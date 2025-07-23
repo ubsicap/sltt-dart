@@ -19,6 +19,9 @@ Develop a shared Dart backend codebase that can be abstracted and deployed acros
    - **Storage Preference:** Prefer AWS DynamoDB for structured data and S3 for media, but allow for pluggable storage backends.
    - **Object IDs:** Use UUIDv7 for all object identifiers.
    - **Sync Status:** Provide APIs for clients to query sync status and progress for both data and media.
+   - use isar for local persistence implementation
+   - use dio and bloc (e.g. for handling errors as data)
+   - add dependencies to pubspec.yaml
 
 2. **Cloud-Side (AWS Serverless):**
    - **Shared Code:** Package relevant backend logic for deployment in AWS Lambda and other serverless services.
