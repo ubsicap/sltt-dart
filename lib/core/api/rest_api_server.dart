@@ -4,7 +4,7 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
-import '../storage/local_storage_service_mock.dart';
+import '../storage/local_storage_service.dart';
 
 class RestApiServer {
   static RestApiServer? _instance;
@@ -73,9 +73,9 @@ class RestApiServer {
   // Get all changes or filter by query parameters
   Future<Response> _handleGetChanges(Request request) async {
     try {
-      final entityType = request.url.queryParameters['entityType'];
-      final operation = request.url.queryParameters['operation'];
-      final entityId = request.url.queryParameters['entityId'];
+      // final entityType = request.url.queryParameters['entityType'];
+      // final operation = request.url.queryParameters['operation'];
+      // final entityId = request.url.queryParameters['entityId'];
       final cursorParam = request.url.queryParameters['cursor'];
       final limitParam = request.url.queryParameters['limit'];
 
@@ -105,9 +105,6 @@ class RestApiServer {
       final changes = await _storage.getChangesWithCursor(
         cursor: cursor,
         limit: limit,
-        entityType: entityType,
-        operation: operation,
-        entityId: entityId,
       );
 
       // Prepare response
@@ -124,9 +121,6 @@ class RestApiServer {
         final moreChanges = await _storage.getChangesWithCursor(
           cursor: lastChangeId,
           limit: 1,
-          entityType: entityType,
-          operation: operation,
-          entityId: entityId,
         );
 
         if (moreChanges.isNotEmpty) {

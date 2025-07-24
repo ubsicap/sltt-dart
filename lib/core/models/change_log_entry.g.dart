@@ -15,7 +15,7 @@ extension GetChangeLogEntryCollection on Isar {
 
 const ChangeLogEntrySchema = CollectionSchema(
   name: r'ChangeLogEntry',
-  id: -8041136144672943509,
+  id: 7185386916618891527,
   properties: {
     r'dataJson': PropertySchema(
       id: 0,
@@ -41,14 +41,28 @@ const ChangeLogEntrySchema = CollectionSchema(
       id: 4,
       name: r'timestamp',
       type: IsarType.dateTime,
-    ),
+    )
   },
   estimateSize: _changeLogEntryEstimateSize,
   serialize: _changeLogEntrySerialize,
   deserialize: _changeLogEntryDeserialize,
   deserializeProp: _changeLogEntryDeserializeProp,
   idName: r'id',
-  indexes: {},
+  indexes: {
+    r'entityType': IndexSchema(
+      id: -5109706325448941117,
+      name: r'entityType',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'entityType',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
   links: {},
   embeddedSchemas: {},
   getId: _changeLogEntryGetId,
@@ -89,13 +103,14 @@ ChangeLogEntry _changeLogEntryDeserialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  final object = ChangeLogEntry.empty();
-  object.dataJson = reader.readString(offsets[0]);
-  object.entityId = reader.readString(offsets[1]);
-  object.entityType = reader.readString(offsets[2]);
+  final object = ChangeLogEntry(
+    dataJson: reader.readString(offsets[0]),
+    entityId: reader.readString(offsets[1]),
+    entityType: reader.readString(offsets[2]),
+    operation: reader.readString(offsets[3]),
+    timestamp: reader.readDateTime(offsets[4]),
+  );
   object.id = id;
-  object.operation = reader.readString(offsets[3]);
-  object.timestamp = reader.readDateTime(offsets[4]);
   return object;
 }
 
@@ -207,10 +222,55 @@ extension ChangeLogEntryQueryWhere
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IdWhereClause.between(
         lower: lowerId,
-        upper: upperId,
         includeLower: includeLower,
+        upper: upperId,
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause>
+      entityTypeEqualTo(String entityType) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'entityType',
+        value: [entityType],
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause>
+      entityTypeNotEqualTo(String entityType) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'entityType',
+              lower: [],
+              upper: [entityType],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'entityType',
+              lower: [entityType],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'entityType',
+              lower: [entityType],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'entityType',
+              lower: [],
+              upper: [entityType],
+              includeUpper: false,
+            ));
+      }
     });
   }
 }

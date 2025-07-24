@@ -7,12 +7,14 @@ part 'change_log_entry.g.dart';
 class ChangeLogEntry {
   Id id = Isar.autoIncrement;
 
+  @Index()
   late String entityType; // e.g., 'Document', 'Passage', 'Portion'
   late String operation; // e.g., 'create', 'update', 'delete'
   late DateTime timestamp;
   late String entityId; // UUID or primary key of the entity
   late String dataJson; // JSON-encoded entity data
 
+  @ignore
   Map<String, dynamic> get data => jsonDecode(dataJson);
   set data(Map<String, dynamic> value) => dataJson = jsonEncode(value);
 
@@ -21,10 +23,8 @@ class ChangeLogEntry {
     required this.operation,
     required this.timestamp,
     required this.entityId,
-    required Map<String, dynamic> data,
-  }) {
-    dataJson = jsonEncode(data);
-  }
+    required this.dataJson,
+  });
 
   ChangeLogEntry.empty();
 
@@ -45,7 +45,7 @@ class ChangeLogEntry {
       operation: json['operation'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
       entityId: json['entityId'] as String,
-      data: Map<String, dynamic>.from(json['data'] ?? {}),
+      dataJson: json['data'] as String,
     );
 
     if (json['id'] != null) {

@@ -35,11 +35,19 @@ class LocalStorageService {
   }
 
   // Change log operations
-  Future<ChangeLogEntry> createChange(ChangeLogEntry change) async {
-    return await _isar.writeTxn(() async {
+  Future<Map<String, dynamic>> createChange(
+      Map<String, dynamic> changeData) async {
+    final change = ChangeLogEntry(
+      entityType: changeData['entityType'] ?? '',
+      operation: changeData['operation'] ?? '',
+      timestamp: DateTime.now(),
+      entityId: changeData['entityId'] ?? '',
+      dataJson: changeData['data'] ?? {},
+    );
+    await _isar.writeTxn(() async {
       await _isar.changeLogEntrys.put(change);
-      return change;
     });
+    return change.toJson();
   }
 
   Future<ChangeLogEntry?> getChange(int id) async {
@@ -83,11 +91,21 @@ class LocalStorageService {
         .findAll();
   }
 
-  Future<ChangeLogEntry> updateChange(ChangeLogEntry change) async {
-    return await _isar.writeTxn(() async {
-      await _isar.changeLogEntrys.put(change);
-      return change;
+  Future<Map<String, dynamic>?> updateChange(
+      int id, Map<String, dynamic> data) async {
+    final existing = await _isar.changeLogEntrys.get(id);
+    if (existing == null) return null;
+    if (data.containsKey('entityType'))
+      existing.entityType = data['entityType'];
+    if (data.containsKey('operation')) existing.operation = data['operation'];
+    if (data.containsKey('entityId')) existing.entityId = data['entityId'];
+    if (data.containsKey('data'))
+      existing.data = Map<String, dynamic>.from(data['data']);
+    existing.timestamp = DateTime.now();
+    await _isar.writeTxn(() async {
+      await _isar.changeLogEntrys.put(existing);
     });
+    return existing.toJson();
   }
 
   Future<bool> deleteChange(int id) async {
@@ -135,5 +153,18 @@ class LocalStorageService {
       _initialized = false;
       print('[LocalStorage] Isar database closed');
     }
+  }
+
+  // Cursor-based pagination and filtering
+  Future<List<Map<String, dynamic>>> getChangesWithCursor({
+    int? cursor,
+    int? limit,
+  }) async {
+    var query = _isar.changeLogEntrys.where();
+    var results = await query.idGreaterThan(cursor ?? 0).findAll();
+    if (limit != null && results.length > limit) {
+      results = results.sublist(0, limit);
+    }
+    return results.map((e) => e.toJson()).toList();
   }
 }
