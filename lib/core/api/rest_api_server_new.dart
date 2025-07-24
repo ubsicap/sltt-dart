@@ -4,7 +4,8 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
-import '../storage/local_storage_service_mock.dart';
+import '../storage/local_storage_service.dart';
+import '../models/change_log_entry.dart';
 
 class RestApiServer {
   static RestApiServer? _instance;
@@ -77,7 +78,7 @@ class RestApiServer {
       final operation = request.url.queryParameters['operation'];
       final entityId = request.url.queryParameters['entityId'];
 
-      List<Map<String, dynamic>> changes;
+      List<ChangeLogEntry> changes;
 
       if (entityType != null) {
         changes = await _storage.getChangesByEntityType(entityType);
@@ -91,7 +92,7 @@ class RestApiServer {
 
       return Response.ok(
         jsonEncode({
-          'changes': changes,
+          'changes': changes.map((c) => c.toJson()).toList(),
           'count': changes.length,
           'timestamp': DateTime.now().toIso8601String(),
         }),
@@ -116,7 +117,7 @@ class RestApiServer {
       }
 
       return Response.ok(
-        jsonEncode(change),
+        jsonEncode(change.toJson()),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
@@ -130,17 +131,20 @@ class RestApiServer {
       final body = await request.readAsString();
       final data = jsonDecode(body) as Map<String, dynamic>;
 
-      final changeData = {
-        'entityType': data['entityType'] as String,
-        'operation': data['operation'] as String,
-        'entityId': data['entityId'] as String,
-        'data': Map<String, dynamic>.from(data['data'] ?? {}),
-      };
+      final change = ChangeLogEntry(
+        entityType: data['entityType'] as String,
+        operation: data['operation'] as String,
+        timestamp: data['timestamp'] != null
+            ? DateTime.parse(data['timestamp'] as String)
+            : DateTime.now(),
+        entityId: data['entityId'] as String,
+        data: Map<String, dynamic>.from(data['data'] ?? {}),
+      );
 
-      final created = await _storage.createChange(changeData);
+      final created = await _storage.createChange(change);
 
       return Response.ok(
-        jsonEncode(created),
+        jsonEncode(created.toJson()),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
@@ -156,13 +160,30 @@ class RestApiServer {
         return _errorResponse('Invalid change ID format', 400);
       }
 
+      final change = await _storage.getChange(changeId);
+      if (change == null) {
+        return _errorResponse('Change not found', 404);
+      }
+
       final body = await request.readAsString();
       final data = jsonDecode(body) as Map<String, dynamic>;
 
-      final updated = await _storage.updateChange(changeId, data);
+      // Update fields if provided
+      if (data['entityType'] != null)
+        change.entityType = data['entityType'] as String;
+      if (data['operation'] != null)
+        change.operation = data['operation'] as String;
+      if (data['timestamp'] != null)
+        change.timestamp = DateTime.parse(data['timestamp'] as String);
+      if (data['entityId'] != null)
+        change.entityId = data['entityId'] as String;
+      if (data['data'] != null)
+        change.data = Map<String, dynamic>.from(data['data']);
+
+      final updated = await _storage.updateChange(change);
 
       return Response.ok(
-        jsonEncode(updated),
+        jsonEncode(updated.toJson()),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {

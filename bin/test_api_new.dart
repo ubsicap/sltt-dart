@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 
@@ -75,16 +76,11 @@ class ApiTester {
     }
 
     final fetchedChange = getResponse.data;
-    print('DEBUG: Fetched change: $fetchedChange');
     if (fetchedChange['entityType'] == 'Document' &&
         fetchedChange['operation'] == 'create' &&
         fetchedChange['entityId'] == 'test-uuid-123') {
       print('   ✅ Change fetched successfully');
     } else {
-      print(
-          'DEBUG: Expected entityType=Document, operation=create, entityId=test-uuid-123');
-      print(
-          'DEBUG: Got entityType=${fetchedChange['entityType']}, operation=${fetchedChange['operation']}, entityId=${fetchedChange['entityId']}');
       throw Exception('Fetched change data does not match expected values');
     }
 

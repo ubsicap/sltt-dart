@@ -1,121 +1,134 @@
 import 'dart:io';
 import 'package:isar/isar.dart';
 import 'package:path/path.dart' as path;
-import '../models/base_entity.dart';
+import '../models/change_log_entry.dart';
 import '../models/document.dart';
 
 class LocalStorageService {
   static LocalStorageService? _instance;
-  static LocalStorageService get instance => _instance ??= LocalStorageService._();
-  
+  static LocalStorageService get instance =>
+      _instance ??= LocalStorageService._();
+
   LocalStorageService._();
-  
+
   late Isar _isar;
   bool _initialized = false;
-  
+
   Future<void> initialize() async {
     if (_initialized) return;
-    
+
     // Create local directory for database
     final dir = Directory('./isar_db');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
-    
+
     // Initialize Isar
     _isar = await Isar.open(
       [DocumentSchema],
       directory: dir.path,
       name: 'local_storage',
     );
-    
+
     _initialized = true;
     print('[LocalStorage] Isar database initialized at: ${dir.path}');
   }
-  
-  // Document operations
-  Future<Document> createDocument(Document document) async {
+
+  // Change log operations
+  Future<ChangeLogEntry> createChange(ChangeLogEntry change) async {
     return await _isar.writeTxn(() async {
-      await _isar.documents.put(document);
-      return document;
+      await _isar.changeLogEntrys.put(change);
+      return change;
     });
   }
-  
-  Future<Document?> getDocument(String uuid) async {
-    return await _isar.documents.filter().uuidEqualTo(uuid).findFirst();
+
+  Future<ChangeLogEntry?> getChange(int id) async {
+    return await _isar.changeLogEntrys.get(id);
   }
-  
-  Future<List<Document>> getAllDocuments() async {
-    return await _isar.documents.where().findAll();
+
+  Future<List<ChangeLogEntry>> getAllChanges() async {
+    return await _isar.changeLogEntrys.where().sortByTimestampDesc().findAll();
   }
-  
-  Future<List<Document>> getDocumentsByType(String type) async {
-    return await _isar.documents.filter().typeEqualTo(type).findAll();
-  }
-  
-  Future<List<Document>> getPendingSyncDocuments() async {
-    return await _isar.documents.filter().syncStatusEqualTo(SyncStatus.pending).findAll();
-  }
-  
-  Future<Document> updateDocument(Document document) async {
-    return await _isar.writeTxn(() async {
-      document.markUpdated();
-      await _isar.documents.put(document);
-      return document;
-    });
-  }
-  
-  Future<bool> deleteDocument(String uuid) async {
-    return await _isar.writeTxn(() async {
-      final document = await _isar.documents.filter().uuidEqualTo(uuid).findFirst();
-      if (document != null) {
-        await _isar.documents.delete(document.id);
-        return true;
-      }
-      return false;
-    });
-  }
-  
-  Future<void> markDocumentSynced(String uuid, SyncTarget target) async {
-    await _isar.writeTxn(() async {
-      final document = await _isar.documents.filter().uuidEqualTo(uuid).findFirst();
-      if (document != null) {
-        document.markSynced(target);
-        await _isar.documents.put(document);
-      }
-    });
-  }
-  
-  Future<int> getDocumentCount() async {
-    return await _isar.documents.count();
-  }
-  
-  Future<List<Document>> searchDocuments(String query) async {
-    final lowerQuery = query.toLowerCase();
-    return await _isar.documents.filter()
-        .titleContains(lowerQuery, caseSensitive: false)
-        .or()
-        .contentContains(lowerQuery, caseSensitive: false)
+
+  Future<List<ChangeLogEntry>> getChangesByEntityType(String entityType) async {
+    return await _isar.changeLogEntrys
+        .filter()
+        .entityTypeEqualTo(entityType)
+        .sortByTimestampDesc()
         .findAll();
   }
-  
-  // Sync status operations
-  Future<Map<String, int>> getSyncStats() async {
-    final total = await _isar.documents.count();
-    final pending = await _isar.documents.filter().syncStatusEqualTo(SyncStatus.pending).count();
-    final synced = await _isar.documents.filter().syncStatusEqualTo(SyncStatus.synced).count();
-    final conflicts = await _isar.documents.filter().syncStatusEqualTo(SyncStatus.conflict).count();
-    final local = await _isar.documents.filter().syncStatusEqualTo(SyncStatus.local).count();
-    
+
+  Future<List<ChangeLogEntry>> getChangesByOperation(String operation) async {
+    return await _isar.changeLogEntrys
+        .filter()
+        .operationEqualTo(operation)
+        .sortByTimestampDesc()
+        .findAll();
+  }
+
+  Future<List<ChangeLogEntry>> getChangesByEntityId(String entityId) async {
+    return await _isar.changeLogEntrys
+        .filter()
+        .entityIdEqualTo(entityId)
+        .sortByTimestampDesc()
+        .findAll();
+  }
+
+  Future<List<ChangeLogEntry>> getChangesInDateRange(
+      DateTime startDate, DateTime endDate) async {
+    return await _isar.changeLogEntrys
+        .filter()
+        .timestampBetween(startDate, endDate)
+        .sortByTimestampDesc()
+        .findAll();
+  }
+
+  Future<ChangeLogEntry> updateChange(ChangeLogEntry change) async {
+    return await _isar.writeTxn(() async {
+      await _isar.changeLogEntrys.put(change);
+      return change;
+    });
+  }
+
+  Future<bool> deleteChange(int id) async {
+    return await _isar.writeTxn(() async {
+      return await _isar.changeLogEntrys.delete(id);
+    });
+  }
+
+  Future<int> getChangeCount() async {
+    return await _isar.changeLogEntrys.count();
+  }
+
+  // Statistics operations
+  Future<Map<String, int>> getChangeStats() async {
+    final total = await _isar.changeLogEntrys.count();
+    final creates =
+        await _isar.changeLogEntrys.filter().operationEqualTo('create').count();
+    final updates =
+        await _isar.changeLogEntrys.filter().operationEqualTo('update').count();
+    final deletes =
+        await _isar.changeLogEntrys.filter().operationEqualTo('delete').count();
+
     return {
       'total': total,
-      'pending': pending,
-      'synced': synced,
-      'conflicts': conflicts,
-      'local': local,
+      'creates': creates,
+      'updates': updates,
+      'deletes': deletes,
     };
   }
-  
+
+  Future<Map<String, int>> getEntityTypeStats() async {
+    final allEntries = await _isar.changeLogEntrys.where().findAll();
+    final stats = <String, int>{};
+
+    for (final entry in allEntries) {
+      stats[entry.entityType] = (stats[entry.entityType] ?? 0) + 1;
+    }
+
+    return stats;
+  }
+
   Future<void> close() async {
     if (_initialized) {
       await _isar.close();
