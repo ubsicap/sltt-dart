@@ -145,6 +145,56 @@ class ApiTester {
       print('   ✅ Entity type filter works (count: ${filtered['count']})');
     }
 
+    // Test cursor and limit functionality
+    print('   Testing cursor and limit...');
+
+    // Create multiple changes for cursor testing
+    final createData2 = {
+      'entityType': 'Document',
+      'operation': 'update',
+      'entityId': 'test-uuid-456',
+      'data': {
+        'title': 'Second Test Document',
+        'content': 'This is another test document',
+        'type': 'note',
+      },
+    };
+    final createResponse2 =
+        await _dio.post('$baseUrl/api/changes', data: createData2);
+    final createdChange2 = createResponse2.data;
+    final changeId2 = createdChange2['id'];
+
+    // Test limit parameter
+    final limitResponse = await _dio.get('$baseUrl/api/changes?limit=1');
+    if (limitResponse.statusCode != 200) {
+      throw Exception('Failed to test limit: ${limitResponse.statusCode}');
+    }
+
+    final limitedResults = limitResponse.data;
+    if (limitedResults['count'] == 1 && limitedResults.containsKey('cursor')) {
+      print('   ✅ Limit parameter works and cursor returned');
+    } else {
+      throw Exception(
+          'Limit test failed - expected count=1 and cursor present');
+    }
+
+    // Test cursor parameter
+    final cursor = limitedResults['cursor'];
+    final cursorResponse =
+        await _dio.get('$baseUrl/api/changes?cursor=$cursor');
+    if (cursorResponse.statusCode != 200) {
+      throw Exception('Failed to test cursor: ${cursorResponse.statusCode}');
+    }
+
+    final cursorResults = cursorResponse.data;
+    if (cursorResults['count'] > 0) {
+      print(
+          '   ✅ Cursor parameter works (returned ${cursorResults['count']} results)');
+    }
+
+    // Clean up the second change
+    await _dio.delete('$baseUrl/api/changes/$changeId2');
+
     // Delete the change
     print('   Deleting change...');
     final deleteResponse = await _dio.delete('$baseUrl/api/changes/$changeId');
@@ -206,6 +256,54 @@ class ApiTester {
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 404) {
         print('   ✅ Non-existent change error handled correctly');
+      } else {
+        rethrow;
+      }
+    }
+
+    // Test invalid cursor parameter
+    try {
+      await _dio.get('$baseUrl/api/changes?cursor=invalid-cursor');
+      throw Exception('Expected 400 error for invalid cursor');
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 400) {
+        print('   ✅ Invalid cursor error handled correctly');
+      } else {
+        rethrow;
+      }
+    }
+
+    // Test invalid limit parameter
+    try {
+      await _dio.get('$baseUrl/api/changes?limit=invalid-limit');
+      throw Exception('Expected 400 error for invalid limit');
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 400) {
+        print('   ✅ Invalid limit error handled correctly');
+      } else {
+        rethrow;
+      }
+    }
+
+    // Test limit out of range (negative)
+    try {
+      await _dio.get('$baseUrl/api/changes?limit=-5');
+      throw Exception('Expected 400 error for negative limit');
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 400) {
+        print('   ✅ Negative limit error handled correctly');
+      } else {
+        rethrow;
+      }
+    }
+
+    // Test limit out of range (too large)
+    try {
+      await _dio.get('$baseUrl/api/changes?limit=10000');
+      throw Exception('Expected 400 error for limit too large');
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 400) {
+        print('   ✅ Limit too large error handled correctly');
       } else {
         rethrow;
       }

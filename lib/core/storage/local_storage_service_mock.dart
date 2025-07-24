@@ -53,6 +53,50 @@ class LocalStorageService {
           .compareTo(DateTime.parse(a['timestamp'])));
   }
 
+  Future<List<Map<String, dynamic>>> getChangesWithCursor({
+    int? cursor,
+    int? limit,
+    String? entityType,
+    String? operation,
+    String? entityId,
+  }) async {
+    // Get all changes sorted by timestamp descending (newest first)
+    var changes = _changes.values.toList()
+      ..sort((a, b) => DateTime.parse(b['timestamp'])
+          .compareTo(DateTime.parse(a['timestamp'])));
+
+    // Apply filters
+    if (entityType != null) {
+      changes = changes
+          .where((change) => change['entityType'] == entityType)
+          .toList();
+    }
+    if (operation != null) {
+      changes =
+          changes.where((change) => change['operation'] == operation).toList();
+    }
+    if (entityId != null) {
+      changes =
+          changes.where((change) => change['entityId'] == entityId).toList();
+    }
+
+    // Apply cursor (exclusive starting point)
+    if (cursor != null) {
+      final cursorIndex =
+          changes.indexWhere((change) => change['id'] == cursor);
+      if (cursorIndex != -1) {
+        changes = changes.sublist(cursorIndex + 1);
+      }
+    }
+
+    // Apply limit
+    if (limit != null && limit > 0 && changes.length > limit) {
+      changes = changes.take(limit).toList();
+    }
+
+    return changes;
+  }
+
   Future<List<Map<String, dynamic>>> getChangesByEntityType(
       String entityType) async {
     final allChanges = await getAllChanges();

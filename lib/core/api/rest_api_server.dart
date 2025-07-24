@@ -76,25 +76,66 @@ class RestApiServer {
       final entityType = request.url.queryParameters['entityType'];
       final operation = request.url.queryParameters['operation'];
       final entityId = request.url.queryParameters['entityId'];
+      final cursorParam = request.url.queryParameters['cursor'];
+      final limitParam = request.url.queryParameters['limit'];
 
-      List<Map<String, dynamic>> changes;
+      // Parse cursor and limit parameters
+      int? cursor;
+      if (cursorParam != null) {
+        cursor = int.tryParse(cursorParam);
+        if (cursor == null) {
+          return _errorResponse(
+              'Invalid cursor format: must be an integer', 400);
+        }
+      }
 
-      if (entityType != null) {
-        changes = await _storage.getChangesByEntityType(entityType);
-      } else if (operation != null) {
-        changes = await _storage.getChangesByOperation(operation);
-      } else if (entityId != null) {
-        changes = await _storage.getChangesByEntityId(entityId);
-      } else {
-        changes = await _storage.getAllChanges();
+      int? limit;
+      if (limitParam != null) {
+        limit = int.tryParse(limitParam);
+        if (limit == null || limit <= 0) {
+          return _errorResponse(
+              'Invalid limit format: must be a positive integer', 400);
+        }
+        if (limit > 1000) {
+          return _errorResponse('Limit too large: maximum is 1000', 400);
+        }
+      }
+
+      // Get changes with cursor-based pagination
+      final changes = await _storage.getChangesWithCursor(
+        cursor: cursor,
+        limit: limit,
+        entityType: entityType,
+        operation: operation,
+        entityId: entityId,
+      );
+
+      // Prepare response
+      final responseData = <String, dynamic>{
+        'changes': changes,
+        'count': changes.length,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      // Add cursor to response if there are more changes available
+      if (changes.isNotEmpty && (limit == null || changes.length == limit)) {
+        // Check if there are more changes after this batch
+        final lastChangeId = changes.last['id'] as int;
+        final moreChanges = await _storage.getChangesWithCursor(
+          cursor: lastChangeId,
+          limit: 1,
+          entityType: entityType,
+          operation: operation,
+          entityId: entityId,
+        );
+
+        if (moreChanges.isNotEmpty) {
+          responseData['cursor'] = lastChangeId;
+        }
       }
 
       return Response.ok(
-        jsonEncode({
-          'changes': changes,
-          'count': changes.length,
-          'timestamp': DateTime.now().toIso8601String(),
-        }),
+        jsonEncode(responseData),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
