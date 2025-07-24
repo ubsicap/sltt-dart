@@ -1,10 +1,13 @@
 import 'package:uuid/uuid.dart';
+import 'package:isar/isar.dart';
 
 // Base mixin for common entity fields
 mixin BaseEntityMixin {
+  @Index(unique: true)
   late String uuid;
   late DateTime createdAt;
   late DateTime updatedAt;
+  @Enumerated(EnumType.name)
   SyncStatus syncStatus = SyncStatus.local;
   String? lastSyncedAt;
   

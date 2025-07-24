@@ -1,5 +1,6 @@
-import 'dart:convert';
 import 'dart:io';
+import 'package:isar/isar.dart';
+import 'package:path/path.dart' as path;
 import '../models/base_entity.dart';
 import '../models/document.dart';
 
@@ -9,112 +10,102 @@ class LocalStorageService {
   
   LocalStorageService._();
   
-  late File _dataFile;
-  List<Document> _documents = [];
+  late Isar _isar;
+  bool _initialized = false;
   
   Future<void> initialize() async {
+    if (_initialized) return;
+    
     // Create local directory for database
-    final dir = Directory('./data');
+    final dir = Directory('./isar_db');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
     
-    _dataFile = File('./data/documents.json');
-    await _loadDocuments();
-  }
-  
-  Future<void> _loadDocuments() async {
-    if (await _dataFile.exists()) {
-      try {
-        final content = await _dataFile.readAsString();
-        final List<dynamic> jsonList = jsonDecode(content);
-        _documents = jsonList.map((json) => Document.fromJson(json)).toList();
-      } catch (e) {
-        print('Error loading documents: $e');
-        _documents = [];
-      }
-    }
-  }
-  
-  Future<void> _saveDocuments() async {
-    final jsonList = _documents.map((doc) => doc.toJson()).toList();
-    await _dataFile.writeAsString(jsonEncode(jsonList));
+    // Initialize Isar
+    _isar = await Isar.open(
+      [DocumentSchema],
+      directory: dir.path,
+      name: 'local_storage',
+    );
+    
+    _initialized = true;
+    print('[LocalStorage] Isar database initialized at: ${dir.path}');
   }
   
   // Document operations
   Future<Document> createDocument(Document document) async {
-    _documents.add(document);
-    await _saveDocuments();
-    return document;
+    return await _isar.writeTxn(() async {
+      await _isar.documents.put(document);
+      return document;
+    });
   }
   
   Future<Document?> getDocument(String uuid) async {
-    try {
-      return _documents.firstWhere((doc) => doc.uuid == uuid);
-    } catch (e) {
-      return null;
-    }
+    return await _isar.documents.filter().uuidEqualTo(uuid).findFirst();
   }
   
   Future<List<Document>> getAllDocuments() async {
-    return List.from(_documents);
+    return await _isar.documents.where().findAll();
   }
   
   Future<List<Document>> getDocumentsByType(String type) async {
-    return _documents.where((doc) => doc.type == type).toList();
+    return await _isar.documents.filter().typeEqualTo(type).findAll();
   }
   
   Future<List<Document>> getPendingSyncDocuments() async {
-    return _documents.where((doc) => doc.syncStatus == SyncStatus.pending).toList();
+    return await _isar.documents.filter().syncStatusEqualTo(SyncStatus.pending).findAll();
   }
   
   Future<Document> updateDocument(Document document) async {
-    final index = _documents.indexWhere((doc) => doc.uuid == document.uuid);
-    if (index != -1) {
+    return await _isar.writeTxn(() async {
       document.markUpdated();
-      _documents[index] = document;
-      await _saveDocuments();
-    }
-    return document;
+      await _isar.documents.put(document);
+      return document;
+    });
   }
   
   Future<bool> deleteDocument(String uuid) async {
-    final index = _documents.indexWhere((doc) => doc.uuid == uuid);
-    if (index != -1) {
-      _documents.removeAt(index);
-      await _saveDocuments();
-      return true;
-    }
-    return false;
+    return await _isar.writeTxn(() async {
+      final document = await _isar.documents.filter().uuidEqualTo(uuid).findFirst();
+      if (document != null) {
+        await _isar.documents.delete(document.id);
+        return true;
+      }
+      return false;
+    });
   }
   
   Future<void> markDocumentSynced(String uuid, SyncTarget target) async {
-    final document = await getDocument(uuid);
-    if (document != null) {
-      document.markSynced(target);
-      await updateDocument(document);
-    }
+    await _isar.writeTxn(() async {
+      final document = await _isar.documents.filter().uuidEqualTo(uuid).findFirst();
+      if (document != null) {
+        document.markSynced(target);
+        await _isar.documents.put(document);
+      }
+    });
   }
   
   Future<int> getDocumentCount() async {
-    return _documents.length;
+    return await _isar.documents.count();
   }
   
   Future<List<Document>> searchDocuments(String query) async {
     final lowerQuery = query.toLowerCase();
-    return _documents.where((doc) =>
-      doc.title.toLowerCase().contains(lowerQuery) ||
-      doc.content.toLowerCase().contains(lowerQuery)
-    ).toList();
+    return await _isar.documents.filter()
+        .titleContains(lowerQuery, caseSensitive: false)
+        .or()
+        .contentContains(lowerQuery, caseSensitive: false)
+        .findAll();
   }
   
   // Sync status operations
   Future<Map<String, int>> getSyncStats() async {
-    final total = _documents.length;
-    final pending = _documents.where((doc) => doc.syncStatus == SyncStatus.pending).length;
-    final synced = _documents.where((doc) => doc.syncStatus == SyncStatus.synced).length;
-    final conflicts = _documents.where((doc) => doc.syncStatus == SyncStatus.conflict).length;
-    final local = _documents.where((doc) => doc.syncStatus == SyncStatus.local).length;
+    final total = await _isar.documents.count();
+    final pending = await _isar.documents.filter().syncStatusEqualTo(SyncStatus.pending).count();
+    final synced = await _isar.documents.filter().syncStatusEqualTo(SyncStatus.synced).count();
+    final conflicts = await _isar.documents.filter().syncStatusEqualTo(SyncStatus.conflict).count();
+    final local = await _isar.documents.filter().syncStatusEqualTo(SyncStatus.local).count();
     
     return {
       'total': total,
@@ -126,6 +117,10 @@ class LocalStorageService {
   }
   
   Future<void> close() async {
-    await _saveDocuments();
+    if (_initialized) {
+      await _isar.close();
+      _initialized = false;
+      print('[LocalStorage] Isar database closed');
+    }
   }
 }

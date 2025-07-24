@@ -33,34 +33,29 @@ const DocumentSchema = CollectionSchema(
       name: r'mediaPath',
       type: IsarType.string,
     ),
-    r'metadataJson': PropertySchema(
-      id: 4,
-      name: r'metadataJson',
-      type: IsarType.string,
-    ),
     r'syncStatus': PropertySchema(
-      id: 5,
+      id: 4,
       name: r'syncStatus',
-      type: IsarType.byte,
+      type: IsarType.string,
       enumMap: _DocumentsyncStatusEnumValueMap,
     ),
     r'title': PropertySchema(
-      id: 6,
+      id: 5,
       name: r'title',
       type: IsarType.string,
     ),
     r'type': PropertySchema(
-      id: 7,
+      id: 6,
       name: r'type',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 8,
+      id: 7,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'uuid': PropertySchema(
-      id: 9,
+      id: 8,
       name: r'uuid',
       type: IsarType.string,
     )
@@ -71,19 +66,6 @@ const DocumentSchema = CollectionSchema(
   deserializeProp: _documentDeserializeProp,
   idName: r'id',
   indexes: {
-    r'uuid': IndexSchema(
-      id: 2134397340427724972,
-      name: r'uuid',
-      unique: true,
-      replace: false,
-      properties: [
-        IndexPropertySchema(
-          name: r'uuid',
-          type: IndexType.hash,
-          caseSensitive: true,
-        )
-      ],
-    ),
     r'type': IndexSchema(
       id: 5117122708147080838,
       name: r'type',
@@ -92,6 +74,19 @@ const DocumentSchema = CollectionSchema(
       properties: [
         IndexPropertySchema(
           name: r'type',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    ),
+    r'uuid': IndexSchema(
+      id: 2134397340427724972,
+      name: r'uuid',
+      unique: true,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'uuid',
           type: IndexType.hash,
           caseSensitive: true,
         )
@@ -125,7 +120,7 @@ int _documentEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
-  bytesCount += 3 + object.metadataJson.length * 3;
+  bytesCount += 3 + object.syncStatus.name.length * 3;
   bytesCount += 3 + object.title.length * 3;
   bytesCount += 3 + object.type.length * 3;
   bytesCount += 3 + object.uuid.length * 3;
@@ -142,12 +137,11 @@ void _documentSerialize(
   writer.writeDateTime(offsets[1], object.createdAt);
   writer.writeString(offsets[2], object.lastSyncedAt);
   writer.writeString(offsets[3], object.mediaPath);
-  writer.writeString(offsets[4], object.metadataJson);
-  writer.writeByte(offsets[5], object.syncStatus.index);
-  writer.writeString(offsets[6], object.title);
-  writer.writeString(offsets[7], object.type);
-  writer.writeDateTime(offsets[8], object.updatedAt);
-  writer.writeString(offsets[9], object.uuid);
+  writer.writeString(offsets[4], object.syncStatus.name);
+  writer.writeString(offsets[5], object.title);
+  writer.writeString(offsets[6], object.type);
+  writer.writeDateTime(offsets[7], object.updatedAt);
+  writer.writeString(offsets[8], object.uuid);
 }
 
 Document _documentDeserialize(
@@ -159,18 +153,17 @@ Document _documentDeserialize(
   final object = Document(
     content: reader.readString(offsets[0]),
     mediaPath: reader.readStringOrNull(offsets[3]),
-    title: reader.readString(offsets[6]),
-    type: reader.readString(offsets[7]),
+    title: reader.readString(offsets[5]),
+    type: reader.readString(offsets[6]),
   );
   object.createdAt = reader.readDateTime(offsets[1]);
   object.id = id;
   object.lastSyncedAt = reader.readStringOrNull(offsets[2]);
-  object.metadataJson = reader.readString(offsets[4]);
   object.syncStatus =
-      _DocumentsyncStatusValueEnumMap[reader.readByteOrNull(offsets[5])] ??
+      _DocumentsyncStatusValueEnumMap[reader.readStringOrNull(offsets[4])] ??
           SyncStatus.local;
-  object.updatedAt = reader.readDateTime(offsets[8]);
-  object.uuid = reader.readString(offsets[9]);
+  object.updatedAt = reader.readDateTime(offsets[7]);
+  object.uuid = reader.readString(offsets[8]);
   return object;
 }
 
@@ -190,17 +183,16 @@ P _documentDeserializeProp<P>(
     case 3:
       return (reader.readStringOrNull(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
-    case 5:
-      return (_DocumentsyncStatusValueEnumMap[reader.readByteOrNull(offset)] ??
+      return (_DocumentsyncStatusValueEnumMap[
+              reader.readStringOrNull(offset)] ??
           SyncStatus.local) as P;
+    case 5:
+      return (reader.readString(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
-    case 8:
       return (reader.readDateTime(offset)) as P;
-    case 9:
+    case 8:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -208,18 +200,18 @@ P _documentDeserializeProp<P>(
 }
 
 const _DocumentsyncStatusEnumValueMap = {
-  'local': 0,
-  'pending': 1,
-  'syncing': 2,
-  'synced': 3,
-  'conflict': 4,
+  r'local': r'local',
+  r'pending': r'pending',
+  r'syncing': r'syncing',
+  r'synced': r'synced',
+  r'conflict': r'conflict',
 };
 const _DocumentsyncStatusValueEnumMap = {
-  0: SyncStatus.local,
-  1: SyncStatus.pending,
-  2: SyncStatus.syncing,
-  3: SyncStatus.synced,
-  4: SyncStatus.conflict,
+  r'local': SyncStatus.local,
+  r'pending': SyncStatus.pending,
+  r'syncing': SyncStatus.syncing,
+  r'synced': SyncStatus.synced,
+  r'conflict': SyncStatus.conflict,
 };
 
 Id _documentGetId(Document object) {
@@ -362,50 +354,6 @@ extension DocumentQueryWhere on QueryBuilder<Document, Document, QWhereClause> {
     });
   }
 
-  QueryBuilder<Document, Document, QAfterWhereClause> uuidEqualTo(String uuid) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'uuid',
-        value: [uuid],
-      ));
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterWhereClause> uuidNotEqualTo(
-      String uuid) {
-    return QueryBuilder.apply(this, (query) {
-      if (query.whereSort == Sort.asc) {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
-              lower: [],
-              upper: [uuid],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
-              lower: [uuid],
-              includeLower: false,
-              upper: [],
-            ));
-      } else {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
-              lower: [uuid],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
-              lower: [],
-              upper: [uuid],
-              includeUpper: false,
-            ));
-      }
-    });
-  }
-
   QueryBuilder<Document, Document, QAfterWhereClause> typeEqualTo(String type) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
@@ -444,6 +392,50 @@ extension DocumentQueryWhere on QueryBuilder<Document, Document, QWhereClause> {
               indexName: r'type',
               lower: [],
               upper: [type],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterWhereClause> uuidEqualTo(String uuid) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'uuid',
+        value: [uuid],
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterWhereClause> uuidNotEqualTo(
+      String uuid) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [],
+              upper: [uuid],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [uuid],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [uuid],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [],
+              upper: [uuid],
               includeUpper: false,
             ));
       }
@@ -986,146 +978,15 @@ extension DocumentQueryFilter
     });
   }
 
-  QueryBuilder<Document, Document, QAfterFilterCondition> metadataJsonEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'metadataJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterFilterCondition>
-      metadataJsonGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'metadataJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterFilterCondition> metadataJsonLessThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'metadataJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterFilterCondition> metadataJsonBetween(
-    String lower,
-    String upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'metadataJson',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterFilterCondition>
-      metadataJsonStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'metadataJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterFilterCondition> metadataJsonEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'metadataJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterFilterCondition> metadataJsonContains(
-      String value,
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'metadataJson',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterFilterCondition> metadataJsonMatches(
-      String pattern,
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'metadataJson',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterFilterCondition>
-      metadataJsonIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'metadataJson',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterFilterCondition>
-      metadataJsonIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'metadataJson',
-        value: '',
-      ));
-    });
-  }
-
   QueryBuilder<Document, Document, QAfterFilterCondition> syncStatusEqualTo(
-      SyncStatus value) {
+    SyncStatus value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'syncStatus',
         value: value,
+        caseSensitive: caseSensitive,
       ));
     });
   }
@@ -1133,12 +994,14 @@ extension DocumentQueryFilter
   QueryBuilder<Document, Document, QAfterFilterCondition> syncStatusGreaterThan(
     SyncStatus value, {
     bool include = false,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
         property: r'syncStatus',
         value: value,
+        caseSensitive: caseSensitive,
       ));
     });
   }
@@ -1146,12 +1009,14 @@ extension DocumentQueryFilter
   QueryBuilder<Document, Document, QAfterFilterCondition> syncStatusLessThan(
     SyncStatus value, {
     bool include = false,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
         property: r'syncStatus',
         value: value,
+        caseSensitive: caseSensitive,
       ));
     });
   }
@@ -1161,6 +1026,7 @@ extension DocumentQueryFilter
     SyncStatus upper, {
     bool includeLower = true,
     bool includeUpper = true,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
@@ -1169,6 +1035,76 @@ extension DocumentQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> syncStatusStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'syncStatus',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> syncStatusEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'syncStatus',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> syncStatusContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'syncStatus',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> syncStatusMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'syncStatus',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition> syncStatusIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'syncStatus',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Document, Document, QAfterFilterCondition>
+      syncStatusIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'syncStatus',
+        value: '',
       ));
     });
   }
@@ -1672,18 +1608,6 @@ extension DocumentQuerySortBy on QueryBuilder<Document, Document, QSortBy> {
     });
   }
 
-  QueryBuilder<Document, Document, QAfterSortBy> sortByMetadataJson() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'metadataJson', Sort.asc);
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterSortBy> sortByMetadataJsonDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'metadataJson', Sort.desc);
-    });
-  }
-
   QueryBuilder<Document, Document, QAfterSortBy> sortBySyncStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'syncStatus', Sort.asc);
@@ -1807,18 +1731,6 @@ extension DocumentQuerySortThenBy
     });
   }
 
-  QueryBuilder<Document, Document, QAfterSortBy> thenByMetadataJson() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'metadataJson', Sort.asc);
-    });
-  }
-
-  QueryBuilder<Document, Document, QAfterSortBy> thenByMetadataJsonDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'metadataJson', Sort.desc);
-    });
-  }
-
   QueryBuilder<Document, Document, QAfterSortBy> thenBySyncStatus() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'syncStatus', Sort.asc);
@@ -1909,16 +1821,10 @@ extension DocumentQueryWhereDistinct
     });
   }
 
-  QueryBuilder<Document, Document, QDistinct> distinctByMetadataJson(
+  QueryBuilder<Document, Document, QDistinct> distinctBySyncStatus(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'metadataJson', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<Document, Document, QDistinct> distinctBySyncStatus() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'syncStatus');
+      return query.addDistinctBy(r'syncStatus', caseSensitive: caseSensitive);
     });
   }
 
@@ -1979,12 +1885,6 @@ extension DocumentQueryProperty
   QueryBuilder<Document, String?, QQueryOperations> mediaPathProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'mediaPath');
-    });
-  }
-
-  QueryBuilder<Document, String, QQueryOperations> metadataJsonProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'metadataJson');
     });
   }
 

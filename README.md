@@ -17,19 +17,46 @@ A shared Dart backend codebase for offline-first, LAN-collaborative, cloud-sync 
 dart pub get
 ```
 
-### 2. Generate Code
+### 2. Install Isar Native Library
+
+The server uses Isar database which requires a native library. Download the appropriate library for your platform:
+
+#### Linux (x64)
+```bash
+curl -L https://github.com/isar/isar/releases/download/3.1.0%2B1/libisar_linux_x64.so -o bin/libisar.so
+chmod +x bin/libisar.so
+```
+
+#### macOS (x64)
+```bash
+curl -L https://github.com/isar/isar/releases/download/3.1.0%2B1/libisar_macos_x64.dylib -o bin/libisar.dylib
+chmod +x bin/libisar.dylib
+```
+
+#### macOS (ARM64)
+```bash
+curl -L https://github.com/isar/isar/releases/download/3.1.0%2B1/libisar_macos_arm64.dylib -o bin/libisar.dylib
+chmod +x bin/libisar.dylib
+```
+
+#### Windows (x64)
+```powershell
+curl -L https://github.com/isar/isar/releases/download/3.1.0%2B1/isar_windows_x64.dll -o bin/isar.dll
+```
+
+### 3. Generate Code
 
 ```bash
 dart run build_runner build
 ```
 
-### 3. Run the Server
+### 4. Run the Server
 
 ```bash
 dart run bin/server.dart
 ```
 
-### 4. Test the API
+### 5. Test the API
 
 ```bash
 dart run bin/test_api.dart
@@ -166,6 +193,39 @@ dart run bin/test_api.dart
 ```
 
 This will test all endpoints and verify functionality.
+
+## Troubleshooting
+
+### "Failed to load dynamic library" Error
+
+If you see an error like:
+```
+Failed to load dynamic library 'libisar.so': libisar.so: cannot open shared object file
+```
+
+This means the Isar native library is missing. Follow the **Install Isar Native Library** step above for your platform.
+
+### "Permission denied" Error
+
+If you get permission errors on Linux/macOS, make sure the native library is executable:
+```bash
+chmod +x bin/libisar.so   # Linux
+chmod +x bin/libisar.dylib  # macOS
+```
+
+### Build Runner Issues
+
+If code generation fails, try cleaning and rebuilding:
+```bash
+dart run build_runner clean
+dart run build_runner build --delete-conflicting-outputs
+```
+
+### Port Already in Use
+
+If port 8080 is already in use, the server will fail to start. You can:
+1. Stop the process using port 8080
+2. Or modify `bin/server.dart` to use a different port
 
 ## Future Enhancements
 

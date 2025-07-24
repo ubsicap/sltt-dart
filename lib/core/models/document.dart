@@ -1,12 +1,32 @@
 import 'dart:convert';
+import 'package:isar/isar.dart';
 import 'base_entity.dart';
 
+part 'document.g.dart';
+
+@Collection()
 class Document with BaseEntityMixin {
+  Id id = Isar.autoIncrement; // Isar auto-increment ID
+  
   late String title;
   late String content;
   String? mediaPath;
+  
+  @Index() // Index for filtering by type
   late String type; // e.g., 'note', 'task', 'image', etc.
-  Map<String, dynamic> metadata = {};
+  
+  // Store complex data as JSON string for Isar compatibility
+  String _metadataJson = '{}';
+  
+  @ignore
+  Map<String, dynamic> get metadata {
+    return Map<String, dynamic>.from(jsonDecode(_metadataJson));
+  }
+  
+  @ignore
+  set metadata(Map<String, dynamic> value) {
+    _metadataJson = jsonEncode(value);
+  }
   
   Document({
     required this.title,
