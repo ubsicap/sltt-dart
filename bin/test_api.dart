@@ -22,6 +22,10 @@ class ApiTester {
       print('\n✅ All tests completed successfully!');
     } catch (e) {
       print('\n❌ Test failed: $e');
+      if (e is DioException) {
+        print('DioException: ${e.message}');
+        print('Response data: ${e.response?.data}');
+      }
       rethrow;
     }
   }
@@ -59,6 +63,7 @@ class ApiTester {
         await _dio.post('$baseUrl/api/changes', data: createData);
 
     if (createResponse.statusCode != 200) {
+      print('Response data: ${createResponse.data}');
       throw Exception('Failed to create change: ${createResponse.statusCode}');
     }
 
