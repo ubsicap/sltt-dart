@@ -1,8 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:isar/isar.dart';
-import 'package:path/path.dart' as path;
 import '../models/change_log_entry.dart';
-import '../models/document.dart';
 
 class LocalStorageService {
   static LocalStorageService? _instance;
@@ -25,7 +24,7 @@ class LocalStorageService {
 
     // Initialize Isar
     _isar = await Isar.open(
-      [DocumentSchema],
+      [ChangeLogEntrySchema],
       directory: dir.path,
       name: 'local_storage',
     );
@@ -42,7 +41,7 @@ class LocalStorageService {
       operation: changeData['operation'] ?? '',
       timestamp: DateTime.now(),
       entityId: changeData['entityId'] ?? '',
-      dataJson: changeData['data'] ?? {},
+      dataJson: jsonEncode(changeData['data'] ?? {}),
     );
     await _isar.writeTxn(() async {
       await _isar.changeLogEntrys.put(change);
