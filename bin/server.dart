@@ -1,43 +1,51 @@
 import 'dart:io';
-import '../lib/core/api/rest_api_server.dart';
+import '../lib/core/server/multi_server_launcher.dart';
 
-Future<void> main() async {
-  final server = RestApiServer.instance;
+Future<void> main(List<String> args) async {
+  final launcher = MultiServerLauncher.instance;
+  print('Starting Flutter-2 Enhanced REST API Servers...');
 
-  print('Starting Flutter-2 Local Storage Server...');
+  // Determine which servers to start
+  final validTypes = ['downsyncs', 'outsyncs', 'cloud'];
+  List<String> serversToStart = validTypes;
+  if (args.isNotEmpty) {
+    serversToStart = args.where((type) => validTypes.contains(type)).toList();
+    if (serversToStart.isEmpty) {
+      print(
+          'No valid server types specified. Valid types: downsyncs, outsyncs, cloud');
+      exit(1);
+    }
+  }
 
   try {
-    await server.start(port: 8080);
-    print('Server is running at ${server.address}');
-    print('\nAvailable endpoints:');
-    print('  GET  /health              - Health check');
-    print('  GET  /api/changes         - Get all changes');
-    print('  GET  /api/changes/{seq}    - Get specific change');
-    print('  POST /api/changes         - Create new change');
-    print('  PUT  /api/changes/{seq}    - Update change');
-    print('  DELETE /api/changes/{seq}  - Delete change');
-    print('  GET  /api/stats           - Get server statistics');
-    print('\nQuery parameters for /api/changes:');
-    print('  ?entityType=Document      - Filter by entity type');
-    print('  ?operation=create         - Filter by operation');
-    print('  ?entityId=uuid            - Filter by entity ID');
-    print('  ?cursor=123               - Start after change seq (exclusive)');
-    print('  ?limit=10                 - Limit number of results');
-    print('\nPress Ctrl+C to stop the server');
+    if (serversToStart.length == validTypes.length) {
+      await launcher.startAllServers();
+      print('All servers started.');
+    } else {
+      for (final type in serversToStart) {
+        final port = type == 'downsyncs'
+            ? 8081
+            : type == 'outsyncs'
+                ? 8082
+                : 8083;
+        await launcher.startServer(type, port);
+        print('$type server started on port $port.');
+      }
+    }
 
-    // Handle shutdown gracefully
+    print('\nPress Ctrl+C to stop the servers');
     ProcessSignal.sigint.watch().listen((_) async {
-      print('\nShutting down server...');
-      await server.stop();
+      print('\nShutting down servers...');
+      await launcher.stopAllServers();
       exit(0);
     });
 
-    // Keep the server running
-    while (server.isRunning) {
+    // Keep the servers running
+    while (true) {
       await Future.delayed(const Duration(seconds: 1));
     }
   } catch (e) {
-    print('Error starting server: $e');
+    print('Error starting servers: $e');
     exit(1);
   }
 }
