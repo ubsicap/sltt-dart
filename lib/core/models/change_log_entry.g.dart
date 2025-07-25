@@ -37,8 +37,13 @@ const ChangeLogEntrySchema = CollectionSchema(
       name: r'operation',
       type: IsarType.string,
     ),
-    r'timestamp': PropertySchema(
+    r'outdatedBy': PropertySchema(
       id: 4,
+      name: r'outdatedBy',
+      type: IsarType.long,
+    ),
+    r'timestamp': PropertySchema(
+      id: 5,
       name: r'timestamp',
       type: IsarType.dateTime,
     )
@@ -94,7 +99,8 @@ void _changeLogEntrySerialize(
   writer.writeString(offsets[1], object.entityId);
   writer.writeString(offsets[2], object.entityType);
   writer.writeString(offsets[3], object.operation);
-  writer.writeDateTime(offsets[4], object.timestamp);
+  writer.writeLong(offsets[4], object.outdatedBy);
+  writer.writeDateTime(offsets[5], object.timestamp);
 }
 
 ChangeLogEntry _changeLogEntryDeserialize(
@@ -108,7 +114,8 @@ ChangeLogEntry _changeLogEntryDeserialize(
     entityId: reader.readString(offsets[1]),
     entityType: reader.readString(offsets[2]),
     operation: reader.readString(offsets[3]),
-    timestamp: reader.readDateTime(offsets[4]),
+    outdatedBy: reader.readLongOrNull(offsets[4]),
+    timestamp: reader.readDateTime(offsets[5]),
   );
   object.id = id;
   return object;
@@ -130,6 +137,8 @@ P _changeLogEntryDeserializeProp<P>(
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
+      return (reader.readLongOrNull(offset)) as P;
+    case 5:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -877,6 +886,80 @@ extension ChangeLogEntryQueryFilter
   }
 
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'outdatedBy',
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'outdatedBy',
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'outdatedBy',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByGreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'outdatedBy',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByLessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'outdatedBy',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'outdatedBy',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
       timestampEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -994,6 +1077,20 @@ extension ChangeLogEntryQuerySortBy
     });
   }
 
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByOutdatedBy() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'outdatedBy', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByOutdatedByDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'outdatedBy', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByTimestamp() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'timestamp', Sort.asc);
@@ -1075,6 +1172,20 @@ extension ChangeLogEntryQuerySortThenBy
     });
   }
 
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByOutdatedBy() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'outdatedBy', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByOutdatedByDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'outdatedBy', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByTimestamp() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'timestamp', Sort.asc);
@@ -1120,6 +1231,13 @@ extension ChangeLogEntryQueryWhereDistinct
   }
 
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct>
+      distinctByOutdatedBy() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'outdatedBy');
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct>
       distinctByTimestamp() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'timestamp');
@@ -1156,6 +1274,12 @@ extension ChangeLogEntryQueryProperty
   QueryBuilder<ChangeLogEntry, String, QQueryOperations> operationProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'operation');
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, int?, QQueryOperations> outdatedByProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'outdatedBy');
     });
   }
 

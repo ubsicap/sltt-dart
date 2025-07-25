@@ -13,6 +13,7 @@ class ChangeLogEntry {
   late DateTime timestamp;
   late String entityId; // UUID or primary key of the entity
   late String dataJson; // JSON-encoded entity data
+  late int? outdatedBy; // id of the change that this entry is outdated by
 
   @ignore
   Map<String, dynamic> get data => jsonDecode(dataJson);
@@ -24,6 +25,7 @@ class ChangeLogEntry {
     required this.timestamp,
     required this.entityId,
     required this.dataJson,
+    this.outdatedBy,
   });
 
   ChangeLogEntry.empty();
@@ -36,6 +38,7 @@ class ChangeLogEntry {
       'timestamp': timestamp.toIso8601String(),
       'entityId': entityId,
       'data': data,
+      'outdatedBy': outdatedBy,
     };
   }
 
@@ -46,6 +49,7 @@ class ChangeLogEntry {
       timestamp: DateTime.parse(json['timestamp'] as String),
       entityId: json['entityId'] as String,
       dataJson: json['data'] as String,
+      outdatedBy: json['outdatedBy'] as int? ?? null,
     );
 
     if (json['id'] != null) {
