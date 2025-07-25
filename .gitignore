@@ -1,2 +1,3 @@
 *.isar.lock
 isar_db/*.isar
+.dart_tool/**
