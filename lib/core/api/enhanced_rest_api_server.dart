@@ -383,8 +383,9 @@ Middleware customLogRequests({required String serverName, required int port}) {
     return (Request request) async {
       final response = await innerHandler(request);
       final timestamp = DateTime.now().toIso8601String();
+      final paddedName = serverName.padLeft(12);
       print(
-          '$timestamp  $serverName:$port  ${request.method}  [${response.statusCode}]  ${request.requestedUri.path}');
+          '$timestamp  $paddedName:$port  ${request.method}  [${response.statusCode}]  ${request.requestedUri.path}');
       return response;
     };
   };
