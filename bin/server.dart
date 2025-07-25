@@ -1,5 +1,6 @@
 import 'dart:io';
 import '../lib/core/server/multi_server_launcher.dart';
+import '../lib/core/server/server_ports.dart';
 
 Future<void> main(List<String> args) async {
   final launcher = MultiServerLauncher.instance;
@@ -24,10 +25,10 @@ Future<void> main(List<String> args) async {
     } else {
       for (final type in serversToStart) {
         final port = type == 'downsyncs'
-            ? 8081
+            ? kDownsyncsPort
             : type == 'outsyncs'
-                ? 8082
-                : 8083;
+                ? kOutsyncsPort
+                : kCloudStoragePort;
         await launcher.startServer(type, port);
         print('$type server started on port $port.');
       }

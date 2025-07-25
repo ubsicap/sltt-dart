@@ -1,8 +1,10 @@
 import '../api/enhanced_rest_api_server.dart';
+import 'server_ports.dart';
 
 class MultiServerLauncher {
   static MultiServerLauncher? _instance;
-  static MultiServerLauncher get instance => _instance ??= MultiServerLauncher._();
+  static MultiServerLauncher get instance =>
+      _instance ??= MultiServerLauncher._();
 
   MultiServerLauncher._();
 
@@ -13,17 +15,20 @@ class MultiServerLauncher {
   Future<void> startAllServers() async {
     print('[MultiServerLauncher] Starting all servers...');
 
-    // Start downsyncs server on port 8081
-    _downsyncsServer = EnhancedRestApiServer(StorageType.downsyncs, 'DownsyncsServer');
-    await _downsyncsServer!.start(port: 8081);
+    // Start downsyncs server on port kDownsyncsPort
+    _downsyncsServer =
+        EnhancedRestApiServer(StorageType.downsyncs, 'DownsyncsServer');
+    await _downsyncsServer!.start(port: kDownsyncsPort);
 
-    // Start outsyncs server on port 8082
-    _outsyncsServer = EnhancedRestApiServer(StorageType.outsyncs, 'OutsyncsServer');
-    await _outsyncsServer!.start(port: 8082);
+    // Start outsyncs server on port kOutsyncsPort
+    _outsyncsServer =
+        EnhancedRestApiServer(StorageType.outsyncs, 'OutsyncsServer');
+    await _outsyncsServer!.start(port: kOutsyncsPort);
 
-    // Start cloud storage server on port 8083
-    _cloudStorageServer = EnhancedRestApiServer(StorageType.cloudStorage, 'CloudStorageServer');
-    await _cloudStorageServer!.start(port: 8083);
+    // Start cloud storage server on port kCloudStoragePort
+    _cloudStorageServer =
+        EnhancedRestApiServer(StorageType.cloudStorage, 'CloudStorageServer');
+    await _cloudStorageServer!.start(port: kCloudStoragePort);
 
     print('[MultiServerLauncher] All servers started successfully');
   }
@@ -32,7 +37,8 @@ class MultiServerLauncher {
     switch (serverType.toLowerCase()) {
       case 'downsyncs':
         if (_downsyncsServer == null) {
-          _downsyncsServer = EnhancedRestApiServer(StorageType.downsyncs, 'DownsyncsServer');
+          _downsyncsServer =
+              EnhancedRestApiServer(StorageType.downsyncs, 'DownsyncsServer');
           await _downsyncsServer!.start(port: port);
         } else {
           print('[MultiServerLauncher] Downsyncs server is already running');
@@ -40,7 +46,8 @@ class MultiServerLauncher {
         break;
       case 'outsyncs':
         if (_outsyncsServer == null) {
-          _outsyncsServer = EnhancedRestApiServer(StorageType.outsyncs, 'OutsyncsServer');
+          _outsyncsServer =
+              EnhancedRestApiServer(StorageType.outsyncs, 'OutsyncsServer');
           await _outsyncsServer!.start(port: port);
         } else {
           print('[MultiServerLauncher] Outsyncs server is already running');
@@ -49,10 +56,12 @@ class MultiServerLauncher {
       case 'cloud':
       case 'cloudstorage':
         if (_cloudStorageServer == null) {
-          _cloudStorageServer = EnhancedRestApiServer(StorageType.cloudStorage, 'CloudStorageServer');
+          _cloudStorageServer = EnhancedRestApiServer(
+              StorageType.cloudStorage, 'CloudStorageServer');
           await _cloudStorageServer!.start(port: port);
         } else {
-          print('[MultiServerLauncher] Cloud storage server is already running');
+          print(
+              '[MultiServerLauncher] Cloud storage server is already running');
         }
         break;
       default:

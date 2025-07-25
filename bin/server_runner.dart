@@ -1,5 +1,6 @@
 import 'dart:io';
 import '../lib/core/server/multi_server_launcher.dart';
+import '../lib/core/server/server_ports.dart';
 import '../lib/core/sync/sync_manager.dart';
 
 void main(List<String> args) async {
@@ -10,7 +11,8 @@ void main(List<String> args) async {
     print('Usage: dart bin/server_runner.dart <command> [options]');
     print('Commands:');
     print('  start-all              - Start all three servers');
-    print('  start <type>           - Start specific server (downsyncs, outsyncs, cloud)');
+    print(
+        '  start <type>           - Start specific server (downsyncs, outsyncs, cloud)');
     print('  stop-all               - Stop all servers');
     print('  stop <type>            - Stop specific server');
     print('  status                 - Show server status');
@@ -28,14 +30,14 @@ void main(List<String> args) async {
       case 'start-all':
         await launcher.startAllServers();
         print('All servers started. Press Ctrl+C to stop.');
-        
+
         // Keep the servers running
         ProcessSignal.sigint.watch().listen((signal) async {
           print('\nShutting down servers...');
           await launcher.stopAllServers();
           exit(0);
         });
-        
+
         // Keep the process alive
         while (true) {
           await Future.delayed(const Duration(seconds: 1));
@@ -47,18 +49,19 @@ void main(List<String> args) async {
           print('Types: downsyncs, outsyncs, cloud');
           return;
         }
-        
+
         final serverType = args[1];
         final port = _getDefaultPort(serverType);
         await launcher.startServer(serverType, port);
-        print('$serverType server started on port $port. Press Ctrl+C to stop.');
-        
+        print(
+            '$serverType server started on port $port. Press Ctrl+C to stop.');
+
         ProcessSignal.sigint.watch().listen((signal) async {
           print('\nShutting down $serverType server...');
           await launcher.stopServer(serverType);
           exit(0);
         });
-        
+
         while (true) {
           await Future.delayed(const Duration(seconds: 1));
         }
@@ -78,11 +81,14 @@ void main(List<String> args) async {
       case 'status':
         final status = launcher.getServerStatus();
         final addresses = launcher.getServerAddresses();
-        
+
         print('Server Status:');
-        print('  Downsyncs: ${status['downsyncs']! ? 'Running' : 'Stopped'} ${addresses['downsyncs'] ?? ''}');
-        print('  Outsyncs: ${status['outsyncs']! ? 'Running' : 'Stopped'} ${addresses['outsyncs'] ?? ''}');
-        print('  Cloud Storage: ${status['cloudStorage']! ? 'Running' : 'Stopped'} ${addresses['cloudStorage'] ?? ''}');
+        print(
+            '  Downsyncs: ${status['downsyncs']! ? 'Running' : 'Stopped'} ${addresses['downsyncs'] ?? ''}');
+        print(
+            '  Outsyncs: ${status['outsyncs']! ? 'Running' : 'Stopped'} ${addresses['outsyncs'] ?? ''}');
+        print(
+            '  Cloud Storage: ${status['cloudStorage']! ? 'Running' : 'Stopped'} ${addresses['cloudStorage'] ?? ''}');
         break;
 
       case 'sync':
@@ -118,7 +124,8 @@ void main(List<String> args) async {
 
       default:
         print('Unknown command: $command');
-        print('Use "dart bin/server_runner.dart" without arguments to see usage.');
+        print(
+            'Use "dart bin/server_runner.dart" without arguments to see usage.');
     }
   } catch (e) {
     print('Error: $e');
@@ -129,12 +136,12 @@ void main(List<String> args) async {
 int _getDefaultPort(String serverType) {
   switch (serverType.toLowerCase()) {
     case 'downsyncs':
-      return 8081;
+      return kDownsyncsPort;
     case 'outsyncs':
-      return 8082;
+      return kOutsyncsPort;
     case 'cloud':
     case 'cloudstorage':
-      return 8083;
+      return kCloudStoragePort;
     default:
       return 8080;
   }

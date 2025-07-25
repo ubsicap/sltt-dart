@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../lib/core/server/multi_server_launcher.dart';
+import '../lib/core/server/server_ports.dart';
 import '../lib/core/sync/sync_manager.dart';
 
 class SyncManagerTester {
@@ -9,9 +10,9 @@ class SyncManagerTester {
   final SyncManager _syncManager = SyncManager.instance;
 
   // API endpoints
-  final String _cloudStorageUrl = 'http://localhost:8083';
-  final String _outsyncsUrl = 'http://localhost:8082';
-  final String _downsyncsUrl = 'http://localhost:8081';
+  final String _cloudStorageUrl = 'http://localhost:$kCloudStoragePort';
+  final String _outsyncsUrl = 'http://localhost:$kOutsyncsPort';
+  final String _downsyncsUrl = 'http://localhost:$kDownsyncsPort';
 
   SyncManagerTester() {
     _dio.options.headers['Content-Type'] = 'application/json';
@@ -54,15 +55,17 @@ class SyncManagerTester {
   Future<void> _startServers() async {
     print('🔧 Starting all servers...');
     await _serverLauncher.startAllServers();
-    
+
     // Wait a moment for servers to fully start
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     // Verify all servers are running
     final status = _serverLauncher.getServerStatus();
     print('Server status: $status');
-    
-    if (!status['downsyncs']! || !status['outsyncs']! || !status['cloudStorage']!) {
+
+    if (!status['downsyncs']! ||
+        !status['outsyncs']! ||
+        !status['cloudStorage']!) {
       throw Exception('Not all servers started successfully');
     }
     print('✅ All servers started successfully\n');
@@ -90,13 +93,13 @@ class SyncManagerTester {
 
     for (final server in servers) {
       print('   Testing ${server['name']} server...');
-      
+
       // Health check
       final healthResponse = await _dio.get('${server['url']}/health');
       if (healthResponse.statusCode != 200) {
         throw Exception('Health check failed for ${server['name']}');
       }
-      
+
       // Create change
       final createResponse = await _dio.post(
         '${server['url']}/api/changes',
@@ -105,7 +108,7 @@ class SyncManagerTester {
       if (createResponse.statusCode != 200) {
         throw Exception('Create change failed for ${server['name']}');
       }
-      
+
       print('   ✅ ${server['name']} server working correctly');
     }
 
@@ -150,7 +153,8 @@ class SyncManagerTester {
     }
 
     print('   ✅ Sync endpoint stored ${storedChanges.length} changes');
-    print('   ✅ Sync endpoint returned ${changesSinceSeq.length} changes since seq 0');
+    print(
+        '   ✅ Sync endpoint returned ${changesSinceSeq.length} changes since seq 0');
     print('✅ Sync endpoint test passed\n');
   }
 
@@ -181,9 +185,11 @@ class SyncManagerTester {
     // Get initial counts
     final outsyncsStatsBefore = await _dio.get('$_outsyncsUrl/api/stats');
     final cloudStatsBefore = await _dio.get('$_cloudStorageUrl/api/stats');
-    
-    final outsyncsCountBefore = outsyncsStatsBefore.data['changeStats']['total'] as int;
-    final cloudCountBefore = cloudStatsBefore.data['changeStats']['total'] as int;
+
+    final outsyncsCountBefore =
+        outsyncsStatsBefore.data['changeStats']['total'] as int;
+    final cloudCountBefore =
+        cloudStatsBefore.data['changeStats']['total'] as int;
 
     print('   Outsyncs changes before: $outsyncsCountBefore');
     print('   Cloud changes before: $cloudCountBefore');
@@ -198,19 +204,23 @@ class SyncManagerTester {
     // Verify results
     final outsyncsStatsAfter = await _dio.get('$_outsyncsUrl/api/stats');
     final cloudStatsAfter = await _dio.get('$_cloudStorageUrl/api/stats');
-    
-    final outsyncsCountAfter = outsyncsStatsAfter.data['changeStats']['total'] as int;
+
+    final outsyncsCountAfter =
+        outsyncsStatsAfter.data['changeStats']['total'] as int;
     final cloudCountAfter = cloudStatsAfter.data['changeStats']['total'] as int;
 
     print('   Outsyncs changes after: $outsyncsCountAfter');
     print('   Cloud changes after: $cloudCountAfter');
 
     if (outsyncResult.syncedChanges.length != testChanges.length) {
-      throw Exception('Expected ${testChanges.length} synced changes, got ${outsyncResult.syncedChanges.length}');
+      throw Exception(
+          'Expected ${testChanges.length} synced changes, got ${outsyncResult.syncedChanges.length}');
     }
 
-    print('   ✅ Successfully outsynced ${outsyncResult.syncedChanges.length} changes');
-    print('   ✅ Deleted ${outsyncResult.deletedLocalChanges.length} local changes');
+    print(
+        '   ✅ Successfully outsynced ${outsyncResult.syncedChanges.length} changes');
+    print(
+        '   ✅ Deleted ${outsyncResult.deletedLocalChanges.length} local changes');
     print('✅ Outsync flow test passed\n');
   }
 
@@ -219,7 +229,8 @@ class SyncManagerTester {
 
     // Get initial downsync count
     final downsyncsStatsBefore = await _dio.get('$_downsyncsUrl/api/stats');
-    final downsyncsCountBefore = downsyncsStatsBefore.data['changeStats']['total'] as int;
+    final downsyncsCountBefore =
+        downsyncsStatsBefore.data['changeStats']['total'] as int;
 
     print('   Downsyncs changes before: $downsyncsCountBefore');
 
@@ -232,10 +243,12 @@ class SyncManagerTester {
 
     // Verify results
     final downsyncsStatsAfter = await _dio.get('$_downsyncsUrl/api/stats');
-    final downsyncsCountAfter = downsyncsStatsAfter.data['changeStats']['total'] as int;
+    final downsyncsCountAfter =
+        downsyncsStatsAfter.data['changeStats']['total'] as int;
 
     print('   Downsyncs changes after: $downsyncsCountAfter');
-    print('   ✅ Successfully downsynced ${downsyncResult.newChanges.length} changes');
+    print(
+        '   ✅ Successfully downsynced ${downsyncResult.newChanges.length} changes');
     print('✅ Downsync flow test passed\n');
   }
 
@@ -278,21 +291,21 @@ class SyncManagerTester {
 
   Future<void> _cleanup() async {
     print('🧹 Cleaning up...');
-    
+
     try {
       await _syncManager.close();
       await _serverLauncher.stopAllServers();
     } catch (e) {
       print('Warning: Cleanup error: $e');
     }
-    
+
     print('✅ Cleanup completed\n');
   }
 }
 
 void main() async {
   final tester = SyncManagerTester();
-  
+
   try {
     await tester.runTests();
   } catch (e) {

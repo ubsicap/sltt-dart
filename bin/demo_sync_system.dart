@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:dio/dio.dart';
 import '../lib/core/server/multi_server_launcher.dart';
+import '../lib/core/server/server_ports.dart';
 import '../lib/core/sync/sync_manager.dart';
 
 class SyncSystemDemo {
@@ -10,9 +11,9 @@ class SyncSystemDemo {
   final Dio _dio = Dio();
 
   // API endpoints
-  final String _cloudStorageUrl = 'http://localhost:8083';
-  final String _outsyncsUrl = 'http://localhost:8082';
-  final String _downsyncsUrl = 'http://localhost:8081';
+  final String _cloudStorageUrl = 'http://localhost:$kCloudStoragePort';
+  final String _outsyncsUrl = 'http://localhost:$kOutsyncsPort';
+  final String _downsyncsUrl = 'http://localhost:$kDownsyncsPort';
 
   SyncSystemDemo() {
     _dio.options.headers['Content-Type'] = 'application/json';
@@ -33,7 +34,7 @@ class SyncSystemDemo {
 
       print('\n🎉 Demo completed successfully!');
       print('Press Ctrl+C to stop all servers and exit.');
-      
+
       // Keep servers running for manual testing
       while (true) {
         await Future.delayed(const Duration(seconds: 1));
@@ -49,10 +50,10 @@ class SyncSystemDemo {
 
     // Start all servers
     await _serverLauncher.startAllServers();
-    
+
     // Wait a moment for servers to fully start
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     // Initialize sync manager
     await _syncManager.initialize();
 
@@ -67,15 +68,27 @@ class SyncSystemDemo {
 
     // Add some initial data to each server
     final servers = [
-      {'name': 'Outsyncs', 'url': _outsyncsUrl, 'description': 'Local changes to be uploaded'},
-      {'name': 'Downsyncs', 'url': _downsyncsUrl, 'description': 'Changes received from cloud'},
-      {'name': 'Cloud Storage', 'url': _cloudStorageUrl, 'description': 'Cloud-based change storage'},
+      {
+        'name': 'Outsyncs',
+        'url': _outsyncsUrl,
+        'description': 'Local changes to be uploaded'
+      },
+      {
+        'name': 'Downsyncs',
+        'url': _downsyncsUrl,
+        'description': 'Changes received from cloud'
+      },
+      {
+        'name': 'Cloud Storage',
+        'url': _cloudStorageUrl,
+        'description': 'Cloud-based change storage'
+      },
     ];
 
     for (int i = 0; i < servers.length; i++) {
       final server = servers[i];
       print('   Adding test data to ${server['name']} server...');
-      
+
       await _dio.post('${server['url']}/api/changes', data: {
         'entityType': 'Document',
         'operation': 'create',
@@ -86,7 +99,7 @@ class SyncSystemDemo {
           'description': server['description'],
         },
       });
-      
+
       print('   ✅ Added demo document to ${server['name']}');
     }
 
@@ -107,7 +120,8 @@ class SyncSystemDemo {
         'entityId': 'demo-doc-1',
         'data': {
           'title': 'Updated Demo Document 1',
-          'content': 'This document was updated and needs to be synced to cloud',
+          'content':
+              'This document was updated and needs to be synced to cloud',
           'lastModified': DateTime.now().toIso8601String(),
         },
       },
@@ -125,7 +139,8 @@ class SyncSystemDemo {
 
     for (final change in outsyncsChanges) {
       await _dio.post('$_outsyncsUrl/api/changes', data: change);
-      print('   ✅ Added change: ${change['operation']} ${change['entityType']}');
+      print(
+          '   ✅ Added change: ${change['operation']} ${change['entityType']}');
     }
 
     print('\n   Status before outsync:');
@@ -133,11 +148,12 @@ class SyncSystemDemo {
 
     print('   Performing outsync...');
     final outsyncResult = await _syncManager.outsyncToCloud();
-    
+
     if (outsyncResult.success) {
       print('   ✅ Outsync successful!');
       print('   📊 Synced ${outsyncResult.syncedChanges.length} changes');
-      print('   🗑️ Cleaned up ${outsyncResult.deletedLocalChanges.length} local changes');
+      print(
+          '   🗑️ Cleaned up ${outsyncResult.deletedLocalChanges.length} local changes');
     } else {
       print('   ❌ Outsync failed: ${outsyncResult.message}');
     }
@@ -160,7 +176,8 @@ class SyncSystemDemo {
         'entityId': 'remote-doc-1',
         'data': {
           'title': 'Remote Document 1',
-          'content': 'This document was created remotely and needs to be downloaded',
+          'content':
+              'This document was created remotely and needs to be downloaded',
           'author': 'Remote User',
           'createdAt': DateTime.now().toIso8601String(),
         },
@@ -179,7 +196,8 @@ class SyncSystemDemo {
 
     for (final change in cloudChanges) {
       await _dio.post('$_cloudStorageUrl/api/changes', data: change);
-      print('   ✅ Added remote change: ${change['operation']} ${change['entityType']}');
+      print(
+          '   ✅ Added remote change: ${change['operation']} ${change['entityType']}');
     }
 
     print('\n   Status before downsync:');
@@ -187,7 +205,7 @@ class SyncSystemDemo {
 
     print('   Performing downsync...');
     final downsyncResult = await _syncManager.downsyncFromCloud();
-    
+
     if (downsyncResult.success) {
       print('   ✅ Downsync successful!');
       print('   📥 Downloaded ${downsyncResult.newChanges.length} new changes');
@@ -223,7 +241,7 @@ class SyncSystemDemo {
 
     print('   Performing full sync (outsync + downsync)...');
     final fullSyncResult = await _syncManager.performFullSync();
-    
+
     if (fullSyncResult.success) {
       print('   ✅ Full sync successful!');
       print('   ⬆️ Outsync: ${fullSyncResult.outsyncResult.message}');
@@ -262,7 +280,7 @@ class SyncSystemDemo {
 
   Future<void> _showFinalStatus() async {
     print('📊 Final System Status:');
-    
+
     // Show detailed stats for each server
     final servers = [
       {'name': 'Outsyncs', 'url': _outsyncsUrl},
@@ -300,7 +318,7 @@ class SyncSystemDemo {
     print('   - Outsyncs Server:     $_outsyncsUrl');
     print('   - Downsyncs Server:   $_downsyncsUrl');
     print('   - Cloud Storage:      $_cloudStorageUrl');
-    
+
     print('\n📚 Available endpoints on each server:');
     print('   GET  /health                  - Health check');
     print('   GET  /api/changes            - Get all changes');
@@ -308,8 +326,10 @@ class SyncSystemDemo {
     print('   POST /api/changes            - Create new change');
     print('   POST /api/changes/sync/{seq} - Sync endpoint');
     print('   GET  /api/stats              - Get statistics');
-    print('   PUT  /api/changes/{seq}      - Update change (not on Cloud Storage)');
-    print('   DELETE /api/changes/{seq}    - Delete change (not on Cloud Storage)');
+    print(
+        '   PUT  /api/changes/{seq}      - Update change (not on Cloud Storage)');
+    print(
+        '   DELETE /api/changes/{seq}    - Delete change (not on Cloud Storage)');
   }
 
   Future<void> cleanup() async {
@@ -326,7 +346,7 @@ class SyncSystemDemo {
 
 void main() async {
   final demo = SyncSystemDemo();
-  
+
   // Set up signal handlers for graceful shutdown
   ProcessSignal.sigint.watch().listen((signal) async {
     print('\n\n🛑 Shutting down...');
