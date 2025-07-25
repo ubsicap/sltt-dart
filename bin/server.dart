@@ -12,10 +12,10 @@ Future<void> main() async {
     print('\nAvailable endpoints:');
     print('  GET  /health              - Health check');
     print('  GET  /api/changes         - Get all changes');
-    print('  GET  /api/changes/{id}    - Get specific change');
+    print('  GET  /api/changes/{seq}    - Get specific change');
     print('  POST /api/changes         - Create new change');
-    print('  PUT  /api/changes/{id}    - Update change');
-    print('  DELETE /api/changes/{id}  - Delete change');
+    print('  PUT  /api/changes/{seq}    - Update change');
+    print('  DELETE /api/changes/{seq}  - Delete change');
     print('  GET  /api/stats           - Get server statistics');
     print('\nQuery parameters for /api/changes:');
     print('  ?entityType=Document      - Filter by entity type');

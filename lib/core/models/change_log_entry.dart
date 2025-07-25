@@ -5,7 +5,7 @@ part 'change_log_entry.g.dart';
 
 @Collection()
 class ChangeLogEntry {
-  Id id = Isar.autoIncrement;
+  Id seq = Isar.autoIncrement;
 
   @Index()
   late String entityType; // e.g., 'Document', 'Passage', 'Portion'
@@ -32,7 +32,7 @@ class ChangeLogEntry {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      'seq': seq,
       'entityType': entityType,
       'operation': operation,
       'timestamp': timestamp.toIso8601String(),
@@ -52,8 +52,8 @@ class ChangeLogEntry {
       outdatedBy: json['outdatedBy'] as int? ?? null,
     );
 
-    if (json['id'] != null) {
-      entry.id = json['id'] as int;
+    if (json['seq'] != null) {
+      entry.seq = json['seq'] as int;
     }
 
     return entry;

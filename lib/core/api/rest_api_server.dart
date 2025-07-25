@@ -44,10 +44,10 @@ class RestApiServer {
 
     // Change log endpoints
     router.get('/api/changes', _handleGetChanges);
-    router.get('/api/changes/<id>', _handleGetChange);
+    router.get('/api/changes/<seq>', _handleGetChange);
     router.post('/api/changes', _handleCreateChange);
-    router.put('/api/changes/<id>', _handleUpdateChange);
-    router.delete('/api/changes/<id>', _handleDeleteChange);
+    router.put('/api/changes/<seq>', _handleUpdateChange);
+    router.delete('/api/changes/<seq>', _handleDeleteChange);
 
     // Statistics
     router.get('/api/stats', _handleGetStats);
@@ -117,7 +117,7 @@ class RestApiServer {
       // Add cursor to response if there are more changes available
       if (changes.isNotEmpty && (limit == null || changes.length == limit)) {
         // Check if there are more changes after this batch
-        final lastChangeId = changes.last['id'] as int;
+        final lastChangeId = changes.last['seq'] as int;
         final moreChanges = await _storage.getChangesWithCursor(
           cursor: lastChangeId,
           limit: 1,
@@ -137,15 +137,15 @@ class RestApiServer {
     }
   }
 
-  // Get a specific change by ID
-  Future<Response> _handleGetChange(Request request, String id) async {
+  // Get a specific change by seq
+  Future<Response> _handleGetChange(Request request, String seq) async {
     try {
-      final changeId = int.tryParse(id);
-      if (changeId == null) {
-        return _errorResponse('Invalid change ID format', 400);
+      final changeSeq = int.tryParse(seq);
+      if (changeSeq == null) {
+        return _errorResponse('Invalid change seq format', 400);
       }
 
-      final change = await _storage.getChange(changeId);
+      final change = await _storage.getChange(changeSeq);
       if (change == null) {
         return _errorResponse('Change not found', 404);
       }
@@ -184,17 +184,17 @@ class RestApiServer {
   }
 
   // Update an existing change
-  Future<Response> _handleUpdateChange(Request request, String id) async {
+  Future<Response> _handleUpdateChange(Request request, String seq) async {
     try {
-      final changeId = int.tryParse(id);
-      if (changeId == null) {
-        return _errorResponse('Invalid change ID format', 400);
+      final changeSeq = int.tryParse(seq);
+      if (changeSeq == null) {
+        return _errorResponse('Invalid change seq format', 400);
       }
 
       final body = await request.readAsString();
       final data = jsonDecode(body) as Map<String, dynamic>;
 
-      final updated = await _storage.updateChange(changeId, data);
+      final updated = await _storage.updateChange(changeSeq, data);
 
       return Response.ok(
         jsonEncode(updated),
@@ -206,14 +206,14 @@ class RestApiServer {
   }
 
   // Delete a change
-  Future<Response> _handleDeleteChange(Request request, String id) async {
+  Future<Response> _handleDeleteChange(Request request, String seq) async {
     try {
-      final changeId = int.tryParse(id);
-      if (changeId == null) {
-        return _errorResponse('Invalid change ID format', 400);
+      final changeSeq = int.tryParse(seq);
+      if (changeSeq == null) {
+        return _errorResponse('Invalid change seq format', 400);
       }
 
-      final deleted = await _storage.deleteChange(changeId);
+      final deleted = await _storage.deleteChange(changeSeq);
 
       if (deleted) {
         return Response.ok(

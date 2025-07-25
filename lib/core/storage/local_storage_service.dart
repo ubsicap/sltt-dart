@@ -49,8 +49,8 @@ class LocalStorageService {
     return change.toJson();
   }
 
-  Future<ChangeLogEntry?> getChange(int id) async {
-    return await _isar.changeLogEntrys.get(id);
+  Future<ChangeLogEntry?> getChange(int seq) async {
+    return await _isar.changeLogEntrys.get(seq);
   }
 
   Future<List<ChangeLogEntry>> getAllChanges() async {
@@ -91,8 +91,8 @@ class LocalStorageService {
   }
 
   Future<Map<String, dynamic>?> updateChange(
-      int id, Map<String, dynamic> data) async {
-    final existing = await _isar.changeLogEntrys.get(id);
+      int seq, Map<String, dynamic> data) async {
+    final existing = await _isar.changeLogEntrys.get(seq);
     if (existing == null) return null;
     if (data.containsKey('entityType'))
       existing.entityType = data['entityType'];
@@ -107,9 +107,9 @@ class LocalStorageService {
     return existing.toJson();
   }
 
-  Future<bool> deleteChange(int id) async {
+  Future<bool> deleteChange(int seq) async {
     return await _isar.writeTxn(() async {
-      return await _isar.changeLogEntrys.delete(id);
+      return await _isar.changeLogEntrys.delete(seq);
     });
   }
 
@@ -160,7 +160,7 @@ class LocalStorageService {
     int? limit,
   }) async {
     var query = _isar.changeLogEntrys.where();
-    var results = await query.idGreaterThan(cursor ?? 0).findAll();
+    var results = await query.seqGreaterThan(cursor ?? 0).findAll();
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
     }

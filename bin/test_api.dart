@@ -68,8 +68,8 @@ class ApiTester {
     }
 
     final createdChange = createResponse.data;
-    final changeId = createdChange['id'];
-    print('   ✅ Change created with ID: $changeId');
+    final changeId = createdChange['seq'];
+    print('   ✅ Change created with seq: $changeId');
 
     // Get the created change
     print('   Fetching created change...');
@@ -167,7 +167,7 @@ class ApiTester {
     final createResponse2 =
         await _dio.post('$baseUrl/api/changes', data: createData2);
     final createdChange2 = createResponse2.data;
-    final changeId2 = createdChange2['id'];
+    final changeId2 = createdChange2['seq'];
 
     // Test limit parameter
     final limitResponse = await _dio.get('$baseUrl/api/changes?limit=1');
@@ -242,13 +242,13 @@ class ApiTester {
   Future<void> _testErrorHandling() async {
     print('\n🚫 Testing error handling...');
 
-    // Test invalid change ID
+    // Test invalid change seq
     try {
-      await _dio.get('$baseUrl/api/changes/invalid-id');
-      throw Exception('Expected 400 error for invalid ID');
+      await _dio.get('$baseUrl/api/changes/invalid-seq');
+      throw Exception('Expected 400 error for invalid seq');
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 400) {
-        print('   ✅ Invalid ID error handled correctly');
+        print('   ✅ Invalid seq error handled correctly');
       } else {
         rethrow;
       }
