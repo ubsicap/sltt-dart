@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../storage/shared_storage_service.dart';
+import '../server/server_ports.dart';
 
 class SyncManager {
   static SyncManager? _instance;
@@ -8,11 +9,13 @@ class SyncManager {
   SyncManager._();
 
   final Dio _dio = Dio();
-  final OutsyncsStorageService _outsyncsStorage = OutsyncsStorageService.instance;
-  final DownsyncsStorageService _downsyncsStorage = DownsyncsStorageService.instance;
+  final OutsyncsStorageService _outsyncsStorage =
+      OutsyncsStorageService.instance;
+  final DownsyncsStorageService _downsyncsStorage =
+      DownsyncsStorageService.instance;
 
   // API endpoints
-  final String _cloudStorageUrl = 'http://localhost:8083';
+  final String _cloudStorageUrl = 'http://localhost:$kCloudStoragePort';
 
   bool _initialized = false;
 
@@ -37,7 +40,7 @@ class SyncManager {
 
       // Get all changes from outsyncs storage
       final changes = await _outsyncsStorage.getChangesWithCursor();
-      
+
       if (changes.isEmpty) {
         print('[SyncManager] No changes to outsync');
         return OutsyncResult(
@@ -59,12 +62,13 @@ class SyncManager {
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
         final storedChanges = responseData['storedChanges'] as List<dynamic>;
-        
+
         // Delete successfully synced changes from outsyncs storage
         final seqsToDelete = changes.map((c) => c['seq'] as int).toList();
         final deletedCount = await _outsyncsStorage.deleteChanges(seqsToDelete);
 
-        print('[SyncManager] Successfully outsynced ${storedChanges.length} changes, deleted $deletedCount local changes');
+        print(
+            '[SyncManager] Successfully outsynced ${storedChanges.length} changes, deleted $deletedCount local changes');
 
         return OutsyncResult(
           success: true,
@@ -103,7 +107,8 @@ class SyncManager {
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        final changesSinceSeq = responseData['changesSinceSeq'] as List<dynamic>;
+        final changesSinceSeq =
+            responseData['changesSinceSeq'] as List<dynamic>;
 
         if (changesSinceSeq.isEmpty) {
           print('[SyncManager] No new changes to downsync');
@@ -118,7 +123,8 @@ class SyncManager {
         final newChanges = changesSinceSeq.cast<Map<String, dynamic>>();
         final storedChanges = await _downsyncsStorage.createChanges(newChanges);
 
-        print('[SyncManager] Successfully downsynced ${storedChanges.length} changes');
+        print(
+            '[SyncManager] Successfully downsynced ${storedChanges.length} changes');
 
         return DownsyncResult(
           success: true,
@@ -174,7 +180,8 @@ class SyncManager {
         outsyncsCount: outsyncsCount,
         downsyncsCount: downsyncsCount,
         cloudCount: cloudCount,
-        lastSyncTime: DateTime.now(), // In a real implementation, this would be persisted
+        lastSyncTime:
+            DateTime.now(), // In a real implementation, this would be persisted
       );
     } catch (e) {
       print('[SyncManager] Failed to get sync status: $e');
@@ -212,11 +219,11 @@ class OutsyncResult {
   });
 
   Map<String, dynamic> toJson() => {
-    'success': success,
-    'syncedChanges': syncedChanges,
-    'deletedLocalChanges': deletedLocalChanges,
-    'message': message,
-  };
+        'success': success,
+        'syncedChanges': syncedChanges,
+        'deletedLocalChanges': deletedLocalChanges,
+        'message': message,
+      };
 }
 
 class DownsyncResult {
@@ -231,10 +238,10 @@ class DownsyncResult {
   });
 
   Map<String, dynamic> toJson() => {
-    'success': success,
-    'newChanges': newChanges,
-    'message': message,
-  };
+        'success': success,
+        'newChanges': newChanges,
+        'message': message,
+      };
 }
 
 class FullSyncResult {
@@ -249,10 +256,10 @@ class FullSyncResult {
   });
 
   Map<String, dynamic> toJson() => {
-    'outsyncResult': outsyncResult.toJson(),
-    'downsyncResult': downsyncResult.toJson(),
-    'success': success,
-  };
+        'outsyncResult': outsyncResult.toJson(),
+        'downsyncResult': downsyncResult.toJson(),
+        'success': success,
+      };
 }
 
 class SyncStatus {
@@ -269,9 +276,9 @@ class SyncStatus {
   });
 
   Map<String, dynamic> toJson() => {
-    'outsyncsCount': outsyncsCount,
-    'downsyncsCount': downsyncsCount,
-    'cloudCount': cloudCount,
-    'lastSyncTime': lastSyncTime.toIso8601String(),
-  };
+        'outsyncsCount': outsyncsCount,
+        'downsyncsCount': downsyncsCount,
+        'cloudCount': cloudCount,
+        'lastSyncTime': lastSyncTime.toIso8601String(),
+      };
 }
