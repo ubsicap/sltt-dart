@@ -21,7 +21,7 @@ Future<void> main() async {
     print('  ?entityType=Document      - Filter by entity type');
     print('  ?operation=create         - Filter by operation');
     print('  ?entityId=uuid            - Filter by entity ID');
-    print('  ?cursor=123               - Start after change ID (exclusive)');
+    print('  ?cursor=123               - Start after change seq (exclusive)');
     print('  ?limit=10                 - Limit number of results');
     print('\nPress Ctrl+C to stop the server');
 
