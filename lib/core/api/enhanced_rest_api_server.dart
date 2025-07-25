@@ -11,7 +11,7 @@ enum StorageType { outsyncs, downsyncs, cloudStorage }
 class EnhancedRestApiServer {
   final StorageType storageType;
   final String serverName;
-  
+
   HttpServer? _server;
   bool _initialized = false;
 
@@ -34,7 +34,7 @@ class EnhancedRestApiServer {
     // Add CORS and logging middleware
     final handler = Pipeline()
         .addMiddleware(corsHeaders())
-        .addMiddleware(logRequests())
+        .addMiddleware(customLogRequests(serverName: serverName, port: port))
         .addHandler(router);
 
     _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
@@ -70,7 +70,7 @@ class EnhancedRestApiServer {
     router.get('/api/changes', _handleGetChanges);
     router.get('/api/changes/<seq>', _handleGetChange);
     router.post('/api/changes', _handleCreateChange);
-    
+
     // Sync endpoint - POST /changes/sync/{seq}
     router.post('/api/changes/sync/<seq>', _handleSyncChanges);
 
@@ -224,7 +224,7 @@ class EnhancedRestApiServer {
 
       final body = await request.readAsString();
       List<Map<String, dynamic>> newChanges = [];
-      
+
       if (body.isNotEmpty) {
         final data = jsonDecode(body);
         if (data is List) {
@@ -251,7 +251,8 @@ class EnhancedRestApiServer {
 
       // Get changes since the provided seq
       List<Map<String, dynamic>> changesSinceSeq = [];
-      if (storageType == StorageType.cloudStorage || storageType == StorageType.outsyncs) {
+      if (storageType == StorageType.cloudStorage ||
+          storageType == StorageType.outsyncs) {
         changesSinceSeq = await _storage!.getChangesSince(lastSeq);
       } else {
         // For downsyncs, use cursor-based approach
@@ -374,4 +375,17 @@ class EnhancedRestApiServer {
 
   String? get address =>
       _server != null ? 'http://localhost:${_server!.port}' : null;
+}
+
+// Custom logging middleware
+Middleware customLogRequests({required String serverName, required int port}) {
+  return (Handler innerHandler) {
+    return (Request request) async {
+      final response = await innerHandler(request);
+      final timestamp = DateTime.now().toIso8601String();
+      print(
+          '$timestamp  $serverName:$port  ${request.method}  [${response.statusCode}]  ${request.requestedUri.path}');
+      return response;
+    };
+  };
 }

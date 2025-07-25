@@ -17,17 +17,16 @@ class MultiServerLauncher {
 
     // Start downsyncs server on port kDownsyncsPort
     _downsyncsServer =
-        EnhancedRestApiServer(StorageType.downsyncs, 'DownsyncsServer');
+        EnhancedRestApiServer(StorageType.downsyncs, 'downsyncs');
     await _downsyncsServer!.start(port: kDownsyncsPort);
 
     // Start outsyncs server on port kOutsyncsPort
-    _outsyncsServer =
-        EnhancedRestApiServer(StorageType.outsyncs, 'OutsyncsServer');
+    _outsyncsServer = EnhancedRestApiServer(StorageType.outsyncs, 'outsyncs');
     await _outsyncsServer!.start(port: kOutsyncsPort);
 
     // Start cloud storage server on port kCloudStoragePort
     _cloudStorageServer =
-        EnhancedRestApiServer(StorageType.cloudStorage, 'CloudStorageServer');
+        EnhancedRestApiServer(StorageType.cloudStorage, 'cloudStorage');
     await _cloudStorageServer!.start(port: kCloudStoragePort);
 
     print('[MultiServerLauncher] All servers started successfully');
@@ -38,7 +37,7 @@ class MultiServerLauncher {
       case 'downsyncs':
         if (_downsyncsServer == null) {
           _downsyncsServer =
-              EnhancedRestApiServer(StorageType.downsyncs, 'DownsyncsServer');
+              EnhancedRestApiServer(StorageType.downsyncs, 'downsyncs');
           await _downsyncsServer!.start(port: port);
         } else {
           print('[MultiServerLauncher] Downsyncs server is already running');
@@ -47,7 +46,7 @@ class MultiServerLauncher {
       case 'outsyncs':
         if (_outsyncsServer == null) {
           _outsyncsServer =
-              EnhancedRestApiServer(StorageType.outsyncs, 'OutsyncsServer');
+              EnhancedRestApiServer(StorageType.outsyncs, 'outsyncs');
           await _outsyncsServer!.start(port: port);
         } else {
           print('[MultiServerLauncher] Outsyncs server is already running');
@@ -56,8 +55,8 @@ class MultiServerLauncher {
       case 'cloud':
       case 'cloudstorage':
         if (_cloudStorageServer == null) {
-          _cloudStorageServer = EnhancedRestApiServer(
-              StorageType.cloudStorage, 'CloudStorageServer');
+          _cloudStorageServer =
+              EnhancedRestApiServer(StorageType.cloudStorage, 'cloudStorage');
           await _cloudStorageServer!.start(port: port);
         } else {
           print(
