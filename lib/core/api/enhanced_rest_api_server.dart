@@ -4,25 +4,30 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
-import '../storage/local_storage_service.dart';
+import '../storage/shared_storage_service.dart';
 
-class RestApiServer {
-  static RestApiServer? _instance;
-  static RestApiServer get instance => _instance ??= RestApiServer._();
+enum StorageType { upsyncs, downsyncs, cloudStorage }
 
-  RestApiServer._();
-
+class EnhancedRestApiServer {
+  final StorageType storageType;
+  final String serverName;
+  
   HttpServer? _server;
-  final LocalStorageService _storage = LocalStorageService.instance;
+  bool _initialized = false;
 
-  Future<void> start({int port = 8080}) async {
+  // Storage service based on type
+  BaseStorageService? _storage;
+
+  EnhancedRestApiServer(this.storageType, this.serverName);
+
+  Future<void> start({required int port}) async {
     if (_server != null) {
-      print('[RestAPI] Server is already running');
+      print('[$serverName] Server is already running');
       return;
     }
 
-    // Initialize dependencies
-    await _storage.initialize();
+    // Initialize the appropriate storage service
+    await _initializeStorage();
 
     final router = _buildRouter();
 
@@ -33,7 +38,26 @@ class RestApiServer {
         .addHandler(router);
 
     _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
-    print('[RestAPI] Server started on http://localhost:$port');
+    print('[$serverName] Server started on http://localhost:$port');
+  }
+
+  Future<void> _initializeStorage() async {
+    if (_initialized) return;
+
+    switch (storageType) {
+      case StorageType.upsyncs:
+        _storage = UpsyncsStorageService.instance;
+        break;
+      case StorageType.downsyncs:
+        _storage = DownsyncsStorageService.instance;
+        break;
+      case StorageType.cloudStorage:
+        _storage = CloudStorageService.instance;
+        break;
+    }
+
+    await _storage!.initialize();
+    _initialized = true;
   }
 
   Router _buildRouter() {
@@ -47,11 +71,15 @@ class RestApiServer {
     router.get('/api/changes/<seq>', _handleGetChange);
     router.post('/api/changes', _handleCreateChange);
     
-    // Sync endpoint - POST /api/changes/sync/{seq}
+    // Sync endpoint - POST /changes/sync/{seq}
     router.post('/api/changes/sync/<seq>', _handleSyncChanges);
-    
-    router.put('/api/changes/<seq>', _handleUpdateChange);
-    router.delete('/api/changes/<seq>', _handleDeleteChange);
+
+    // Conditional endpoints based on storage type
+    if (storageType != StorageType.cloudStorage) {
+      // Allow PUT and DELETE for upsyncs and downsyncs
+      router.put('/api/changes/<seq>', _handleUpdateChange);
+      router.delete('/api/changes/<seq>', _handleDeleteChange);
+    }
 
     // Statistics
     router.get('/api/stats', _handleGetStats);
@@ -68,7 +96,8 @@ class RestApiServer {
       jsonEncode({
         'status': 'healthy',
         'timestamp': DateTime.now().toIso8601String(),
-        'server': 'flutter-2-local-storage',
+        'server': serverName,
+        'storageType': storageType.toString(),
       }),
       headers: {'Content-Type': 'application/json'},
     );
@@ -77,9 +106,6 @@ class RestApiServer {
   // Get all changes or filter by query parameters
   Future<Response> _handleGetChanges(Request request) async {
     try {
-      // final entityType = request.url.queryParameters['entityType'];
-      // final operation = request.url.queryParameters['operation'];
-      // final entityId = request.url.queryParameters['entityId'];
       final cursorParam = request.url.queryParameters['cursor'];
       final limitParam = request.url.queryParameters['limit'];
 
@@ -106,7 +132,7 @@ class RestApiServer {
       }
 
       // Get changes with cursor-based pagination
-      final changes = await _storage.getChangesWithCursor(
+      final changes = await _storage!.getChangesWithCursor(
         cursor: cursor,
         limit: limit,
       );
@@ -122,7 +148,7 @@ class RestApiServer {
       if (changes.isNotEmpty && (limit == null || changes.length == limit)) {
         // Check if there are more changes after this batch
         final lastChangeId = changes.last['seq'] as int;
-        final moreChanges = await _storage.getChangesWithCursor(
+        final moreChanges = await _storage!.getChangesWithCursor(
           cursor: lastChangeId,
           limit: 1,
         );
@@ -149,13 +175,13 @@ class RestApiServer {
         return _errorResponse('Invalid change seq format', 400);
       }
 
-      final change = await _storage.getChange(changeSeq);
+      final change = await _storage!.getChange(changeSeq);
       if (change == null) {
         return _errorResponse('Change not found', 404);
       }
 
       return Response.ok(
-        jsonEncode(change),
+        jsonEncode(change.toJson()),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
@@ -176,7 +202,7 @@ class RestApiServer {
         'data': Map<String, dynamic>.from(data['data'] ?? {}),
       };
 
-      final created = await _storage.createChange(changeData);
+      final created = await _storage!.createChange(changeData);
 
       return Response.ok(
         jsonEncode(created),
@@ -218,13 +244,19 @@ class RestApiServer {
             'entityId': changeData['entityId'] as String,
             'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
           };
-          final created = await _storage.createChange(changeToStore);
+          final created = await _storage!.createChange(changeToStore);
           storedChanges.add(created);
         }
       }
 
       // Get changes since the provided seq
-      final changesSinceSeq = await _storage.getChangesWithCursor(cursor: lastSeq);
+      List<Map<String, dynamic>> changesSinceSeq = [];
+      if (storageType == StorageType.cloudStorage || storageType == StorageType.upsyncs) {
+        changesSinceSeq = await _storage!.getChangesSince(lastSeq);
+      } else {
+        // For downsyncs, use cursor-based approach
+        changesSinceSeq = await _storage!.getChangesWithCursor(cursor: lastSeq);
+      }
 
       return Response.ok(
         jsonEncode({
@@ -240,7 +272,7 @@ class RestApiServer {
     }
   }
 
-  // Update an existing change
+  // Update an existing change (not available for cloud storage)
   Future<Response> _handleUpdateChange(Request request, String seq) async {
     try {
       final changeSeq = int.tryParse(seq);
@@ -251,7 +283,7 @@ class RestApiServer {
       final body = await request.readAsString();
       final data = jsonDecode(body) as Map<String, dynamic>;
 
-      final updated = await _storage.updateChange(changeSeq, data);
+      final updated = await _storage!.updateChange(changeSeq, data);
 
       return Response.ok(
         jsonEncode(updated),
@@ -262,7 +294,7 @@ class RestApiServer {
     }
   }
 
-  // Delete a change
+  // Delete a change (not available for cloud storage)
   Future<Response> _handleDeleteChange(Request request, String seq) async {
     try {
       final changeSeq = int.tryParse(seq);
@@ -270,7 +302,7 @@ class RestApiServer {
         return _errorResponse('Invalid change seq format', 400);
       }
 
-      final deleted = await _storage.deleteChange(changeSeq);
+      final deleted = await _storage!.deleteChange(changeSeq);
 
       if (deleted) {
         return Response.ok(
@@ -288,14 +320,15 @@ class RestApiServer {
   // Get statistics
   Future<Response> _handleGetStats(Request request) async {
     try {
-      final changeStats = await _storage.getChangeStats();
-      final entityTypeStats = await _storage.getEntityTypeStats();
+      final changeStats = await _storage!.getChangeStats();
+      final entityTypeStats = await _storage!.getEntityTypeStats();
 
       return Response.ok(
         jsonEncode({
           'changeStats': changeStats,
           'entityTypeStats': entityTypeStats,
           'timestamp': DateTime.now().toIso8601String(),
+          'storageType': storageType.toString(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -319,6 +352,7 @@ class RestApiServer {
       body: jsonEncode({
         'error': message,
         'timestamp': DateTime.now().toIso8601String(),
+        'server': serverName,
       }),
       headers: {'Content-Type': 'application/json'},
     );
@@ -328,10 +362,12 @@ class RestApiServer {
     if (_server != null) {
       await _server!.close();
       _server = null;
-      print('[RestAPI] Server stopped');
+      print('[$serverName] Server stopped');
     }
 
-    await _storage.close();
+    if (_initialized) {
+      await _storage!.close();
+    }
   }
 
   bool get isRunning => _server != null;

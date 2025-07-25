@@ -1,2 +1,2 @@
 *.isar.lock
-isar_db/local_storage.isar
+isar_db/*.isar

@@ -1,0 +1,344 @@
+import 'dart:io';
+import 'dart:async';
+import 'package:dio/dio.dart';
+import '../lib/core/server/multi_server_launcher.dart';
+import '../lib/core/sync/sync_manager.dart';
+
+class SyncSystemDemo {
+  final MultiServerLauncher _serverLauncher = MultiServerLauncher.instance;
+  final SyncManager _syncManager = SyncManager.instance;
+  final Dio _dio = Dio();
+
+  // API endpoints
+  final String _cloudStorageUrl = 'http://localhost:8083';
+  final String _upsyncsUrl = 'http://localhost:8082';
+  final String _downsyncsUrl = 'http://localhost:8081';
+
+  SyncSystemDemo() {
+    _dio.options.headers['Content-Type'] = 'application/json';
+    _dio.options.connectTimeout = const Duration(seconds: 5);
+    _dio.options.receiveTimeout = const Duration(seconds: 10);
+  }
+
+  Future<void> runDemo() async {
+    print('🚀 Starting Sync System Demo\n');
+
+    try {
+      await _setupSystem();
+      await _demonstrateBasicOperations();
+      await _demonstrateUpsyncFlow();
+      await _demonstrateDownsyncFlow();
+      await _demonstrateFullSyncFlow();
+      await _showFinalStatus();
+
+      print('\n🎉 Demo completed successfully!');
+      print('Press Ctrl+C to stop all servers and exit.');
+      
+      // Keep servers running for manual testing
+      while (true) {
+        await Future.delayed(const Duration(seconds: 1));
+      }
+    } catch (e) {
+      print('\n❌ Demo failed: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _setupSystem() async {
+    print('🔧 Setting up the sync system...');
+
+    // Start all servers
+    await _serverLauncher.startAllServers();
+    
+    // Wait a moment for servers to fully start
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // Initialize sync manager
+    await _syncManager.initialize();
+
+    // Verify all servers are running
+    final status = _serverLauncher.getServerStatus();
+    print('✅ Server status: $status');
+    print('✅ Sync system ready!\n');
+  }
+
+  Future<void> _demonstrateBasicOperations() async {
+    print('📝 Demonstrating basic operations on each server...');
+
+    // Add some initial data to each server
+    final servers = [
+      {'name': 'Upsyncs', 'url': _upsyncsUrl, 'description': 'Local changes to be uploaded'},
+      {'name': 'Downsyncs', 'url': _downsyncsUrl, 'description': 'Changes received from cloud'},
+      {'name': 'Cloud Storage', 'url': _cloudStorageUrl, 'description': 'Cloud-based change storage'},
+    ];
+
+    for (int i = 0; i < servers.length; i++) {
+      final server = servers[i];
+      print('   Adding test data to ${server['name']} server...');
+      
+      await _dio.post('${server['url']}/api/changes', data: {
+        'entityType': 'Document',
+        'operation': 'create',
+        'entityId': 'demo-doc-${i + 1}',
+        'data': {
+          'title': 'Demo Document ${i + 1}',
+          'content': 'This is a demo document stored in ${server['name']}',
+          'description': server['description'],
+        },
+      });
+      
+      print('   ✅ Added demo document to ${server['name']}');
+    }
+
+    await _showCurrentStatus();
+    print('✅ Basic operations completed\n');
+  }
+
+  Future<void> _demonstrateUpsyncFlow() async {
+    print('⬆️ Demonstrating upsync flow...');
+    print('   This will sync changes from Upsyncs to Cloud Storage\n');
+
+    // Add more changes to upsyncs to demonstrate the flow
+    print('   Adding additional changes to Upsyncs...');
+    final upsyncsChanges = [
+      {
+        'entityType': 'Document',
+        'operation': 'update',
+        'entityId': 'demo-doc-1',
+        'data': {
+          'title': 'Updated Demo Document 1',
+          'content': 'This document was updated and needs to be synced to cloud',
+          'lastModified': DateTime.now().toIso8601String(),
+        },
+      },
+      {
+        'entityType': 'User',
+        'operation': 'create',
+        'entityId': 'user-123',
+        'data': {
+          'name': 'John Doe',
+          'email': 'john.doe@example.com',
+          'role': 'editor',
+        },
+      },
+    ];
+
+    for (final change in upsyncsChanges) {
+      await _dio.post('$_upsyncsUrl/api/changes', data: change);
+      print('   ✅ Added change: ${change['operation']} ${change['entityType']}');
+    }
+
+    print('\n   Status before upsync:');
+    await _showCurrentStatus();
+
+    print('   Performing upsync...');
+    final upsyncResult = await _syncManager.upsyncToCloud();
+    
+    if (upsyncResult.success) {
+      print('   ✅ Upsync successful!');
+      print('   📊 Synced ${upsyncResult.syncedChanges.length} changes');
+      print('   🗑️ Cleaned up ${upsyncResult.deletedLocalChanges.length} local changes');
+    } else {
+      print('   ❌ Upsync failed: ${upsyncResult.message}');
+    }
+
+    print('\n   Status after upsync:');
+    await _showCurrentStatus();
+    print('✅ Upsync flow demonstration completed\n');
+  }
+
+  Future<void> _demonstrateDownsyncFlow() async {
+    print('⬇️ Demonstrating downsync flow...');
+    print('   This will sync changes from Cloud Storage to Downsyncs\n');
+
+    // Add some changes directly to cloud storage to simulate remote changes
+    print('   Simulating remote changes in Cloud Storage...');
+    final cloudChanges = [
+      {
+        'entityType': 'Document',
+        'operation': 'create',
+        'entityId': 'remote-doc-1',
+        'data': {
+          'title': 'Remote Document 1',
+          'content': 'This document was created remotely and needs to be downloaded',
+          'author': 'Remote User',
+          'createdAt': DateTime.now().toIso8601String(),
+        },
+      },
+      {
+        'entityType': 'Project',
+        'operation': 'create',
+        'entityId': 'project-456',
+        'data': {
+          'name': 'Remote Project',
+          'description': 'A project created in the cloud',
+          'status': 'active',
+        },
+      },
+    ];
+
+    for (final change in cloudChanges) {
+      await _dio.post('$_cloudStorageUrl/api/changes', data: change);
+      print('   ✅ Added remote change: ${change['operation']} ${change['entityType']}');
+    }
+
+    print('\n   Status before downsync:');
+    await _showCurrentStatus();
+
+    print('   Performing downsync...');
+    final downsyncResult = await _syncManager.downsyncFromCloud();
+    
+    if (downsyncResult.success) {
+      print('   ✅ Downsync successful!');
+      print('   📥 Downloaded ${downsyncResult.newChanges.length} new changes');
+    } else {
+      print('   ❌ Downsync failed: ${downsyncResult.message}');
+    }
+
+    print('\n   Status after downsync:');
+    await _showCurrentStatus();
+    print('✅ Downsync flow demonstration completed\n');
+  }
+
+  Future<void> _demonstrateFullSyncFlow() async {
+    print('🔄 Demonstrating full sync flow...');
+    print('   This will perform both upsync and downsync operations\n');
+
+    // Add one more change to upsyncs
+    await _dio.post('$_upsyncsUrl/api/changes', data: {
+      'entityType': 'Settings',
+      'operation': 'update',
+      'entityId': 'app-settings',
+      'data': {
+        'theme': 'dark',
+        'language': 'en',
+        'autoSync': true,
+        'lastUpdated': DateTime.now().toIso8601String(),
+      },
+    });
+    print('   ✅ Added final change to Upsyncs');
+
+    print('\n   Status before full sync:');
+    await _showCurrentStatus();
+
+    print('   Performing full sync (upsync + downsync)...');
+    final fullSyncResult = await _syncManager.performFullSync();
+    
+    if (fullSyncResult.success) {
+      print('   ✅ Full sync successful!');
+      print('   ⬆️ Upsync: ${fullSyncResult.upsyncResult.message}');
+      print('   ⬇️ Downsync: ${fullSyncResult.downsyncResult.message}');
+    } else {
+      print('   ❌ Full sync failed');
+      print('   ⬆️ Upsync: ${fullSyncResult.upsyncResult.message}');
+      print('   ⬇️ Downsync: ${fullSyncResult.downsyncResult.message}');
+    }
+
+    print('\n   Status after full sync:');
+    await _showCurrentStatus();
+    print('✅ Full sync flow demonstration completed\n');
+  }
+
+  Future<void> _showCurrentStatus() async {
+    try {
+      final responses = await Future.wait([
+        _dio.get('$_upsyncsUrl/api/stats'),
+        _dio.get('$_downsyncsUrl/api/stats'),
+        _dio.get('$_cloudStorageUrl/api/stats'),
+      ]);
+
+      final upsyncsStats = responses[0].data['changeStats'];
+      final downsyncsStats = responses[1].data['changeStats'];
+      final cloudStats = responses[2].data['changeStats'];
+
+      print('   📊 Current Status:');
+      print('      Upsyncs:      ${upsyncsStats['total']} changes');
+      print('      Downsyncs:    ${downsyncsStats['total']} changes');
+      print('      Cloud Storage: ${cloudStats['total']} changes');
+    } catch (e) {
+      print('   ⚠️ Could not retrieve stats: $e');
+    }
+  }
+
+  Future<void> _showFinalStatus() async {
+    print('📊 Final System Status:');
+    
+    // Show detailed stats for each server
+    final servers = [
+      {'name': 'Upsyncs', 'url': _upsyncsUrl},
+      {'name': 'Downsyncs', 'url': _downsyncsUrl},
+      {'name': 'Cloud Storage', 'url': _cloudStorageUrl},
+    ];
+
+    for (final server in servers) {
+      try {
+        final statsResponse = await _dio.get('${server['url']}/api/stats');
+        final changeStats = statsResponse.data['changeStats'];
+        final entityTypeStats = statsResponse.data['entityTypeStats'];
+
+        print('\n   ${server['name']}:');
+        print('      Total changes: ${changeStats['total']}');
+        print('      Creates: ${changeStats['creates']}');
+        print('      Updates: ${changeStats['updates']}');
+        print('      Deletes: ${changeStats['deletes']}');
+        print('      Entity types: $entityTypeStats');
+      } catch (e) {
+        print('\n   ${server['name']}: Could not retrieve stats');
+      }
+    }
+
+    // Show sync manager status
+    try {
+      final syncStatus = await _syncManager.getSyncStatus();
+      print('\n   Sync Manager Status:');
+      print('      Last sync: ${syncStatus.lastSyncTime}');
+    } catch (e) {
+      print('\n   Sync Manager: Could not retrieve status');
+    }
+
+    print('\n✅ All servers are running and ready for manual testing:');
+    print('   - Upsyncs Server:     $_upsyncsUrl');
+    print('   - Downsyncs Server:   $_downsyncsUrl');
+    print('   - Cloud Storage:      $_cloudStorageUrl');
+    
+    print('\n📚 Available endpoints on each server:');
+    print('   GET  /health                  - Health check');
+    print('   GET  /api/changes            - Get all changes');
+    print('   GET  /api/changes/{seq}      - Get specific change');
+    print('   POST /api/changes            - Create new change');
+    print('   POST /api/changes/sync/{seq} - Sync endpoint');
+    print('   GET  /api/stats              - Get statistics');
+    print('   PUT  /api/changes/{seq}      - Update change (not on Cloud Storage)');
+    print('   DELETE /api/changes/{seq}    - Delete change (not on Cloud Storage)');
+  }
+
+  Future<void> cleanup() async {
+    print('\n🧹 Cleaning up...');
+    try {
+      await _syncManager.close();
+      await _serverLauncher.stopAllServers();
+      print('✅ Cleanup completed');
+    } catch (e) {
+      print('⚠️ Cleanup error: $e');
+    }
+  }
+}
+
+void main() async {
+  final demo = SyncSystemDemo();
+  
+  // Set up signal handlers for graceful shutdown
+  ProcessSignal.sigint.watch().listen((signal) async {
+    print('\n\n🛑 Shutting down...');
+    await demo.cleanup();
+    exit(0);
+  });
+
+  try {
+    await demo.runDemo();
+  } catch (e) {
+    print('Demo execution failed: $e');
+    await demo.cleanup();
+    exit(1);
+  }
+}

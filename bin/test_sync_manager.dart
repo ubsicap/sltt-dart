@@ -1,0 +1,302 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
+import '../lib/core/server/multi_server_launcher.dart';
+import '../lib/core/sync/sync_manager.dart';
+
+class SyncManagerTester {
+  final Dio _dio = Dio();
+  final MultiServerLauncher _serverLauncher = MultiServerLauncher.instance;
+  final SyncManager _syncManager = SyncManager.instance;
+
+  // API endpoints
+  final String _cloudStorageUrl = 'http://localhost:8083';
+  final String _upsyncsUrl = 'http://localhost:8082';
+  final String _downsyncsUrl = 'http://localhost:8081';
+
+  SyncManagerTester() {
+    _dio.options.headers['Content-Type'] = 'application/json';
+    _dio.options.connectTimeout = const Duration(seconds: 5);
+    _dio.options.receiveTimeout = const Duration(seconds: 10);
+  }
+
+  Future<void> runTests() async {
+    print('🚀 Starting Sync Manager Tests\n');
+
+    try {
+      // Start all servers
+      await _startServers();
+
+      // Initialize sync manager
+      await _syncManager.initialize();
+
+      // Run test scenarios
+      await _testBasicOperations();
+      await _testSyncEndpoint();
+      await _testUpsyncFlow();
+      await _testDownsyncFlow();
+      await _testFullSyncFlow();
+      await _testSyncStatus();
+
+      print('\n✅ All sync manager tests completed successfully!');
+    } catch (e) {
+      print('\n❌ Test failed: $e');
+      if (e is DioException) {
+        print('DioException: ${e.message}');
+        print('Response data: ${e.response?.data}');
+      }
+      rethrow;
+    } finally {
+      // Clean up
+      await _cleanup();
+    }
+  }
+
+  Future<void> _startServers() async {
+    print('🔧 Starting all servers...');
+    await _serverLauncher.startAllServers();
+    
+    // Wait a moment for servers to fully start
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // Verify all servers are running
+    final status = _serverLauncher.getServerStatus();
+    print('Server status: $status');
+    
+    if (!status['downsyncs']! || !status['upsyncs']! || !status['cloudStorage']!) {
+      throw Exception('Not all servers started successfully');
+    }
+    print('✅ All servers started successfully\n');
+  }
+
+  Future<void> _testBasicOperations() async {
+    print('📝 Testing basic operations on all servers...');
+
+    final testData = {
+      'entityType': 'Document',
+      'operation': 'create',
+      'entityId': 'test-uuid-123',
+      'data': {
+        'title': 'Test Document',
+        'content': 'This is a test document',
+      },
+    };
+
+    // Test each server
+    final servers = [
+      {'name': 'downsyncs', 'url': _downsyncsUrl},
+      {'name': 'upsyncs', 'url': _upsyncsUrl},
+      {'name': 'cloud storage', 'url': _cloudStorageUrl},
+    ];
+
+    for (final server in servers) {
+      print('   Testing ${server['name']} server...');
+      
+      // Health check
+      final healthResponse = await _dio.get('${server['url']}/health');
+      if (healthResponse.statusCode != 200) {
+        throw Exception('Health check failed for ${server['name']}');
+      }
+      
+      // Create change
+      final createResponse = await _dio.post(
+        '${server['url']}/api/changes',
+        data: testData,
+      );
+      if (createResponse.statusCode != 200) {
+        throw Exception('Create change failed for ${server['name']}');
+      }
+      
+      print('   ✅ ${server['name']} server working correctly');
+    }
+
+    print('✅ Basic operations test passed\n');
+  }
+
+  Future<void> _testSyncEndpoint() async {
+    print('🔄 Testing sync endpoint...');
+
+    // Test sync endpoint on cloud storage
+    final syncData = [
+      {
+        'entityType': 'Document',
+        'operation': 'update',
+        'entityId': 'sync-test-1',
+        'data': {'title': 'Sync Test Document 1'},
+      },
+      {
+        'entityType': 'Document',
+        'operation': 'create',
+        'entityId': 'sync-test-2',
+        'data': {'title': 'Sync Test Document 2'},
+      },
+    ];
+
+    // Send sync request
+    final syncResponse = await _dio.post(
+      '$_cloudStorageUrl/api/changes/sync/0',
+      data: syncData,
+    );
+
+    if (syncResponse.statusCode != 200) {
+      throw Exception('Sync endpoint failed');
+    }
+
+    final syncResult = syncResponse.data as Map<String, dynamic>;
+    final storedChanges = syncResult['storedChanges'] as List;
+    final changesSinceSeq = syncResult['changesSinceSeq'] as List;
+
+    if (storedChanges.length != 2) {
+      throw Exception('Expected 2 stored changes, got ${storedChanges.length}');
+    }
+
+    print('   ✅ Sync endpoint stored ${storedChanges.length} changes');
+    print('   ✅ Sync endpoint returned ${changesSinceSeq.length} changes since seq 0');
+    print('✅ Sync endpoint test passed\n');
+  }
+
+  Future<void> _testUpsyncFlow() async {
+    print('⬆️ Testing upsync flow...');
+
+    // Add some changes to upsyncs storage
+    final testChanges = [
+      {
+        'entityType': 'Document',
+        'operation': 'create',
+        'entityId': 'upsync-test-1',
+        'data': {'title': 'Upsync Test Document 1'},
+      },
+      {
+        'entityType': 'Document',
+        'operation': 'update',
+        'entityId': 'upsync-test-2',
+        'data': {'title': 'Upsync Test Document 2'},
+      },
+    ];
+
+    // Add changes to upsyncs server
+    for (final change in testChanges) {
+      await _dio.post('$_upsyncsUrl/api/changes', data: change);
+    }
+
+    // Get initial counts
+    final upsyncsStatsBefore = await _dio.get('$_upsyncsUrl/api/stats');
+    final cloudStatsBefore = await _dio.get('$_cloudStorageUrl/api/stats');
+    
+    final upsyncsCountBefore = upsyncsStatsBefore.data['changeStats']['total'] as int;
+    final cloudCountBefore = cloudStatsBefore.data['changeStats']['total'] as int;
+
+    print('   Upsyncs changes before: $upsyncsCountBefore');
+    print('   Cloud changes before: $cloudCountBefore');
+
+    // Perform upsync
+    final upsyncResult = await _syncManager.upsyncToCloud();
+
+    if (!upsyncResult.success) {
+      throw Exception('Upsync failed: ${upsyncResult.message}');
+    }
+
+    // Verify results
+    final upsyncsStatsAfter = await _dio.get('$_upsyncsUrl/api/stats');
+    final cloudStatsAfter = await _dio.get('$_cloudStorageUrl/api/stats');
+    
+    final upsyncsCountAfter = upsyncsStatsAfter.data['changeStats']['total'] as int;
+    final cloudCountAfter = cloudStatsAfter.data['changeStats']['total'] as int;
+
+    print('   Upsyncs changes after: $upsyncsCountAfter');
+    print('   Cloud changes after: $cloudCountAfter');
+
+    if (upsyncResult.syncedChanges.length != testChanges.length) {
+      throw Exception('Expected ${testChanges.length} synced changes, got ${upsyncResult.syncedChanges.length}');
+    }
+
+    print('   ✅ Successfully upsynced ${upsyncResult.syncedChanges.length} changes');
+    print('   ✅ Deleted ${upsyncResult.deletedLocalChanges.length} local changes');
+    print('✅ Upsync flow test passed\n');
+  }
+
+  Future<void> _testDownsyncFlow() async {
+    print('⬇️ Testing downsync flow...');
+
+    // Get initial downsync count
+    final downsyncsStatsBefore = await _dio.get('$_downsyncsUrl/api/stats');
+    final downsyncsCountBefore = downsyncsStatsBefore.data['changeStats']['total'] as int;
+
+    print('   Downsyncs changes before: $downsyncsCountBefore');
+
+    // Perform downsync
+    final downsyncResult = await _syncManager.downsyncFromCloud();
+
+    if (!downsyncResult.success) {
+      throw Exception('Downsync failed: ${downsyncResult.message}');
+    }
+
+    // Verify results
+    final downsyncsStatsAfter = await _dio.get('$_downsyncsUrl/api/stats');
+    final downsyncsCountAfter = downsyncsStatsAfter.data['changeStats']['total'] as int;
+
+    print('   Downsyncs changes after: $downsyncsCountAfter');
+    print('   ✅ Successfully downsynced ${downsyncResult.newChanges.length} changes');
+    print('✅ Downsync flow test passed\n');
+  }
+
+  Future<void> _testFullSyncFlow() async {
+    print('🔄 Testing full sync flow...');
+
+    // Add a change to upsyncs
+    await _dio.post('$_upsyncsUrl/api/changes', data: {
+      'entityType': 'Document',
+      'operation': 'create',
+      'entityId': 'full-sync-test',
+      'data': {'title': 'Full Sync Test Document'},
+    });
+
+    // Perform full sync
+    final fullSyncResult = await _syncManager.performFullSync();
+
+    if (!fullSyncResult.success) {
+      throw Exception('Full sync failed');
+    }
+
+    print('   ✅ Full sync completed successfully');
+    print('   ✅ Upsync: ${fullSyncResult.upsyncResult.message}');
+    print('   ✅ Downsync: ${fullSyncResult.downsyncResult.message}');
+    print('✅ Full sync flow test passed\n');
+  }
+
+  Future<void> _testSyncStatus() async {
+    print('📊 Testing sync status...');
+
+    final syncStatus = await _syncManager.getSyncStatus();
+
+    print('   Upsyncs count: ${syncStatus.upsyncsCount}');
+    print('   Downsyncs count: ${syncStatus.downsyncsCount}');
+    print('   Cloud count: ${syncStatus.cloudCount}');
+    print('   Last sync time: ${syncStatus.lastSyncTime}');
+
+    print('✅ Sync status test passed\n');
+  }
+
+  Future<void> _cleanup() async {
+    print('🧹 Cleaning up...');
+    
+    try {
+      await _syncManager.close();
+      await _serverLauncher.stopAllServers();
+    } catch (e) {
+      print('Warning: Cleanup error: $e');
+    }
+    
+    print('✅ Cleanup completed\n');
+  }
+}
+
+void main() async {
+  final tester = SyncManagerTester();
+  
+  try {
+    await tester.runTests();
+  } catch (e) {
+    print('Test execution failed: $e');
+    exit(1);
+  }
+}
