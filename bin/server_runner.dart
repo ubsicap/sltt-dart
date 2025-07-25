@@ -10,12 +10,12 @@ void main(List<String> args) async {
     print('Usage: dart bin/server_runner.dart <command> [options]');
     print('Commands:');
     print('  start-all              - Start all three servers');
-    print('  start <type>           - Start specific server (downsyncs, upsyncs, cloud)');
+    print('  start <type>           - Start specific server (downsyncs, outsyncs, cloud)');
     print('  stop-all               - Stop all servers');
     print('  stop <type>            - Stop specific server');
     print('  status                 - Show server status');
     print('  sync                   - Perform full sync');
-    print('  upsync                 - Perform upsync only');
+    print('  outsync                 - Perform outsync only');
     print('  downsync               - Perform downsync only');
     print('  sync-status            - Show sync status');
     return;
@@ -44,7 +44,7 @@ void main(List<String> args) async {
       case 'start':
         if (args.length < 2) {
           print('Usage: dart bin/server_runner.dart start <type>');
-          print('Types: downsyncs, upsyncs, cloud');
+          print('Types: downsyncs, outsyncs, cloud');
           return;
         }
         
@@ -81,7 +81,7 @@ void main(List<String> args) async {
         
         print('Server Status:');
         print('  Downsyncs: ${status['downsyncs']! ? 'Running' : 'Stopped'} ${addresses['downsyncs'] ?? ''}');
-        print('  Upsyncs: ${status['upsyncs']! ? 'Running' : 'Stopped'} ${addresses['upsyncs'] ?? ''}');
+        print('  Outsyncs: ${status['outsyncs']! ? 'Running' : 'Stopped'} ${addresses['outsyncs'] ?? ''}');
         print('  Cloud Storage: ${status['cloudStorage']! ? 'Running' : 'Stopped'} ${addresses['cloudStorage'] ?? ''}');
         break;
 
@@ -93,11 +93,11 @@ void main(List<String> args) async {
         await syncManager.close();
         break;
 
-      case 'upsync':
+      case 'outsync':
         await syncManager.initialize();
-        print('Performing upsync...');
-        final result = await syncManager.upsyncToCloud();
-        print('Upsync result: ${result.toJson()}');
+        print('Performing outsync...');
+        final result = await syncManager.outsyncToCloud();
+        print('Outsync result: ${result.toJson()}');
         await syncManager.close();
         break;
 
@@ -130,7 +130,7 @@ int _getDefaultPort(String serverType) {
   switch (serverType.toLowerCase()) {
     case 'downsyncs':
       return 8081;
-    case 'upsyncs':
+    case 'outsyncs':
       return 8082;
     case 'cloud':
     case 'cloudstorage':

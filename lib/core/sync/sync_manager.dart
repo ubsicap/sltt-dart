@@ -8,7 +8,7 @@ class SyncManager {
   SyncManager._();
 
   final Dio _dio = Dio();
-  final UpsyncsStorageService _upsyncsStorage = UpsyncsStorageService.instance;
+  final OutsyncsStorageService _outsyncsStorage = OutsyncsStorageService.instance;
   final DownsyncsStorageService _downsyncsStorage = DownsyncsStorageService.instance;
 
   // API endpoints
@@ -19,7 +19,7 @@ class SyncManager {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    await _upsyncsStorage.initialize();
+    await _outsyncsStorage.initialize();
     await _downsyncsStorage.initialize();
 
     _dio.options.headers['Content-Type'] = 'application/json';
@@ -30,17 +30,17 @@ class SyncManager {
     print('[SyncManager] Initialized');
   }
 
-  // Upsync changes from upsyncs to cloud storage
-  Future<UpsyncResult> upsyncToCloud() async {
+  // Outsync changes from outsyncs to cloud storage
+  Future<OutsyncResult> outsyncToCloud() async {
     try {
-      print('[SyncManager] Starting upsync to cloud...');
+      print('[SyncManager] Starting outsync to cloud...');
 
-      // Get all changes from upsyncs storage
-      final changes = await _upsyncsStorage.getChangesWithCursor();
+      // Get all changes from outsyncs storage
+      final changes = await _outsyncsStorage.getChangesWithCursor();
       
       if (changes.isEmpty) {
-        print('[SyncManager] No changes to upsync');
-        return UpsyncResult(
+        print('[SyncManager] No changes to outsync');
+        return OutsyncResult(
           success: true,
           syncedChanges: [],
           deletedLocalChanges: [],
@@ -48,7 +48,7 @@ class SyncManager {
         );
       }
 
-      print('[SyncManager] Found ${changes.length} changes to upsync');
+      print('[SyncManager] Found ${changes.length} changes to outsync');
 
       // Send changes to cloud storage using sync endpoint
       final response = await _dio.post(
@@ -60,28 +60,28 @@ class SyncManager {
         final responseData = response.data as Map<String, dynamic>;
         final storedChanges = responseData['storedChanges'] as List<dynamic>;
         
-        // Delete successfully synced changes from upsyncs storage
+        // Delete successfully synced changes from outsyncs storage
         final seqsToDelete = changes.map((c) => c['seq'] as int).toList();
-        final deletedCount = await _upsyncsStorage.deleteChanges(seqsToDelete);
+        final deletedCount = await _outsyncsStorage.deleteChanges(seqsToDelete);
 
-        print('[SyncManager] Successfully upsynced ${storedChanges.length} changes, deleted $deletedCount local changes');
+        print('[SyncManager] Successfully outsynced ${storedChanges.length} changes, deleted $deletedCount local changes');
 
-        return UpsyncResult(
+        return OutsyncResult(
           success: true,
           syncedChanges: storedChanges.cast<Map<String, dynamic>>(),
           deletedLocalChanges: seqsToDelete,
-          message: 'Successfully upsynced ${storedChanges.length} changes',
+          message: 'Successfully outsynced ${storedChanges.length} changes',
         );
       } else {
-        throw Exception('Upsync failed with status: ${response.statusCode}');
+        throw Exception('Outsync failed with status: ${response.statusCode}');
       }
     } catch (e) {
-      print('[SyncManager] Upsync failed: $e');
-      return UpsyncResult(
+      print('[SyncManager] Outsync failed: $e');
+      return OutsyncResult(
         success: false,
         syncedChanges: [],
         deletedLocalChanges: [],
-        message: 'Upsync failed: $e',
+        message: 'Outsync failed: $e',
       );
     }
   }
@@ -138,24 +138,24 @@ class SyncManager {
     }
   }
 
-  // Perform full sync: upsync first, then downsync
+  // Perform full sync: outsync first, then downsync
   Future<FullSyncResult> performFullSync() async {
     print('[SyncManager] Starting full sync...');
 
-    final upsyncResult = await upsyncToCloud();
+    final outsyncResult = await outsyncToCloud();
     final downsyncResult = await downsyncFromCloud();
 
     return FullSyncResult(
-      upsyncResult: upsyncResult,
+      outsyncResult: outsyncResult,
       downsyncResult: downsyncResult,
-      success: upsyncResult.success && downsyncResult.success,
+      success: outsyncResult.success && downsyncResult.success,
     );
   }
 
   // Check sync status and statistics
   Future<SyncStatus> getSyncStatus() async {
     try {
-      final upsyncsCount = await _upsyncsStorage.getChangeCount();
+      final outsyncsCount = await _outsyncsStorage.getChangeCount();
       final downsyncsCount = await _downsyncsStorage.getChangeCount();
 
       // Try to get cloud storage stats
@@ -171,7 +171,7 @@ class SyncManager {
       }
 
       return SyncStatus(
-        upsyncsCount: upsyncsCount,
+        outsyncsCount: outsyncsCount,
         downsyncsCount: downsyncsCount,
         cloudCount: cloudCount,
         lastSyncTime: DateTime.now(), // In a real implementation, this would be persisted
@@ -179,7 +179,7 @@ class SyncManager {
     } catch (e) {
       print('[SyncManager] Failed to get sync status: $e');
       return SyncStatus(
-        upsyncsCount: 0,
+        outsyncsCount: 0,
         downsyncsCount: 0,
         cloudCount: 0,
         lastSyncTime: DateTime.now(),
@@ -189,7 +189,7 @@ class SyncManager {
 
   Future<void> close() async {
     if (_initialized) {
-      await _upsyncsStorage.close();
+      await _outsyncsStorage.close();
       await _downsyncsStorage.close();
       _initialized = false;
       print('[SyncManager] Closed');
@@ -198,13 +198,13 @@ class SyncManager {
 }
 
 // Result classes
-class UpsyncResult {
+class OutsyncResult {
   final bool success;
   final List<Map<String, dynamic>> syncedChanges;
   final List<int> deletedLocalChanges;
   final String message;
 
-  UpsyncResult({
+  OutsyncResult({
     required this.success,
     required this.syncedChanges,
     required this.deletedLocalChanges,
@@ -238,38 +238,38 @@ class DownsyncResult {
 }
 
 class FullSyncResult {
-  final UpsyncResult upsyncResult;
+  final OutsyncResult outsyncResult;
   final DownsyncResult downsyncResult;
   final bool success;
 
   FullSyncResult({
-    required this.upsyncResult,
+    required this.outsyncResult,
     required this.downsyncResult,
     required this.success,
   });
 
   Map<String, dynamic> toJson() => {
-    'upsyncResult': upsyncResult.toJson(),
+    'outsyncResult': outsyncResult.toJson(),
     'downsyncResult': downsyncResult.toJson(),
     'success': success,
   };
 }
 
 class SyncStatus {
-  final int upsyncsCount;
+  final int outsyncsCount;
   final int downsyncsCount;
   final int cloudCount;
   final DateTime lastSyncTime;
 
   SyncStatus({
-    required this.upsyncsCount,
+    required this.outsyncsCount,
     required this.downsyncsCount,
     required this.cloudCount,
     required this.lastSyncTime,
   });
 
   Map<String, dynamic> toJson() => {
-    'upsyncsCount': upsyncsCount,
+    'outsyncsCount': outsyncsCount,
     'downsyncsCount': downsyncsCount,
     'cloudCount': cloudCount,
     'lastSyncTime': lastSyncTime.toIso8601String(),

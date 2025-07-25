@@ -3,14 +3,15 @@ import 'dart:io';
 import 'package:isar/isar.dart';
 import '../models/change_log_entry.dart';
 
-class BaseStorageService {
-  final String _databaseName;
-  final String _logPrefix;
-  
+class OutsyncsStorageService {
+  static OutsyncsStorageService? _instance;
+  static OutsyncsStorageService get instance =>
+      _instance ??= OutsyncsStorageService._();
+
+  OutsyncsStorageService._();
+
   late Isar _isar;
   bool _initialized = false;
-
-  BaseStorageService(this._databaseName, this._logPrefix);
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -21,15 +22,15 @@ class BaseStorageService {
       await dir.create(recursive: true);
     }
 
-    // Initialize Isar with the specified database name
+    // Initialize Isar with outsyncs database name
     _isar = await Isar.open(
       [ChangeLogEntrySchema],
       directory: dir.path,
-      name: _databaseName,
+      name: 'outsyncs',
     );
 
     _initialized = true;
-    print('[$_logPrefix] Isar database initialized at: ${dir.path}');
+    print('[OutsyncsStorage] Isar database initialized at: ${dir.path}');
   }
 
   // Change log operations
@@ -116,7 +117,7 @@ class BaseStorageService {
     return await _isar.changeLogEntrys.count();
   }
 
-  // Delete multiple changes by seq numbers (useful for cleanup after successful outsync)
+  // Delete multiple changes by seq numbers (for cleanup after successful outsync)
   Future<int> deleteChanges(List<int> seqs) async {
     int deletedCount = 0;
     await _isar.writeTxn(() async {
@@ -162,7 +163,7 @@ class BaseStorageService {
     if (_initialized) {
       await _isar.close();
       _initialized = false;
-      print('[$_logPrefix] Isar database closed');
+      print('[OutsyncsStorage] Isar database closed');
     }
   }
 
@@ -179,15 +180,6 @@ class BaseStorageService {
     return results.map((e) => e.toJson()).toList();
   }
 
-  // Get the highest sequence number in the database
-  Future<int> getLastSeq() async {
-    final result = await _isar.changeLogEntrys.where().findAll();
-    if (result.isEmpty) {
-      return 0;
-    }
-    return result.map((e) => e.seq).reduce((a, b) => a > b ? a : b);
-  }
-
   // Get changes since a specific sequence number (for syncing)
   Future<List<Map<String, dynamic>>> getChangesSince(int seq) async {
     final results = await _isar.changeLogEntrys
@@ -198,47 +190,4 @@ class BaseStorageService {
     results.sort((a, b) => a.seq.compareTo(b.seq));
     return results.map((e) => e.toJson()).toList();
   }
-
-  // Store multiple changes (for batch operations)
-  Future<List<Map<String, dynamic>>> createChanges(
-      List<Map<String, dynamic>> changesData) async {
-    final changes = changesData.map((changeData) => ChangeLogEntry(
-      entityType: changeData['entityType'] ?? '',
-      operation: changeData['operation'] ?? '',
-      timestamp: DateTime.now(),
-      entityId: changeData['entityId'] ?? '',
-      dataJson: jsonEncode(changeData['data'] ?? {}),
-    )).toList();
-
-    await _isar.writeTxn(() async {
-      await _isar.changeLogEntrys.putAll(changes);
-    });
-
-    return changes.map((e) => e.toJson()).toList();
-  }
-}
-
-// Singleton wrappers for each storage type
-class OutsyncsStorageService extends BaseStorageService {
-  static OutsyncsStorageService? _instance;
-  static OutsyncsStorageService get instance =>
-      _instance ??= OutsyncsStorageService._();
-
-  OutsyncsStorageService._() : super('outsyncs', 'OutsyncsStorage');
-}
-
-class DownsyncsStorageService extends BaseStorageService {
-  static DownsyncsStorageService? _instance;
-  static DownsyncsStorageService get instance =>
-      _instance ??= DownsyncsStorageService._();
-
-  DownsyncsStorageService._() : super('downsyncs', 'DownsyncsStorage');
-}
-
-class CloudStorageService extends BaseStorageService {
-  static CloudStorageService? _instance;
-  static CloudStorageService get instance =>
-      _instance ??= CloudStorageService._();
-
-  CloudStorageService._() : super('cloud_storage', 'CloudStorage');
 }

@@ -11,7 +11,7 @@ class SyncSystemDemo {
 
   // API endpoints
   final String _cloudStorageUrl = 'http://localhost:8083';
-  final String _upsyncsUrl = 'http://localhost:8082';
+  final String _outsyncsUrl = 'http://localhost:8082';
   final String _downsyncsUrl = 'http://localhost:8081';
 
   SyncSystemDemo() {
@@ -26,7 +26,7 @@ class SyncSystemDemo {
     try {
       await _setupSystem();
       await _demonstrateBasicOperations();
-      await _demonstrateUpsyncFlow();
+      await _demonstrateOutsyncFlow();
       await _demonstrateDownsyncFlow();
       await _demonstrateFullSyncFlow();
       await _showFinalStatus();
@@ -67,7 +67,7 @@ class SyncSystemDemo {
 
     // Add some initial data to each server
     final servers = [
-      {'name': 'Upsyncs', 'url': _upsyncsUrl, 'description': 'Local changes to be uploaded'},
+      {'name': 'Outsyncs', 'url': _outsyncsUrl, 'description': 'Local changes to be uploaded'},
       {'name': 'Downsyncs', 'url': _downsyncsUrl, 'description': 'Changes received from cloud'},
       {'name': 'Cloud Storage', 'url': _cloudStorageUrl, 'description': 'Cloud-based change storage'},
     ];
@@ -94,13 +94,13 @@ class SyncSystemDemo {
     print('✅ Basic operations completed\n');
   }
 
-  Future<void> _demonstrateUpsyncFlow() async {
-    print('⬆️ Demonstrating upsync flow...');
-    print('   This will sync changes from Upsyncs to Cloud Storage\n');
+  Future<void> _demonstrateOutsyncFlow() async {
+    print('⬆️ Demonstrating outsync flow...');
+    print('   This will sync changes from Outsyncs to Cloud Storage\n');
 
-    // Add more changes to upsyncs to demonstrate the flow
-    print('   Adding additional changes to Upsyncs...');
-    final upsyncsChanges = [
+    // Add more changes to outsyncs to demonstrate the flow
+    print('   Adding additional changes to Outsyncs...');
+    final outsyncsChanges = [
       {
         'entityType': 'Document',
         'operation': 'update',
@@ -123,28 +123,28 @@ class SyncSystemDemo {
       },
     ];
 
-    for (final change in upsyncsChanges) {
-      await _dio.post('$_upsyncsUrl/api/changes', data: change);
+    for (final change in outsyncsChanges) {
+      await _dio.post('$_outsyncsUrl/api/changes', data: change);
       print('   ✅ Added change: ${change['operation']} ${change['entityType']}');
     }
 
-    print('\n   Status before upsync:');
+    print('\n   Status before outsync:');
     await _showCurrentStatus();
 
-    print('   Performing upsync...');
-    final upsyncResult = await _syncManager.upsyncToCloud();
+    print('   Performing outsync...');
+    final outsyncResult = await _syncManager.outsyncToCloud();
     
-    if (upsyncResult.success) {
-      print('   ✅ Upsync successful!');
-      print('   📊 Synced ${upsyncResult.syncedChanges.length} changes');
-      print('   🗑️ Cleaned up ${upsyncResult.deletedLocalChanges.length} local changes');
+    if (outsyncResult.success) {
+      print('   ✅ Outsync successful!');
+      print('   📊 Synced ${outsyncResult.syncedChanges.length} changes');
+      print('   🗑️ Cleaned up ${outsyncResult.deletedLocalChanges.length} local changes');
     } else {
-      print('   ❌ Upsync failed: ${upsyncResult.message}');
+      print('   ❌ Outsync failed: ${outsyncResult.message}');
     }
 
-    print('\n   Status after upsync:');
+    print('\n   Status after outsync:');
     await _showCurrentStatus();
-    print('✅ Upsync flow demonstration completed\n');
+    print('✅ Outsync flow demonstration completed\n');
   }
 
   Future<void> _demonstrateDownsyncFlow() async {
@@ -202,10 +202,10 @@ class SyncSystemDemo {
 
   Future<void> _demonstrateFullSyncFlow() async {
     print('🔄 Demonstrating full sync flow...');
-    print('   This will perform both upsync and downsync operations\n');
+    print('   This will perform both outsync and downsync operations\n');
 
-    // Add one more change to upsyncs
-    await _dio.post('$_upsyncsUrl/api/changes', data: {
+    // Add one more change to outsyncs
+    await _dio.post('$_outsyncsUrl/api/changes', data: {
       'entityType': 'Settings',
       'operation': 'update',
       'entityId': 'app-settings',
@@ -216,21 +216,21 @@ class SyncSystemDemo {
         'lastUpdated': DateTime.now().toIso8601String(),
       },
     });
-    print('   ✅ Added final change to Upsyncs');
+    print('   ✅ Added final change to Outsyncs');
 
     print('\n   Status before full sync:');
     await _showCurrentStatus();
 
-    print('   Performing full sync (upsync + downsync)...');
+    print('   Performing full sync (outsync + downsync)...');
     final fullSyncResult = await _syncManager.performFullSync();
     
     if (fullSyncResult.success) {
       print('   ✅ Full sync successful!');
-      print('   ⬆️ Upsync: ${fullSyncResult.upsyncResult.message}');
+      print('   ⬆️ Outsync: ${fullSyncResult.outsyncResult.message}');
       print('   ⬇️ Downsync: ${fullSyncResult.downsyncResult.message}');
     } else {
       print('   ❌ Full sync failed');
-      print('   ⬆️ Upsync: ${fullSyncResult.upsyncResult.message}');
+      print('   ⬆️ Outsync: ${fullSyncResult.outsyncResult.message}');
       print('   ⬇️ Downsync: ${fullSyncResult.downsyncResult.message}');
     }
 
@@ -242,17 +242,17 @@ class SyncSystemDemo {
   Future<void> _showCurrentStatus() async {
     try {
       final responses = await Future.wait([
-        _dio.get('$_upsyncsUrl/api/stats'),
+        _dio.get('$_outsyncsUrl/api/stats'),
         _dio.get('$_downsyncsUrl/api/stats'),
         _dio.get('$_cloudStorageUrl/api/stats'),
       ]);
 
-      final upsyncsStats = responses[0].data['changeStats'];
+      final outsyncsStats = responses[0].data['changeStats'];
       final downsyncsStats = responses[1].data['changeStats'];
       final cloudStats = responses[2].data['changeStats'];
 
       print('   📊 Current Status:');
-      print('      Upsyncs:      ${upsyncsStats['total']} changes');
+      print('      Outsyncs:      ${outsyncsStats['total']} changes');
       print('      Downsyncs:    ${downsyncsStats['total']} changes');
       print('      Cloud Storage: ${cloudStats['total']} changes');
     } catch (e) {
@@ -265,7 +265,7 @@ class SyncSystemDemo {
     
     // Show detailed stats for each server
     final servers = [
-      {'name': 'Upsyncs', 'url': _upsyncsUrl},
+      {'name': 'Outsyncs', 'url': _outsyncsUrl},
       {'name': 'Downsyncs', 'url': _downsyncsUrl},
       {'name': 'Cloud Storage', 'url': _cloudStorageUrl},
     ];
@@ -297,7 +297,7 @@ class SyncSystemDemo {
     }
 
     print('\n✅ All servers are running and ready for manual testing:');
-    print('   - Upsyncs Server:     $_upsyncsUrl');
+    print('   - Outsyncs Server:     $_outsyncsUrl');
     print('   - Downsyncs Server:   $_downsyncsUrl');
     print('   - Cloud Storage:      $_cloudStorageUrl');
     

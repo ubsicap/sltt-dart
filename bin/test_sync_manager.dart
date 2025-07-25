@@ -10,7 +10,7 @@ class SyncManagerTester {
 
   // API endpoints
   final String _cloudStorageUrl = 'http://localhost:8083';
-  final String _upsyncsUrl = 'http://localhost:8082';
+  final String _outsyncsUrl = 'http://localhost:8082';
   final String _downsyncsUrl = 'http://localhost:8081';
 
   SyncManagerTester() {
@@ -32,7 +32,7 @@ class SyncManagerTester {
       // Run test scenarios
       await _testBasicOperations();
       await _testSyncEndpoint();
-      await _testUpsyncFlow();
+      await _testOutsyncFlow();
       await _testDownsyncFlow();
       await _testFullSyncFlow();
       await _testSyncStatus();
@@ -62,7 +62,7 @@ class SyncManagerTester {
     final status = _serverLauncher.getServerStatus();
     print('Server status: $status');
     
-    if (!status['downsyncs']! || !status['upsyncs']! || !status['cloudStorage']!) {
+    if (!status['downsyncs']! || !status['outsyncs']! || !status['cloudStorage']!) {
       throw Exception('Not all servers started successfully');
     }
     print('✅ All servers started successfully\n');
@@ -84,7 +84,7 @@ class SyncManagerTester {
     // Test each server
     final servers = [
       {'name': 'downsyncs', 'url': _downsyncsUrl},
-      {'name': 'upsyncs', 'url': _upsyncsUrl},
+      {'name': 'outsyncs', 'url': _outsyncsUrl},
       {'name': 'cloud storage', 'url': _cloudStorageUrl},
     ];
 
@@ -154,64 +154,64 @@ class SyncManagerTester {
     print('✅ Sync endpoint test passed\n');
   }
 
-  Future<void> _testUpsyncFlow() async {
-    print('⬆️ Testing upsync flow...');
+  Future<void> _testOutsyncFlow() async {
+    print('⬆️ Testing outsync flow...');
 
-    // Add some changes to upsyncs storage
+    // Add some changes to outsyncs storage
     final testChanges = [
       {
         'entityType': 'Document',
         'operation': 'create',
-        'entityId': 'upsync-test-1',
-        'data': {'title': 'Upsync Test Document 1'},
+        'entityId': 'outsync-test-1',
+        'data': {'title': 'Outsync Test Document 1'},
       },
       {
         'entityType': 'Document',
         'operation': 'update',
-        'entityId': 'upsync-test-2',
-        'data': {'title': 'Upsync Test Document 2'},
+        'entityId': 'outsync-test-2',
+        'data': {'title': 'Outsync Test Document 2'},
       },
     ];
 
-    // Add changes to upsyncs server
+    // Add changes to outsyncs server
     for (final change in testChanges) {
-      await _dio.post('$_upsyncsUrl/api/changes', data: change);
+      await _dio.post('$_outsyncsUrl/api/changes', data: change);
     }
 
     // Get initial counts
-    final upsyncsStatsBefore = await _dio.get('$_upsyncsUrl/api/stats');
+    final outsyncsStatsBefore = await _dio.get('$_outsyncsUrl/api/stats');
     final cloudStatsBefore = await _dio.get('$_cloudStorageUrl/api/stats');
     
-    final upsyncsCountBefore = upsyncsStatsBefore.data['changeStats']['total'] as int;
+    final outsyncsCountBefore = outsyncsStatsBefore.data['changeStats']['total'] as int;
     final cloudCountBefore = cloudStatsBefore.data['changeStats']['total'] as int;
 
-    print('   Upsyncs changes before: $upsyncsCountBefore');
+    print('   Outsyncs changes before: $outsyncsCountBefore');
     print('   Cloud changes before: $cloudCountBefore');
 
-    // Perform upsync
-    final upsyncResult = await _syncManager.upsyncToCloud();
+    // Perform outsync
+    final outsyncResult = await _syncManager.outsyncToCloud();
 
-    if (!upsyncResult.success) {
-      throw Exception('Upsync failed: ${upsyncResult.message}');
+    if (!outsyncResult.success) {
+      throw Exception('Outsync failed: ${outsyncResult.message}');
     }
 
     // Verify results
-    final upsyncsStatsAfter = await _dio.get('$_upsyncsUrl/api/stats');
+    final outsyncsStatsAfter = await _dio.get('$_outsyncsUrl/api/stats');
     final cloudStatsAfter = await _dio.get('$_cloudStorageUrl/api/stats');
     
-    final upsyncsCountAfter = upsyncsStatsAfter.data['changeStats']['total'] as int;
+    final outsyncsCountAfter = outsyncsStatsAfter.data['changeStats']['total'] as int;
     final cloudCountAfter = cloudStatsAfter.data['changeStats']['total'] as int;
 
-    print('   Upsyncs changes after: $upsyncsCountAfter');
+    print('   Outsyncs changes after: $outsyncsCountAfter');
     print('   Cloud changes after: $cloudCountAfter');
 
-    if (upsyncResult.syncedChanges.length != testChanges.length) {
-      throw Exception('Expected ${testChanges.length} synced changes, got ${upsyncResult.syncedChanges.length}');
+    if (outsyncResult.syncedChanges.length != testChanges.length) {
+      throw Exception('Expected ${testChanges.length} synced changes, got ${outsyncResult.syncedChanges.length}');
     }
 
-    print('   ✅ Successfully upsynced ${upsyncResult.syncedChanges.length} changes');
-    print('   ✅ Deleted ${upsyncResult.deletedLocalChanges.length} local changes');
-    print('✅ Upsync flow test passed\n');
+    print('   ✅ Successfully outsynced ${outsyncResult.syncedChanges.length} changes');
+    print('   ✅ Deleted ${outsyncResult.deletedLocalChanges.length} local changes');
+    print('✅ Outsync flow test passed\n');
   }
 
   Future<void> _testDownsyncFlow() async {
@@ -242,8 +242,8 @@ class SyncManagerTester {
   Future<void> _testFullSyncFlow() async {
     print('🔄 Testing full sync flow...');
 
-    // Add a change to upsyncs
-    await _dio.post('$_upsyncsUrl/api/changes', data: {
+    // Add a change to outsyncs
+    await _dio.post('$_outsyncsUrl/api/changes', data: {
       'entityType': 'Document',
       'operation': 'create',
       'entityId': 'full-sync-test',
@@ -258,7 +258,7 @@ class SyncManagerTester {
     }
 
     print('   ✅ Full sync completed successfully');
-    print('   ✅ Upsync: ${fullSyncResult.upsyncResult.message}');
+    print('   ✅ Outsync: ${fullSyncResult.outsyncResult.message}');
     print('   ✅ Downsync: ${fullSyncResult.downsyncResult.message}');
     print('✅ Full sync flow test passed\n');
   }
@@ -268,7 +268,7 @@ class SyncManagerTester {
 
     final syncStatus = await _syncManager.getSyncStatus();
 
-    print('   Upsyncs count: ${syncStatus.upsyncsCount}');
+    print('   Outsyncs count: ${syncStatus.outsyncsCount}');
     print('   Downsyncs count: ${syncStatus.downsyncsCount}');
     print('   Cloud count: ${syncStatus.cloudCount}');
     print('   Last sync time: ${syncStatus.lastSyncTime}');

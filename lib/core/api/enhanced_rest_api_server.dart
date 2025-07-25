@@ -6,7 +6,7 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import '../storage/shared_storage_service.dart';
 
-enum StorageType { upsyncs, downsyncs, cloudStorage }
+enum StorageType { outsyncs, downsyncs, cloudStorage }
 
 class EnhancedRestApiServer {
   final StorageType storageType;
@@ -45,8 +45,8 @@ class EnhancedRestApiServer {
     if (_initialized) return;
 
     switch (storageType) {
-      case StorageType.upsyncs:
-        _storage = UpsyncsStorageService.instance;
+      case StorageType.outsyncs:
+        _storage = OutsyncsStorageService.instance;
         break;
       case StorageType.downsyncs:
         _storage = DownsyncsStorageService.instance;
@@ -76,7 +76,7 @@ class EnhancedRestApiServer {
 
     // Conditional endpoints based on storage type
     if (storageType != StorageType.cloudStorage) {
-      // Allow PUT and DELETE for upsyncs and downsyncs
+      // Allow PUT and DELETE for outsyncs and downsyncs
       router.put('/api/changes/<seq>', _handleUpdateChange);
       router.delete('/api/changes/<seq>', _handleDeleteChange);
     }
@@ -251,7 +251,7 @@ class EnhancedRestApiServer {
 
       // Get changes since the provided seq
       List<Map<String, dynamic>> changesSinceSeq = [];
-      if (storageType == StorageType.cloudStorage || storageType == StorageType.upsyncs) {
+      if (storageType == StorageType.cloudStorage || storageType == StorageType.outsyncs) {
         changesSinceSeq = await _storage!.getChangesSince(lastSeq);
       } else {
         // For downsyncs, use cursor-based approach

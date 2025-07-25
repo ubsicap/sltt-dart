@@ -4,8 +4,8 @@ A shared Dart backend codebase for offline-first, LAN-collaborative, cloud-sync 
 
 ## Features
 
-- **Multi-Storage Architecture**: Separate storage services for upsyncs, downsyncs, and cloud simulation
-- **Advanced Sync Management**: Bi-directional sync with upsync and downsync capabilities
+- **Multi-Storage Architecture**: Separate storage services for outsyncs, downsyncs, and cloud simulation
+- **Advanced Sync Management**: Bi-directional sync with outsync and downsync capabilities
 - **REST API Servers**: Multiple API servers for different storage types with sync endpoints
 - **Offline-First Storage**: Uses Isar for local data persistence with automatic change tracking
 - **Developer-Friendly**: Easy to debug, test, and extend with comprehensive tooling
@@ -13,12 +13,12 @@ A shared Dart backend codebase for offline-first, LAN-collaborative, cloud-sync 
 ## Architecture Overview
 
 The system consists of three main storage services:
-- **Upsyncs Storage**: Stores local changes that need to be uploaded to the cloud
+- **Outsyncs Storage**: Stores local changes that need to be uploaded to the cloud
 - **Downsyncs Storage**: Stores changes received from the cloud
 - **Cloud Storage**: Simulates cloud-based storage (read-only for updates/deletes)
 
 Each storage service has its own REST API server:
-- **Upsyncs Server**: Port 8082 - Full CRUD operations
+- **Outsyncs Server**: Port 8082 - Full CRUD operations
 - **Downsyncs Server**: Port 8081 - Full CRUD operations  
 - **Cloud Storage Server**: Port 8083 - Read and create only (simulates cloud constraints)
 
@@ -72,8 +72,8 @@ dart run bin/server_runner.dart start-all
 
 #### Option B: Start Individual Servers
 ```bash
-# Start upsyncs server (port 8082)
-dart run bin/server_runner.dart start upsyncs
+# Start outsyncs server (port 8082)
+dart run bin/server_runner.dart start outsyncs
 
 # Start downsyncs server (port 8081)  
 dart run bin/server_runner.dart start downsyncs
@@ -104,8 +104,8 @@ dart run bin/server_runner.dart status
 dart run bin/server_runner.dart stop-all
 
 # Perform sync operations
-dart run bin/server_runner.dart sync         # Full sync (upsync + downsync)
-dart run bin/server_runner.dart upsync      # Upload local changes to cloud
+dart run bin/server_runner.dart sync         # Full sync (outsync + downsync)
+dart run bin/server_runner.dart outsync      # Upload local changes to cloud
 dart run bin/server_runner.dart downsync    # Download cloud changes locally
 dart run bin/server_runner.dart sync-status # Show sync statistics
 ```
@@ -136,11 +136,11 @@ GET /api/stats                    # Get change and entity type statistics
 
 ### Sync Workflow
 
-1. **Local Changes**: Create changes in the upsyncs storage
-2. **Upsync**: Sync manager uploads changes from upsyncs to cloud storage
-3. **Cleanup**: Successfully uploaded changes are removed from upsyncs storage
+1. **Local Changes**: Create changes in the outsyncs storage
+2. **Outsync**: Sync manager uploads changes from outsyncs to cloud storage
+3. **Cleanup**: Successfully uploaded changes are removed from outsyncs storage
 4. **Downsync**: Sync manager downloads new changes from cloud to downsyncs storage
-5. **Full Sync**: Combines upsync and downsync operations
+5. **Full Sync**: Combines outsync and downsync operations
 
 ### Example API Usage
 
@@ -192,8 +192,8 @@ dart run bin/test_sync_manager.dart
 
 ### Manual Testing
 1. Start all servers: `dart run bin/server_runner.dart start-all`
-2. Add changes to upsyncs: `POST http://localhost:8082/api/changes`
-3. Perform upsync: `dart run bin/server_runner.dart upsync`
+2. Add changes to outsyncs: `POST http://localhost:8082/api/changes`
+3. Perform outsync: `dart run bin/server_runner.dart outsync`
 4. Check cloud storage: `GET http://localhost:8083/api/changes`
 5. Perform downsync: `dart run bin/server_runner.dart downsync`  
 6. Check downsyncs: `GET http://localhost:8081/api/changes`
@@ -214,7 +214,7 @@ lib/core/
 │   ├── cloud_storage_service.dart       # Cloud storage simulation
 │   ├── downsyncs_storage_service.dart   # Downsyncs storage
 │   ├── local_storage_service.dart       # Original storage service
-│   └── upsyncs_storage_service.dart     # Upsyncs storage
+│   └── outsyncs_storage_service.dart     # Outsyncs storage
 └── sync/
     └── sync_manager.dart                 # Sync orchestration
 
@@ -228,12 +228,12 @@ bin/
 ### Key Components
 
 #### Storage Services
-- **UpsyncsStorageService**: Manages local changes awaiting upload
+- **OutsyncsStorageService**: Manages local changes awaiting upload
 - **DownsyncsStorageService**: Manages changes received from cloud  
 - **CloudStorageService**: Simulates cloud storage (append-only)
 
 #### Sync Manager
-- **upsyncToCloud()**: Uploads local changes and cleans up
+- **outsyncToCloud()**: Uploads local changes and cleans up
 - **downsyncFromCloud()**: Downloads remote changes using cursor
 - **performFullSync()**: Combines both operations
 - **getSyncStatus()**: Provides sync statistics
