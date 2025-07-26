@@ -24,7 +24,7 @@ class SyncSystemDemo {
   }
 
   Future<void> runDemo() async {
-    print('🚀 Starting Sync System Demo\n');
+    print('🚀 Starting SLTT Dart Sync Demo\n');
 
     try {
       await _setupSystem();

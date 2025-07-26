@@ -4,7 +4,7 @@ import '../lib/core/server/server_ports.dart';
 
 Future<void> main(List<String> args) async {
   final launcher = MultiServerLauncher.instance;
-  print('Starting Dart Enhanced REST API Servers...');
+  print('Starting SLTT Dart Sync Servers...');
 
   // Determine which servers to start
   final validTypes = ['downsyncs', 'outsyncs', 'cloud'];
