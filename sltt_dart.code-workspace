@@ -16,7 +16,28 @@
   "settings": {
     "dart.lineLength": 120,
     "editor.rulers": [120],
-    "dart.showTodos": false
+    "dart.showTodos": false,
+    "dart.debugExternalPackageLibraries": true,
+    "dart.debugSdkLibraries": false,
+    "dart.analysisExcludedFolders": [
+      ".dart_tool",
+      "build"
+    ],
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit"
+    },
+    "files.exclude": {
+      "**/.dart_tool": true,
+      "**/build": true,
+      "**/*.g.dart": true
+    },
+    "search.exclude": {
+      "**/.dart_tool": true,
+      "**/build": true,
+      "**/*.g.dart": true,
+      "**/pubspec.lock": true
+    }
   },
   "extensions": {
     "recommendations": [

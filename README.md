@@ -14,19 +14,51 @@ A comprehensive mono-repo for offline-first sync systems including core librarie
 
 ## Getting Started
 
+### Quick Setup
+```bash
+# One-command setup (recommended)
+./dev.sh setup
+```
+
+### Manual Setup
 1. Install dependencies:
    ```bash
    cd packages/sltt_core
    dart pub get
+   cd ../examples/sync_manager_demo
+   dart pub get
    ```
 
-2. Run the demo:
+2. Generate code:
    ```bash
+   cd packages/sltt_core
+   dart run build_runner build
+   ```
+
+3. Run the demo:
+   ```bash
+   ./dev.sh demo
+   # or manually:
    cd examples/sync_manager_demo
    dart run demo_sync_system.dart
    ```
 
 ## Development
+
+### VS Code Setup
+- Open `sltt_dart.code-workspace` for multi-folder development
+- Use F5 to launch configurations for debugging
+- Use Ctrl+Shift+P → "Tasks: Run Task" for common operations
+
+### Development Scripts
+```bash
+./dev.sh setup     # Initial project setup
+./dev.sh demo      # Run interactive demo
+./dev.sh servers   # Start all servers
+./dev.sh test      # Run all tests
+./dev.sh status    # Check server status
+./dev.sh help      # Show all commands
+```
 
 See individual package READMEs for specific development instructions.
 

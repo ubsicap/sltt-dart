@@ -5,13 +5,93 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Dart Server: bin/server.dart",
+            "name": "Demo: Interactive Sync System",
             "type": "dart",
             "request": "launch",
-            "program": "bin/server.dart",
+            "program": "examples/sync_manager_demo/demo_sync_system.dart",
+            "console": "terminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Demo: Server Runner - Start All",
+            "type": "dart",
+            "request": "launch",
+            "program": "examples/sync_manager_demo/server_runner.dart",
+            "console": "terminal",
             "cwd": "${workspaceFolder}",
-            "args": [],
-            "console": "debugConsole"
+            "args": ["start-all"]
+        },
+        {
+            "name": "Demo: Server Runner - Status",
+            "type": "dart",
+            "request": "launch",
+            "program": "examples/sync_manager_demo/server_runner.dart",
+            "console": "terminal",
+            "cwd": "${workspaceFolder}",
+            "args": ["status"]
+        },
+        {
+            "name": "Demo: Server Runner - Sync",
+            "type": "dart",
+            "request": "launch",
+            "program": "examples/sync_manager_demo/server_runner.dart",
+            "console": "terminal",
+            "cwd": "${workspaceFolder}",
+            "args": ["sync"]
+        },
+        {
+            "name": "Test: Sync Manager",
+            "type": "dart",
+            "request": "launch",
+            "program": "examples/sync_manager_demo/test_sync_manager.dart",
+            "console": "terminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Test: Operation Field",
+            "type": "dart",
+            "request": "launch",
+            "program": "examples/sync_manager_demo/test_operation_field.dart",
+            "console": "terminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Server: Downsyncs (8081)",
+            "type": "dart",
+            "request": "launch",
+            "program": "examples/sync_manager_demo/server.dart",
+            "console": "terminal",
+            "cwd": "${workspaceFolder}",
+            "args": ["downsyncs"]
+        },
+        {
+            "name": "Server: Outsyncs (8082)",
+            "type": "dart",
+            "request": "launch",
+            "program": "examples/sync_manager_demo/server.dart",
+            "console": "terminal",
+            "cwd": "${workspaceFolder}",
+            "args": ["outsyncs"]
+        },
+        {
+            "name": "Server: Cloud Storage (8083)",
+            "type": "dart",
+            "request": "launch",
+            "program": "examples/sync_manager_demo/server.dart",
+            "console": "terminal",
+            "cwd": "${workspaceFolder}",
+            "args": ["cloud"]
+        }
+    ],
+    "compounds": [
+        {
+            "name": "All Servers",
+            "configurations": [
+                "Server: Downsyncs (8081)",
+                "Server: Outsyncs (8082)",
+                "Server: Cloud Storage (8083)"
+            ],
+            "stopAll": true
         }
     ]
 }
