@@ -1,4 +1,4 @@
-# Flutter-2 Sync System
+# Dart Sync System
 
 A shared Dart backend codebase for offline-first, LAN-collaborative, cloud-sync applications with a comprehensive sync management system and REST API interface.
 
@@ -19,7 +19,7 @@ The system consists of three main storage services:
 
 Each storage service has its own REST API server:
 - **Outsyncs Server**: Port 8082 - Full CRUD operations
-- **Downsyncs Server**: Port 8081 - Full CRUD operations  
+- **Downsyncs Server**: Port 8081 - Full CRUD operations
 - **Cloud Storage Server**: Port 8083 - Read and create only (simulates cloud constraints)
 
 ## Quick Start
@@ -75,7 +75,7 @@ dart run bin/server_runner.dart start-all
 # Start outsyncs server (port 8082)
 dart run bin/server_runner.dart start outsyncs
 
-# Start downsyncs server (port 8081)  
+# Start downsyncs server (port 8081)
 dart run bin/server_runner.dart start downsyncs
 
 # Start cloud storage server (port 8083)
@@ -120,7 +120,7 @@ GET /health
 ```
 
 #### API Documentation
-```  
+```
 GET /api/help                     # Get comprehensive API documentation
 ```
 
@@ -192,7 +192,7 @@ curl -X POST http://localhost:8082/api/changes \
   -H "Content-Type: application/json" \
   -d '{
     "entityType": "Document",
-    "operation": "create", 
+    "operation": "create",
     "entityId": "doc-123",
     "data": {
       "title": "My Document",
@@ -208,7 +208,7 @@ curl -X POST http://localhost:8083/api/changes/sync/0 \
   -d '[{
     "entityType": "Document",
     "operation": "update",
-    "entityId": "doc-123", 
+    "entityId": "doc-123",
     "data": {"title": "Updated Document"}
   }]'
 ```
@@ -234,7 +234,7 @@ dart run bin/test_operation_field.dart
 2. Add changes to outsyncs: `POST http://localhost:8082/api/changes`
 3. Perform outsync: `dart run bin/server_runner.dart outsync`
 4. Check cloud storage: `GET http://localhost:8083/api/changes`
-5. Perform downsync: `dart run bin/server_runner.dart downsync`  
+5. Perform downsync: `dart run bin/server_runner.dart downsync`
 6. Check downsyncs: `GET http://localhost:8081/api/changes`
 
 ## Development
@@ -267,7 +267,7 @@ bin/
 
 #### Storage Services
 - **OutsyncsStorageService**: Manages local changes awaiting upload
-- **DownsyncsStorageService**: Manages changes received from cloud  
+- **DownsyncsStorageService**: Manages changes received from cloud
 - **CloudStorageService**: Simulates cloud storage (append-only)
 
 #### Sync Manager
@@ -320,7 +320,7 @@ dart run bin/demo_sync_system.dart
 ### Core Components
 
 - **`ChangeLogEntry`**: Change log data model with Isar schema
-- **`SharedStorageService`**: Unified storage service with sync-aware filtering  
+- **`SharedStorageService`**: Unified storage service with sync-aware filtering
 - **`SyncManager`**: Orchestrates sync between outsyncs, downsyncs, and cloud
 - **`EnhancedRestApiServer`**: Multi-storage API server with change log semantics
 - **`MultiServerLauncher`**: Manages multiple server instances
@@ -437,4 +437,4 @@ If ports 8081, 8082, or 8083 are already in use, the servers will fail to start.
 
 ## License
 
-This project is part of the Flutter-2 shared backend codebase.
+This project is part of the Dart shared backend codebase.
