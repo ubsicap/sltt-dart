@@ -6,7 +6,7 @@ import '../models/change_log_entry.dart';
 class BaseStorageService {
   final String _databaseName;
   final String _logPrefix;
-  
+
   late Isar _isar;
   bool _initialized = false;
 
@@ -29,7 +29,8 @@ class BaseStorageService {
     );
 
     _initialized = true;
-    print('[$_logPrefix] Isar database initialized at: ${dir.path}');
+    print(
+        '[$_logPrefix] Isar database initialized at: ${dir.path}/${_databaseName}.isar');
   }
 
   /// Create a new change log entry in the storage.
@@ -207,10 +208,8 @@ class BaseStorageService {
 
   // Get changes since a specific sequence number (for syncing)
   Future<List<Map<String, dynamic>>> getChangesSince(int seq) async {
-    final results = await _isar.changeLogEntrys
-        .where()
-        .seqGreaterThan(seq)
-        .findAll();
+    final results =
+        await _isar.changeLogEntrys.where().seqGreaterThan(seq).findAll();
     // Sort by seq in ascending order
     results.sort((a, b) => a.seq.compareTo(b.seq));
     return results.map((e) => e.toJson()).toList();
@@ -219,13 +218,15 @@ class BaseStorageService {
   // Store multiple changes (for batch operations)
   Future<List<Map<String, dynamic>>> createChanges(
       List<Map<String, dynamic>> changesData) async {
-    final changes = changesData.map((changeData) => ChangeLogEntry(
-      entityType: changeData['entityType'] ?? '',
-      operation: changeData['operation'] ?? '',
-      timestamp: DateTime.now(),
-      entityId: changeData['entityId'] ?? '',
-      dataJson: jsonEncode(changeData['data'] ?? {}),
-    )).toList();
+    final changes = changesData
+        .map((changeData) => ChangeLogEntry(
+              entityType: changeData['entityType'] ?? '',
+              operation: changeData['operation'] ?? '',
+              timestamp: DateTime.now(),
+              entityId: changeData['entityId'] ?? '',
+              dataJson: jsonEncode(changeData['data'] ?? {}),
+            ))
+        .toList();
 
     await _isar.writeTxn(() async {
       await _isar.changeLogEntrys.putAll(changes);
