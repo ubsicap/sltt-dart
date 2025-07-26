@@ -29,15 +29,13 @@ class BaseStorageService {
     );
 
     _initialized = true;
-    print(
-        '[$_logPrefix] Isar database initialized at: ${dir.path}/${_databaseName}.isar');
+    print('[$_logPrefix] Isar database initialized at: ${dir.path}/${_databaseName}.isar');
   }
 
   /// Create a new change log entry in the storage.
   ///
   /// Returns the created change log entry with auto-generated sequence number.
-  Future<Map<String, dynamic>> createChange(
-      Map<String, dynamic> changeData) async {
+  Future<Map<String, dynamic>> createChange(Map<String, dynamic> changeData) async {
     final change = ChangeLogEntry(
       entityType: changeData['entityType'] ?? '',
       operation: changeData['operation'] ?? '',
@@ -60,36 +58,19 @@ class BaseStorageService {
   }
 
   Future<List<ChangeLogEntry>> getChangesByEntityType(String entityType) async {
-    return await _isar.changeLogEntrys
-        .filter()
-        .entityTypeEqualTo(entityType)
-        .sortByTimestampDesc()
-        .findAll();
+    return await _isar.changeLogEntrys.filter().entityTypeEqualTo(entityType).sortByTimestampDesc().findAll();
   }
 
   Future<List<ChangeLogEntry>> getChangesByOperation(String operation) async {
-    return await _isar.changeLogEntrys
-        .filter()
-        .operationEqualTo(operation)
-        .sortByTimestampDesc()
-        .findAll();
+    return await _isar.changeLogEntrys.filter().operationEqualTo(operation).sortByTimestampDesc().findAll();
   }
 
   Future<List<ChangeLogEntry>> getChangesByEntityId(String entityId) async {
-    return await _isar.changeLogEntrys
-        .filter()
-        .entityIdEqualTo(entityId)
-        .sortByTimestampDesc()
-        .findAll();
+    return await _isar.changeLogEntrys.filter().entityIdEqualTo(entityId).sortByTimestampDesc().findAll();
   }
 
-  Future<List<ChangeLogEntry>> getChangesInDateRange(
-      DateTime startDate, DateTime endDate) async {
-    return await _isar.changeLogEntrys
-        .filter()
-        .timestampBetween(startDate, endDate)
-        .sortByTimestampDesc()
-        .findAll();
+  Future<List<ChangeLogEntry>> getChangesInDateRange(DateTime startDate, DateTime endDate) async {
+    return await _isar.changeLogEntrys.filter().timestampBetween(startDate, endDate).sortByTimestampDesc().findAll();
   }
 
   /// Get the total count of change log entries.
@@ -116,12 +97,9 @@ class BaseStorageService {
   // Statistics operations
   Future<Map<String, int>> getChangeStats() async {
     final total = await _isar.changeLogEntrys.count();
-    final creates =
-        await _isar.changeLogEntrys.filter().operationEqualTo('create').count();
-    final updates =
-        await _isar.changeLogEntrys.filter().operationEqualTo('update').count();
-    final deletes =
-        await _isar.changeLogEntrys.filter().operationEqualTo('delete').count();
+    final creates = await _isar.changeLogEntrys.filter().operationEqualTo('create').count();
+    final updates = await _isar.changeLogEntrys.filter().operationEqualTo('update').count();
+    final deletes = await _isar.changeLogEntrys.filter().operationEqualTo('delete').count();
 
     return {
       'total': total,
@@ -172,11 +150,7 @@ class BaseStorageService {
     int? limit,
   }) async {
     var query = _isar.changeLogEntrys.where();
-    var results = await query
-        .seqGreaterThan(cursor ?? 0)
-        .filter()
-        .outdatedByIsNull()
-        .findAll();
+    var results = await query.seqGreaterThan(cursor ?? 0).filter().outdatedByIsNull().findAll();
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
     }
@@ -208,16 +182,14 @@ class BaseStorageService {
 
   // Get changes since a specific sequence number (for syncing)
   Future<List<Map<String, dynamic>>> getChangesSince(int seq) async {
-    final results =
-        await _isar.changeLogEntrys.where().seqGreaterThan(seq).findAll();
+    final results = await _isar.changeLogEntrys.where().seqGreaterThan(seq).findAll();
     // Sort by seq in ascending order
     results.sort((a, b) => a.seq.compareTo(b.seq));
     return results.map((e) => e.toJson()).toList();
   }
 
   // Store multiple changes (for batch operations)
-  Future<List<Map<String, dynamic>>> createChanges(
-      List<Map<String, dynamic>> changesData) async {
+  Future<List<Map<String, dynamic>>> createChanges(List<Map<String, dynamic>> changesData) async {
     final changes = changesData
         .map((changeData) => ChangeLogEntry(
               entityType: changeData['entityType'] ?? '',
@@ -239,24 +211,21 @@ class BaseStorageService {
 // Singleton wrappers for each storage type
 class OutsyncsStorageService extends BaseStorageService {
   static OutsyncsStorageService? _instance;
-  static OutsyncsStorageService get instance =>
-      _instance ??= OutsyncsStorageService._();
+  static OutsyncsStorageService get instance => _instance ??= OutsyncsStorageService._();
 
   OutsyncsStorageService._() : super('outsyncs', 'OutsyncsStorage');
 }
 
 class DownsyncsStorageService extends BaseStorageService {
   static DownsyncsStorageService? _instance;
-  static DownsyncsStorageService get instance =>
-      _instance ??= DownsyncsStorageService._();
+  static DownsyncsStorageService get instance => _instance ??= DownsyncsStorageService._();
 
   DownsyncsStorageService._() : super('downsyncs', 'DownsyncsStorage');
 }
 
 class CloudStorageService extends BaseStorageService {
   static CloudStorageService? _instance;
-  static CloudStorageService get instance =>
-      _instance ??= CloudStorageService._();
+  static CloudStorageService get instance => _instance ??= CloudStorageService._();
 
   CloudStorageService._() : super('cloud_storage', 'CloudStorage');
 }

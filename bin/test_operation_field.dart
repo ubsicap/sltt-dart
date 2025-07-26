@@ -65,7 +65,7 @@ void main() async {
 
     // Test 3: Verify outdated filtering
     print('Test 3: Testing outdated changes filtering...');
-    
+
     // Get the sequence of the first change
     final seqMap1 = data1['seqMap'] as Map<String, dynamic>;
     final seq1 = seqMap1.values.first as int;
@@ -89,7 +89,7 @@ void main() async {
     // Test 4: Verify the non-outdated change is still included
     final seqMap2 = data2['seqMap'] as Map<String, dynamic>;
     final seq2 = seqMap2.values.first as int;
-    
+
     final nonOutdatedChangeInSync = changesForSync.any((c) => c['seq'] == seq2);
     if (!nonOutdatedChangeInSync) {
       throw Exception('Non-outdated change was incorrectly excluded from sync results');
@@ -98,7 +98,6 @@ void main() async {
     print('✅ Non-outdated changes correctly included in sync');
 
     print('\n🎉 All tests passed! Optional operation field and outdated filtering work correctly.');
-
   } catch (e) {
     print('\n❌ Test failed: $e');
     exit(1);

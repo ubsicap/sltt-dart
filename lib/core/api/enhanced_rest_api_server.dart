@@ -274,8 +274,7 @@ class EnhancedRestApiServer {
       if (cursorParam != null) {
         cursor = int.tryParse(cursorParam);
         if (cursor == null) {
-          return _errorResponse(
-              'Invalid cursor format: must be an integer', 400);
+          return _errorResponse('Invalid cursor format: must be an integer', 400);
         }
       }
 
@@ -283,8 +282,7 @@ class EnhancedRestApiServer {
       if (limitParam != null) {
         limit = int.tryParse(limitParam);
         if (limit == null || limit <= 0) {
-          return _errorResponse(
-              'Invalid limit format: must be a positive integer', 400);
+          return _errorResponse('Invalid limit format: must be a positive integer', 400);
         }
         if (limit > 1000) {
           return _errorResponse('Limit too large: maximum is 1000', 400);
@@ -391,8 +389,7 @@ class EnhancedRestApiServer {
           // Always create with fresh data, never include 'seq' in storage
           final changeToStore = {
             'entityType': changeData['entityType'] as String,
-            'operation': changeData['operation'] as String? ??
-                'create', // Default to 'create' if not provided
+            'operation': changeData['operation'] as String? ?? 'create', // Default to 'create' if not provided
             'entityId': changeData['entityId'] as String,
             'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
           };
@@ -501,8 +498,7 @@ class EnhancedRestApiServer {
 
   bool get isRunning => _server != null;
 
-  String? get address =>
-      _server != null ? 'http://localhost:${_server!.port}' : null;
+  String? get address => _server != null ? 'http://localhost:${_server!.port}' : null;
 }
 
 // Custom logging middleware
@@ -512,8 +508,7 @@ Middleware customLogRequests({required String serverName, required int port}) {
       final response = await innerHandler(request);
       final timestamp = DateTime.now().toIso8601String();
       final paddedName = serverName.padLeft(12);
-      print(
-          '$timestamp  $paddedName:$port  ${request.method}  [${response.statusCode}]  ${request.requestedUri.path}');
+      print('$timestamp  $paddedName:$port  ${request.method}  [${response.statusCode}]  ${request.requestedUri.path}');
       return response;
     };
   };

@@ -12,8 +12,7 @@ Future<void> main(List<String> args) async {
   if (args.isNotEmpty) {
     serversToStart = args.where((type) => validTypes.contains(type)).toList();
     if (serversToStart.isEmpty) {
-      print(
-          'No valid server types specified. Valid types: downsyncs, outsyncs, cloud');
+      print('No valid server types specified. Valid types: downsyncs, outsyncs, cloud');
       exit(1);
     }
   }

@@ -9,10 +9,8 @@ class SyncManager {
   SyncManager._();
 
   final Dio _dio = Dio();
-  final OutsyncsStorageService _outsyncsStorage =
-      OutsyncsStorageService.instance;
-  final DownsyncsStorageService _downsyncsStorage =
-      DownsyncsStorageService.instance;
+  final OutsyncsStorageService _outsyncsStorage = OutsyncsStorageService.instance;
+  final DownsyncsStorageService _downsyncsStorage = DownsyncsStorageService.instance;
 
   // API endpoints
   final String _cloudStorageUrl = 'http://localhost:$kCloudStoragePort';
@@ -139,8 +137,7 @@ class SyncManager {
         final newChanges = changesSinceSeq.cast<Map<String, dynamic>>();
         final storedChanges = await _downsyncsStorage.createChanges(newChanges);
 
-        print(
-            '[SyncManager] Successfully downsynced ${storedChanges.length} changes');
+        print('[SyncManager] Successfully downsynced ${storedChanges.length} changes');
 
         return DownsyncResult(
           success: true,
@@ -166,7 +163,7 @@ class SyncManager {
 
     // Step 1: Outsync to cloud (but don't delete local changes yet)
     final outsyncResult = await outsyncToCloud();
-    
+
     // Step 2: Downsync from cloud to get the new sequences
     final downsyncResult = await downsyncFromCloud();
 
@@ -174,17 +171,17 @@ class SyncManager {
     List<int> deletedLocalSeqs = [];
     if (outsyncResult.success && outsyncResult.seqMap.isNotEmpty) {
       print('[SyncManager] Completing outsync cleanup...');
-      
+
       // Update outdatedBy fields and delete outsynced changes
       for (final entry in outsyncResult.seqMap.entries) {
         final oldSeq = int.parse(entry.key);
         final newSeq = entry.value;
-        
+
         // Mark the old change as outdated by the new sequence
         await _outsyncsStorage.markAsOutdated(oldSeq, newSeq);
         deletedLocalSeqs.add(oldSeq);
       }
-      
+
       // Now actually delete the outsynced changes
       final deletedCount = await _outsyncsStorage.deleteChanges(deletedLocalSeqs);
       print('[SyncManager] Deleted $deletedCount outsynced changes from local storage');
@@ -228,8 +225,7 @@ class SyncManager {
         outsyncsCount: outsyncsCount,
         downsyncsCount: downsyncsCount,
         cloudCount: cloudCount,
-        lastSyncTime:
-            DateTime.now(), // In a real implementation, this would be persisted
+        lastSyncTime: DateTime.now(), // In a real implementation, this would be persisted
       );
     } catch (e) {
       print('[SyncManager] Failed to get sync status: $e');

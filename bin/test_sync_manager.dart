@@ -67,9 +67,7 @@ class SyncManagerTester {
     final status = _serverLauncher.getServerStatus();
     print('Server status: $status');
 
-    if (!status['downsyncs']! ||
-        !status['outsyncs']! ||
-        !status['cloudStorage']!) {
+    if (!status['downsyncs']! || !status['outsyncs']! || !status['cloudStorage']!) {
       throw Exception('Not all servers started successfully');
     }
     print('✅ All servers started successfully\n');
@@ -154,8 +152,7 @@ class SyncManagerTester {
     final seqMap = batchResult['seqMap'] as Map<String, dynamic>?;
 
     if (!success || createdCount != 2) {
-      throw Exception(
-          'Expected 2 successful changes, got success=$success, created=$createdCount');
+      throw Exception('Expected 2 successful changes, got success=$success, created=$createdCount');
     }
 
     if (seqMap == null || seqMap.length != 2) {
@@ -188,18 +185,15 @@ class SyncManagerTester {
 
     // Add changes to outsyncs server
     for (final change in testChanges) {
-      await _dio
-          .post('$_outsyncsUrl/api/changes', data: [change]); // Wrap in array
+      await _dio.post('$_outsyncsUrl/api/changes', data: [change]); // Wrap in array
     }
 
     // Get initial counts
     final outsyncsStatsBefore = await _dio.get('$_outsyncsUrl/api/stats');
     final cloudStatsBefore = await _dio.get('$_cloudStorageUrl/api/stats');
 
-    final outsyncsCountBefore =
-        outsyncsStatsBefore.data['changeStats']['total'] as int;
-    final cloudCountBefore =
-        cloudStatsBefore.data['changeStats']['total'] as int;
+    final outsyncsCountBefore = outsyncsStatsBefore.data['changeStats']['total'] as int;
+    final cloudCountBefore = cloudStatsBefore.data['changeStats']['total'] as int;
 
     print('   Outsyncs changes before: $outsyncsCountBefore');
     print('   Cloud changes before: $cloudCountBefore');
@@ -217,15 +211,15 @@ class SyncManagerTester {
     }
 
     if (outsyncResult.deletedLocalChanges.isNotEmpty) {
-      throw Exception('Expected no local changes to be deleted yet, but found ${outsyncResult.deletedLocalChanges.length}');
+      throw Exception(
+          'Expected no local changes to be deleted yet, but found ${outsyncResult.deletedLocalChanges.length}');
     }
 
     // Verify changes were added to cloud storage but outsyncs still has them
     final outsyncsStatsAfter = await _dio.get('$_outsyncsUrl/api/stats');
     final cloudStatsAfter = await _dio.get('$_cloudStorageUrl/api/stats');
 
-    final outsyncsCountAfter =
-        outsyncsStatsAfter.data['changeStats']['total'] as int;
+    final outsyncsCountAfter = outsyncsStatsAfter.data['changeStats']['total'] as int;
     final cloudCountAfter = cloudStatsAfter.data['changeStats']['total'] as int;
 
     print('   Outsyncs changes after: $outsyncsCountAfter');
@@ -236,7 +230,8 @@ class SyncManagerTester {
     }
 
     if (outsyncsCountAfter != outsyncsCountBefore) {
-      throw Exception('Expected outsyncs changes to remain same until full sync completion, before: $outsyncsCountBefore, after: $outsyncsCountAfter');
+      throw Exception(
+          'Expected outsyncs changes to remain same until full sync completion, before: $outsyncsCountBefore, after: $outsyncsCountAfter');
     }
 
     print('   ✅ Successfully outsynced to cloud, seqMap contains ${outsyncResult.seqMap.length} mappings');
@@ -249,8 +244,7 @@ class SyncManagerTester {
 
     // Get initial downsync count
     final downsyncsStatsBefore = await _dio.get('$_downsyncsUrl/api/stats');
-    final downsyncsCountBefore =
-        downsyncsStatsBefore.data['changeStats']['total'] as int;
+    final downsyncsCountBefore = downsyncsStatsBefore.data['changeStats']['total'] as int;
 
     print('   Downsyncs changes before: $downsyncsCountBefore');
 
@@ -263,12 +257,10 @@ class SyncManagerTester {
 
     // Verify results
     final downsyncsStatsAfter = await _dio.get('$_downsyncsUrl/api/stats');
-    final downsyncsCountAfter =
-        downsyncsStatsAfter.data['changeStats']['total'] as int;
+    final downsyncsCountAfter = downsyncsStatsAfter.data['changeStats']['total'] as int;
 
     print('   Downsyncs changes after: $downsyncsCountAfter');
-    print(
-        '   ✅ Successfully downsynced ${downsyncResult.newChanges.length} changes');
+    print('   ✅ Successfully downsynced ${downsyncResult.newChanges.length} changes');
     print('✅ Downsync flow test passed\n');
   }
 
@@ -287,8 +279,7 @@ class SyncManagerTester {
 
     // Get initial counts
     final outsyncsStatsBefore = await _dio.get('$_outsyncsUrl/api/stats');
-    final outsyncsCountBefore =
-        outsyncsStatsBefore.data['changeStats']['total'] as int;
+    final outsyncsCountBefore = outsyncsStatsBefore.data['changeStats']['total'] as int;
 
     // Perform full sync
     final fullSyncResult = await _syncManager.performFullSync();
@@ -299,15 +290,15 @@ class SyncManagerTester {
 
     // Verify that local changes were actually deleted after full sync
     final outsyncsStatsAfter = await _dio.get('$_outsyncsUrl/api/stats');
-    final outsyncsCountAfter =
-        outsyncsStatsAfter.data['changeStats']['total'] as int;
+    final outsyncsCountAfter = outsyncsStatsAfter.data['changeStats']['total'] as int;
 
     if (fullSyncResult.outsyncResult.deletedLocalChanges.isEmpty) {
       throw Exception('Expected some local changes to be deleted after full sync');
     }
 
     if (outsyncsCountAfter >= outsyncsCountBefore) {
-      throw Exception('Expected outsyncs count to decrease after full sync, before: $outsyncsCountBefore, after: $outsyncsCountAfter');
+      throw Exception(
+          'Expected outsyncs count to decrease after full sync, before: $outsyncsCountBefore, after: $outsyncsCountAfter');
     }
 
     print('   ✅ Full sync completed successfully');
@@ -392,11 +383,9 @@ class SyncManagerTester {
     }
 
     if (change1.first['seq'] != newSeq1 || change2.first['seq'] != newSeq2) {
-      throw Exception(
-        'Stored changes have incorrect sequences. '
-        'Expected change1 seq: $newSeq1, got: ${change1.first['seq']}. '
-        'Expected change2 seq: $newSeq2, got: ${change2.first['seq']}'
-      );
+      throw Exception('Stored changes have incorrect sequences. '
+          'Expected change1 seq: $newSeq1, got: ${change1.first['seq']}. '
+          'Expected change2 seq: $newSeq2, got: ${change2.first['seq']}');
     }
 
     print('   ✅ Cloud storage correctly creates new sequences and provides seqMap');

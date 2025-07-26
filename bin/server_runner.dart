@@ -11,8 +11,7 @@ void main(List<String> args) async {
     print('Usage: dart bin/server_runner.dart <command> [options]');
     print('Commands:');
     print('  start-all              - Start all three servers');
-    print(
-        '  start <type>           - Start specific server (downsyncs, outsyncs, cloud)');
+    print('  start <type>           - Start specific server (downsyncs, outsyncs, cloud)');
     print('  stop-all               - Stop all servers');
     print('  stop <type>            - Stop specific server');
     print('  status                 - Show server status');
@@ -53,8 +52,7 @@ void main(List<String> args) async {
         final serverType = args[1];
         final port = _getDefaultPort(serverType);
         await launcher.startServer(serverType, port);
-        print(
-            '$serverType server started on port $port. Press Ctrl+C to stop.');
+        print('$serverType server started on port $port. Press Ctrl+C to stop.');
 
         ProcessSignal.sigint.watch().listen((signal) async {
           print('\nShutting down $serverType server...');
@@ -83,12 +81,9 @@ void main(List<String> args) async {
         final addresses = launcher.getServerAddresses();
 
         print('Server Status:');
-        print(
-            '  Downsyncs: ${status['downsyncs']! ? 'Running' : 'Stopped'} ${addresses['downsyncs'] ?? ''}');
-        print(
-            '  Outsyncs: ${status['outsyncs']! ? 'Running' : 'Stopped'} ${addresses['outsyncs'] ?? ''}');
-        print(
-            '  Cloud Storage: ${status['cloudStorage']! ? 'Running' : 'Stopped'} ${addresses['cloudStorage'] ?? ''}');
+        print('  Downsyncs: ${status['downsyncs']! ? 'Running' : 'Stopped'} ${addresses['downsyncs'] ?? ''}');
+        print('  Outsyncs: ${status['outsyncs']! ? 'Running' : 'Stopped'} ${addresses['outsyncs'] ?? ''}');
+        print('  Cloud Storage: ${status['cloudStorage']! ? 'Running' : 'Stopped'} ${addresses['cloudStorage'] ?? ''}');
         break;
 
       case 'sync':
@@ -124,8 +119,7 @@ void main(List<String> args) async {
 
       default:
         print('Unknown command: $command');
-        print(
-            'Use "dart bin/server_runner.dart" without arguments to see usage.');
+        print('Use "dart bin/server_runner.dart" without arguments to see usage.');
     }
   } catch (e) {
     print('Error: $e');
