@@ -123,16 +123,15 @@ GET /health
 ```
 GET  /api/changes                  # Get all changes (with cursor/limit pagination)
 GET  /api/changes/{seq}           # Get specific change by sequence number
-POST /api/changes                 # Create new change
-POST /api/changes/sync/{seq}      # Sync endpoint (store changes + return changes since seq)
-PUT  /api/changes/{seq}           # Update existing change (not available on cloud storage)
-DELETE /api/changes/{seq}         # Delete change (not available on cloud storage)
+POST /api/changes                 # Create new changes (array format)
 ```
 
 #### Statistics
 ```
 GET /api/stats                    # Get change and entity type statistics
 ```
+
+**Note**: PUT and DELETE endpoints have been removed. The API now follows append-only change log semantics for data integrity.
 
 ### Sync Workflow
 
@@ -180,14 +179,11 @@ curl "http://localhost:8081/api/changes?cursor=10&limit=5"
 
 ### Run API Tests
 ```bash
-# Test original REST API
-dart run bin/test_api.dart
-
-# Test original API on specific server
-dart run bin/test_api.dart http://localhost:8082
-
 # Test complete sync system
 dart run bin/test_sync_manager.dart
+
+# Test operation field functionality
+dart run bin/test_operation_field.dart
 ```
 
 ### Manual Testing
@@ -204,24 +200,23 @@ dart run bin/test_sync_manager.dart
 ```
 lib/core/
 ├── api/
-│   ├── enhanced_rest_api_server.dart    # New multi-storage API server
-│   └── rest_api_server.dart             # Original API server (with sync endpoint)
+│   └── enhanced_rest_api_server.dart    # Multi-storage API server
 ├── models/
-│   └── change_log_entry.dart            # Change log data model
+│   ├── change_log_entry.dart            # Change log data model
+│   └── change_log_entry.g.dart          # Generated Isar schema
 ├── server/
-│   └── multi_server_launcher.dart       # Server management utility
+│   ├── multi_server_launcher.dart       # Server management utility
+│   └── server_ports.dart                # Port configuration constants
 ├── storage/
-│   ├── cloud_storage_service.dart       # Cloud storage simulation
-│   ├── downsyncs_storage_service.dart   # Downsyncs storage
-│   ├── local_storage_service.dart       # Original storage service
-│   └── outsyncs_storage_service.dart     # Outsyncs storage
+│   └── shared_storage_service.dart      # Unified storage services
 └── sync/
     └── sync_manager.dart                 # Sync orchestration
 
 bin/
 ├── demo_sync_system.dart                # Interactive demo
+├── server.dart                          # Main server executable
 ├── server_runner.dart                   # Server management CLI
-├── test_api.dart                        # Original API tests
+├── test_operation_field.dart            # Operation field tests
 └── test_sync_manager.dart               # Sync system tests
 ```
 
@@ -239,9 +234,10 @@ bin/
 - **getSyncStatus()**: Provides sync statistics
 
 #### Enhanced API Server
-- Supports multiple storage backends
-- Implements sync endpoint for bi-directional sync
-- Enforces cloud storage constraints (no PUT/DELETE)
+- Supports multiple storage backends (outsyncs, downsyncs, cloud)
+- Implements change log semantics with append-only operations
+- Provides sequence mapping for sync operations
+- Filters outdated changes from sync operations
 
 ### Adding New Features
 
@@ -266,100 +262,41 @@ bin/
 dart run bin/server.dart
 ```
 
-### 5. Test the API
+### 5. Test the System
 
 ```bash
-dart run bin/test_api.dart
-```
+# Test the complete sync system
+dart run bin/test_sync_manager.dart
 
-## API Endpoints
-
-### Health Check
-- `GET /health` - Server health status
-
-### Documents
-- `GET /api/documents` - List all documents
-- `GET /api/documents?type={type}` - Filter documents by type
-- `GET /api/documents/{uuid}` - Get specific document
-- `POST /api/documents` - Create new document
-- `PUT /api/documents/{uuid}` - Update document
-- `DELETE /api/documents/{uuid}` - Delete document
-- `GET /api/documents/search/{query}` - Search documents
-
-### Sync
-- `GET /api/sync/status` - Get sync status
-- `POST /api/sync/trigger` - Trigger sync process
-- `POST /api/sync/document/{uuid}` - Sync specific document
-
-### Statistics
-- `GET /api/stats` - Get server and storage statistics
-
-## Example Usage
-
-### Create a Document
-```bash
-curl -X POST http://localhost:8080/api/documents \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "My Note",
-    "content": "This is a test note",
-    "type": "note",
-    "metadata": {
-      "tags": ["test", "example"]
-    }
-  }'
-```
-
-### Get All Documents
-```bash
-curl http://localhost:8080/api/documents
-```
-
-### Search Documents
-```bash
-curl http://localhost:8080/api/documents/search/test
-```
-
-### Check Sync Status
-```bash
-curl http://localhost:8080/api/sync/status
+# Or run the interactive demo
+dart run bin/demo_sync_system.dart
 ```
 
 ## Architecture
 
 ### Core Components
 
-- **`BaseEntity`**: Base class for all persisted entities with sync metadata
-- **`Document`**: Main content entity with title, content, type, and metadata
-- **`LocalStorageService`**: Isar-based local persistence layer
-- **`SyncManager`**: Orchestrates sync between local, LAN, and cloud
-- **`RestApiServer`**: Shelf-based HTTP server with CORS support
+- **`ChangeLogEntry`**: Change log data model with Isar schema
+- **`SharedStorageService`**: Unified storage service with sync-aware filtering  
+- **`SyncManager`**: Orchestrates sync between outsyncs, downsyncs, and cloud
+- **`EnhancedRestApiServer`**: Multi-storage API server with change log semantics
+- **`MultiServerLauncher`**: Manages multiple server instances
 
 ### Sync Architecture
 
-The sync system is designed with three layers:
+The sync system uses a three-tier change log architecture:
 
-1. **Local Storage**: Isar database for offline-first functionality
-2. **LAN Sync**: Stubbed P2P sync for local network collaboration
-3. **Cloud Sync**: Stubbed AWS integration for cloud synchronization
+1. **Outsyncs Storage**: Local changes awaiting upload to cloud
+2. **Cloud Storage**: Centralized change log (append-only)
+3. **Downsyncs Storage**: Changes received from cloud
 
 ### Data Flow
 
 ```
-Local Storage ↔ Sync Manager ↔ [LAN Provider, Cloud Provider]
-                      ↓
-                 REST API Server
-                      ↓
-              External Clients
+Outsyncs → Cloud Storage → Downsyncs
+    ↑           ↓             ↓
+Local Clients ← SyncManager → Application State
 ```
-
-## Sync Status States
-
-- **`local`**: Only exists locally
-- **`pending`**: Has local changes, needs sync
-- **`syncing`**: Currently syncing
-- **`synced`**: Synced to cloud
-- **`conflict`**: Sync conflict detected
 
 ## Development
 
@@ -396,13 +333,20 @@ Default configuration:
 
 ## Testing
 
-Run the comprehensive API test suite:
+Run the comprehensive sync system test suite:
 
 ```bash
-dart run bin/test_api.dart
+# Test all sync functionality
+dart run bin/test_sync_manager.dart
+
+# Test specific features
+dart run bin/test_operation_field.dart
+
+# Interactive demonstration
+dart run bin/demo_sync_system.dart
 ```
 
-This will test all endpoints and verify functionality.
+This will test all sync operations, change log functionality, and verify the complete system works correctly.
 
 ## Troubleshooting
 
@@ -433,20 +377,20 @@ dart run build_runner build --delete-conflicting-outputs
 
 ### Port Already in Use
 
-If port 8080 is already in use, the server will fail to start. You can:
-1. Stop the process using port 8080
-2. Or modify `bin/server.dart` to use a different port
+If ports 8081, 8082, or 8083 are already in use, the servers will fail to start. You can:
+1. Stop the processes using these ports
+2. Or modify the port constants in `lib/core/server/server_ports.dart`
 
 ## Future Enhancements
 
-- [ ] Implement actual LAN discovery and sync
-- [ ] Add AWS DynamoDB/S3 integration
-- [ ] Add media file handling
-- [ ] Implement conflict resolution UI
-- [ ] Add user authentication
-- [ ] Add real-time WebSocket notifications
-- [ ] Add batch operations
-- [ ] Add data export/import
+- [ ] Add operation field validation against entity state snapshots
+- [ ] Implement compressed change log storage
+- [ ] Add real-time WebSocket notifications for sync events
+- [ ] Implement conflict resolution for concurrent changes
+- [ ] Add authentication and authorization
+- [ ] Add cloud storage backend (AWS S3, Google Cloud, etc.)
+- [ ] Implement change log compaction and archiving
+- [ ] Add metrics and monitoring capabilities
 
 ## License
 
