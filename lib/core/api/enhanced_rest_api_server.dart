@@ -66,17 +66,10 @@ class EnhancedRestApiServer {
     // Health check
     router.get('/health', _handleHealth);
 
-    // Change log endpoints
+    // Change log endpoints - append-only operations
     router.post('/api/changes', _handleCreateChanges);
     router.get('/api/changes', _handleGetChanges);
     router.get('/api/changes/<seq>', _handleGetChange);
-
-    // Conditional endpoints based on storage type
-    if (storageType != StorageType.cloudStorage) {
-      // Allow PUT and DELETE for outsyncs and downsyncs
-      router.put('/api/changes/<seq>', _handleUpdateChange);
-      router.delete('/api/changes/<seq>', _handleDeleteChange);
-    }
 
     // Statistics
     router.get('/api/stats', _handleGetStats);
@@ -87,7 +80,10 @@ class EnhancedRestApiServer {
     return router;
   }
 
-  // Health check endpoint
+  /// Health check endpoint.
+  ///
+  /// Returns server status information including timestamp, server name,
+  /// and storage type. Used for monitoring and debugging purposes.
   Future<Response> _handleHealth(Request request) async {
     return Response.ok(
       jsonEncode({
@@ -100,7 +96,13 @@ class EnhancedRestApiServer {
     );
   }
 
-  // Get all changes or filter by query parameters
+  /// Get all changes or filter by query parameters.
+  ///
+  /// Supports cursor-based pagination with optional query parameters:
+  /// - `cursor`: Starting sequence number (exclusive)
+  /// - `limit`: Maximum number of results (max 1000)
+  ///
+  /// Returns a list of changes with pagination metadata.
   Future<Response> _handleGetChanges(Request request) async {
     try {
       final cursorParam = request.url.queryParameters['cursor'];
@@ -164,7 +166,10 @@ class EnhancedRestApiServer {
     }
   }
 
-  // Get a specific change by seq
+  /// Get a specific change by sequence number.
+  ///
+  /// Returns the change log entry with the specified sequence number.
+  /// Returns 404 if the change is not found.
   Future<Response> _handleGetChange(Request request, String seq) async {
     try {
       final changeSeq = int.tryParse(seq);
@@ -186,8 +191,17 @@ class EnhancedRestApiServer {
     }
   }
 
-  /// Creates new changes in the storage
-  /// Returns metadata about created changes, not the full payload
+  /// Creates new changes in the storage.
+  ///
+  /// Accepts an array of change objects and creates new change log entries.
+  /// The `operation` field is optional and defaults to 'create' if not provided.
+  /// This field represents the logical operation on the application entity,
+  /// not the change log entry operation (which is always a creation).
+  ///
+  /// Returns metadata about created changes including sequence mappings,
+  /// but not the full payload to reduce response size.
+  ///
+  /// TODO: Future enhancement - validate operation field against entity state snapshots.
   Future<Response> _handleCreateChanges(Request request) async {
     try {
       final body = await request.readAsString();
@@ -216,7 +230,7 @@ class EnhancedRestApiServer {
           // Always create with fresh data, never include 'seq' in storage
           final changeToStore = {
             'entityType': changeData['entityType'] as String,
-            'operation': changeData['operation'] as String,
+            'operation': changeData['operation'] as String? ?? 'create', // Default to 'create' if not provided
             'entityId': changeData['entityId'] as String,
             'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
           };
@@ -261,53 +275,12 @@ class EnhancedRestApiServer {
     } catch (e) {
       return _errorResponse('Failed to create changes: $e', 500);
     }
-  } // Update an existing change (not available for cloud storage)
-
-  Future<Response> _handleUpdateChange(Request request, String seq) async {
-    try {
-      final changeSeq = int.tryParse(seq);
-      if (changeSeq == null) {
-        return _errorResponse('Invalid change seq format', 400);
-      }
-
-      final body = await request.readAsString();
-      final data = jsonDecode(body) as Map<String, dynamic>;
-
-      final updated = await _storage!.updateChange(changeSeq, data);
-
-      return Response.ok(
-        jsonEncode(updated),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      return _errorResponse('Failed to update change: $e', 500);
-    }
   }
 
-  // Delete a change (not available for cloud storage)
-  Future<Response> _handleDeleteChange(Request request, String seq) async {
-    try {
-      final changeSeq = int.tryParse(seq);
-      if (changeSeq == null) {
-        return _errorResponse('Invalid change seq format', 400);
-      }
-
-      final deleted = await _storage!.deleteChange(changeSeq);
-
-      if (deleted) {
-        return Response.ok(
-          jsonEncode({'message': 'Change deleted successfully'}),
-          headers: {'Content-Type': 'application/json'},
-        );
-      } else {
-        return _errorResponse('Change not found', 404);
-      }
-    } catch (e) {
-      return _errorResponse('Failed to delete change: $e', 500);
-    }
-  }
-
-  // Get statistics
+  /// Get statistics for the change log storage.
+  ///
+  /// Returns count statistics for different operation types and entity types.
+  /// Useful for monitoring and debugging sync operations.
   Future<Response> _handleGetStats(Request request) async {
     try {
       final changeStats = await _storage!.getChangeStats();
@@ -327,7 +300,9 @@ class EnhancedRestApiServer {
     }
   }
 
-  // 404 handler
+  /// 404 handler for unmatched routes.
+  ///
+  /// Returns a standardized 404 response with error details.
   Future<Response> _handleNotFound(Request request) async {
     return Response.notFound(
       jsonEncode({'error': 'Endpoint not found', 'path': request.url.path}),
@@ -335,7 +310,9 @@ class EnhancedRestApiServer {
     );
   }
 
-  // Error response helper
+  /// Helper method to create standardized error responses.
+  ///
+  /// Returns a JSON response with error message, timestamp and server info.
   Response _errorResponse(String message, int statusCode) {
     return Response(
       statusCode,

@@ -3,11 +3,13 @@ import 'package:dio/dio.dart';
 import '../lib/core/server/multi_server_launcher.dart';
 import '../lib/core/server/server_ports.dart';
 import '../lib/core/sync/sync_manager.dart';
+import '../lib/core/storage/shared_storage_service.dart';
 
 class SyncManagerTester {
   final Dio _dio = Dio();
   final MultiServerLauncher _serverLauncher = MultiServerLauncher.instance;
   final SyncManager _syncManager = SyncManager.instance;
+  final OutsyncsStorageService _outsyncsStorage = OutsyncsStorageService.instance;
 
   // API endpoints
   final String _cloudStorageUrl = 'http://localhost:$kCloudStoragePort';
@@ -425,18 +427,9 @@ class SyncManagerTester {
 
     print('   Created change with seq: $createdSeq');
 
-    // Mark the change as outdated by updating it
-    final updateResponse = await _dio.put(
-      '$_outsyncsUrl/api/changes/$createdSeq',
-      data: {
-        ...change,
-        'outdatedBy': 99999, // Some future seq
-      },
-    );
-
-    if (updateResponse.statusCode != 200) {
-      throw Exception('Failed to mark change as outdated');
-    }
+    // Mark the change as outdated using the storage service directly
+    // (since PUT endpoint has been removed from the API)
+    await _outsyncsStorage.markAsOutdated(createdSeq, 99999);
 
     print('   Marked change as outdated');
 

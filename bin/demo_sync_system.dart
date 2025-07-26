@@ -4,10 +4,12 @@ import 'package:dio/dio.dart';
 import '../lib/core/server/multi_server_launcher.dart';
 import '../lib/core/server/server_ports.dart';
 import '../lib/core/sync/sync_manager.dart';
+import '../lib/core/storage/shared_storage_service.dart';
 
 class SyncSystemDemo {
   final MultiServerLauncher _serverLauncher = MultiServerLauncher.instance;
   final SyncManager _syncManager = SyncManager.instance;
+  final OutsyncsStorageService _outsyncsStorage = OutsyncsStorageService.instance;
   final Dio _dio = Dio();
 
   // API endpoints
@@ -120,12 +122,12 @@ class SyncSystemDemo {
     final outsyncsChanges = [
       {
         'entityType': 'Document',
-        'operation': 'update',
-        'entityId': 'demo-doc-1',
+        'operation': 'create',
+        'entityId': 'demo-doc-outsync-1',
         'data': {
-          'title': 'Updated Demo Document 1',
+          'title': 'Outsync Demo Document 1',
           'content':
-              'This document was updated and needs to be synced to cloud',
+              'This document was created and needs to be synced to cloud',
           'lastModified': DateTime.now().toIso8601String(),
         },
       },
@@ -230,8 +232,8 @@ class SyncSystemDemo {
     await _dio.post('$_outsyncsUrl/api/changes', data: [
       {
         'entityType': 'Settings',
-        'operation': 'update',
-        'entityId': 'app-settings',
+        'operation': 'create',
+        'entityId': 'app-settings-final',
         'data': {
           'theme': 'dark',
           'language': 'en',
@@ -333,10 +335,9 @@ class SyncSystemDemo {
     print('   GET  /api/changes/{seq}      - Get specific change');
     print('   POST /api/changes            - Create new changes (array)');
     print('   GET  /api/stats              - Get statistics');
-    print(
-        '   PUT  /api/changes/{seq}      - Update change (not on Cloud Storage)');
-    print(
-        '   DELETE /api/changes/{seq}    - Delete change (not on Cloud Storage)');
+    print('');
+    print('   Note: PUT and DELETE endpoints have been removed.');
+    print('   Change logs are now append-only for data integrity.');
   }
 
   Future<void> _demonstrateSequenceMapping() async {
@@ -395,11 +396,9 @@ class SyncSystemDemo {
 
     print('✓ Created change with seq: $createdSeq');
 
-    // Mark it as outdated
-    await _dio.put('$_outsyncsUrl/api/changes/$createdSeq', data: {
-      ...change,
-      'outdatedBy': 99999, // Mark as outdated by a future sequence
-    });
+    // Mark it as outdated using the storage service directly
+    // (PUT endpoint has been removed - change logs are now append-only)
+    await _outsyncsStorage.markAsOutdated(createdSeq, 99999);
 
     print('✓ Marked change as outdated (outdatedBy: 99999)');
 

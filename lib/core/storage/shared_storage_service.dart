@@ -32,7 +32,9 @@ class BaseStorageService {
     print('[$_logPrefix] Isar database initialized at: ${dir.path}');
   }
 
-  // Change log operations
+  /// Create a new change log entry in the storage.
+  ///
+  /// Returns the created change log entry with auto-generated sequence number.
   Future<Map<String, dynamic>> createChange(
       Map<String, dynamic> changeData) async {
     final change = ChangeLogEntry(
@@ -89,36 +91,15 @@ class BaseStorageService {
         .findAll();
   }
 
-  Future<Map<String, dynamic>?> updateChange(
-      int seq, Map<String, dynamic> data) async {
-    final existing = await _isar.changeLogEntrys.get(seq);
-    if (existing == null) return null;
-    if (data.containsKey('entityType'))
-      existing.entityType = data['entityType'];
-    if (data.containsKey('operation')) existing.operation = data['operation'];
-    if (data.containsKey('entityId')) existing.entityId = data['entityId'];
-    if (data.containsKey('data'))
-      existing.data = Map<String, dynamic>.from(data['data']);
-    if (data.containsKey('outdatedBy'))
-      existing.outdatedBy = data['outdatedBy'] as int?;
-    existing.timestamp = DateTime.now();
-    await _isar.writeTxn(() async {
-      await _isar.changeLogEntrys.put(existing);
-    });
-    return existing.toJson();
-  }
-
-  Future<bool> deleteChange(int seq) async {
-    return await _isar.writeTxn(() async {
-      return await _isar.changeLogEntrys.delete(seq);
-    });
-  }
-
+  /// Get the total count of change log entries.
   Future<int> getChangeCount() async {
     return await _isar.changeLogEntrys.count();
   }
 
-  // Delete multiple changes by seq numbers (useful for cleanup after successful outsync)
+  /// Delete multiple changes by sequence numbers.
+  ///
+  /// Used for cleanup after successful outsync operations.
+  /// Returns the number of changes actually deleted.
   Future<int> deleteChanges(List<int> seqs) async {
     int deletedCount = 0;
     await _isar.writeTxn(() async {
@@ -181,7 +162,10 @@ class BaseStorageService {
     return results.map((e) => e.toJson()).toList();
   }
 
-  // Get changes for syncing - excludes outdated changes
+  /// Get changes for syncing - excludes outdated changes.
+  ///
+  /// Returns only changes that haven't been marked as outdated,
+  /// which prevents syncing obsolete change log entries.
   Future<List<Map<String, dynamic>>> getChangesForSync({
     int? cursor,
     int? limit,
@@ -198,7 +182,10 @@ class BaseStorageService {
     return results.map((e) => e.toJson()).toList();
   }
 
-  // Update outdatedBy field for a change
+  /// Mark a change as outdated by another change.
+  ///
+  /// Updates the outdatedBy field to indicate this change has been
+  /// superseded by a newer change with the specified sequence number.
   Future<void> markAsOutdated(int seq, int outdatedBySeq) async {
     await _isar.writeTxn(() async {
       final change = await _isar.changeLogEntrys.get(seq);
