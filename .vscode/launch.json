@@ -81,17 +81,15 @@
             "console": "terminal",
             "cwd": "${workspaceFolder}",
             "args": ["cloud"]
-        }
-    ],
-    "compounds": [
-        {
-            "name": "All Servers",
-            "configurations": [
-                "Server: Downsyncs (8081)",
-                "Server: Outsyncs (8082)",
-                "Server: Cloud Storage (8083)"
-            ],
-            "stopAll": true
+        },
+                {
+            "name": "Server: all",
+            "type": "dart",
+            "request": "launch",
+            "program": "examples/sync_manager_demo/server.dart",
+            "console": "terminal",
+            "cwd": "${workspaceFolder}",
+            "args": []
         }
     ]
 }
