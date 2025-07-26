@@ -3,6 +3,14 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
 
+/// Interactive demonstration of the SLTT Dart sync system.
+///
+/// This demo showcases proper operation usage:
+/// - 'create': First time an entityId appears in a storage
+/// - 'update': Subsequent changes to an existing entityId in the same storage
+/// - 'delete': Remove an entityId (alternative to update)
+///
+/// The demo follows realistic entity lifecycle patterns across different storages.
 class SyncSystemDemo {
   final MultiServerLauncher _serverLauncher = MultiServerLauncher.instance;
   final SyncManager _syncManager = SyncManager.instance;
@@ -88,7 +96,7 @@ class SyncSystemDemo {
             'content': 'This is a demo document stored in ${server['name']}',
             'description': server['description'],
           },
-        }
+        },
       ]);
 
       print('   ✅ Added demo document to ${server['name']}');
@@ -131,6 +139,53 @@ class SyncSystemDemo {
       await _dio.post('$_outsyncsUrl/api/changes', data: [change]);
       print('   ✅ Added change: ${change['operation']} ${change['entityType']}');
     }
+
+    // Now demonstrate update operations by modifying existing entities
+    print('   Demonstrating update operations...');
+    final updateChanges = [
+      {
+        'entityType': 'Document',
+        'operation': 'update',
+        'entityId': 'demo-doc-outsync-1', // Same entityId as above
+        'data': {
+          'title': 'Outsync Demo Document 1 (Updated)',
+          'content': 'This document was updated after creation',
+          'lastModified': DateTime.now().toIso8601String(),
+          'version': 2,
+        },
+      },
+      {
+        'entityType': 'User',
+        'operation': 'update',
+        'entityId': 'user-123', // Same entityId as above
+        'data': {
+          'name': 'John Doe',
+          'email': 'john.doe@company.com', // Updated email
+          'role': 'senior-editor', // Updated role
+          'lastLogin': DateTime.now().toIso8601String(),
+        },
+      },
+    ];
+
+    for (final change in updateChanges) {
+      await _dio.post('$_outsyncsUrl/api/changes', data: [change]);
+      print('   ✅ Added change: ${change['operation']} ${change['entityType']} (${change['entityId']})');
+    }
+
+    // Add a delete operation as well
+    print('   Demonstrating delete operation...');
+    await _dio.post('$_outsyncsUrl/api/changes', data: [
+      {
+        'entityType': 'Document',
+        'operation': 'delete',
+        'entityId': 'demo-doc-1', // Delete one of the initially created docs
+        'data': {
+          'reason': 'Document no longer needed',
+          'deletedAt': DateTime.now().toIso8601String(),
+        },
+      }
+    ]);
+    print('   ✅ Added change: delete Document (demo-doc-1)');
 
     print('\n   Status before outsync:');
     await _showCurrentStatus();
@@ -186,6 +241,39 @@ class SyncSystemDemo {
       print('   ✅ Added remote change: ${change['operation']} ${change['entityType']}');
     }
 
+    // Simulate some updates to remote entities
+    print('   Simulating remote update operations...');
+    final remoteUpdates = [
+      {
+        'entityType': 'Document',
+        'operation': 'update',
+        'entityId': 'remote-doc-1', // Same entityId as above
+        'data': {
+          'title': 'Remote Document 1 (Updated)',
+          'content': 'This document was updated by another user',
+          'author': 'Remote User',
+          'lastModified': DateTime.now().toIso8601String(),
+          'version': 2,
+        },
+      },
+      {
+        'entityType': 'Project',
+        'operation': 'update',
+        'entityId': 'project-456', // Same entityId as above
+        'data': {
+          'name': 'Remote Project (Updated)',
+          'description': 'A project created in the cloud and then updated',
+          'status': 'in-progress',
+          'lastUpdated': DateTime.now().toIso8601String(),
+        },
+      },
+    ];
+
+    for (final change in remoteUpdates) {
+      await _dio.post('$_cloudStorageUrl/api/changes', data: [change]);
+      print('   ✅ Added remote change: ${change['operation']} ${change['entityType']} (${change['entityId']})');
+    }
+
     print('\n   Status before downsync:');
     await _showCurrentStatus();
 
@@ -208,7 +296,7 @@ class SyncSystemDemo {
     print('🔄 Demonstrating full sync flow...');
     print('   This will perform both outsync and downsync operations\n');
 
-    // Add one more change to outsyncs
+    // Add one more create change to outsyncs
     await _dio.post('$_outsyncsUrl/api/changes', data: [
       {
         'entityType': 'Settings',
@@ -222,7 +310,25 @@ class SyncSystemDemo {
         },
       }
     ]);
-    print('   ✅ Added final change to Outsyncs');
+    print('   ✅ Added final change to Outsyncs: create Settings');
+
+    // Also add an update to demonstrate modifying the settings
+    await Future.delayed(const Duration(milliseconds: 100)); // Small delay to ensure different timestamps
+    await _dio.post('$_outsyncsUrl/api/changes', data: [
+      {
+        'entityType': 'Settings',
+        'operation': 'update',
+        'entityId': 'app-settings-final', // Same entityId as above
+        'data': {
+          'theme': 'light', // Changed from dark to light
+          'language': 'en',
+          'autoSync': false, // Changed from true to false
+          'notifications': true, // Added new field
+          'lastUpdated': DateTime.now().toIso8601String(),
+        },
+      }
+    ]);
+    print('   ✅ Added final change to Outsyncs: update Settings (app-settings-final)');
 
     print('\n   Status before full sync:');
     await _showCurrentStatus();
