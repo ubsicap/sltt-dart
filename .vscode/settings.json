@@ -5,5 +5,23 @@
         "outsync",
         "outsynced",
         "outsyncs"
-    ]
+    ],
+
+    // Dart-specific formatting settings
+    "dart.lineLength": 120,
+    "[dart]": {
+        "editor.rulers": [80, 120],
+        "editor.wordWrap": "bounded",
+        "editor.wordWrapColumn": 120,
+        "editor.formatOnSave": true,
+        "editor.formatOnType": false,
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2
+    },
+
+    // General editor settings
+    "editor.wordWrap": "bounded",
+    "editor.wordWrapColumn": 120,
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true
 }
