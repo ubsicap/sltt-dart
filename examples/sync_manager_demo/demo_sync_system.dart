@@ -77,27 +77,42 @@ class SyncSystemDemo {
 
     // Add some initial data to each server
     final servers = [
-      {'name': 'Outsyncs', 'url': _outsyncsUrl, 'description': 'Local changes to be uploaded'},
-      {'name': 'Downsyncs', 'url': _downsyncsUrl, 'description': 'Changes received from cloud'},
-      {'name': 'Cloud Storage', 'url': _cloudStorageUrl, 'description': 'Cloud-based change storage'},
+      {
+        'name': 'Outsyncs',
+        'url': _outsyncsUrl,
+        'description': 'Local changes to be uploaded',
+      },
+      {
+        'name': 'Downsyncs',
+        'url': _downsyncsUrl,
+        'description': 'Changes received from cloud',
+      },
+      {
+        'name': 'Cloud Storage',
+        'url': _cloudStorageUrl,
+        'description': 'Cloud-based change storage',
+      },
     ];
 
     for (int i = 0; i < servers.length; i++) {
       final server = servers[i];
       print('   Adding test data to ${server['name']} server...');
 
-      await _dio.post('${server['url']}/api/changes', data: [
-        {
-          'entityType': 'Document',
-          'operation': 'create',
-          'entityId': 'demo-doc-${i + 1}',
-          'data': {
-            'title': 'Demo Document ${i + 1}',
-            'content': 'This is a demo document stored in ${server['name']}',
-            'description': server['description'],
+      await _dio.post(
+        '${server['url']}/api/changes',
+        data: [
+          {
+            'entityType': 'Document',
+            'operation': 'create',
+            'entityId': 'demo-doc-${i + 1}',
+            'data': {
+              'title': 'Demo Document ${i + 1}',
+              'content': 'This is a demo document stored in ${server['name']}',
+              'description': server['description'],
+            },
           },
-        },
-      ]);
+        ],
+      );
 
       print('   ✅ Added demo document to ${server['name']}');
     }
@@ -174,17 +189,20 @@ class SyncSystemDemo {
 
     // Add a delete operation as well
     print('   Demonstrating delete operation...');
-    await _dio.post('$_outsyncsUrl/api/changes', data: [
-      {
-        'entityType': 'Document',
-        'operation': 'delete',
-        'entityId': 'demo-doc-1', // Delete one of the initially created docs
-        'data': {
-          'reason': 'Document no longer needed',
-          'deletedAt': DateTime.now().toIso8601String(),
+    await _dio.post(
+      '$_outsyncsUrl/api/changes',
+      data: [
+        {
+          'entityType': 'Document',
+          'operation': 'delete',
+          'entityId': 'demo-doc-1', // Delete one of the initially created docs
+          'data': {
+            'reason': 'Document no longer needed',
+            'deletedAt': DateTime.now().toIso8601String(),
+          },
         },
-      }
-    ]);
+      ],
+    );
     print('   ✅ Added change: delete Document (demo-doc-1)');
 
     print('\n   Status before outsync:');
@@ -297,37 +315,43 @@ class SyncSystemDemo {
     print('   This will perform both outsync and downsync operations\n');
 
     // Add one more create change to outsyncs
-    await _dio.post('$_outsyncsUrl/api/changes', data: [
-      {
-        'entityType': 'Settings',
-        'operation': 'create',
-        'entityId': 'app-settings-final',
-        'data': {
-          'theme': 'dark',
-          'language': 'en',
-          'autoSync': true,
-          'lastUpdated': DateTime.now().toIso8601String(),
+    await _dio.post(
+      '$_outsyncsUrl/api/changes',
+      data: [
+        {
+          'entityType': 'Settings',
+          'operation': 'create',
+          'entityId': 'app-settings-final',
+          'data': {
+            'theme': 'dark',
+            'language': 'en',
+            'autoSync': true,
+            'lastUpdated': DateTime.now().toIso8601String(),
+          },
         },
-      }
-    ]);
+      ],
+    );
     print('   ✅ Added final change to Outsyncs: create Settings');
 
     // Also add an update to demonstrate modifying the settings
     await Future.delayed(const Duration(milliseconds: 100)); // Small delay to ensure different timestamps
-    await _dio.post('$_outsyncsUrl/api/changes', data: [
-      {
-        'entityType': 'Settings',
-        'operation': 'update',
-        'entityId': 'app-settings-final', // Same entityId as above
-        'data': {
-          'theme': 'light', // Changed from dark to light
-          'language': 'en',
-          'autoSync': false, // Changed from true to false
-          'notifications': true, // Added new field
-          'lastUpdated': DateTime.now().toIso8601String(),
+    await _dio.post(
+      '$_outsyncsUrl/api/changes',
+      data: [
+        {
+          'entityType': 'Settings',
+          'operation': 'update',
+          'entityId': 'app-settings-final', // Same entityId as above
+          'data': {
+            'theme': 'light', // Changed from dark to light
+            'language': 'en',
+            'autoSync': false, // Changed from true to false
+            'notifications': true, // Added new field
+            'lastUpdated': DateTime.now().toIso8601String(),
+          },
         },
-      }
-    ]);
+      ],
+    );
     print('   ✅ Added final change to Outsyncs: update Settings (app-settings-final)');
 
     print('\n   Status before full sync:');

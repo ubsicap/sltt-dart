@@ -209,7 +209,8 @@ class SyncManagerTester {
 
     if (outsyncResult.deletedLocalChanges.isNotEmpty) {
       throw Exception(
-          'Expected no local changes to be deleted yet, but found ${outsyncResult.deletedLocalChanges.length}');
+        'Expected no local changes to be deleted yet, but found ${outsyncResult.deletedLocalChanges.length}',
+      );
     }
 
     // Verify changes were added to cloud storage but outsyncs still has them
@@ -228,7 +229,8 @@ class SyncManagerTester {
 
     if (outsyncsCountAfter != outsyncsCountBefore) {
       throw Exception(
-          'Expected outsyncs changes to remain same until full sync completion, before: $outsyncsCountBefore, after: $outsyncsCountAfter');
+        'Expected outsyncs changes to remain same until full sync completion, before: $outsyncsCountBefore, after: $outsyncsCountAfter',
+      );
     }
 
     print('   ✅ Successfully outsynced to cloud, seqMap contains ${outsyncResult.seqMap.length} mappings');
@@ -265,14 +267,17 @@ class SyncManagerTester {
     print('🔄 Testing full sync flow...');
 
     // Add a change to outsyncs
-    await _dio.post('$_outsyncsUrl/api/changes', data: [
-      {
-        'entityType': 'Document',
-        'operation': 'create',
-        'entityId': 'full-sync-test',
-        'data': {'title': 'Full Sync Test Document'},
-      }
-    ]);
+    await _dio.post(
+      '$_outsyncsUrl/api/changes',
+      data: [
+        {
+          'entityType': 'Document',
+          'operation': 'create',
+          'entityId': 'full-sync-test',
+          'data': {'title': 'Full Sync Test Document'},
+        }
+      ],
+    );
 
     // Get initial counts
     final outsyncsStatsBefore = await _dio.get('$_outsyncsUrl/api/stats');
@@ -295,7 +300,8 @@ class SyncManagerTester {
 
     if (outsyncsCountAfter >= outsyncsCountBefore) {
       throw Exception(
-          'Expected outsyncs count to decrease after full sync, before: $outsyncsCountBefore, after: $outsyncsCountAfter');
+        'Expected outsyncs count to decrease after full sync, before: $outsyncsCountBefore, after: $outsyncsCountAfter',
+      );
     }
 
     print('   ✅ Full sync completed successfully');
