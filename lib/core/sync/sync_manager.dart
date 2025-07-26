@@ -61,21 +61,53 @@ class SyncManager {
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        final storedChanges = responseData['changes'] as List<dynamic>;
+        final success = responseData['success'] as bool;
+        final createdCount = responseData['created'] as int;
 
-        // Delete successfully synced changes from outsyncs storage
-        final seqsToDelete = changes.map((c) => c['seq'] as int).toList();
-        final deletedCount = await _outsyncsStorage.deleteChanges(seqsToDelete);
+        if (success) {
+          // Delete successfully synced changes from outsyncs storage
+          final seqsToDelete = changes.map((c) => c['seq'] as int).toList();
+          final deletedCount =
+              await _outsyncsStorage.deleteChanges(seqsToDelete);
 
-        print(
-            '[SyncManager] Successfully outsynced ${storedChanges.length} changes, deleted $deletedCount local changes');
+          print(
+              '[SyncManager] Successfully outsynced $createdCount changes, deleted $deletedCount local changes');
 
-        return OutsyncResult(
-          success: true,
-          syncedChanges: storedChanges.cast<Map<String, dynamic>>(),
-          deletedLocalChanges: seqsToDelete,
-          message: 'Successfully outsynced ${storedChanges.length} changes',
-        );
+          return OutsyncResult(
+            success: true,
+            syncedChanges: [], // No longer return full payload
+            deletedLocalChanges: seqsToDelete,
+            message: 'Successfully outsynced $createdCount changes',
+          );
+        } else {
+          // Handle partial failure
+          final failedAtIndex = responseData['failedAtIndex'] as int?;
+          final error = responseData['error'] as String?;
+
+          // Delete only the successfully created changes (up to the failed index)
+          if (createdCount > 0) {
+            final successfulSeqs =
+                changes.take(createdCount).map((c) => c['seq'] as int).toList();
+            final deletedCount =
+                await _outsyncsStorage.deleteChanges(successfulSeqs);
+            print(
+                '[SyncManager] Partial outsync: $deletedCount changes synced, failed at index $failedAtIndex: $error');
+
+            return OutsyncResult(
+              success: false,
+              syncedChanges: [],
+              deletedLocalChanges: successfulSeqs,
+              message: 'Partial outsync failed at index $failedAtIndex: $error',
+            );
+          } else {
+            return OutsyncResult(
+              success: false,
+              syncedChanges: [],
+              deletedLocalChanges: [],
+              message: 'Outsync failed at first change: $error',
+            );
+          }
+        }
       } else {
         throw Exception('Outsync failed with status: ${response.statusCode}');
       }

@@ -89,16 +89,18 @@ class SyncSystemDemo {
       final server = servers[i];
       print('   Adding test data to ${server['name']} server...');
 
-      await _dio.post('${server['url']}/api/changes', data: {
-        'entityType': 'Document',
-        'operation': 'create',
-        'entityId': 'demo-doc-${i + 1}',
-        'data': {
-          'title': 'Demo Document ${i + 1}',
-          'content': 'This is a demo document stored in ${server['name']}',
-          'description': server['description'],
-        },
-      });
+      await _dio.post('${server['url']}/api/changes', data: [
+        {
+          'entityType': 'Document',
+          'operation': 'create',
+          'entityId': 'demo-doc-${i + 1}',
+          'data': {
+            'title': 'Demo Document ${i + 1}',
+            'content': 'This is a demo document stored in ${server['name']}',
+            'description': server['description'],
+          },
+        }
+      ]);
 
       print('   ✅ Added demo document to ${server['name']}');
     }
@@ -138,7 +140,7 @@ class SyncSystemDemo {
     ];
 
     for (final change in outsyncsChanges) {
-      await _dio.post('$_outsyncsUrl/api/changes', data: change);
+      await _dio.post('$_outsyncsUrl/api/changes', data: [change]);
       print(
           '   ✅ Added change: ${change['operation']} ${change['entityType']}');
     }
@@ -151,7 +153,7 @@ class SyncSystemDemo {
 
     if (outsyncResult.success) {
       print('   ✅ Outsync successful!');
-      print('   📊 Synced ${outsyncResult.syncedChanges.length} changes');
+      print('   📊 Synced ${outsyncResult.deletedLocalChanges.length} changes');
       print(
           '   🗑️ Cleaned up ${outsyncResult.deletedLocalChanges.length} local changes');
     } else {
@@ -195,7 +197,7 @@ class SyncSystemDemo {
     ];
 
     for (final change in cloudChanges) {
-      await _dio.post('$_cloudStorageUrl/api/changes', data: change);
+      await _dio.post('$_cloudStorageUrl/api/changes', data: [change]);
       print(
           '   ✅ Added remote change: ${change['operation']} ${change['entityType']}');
     }
@@ -223,17 +225,19 @@ class SyncSystemDemo {
     print('   This will perform both outsync and downsync operations\n');
 
     // Add one more change to outsyncs
-    await _dio.post('$_outsyncsUrl/api/changes', data: {
-      'entityType': 'Settings',
-      'operation': 'update',
-      'entityId': 'app-settings',
-      'data': {
-        'theme': 'dark',
-        'language': 'en',
-        'autoSync': true,
-        'lastUpdated': DateTime.now().toIso8601String(),
-      },
-    });
+    await _dio.post('$_outsyncsUrl/api/changes', data: [
+      {
+        'entityType': 'Settings',
+        'operation': 'update',
+        'entityId': 'app-settings',
+        'data': {
+          'theme': 'dark',
+          'language': 'en',
+          'autoSync': true,
+          'lastUpdated': DateTime.now().toIso8601String(),
+        },
+      }
+    ]);
     print('   ✅ Added final change to Outsyncs');
 
     print('\n   Status before full sync:');
@@ -323,8 +327,7 @@ class SyncSystemDemo {
     print('   GET  /health                  - Health check');
     print('   GET  /api/changes            - Get all changes');
     print('   GET  /api/changes/{seq}      - Get specific change');
-    print('   POST /api/changes            - Create new change');
-    print('   POST /api/changes/sync/{seq} - Sync endpoint');
+    print('   POST /api/changes            - Create new changes (array)');
     print('   GET  /api/stats              - Get statistics');
     print(
         '   PUT  /api/changes/{seq}      - Update change (not on Cloud Storage)');

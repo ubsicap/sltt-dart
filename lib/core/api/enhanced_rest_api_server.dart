@@ -186,51 +186,73 @@ class EnhancedRestApiServer {
     }
   }
 
-  // Create new changes (accepts single change or array of changes)
+  /// Creates new changes in the storage
+  /// Returns metadata about created changes, not the full payload
   Future<Response> _handleCreateChanges(Request request) async {
     try {
       final body = await request.readAsString();
       final data = jsonDecode(body);
 
-      List<Map<String, dynamic>> changesToCreate = [];
-
-      // Handle both single change and array of changes
-      if (data is List) {
-        changesToCreate = data.cast<Map<String, dynamic>>();
-      } else if (data is Map<String, dynamic>) {
-        changesToCreate = [data];
-      } else {
-        return _errorResponse('Invalid request body format', 400);
+      // Expect an array of changes
+      if (data is! List) {
+        return _errorResponse('Request body must be an array of changes', 400);
       }
 
-      List<Map<String, dynamic>> createdChanges = [];
+      final changesToCreate = data.cast<Map<String, dynamic>>();
+      if (changesToCreate.isEmpty) {
+        return _errorResponse('No changes provided', 400);
+      }
 
-      for (final changeData in changesToCreate) {
-        final changeToStore = {
-          'entityType': changeData['entityType'] as String,
-          'operation': changeData['operation'] as String,
-          'entityId': changeData['entityId'] as String,
-          'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
-        };
+      List<int> createdSeqs = [];
+      int? failedIndex;
+      String? errorMessage;
 
-        final created = await _storage!.createChange(changeToStore);
-        createdChanges.add(created);
+      for (int i = 0; i < changesToCreate.length; i++) {
+        try {
+          final changeData = changesToCreate[i];
+          final changeToStore = {
+            'entityType': changeData['entityType'] as String,
+            'operation': changeData['operation'] as String,
+            'entityId': changeData['entityId'] as String,
+            'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
+          };
+
+          final created = await _storage!.createChange(changeToStore);
+          createdSeqs.add(created['seq'] as int);
+        } catch (e) {
+          // Stop processing on first error
+          failedIndex = i;
+          errorMessage = e.toString();
+          break;
+        }
+      }
+
+      final success = failedIndex == null;
+      final response = <String, dynamic>{
+        'success': success,
+        'created': createdSeqs.length,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      if (createdSeqs.isNotEmpty) {
+        response['firstSeq'] = createdSeqs.first;
+        response['lastSeq'] = createdSeqs.last;
+      }
+
+      if (!success) {
+        response['failedAtIndex'] = failedIndex;
+        response['error'] = errorMessage;
       }
 
       return Response.ok(
-        jsonEncode({
-          'changes': createdChanges,
-          'count': createdChanges.length,
-          'timestamp': DateTime.now().toIso8601String(),
-        }),
+        jsonEncode(response),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
       return _errorResponse('Failed to create changes: $e', 500);
     }
-  }
+  } // Update an existing change (not available for cloud storage)
 
-  // Update an existing change (not available for cloud storage)
   Future<Response> _handleUpdateChange(Request request, String seq) async {
     try {
       final changeSeq = int.tryParse(seq);

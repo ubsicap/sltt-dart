@@ -103,7 +103,7 @@ class SyncManagerTester {
       // Create change
       final createResponse = await _dio.post(
         '${server['url']}/api/changes',
-        data: testData,
+        data: [testData], // Wrap in array
       );
       if (createResponse.statusCode != 200) {
         throw Exception('Create change failed for ${server['name']}');
@@ -145,13 +145,15 @@ class SyncManagerTester {
     }
 
     final batchResult = batchResponse.data as Map<String, dynamic>;
-    final storedChanges = batchResult['changes'] as List;
+    final success = batchResult['success'] as bool;
+    final createdCount = batchResult['created'] as int;
 
-    if (storedChanges.length != 2) {
-      throw Exception('Expected 2 stored changes, got ${storedChanges.length}');
+    if (!success || createdCount != 2) {
+      throw Exception(
+          'Expected 2 successful changes, got success=$success, created=$createdCount');
     }
 
-    print('   ✅ Batch changes endpoint stored ${storedChanges.length} changes');
+    print('   ✅ Batch changes endpoint created $createdCount changes');
     print('✅ Batch changes endpoint test passed\n');
   }
 
@@ -176,7 +178,8 @@ class SyncManagerTester {
 
     // Add changes to outsyncs server
     for (final change in testChanges) {
-      await _dio.post('$_outsyncsUrl/api/changes', data: change);
+      await _dio
+          .post('$_outsyncsUrl/api/changes', data: [change]); // Wrap in array
     }
 
     // Get initial counts
@@ -209,15 +212,13 @@ class SyncManagerTester {
     print('   Outsyncs changes after: $outsyncsCountAfter');
     print('   Cloud changes after: $cloudCountAfter');
 
-    if (outsyncResult.syncedChanges.length < testChanges.length) {
+    if (outsyncResult.deletedLocalChanges.length < testChanges.length) {
       throw Exception(
-          'Expected at least ${testChanges.length} synced changes, got ${outsyncResult.syncedChanges.length}');
+          'Expected at least ${testChanges.length} deleted local changes, got ${outsyncResult.deletedLocalChanges.length}');
     }
 
     print(
-        '   ✅ Successfully outsynced ${outsyncResult.syncedChanges.length} changes');
-    print(
-        '   ✅ Deleted ${outsyncResult.deletedLocalChanges.length} local changes');
+        '   ✅ Successfully outsynced and deleted ${outsyncResult.deletedLocalChanges.length} local changes');
     print('✅ Outsync flow test passed\n');
   }
 
@@ -253,12 +254,14 @@ class SyncManagerTester {
     print('🔄 Testing full sync flow...');
 
     // Add a change to outsyncs
-    await _dio.post('$_outsyncsUrl/api/changes', data: {
-      'entityType': 'Document',
-      'operation': 'create',
-      'entityId': 'full-sync-test',
-      'data': {'title': 'Full Sync Test Document'},
-    });
+    await _dio.post('$_outsyncsUrl/api/changes', data: [
+      {
+        'entityType': 'Document',
+        'operation': 'create',
+        'entityId': 'full-sync-test',
+        'data': {'title': 'Full Sync Test Document'},
+      }
+    ]);
 
     // Perform full sync
     final fullSyncResult = await _syncManager.performFullSync();
