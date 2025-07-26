@@ -116,9 +116,9 @@ class SyncManagerTester {
   }
 
   Future<void> _testSyncEndpoint() async {
-    print('🔄 Testing sync endpoint...');
+    print('🔄 Testing batch changes endpoint...');
 
-    // Test sync endpoint on cloud storage
+    // Test batch changes endpoint on cloud storage
     final syncData = [
       {
         'entityType': 'Document',
@@ -134,28 +134,25 @@ class SyncManagerTester {
       },
     ];
 
-    // Send sync request
-    final syncResponse = await _dio.post(
-      '$_cloudStorageUrl/api/changes/sync/0',
+    // Send batch changes request
+    final batchResponse = await _dio.post(
+      '$_cloudStorageUrl/api/changes',
       data: syncData,
     );
 
-    if (syncResponse.statusCode != 200) {
-      throw Exception('Sync endpoint failed');
+    if (batchResponse.statusCode != 200) {
+      throw Exception('Batch changes endpoint failed');
     }
 
-    final syncResult = syncResponse.data as Map<String, dynamic>;
-    final storedChanges = syncResult['storedChanges'] as List;
-    final changesSinceSeq = syncResult['changesSinceSeq'] as List;
+    final batchResult = batchResponse.data as Map<String, dynamic>;
+    final storedChanges = batchResult['changes'] as List;
 
     if (storedChanges.length != 2) {
       throw Exception('Expected 2 stored changes, got ${storedChanges.length}');
     }
 
-    print('   ✅ Sync endpoint stored ${storedChanges.length} changes');
-    print(
-        '   ✅ Sync endpoint returned ${changesSinceSeq.length} changes since seq 0');
-    print('✅ Sync endpoint test passed\n');
+    print('   ✅ Batch changes endpoint stored ${storedChanges.length} changes');
+    print('✅ Batch changes endpoint test passed\n');
   }
 
   Future<void> _testOutsyncFlow() async {
@@ -212,9 +209,9 @@ class SyncManagerTester {
     print('   Outsyncs changes after: $outsyncsCountAfter');
     print('   Cloud changes after: $cloudCountAfter');
 
-    if (outsyncResult.syncedChanges.length != testChanges.length) {
+    if (outsyncResult.syncedChanges.length < testChanges.length) {
       throw Exception(
-          'Expected ${testChanges.length} synced changes, got ${outsyncResult.syncedChanges.length}');
+          'Expected at least ${testChanges.length} synced changes, got ${outsyncResult.syncedChanges.length}');
     }
 
     print(

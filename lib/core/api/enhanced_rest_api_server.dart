@@ -68,11 +68,8 @@ class EnhancedRestApiServer {
 
     // Change log endpoints
     router.get('/api/changes', _handleGetChanges);
+    router.post('/api/changes', _handleCreateChanges);
     router.get('/api/changes/<seq>', _handleGetChange);
-    router.post('/api/changes', _handleCreateChange);
-
-    // Sync endpoint - POST /changes/sync/{seq}
-    router.post('/api/changes/sync/<seq>', _handleSyncChanges);
 
     // Conditional endpoints based on storage type
     if (storageType != StorageType.cloudStorage) {
@@ -189,87 +186,47 @@ class EnhancedRestApiServer {
     }
   }
 
-  // Create a new change
-  Future<Response> _handleCreateChange(Request request) async {
+  // Create new changes (accepts single change or array of changes)
+  Future<Response> _handleCreateChanges(Request request) async {
     try {
       final body = await request.readAsString();
-      final data = jsonDecode(body) as Map<String, dynamic>;
+      final data = jsonDecode(body);
 
-      final changeData = {
-        'entityType': data['entityType'] as String,
-        'operation': data['operation'] as String,
-        'entityId': data['entityId'] as String,
-        'data': Map<String, dynamic>.from(data['data'] ?? {}),
-      };
+      List<Map<String, dynamic>> changesToCreate = [];
 
-      final created = await _storage!.createChange(changeData);
-
-      return Response.ok(
-        jsonEncode(created),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } catch (e) {
-      return _errorResponse('Failed to create change: $e', 500);
-    }
-  }
-
-  // Sync endpoint: POST /api/changes/sync/{seq}
-  // Stores new changes and responds with changes since last seq
-  Future<Response> _handleSyncChanges(Request request, String seq) async {
-    try {
-      final lastSeq = int.tryParse(seq);
-      if (lastSeq == null) {
-        return _errorResponse('Invalid seq format: must be an integer', 400);
-      }
-
-      final body = await request.readAsString();
-      List<Map<String, dynamic>> newChanges = [];
-
-      if (body.isNotEmpty) {
-        final data = jsonDecode(body);
-        if (data is List) {
-          newChanges = data.cast<Map<String, dynamic>>();
-        } else if (data is Map<String, dynamic>) {
-          newChanges = [data];
-        }
-      }
-
-      // Store new changes if any
-      List<Map<String, dynamic>> storedChanges = [];
-      if (newChanges.isNotEmpty) {
-        for (final changeData in newChanges) {
-          final changeToStore = {
-            'entityType': changeData['entityType'] as String,
-            'operation': changeData['operation'] as String,
-            'entityId': changeData['entityId'] as String,
-            'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
-          };
-          final created = await _storage!.createChange(changeToStore);
-          storedChanges.add(created);
-        }
-      }
-
-      // Get changes since the provided seq
-      List<Map<String, dynamic>> changesSinceSeq = [];
-      if (storageType == StorageType.cloudStorage ||
-          storageType == StorageType.outsyncs) {
-        changesSinceSeq = await _storage!.getChangesSince(lastSeq);
+      // Handle both single change and array of changes
+      if (data is List) {
+        changesToCreate = data.cast<Map<String, dynamic>>();
+      } else if (data is Map<String, dynamic>) {
+        changesToCreate = [data];
       } else {
-        // For downsyncs, use cursor-based approach
-        changesSinceSeq = await _storage!.getChangesWithCursor(cursor: lastSeq);
+        return _errorResponse('Invalid request body format', 400);
+      }
+
+      List<Map<String, dynamic>> createdChanges = [];
+
+      for (final changeData in changesToCreate) {
+        final changeToStore = {
+          'entityType': changeData['entityType'] as String,
+          'operation': changeData['operation'] as String,
+          'entityId': changeData['entityId'] as String,
+          'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
+        };
+
+        final created = await _storage!.createChange(changeToStore);
+        createdChanges.add(created);
       }
 
       return Response.ok(
         jsonEncode({
-          'storedChanges': storedChanges,
-          'changesSinceSeq': changesSinceSeq,
-          'lastProcessedSeq': lastSeq,
+          'changes': createdChanges,
+          'count': createdChanges.length,
           'timestamp': DateTime.now().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {
-      return _errorResponse('Failed to sync changes: $e', 500);
+      return _errorResponse('Failed to create changes: $e', 500);
     }
   }
 

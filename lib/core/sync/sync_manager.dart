@@ -53,15 +53,15 @@ class SyncManager {
 
       print('[SyncManager] Found ${changes.length} changes to outsync');
 
-      // Send changes to cloud storage using sync endpoint
+      // Send changes to cloud storage
       final response = await _dio.post(
-        '$_cloudStorageUrl/api/changes/sync/0', // Start from seq 0 since we're pushing all changes
+        '$_cloudStorageUrl/api/changes',
         data: changes,
       );
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        final storedChanges = responseData['storedChanges'] as List<dynamic>;
+        final storedChanges = responseData['changes'] as List<dynamic>;
 
         // Delete successfully synced changes from outsyncs storage
         final seqsToDelete = changes.map((c) => c['seq'] as int).toList();
@@ -99,16 +99,14 @@ class SyncManager {
       final lastSeq = await _downsyncsStorage.getLastSeq();
       print('[SyncManager] Last seq in downsyncs: $lastSeq');
 
-      // Request changes from cloud since last seq
-      final response = await _dio.post(
-        '$_cloudStorageUrl/api/changes/sync/$lastSeq',
-        data: [], // Empty array since we're only pulling, not pushing
+      // Request changes from cloud since last seq using cursor-based pagination
+      final response = await _dio.get(
+        '$_cloudStorageUrl/api/changes?cursor=$lastSeq',
       );
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        final changesSinceSeq =
-            responseData['changesSinceSeq'] as List<dynamic>;
+        final changesSinceSeq = responseData['changes'] as List<dynamic>;
 
         if (changesSinceSeq.isEmpty) {
           print('[SyncManager] No new changes to downsync');
