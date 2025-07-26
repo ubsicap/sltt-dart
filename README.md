@@ -121,9 +121,47 @@ GET /health
 
 #### Change Management
 ```
-GET  /api/changes                  # Get all changes (with cursor/limit pagination)
+GET  /api/changes                  # Get all changes (with optional query parameters)
 GET  /api/changes/{seq}           # Get specific change by sequence number
 POST /api/changes                 # Create new changes (array format)
+```
+
+**GET /api/changes Query Parameters:**
+- `cursor` (optional): Starting sequence number (exclusive). Only returns changes with sequence numbers greater than this value.
+- `limit` (optional): Maximum number of results to return. Must be a positive integer, maximum value is 1000.
+
+**Example Usage:**
+```bash
+# Get all changes
+GET /api/changes
+
+# Get changes after sequence 50
+GET /api/changes?cursor=50
+
+# Get up to 20 changes
+GET /api/changes?limit=20
+
+# Get up to 10 changes after sequence 100
+GET /api/changes?cursor=100&limit=10
+```
+
+**Response Format:**
+```json
+{
+  "changes": [
+    {
+      "seq": 101,
+      "entityType": "Document",
+      "operation": "create",
+      "entityId": "doc-123",
+      "timestamp": "2025-07-26T15:30:00.000Z",
+      "data": {"title": "My Document"}
+    }
+  ],
+  "count": 1,
+  "timestamp": "2025-07-26T15:30:00.000Z",
+  "cursor": 101  // Present if there are more results available
+}
 ```
 
 #### Statistics
