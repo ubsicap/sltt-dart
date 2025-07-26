@@ -1,0 +1,26 @@
+{
+  "folders": [
+    {
+      "name": "sltt_dart (root)",
+      "path": "."
+    },
+    {
+      "name": "sltt_core",
+      "path": "./packages/sltt_core"
+    },
+    {
+      "name": "sync_manager_demo",
+      "path": "./examples/sync_manager_demo"
+    }
+  ],
+  "settings": {
+    "dart.lineLength": 120,
+    "editor.rulers": [120],
+    "dart.showTodos": false
+  },
+  "extensions": {
+    "recommendations": [
+      "dart-code.dart-code"
+    ]
+  }
+}

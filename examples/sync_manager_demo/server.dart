@@ -1,6 +1,5 @@
 import 'dart:io';
-import '../lib/core/server/multi_server_launcher.dart';
-import '../lib/core/server/server_ports.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 Future<void> main(List<String> args) async {
   final launcher = MultiServerLauncher.instance;

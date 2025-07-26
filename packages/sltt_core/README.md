@@ -1,38 +1,6 @@
 # SLTT Dart
 
-A comprehensive mono-repo for offline-first sync systems including core libraries, Flutter applications, and AWS backend services.
-
-## Packages
-
-- **[sltt_core](packages/sltt_core/)** - Core sync system with multi-server architecture and change tracking
-- **flutter_app** - Flutter mobile application (coming soon)
-- **aws_backend** - AWS Lambda backend service (coming soon)
-
-## Examples
-
-- **[sync_manager_demo](examples/sync_manager_demo/)** - Interactive demo and test suite for the core sync system
-
-## Getting Started
-
-1. Install dependencies:
-   ```bash
-   cd packages/sltt_core
-   dart pub get
-   ```
-
-2. Run the demo:
-   ```bash
-   cd examples/sync_manager_demo
-   dart run demo_sync_system.dart
-   ```
-
-## Development
-
-See individual package READMEs for specific development instructions.
-
-## Legacy Documentation
-
-The complete system documentation below is for reference and will be moved to individual packages:
+A comprehensive offline-first sync system for Flutter applications with multi-server architecture, change tracking, and REST API interface.
 
 ## Features
 

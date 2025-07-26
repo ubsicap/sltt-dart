@@ -1,0 +1,20 @@
+name: sync_manager_demo
+description: Interactive demo and test suite for the SLTT Core sync system
+publish_to: none
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  # HTTP client for testing
+  dio: ^5.4.0
+
+  # Local package dependency
+  sltt_core:
+    path: ../../packages/sltt_core
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^3.0.0

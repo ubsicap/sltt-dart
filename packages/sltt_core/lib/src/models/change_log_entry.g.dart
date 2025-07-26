@@ -153,11 +153,13 @@ List<IsarLinkBase<dynamic>> _changeLogEntryGetLinks(ChangeLogEntry object) {
   return [];
 }
 
-void _changeLogEntryAttach(IsarCollection<dynamic> col, Id id, ChangeLogEntry object) {
+void _changeLogEntryAttach(
+    IsarCollection<dynamic> col, Id id, ChangeLogEntry object) {
   object.seq = id;
 }
 
-extension ChangeLogEntryQueryWhereSort on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QWhere> {
+extension ChangeLogEntryQueryWhereSort
+    on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QWhere> {
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhere> anySeq() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
@@ -165,8 +167,10 @@ extension ChangeLogEntryQueryWhereSort on QueryBuilder<ChangeLogEntry, ChangeLog
   }
 }
 
-extension ChangeLogEntryQueryWhere on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QWhereClause> {
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause> seqEqualTo(Id seq) {
+extension ChangeLogEntryQueryWhere
+    on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QWhereClause> {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause> seqEqualTo(
+      Id seq) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IdWhereClause.between(
         lower: seq,
@@ -175,7 +179,8 @@ extension ChangeLogEntryQueryWhere on QueryBuilder<ChangeLogEntry, ChangeLogEntr
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause> seqNotEqualTo(Id seq) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause> seqNotEqualTo(
+      Id seq) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -197,7 +202,8 @@ extension ChangeLogEntryQueryWhere on QueryBuilder<ChangeLogEntry, ChangeLogEntr
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause> seqGreaterThan(Id seq, {bool include = false}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause>
+      seqGreaterThan(Id seq, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: seq, includeLower: include),
@@ -205,7 +211,9 @@ extension ChangeLogEntryQueryWhere on QueryBuilder<ChangeLogEntry, ChangeLogEntr
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause> seqLessThan(Id seq, {bool include = false}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause> seqLessThan(
+      Id seq,
+      {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: seq, includeUpper: include),
@@ -229,7 +237,8 @@ extension ChangeLogEntryQueryWhere on QueryBuilder<ChangeLogEntry, ChangeLogEntr
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause> entityTypeEqualTo(String entityType) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause>
+      entityTypeEqualTo(String entityType) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
         indexName: r'entityType',
@@ -238,7 +247,8 @@ extension ChangeLogEntryQueryWhere on QueryBuilder<ChangeLogEntry, ChangeLogEntr
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause> entityTypeNotEqualTo(String entityType) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause>
+      entityTypeNotEqualTo(String entityType) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -273,8 +283,10 @@ extension ChangeLogEntryQueryWhere on QueryBuilder<ChangeLogEntry, ChangeLogEntr
   }
 }
 
-extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QFilterCondition> {
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> dataJsonEqualTo(
+extension ChangeLogEntryQueryFilter
+    on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QFilterCondition> {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      dataJsonEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -287,7 +299,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> dataJsonGreaterThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      dataJsonGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -302,7 +315,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> dataJsonLessThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      dataJsonLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -317,7 +331,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> dataJsonBetween(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      dataJsonBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -336,7 +351,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> dataJsonStartsWith(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      dataJsonStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -349,7 +365,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> dataJsonEndsWith(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      dataJsonEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -362,8 +379,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> dataJsonContains(String value,
-      {bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      dataJsonContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
         property: r'dataJson',
@@ -373,8 +390,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> dataJsonMatches(String pattern,
-      {bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      dataJsonMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
         property: r'dataJson',
@@ -384,7 +401,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> dataJsonIsEmpty() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      dataJsonIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'dataJson',
@@ -393,7 +411,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> dataJsonIsNotEmpty() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      dataJsonIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'dataJson',
@@ -402,7 +421,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityIdEqualTo(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityIdEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -415,7 +435,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityIdGreaterThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -430,7 +451,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityIdLessThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityIdLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -445,7 +467,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityIdBetween(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -464,7 +487,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityIdStartsWith(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityIdStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -477,7 +501,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityIdEndsWith(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityIdEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -490,8 +515,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityIdContains(String value,
-      {bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
         property: r'entityId',
@@ -501,8 +526,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityIdMatches(String pattern,
-      {bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
         property: r'entityId',
@@ -512,7 +537,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityIdIsEmpty() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'entityId',
@@ -521,7 +547,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityIdIsNotEmpty() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'entityId',
@@ -530,7 +557,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityTypeEqualTo(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityTypeEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -543,7 +571,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityTypeGreaterThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityTypeGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -558,7 +587,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityTypeLessThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityTypeLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -573,7 +603,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityTypeBetween(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityTypeBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -592,7 +623,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityTypeStartsWith(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityTypeStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -605,7 +637,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityTypeEndsWith(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityTypeEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -618,8 +651,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityTypeContains(String value,
-      {bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityTypeContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
         property: r'entityType',
@@ -629,8 +662,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityTypeMatches(String pattern,
-      {bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityTypeMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
         property: r'entityType',
@@ -640,7 +673,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityTypeIsEmpty() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityTypeIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'entityType',
@@ -649,7 +683,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> entityTypeIsNotEmpty() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      entityTypeIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'entityType',
@@ -658,7 +693,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> operationEqualTo(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      operationEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -671,7 +707,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> operationGreaterThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      operationGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -686,7 +723,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> operationLessThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      operationLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -701,7 +739,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> operationBetween(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      operationBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -720,7 +759,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> operationStartsWith(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      operationStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -733,7 +773,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> operationEndsWith(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      operationEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -746,8 +787,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> operationContains(String value,
-      {bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      operationContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
         property: r'operation',
@@ -757,8 +798,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> operationMatches(String pattern,
-      {bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      operationMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
         property: r'operation',
@@ -768,7 +809,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> operationIsEmpty() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      operationIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'operation',
@@ -777,7 +819,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> operationIsNotEmpty() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      operationIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'operation',
@@ -786,7 +829,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> outdatedByIsNull() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
         property: r'outdatedBy',
@@ -794,7 +838,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> outdatedByIsNotNull() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNotNull(
         property: r'outdatedBy',
@@ -802,7 +847,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> outdatedByEqualTo(int? value) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByEqualTo(int? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'outdatedBy',
@@ -811,7 +857,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> outdatedByGreaterThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByGreaterThan(
     int? value, {
     bool include = false,
   }) {
@@ -824,7 +871,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> outdatedByLessThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByLessThan(
     int? value, {
     bool include = false,
   }) {
@@ -837,7 +885,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> outdatedByBetween(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      outdatedByBetween(
     int? lower,
     int? upper, {
     bool includeLower = true,
@@ -854,7 +903,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> seqEqualTo(Id value) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      seqEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'seq',
@@ -863,7 +913,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> seqGreaterThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      seqGreaterThan(
     Id value, {
     bool include = false,
   }) {
@@ -876,7 +927,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> seqLessThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      seqLessThan(
     Id value, {
     bool include = false,
   }) {
@@ -889,7 +941,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> seqBetween(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      seqBetween(
     Id lower,
     Id upper, {
     bool includeLower = true,
@@ -906,7 +959,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> timestampEqualTo(DateTime value) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      timestampEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'timestamp',
@@ -915,7 +969,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> timestampGreaterThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      timestampGreaterThan(
     DateTime value, {
     bool include = false,
   }) {
@@ -928,7 +983,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> timestampLessThan(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      timestampLessThan(
     DateTime value, {
     bool include = false,
   }) {
@@ -941,7 +997,8 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition> timestampBetween(
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      timestampBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
@@ -959,18 +1016,22 @@ extension ChangeLogEntryQueryFilter on QueryBuilder<ChangeLogEntry, ChangeLogEnt
   }
 }
 
-extension ChangeLogEntryQueryObject on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QFilterCondition> {}
+extension ChangeLogEntryQueryObject
+    on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QFilterCondition> {}
 
-extension ChangeLogEntryQueryLinks on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QFilterCondition> {}
+extension ChangeLogEntryQueryLinks
+    on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QFilterCondition> {}
 
-extension ChangeLogEntryQuerySortBy on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QSortBy> {
+extension ChangeLogEntryQuerySortBy
+    on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QSortBy> {
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByDataJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataJson', Sort.asc);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByDataJsonDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByDataJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataJson', Sort.desc);
     });
@@ -982,19 +1043,22 @@ extension ChangeLogEntryQuerySortBy on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByEntityIdDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByEntityIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityId', Sort.desc);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByEntityType() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByEntityType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityType', Sort.asc);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByEntityTypeDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByEntityTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityType', Sort.desc);
     });
@@ -1006,19 +1070,22 @@ extension ChangeLogEntryQuerySortBy on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByOperationDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByOperationDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operation', Sort.desc);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByOutdatedBy() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByOutdatedBy() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'outdatedBy', Sort.asc);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByOutdatedByDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByOutdatedByDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'outdatedBy', Sort.desc);
     });
@@ -1030,21 +1097,24 @@ extension ChangeLogEntryQuerySortBy on QueryBuilder<ChangeLogEntry, ChangeLogEnt
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByTimestampDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByTimestampDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'timestamp', Sort.desc);
     });
   }
 }
 
-extension ChangeLogEntryQuerySortThenBy on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QSortThenBy> {
+extension ChangeLogEntryQuerySortThenBy
+    on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QSortThenBy> {
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByDataJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataJson', Sort.asc);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByDataJsonDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByDataJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataJson', Sort.desc);
     });
@@ -1056,19 +1126,22 @@ extension ChangeLogEntryQuerySortThenBy on QueryBuilder<ChangeLogEntry, ChangeLo
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByEntityIdDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByEntityIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityId', Sort.desc);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByEntityType() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByEntityType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityType', Sort.asc);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByEntityTypeDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByEntityTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityType', Sort.desc);
     });
@@ -1080,19 +1153,22 @@ extension ChangeLogEntryQuerySortThenBy on QueryBuilder<ChangeLogEntry, ChangeLo
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByOperationDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByOperationDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operation', Sort.desc);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByOutdatedBy() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByOutdatedBy() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'outdatedBy', Sort.asc);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByOutdatedByDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByOutdatedByDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'outdatedBy', Sort.desc);
     });
@@ -1116,52 +1192,61 @@ extension ChangeLogEntryQuerySortThenBy on QueryBuilder<ChangeLogEntry, ChangeLo
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByTimestampDesc() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByTimestampDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'timestamp', Sort.desc);
     });
   }
 }
 
-extension ChangeLogEntryQueryWhereDistinct on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> {
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByDataJson({bool caseSensitive = true}) {
+extension ChangeLogEntryQueryWhereDistinct
+    on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByDataJson(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'dataJson', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByEntityId({bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByEntityId(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'entityId', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByEntityType({bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByEntityType(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'entityType', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByOperation({bool caseSensitive = true}) {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByOperation(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'operation', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByOutdatedBy() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct>
+      distinctByOutdatedBy() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'outdatedBy');
     });
   }
 
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByTimestamp() {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct>
+      distinctByTimestamp() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'timestamp');
     });
   }
 }
 
-extension ChangeLogEntryQueryProperty on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QQueryProperty> {
+extension ChangeLogEntryQueryProperty
+    on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QQueryProperty> {
   QueryBuilder<ChangeLogEntry, int, QQueryOperations> seqProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'seq');
