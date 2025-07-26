@@ -99,6 +99,8 @@ class BaseStorageService {
     if (data.containsKey('entityId')) existing.entityId = data['entityId'];
     if (data.containsKey('data'))
       existing.data = Map<String, dynamic>.from(data['data']);
+    if (data.containsKey('outdatedBy'))
+      existing.outdatedBy = data['outdatedBy'] as int?;
     existing.timestamp = DateTime.now();
     await _isar.writeTxn(() async {
       await _isar.changeLogEntrys.put(existing);
@@ -177,6 +179,34 @@ class BaseStorageService {
       results = results.sublist(0, limit);
     }
     return results.map((e) => e.toJson()).toList();
+  }
+
+  // Get changes for syncing - excludes outdated changes
+  Future<List<Map<String, dynamic>>> getChangesForSync({
+    int? cursor,
+    int? limit,
+  }) async {
+    var query = _isar.changeLogEntrys.where();
+    var results = await query
+        .seqGreaterThan(cursor ?? 0)
+        .filter()
+        .outdatedByIsNull()
+        .findAll();
+    if (limit != null && results.length > limit) {
+      results = results.sublist(0, limit);
+    }
+    return results.map((e) => e.toJson()).toList();
+  }
+
+  // Update outdatedBy field for a change
+  Future<void> markAsOutdated(int seq, int outdatedBySeq) async {
+    await _isar.writeTxn(() async {
+      final change = await _isar.changeLogEntrys.get(seq);
+      if (change != null) {
+        change.outdatedBy = outdatedBySeq;
+        await _isar.changeLogEntrys.put(change);
+      }
+    });
   }
 
   // Get the highest sequence number in the database

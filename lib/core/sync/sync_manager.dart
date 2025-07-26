@@ -38,8 +38,8 @@ class SyncManager {
     try {
       print('[SyncManager] Starting outsync to cloud...');
 
-      // Get all changes from outsyncs storage
-      final changes = await _outsyncsStorage.getChangesWithCursor();
+      // Get changes for sync (excludes outdated changes)
+      final changes = await _outsyncsStorage.getChangesForSync();
 
       if (changes.isEmpty) {
         print('[SyncManager] No changes to outsync');
@@ -47,6 +47,7 @@ class SyncManager {
           success: true,
           syncedChanges: [],
           deletedLocalChanges: [],
+          seqMap: {},
           message: 'No changes to sync',
         );
       }
@@ -63,20 +64,18 @@ class SyncManager {
         final responseData = response.data as Map<String, dynamic>;
         final success = responseData['success'] as bool;
         final createdCount = responseData['created'] as int;
+        final seqMap = Map<String, int>.from(responseData['seqMap'] ?? {});
 
         if (success) {
-          // Delete successfully synced changes from outsyncs storage
-          final seqsToDelete = changes.map((c) => c['seq'] as int).toList();
-          final deletedCount =
-              await _outsyncsStorage.deleteChanges(seqsToDelete);
-
-          print(
-              '[SyncManager] Successfully outsynced $createdCount changes, deleted $deletedCount local changes');
+          // DON'T delete changes yet - wait for downsync to complete
+          // Just store the mapping for later use
+          print('[SyncManager] Successfully outsynced $createdCount changes to cloud');
 
           return OutsyncResult(
             success: true,
             syncedChanges: [], // No longer return full payload
-            deletedLocalChanges: seqsToDelete,
+            deletedLocalChanges: [], // Will be populated after downsync
+            seqMap: seqMap,
             message: 'Successfully outsynced $createdCount changes',
           );
         } else {
@@ -84,29 +83,15 @@ class SyncManager {
           final failedAtIndex = responseData['failedAtIndex'] as int?;
           final error = responseData['error'] as String?;
 
-          // Delete only the successfully created changes (up to the failed index)
-          if (createdCount > 0) {
-            final successfulSeqs =
-                changes.take(createdCount).map((c) => c['seq'] as int).toList();
-            final deletedCount =
-                await _outsyncsStorage.deleteChanges(successfulSeqs);
-            print(
-                '[SyncManager] Partial outsync: $deletedCount changes synced, failed at index $failedAtIndex: $error');
+          print('[SyncManager] Partial outsync failed at index $failedAtIndex: $error');
 
-            return OutsyncResult(
-              success: false,
-              syncedChanges: [],
-              deletedLocalChanges: successfulSeqs,
-              message: 'Partial outsync failed at index $failedAtIndex: $error',
-            );
-          } else {
-            return OutsyncResult(
-              success: false,
-              syncedChanges: [],
-              deletedLocalChanges: [],
-              message: 'Outsync failed at first change: $error',
-            );
-          }
+          return OutsyncResult(
+            success: false,
+            syncedChanges: [],
+            deletedLocalChanges: [],
+            seqMap: seqMap,
+            message: 'Partial outsync failed at index $failedAtIndex: $error',
+          );
         }
       } else {
         throw Exception('Outsync failed with status: ${response.statusCode}');
@@ -117,6 +102,7 @@ class SyncManager {
         success: false,
         syncedChanges: [],
         deletedLocalChanges: [],
+        seqMap: {},
         message: 'Outsync failed: $e',
       );
     }
@@ -174,15 +160,47 @@ class SyncManager {
     }
   }
 
-  // Perform full sync: outsync first, then downsync
+  // Perform full sync: outsync first, then downsync, then complete outsync cleanup
   Future<FullSyncResult> performFullSync() async {
     print('[SyncManager] Starting full sync...');
 
+    // Step 1: Outsync to cloud (but don't delete local changes yet)
     final outsyncResult = await outsyncToCloud();
+    
+    // Step 2: Downsync from cloud to get the new sequences
     final downsyncResult = await downsyncFromCloud();
 
+    // Step 3: If outsync was successful and we have seqMap, complete the cleanup
+    List<int> deletedLocalSeqs = [];
+    if (outsyncResult.success && outsyncResult.seqMap.isNotEmpty) {
+      print('[SyncManager] Completing outsync cleanup...');
+      
+      // Update outdatedBy fields and delete outsynced changes
+      for (final entry in outsyncResult.seqMap.entries) {
+        final oldSeq = int.parse(entry.key);
+        final newSeq = entry.value;
+        
+        // Mark the old change as outdated by the new sequence
+        await _outsyncsStorage.markAsOutdated(oldSeq, newSeq);
+        deletedLocalSeqs.add(oldSeq);
+      }
+      
+      // Now actually delete the outsynced changes
+      final deletedCount = await _outsyncsStorage.deleteChanges(deletedLocalSeqs);
+      print('[SyncManager] Deleted $deletedCount outsynced changes from local storage');
+    }
+
+    // Update the outsync result with actual deleted sequences
+    final finalOutsyncResult = OutsyncResult(
+      success: outsyncResult.success,
+      syncedChanges: outsyncResult.syncedChanges,
+      deletedLocalChanges: deletedLocalSeqs,
+      seqMap: outsyncResult.seqMap,
+      message: outsyncResult.message,
+    );
+
     return FullSyncResult(
-      outsyncResult: outsyncResult,
+      outsyncResult: finalOutsyncResult,
       downsyncResult: downsyncResult,
       success: outsyncResult.success && downsyncResult.success,
     );
@@ -239,12 +257,14 @@ class OutsyncResult {
   final bool success;
   final List<Map<String, dynamic>> syncedChanges;
   final List<int> deletedLocalChanges;
+  final Map<String, int> seqMap; // Maps old seq (as string) to new seq
   final String message;
 
   OutsyncResult({
     required this.success,
     required this.syncedChanges,
     required this.deletedLocalChanges,
+    required this.seqMap,
     required this.message,
   });
 
@@ -252,6 +272,7 @@ class OutsyncResult {
         'success': success,
         'syncedChanges': syncedChanges,
         'deletedLocalChanges': deletedLocalChanges,
+        'seqMap': seqMap,
         'message': message,
       };
 }

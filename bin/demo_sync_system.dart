@@ -27,6 +27,8 @@ class SyncSystemDemo {
     try {
       await _setupSystem();
       await _demonstrateBasicOperations();
+      await _demonstrateSequenceMapping();
+      await _demonstrateOutdatedChanges();
       await _demonstrateOutsyncFlow();
       await _demonstrateDownsyncFlow();
       await _demonstrateFullSyncFlow();
@@ -249,6 +251,8 @@ class SyncSystemDemo {
     if (fullSyncResult.success) {
       print('   ✅ Full sync successful!');
       print('   ⬆️ Outsync: ${fullSyncResult.outsyncResult.message}');
+      print('   ⬆️ Sequence mappings: ${fullSyncResult.outsyncResult.seqMap}');
+      print('   ⬆️ Deleted ${fullSyncResult.outsyncResult.deletedLocalChanges.length} local changes');
       print('   ⬇️ Downsync: ${fullSyncResult.downsyncResult.message}');
     } else {
       print('   ❌ Full sync failed');
@@ -333,6 +337,93 @@ class SyncSystemDemo {
         '   PUT  /api/changes/{seq}      - Update change (not on Cloud Storage)');
     print(
         '   DELETE /api/changes/{seq}    - Delete change (not on Cloud Storage)');
+  }
+
+  Future<void> _demonstrateSequenceMapping() async {
+    print('\n--- Step 2A: Sequence Mapping ---');
+    print('Demonstrating how cloud storage creates new sequences and provides seqMap...');
+
+    // Create changes with explicit old sequences that should be ignored
+    final changes = [
+      {
+        'seq': 9999, // This will be ignored
+        'entityType': 'Document',
+        'operation': 'create',
+        'entityId': 'demo-seq-mapping-1',
+        'data': {'title': 'Document with Old Seq 9999'},
+      },
+      {
+        'seq': 8888, // This will also be ignored
+        'entityType': 'Document',
+        'operation': 'create',
+        'entityId': 'demo-seq-mapping-2',
+        'data': {'title': 'Document with Old Seq 8888'},
+      }
+    ];
+
+    final response = await _dio.post('$_cloudStorageUrl/api/changes', data: changes);
+    final responseData = response.data as Map<String, dynamic>;
+
+    if (responseData['success']) {
+      final seqMap = responseData['seqMap'] as Map<String, dynamic>;
+      print('✓ Created ${responseData['created']} changes in cloud storage');
+      print('✓ Sequence mappings:');
+      seqMap.forEach((oldSeq, newSeq) {
+        print('   Old seq $oldSeq → New seq $newSeq');
+      });
+    } else {
+      print('✗ Failed to create changes: ${responseData['error']}');
+    }
+  }
+
+  Future<void> _demonstrateOutdatedChanges() async {
+    print('\n--- Step 2B: Outdated Changes ---');
+    print('Demonstrating how outdated changes are excluded from sync...');
+
+    // Create a change in outsyncs
+    final change = {
+      'entityType': 'Document',
+      'operation': 'create',
+      'entityId': 'demo-outdated-change',
+      'data': {'title': 'This change will be marked outdated'},
+    };
+
+    final createResponse = await _dio.post('$_outsyncsUrl/api/changes', data: [change]);
+    final createData = createResponse.data as Map<String, dynamic>;
+    final seqMap = createData['seqMap'] as Map<String, dynamic>;
+    final createdSeq = seqMap.values.first as int;
+
+    print('✓ Created change with seq: $createdSeq');
+
+    // Mark it as outdated
+    await _dio.put('$_outsyncsUrl/api/changes/$createdSeq', data: {
+      ...change,
+      'outdatedBy': 99999, // Mark as outdated by a future sequence
+    });
+
+    print('✓ Marked change as outdated (outdatedBy: 99999)');
+
+    // Get cloud stats before sync attempt
+    final statsBefore = await _dio.get('$_cloudStorageUrl/api/stats');
+    final countBefore = statsBefore.data['changeStats']['total'] as int;
+
+    // Attempt to sync - should skip outdated changes
+    final outsyncResult = await _syncManager.outsyncToCloud();
+    if (outsyncResult.seqMap.isEmpty) {
+      print('✓ Outsync correctly skipped outdated changes');
+    } else {
+      print('✗ Outdated change was unexpectedly synced');
+    }
+
+    // Verify cloud count didn't change
+    final statsAfter = await _dio.get('$_cloudStorageUrl/api/stats');
+    final countAfter = statsAfter.data['changeStats']['total'] as int;
+
+    if (countAfter == countBefore) {
+      print('✓ Cloud storage count remained unchanged: $countAfter');
+    } else {
+      print('✗ Cloud storage count changed unexpectedly: $countBefore → $countAfter');
+    }
   }
 
   Future<void> cleanup() async {

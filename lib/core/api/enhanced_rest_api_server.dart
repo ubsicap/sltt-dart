@@ -67,8 +67,8 @@ class EnhancedRestApiServer {
     router.get('/health', _handleHealth);
 
     // Change log endpoints
-    router.get('/api/changes', _handleGetChanges);
     router.post('/api/changes', _handleCreateChanges);
+    router.get('/api/changes', _handleGetChanges);
     router.get('/api/changes/<seq>', _handleGetChange);
 
     // Conditional endpoints based on storage type
@@ -204,12 +204,16 @@ class EnhancedRestApiServer {
       }
 
       List<int> createdSeqs = [];
+      List<int> originalSeqs = [];
       int? failedIndex;
       String? errorMessage;
 
       for (int i = 0; i < changesToCreate.length; i++) {
         try {
           final changeData = changesToCreate[i];
+          final originalSeq = changeData['seq'] as int?; // Capture original seq
+          
+          // Always create with fresh data, never include 'seq' in storage
           final changeToStore = {
             'entityType': changeData['entityType'] as String,
             'operation': changeData['operation'] as String,
@@ -218,7 +222,9 @@ class EnhancedRestApiServer {
           };
 
           final created = await _storage!.createChange(changeToStore);
-          createdSeqs.add(created['seq'] as int);
+          final newSeq = created['seq'] as int;
+          createdSeqs.add(newSeq);
+          originalSeqs.add(originalSeq ?? newSeq); // Use new seq if no original
         } catch (e) {
           // Stop processing on first error
           failedIndex = i;
@@ -234,9 +240,13 @@ class EnhancedRestApiServer {
         'timestamp': DateTime.now().toIso8601String(),
       };
 
+      // Build sequence mapping from old seq to new seq
       if (createdSeqs.isNotEmpty) {
-        response['firstSeq'] = createdSeqs.first;
-        response['lastSeq'] = createdSeqs.last;
+        final seqMap = <String, int>{};
+        for (int i = 0; i < createdSeqs.length; i++) {
+          seqMap[originalSeqs[i].toString()] = createdSeqs[i];
+        }
+        response['seqMap'] = seqMap;
       }
 
       if (!success) {

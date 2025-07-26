@@ -13,7 +13,7 @@ class ChangeLogEntry {
   late DateTime timestamp;
   late String entityId; // UUID or primary key of the entity
   late String dataJson; // JSON-encoded entity data
-  late int? outdatedBy; // id of the change that this entry is outdated by
+  int? outdatedBy; // id of the change that this entry is outdated by
 
   @ignore
   Map<String, dynamic> get data => jsonDecode(dataJson);
