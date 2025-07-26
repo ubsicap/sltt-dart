@@ -66,6 +66,9 @@ class EnhancedRestApiServer {
     // Health check
     router.get('/health', _handleHealth);
 
+    // API documentation
+    router.get('/api/help', _handleApiDocs);
+
     // Change log endpoints - append-only operations
     router.post('/api/changes', _handleCreateChanges);
     router.get('/api/changes', _handleGetChanges);
@@ -94,6 +97,164 @@ class EnhancedRestApiServer {
       }),
       headers: {'Content-Type': 'application/json'},
     );
+  }
+
+  /// API documentation endpoint.
+  ///
+  /// Returns comprehensive API documentation including all available endpoints,
+  /// parameters, and usage examples. Can be used programmatically by demos
+  /// and testing tools.
+  Future<Response> _handleApiDocs(Request request) async {
+    final docs = getApiDocumentation();
+    return Response.ok(
+      jsonEncode(docs),
+      headers: {'Content-Type': 'application/json'},
+    );
+  }
+
+  /// Get API documentation data structure.
+  ///
+  /// Returns a structured map containing all API documentation that can be
+  /// used by demos, tests, or converted to different formats.
+  Map<String, dynamic> getApiDocumentation() {
+    return {
+      'server': {
+        'name': serverName,
+        'storageType': storageType.toString(),
+        'description': _getStorageDescription(),
+      },
+      'endpoints': [
+        {
+          'method': 'GET',
+          'path': '/health',
+          'description': 'Health check - returns server status',
+          'parameters': [],
+          'example': 'GET /health',
+        },
+        {
+          'method': 'GET',
+          'path': '/api/help',
+          'description': 'API documentation - returns this documentation',
+          'parameters': [],
+          'example': 'GET /api/help',
+        },
+        {
+          'method': 'GET',
+          'path': '/api/changes',
+          'description': 'Get all changes with optional pagination',
+          'parameters': [
+            {
+              'name': 'cursor',
+              'type': 'integer',
+              'required': false,
+              'description': 'Starting sequence number (exclusive)',
+            },
+            {
+              'name': 'limit',
+              'type': 'integer',
+              'required': false,
+              'description': 'Maximum number of results (1-1000)',
+            },
+          ],
+          'examples': [
+            'GET /api/changes',
+            'GET /api/changes?cursor=50',
+            'GET /api/changes?limit=20',
+            'GET /api/changes?cursor=100&limit=10',
+          ],
+        },
+        {
+          'method': 'GET',
+          'path': '/api/changes/{seq}',
+          'description': 'Get specific change by sequence number',
+          'parameters': [
+            {
+              'name': 'seq',
+              'type': 'integer',
+              'required': true,
+              'description': 'Change sequence number',
+            },
+          ],
+          'example': 'GET /api/changes/123',
+        },
+        {
+          'method': 'POST',
+          'path': '/api/changes',
+          'description': 'Create new changes (array format)',
+          'parameters': [],
+          'requestBody': {
+            'type': 'array',
+            'description': 'Array of change objects',
+            'schema': {
+              'entityType': 'string (required)',
+              'operation': 'string (optional, defaults to "create")',
+              'entityId': 'string (required)',
+              'data': 'object (required)',
+            },
+          },
+          'example': 'POST /api/changes',
+          'exampleBody': [
+            {
+              'entityType': 'Document',
+              'operation': 'create',
+              'entityId': 'doc-123',
+              'data': {'title': 'My Document', 'content': 'Content here'},
+            }
+          ],
+        },
+        {
+          'method': 'GET',
+          'path': '/api/stats',
+          'description': 'Get statistics about changes and entity types',
+          'parameters': [],
+          'example': 'GET /api/stats',
+        },
+      ],
+      'notes': [
+        'PUT and DELETE endpoints have been removed - API follows append-only change log semantics',
+        'The operation field represents logical operations on application entities, not change log operations',
+        'All change log entries are created with auto-generated sequence numbers',
+        'Cloud storage servers create new sequences and provide sequence mappings via seqMap',
+      ],
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+  }
+
+  /// Get description for the current storage type.
+  String _getStorageDescription() {
+    switch (storageType) {
+      case StorageType.outsyncs:
+        return 'Manages local changes awaiting upload to cloud';
+      case StorageType.downsyncs:
+        return 'Manages changes received from cloud';
+      case StorageType.cloudStorage:
+        return 'Simulates cloud storage with append-only operations';
+    }
+  }
+
+  /// Get formatted API documentation for console output.
+  ///
+  /// Returns a string suitable for printing to console, used by demos
+  /// and command-line tools.
+  String getFormattedApiDocumentation() {
+    final docs = getApiDocumentation();
+    final buffer = StringBuffer();
+
+    buffer.writeln('📚 Available endpoints on ${docs['server']['name']}:');
+
+    for (final endpoint in docs['endpoints']) {
+      final method = endpoint['method'].toString().padRight(6);
+      final path = endpoint['path'].toString().padRight(25);
+      buffer.writeln('   $method $path - ${endpoint['description']}');
+    }
+
+    buffer.writeln('');
+    buffer.writeln('   Notes:');
+    for (final note in docs['notes']) {
+      buffer.writeln('   • $note');
+    }
+
+    return buffer.toString();
   }
 
   /// Get all changes or filter by query parameters.
@@ -226,11 +387,12 @@ class EnhancedRestApiServer {
         try {
           final changeData = changesToCreate[i];
           final originalSeq = changeData['seq'] as int?; // Capture original seq
-          
+
           // Always create with fresh data, never include 'seq' in storage
           final changeToStore = {
             'entityType': changeData['entityType'] as String,
-            'operation': changeData['operation'] as String? ?? 'create', // Default to 'create' if not provided
+            'operation': changeData['operation'] as String? ??
+                'create', // Default to 'create' if not provided
             'entityId': changeData['entityId'] as String,
             'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
           };

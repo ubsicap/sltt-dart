@@ -9,7 +9,8 @@ import '../lib/core/storage/shared_storage_service.dart';
 class SyncSystemDemo {
   final MultiServerLauncher _serverLauncher = MultiServerLauncher.instance;
   final SyncManager _syncManager = SyncManager.instance;
-  final OutsyncsStorageService _outsyncsStorage = OutsyncsStorageService.instance;
+  final OutsyncsStorageService _outsyncsStorage =
+      OutsyncsStorageService.instance;
   final Dio _dio = Dio();
 
   // API endpoints
@@ -254,7 +255,8 @@ class SyncSystemDemo {
       print('   ✅ Full sync successful!');
       print('   ⬆️ Outsync: ${fullSyncResult.outsyncResult.message}');
       print('   ⬆️ Sequence mappings: ${fullSyncResult.outsyncResult.seqMap}');
-      print('   ⬆️ Deleted ${fullSyncResult.outsyncResult.deletedLocalChanges.length} local changes');
+      print(
+          '   ⬆️ Deleted ${fullSyncResult.outsyncResult.deletedLocalChanges.length} local changes');
       print('   ⬇️ Downsync: ${fullSyncResult.downsyncResult.message}');
     } else {
       print('   ❌ Full sync failed');
@@ -329,20 +331,47 @@ class SyncSystemDemo {
     print('   - Downsyncs Server:   $_downsyncsUrl');
     print('   - Cloud Storage:      $_cloudStorageUrl');
 
-    print('\n📚 Available endpoints on each server:');
-    print('   GET  /health                  - Health check');
-    print('   GET  /api/changes            - Get all changes');
-    print('   GET  /api/changes/{seq}      - Get specific change');
-    print('   POST /api/changes            - Create new changes (array)');
-    print('   GET  /api/stats              - Get statistics');
-    print('');
-    print('   Note: PUT and DELETE endpoints have been removed.');
-    print('   Change logs are now append-only for data integrity.');
+    await _showApiDocumentation();
+  }
+
+  Future<void> _showApiDocumentation() async {
+    try {
+      // Get API documentation from one of the servers
+      final response = await _dio.get('$_cloudStorageUrl/api/help');
+      final docs = response.data as Map<String, dynamic>;
+
+      print('\n📚 Available endpoints on each server:');
+
+      for (final endpoint in docs['endpoints']) {
+        final method = endpoint['method'].toString().padRight(6);
+        final path = endpoint['path'].toString().padRight(25);
+        print('   $method $path - ${endpoint['description']}');
+      }
+
+      print('');
+      print('   Notes:');
+      for (final note in docs['notes']) {
+        print('   • $note');
+      }
+    } catch (e) {
+      // Fallback to static documentation if API call fails
+      print('\n📚 Available endpoints on each server:');
+      print('   GET  /health                  - Health check');
+      print('   GET  /api/help               - API documentation');
+      print('   GET  /api/changes            - Get all changes');
+      print('   GET  /api/changes/{seq}      - Get specific change');
+      print('   POST /api/changes            - Create new changes (array)');
+      print('   GET  /api/stats              - Get statistics');
+      print('');
+      print('   Note: PUT and DELETE endpoints have been removed.');
+      print('   Change logs are now append-only for data integrity.');
+    }
   }
 
   Future<void> _demonstrateSequenceMapping() async {
     print('\n--- Step 2A: Sequence Mapping ---');
-    print('Demonstrating how cloud storage creates new sequences and provides seqMap...');
+    print(
+        'Demonstrating how cloud storage creates new sequences and provides seqMap...');
 
     // Create changes with explicit old sequences that should be ignored
     final changes = [
@@ -362,7 +391,8 @@ class SyncSystemDemo {
       }
     ];
 
-    final response = await _dio.post('$_cloudStorageUrl/api/changes', data: changes);
+    final response =
+        await _dio.post('$_cloudStorageUrl/api/changes', data: changes);
     final responseData = response.data as Map<String, dynamic>;
 
     if (responseData['success']) {
@@ -389,7 +419,8 @@ class SyncSystemDemo {
       'data': {'title': 'This change will be marked outdated'},
     };
 
-    final createResponse = await _dio.post('$_outsyncsUrl/api/changes', data: [change]);
+    final createResponse =
+        await _dio.post('$_outsyncsUrl/api/changes', data: [change]);
     final createData = createResponse.data as Map<String, dynamic>;
     final seqMap = createData['seqMap'] as Map<String, dynamic>;
     final createdSeq = seqMap.values.first as int;
@@ -421,7 +452,8 @@ class SyncSystemDemo {
     if (countAfter == countBefore) {
       print('✓ Cloud storage count remained unchanged: $countAfter');
     } else {
-      print('✗ Cloud storage count changed unexpectedly: $countBefore → $countAfter');
+      print(
+          '✗ Cloud storage count changed unexpectedly: $countBefore → $countAfter');
     }
   }
 

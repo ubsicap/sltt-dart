@@ -119,6 +119,11 @@ All servers support the following endpoints:
 GET /health
 ```
 
+#### API Documentation
+```  
+GET /api/help                     # Get comprehensive API documentation
+```
+
 #### Change Management
 ```
 GET  /api/changes                  # Get all changes (with optional query parameters)
