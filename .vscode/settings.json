@@ -11,8 +11,11 @@
 
     // Dart-specific formatting settings
     "dart.lineLength": 120,
+    "dart.showTodos": true,
     "[dart]": {
         "editor.rulers": [80, 120],
+        "editor.hover.enabled": true,
+        "editor.hover.delay": 300,
         "editor.wordWrap": "bounded",
         "editor.wordWrapColumn": 120,
         "editor.formatOnSave": true,
@@ -29,6 +32,7 @@
     "dart.previewLsp": true,
     "dart.runPubGetOnPubspecChanges": true,
     "dart.automaticCommentSlashes": "tripleSlash",
+    "dart.documentation": "full",
 
     // General editor settings
     "editor.wordWrap": "bounded",
