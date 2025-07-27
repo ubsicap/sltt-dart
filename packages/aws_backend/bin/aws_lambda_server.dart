@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:aws_backend/aws_backend.dart';
 
 /// Simple AWS Lambda handler for SLTT backend API.
-/// 
+///
 /// This provides a basic Lambda function that can be deployed to AWS
 /// without complex runtime dependencies.
 Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
@@ -12,7 +13,7 @@ Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
     final tableName = Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-changes-dev';
     final projectId = Platform.environment['PROJECT_ID'] ?? 'default-project';
     final region = Platform.environment['AWS_REGION'] ?? 'us-east-1';
-    
+
     // Create DynamoDB storage service
     final storage = DynamoDBStorageService(
       tableName: tableName,
@@ -20,13 +21,13 @@ Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
       region: region,
       useLocalDynamoDB: false, // Always use real AWS in Lambda
     );
-    
+
     // Initialize storage
     await storage.initialize();
-    
+
     // Handle basic HTTP methods
     final httpMethod = event['httpMethod'] as String? ?? 'GET';
-    
+
     switch (httpMethod) {
       case 'GET':
         return await _handleGetRequest(storage, event);
@@ -35,7 +36,6 @@ Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
       default:
         return _errorResponse('Method not allowed', 405);
     }
-    
   } catch (e, stackTrace) {
     print('Lambda error: $e');
     print('Stack trace: $stackTrace');
@@ -50,29 +50,29 @@ Future<Map<String, dynamic>> _handleGetRequest(
 ) async {
   final path = event['path'] as String? ?? '/';
   final queryParams = event['queryStringParameters'] as Map<String, dynamic>? ?? {};
-  
+
   try {
     if (path.contains('/changes')) {
       if (path.contains(RegExp(r'/changes/\d+$'))) {
         // Get specific change: /api/changes/123
         final seq = int.parse(path.split('/').last);
         final change = await storage.getChange(seq);
-        
+
         if (change == null) {
           return _errorResponse('Change not found', 404);
         }
-        
+
         return _successResponse(change);
       } else {
         // Get changes with pagination: /api/changes
         final cursor = int.tryParse(queryParams['cursor']?.toString() ?? '');
         final limit = int.tryParse(queryParams['limit']?.toString() ?? '100') ?? 100;
-        
+
         final changes = await storage.getChangesWithCursor(
           cursor: cursor,
           limit: limit.clamp(1, 1000),
         );
-        
+
         return _successResponse({
           'changes': changes,
           'count': changes.length,
@@ -105,28 +105,28 @@ Future<Map<String, dynamic>> _handlePostRequest(
 ) async {
   final path = event['path'] as String? ?? '/';
   final body = event['body'] as String? ?? '{}';
-  
+
   try {
     if (path.contains('/changes')) {
       // Create changes: POST /api/changes
       final data = jsonDecode(body);
-      
+
       if (data is! List) {
         return _errorResponse('Request body must be an array', 400);
       }
-      
+
       final changes = data.cast<Map<String, dynamic>>();
       final createdChanges = <Map<String, dynamic>>[];
       final seqMap = <String, int>{};
-      
+
       for (final changeData in changes) {
         final originalSeq = changeData['seq'];
         final created = await storage.createChange(changeData);
         createdChanges.add(created);
-        
+
         seqMap[originalSeq?.toString() ?? created['seq'].toString()] = created['seq'];
       }
-      
+
       return _successResponse({
         'success': true,
         'created': createdChanges.length,

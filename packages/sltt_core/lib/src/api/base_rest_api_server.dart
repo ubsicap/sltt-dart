@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:meta/meta.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
@@ -9,7 +10,7 @@ import 'package:shelf_router/shelf_router.dart';
 import '../storage/base_storage_service.dart';
 
 /// Base REST API server that provides common functionality for all storage types.
-/// 
+///
 /// This eliminates code duplication between different server implementations
 /// by providing shared endpoints, middleware, and error handling.
 abstract class BaseRestApiServer {
@@ -41,7 +42,7 @@ abstract class BaseRestApiServer {
     // Initialize the storage service
     await storage.initialize();
 
-    final router = _buildRouter();
+    final router = buildRouter();
 
     // Add CORS and logging middleware
     final handler = const Pipeline()
@@ -54,7 +55,8 @@ abstract class BaseRestApiServer {
   }
 
   /// Build the router with standard endpoints
-  Router _buildRouter() {
+  @protected
+  Router buildRouter() {
     final router = Router();
 
     // Standard endpoints (same for all servers)

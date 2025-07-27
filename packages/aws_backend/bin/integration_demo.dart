@@ -113,7 +113,8 @@ Future<void> main() async {
 
       final localChange = await localDownsyncs.createChange(changeForLocal);
       print(
-          '   Downloaded: cloud seq ${cloudChange['seq']} -> local seq ${localChange['seq']} (${cloudChange['entityType']})',);
+        '   Downloaded: cloud seq ${cloudChange['seq']} -> local seq ${localChange['seq']} (${cloudChange['entityType']})',
+      );
     }
     print('✅ Cloud to local sync completed\n');
 

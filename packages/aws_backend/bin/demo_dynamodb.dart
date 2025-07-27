@@ -86,7 +86,8 @@ Future<void> main() async {
     final specificChange = await storage.getChange(change1['seq'] as int);
     if (specificChange != null) {
       print(
-          '   Retrieved change ${specificChange['seq']}: ${specificChange['entityType']}/${specificChange['entityId']}',);
+        '   Retrieved change ${specificChange['seq']}: ${specificChange['entityType']}/${specificChange['entityId']}',
+      );
       print('   Data: ${specificChange['data']}');
     } else {
       print('   ❌ Failed to retrieve specific change');
