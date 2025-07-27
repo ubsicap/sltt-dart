@@ -10,4 +10,5 @@ environment:
 # Individual packages have their own dependencies
 workspace:
   - packages/sltt_core
+  - packages/aws_backend
   - examples/sync_manager_demo

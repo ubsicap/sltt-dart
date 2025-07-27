@@ -1,0 +1,33 @@
+name: aws_backend
+description: AWS backend services for SLTT including DynamoDB storage service
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  # Core interfaces only (minimal import from sltt_core)
+  sltt_core:
+    path: ../sltt_core
+
+  # Minimal HTTP client for DynamoDB API calls
+  http: ^1.1.0
+
+  # JSON handling
+  json_annotation: ^4.8.0
+
+  # Shelf for REST API server
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  shelf_cors_headers: ^0.1.4
+
+dev_dependencies:
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
+  test: ^1.24.0
+  lints: ^3.0.0
+
+# For serverless deployment
+executables:
+  aws_lambda_server: null

@@ -1,5 +1,5 @@
 /// Abstract base class for all storage service implementations.
-/// 
+///
 /// This interface defines the contract that all storage services must implement,
 /// whether they use local Isar databases, DynamoDB, or other storage backends.
 abstract class BaseStorageService {
@@ -36,7 +36,7 @@ abstract class BaseStorageService {
     throw UnsupportedError('markAsOutdated not supported by this storage service');
   }
 
-  /// Get changes that are not outdated (for local storage services)  
+  /// Get changes that are not outdated (for local storage services)
   Future<List<Map<String, dynamic>>> getChangesNotOutdated() async {
     // Default implementation - override in local storage services
     return getChangesWithCursor();

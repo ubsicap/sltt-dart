@@ -1,0 +1,109 @@
+# Serverless Framework configuration for SLTT AWS Lambda deployment
+service: sltt-backend
+
+# Use the Dart serverless plugin for optimal packaging
+plugins:
+  - serverless-dart
+
+provider:
+  name: aws
+  runtime: provided.al2  # Custom runtime for Dart
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+
+  # Lambda function configuration
+  timeout: 30
+  memorySize: 512
+
+  # Environment variables
+  environment:
+    STAGE: ${self:provider.stage}
+    DYNAMODB_TABLE: ${self:service}-changes-${self:provider.stage}
+    DYNAMODB_REGION: ${self:provider.region}
+    PROJECT_ID: ${opt:project, 'default-project'}
+
+  # IAM permissions for DynamoDB
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:DescribeTable
+        - dynamodb:CreateTable
+      Resource:
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}/index/*"
+
+functions:
+  # Main API handler for SLTT changes
+  api:
+    handler: bin/aws_lambda_server.main
+    events:
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors: true
+      - http:
+          path: /
+          method: ANY
+          cors: true
+
+resources:
+  Resources:
+    # DynamoDB table for change log entries
+    ChangesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+          - AttributeName: seq
+            AttributeType: N
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+          - AttributeName: seq
+            KeyType: RANGE
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+        Tags:
+          - Key: Service
+            Value: ${self:service}
+          - Key: Stage
+            Value: ${self:provider.stage}
+
+# Dart-specific configuration
+custom:
+  dart:
+    # Optimize for Lambda cold starts
+    optimize: true
+    # Include only necessary files
+    exclude:
+      - test/**
+      - example/**
+      - .dart_tool/**
+      - build/**
+    # Tree-shake unused code
+    tree-shake: true
+    # Minimize dependencies
+    minimal: true
+
+# Package configuration
+package:
+  individually: false
+  exclude:
+    - .git/**
+    - .dart_tool/**
+    - test/**
+    - example/**
+    - '*.md'
+    - .gitignore
+    - analysis_options.yaml
