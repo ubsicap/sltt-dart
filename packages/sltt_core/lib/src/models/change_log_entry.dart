@@ -49,7 +49,7 @@ class ChangeLogEntry {
       timestamp: DateTime.parse(json['timestamp'] as String),
       entityId: json['entityId'] as String,
       dataJson: json['data'] as String,
-      outdatedBy: json['outdatedBy'] as int? ?? null,
+      outdatedBy: json['outdatedBy'] as int?,
     );
 
     if (json['seq'] != null) {

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:isar/isar.dart';
+
 import '../models/change_log_entry.dart';
 import 'base_storage_service.dart';
 
@@ -13,6 +15,7 @@ class LocalStorageService implements BaseStorageService {
 
   LocalStorageService(this._databaseName, this._logPrefix);
 
+  @override
   Future<void> initialize() async {
     if (_initialized) return;
 
@@ -30,7 +33,7 @@ class LocalStorageService implements BaseStorageService {
     );
 
     _initialized = true;
-    print('[$_logPrefix] Isar database initialized at: ${dir.path}/${_databaseName}.isar');
+    print('[$_logPrefix] Isar database initialized at: ${dir.path}/$_databaseName.isar');
   }
 
   /// Create a new change log entry in the storage.
@@ -114,6 +117,7 @@ class LocalStorageService implements BaseStorageService {
     };
   }
 
+  @override
   Future<Map<String, int>> getEntityTypeStats() async {
     final allEntries = await _isar.changeLogEntrys.where().findAll();
     final stats = <String, int>{};
@@ -141,7 +145,7 @@ class LocalStorageService implements BaseStorageService {
   Future<int> deleteOutdatedChanges() async {
     final outdatedChanges = await _isar.changeLogEntrys.filter().outdatedByIsNotNull().findAll();
     final seqsToDelete = outdatedChanges.map((e) => e.seq).toList();
-    
+
     int deletedCount = 0;
     await _isar.writeTxn(() async {
       for (final seq in seqsToDelete) {
@@ -150,7 +154,7 @@ class LocalStorageService implements BaseStorageService {
         }
       }
     });
-    
+
     return deletedCount;
   }
 
@@ -205,6 +209,7 @@ class LocalStorageService implements BaseStorageService {
   ///
   /// Updates the outdatedBy field to indicate this change has been
   /// superseded by a newer change with the specified sequence number.
+  @override
   Future<void> markAsOutdated(int seq, int outdatedBySeq) async {
     await _isar.writeTxn(() async {
       final change = await _isar.changeLogEntrys.get(seq);
@@ -236,13 +241,15 @@ class LocalStorageService implements BaseStorageService {
   // Store multiple changes (for batch operations)
   Future<List<Map<String, dynamic>>> createChanges(List<Map<String, dynamic>> changesData) async {
     final changes = changesData
-        .map((changeData) => ChangeLogEntry(
-              entityType: changeData['entityType'] ?? '',
-              operation: changeData['operation'] ?? '',
-              timestamp: DateTime.now(),
-              entityId: changeData['entityId'] ?? '',
-              dataJson: jsonEncode(changeData['data'] ?? {}),
-            ))
+        .map(
+          (changeData) => ChangeLogEntry(
+            entityType: changeData['entityType'] ?? '',
+            operation: changeData['operation'] ?? '',
+            timestamp: DateTime.now(),
+            entityId: changeData['entityId'] ?? '',
+            dataJson: jsonEncode(changeData['data'] ?? {}),
+          ),
+        )
         .toList();
 
     await _isar.writeTxn(() async {
