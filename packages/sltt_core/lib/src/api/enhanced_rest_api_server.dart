@@ -16,7 +16,7 @@ class EnhancedRestApiServer {
   bool _initialized = false;
 
   // Storage service based on type
-  BaseStorageService? _storage;
+  LocalStorageService? _storage;
 
   EnhancedRestApiServer(this.storageType, this.serverName);
 
@@ -342,7 +342,7 @@ class EnhancedRestApiServer {
       }
 
       return Response.ok(
-        jsonEncode(change.toJson()),
+        jsonEncode(change),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e) {

@@ -2,15 +2,16 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:isar/isar.dart';
 import '../models/change_log_entry.dart';
+import 'base_storage_service.dart';
 
-class BaseStorageService {
+class LocalStorageService implements BaseStorageService {
   final String _databaseName;
   final String _logPrefix;
 
   late Isar _isar;
   bool _initialized = false;
 
-  BaseStorageService(this._databaseName, this._logPrefix);
+  LocalStorageService(this._databaseName, this._logPrefix);
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -35,6 +36,7 @@ class BaseStorageService {
   /// Create a new change log entry in the storage.
   ///
   /// Returns the created change log entry with auto-generated sequence number.
+  @override
   Future<Map<String, dynamic>> createChange(Map<String, dynamic> changeData) async {
     final change = ChangeLogEntry(
       entityType: changeData['entityType'] ?? '',
@@ -49,8 +51,10 @@ class BaseStorageService {
     return change.toJson();
   }
 
-  Future<ChangeLogEntry?> getChange(int seq) async {
-    return await _isar.changeLogEntrys.get(seq);
+  @override
+  Future<Map<String, dynamic>?> getChange(int seq) async {
+    final change = await _isar.changeLogEntrys.get(seq);
+    return change?.toJson();
   }
 
   Future<List<ChangeLogEntry>> getAllChanges() async {
@@ -95,6 +99,7 @@ class BaseStorageService {
   }
 
   // Statistics operations
+  @override
   Future<Map<String, int>> getChangeStats() async {
     final total = await _isar.changeLogEntrys.count();
     final creates = await _isar.changeLogEntrys.filter().operationEqualTo('create').count();
@@ -120,6 +125,7 @@ class BaseStorageService {
     return stats;
   }
 
+  @override
   Future<void> close() async {
     if (_initialized) {
       await _isar.close();
@@ -128,13 +134,51 @@ class BaseStorageService {
     }
   }
 
+  /// Delete outdated changes to save storage space.
+  ///
+  /// This removes change log entries that have been marked as outdated
+  /// by newer changes, helping to keep the storage size manageable.
+  Future<int> deleteOutdatedChanges() async {
+    final outdatedChanges = await _isar.changeLogEntrys.filter().outdatedByIsNotNull().findAll();
+    final seqsToDelete = outdatedChanges.map((e) => e.seq).toList();
+    
+    int deletedCount = 0;
+    await _isar.writeTxn(() async {
+      for (final seq in seqsToDelete) {
+        if (await _isar.changeLogEntrys.delete(seq)) {
+          deletedCount++;
+        }
+      }
+    });
+    
+    return deletedCount;
+  }
+
   // Cursor-based pagination and filtering
+  @override
   Future<List<Map<String, dynamic>>> getChangesWithCursor({
     int? cursor,
     int? limit,
   }) async {
     var query = _isar.changeLogEntrys.where();
     var results = await query.seqGreaterThan(cursor ?? 0).findAll();
+    if (limit != null && results.length > limit) {
+      results = results.sublist(0, limit);
+    }
+    return results.map((e) => e.toJson()).toList();
+  }
+
+  /// Get changes for syncing - excludes outdated changes.
+  ///
+  /// Returns only changes that haven't been marked as outdated,
+  /// which prevents syncing obsolete change log entries.
+  @override
+  Future<List<Map<String, dynamic>>> getChangesNotOutdated({
+    int? cursor,
+    int? limit,
+  }) async {
+    var query = _isar.changeLogEntrys.where();
+    var results = await query.seqGreaterThan(cursor ?? 0).filter().outdatedByIsNull().findAll();
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
     }
@@ -181,6 +225,7 @@ class BaseStorageService {
   }
 
   // Get changes since a specific sequence number (for syncing)
+  @override
   Future<List<Map<String, dynamic>>> getChangesSince(int seq) async {
     final results = await _isar.changeLogEntrys.where().seqGreaterThan(seq).findAll();
     // Sort by seq in ascending order
@@ -209,21 +254,21 @@ class BaseStorageService {
 }
 
 // Singleton wrappers for each storage type
-class OutsyncsStorageService extends BaseStorageService {
+class OutsyncsStorageService extends LocalStorageService {
   static OutsyncsStorageService? _instance;
   static OutsyncsStorageService get instance => _instance ??= OutsyncsStorageService._();
 
   OutsyncsStorageService._() : super('outsyncs', 'OutsyncsStorage');
 }
 
-class DownsyncsStorageService extends BaseStorageService {
+class DownsyncsStorageService extends LocalStorageService {
   static DownsyncsStorageService? _instance;
   static DownsyncsStorageService get instance => _instance ??= DownsyncsStorageService._();
 
   DownsyncsStorageService._() : super('downsyncs', 'DownsyncsStorage');
 }
 
-class CloudStorageService extends BaseStorageService {
+class CloudStorageService extends LocalStorageService {
   static CloudStorageService? _instance;
   static CloudStorageService get instance => _instance ??= CloudStorageService._();
 
