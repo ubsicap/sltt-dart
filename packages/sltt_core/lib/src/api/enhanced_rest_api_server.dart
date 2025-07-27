@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
-import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
-import '../storage/shared_storage_service.dart';
+import 'package:shelf_router/shelf_router.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 enum StorageType { outsyncs, downsyncs, cloudStorage }
 
@@ -16,7 +17,7 @@ class EnhancedRestApiServer {
   bool _initialized = false;
 
   // Storage service based on type
-  LocalStorageService? _storage;
+  BaseStorageService? _storage;
 
   EnhancedRestApiServer(this.storageType, this.serverName);
 
@@ -32,10 +33,10 @@ class EnhancedRestApiServer {
     final router = _buildRouter();
 
     // Add CORS and logging middleware
-    final handler = Pipeline()
+    final handler = const Pipeline()
         .addMiddleware(corsHeaders())
         .addMiddleware(customLogRequests(serverName: serverName, port: port))
-        .addHandler(router);
+        .addHandler(router.call);
 
     _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
     print('[$serverName] Server started on http://localhost:$port');
