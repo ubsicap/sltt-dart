@@ -1,0 +1,141 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Get Dependencies (All)",
+            "type": "shell",
+            "command": "dart pub get",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/sltt_core"
+            },
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "dependsOn": [
+                "Get Dependencies (Demo)"
+            ]
+        },
+        {
+            "label": "Get Dependencies (Demo)",
+            "type": "shell",
+            "command": "dart pub get",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/sync_manager_demo"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Generate Code (Core)",
+            "type": "shell",
+            "command": "dart run build_runner build --delete-conflicting-outputs",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/sltt_core"
+            },
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Clean Build (Core)",
+            "type": "shell",
+            "command": "dart run build_runner clean",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/sltt_core"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Analyze (All)",
+            "type": "shell",
+            "command": "dart analyze --no-fatal-warnings",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/sltt_core"
+            },
+            "group": "test",
+            "dependsOn": [
+                "Analyze (Demo)"
+            ]
+        },
+        {
+            "label": "Analyze (Demo)",
+            "type": "shell",
+            "command": "dart analyze --no-fatal-warnings",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/sync_manager_demo"
+            },
+            "group": "test"
+        },
+        {
+            "label": "Start All Servers",
+            "type": "shell",
+            "command": "dart run server_runner.dart start-all",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/sync_manager_demo"
+            },
+            "group": "build",
+            "isBackground": true,
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "Stop All Servers",
+            "type": "shell",
+            "command": "dart run server_runner.dart stop-all",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/sync_manager_demo"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Run Demo",
+            "type": "shell",
+            "command": "dart run demo_sync_system.dart",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/sync_manager_demo"
+            },
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "dart run test_sync_manager.dart",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/sync_manager_demo"
+            },
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Full Sync",
+            "type": "shell",
+            "command": "dart run server_runner.dart sync",
+            "options": {
+                "cwd": "${workspaceFolder}/examples/sync_manager_demo"
+            },
+            "group": "build"
+        }
+    ]
+}
