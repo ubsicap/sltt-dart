@@ -4,7 +4,9 @@
         "Entrys",
         "outsync",
         "outsynced",
-        "outsyncs"
+        "outsyncs",
+        "Seqs",
+        "sltt"
     ],
 
     // Dart-specific formatting settings
