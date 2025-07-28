@@ -45,3 +45,9 @@ app.*.map.json
 *.isar
 *.isar.lock
 isar_db/
+**/libisar.*     # All Isar native libraries
+
+# Native libraries for different platforms
+*.so             # Linux shared libraries
+*.dll            # Windows libraries
+*.dylib          # macOS libraries
