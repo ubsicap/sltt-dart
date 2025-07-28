@@ -146,7 +146,7 @@ The package includes a `serverless.yml` configuration optimized for AWS Lambda d
    ```bash
    # Docker is ONLY required for Windows and macOS
    # Linux and WSL2 can compile natively without Docker
-   
+
    # Windows/macOS users: Get Docker at https://docs.docker.com/get-docker/
    # Linux/WSL2 users: Skip this step - no Docker needed!
    ```
@@ -173,7 +173,7 @@ serverless deploy --stage dev
 ### Platform-Specific Notes
 
 - **Linux/WSL2**: ✅ Native compilation - no Docker required
-- **Windows**: ❌ Requires Docker for cross-compilation to Linux x64  
+- **Windows**: ❌ Requires Docker for cross-compilation to Linux x64
 - **macOS**: ❌ Requires Docker for cross-compilation to Linux x64
 - **Alternative**: Build on Linux/WSL2 machine or use CI/CD pipeline
 
@@ -280,7 +280,7 @@ This demonstrates hybrid local/cloud synchronization.
   - **Solution**: Ensure Docker Desktop is running
   - **WSL2/Linux users**: You can skip Docker entirely!
 
-### Compilation Issues  
+### Compilation Issues
 - **Problem**: "dart2native: No such file or directory"
   - **Solution**: Ensure Dart SDK ≥ 2.6 is installed (or use `dart compile exe` in newer versions)
   - **Check**: `dart --version`
