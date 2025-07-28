@@ -19,6 +19,11 @@ if [ -f "$ISAR_LIB_PATH" ]; then
     cp "$ISAR_LIB_PATH" "$TEST_LIB_DIR/"
     echo "📁 Copied libisar.so to: $TEST_LIB_DIR/"
 
+    # Copy the library to the examples/sync_manager_demo directory
+    DEMO_DIR="/home/epyle/repos/ericpyle/flutter-2/examples/sync_manager_demo"
+    cp "$ISAR_LIB_PATH" "$DEMO_DIR/"
+    echo "📁 Copied libisar.so to: $DEMO_DIR/"
+
     # Set environment variable so Isar can find it
     export LD_LIBRARY_PATH="$TEST_LIB_DIR:$LD_LIBRARY_PATH"
     export ISAR_LIBRARY_PATH="$TEST_LIB_DIR/libisar.so"
