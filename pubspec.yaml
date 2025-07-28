@@ -15,3 +15,4 @@ workspace:
 dev_dependencies:
   http: any
   sltt_core: any
+  aws_backend: any

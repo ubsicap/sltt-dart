@@ -561,7 +561,7 @@ class SyncSystemDemo {
 
     // Mark it as outdated using the storage service directly
     // (PUT endpoint has been removed - change logs are now append-only)
-    await _outsyncsStorage.markAsOutdated(createdSeq, 99999);
+    await _outsyncsStorage.markAsOutdated('demo-project', createdSeq, 99999);
 
     print('✓ Marked change as outdated (outdatedBy: 99999)');
 

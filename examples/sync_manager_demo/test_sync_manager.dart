@@ -461,7 +461,7 @@ class SyncManagerTester {
 
     // Mark the change as outdated using the storage service directly
     // (since PUT endpoint has been removed from the API)
-    await _outsyncsStorage.markAsOutdated(createdSeq, 99999);
+    await _outsyncsStorage.markAsOutdated('test-project', createdSeq, 99999);
 
     print('   Marked change as outdated');
 

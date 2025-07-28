@@ -75,7 +75,7 @@ void main() async {
     final seq1 = seqMap1.values.first as int;
 
     // Mark it as outdated
-    await outsyncsStorage.markAsOutdated(seq1, 99999);
+    await outsyncsStorage.markAsOutdated('test-project', seq1, 99999);
     print('Marked change seq $seq1 as outdated');
 
     // Get changes for sync - should exclude the outdated one
