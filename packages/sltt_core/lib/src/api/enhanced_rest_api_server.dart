@@ -12,13 +12,11 @@ class EnhancedRestApiServer extends BaseRestApiServer {
   final StorageType storageType;
 
   EnhancedRestApiServer(this.storageType, String serverName)
-      : super(
-          serverName: serverName,
-          storage: _createStorage(storageType),
-        );
+    : super(serverName: serverName, storage: _createStorage(storageType));
 
   @override
-  String get storageTypeDescription => 'Local Isar (${storageType.toString().split('.').last})';
+  String get storageTypeDescription =>
+      'Local Isar (${storageType.toString().split('.').last})';
 
   /// Create storage service based on type
   static BaseStorageService _createStorage(StorageType storageType) {

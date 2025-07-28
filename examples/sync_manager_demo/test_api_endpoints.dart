@@ -22,7 +22,9 @@ Future<void> main() async {
 
     // Test 1: Health check
     print('🔍 Testing health endpoint...');
-    final healthResponse = await http.get(Uri.parse('http://localhost:8080/health'));
+    final healthResponse = await http.get(
+      Uri.parse('http://localhost:8080/health'),
+    );
     print('   Health status: ${healthResponse.statusCode}');
     if (healthResponse.statusCode == 200) {
       print('✅ Health check passed\n');
@@ -30,7 +32,9 @@ Future<void> main() async {
 
     // Test 2: API help (should show new project-based endpoints)
     print('🔍 Testing API help endpoint...');
-    final helpResponse = await http.get(Uri.parse('http://localhost:8080/api/help'));
+    final helpResponse = await http.get(
+      Uri.parse('http://localhost:8080/api/help'),
+    );
     if (helpResponse.statusCode == 200) {
       final helpData = jsonDecode(helpResponse.body);
       print('   Available endpoints:');
@@ -48,7 +52,7 @@ Future<void> main() async {
         'operation': 'create',
         'entityId': 'doc-123',
         'data': {'title': 'Test Document', 'content': 'Hello World'},
-      }
+      },
     ];
 
     final createResponse = await http.post(
@@ -62,7 +66,9 @@ Future<void> main() async {
       print('   Created change: ${createResult['createdSeqs']}');
       print('✅ Change creation passed\n');
     } else {
-      print('   ❌ Change creation failed: ${createResponse.statusCode} ${createResponse.body}');
+      print(
+        '   ❌ Change creation failed: ${createResponse.statusCode} ${createResponse.body}',
+      );
     }
 
     // Test 4: Get changes for the project
@@ -76,11 +82,15 @@ Future<void> main() async {
       print('   Retrieved ${changesResult['changes'].length} changes');
       if (changesResult['changes'].isNotEmpty) {
         final change = changesResult['changes'][0];
-        print('   First change: seq=${change['seq']}, projectId=${change['projectId']}');
+        print(
+          '   First change: seq=${change['seq']}, projectId=${change['projectId']}',
+        );
       }
       print('✅ Change retrieval passed\n');
     } else {
-      print('   ❌ Change retrieval failed: ${changesResponse.statusCode} ${changesResponse.body}');
+      print(
+        '   ❌ Change retrieval failed: ${changesResponse.statusCode} ${changesResponse.body}',
+      );
     }
 
     // Test 5: Get project statistics
@@ -95,14 +105,15 @@ Future<void> main() async {
       print('   Entity types: ${statsResult['entityTypeStats']}');
       print('✅ Project statistics passed\n');
     } else {
-      print('   ❌ Project statistics failed: ${statsResponse.statusCode} ${statsResponse.body}');
+      print(
+        '   ❌ Project statistics failed: ${statsResponse.statusCode} ${statsResponse.body}',
+      );
     }
 
     print('🎉 All API endpoint tests completed successfully!');
 
     // Clean up
     await server.stop();
-
   } catch (e, stackTrace) {
     print('❌ Test failed with error: $e');
     print('Stack trace: $stackTrace');

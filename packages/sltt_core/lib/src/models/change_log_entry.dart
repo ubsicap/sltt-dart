@@ -32,12 +32,12 @@ class ChangeLogEntry {
   });
 
   ChangeLogEntry.empty()
-      : projectId = '',
-        entityType = '',
-        operation = '',
-        timestamp = DateTime.now(),
-        entityId = '',
-        dataJson = '';
+    : projectId = '',
+      entityType = '',
+      operation = '',
+      timestamp = DateTime.now(),
+      entityId = '',
+      dataJson = '';
 
   Map<String, dynamic> toJson() {
     return {

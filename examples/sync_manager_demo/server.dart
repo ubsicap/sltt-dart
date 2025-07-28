@@ -11,7 +11,9 @@ Future<void> main(List<String> args) async {
   if (args.isNotEmpty) {
     serversToStart = args.where((type) => validTypes.contains(type)).toList();
     if (serversToStart.isEmpty) {
-      print('No valid server types specified. Valid types: downsyncs, outsyncs, cloud');
+      print(
+        'No valid server types specified. Valid types: downsyncs, outsyncs, cloud',
+      );
       exit(1);
     }
   }
@@ -25,8 +27,8 @@ Future<void> main(List<String> args) async {
         final port = type == 'downsyncs'
             ? kDownsyncsPort
             : type == 'outsyncs'
-                ? kOutsyncsPort
-                : kCloudStoragePort;
+            ? kOutsyncsPort
+            : kCloudStoragePort;
         await launcher.startServer(type, port);
         print('$type server started on port $port.');
       }

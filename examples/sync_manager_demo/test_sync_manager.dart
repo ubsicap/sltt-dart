@@ -6,7 +6,8 @@ class SyncManagerTester {
   final Dio _dio = Dio();
   final MultiServerLauncher _serverLauncher = MultiServerLauncher.instance;
   final SyncManager _syncManager = SyncManager.instance;
-  final OutsyncsStorageService _outsyncsStorage = OutsyncsStorageService.instance;
+  final OutsyncsStorageService _outsyncsStorage =
+      OutsyncsStorageService.instance;
 
   // API endpoints
   final String _cloudStorageUrl = 'http://localhost:$kCloudStoragePort';
@@ -64,7 +65,9 @@ class SyncManagerTester {
     final status = _serverLauncher.getServerStatus();
     print('Server status: $status');
 
-    if (!status['downsyncs']! || !status['outsyncs']! || !status['cloudStorage']!) {
+    if (!status['downsyncs']! ||
+        !status['outsyncs']! ||
+        !status['cloudStorage']!) {
       throw Exception('Not all servers started successfully');
     }
     print('✅ All servers started successfully\n');
@@ -77,10 +80,7 @@ class SyncManagerTester {
       'entityType': 'Document',
       'operation': 'create',
       'entityId': 'test-uuid-123',
-      'data': {
-        'title': 'Test Document',
-        'content': 'This is a test document',
-      },
+      'data': {'title': 'Test Document', 'content': 'This is a test document'},
     };
 
     // Test each server
@@ -149,7 +149,9 @@ class SyncManagerTester {
     final seqMap = batchResult['seqMap'] as Map<String, dynamic>?;
 
     if (!success || createdCount != 2) {
-      throw Exception('Expected 2 successful changes, got success=$success, created=$createdCount');
+      throw Exception(
+        'Expected 2 successful changes, got success=$success, created=$createdCount',
+      );
     }
 
     if (seqMap == null || seqMap.length != 2) {
@@ -182,15 +184,20 @@ class SyncManagerTester {
 
     // Add changes to outsyncs server
     for (final change in testChanges) {
-      await _dio.post('$_outsyncsUrl/api/changes', data: [change]); // Wrap in array
+      await _dio.post(
+        '$_outsyncsUrl/api/changes',
+        data: [change],
+      ); // Wrap in array
     }
 
     // Get initial counts
     final outsyncsStatsBefore = await _dio.get('$_outsyncsUrl/api/stats');
     final cloudStatsBefore = await _dio.get('$_cloudStorageUrl/api/stats');
 
-    final outsyncsCountBefore = outsyncsStatsBefore.data['changeStats']['total'] as int;
-    final cloudCountBefore = cloudStatsBefore.data['changeStats']['total'] as int;
+    final outsyncsCountBefore =
+        outsyncsStatsBefore.data['changeStats']['total'] as int;
+    final cloudCountBefore =
+        cloudStatsBefore.data['changeStats']['total'] as int;
 
     print('   Outsyncs changes before: $outsyncsCountBefore');
     print('   Cloud changes before: $cloudCountBefore');
@@ -217,7 +224,8 @@ class SyncManagerTester {
     final outsyncsStatsAfter = await _dio.get('$_outsyncsUrl/api/stats');
     final cloudStatsAfter = await _dio.get('$_cloudStorageUrl/api/stats');
 
-    final outsyncsCountAfter = outsyncsStatsAfter.data['changeStats']['total'] as int;
+    final outsyncsCountAfter =
+        outsyncsStatsAfter.data['changeStats']['total'] as int;
     final cloudCountAfter = cloudStatsAfter.data['changeStats']['total'] as int;
 
     print('   Outsyncs changes after: $outsyncsCountAfter');
@@ -233,7 +241,9 @@ class SyncManagerTester {
       );
     }
 
-    print('   ✅ Successfully outsynced to cloud, seqMap contains ${outsyncResult.seqMap.length} mappings');
+    print(
+      '   ✅ Successfully outsynced to cloud, seqMap contains ${outsyncResult.seqMap.length} mappings',
+    );
     print('   ✅ Local changes preserved until full sync completion');
     print('✅ Outsync flow test passed\n');
   }
@@ -243,7 +253,8 @@ class SyncManagerTester {
 
     // Get initial downsync count
     final downsyncsStatsBefore = await _dio.get('$_downsyncsUrl/api/stats');
-    final downsyncsCountBefore = downsyncsStatsBefore.data['changeStats']['total'] as int;
+    final downsyncsCountBefore =
+        downsyncsStatsBefore.data['changeStats']['total'] as int;
 
     print('   Downsyncs changes before: $downsyncsCountBefore');
 
@@ -256,10 +267,13 @@ class SyncManagerTester {
 
     // Verify results
     final downsyncsStatsAfter = await _dio.get('$_downsyncsUrl/api/stats');
-    final downsyncsCountAfter = downsyncsStatsAfter.data['changeStats']['total'] as int;
+    final downsyncsCountAfter =
+        downsyncsStatsAfter.data['changeStats']['total'] as int;
 
     print('   Downsyncs changes after: $downsyncsCountAfter');
-    print('   ✅ Successfully downsynced ${downsyncResult.newChanges.length} changes');
+    print(
+      '   ✅ Successfully downsynced ${downsyncResult.newChanges.length} changes',
+    );
     print('✅ Downsync flow test passed\n');
   }
 
@@ -275,13 +289,14 @@ class SyncManagerTester {
           'operation': 'create',
           'entityId': 'full-sync-test',
           'data': {'title': 'Full Sync Test Document'},
-        }
+        },
       ],
     );
 
     // Get initial counts
     final outsyncsStatsBefore = await _dio.get('$_outsyncsUrl/api/stats');
-    final outsyncsCountBefore = outsyncsStatsBefore.data['changeStats']['total'] as int;
+    final outsyncsCountBefore =
+        outsyncsStatsBefore.data['changeStats']['total'] as int;
 
     // Perform full sync
     final fullSyncResult = await _syncManager.performFullSync();
@@ -292,10 +307,13 @@ class SyncManagerTester {
 
     // Verify that local changes were actually deleted after full sync
     final outsyncsStatsAfter = await _dio.get('$_outsyncsUrl/api/stats');
-    final outsyncsCountAfter = outsyncsStatsAfter.data['changeStats']['total'] as int;
+    final outsyncsCountAfter =
+        outsyncsStatsAfter.data['changeStats']['total'] as int;
 
     if (fullSyncResult.outsyncResult.deletedLocalChanges.isEmpty) {
-      throw Exception('Expected some local changes to be deleted after full sync');
+      throw Exception(
+        'Expected some local changes to be deleted after full sync',
+      );
     }
 
     if (outsyncsCountAfter >= outsyncsCountBefore) {
@@ -307,8 +325,12 @@ class SyncManagerTester {
     print('   ✅ Full sync completed successfully');
     print('   ✅ Outsync: ${fullSyncResult.outsyncResult.message}');
     print('   ✅ Downsync: ${fullSyncResult.downsyncResult.message}');
-    print('   ✅ Deleted ${fullSyncResult.outsyncResult.deletedLocalChanges.length} local changes');
-    print('   ✅ seqMap contains ${fullSyncResult.outsyncResult.seqMap.length} sequence mappings');
+    print(
+      '   ✅ Deleted ${fullSyncResult.outsyncResult.deletedLocalChanges.length} local changes',
+    );
+    print(
+      '   ✅ seqMap contains ${fullSyncResult.outsyncResult.seqMap.length} sequence mappings',
+    );
     print('✅ Full sync flow test passed\n');
   }
 
@@ -348,11 +370,14 @@ class SyncManagerTester {
         'operation': 'create',
         'entityId': entityId2,
         'data': {'name': 'Test 2'},
-      }
+      },
     ];
 
     // Send to cloud storage
-    final response = await _dio.post('$_cloudStorageUrl/api/changes', data: changes);
+    final response = await _dio.post(
+      '$_cloudStorageUrl/api/changes',
+      data: changes,
+    );
     final responseData = response.data as Map<String, dynamic>;
 
     if (!responseData['success']) {
@@ -370,7 +395,9 @@ class SyncManagerTester {
     final newSeq2 = seqMap['1000'] as int;
 
     if (newSeq1 == 999 || newSeq2 == 1000) {
-      throw Exception('Cloud storage used old sequences instead of creating new ones');
+      throw Exception(
+        'Cloud storage used old sequences instead of creating new ones',
+      );
     }
 
     // Verify the actual stored changes have the new sequences
@@ -378,20 +405,30 @@ class SyncManagerTester {
     final changesList = storedChanges.data['changes'] as List;
 
     // Find our changes by entity ID
-    final change1 = changesList.where((c) => c['entityId'] == entityId1).toList();
-    final change2 = changesList.where((c) => c['entityId'] == entityId2).toList();
+    final change1 = changesList
+        .where((c) => c['entityId'] == entityId1)
+        .toList();
+    final change2 = changesList
+        .where((c) => c['entityId'] == entityId2)
+        .toList();
 
     if (change1.isEmpty || change2.isEmpty) {
-      throw Exception('Could not find test changes in storage. Found ${changesList.length} total changes.');
+      throw Exception(
+        'Could not find test changes in storage. Found ${changesList.length} total changes.',
+      );
     }
 
     if (change1.first['seq'] != newSeq1 || change2.first['seq'] != newSeq2) {
-      throw Exception('Stored changes have incorrect sequences. '
-          'Expected change1 seq: $newSeq1, got: ${change1.first['seq']}. '
-          'Expected change2 seq: $newSeq2, got: ${change2.first['seq']}');
+      throw Exception(
+        'Stored changes have incorrect sequences. '
+        'Expected change1 seq: $newSeq1, got: ${change1.first['seq']}. '
+        'Expected change2 seq: $newSeq2, got: ${change2.first['seq']}',
+      );
     }
 
-    print('   ✅ Cloud storage correctly creates new sequences and provides seqMap');
+    print(
+      '   ✅ Cloud storage correctly creates new sequences and provides seqMap',
+    );
     print('   ✅ Old seq 999 → new seq $newSeq1');
     print('   ✅ Old seq 1000 → new seq $newSeq2');
     print('✅ Cloud storage sequence generation test passed\n');
@@ -412,7 +449,10 @@ class SyncManagerTester {
       'data': {'name': 'Will be outdated'},
     };
 
-    final response = await _dio.post('$_outsyncsUrl/api/changes', data: [change]);
+    final response = await _dio.post(
+      '$_outsyncsUrl/api/changes',
+      data: [change],
+    );
     final responseData = response.data as Map<String, dynamic>;
     final seqMap = responseData['seqMap'] as Map<String, dynamic>;
     final createdSeq = seqMap.values.first as int;
@@ -427,7 +467,8 @@ class SyncManagerTester {
 
     // Get initial cloud count
     final cloudStatsBefore = await _dio.get('$_cloudStorageUrl/api/stats');
-    final cloudCountBefore = cloudStatsBefore.data['changeStats']['total'] as int;
+    final cloudCountBefore =
+        cloudStatsBefore.data['changeStats']['total'] as int;
 
     // Try to outsync - should skip the outdated change
     final outsyncResult = await _syncManager.outsyncToCloud();
@@ -438,7 +479,9 @@ class SyncManagerTester {
 
     // Verify no changes were synced
     if (outsyncResult.seqMap.isNotEmpty) {
-      throw Exception('Expected no changes to be synced, but got ${outsyncResult.seqMap.length}');
+      throw Exception(
+        'Expected no changes to be synced, but got ${outsyncResult.seqMap.length}',
+      );
     }
 
     // Verify cloud storage count didn't increase
@@ -446,7 +489,9 @@ class SyncManagerTester {
     final cloudCountAfter = cloudStatsAfter.data['changeStats']['total'] as int;
 
     if (cloudCountAfter != cloudCountBefore) {
-      throw Exception('Expected cloud count to remain same, before: $cloudCountBefore, after: $cloudCountAfter');
+      throw Exception(
+        'Expected cloud count to remain same, before: $cloudCountBefore, after: $cloudCountAfter',
+      );
     }
 
     print('   ✅ Outdated changes correctly filtered out from sync');

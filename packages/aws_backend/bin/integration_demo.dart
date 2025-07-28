@@ -50,7 +50,9 @@ Future<void> main() async {
         'author': 'integration-demo',
       },
     });
-    print('   Local change: ${localChange1['seq']} - ${localChange1['entityType']}');
+    print(
+      '   Local change: ${localChange1['seq']} - ${localChange1['entityType']}',
+    );
 
     final localChange2 = await localOutsyncs.createChange({
       'entityType': 'User',
@@ -62,12 +64,16 @@ Future<void> main() async {
         'preferences': {'theme': 'dark', 'notifications': true},
       },
     });
-    print('   Local change: ${localChange2['seq']} - ${localChange2['entityType']}');
+    print(
+      '   Local change: ${localChange2['seq']} - ${localChange2['entityType']}',
+    );
     print('✅ Local changes created\n');
 
     // Simulate sync from local to DynamoDB cloud
     print('⬆️ Syncing local changes to DynamoDB cloud...');
-    final localChanges = await localOutsyncs.getChangesWithCursor(projectId: projectId);
+    final localChanges = await localOutsyncs.getChangesWithCursor(
+      projectId: projectId,
+    );
 
     final seqMapping = <int, int>{}; // old seq -> new seq
 
@@ -82,7 +88,9 @@ Future<void> main() async {
       final newSeq = cloudChange['seq'] as int;
       seqMapping[oldSeq] = newSeq;
 
-      print('   Synced: local seq $oldSeq -> cloud seq $newSeq (${cloudChange['entityType']})');
+      print(
+        '   Synced: local seq $oldSeq -> cloud seq $newSeq (${cloudChange['entityType']})',
+      );
     }
     print('✅ Local to cloud sync completed\n');
 
@@ -98,7 +106,9 @@ Future<void> main() async {
         'status': 'active',
       },
     });
-    print('   Cloud change: ${cloudChange1['seq']} - ${cloudChange1['entityType']}');
+    print(
+      '   Cloud change: ${cloudChange1['seq']} - ${cloudChange1['entityType']}',
+    );
     print('✅ Cloud changes created\n');
 
     // Simulate sync from DynamoDB cloud to local
@@ -106,7 +116,10 @@ Future<void> main() async {
     final lastLocalSeq = await localDownsyncs.getLastSeq();
     print('   Last local downsync seq: $lastLocalSeq');
 
-    final cloudChanges = await dynamoCloudStorage.getChangesSince(projectId, 0); // Get all for demo
+    final cloudChanges = await dynamoCloudStorage.getChangesSince(
+      projectId,
+      0,
+    ); // Get all for demo
 
     for (final cloudChange in cloudChanges) {
       // Add to local downsyncs storage
@@ -131,22 +144,34 @@ Future<void> main() async {
     print('   Local Downsyncs: ${localDownstats['total']} changes');
     print('   DynamoDB Cloud: ${cloudStats['total']} changes');
 
-    final cloudEntityStats = await dynamoCloudStorage.getEntityTypeStats(projectId);
+    final cloudEntityStats = await dynamoCloudStorage.getEntityTypeStats(
+      projectId,
+    );
     print('   Cloud entity types: $cloudEntityStats');
     print('✅ Statistics comparison completed\n');
 
     // Demonstrate pagination across both systems
     print('📄 Testing pagination consistency...');
 
-    final localPage1 = await localDownsyncs.getChangesWithCursor(projectId: projectId, limit: 2);
+    final localPage1 = await localDownsyncs.getChangesWithCursor(
+      projectId: projectId,
+      limit: 2,
+    );
     print('   Local page 1: ${localPage1.length} changes');
 
-    final cloudPage1 = await dynamoCloudStorage.getChangesWithCursor(projectId: projectId, limit: 2);
+    final cloudPage1 = await dynamoCloudStorage.getChangesWithCursor(
+      projectId: projectId,
+      limit: 2,
+    );
     print('   Cloud page 1: ${cloudPage1.length} changes');
 
     if (cloudPage1.isNotEmpty) {
       final cursor = cloudPage1.last['seq'] as int;
-      final cloudPage2 = await dynamoCloudStorage.getChangesWithCursor(projectId: projectId, cursor: cursor, limit: 2);
+      final cloudPage2 = await dynamoCloudStorage.getChangesWithCursor(
+        projectId: projectId,
+        cursor: cursor,
+        limit: 2,
+      );
       print('   Cloud page 2: ${cloudPage2.length} changes (cursor: $cursor)');
     }
     print('✅ Pagination test completed\n');

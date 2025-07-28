@@ -10,7 +10,8 @@ import 'package:aws_backend/aws_backend.dart';
 Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
   try {
     // Get configuration from environment variables
-    final tableName = Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-changes-dev';
+    final tableName =
+        Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-changes-dev';
     final projectId = Platform.environment['PROJECT_ID'] ?? 'default-project';
     final region = Platform.environment['AWS_REGION'] ?? 'us-east-1';
 
@@ -49,7 +50,8 @@ Future<Map<String, dynamic>> _handleGetRequest(
   Map<String, dynamic> event,
 ) async {
   final path = event['path'] as String? ?? '/';
-  final queryParams = event['queryStringParameters'] as Map<String, dynamic>? ?? {};
+  final queryParams =
+      event['queryStringParameters'] as Map<String, dynamic>? ?? {};
 
   try {
     if (path.contains('/changes')) {
@@ -66,7 +68,8 @@ Future<Map<String, dynamic>> _handleGetRequest(
       } else {
         // Get changes with pagination: /api/changes
         final cursor = int.tryParse(queryParams['cursor']?.toString() ?? '');
-        final limit = int.tryParse(queryParams['limit']?.toString() ?? '100') ?? 100;
+        final limit =
+            int.tryParse(queryParams['limit']?.toString() ?? '100') ?? 100;
 
         final changes = await storage.getChangesWithCursor(
           projectId: storage.projectId,
@@ -125,7 +128,8 @@ Future<Map<String, dynamic>> _handlePostRequest(
         final created = await storage.createChange(changeData);
         createdChanges.add(created);
 
-        seqMap[originalSeq?.toString() ?? created['seq'].toString()] = created['seq'];
+        seqMap[originalSeq?.toString() ?? created['seq'].toString()] =
+            created['seq'];
       }
 
       return _successResponse({

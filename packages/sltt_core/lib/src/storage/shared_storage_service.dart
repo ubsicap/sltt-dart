@@ -33,14 +33,18 @@ class LocalStorageService implements BaseStorageService {
     );
 
     _initialized = true;
-    print('[$_logPrefix] Isar database initialized at: ${dir.path}/$_databaseName.isar');
+    print(
+      '[$_logPrefix] Isar database initialized at: ${dir.path}/$_databaseName.isar',
+    );
   }
 
   /// Create a new change log entry in the storage.
   ///
   /// Returns the created change log entry with auto-generated sequence number.
   @override
-  Future<Map<String, dynamic>> createChange(Map<String, dynamic> changeData) async {
+  Future<Map<String, dynamic>> createChange(
+    Map<String, dynamic> changeData,
+  ) async {
     final change = ChangeLogEntry(
       projectId: changeData['projectId'] ?? '',
       entityType: changeData['entityType'] ?? '',
@@ -71,19 +75,38 @@ class LocalStorageService implements BaseStorageService {
   }
 
   Future<List<ChangeLogEntry>> getChangesByEntityType(String entityType) async {
-    return await _isar.changeLogEntrys.filter().entityTypeEqualTo(entityType).sortByTimestampDesc().findAll();
+    return await _isar.changeLogEntrys
+        .filter()
+        .entityTypeEqualTo(entityType)
+        .sortByTimestampDesc()
+        .findAll();
   }
 
   Future<List<ChangeLogEntry>> getChangesByOperation(String operation) async {
-    return await _isar.changeLogEntrys.filter().operationEqualTo(operation).sortByTimestampDesc().findAll();
+    return await _isar.changeLogEntrys
+        .filter()
+        .operationEqualTo(operation)
+        .sortByTimestampDesc()
+        .findAll();
   }
 
   Future<List<ChangeLogEntry>> getChangesByEntityId(String entityId) async {
-    return await _isar.changeLogEntrys.filter().entityIdEqualTo(entityId).sortByTimestampDesc().findAll();
+    return await _isar.changeLogEntrys
+        .filter()
+        .entityIdEqualTo(entityId)
+        .sortByTimestampDesc()
+        .findAll();
   }
 
-  Future<List<ChangeLogEntry>> getChangesInDateRange(DateTime startDate, DateTime endDate) async {
-    return await _isar.changeLogEntrys.filter().timestampBetween(startDate, endDate).sortByTimestampDesc().findAll();
+  Future<List<ChangeLogEntry>> getChangesInDateRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    return await _isar.changeLogEntrys
+        .filter()
+        .timestampBetween(startDate, endDate)
+        .sortByTimestampDesc()
+        .findAll();
   }
 
   /// Get the total count of change log entries.
@@ -170,7 +193,10 @@ class LocalStorageService implements BaseStorageService {
   /// This removes change log entries that have been marked as outdated
   /// by newer changes, helping to keep the storage size manageable.
   Future<int> deleteOutdatedChanges() async {
-    final outdatedChanges = await _isar.changeLogEntrys.filter().outdatedByIsNotNull().findAll();
+    final outdatedChanges = await _isar.changeLogEntrys
+        .filter()
+        .outdatedByIsNotNull()
+        .findAll();
     final seqsToDelete = outdatedChanges.map((e) => e.seq).toList();
 
     int deletedCount = 0;
@@ -197,7 +223,7 @@ class LocalStorageService implements BaseStorageService {
         .seqGreaterThan(cursor ?? 0)
         .filter()
         .projectIdEqualTo(projectId);
-    
+
     var results = await query.findAll();
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
@@ -210,7 +236,9 @@ class LocalStorageService implements BaseStorageService {
   /// Returns only changes that haven't been marked as outdated,
   /// which prevents syncing obsolete change log entries.
   @override
-  Future<List<Map<String, dynamic>>> getChangesNotOutdated(String projectId) async {
+  Future<List<Map<String, dynamic>>> getChangesNotOutdated(
+    String projectId,
+  ) async {
     var results = await _isar.changeLogEntrys
         .where()
         .filter()
@@ -230,7 +258,11 @@ class LocalStorageService implements BaseStorageService {
     int? limit,
   }) async {
     var query = _isar.changeLogEntrys.where();
-    var results = await query.seqGreaterThan(cursor ?? 0).filter().outdatedByIsNull().findAll();
+    var results = await query
+        .seqGreaterThan(cursor ?? 0)
+        .filter()
+        .outdatedByIsNull()
+        .findAll();
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
     }
@@ -263,7 +295,10 @@ class LocalStorageService implements BaseStorageService {
 
   // Get changes since a specific sequence number (for syncing)
   @override
-  Future<List<Map<String, dynamic>>> getChangesSince(String projectId, int seq) async {
+  Future<List<Map<String, dynamic>>> getChangesSince(
+    String projectId,
+    int seq,
+  ) async {
     final results = await _isar.changeLogEntrys
         .where()
         .seqGreaterThan(seq)
@@ -276,7 +311,9 @@ class LocalStorageService implements BaseStorageService {
   }
 
   // Store multiple changes (for batch operations)
-  Future<List<Map<String, dynamic>>> createChanges(List<Map<String, dynamic>> changesData) async {
+  Future<List<Map<String, dynamic>>> createChanges(
+    List<Map<String, dynamic>> changesData,
+  ) async {
     final changes = changesData
         .map(
           (changeData) => ChangeLogEntry(
@@ -301,21 +338,24 @@ class LocalStorageService implements BaseStorageService {
 // Singleton wrappers for each storage type
 class OutsyncsStorageService extends LocalStorageService {
   static OutsyncsStorageService? _instance;
-  static OutsyncsStorageService get instance => _instance ??= OutsyncsStorageService._();
+  static OutsyncsStorageService get instance =>
+      _instance ??= OutsyncsStorageService._();
 
   OutsyncsStorageService._() : super('outsyncs', 'OutsyncsStorage');
 }
 
 class DownsyncsStorageService extends LocalStorageService {
   static DownsyncsStorageService? _instance;
-  static DownsyncsStorageService get instance => _instance ??= DownsyncsStorageService._();
+  static DownsyncsStorageService get instance =>
+      _instance ??= DownsyncsStorageService._();
 
   DownsyncsStorageService._() : super('downsyncs', 'DownsyncsStorage');
 }
 
 class CloudStorageService extends LocalStorageService {
   static CloudStorageService? _instance;
-  static CloudStorageService get instance => _instance ??= CloudStorageService._();
+  static CloudStorageService get instance =>
+      _instance ??= CloudStorageService._();
 
   CloudStorageService._() : super('cloud_storage', 'CloudStorage');
 }

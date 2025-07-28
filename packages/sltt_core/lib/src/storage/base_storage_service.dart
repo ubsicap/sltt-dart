@@ -34,11 +34,15 @@ abstract class BaseStorageService {
   /// Mark a change as outdated (for local storage services)
   Future<void> markAsOutdated(int seq, int outdatedBy) async {
     // Default implementation - override in local storage services
-    throw UnsupportedError('markAsOutdated not supported by this storage service');
+    throw UnsupportedError(
+      'markAsOutdated not supported by this storage service',
+    );
   }
 
   /// Get changes that are not outdated (for local storage services)
-  Future<List<Map<String, dynamic>>> getChangesNotOutdated(String projectId) async {
+  Future<List<Map<String, dynamic>>> getChangesNotOutdated(
+    String projectId,
+  ) async {
     // Default implementation - override in local storage services
     return getChangesWithCursor(projectId: projectId);
   }

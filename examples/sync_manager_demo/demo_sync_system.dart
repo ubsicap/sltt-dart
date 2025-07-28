@@ -14,7 +14,8 @@ import 'package:sltt_core/sltt_core.dart';
 class SyncSystemDemo {
   final MultiServerLauncher _serverLauncher = MultiServerLauncher.instance;
   final SyncManager _syncManager = SyncManager.instance;
-  final OutsyncsStorageService _outsyncsStorage = OutsyncsStorageService.instance;
+  final OutsyncsStorageService _outsyncsStorage =
+      OutsyncsStorageService.instance;
   final Dio _dio = Dio();
 
   // API endpoints
@@ -134,7 +135,8 @@ class SyncSystemDemo {
         'entityId': 'demo-doc-outsync-1',
         'data': {
           'title': 'Outsync Demo Document 1',
-          'content': 'This document was created and needs to be synced to cloud',
+          'content':
+              'This document was created and needs to be synced to cloud',
           'lastModified': DateTime.now().toIso8601String(),
         },
       },
@@ -152,7 +154,9 @@ class SyncSystemDemo {
 
     for (final change in outsyncsChanges) {
       await _dio.post('$_outsyncsUrl/api/changes', data: [change]);
-      print('   ✅ Added change: ${change['operation']} ${change['entityType']}');
+      print(
+        '   ✅ Added change: ${change['operation']} ${change['entityType']}',
+      );
     }
 
     // Now demonstrate update operations by modifying existing entities
@@ -184,7 +188,9 @@ class SyncSystemDemo {
 
     for (final change in updateChanges) {
       await _dio.post('$_outsyncsUrl/api/changes', data: [change]);
-      print('   ✅ Added change: ${change['operation']} ${change['entityType']} (${change['entityId']})');
+      print(
+        '   ✅ Added change: ${change['operation']} ${change['entityType']} (${change['entityId']})',
+      );
     }
 
     // Add a delete operation as well
@@ -214,7 +220,9 @@ class SyncSystemDemo {
     if (outsyncResult.success) {
       print('   ✅ Outsync successful!');
       print('   📊 Synced ${outsyncResult.deletedLocalChanges.length} changes');
-      print('   🗑️ Cleaned up ${outsyncResult.deletedLocalChanges.length} local changes');
+      print(
+        '   🗑️ Cleaned up ${outsyncResult.deletedLocalChanges.length} local changes',
+      );
     } else {
       print('   ❌ Outsync failed: ${outsyncResult.message}');
     }
@@ -237,7 +245,8 @@ class SyncSystemDemo {
         'entityId': 'remote-doc-1',
         'data': {
           'title': 'Remote Document 1',
-          'content': 'This document was created remotely and needs to be downloaded',
+          'content':
+              'This document was created remotely and needs to be downloaded',
           'author': 'Remote User',
           'createdAt': DateTime.now().toIso8601String(),
         },
@@ -256,7 +265,9 @@ class SyncSystemDemo {
 
     for (final change in cloudChanges) {
       await _dio.post('$_cloudStorageUrl/api/changes', data: [change]);
-      print('   ✅ Added remote change: ${change['operation']} ${change['entityType']}');
+      print(
+        '   ✅ Added remote change: ${change['operation']} ${change['entityType']}',
+      );
     }
 
     // Simulate some updates to remote entities
@@ -289,7 +300,9 @@ class SyncSystemDemo {
 
     for (final change in remoteUpdates) {
       await _dio.post('$_cloudStorageUrl/api/changes', data: [change]);
-      print('   ✅ Added remote change: ${change['operation']} ${change['entityType']} (${change['entityId']})');
+      print(
+        '   ✅ Added remote change: ${change['operation']} ${change['entityType']} (${change['entityId']})',
+      );
     }
 
     print('\n   Status before downsync:');
@@ -334,7 +347,9 @@ class SyncSystemDemo {
     print('   ✅ Added final change to Outsyncs: create Settings');
 
     // Also add an update to demonstrate modifying the settings
-    await Future.delayed(const Duration(milliseconds: 100)); // Small delay to ensure different timestamps
+    await Future.delayed(
+      const Duration(milliseconds: 100),
+    ); // Small delay to ensure different timestamps
     await _dio.post(
       '$_outsyncsUrl/api/changes',
       data: [
@@ -352,7 +367,9 @@ class SyncSystemDemo {
         },
       ],
     );
-    print('   ✅ Added final change to Outsyncs: update Settings (app-settings-final)');
+    print(
+      '   ✅ Added final change to Outsyncs: update Settings (app-settings-final)',
+    );
 
     print('\n   Status before full sync:');
     await _showCurrentStatus();
@@ -364,7 +381,9 @@ class SyncSystemDemo {
       print('   ✅ Full sync successful!');
       print('   ⬆️ Outsync: ${fullSyncResult.outsyncResult.message}');
       print('   ⬆️ Sequence mappings: ${fullSyncResult.outsyncResult.seqMap}');
-      print('   ⬆️ Deleted ${fullSyncResult.outsyncResult.deletedLocalChanges.length} local changes');
+      print(
+        '   ⬆️ Deleted ${fullSyncResult.outsyncResult.deletedLocalChanges.length} local changes',
+      );
       print('   ⬇️ Downsync: ${fullSyncResult.downsyncResult.message}');
     } else {
       print('   ❌ Full sync failed');
@@ -478,7 +497,9 @@ class SyncSystemDemo {
 
   Future<void> _demonstrateSequenceMapping() async {
     print('\n--- Step 2A: Sequence Mapping ---');
-    print('Demonstrating how cloud storage creates new sequences and provides seqMap...');
+    print(
+      'Demonstrating how cloud storage creates new sequences and provides seqMap...',
+    );
 
     // Create changes with explicit old sequences that should be ignored
     final changes = [
@@ -495,10 +516,13 @@ class SyncSystemDemo {
         'operation': 'create',
         'entityId': 'demo-seq-mapping-2',
         'data': {'title': 'Document with Old Seq 8888'},
-      }
+      },
     ];
 
-    final response = await _dio.post('$_cloudStorageUrl/api/changes', data: changes);
+    final response = await _dio.post(
+      '$_cloudStorageUrl/api/changes',
+      data: changes,
+    );
     final responseData = response.data as Map<String, dynamic>;
 
     if (responseData['success']) {
@@ -525,7 +549,10 @@ class SyncSystemDemo {
       'data': {'title': 'This change will be marked outdated'},
     };
 
-    final createResponse = await _dio.post('$_outsyncsUrl/api/changes', data: [change]);
+    final createResponse = await _dio.post(
+      '$_outsyncsUrl/api/changes',
+      data: [change],
+    );
     final createData = createResponse.data as Map<String, dynamic>;
     final seqMap = createData['seqMap'] as Map<String, dynamic>;
     final createdSeq = seqMap.values.first as int;
@@ -557,7 +584,9 @@ class SyncSystemDemo {
     if (countAfter == countBefore) {
       print('✓ Cloud storage count remained unchanged: $countAfter');
     } else {
-      print('✗ Cloud storage count changed unexpectedly: $countBefore → $countAfter');
+      print(
+        '✗ Cloud storage count changed unexpectedly: $countBefore → $countAfter',
+      );
     }
   }
 

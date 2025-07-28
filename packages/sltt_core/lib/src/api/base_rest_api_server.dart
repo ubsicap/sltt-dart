@@ -19,10 +19,7 @@ abstract class BaseRestApiServer {
 
   HttpServer? _server;
 
-  BaseRestApiServer({
-    required this.serverName,
-    required this.storage,
-  });
+  BaseRestApiServer({required this.serverName, required this.storage});
 
   /// Storage type description for API documentation
   String get storageTypeDescription;
@@ -59,7 +56,7 @@ abstract class BaseRestApiServer {
   Router buildRouter() {
     final router = Router();
 
-        // Standard endpoints (same for all servers)
+    // Standard endpoints (same for all servers)
     router.get('/health', _handleHealth);
     router.get('/api/help', _handleApiDocs);
     router.post('/api/projects/<projectId>/changes', _handleCreateChanges);
@@ -111,7 +108,8 @@ abstract class BaseRestApiServer {
         {
           'method': 'GET',
           'path': '/api/projects/{projectId}/changes',
-          'description': 'Get all changes for a project with optional pagination',
+          'description':
+              'Get all changes for a project with optional pagination',
           'parameters': [
             {
               'name': 'projectId',
@@ -168,7 +166,8 @@ abstract class BaseRestApiServer {
         {
           'method': 'GET',
           'path': '/api/projects/{projectId}/stats',
-          'description': 'Get statistics about changes and entity types for a project',
+          'description':
+              'Get statistics about changes and entity types for a project',
           'parameters': [
             {
               'name': 'projectId',
@@ -203,7 +202,10 @@ abstract class BaseRestApiServer {
       if (cursorParam != null) {
         cursor = int.tryParse(cursorParam);
         if (cursor == null) {
-          return _errorResponse('Invalid cursor format: must be an integer', 400);
+          return _errorResponse(
+            'Invalid cursor format: must be an integer',
+            400,
+          );
         }
       }
 
@@ -211,7 +213,10 @@ abstract class BaseRestApiServer {
       if (limitParam != null) {
         limit = int.tryParse(limitParam);
         if (limit == null || limit <= 0) {
-          return _errorResponse('Invalid limit format: must be a positive integer', 400);
+          return _errorResponse(
+            'Invalid limit format: must be a positive integer',
+            400,
+          );
         }
         if (limit > 1000) {
           return _errorResponse('Limit too large: maximum is 1000', 400);
@@ -254,7 +259,11 @@ abstract class BaseRestApiServer {
   }
 
   /// Get specific change by sequence number
-  Future<Response> _handleGetChange(Request request, String projectId, String seq) async {
+  Future<Response> _handleGetChange(
+    Request request,
+    String projectId,
+    String seq,
+  ) async {
     try {
       final changeSeq = int.tryParse(seq);
       if (changeSeq == null) {
@@ -415,7 +424,8 @@ abstract class BaseRestApiServer {
   bool get isRunning => _server != null;
 
   /// Get server address
-  String? get address => _server != null ? 'http://localhost:${_server!.port}' : null;
+  String? get address =>
+      _server != null ? 'http://localhost:${_server!.port}' : null;
 }
 
 /// Custom logging middleware
@@ -425,7 +435,9 @@ Middleware _customLogRequests({required String serverName, required int port}) {
       final response = await innerHandler(request);
       final timestamp = DateTime.now().toIso8601String();
       final paddedName = serverName.padLeft(12);
-      print('$timestamp  $paddedName:$port  ${request.method}  [${response.statusCode}]  ${request.requestedUri.path}');
+      print(
+        '$timestamp  $paddedName:$port  ${request.method}  [${response.statusCode}]  ${request.requestedUri.path}',
+      );
       return response;
     };
   };

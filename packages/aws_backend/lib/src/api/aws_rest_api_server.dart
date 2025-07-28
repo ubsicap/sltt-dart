@@ -13,15 +13,15 @@ class AwsRestApiServer extends BaseRestApiServer {
   AwsRestApiServer({
     required super.serverName,
     required DynamoDBStorageService storage,
-  }) : super(
-          storage: storage,
-        );
+  }) : super(storage: storage);
 
   @override
   String get storageTypeDescription => 'AWS DynamoDB';
 
   /// Handle AWS API Gateway event (for Lambda deployment)
-  Future<Map<String, dynamic>> handleApiGatewayEvent(Map<String, dynamic> event) async {
+  Future<Map<String, dynamic>> handleApiGatewayEvent(
+    Map<String, dynamic> event,
+  ) async {
     try {
       // Convert API Gateway event to Shelf request
       final request = _convertApiGatewayEventToRequest(event);
@@ -47,7 +47,8 @@ class AwsRestApiServer extends BaseRestApiServer {
   Request _convertApiGatewayEventToRequest(Map<String, dynamic> event) {
     final method = event['httpMethod'] as String? ?? 'GET';
     final path = event['path'] as String? ?? '/';
-    final queryParams = event['queryStringParameters'] as Map<String, dynamic>? ?? {};
+    final queryParams =
+        event['queryStringParameters'] as Map<String, dynamic>? ?? {};
     final headers = event['headers'] as Map<String, dynamic>? ?? {};
     final body = event['body'] as String? ?? '';
 
@@ -65,7 +66,9 @@ class AwsRestApiServer extends BaseRestApiServer {
   }
 
   /// Convert Shelf Response to API Gateway response
-  Future<Map<String, dynamic>> _convertResponseToApiGateway(Response response) async {
+  Future<Map<String, dynamic>> _convertResponseToApiGateway(
+    Response response,
+  ) async {
     final body = await response.readAsString();
 
     return {

@@ -72,7 +72,9 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> createChange(Map<String, dynamic> changeData) async {
+  Future<Map<String, dynamic>> createChange(
+    Map<String, dynamic> changeData,
+  ) async {
     if (!_initialized) await initialize();
 
     // Get next sequence number
@@ -83,15 +85,14 @@ class DynamoDBStorageService implements BaseStorageService {
       'seq': {'N': seq.toString()},
       'entityType': {'S': changeData['entityType'] ?? ''},
       'operation': {'S': changeData['operation'] ?? ''},
-      'timestamp': {'S': changeData['timestamp'] ?? DateTime.now().toIso8601String()},
+      'timestamp': {
+        'S': changeData['timestamp'] ?? DateTime.now().toIso8601String(),
+      },
       'entityId': {'S': changeData['entityId'] ?? ''},
       'dataJson': {'S': jsonEncode(changeData['data'] ?? {})},
     };
 
-    final putRequest = {
-      'TableName': tableName,
-      'Item': item,
-    };
+    final putRequest = {'TableName': tableName, 'Item': item};
 
     final response = await _dynamoRequest('PutItem', putRequest);
 
@@ -110,7 +111,10 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>?> getChange(String requestProjectId, int seq) async {
+  Future<Map<String, dynamic>?> getChange(
+    String requestProjectId,
+    int seq,
+  ) async {
     if (!_initialized) await initialize();
 
     final getRequest = {
@@ -172,11 +176,16 @@ class DynamoDBStorageService implements BaseStorageService {
     final data = jsonDecode(response.body);
     final items = data['Items'] as List? ?? [];
 
-    return items.map<Map<String, dynamic>>((item) => _dynamoItemToMap(item)).toList();
+    return items
+        .map<Map<String, dynamic>>((item) => _dynamoItemToMap(item))
+        .toList();
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getChangesSince(String requestProjectId, int seq) async {
+  Future<List<Map<String, dynamic>>> getChangesSince(
+    String requestProjectId,
+    int seq,
+  ) async {
     if (!_initialized) await initialize();
 
     final queryRequest = {
@@ -198,7 +207,9 @@ class DynamoDBStorageService implements BaseStorageService {
     final data = jsonDecode(response.body);
     final items = data['Items'] as List? ?? [];
 
-    return items.map<Map<String, dynamic>>((item) => _dynamoItemToMap(item)).toList();
+    return items
+        .map<Map<String, dynamic>>((item) => _dynamoItemToMap(item))
+        .toList();
   }
 
   @override
@@ -224,14 +235,13 @@ class DynamoDBStorageService implements BaseStorageService {
     final data = jsonDecode(response.body);
     final count = data['Count'] ?? 0;
 
-    return {
-      'totalChanges': count,
-      'scannedCount': data['ScannedCount'] ?? 0,
-    };
+    return {'totalChanges': count, 'scannedCount': data['ScannedCount'] ?? 0};
   }
 
   @override
-  Future<Map<String, dynamic>> getEntityTypeStats(String requestProjectId) async {
+  Future<Map<String, dynamic>> getEntityTypeStats(
+    String requestProjectId,
+  ) async {
     if (!_initialized) await initialize();
 
     // For DynamoDB, we use Query instead of Scan for better performance
@@ -282,12 +292,16 @@ class DynamoDBStorageService implements BaseStorageService {
     final response = await _dynamoRequest('UpdateItem', updateRequest);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to mark change $seq as outdated: ${response.body}');
+      throw Exception(
+        'Failed to mark change $seq as outdated: ${response.body}',
+      );
     }
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getChangesNotOutdated(String requestProjectId) async {
+  Future<List<Map<String, dynamic>>> getChangesNotOutdated(
+    String requestProjectId,
+  ) async {
     if (!_initialized) await initialize();
 
     final queryRequest = {
@@ -309,12 +323,17 @@ class DynamoDBStorageService implements BaseStorageService {
     final data = jsonDecode(response.body);
     final items = data['Items'] as List? ?? [];
 
-    return items.map<Map<String, dynamic>>((item) => _dynamoItemToMap(item)).toList();
+    return items
+        .map<Map<String, dynamic>>((item) => _dynamoItemToMap(item))
+        .toList();
   }
 
   // Private helper methods
 
-  Future<http.Response> _dynamoRequest(String target, Map<String, dynamic> payload) async {
+  Future<http.Response> _dynamoRequest(
+    String target,
+    Map<String, dynamic> payload,
+  ) async {
     final headers = Map<String, String>.from(_headers);
     headers['X-Amz-Target'] = 'DynamoDB_20120810.$target';
 
@@ -354,9 +373,7 @@ class DynamoDBStorageService implements BaseStorageService {
         'seq': {'N': '0'},
       },
       'UpdateExpression': 'SET #val = if_not_exists(#val, :start) + :inc',
-      'ExpressionAttributeNames': {
-        '#val': 'value',
-      },
+      'ExpressionAttributeNames': {'#val': 'value'},
       'ExpressionAttributeValues': {
         ':start': {'N': '0'},
         ':inc': {'N': '1'},
@@ -377,11 +394,12 @@ class DynamoDBStorageService implements BaseStorageService {
 
   Future<void> _createTableIfNotExists() async {
     // Check if table exists
-    final describeRequest = {
-      'TableName': tableName,
-    };
+    final describeRequest = {'TableName': tableName};
 
-    final describeResponse = await _dynamoRequest('DescribeTable', describeRequest);
+    final describeResponse = await _dynamoRequest(
+      'DescribeTable',
+      describeRequest,
+    );
 
     if (describeResponse.statusCode == 200) {
       // Table exists
@@ -392,24 +410,12 @@ class DynamoDBStorageService implements BaseStorageService {
     final createRequest = {
       'TableName': tableName,
       'KeySchema': [
-        {
-          'AttributeName': 'pk',
-          'KeyType': 'HASH',
-        },
-        {
-          'AttributeName': 'seq',
-          'KeyType': 'RANGE',
-        },
+        {'AttributeName': 'pk', 'KeyType': 'HASH'},
+        {'AttributeName': 'seq', 'KeyType': 'RANGE'},
       ],
       'AttributeDefinitions': [
-        {
-          'AttributeName': 'pk',
-          'AttributeType': 'S',
-        },
-        {
-          'AttributeName': 'seq',
-          'AttributeType': 'N',
-        },
+        {'AttributeName': 'pk', 'AttributeType': 'S'},
+        {'AttributeName': 'seq', 'AttributeType': 'N'},
       ],
       'BillingMode': 'PAY_PER_REQUEST',
     };

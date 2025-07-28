@@ -28,7 +28,10 @@ void main() async {
       'data': {'name': 'Test without operation'},
     };
 
-    final response1 = await dio.post('$outsyncsUrl/api/changes', data: [changeWithoutOp]);
+    final response1 = await dio.post(
+      '$outsyncsUrl/api/changes',
+      data: [changeWithoutOp],
+    );
     if (response1.statusCode != 200) {
       throw Exception('Failed to create change without operation field');
     }
@@ -49,7 +52,10 @@ void main() async {
       'data': {'name': 'Test with operation'},
     };
 
-    final response2 = await dio.post('$outsyncsUrl/api/changes', data: [changeWithOp]);
+    final response2 = await dio.post(
+      '$outsyncsUrl/api/changes',
+      data: [changeWithOp],
+    );
     if (response2.statusCode != 200) {
       throw Exception('Failed to create change with operation field');
     }
@@ -90,12 +96,16 @@ void main() async {
 
     final nonOutdatedChangeInSync = changesForSync.any((c) => c['seq'] == seq2);
     if (!nonOutdatedChangeInSync) {
-      throw Exception('Non-outdated change was incorrectly excluded from sync results');
+      throw Exception(
+        'Non-outdated change was incorrectly excluded from sync results',
+      );
     }
 
     print('✅ Non-outdated changes correctly included in sync');
 
-    print('\n🎉 All tests passed! Optional operation field and outdated filtering work correctly.');
+    print(
+      '\n🎉 All tests passed! Optional operation field and outdated filtering work correctly.',
+    );
   } catch (e) {
     print('\n❌ Test failed: $e');
     exit(1);
