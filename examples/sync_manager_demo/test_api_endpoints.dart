@@ -18,7 +18,7 @@ Future<void> main() async {
     const testProjectId = 'test-project-123';
 
     // Wait a moment for server to be ready
-    await Future.delayed(Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     // Test 1: Health check
     print('🔍 Testing health endpoint...');
