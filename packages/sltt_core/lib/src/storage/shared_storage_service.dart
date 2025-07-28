@@ -333,6 +333,25 @@ class LocalStorageService implements BaseStorageService {
 
     return changes.map((e) => e.toJson()).toList();
   }
+
+  /// Get all unique project IDs from changes with entityType 'project'
+  @override
+  Future<List<String>> getAllProjects() async {
+    final projectChanges = await _isar.changeLogEntrys
+        .filter()
+        .entityTypeEqualTo('project')
+        .findAll();
+
+    // Extract unique project IDs
+    final projectIds = <String>{};
+    for (final change in projectChanges) {
+      if (change.projectId.isNotEmpty) {
+        projectIds.add(change.projectId);
+      }
+    }
+
+    return projectIds.toList()..sort();
+  }
 }
 
 // Singleton wrappers for each storage type

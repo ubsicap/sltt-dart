@@ -31,6 +31,9 @@ abstract class BaseStorageService {
   /// Get statistics about entity types
   Future<Map<String, dynamic>> getEntityTypeStats(String projectId);
 
+  /// Get all projects (based on changes with entityType 'project')
+  Future<List<String>> getAllProjects();
+
   /// Mark a change as outdated (for local storage services)
   Future<void> markAsOutdated(int seq, int outdatedBy) async {
     // Default implementation - override in local storage services

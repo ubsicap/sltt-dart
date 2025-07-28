@@ -69,7 +69,8 @@ abstract class BaseRestApiServer {
     // Standard endpoints (same for all servers)
     router.get('/health', _handleHealth);
     router.get('/api/help', _handleApiDocs);
-    router.post('/api/projects/<projectId>/changes', _handleCreateChanges);
+    router.post('/api/changes', _handleCreateChanges);
+    router.get('/api/projects', _handleGetProjects); // List all projects
     router.get('/api/projects/<projectId>/changes', _handleGetChanges);
     router.get('/api/projects/<projectId>/changes/<seq>', _handleGetChange);
     router.get('/api/projects/<projectId>/stats', _handleGetStats);
@@ -114,6 +115,37 @@ abstract class BaseRestApiServer {
           'method': 'GET',
           'path': '/api/help',
           'description': 'API documentation - returns this documentation',
+        },
+        {
+          'method': 'POST',
+          'path': '/api/changes',
+          'description':
+              'Create new changes (array format) - each change must include projectId',
+        },
+        {
+          'method': 'GET',
+          'path': '/api/projects',
+          'description': 'Get list of all projects that have changes',
+        },
+        {
+          'method': 'GET',
+          'path': '/api/changes',
+          'description':
+              'Get all changes from all projects with optional pagination (for sync)',
+          'parameters': [
+            {
+              'name': 'cursor',
+              'type': 'integer',
+              'required': false,
+              'description': 'Starting sequence number (exclusive)',
+            },
+            {
+              'name': 'limit',
+              'type': 'integer',
+              'required': false,
+              'description': 'Maximum number of results (1-1000)',
+            },
+          ],
         },
         {
           'method': 'GET',
@@ -161,19 +193,6 @@ abstract class BaseRestApiServer {
           ],
         },
         {
-          'method': 'POST',
-          'path': '/api/projects/{projectId}/changes',
-          'description': 'Create new changes for a project (array format)',
-          'parameters': [
-            {
-              'name': 'projectId',
-              'type': 'string',
-              'required': true,
-              'description': 'Project identifier',
-            },
-          ],
-        },
-        {
           'method': 'GET',
           'path': '/api/projects/{projectId}/stats',
           'description':
@@ -195,6 +214,28 @@ abstract class BaseRestApiServer {
       jsonEncode(docs),
       headers: {'Content-Type': 'application/json'},
     );
+  }
+
+  /// Get all project IDs
+  Future<Response> _handleGetProjects(Request request) async {
+    try {
+      final projects = await storage.getAllProjects();
+
+      final response = {
+        'projects': projects,
+        'count': projects.length,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      return Response.ok(
+        jsonEncode(response),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stackTrace) {
+      print('Error getting projects: $e');
+      print('Stack trace: $stackTrace');
+      return _errorResponse('Failed to get projects: ${e.toString()}', 500);
+    }
   }
 
   /// Get changes with optional pagination
@@ -303,11 +344,6 @@ abstract class BaseRestApiServer {
   /// Create new changes
   Future<Response> _handleCreateChanges(Request request) async {
     try {
-      final projectId = _extractProjectId(request);
-      if (projectId == null || projectId.isEmpty) {
-        return _errorResponse('Project ID is required', 400);
-      }
-
       final body = await request.readAsString();
       final data = jsonDecode(body);
 
@@ -329,6 +365,14 @@ abstract class BaseRestApiServer {
         try {
           final changeData = changesToCreate[i];
           final originalSeq = changeData['seq'] as int?;
+
+          // Validate that each change has a projectId
+          final projectId = changeData['projectId'] as String?;
+          if (projectId == null || projectId.isEmpty) {
+            throw ArgumentError(
+              'Change at index $i is missing required projectId field',
+            );
+          }
 
           final changeToStore = {
             'projectId': projectId,
@@ -354,7 +398,6 @@ abstract class BaseRestApiServer {
         'success': success,
         'created': createdSeqs.length,
         'createdSeqs': createdSeqs,
-        'projectId': projectId,
         'timestamp': DateTime.now().toIso8601String(),
       };
 

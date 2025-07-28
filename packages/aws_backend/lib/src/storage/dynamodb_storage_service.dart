@@ -429,4 +429,41 @@ class DynamoDBStorageService implements BaseStorageService {
     // Wait for table to be active
     print('[DynamoDBStorage] Table $tableName created successfully');
   }
+
+  /// Get all unique project IDs from the table
+  @override
+  Future<List<String>> getAllProjects() async {
+    await initialize();
+
+    // Use a scan operation with a filter for entityType = 'project'
+    final scanRequest = {
+      'TableName': tableName,
+      'FilterExpression': 'entityType = :entityType',
+      'ExpressionAttributeValues': {
+        ':entityType': {'S': 'project'},
+      },
+      'ProjectionExpression':
+          'pk', // Only return the partition key (project ID)
+    };
+
+    final response = await _dynamoRequest('Scan', scanRequest);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to scan projects: ${response.body}');
+    }
+
+    final responseData = jsonDecode(response.body);
+    final items = responseData['Items'] as List<dynamic>? ?? [];
+
+    // Extract unique project IDs
+    final projectIds = <String>{};
+    for (final item in items) {
+      final pk = item['pk']?['S'] as String?;
+      if (pk != null && pk.isNotEmpty) {
+        projectIds.add(pk);
+      }
+    }
+
+    return projectIds.toList()..sort();
+  }
 }
