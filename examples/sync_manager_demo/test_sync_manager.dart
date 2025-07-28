@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
 
@@ -77,6 +78,7 @@ class SyncManagerTester {
     print('📝 Testing basic operations on all servers...');
 
     final testData = {
+      'projectId': 'test-project',
       'entityType': 'Document',
       'operation': 'create',
       'entityId': 'test-uuid-123',
@@ -120,12 +122,14 @@ class SyncManagerTester {
     // Test batch changes endpoint on cloud storage
     final syncData = [
       {
+        'projectId': 'test-project',
         'entityType': 'Document',
-        'operation': 'update',
+        'operation': 'create',
         'entityId': 'sync-test-1',
         'data': {'title': 'Sync Test Document 1'},
       },
       {
+        'projectId': 'test-project',
         'entityType': 'Document',
         'operation': 'create',
         'entityId': 'sync-test-2',
@@ -169,14 +173,16 @@ class SyncManagerTester {
     // Add some changes to outsyncs storage
     final testChanges = [
       {
+        'projectId': 'test-project',
         'entityType': 'Document',
         'operation': 'create',
         'entityId': 'outsync-test-1',
         'data': {'title': 'Outsync Test Document 1'},
       },
       {
+        'projectId': 'test-project',
         'entityType': 'Document',
-        'operation': 'update',
+        'operation': 'create',
         'entityId': 'outsync-test-2',
         'data': {'title': 'Outsync Test Document 2'},
       },
@@ -191,8 +197,12 @@ class SyncManagerTester {
     }
 
     // Get initial counts
-    final outsyncsStatsBefore = await _dio.get('$_outsyncsUrl/api/stats');
-    final cloudStatsBefore = await _dio.get('$_cloudStorageUrl/api/stats');
+    final outsyncsStatsBefore = await _dio.get(
+      '$_outsyncsUrl/api/projects/test-project/stats',
+    );
+    final cloudStatsBefore = await _dio.get(
+      '$_cloudStorageUrl/api/projects/test-project/stats',
+    );
 
     final outsyncsCountBefore =
         outsyncsStatsBefore.data['changeStats']['total'] as int;
@@ -221,8 +231,12 @@ class SyncManagerTester {
     }
 
     // Verify changes were added to cloud storage but outsyncs still has them
-    final outsyncsStatsAfter = await _dio.get('$_outsyncsUrl/api/stats');
-    final cloudStatsAfter = await _dio.get('$_cloudStorageUrl/api/stats');
+    final outsyncsStatsAfter = await _dio.get(
+      '$_outsyncsUrl/api/projects/test-project/stats',
+    );
+    final cloudStatsAfter = await _dio.get(
+      '$_cloudStorageUrl/api/projects/test-project/stats',
+    );
 
     final outsyncsCountAfter =
         outsyncsStatsAfter.data['changeStats']['total'] as int;
@@ -252,7 +266,9 @@ class SyncManagerTester {
     print('⬇️ Testing downsync flow...');
 
     // Get initial downsync count
-    final downsyncsStatsBefore = await _dio.get('$_downsyncsUrl/api/stats');
+    final downsyncsStatsBefore = await _dio.get(
+      '$_downsyncsUrl/api/projects/test-project/stats',
+    );
     final downsyncsCountBefore =
         downsyncsStatsBefore.data['changeStats']['total'] as int;
 
@@ -266,7 +282,9 @@ class SyncManagerTester {
     }
 
     // Verify results
-    final downsyncsStatsAfter = await _dio.get('$_downsyncsUrl/api/stats');
+    final downsyncsStatsAfter = await _dio.get(
+      '$_downsyncsUrl/api/projects/test-project/stats',
+    );
     final downsyncsCountAfter =
         downsyncsStatsAfter.data['changeStats']['total'] as int;
 
@@ -285,6 +303,7 @@ class SyncManagerTester {
       '$_outsyncsUrl/api/changes',
       data: [
         {
+          'projectId': 'test-project',
           'entityType': 'Document',
           'operation': 'create',
           'entityId': 'full-sync-test',
@@ -294,7 +313,9 @@ class SyncManagerTester {
     );
 
     // Get initial counts
-    final outsyncsStatsBefore = await _dio.get('$_outsyncsUrl/api/stats');
+    final outsyncsStatsBefore = await _dio.get(
+      '$_outsyncsUrl/api/projects/test-project/stats',
+    );
     final outsyncsCountBefore =
         outsyncsStatsBefore.data['changeStats']['total'] as int;
 
@@ -306,7 +327,9 @@ class SyncManagerTester {
     }
 
     // Verify that local changes were actually deleted after full sync
-    final outsyncsStatsAfter = await _dio.get('$_outsyncsUrl/api/stats');
+    final outsyncsStatsAfter = await _dio.get(
+      '$_outsyncsUrl/api/projects/test-project/stats',
+    );
     final outsyncsCountAfter =
         outsyncsStatsAfter.data['changeStats']['total'] as int;
 
@@ -359,6 +382,7 @@ class SyncManagerTester {
     final changes = [
       {
         'seq': 999, // This should be ignored
+        'projectId': 'test-project',
         'entityType': 'TestEntity',
         'operation': 'create',
         'entityId': entityId1,
@@ -366,6 +390,7 @@ class SyncManagerTester {
       },
       {
         'seq': 1000, // This should also be ignored
+        'projectId': 'test-project',
         'entityType': 'TestEntity',
         'operation': 'create',
         'entityId': entityId2,
@@ -401,7 +426,9 @@ class SyncManagerTester {
     }
 
     // Verify the actual stored changes have the new sequences
-    final storedChanges = await _dio.get('$_cloudStorageUrl/api/changes');
+    final storedChanges = await _dio.get(
+      '$_cloudStorageUrl/api/projects/test-project/changes',
+    );
     final changesList = storedChanges.data['changes'] as List;
 
     // Find our changes by entity ID
@@ -443,6 +470,7 @@ class SyncManagerTester {
 
     // Add a change to outsyncs
     final change = {
+      'projectId': 'test-project',
       'entityType': 'TestEntity',
       'operation': 'create',
       'entityId': entityId,
@@ -466,7 +494,9 @@ class SyncManagerTester {
     print('   Marked change as outdated');
 
     // Get initial cloud count
-    final cloudStatsBefore = await _dio.get('$_cloudStorageUrl/api/stats');
+    final cloudStatsBefore = await _dio.get(
+      '$_cloudStorageUrl/api/projects/test-project/stats',
+    );
     final cloudCountBefore =
         cloudStatsBefore.data['changeStats']['total'] as int;
 
@@ -485,7 +515,9 @@ class SyncManagerTester {
     }
 
     // Verify cloud storage count didn't increase
-    final cloudStatsAfter = await _dio.get('$_cloudStorageUrl/api/stats');
+    final cloudStatsAfter = await _dio.get(
+      '$_cloudStorageUrl/api/projects/test-project/stats',
+    );
     final cloudCountAfter = cloudStatsAfter.data['changeStats']['total'] as int;
 
     if (cloudCountAfter != cloudCountBefore) {

@@ -37,21 +37,12 @@ class SyncManager {
   // Get all projects that have changes to sync
   Future<List<String>> _getProjectsToSync() async {
     try {
-      // Get projects from the cloud storage projects endpoint
-      final response = await _dio.get('$_cloudStorageUrl/api/projects');
-
-      if (response.statusCode == 200) {
-        final responseData = response.data as Map<String, dynamic>;
-        final projectsList = responseData['projects'] as List<dynamic>;
-        return projectsList.cast<String>();
-      } else {
-        print(
-          '[SyncManager] Failed to get projects list, falling back to local discovery',
-        );
-      }
+      // Get projects from local outsyncs storage
+      final projectIds = await _outsyncsStorage.getAllProjects();
+      return projectIds;
     } catch (e) {
       print(
-        '[SyncManager] Error getting projects list: $e, falling back to local discovery',
+        '[SyncManager] Error getting projects list: $e, falling back to change-based discovery',
       );
     }
 
@@ -169,44 +160,83 @@ class SyncManager {
     try {
       print('[SyncManager] Starting downsync from cloud...');
 
-      // Get the last sequence number from downsyncs storage
-      final lastSeq = await _downsyncsStorage.getLastSeq();
-      print('[SyncManager] Last seq in downsyncs: $lastSeq');
+      // First, get all projects from the cloud storage (authoritative source)
+      final projectsResponse = await _dio.get('$_cloudStorageUrl/api/projects');
+      if (projectsResponse.statusCode != 200) {
+        throw Exception(
+          'Failed to get projects from cloud: ${projectsResponse.statusCode}',
+        );
+      }
 
-      // Request changes from cloud since last seq using cursor-based pagination
-      final response = await _dio.get(
-        '$_cloudStorageUrl/api/changes?cursor=$lastSeq',
+      final responseData = projectsResponse.data as Map<String, dynamic>;
+      final projects = (responseData['projects'] as List<dynamic>)
+          .cast<String>();
+      print(
+        '[SyncManager] Found ${projects.length} projects in cloud: $projects',
       );
 
-      if (response.statusCode == 200) {
-        final responseData = response.data as Map<String, dynamic>;
-        final changesSinceSeq = responseData['changes'] as List<dynamic>;
-
-        if (changesSinceSeq.isEmpty) {
-          print('[SyncManager] No new changes to downsync');
-          return DownsyncResult(
-            success: true,
-            newChanges: [],
-            message: 'No new changes to sync',
-          );
-        }
-
-        // Store new changes in downsyncs storage
-        final newChanges = changesSinceSeq.cast<Map<String, dynamic>>();
-        final storedChanges = await _downsyncsStorage.createChanges(newChanges);
-
-        print(
-          '[SyncManager] Successfully downsynced ${storedChanges.length} changes',
-        );
-
+      if (projects.isEmpty) {
+        print('[SyncManager] No projects found in cloud to downsync');
         return DownsyncResult(
           success: true,
-          newChanges: storedChanges,
-          message: 'Successfully downsynced ${storedChanges.length} changes',
+          newChanges: [],
+          message: 'No projects found in cloud to downsync',
         );
-      } else {
-        throw Exception('Downsync failed with status: ${response.statusCode}');
       }
+
+      final allNewChanges = <Map<String, dynamic>>[];
+
+      // For each project, downsync its changes
+      for (final projectId in projects) {
+        print('[SyncManager] Downsyncing project: $projectId');
+
+        // Get the last sequence number for this project from downsyncs storage
+        // We'll use 0 as starting point and let the cloud API handle cursor-based pagination
+        final lastSeq = await _downsyncsStorage.getLastSeq();
+        print('[SyncManager] Last seq in downsyncs: $lastSeq');
+
+        // Request changes from cloud for this project since last seq
+        final response = await _dio.get(
+          '$_cloudStorageUrl/api/projects/$projectId/changes?cursor=$lastSeq',
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = response.data as Map<String, dynamic>;
+          final changesSinceSeq = responseData['changes'] as List<dynamic>;
+
+          if (changesSinceSeq.isEmpty) {
+            print('[SyncManager] No new changes for project $projectId');
+            continue;
+          }
+
+          // Store new changes in downsyncs storage
+          final newChanges = changesSinceSeq.cast<Map<String, dynamic>>();
+          final storedChanges = await _downsyncsStorage.createChanges(
+            newChanges,
+          );
+          allNewChanges.addAll(storedChanges);
+
+          print(
+            '[SyncManager] Successfully downsynced ${storedChanges.length} changes for project $projectId',
+          );
+        } else {
+          print(
+            '[SyncManager] Failed to downsync project $projectId: ${response.statusCode}',
+          );
+          // Continue with other projects instead of failing completely
+        }
+      }
+
+      print(
+        '[SyncManager] Downsync completed. Total changes: ${allNewChanges.length}',
+      );
+
+      return DownsyncResult(
+        success: true,
+        newChanges: allNewChanges,
+        message:
+            'Successfully downsynced ${allNewChanges.length} changes from ${projects.length} projects',
+      );
     } catch (e) {
       print('[SyncManager] Downsync failed: $e');
       return DownsyncResult(
