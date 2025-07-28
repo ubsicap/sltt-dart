@@ -28,7 +28,9 @@ void main() {
         isarAvailable = true;
         print('✅ Isar database available - running full integration tests');
       } catch (e) {
-        print('⚠️  Isar database not available: ${e.toString().split(':').first}');
+        print(
+          '⚠️  Isar database not available: ${e.toString().split(':').first}',
+        );
         print('   Skipping database-dependent tests, running basic tests only');
         isarAvailable = false;
         outsyncsStorage = null;
@@ -47,7 +49,9 @@ void main() {
 
     test('storage services can be instantiated', () {
       if (!isarAvailable) {
-        markTestSkipped('Isar database not available - install libisar.so for full tests');
+        markTestSkipped(
+          'Isar database not available - install libisar.so for full tests',
+        );
         return;
       }
 
@@ -58,7 +62,9 @@ void main() {
 
     test('multi-project change creation and retrieval', () async {
       if (!isarAvailable) {
-        markTestSkipped('Isar database not available - skipping database tests');
+        markTestSkipped(
+          'Isar database not available - skipping database tests',
+        );
         return;
       }
 
