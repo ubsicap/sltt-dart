@@ -20,7 +20,6 @@ Future<void> main() async {
   // Create a DynamoDB-backed cloud storage service
   final dynamoCloudStorage = DynamoDBStorageService(
     tableName: 'sltt-integration-demo',
-    projectId: projectId,
     region: 'us-east-1',
     useLocalDynamoDB: true,
     localEndpoint: 'http://localhost:8000',

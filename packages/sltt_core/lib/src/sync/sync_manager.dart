@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
-import '../storage/shared_storage_service.dart';
+
 import '../server/server_ports.dart';
+import '../storage/shared_storage_service.dart';
 
 class SyncManager {
   static SyncManager? _instance;
@@ -33,10 +34,61 @@ class SyncManager {
     print('[SyncManager] Initialized');
   }
 
+  // Get all projects that have changes to sync
+  Future<List<String>> _getProjectsToSync() async {
+    try {
+      // Get projects from the cloud storage projects endpoint
+      final response = await _dio.get('$_cloudStorageUrl/api/projects');
+
+      if (response.statusCode == 200) {
+        final responseData = response.data as Map<String, dynamic>;
+        final projectsList = responseData['projects'] as List<dynamic>;
+        return projectsList.cast<String>();
+      } else {
+        print(
+          '[SyncManager] Failed to get projects list, falling back to local discovery',
+        );
+      }
+    } catch (e) {
+      print(
+        '[SyncManager] Error getting projects list: $e, falling back to local discovery',
+      );
+    }
+
+    // Fallback: discover projects from local changes
+    final changes = await _outsyncsStorage.getChangesForSync();
+    final projectIds = <String>{};
+    for (final change in changes) {
+      final projectId = change['projectId'] as String?;
+      if (projectId != null) {
+        projectIds.add(projectId);
+      }
+    }
+    return projectIds.toList();
+  }
+
   // Outsync changes from outsyncs to cloud storage
   Future<OutsyncResult> outsyncToCloud() async {
     try {
       print('[SyncManager] Starting outsync to cloud...');
+
+      // Get all projects that need syncing
+      final projectIds = await _getProjectsToSync();
+
+      if (projectIds.isEmpty) {
+        print('[SyncManager] No projects found to sync');
+        return OutsyncResult(
+          success: true,
+          syncedChanges: [],
+          deletedLocalChanges: [],
+          seqMap: {},
+          message: 'No projects to sync',
+        );
+      }
+
+      print(
+        '[SyncManager] Found ${projectIds.length} projects to sync: ${projectIds.join(', ')}',
+      );
 
       // Get changes for sync (excludes outdated changes)
       final changes = await _outsyncsStorage.getChangesForSync();
@@ -181,13 +233,30 @@ class SyncManager {
       print('[SyncManager] Completing outsync cleanup...');
 
       // Update outdatedBy fields and delete outsynced changes
+      // Get the original changes to extract their projectIds
+      final originalChanges = await _outsyncsStorage.getChangesForSync();
+      final changesBySeq = <int, Map<String, dynamic>>{};
+      for (final change in originalChanges) {
+        changesBySeq[change['seq'] as int] = change;
+      }
+
       for (final entry in outsyncResult.seqMap.entries) {
         final oldSeq = int.parse(entry.key);
         final newSeq = entry.value;
 
-        // Mark the old change as outdated by the new sequence
-        await _outsyncsStorage.markAsOutdated(oldSeq, newSeq);
-        deletedLocalSeqs.add(oldSeq);
+        // Get the projectId from the original change
+        final originalChange = changesBySeq[oldSeq];
+        if (originalChange != null) {
+          final projectId = originalChange['projectId'] as String;
+
+          // Mark the old change as outdated by the new sequence
+          await _outsyncsStorage.markAsOutdated(projectId, oldSeq, newSeq);
+          deletedLocalSeqs.add(oldSeq);
+        } else {
+          print(
+            '[SyncManager] Warning: Could not find original change for seq $oldSeq',
+          );
+        }
       }
 
       // Now actually delete the outsynced changes

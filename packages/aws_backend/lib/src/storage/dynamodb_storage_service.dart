@@ -19,7 +19,6 @@ import 'package:sltt_core/sltt_core.dart';
 /// - Cost-effective table sharing across projects
 class DynamoDBStorageService implements BaseStorageService {
   final String tableName;
-  final String projectId;
   final String region;
   final bool useLocalDynamoDB;
   final String? localEndpoint;
@@ -30,7 +29,6 @@ class DynamoDBStorageService implements BaseStorageService {
 
   DynamoDBStorageService({
     required this.tableName,
-    required this.projectId,
     this.region = 'us-east-1',
     this.useLocalDynamoDB = false,
     this.localEndpoint = 'http://localhost:8000',
@@ -77,11 +75,17 @@ class DynamoDBStorageService implements BaseStorageService {
   ) async {
     if (!_initialized) await initialize();
 
-    // Get next sequence number
-    final seq = await _getNextSequence();
+    // projectId is now required in changeData
+    final changeProjectId = changeData['projectId'] as String?;
+    if (changeProjectId == null || changeProjectId.isEmpty) {
+      throw ArgumentError('projectId is required in changeData');
+    }
+
+    // Get next sequence number for this specific project
+    final seq = await _getNextSequence(changeProjectId);
 
     final item = {
-      'pk': {'S': projectId},
+      'pk': {'S': changeProjectId},
       'seq': {'N': seq.toString()},
       'entityType': {'S': changeData['entityType'] ?? ''},
       'operation': {'S': changeData['operation'] ?? ''},
@@ -102,6 +106,7 @@ class DynamoDBStorageService implements BaseStorageService {
 
     return {
       'seq': seq,
+      'projectId': changeProjectId,
       'entityType': changeData['entityType'],
       'operation': changeData['operation'],
       'timestamp': changeData['timestamp'] ?? DateTime.now().toIso8601String(),
@@ -273,7 +278,7 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<void> markAsOutdated(int seq, int outdatedBy) async {
+  Future<void> markAsOutdated(String projectId, int seq, int outdatedBy) async {
     // For DynamoDB, we can add an 'outdatedBy' attribute to mark items as outdated
     if (!_initialized) await initialize();
 
@@ -364,7 +369,7 @@ class DynamoDBStorageService implements BaseStorageService {
     }
   }
 
-  Future<int> _getNextSequence() async {
+  Future<int> _getNextSequence(String projectId) async {
     // Use atomic counter for sequence generation per project
     final updateRequest = {
       'TableName': tableName,

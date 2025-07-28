@@ -274,10 +274,14 @@ class LocalStorageService implements BaseStorageService {
   /// Updates the outdatedBy field to indicate this change has been
   /// superseded by a newer change with the specified sequence number.
   @override
-  Future<void> markAsOutdated(int seq, int outdatedBySeq) async {
+  Future<void> markAsOutdated(
+    String projectId,
+    int seq,
+    int outdatedBySeq,
+  ) async {
     await _isar.writeTxn(() async {
       final change = await _isar.changeLogEntrys.get(seq);
-      if (change != null) {
+      if (change != null && change.projectId == projectId) {
         change.outdatedBy = outdatedBySeq;
         await _isar.changeLogEntrys.put(change);
       }

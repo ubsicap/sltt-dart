@@ -152,9 +152,10 @@ serverless deploy --stage dev --project my-project-123
 ### Environment Variables
 
 - `DYNAMODB_TABLE`: DynamoDB table name (e.g., 'sltt-changes-prod')
-- `PROJECT_ID`: Project identifier for data isolation (e.g., 'my-project-123')
 - `DYNAMODB_REGION`: AWS region (e.g., 'us-east-1')
 - `USE_LOCAL_DYNAMODB`: Set to 'true' for local DynamoDB (development only)
+
+**Note**: `PROJECT_ID` is no longer needed as an environment variable. Projects are now identified by the `projectId` field in the change data itself.
 
 ## DynamoDB Schema
 

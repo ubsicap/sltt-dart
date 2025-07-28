@@ -51,3 +51,5 @@ isar_db/
 *.so             # Linux shared libraries
 *.dll            # Windows libraries
 *.dylib          # macOS libraries
+**/*.exe         # Windows executables
+*.dmg         # macOS disk images

@@ -12,13 +12,11 @@ Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
     // Get configuration from environment variables
     final tableName =
         Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-changes-dev';
-    final projectId = Platform.environment['PROJECT_ID'] ?? 'default-project';
     final region = Platform.environment['AWS_REGION'] ?? 'us-east-1';
 
-    // Create DynamoDB storage service
+    // Create DynamoDB storage service (no projectId needed)
     final storage = DynamoDBStorageService(
       tableName: tableName,
-      projectId: projectId,
       region: region,
       useLocalDynamoDB: false, // Always use real AWS in Lambda
     );
@@ -50,48 +48,79 @@ Future<Map<String, dynamic>> _handleGetRequest(
   Map<String, dynamic> event,
 ) async {
   final path = event['path'] as String? ?? '/';
-  final queryParams =
-      event['queryStringParameters'] as Map<String, dynamic>? ?? {};
 
   try {
-    if (path.contains('/changes')) {
-      if (path.contains(RegExp(r'/changes/\d+$'))) {
-        // Get specific change: /api/changes/123
-        final seq = int.parse(path.split('/').last);
-        final change = await storage.getChange(storage.projectId, seq);
+    if (path.contains('/health')) {
+      // Health check: /health
+      return _successResponse({
+        'status': 'healthy',
+        'timestamp': DateTime.now().toIso8601String(),
+        'service': 'AWS Lambda SLTT API',
+        'multiProject': true,
+      });
+    } else if (path == '/api/projects') {
+      // Get all projects: GET /api/projects
+      final projects = await storage.getAllProjects();
+      return _successResponse({
+        'projects': projects,
+        'count': projects.length,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+    } else if (path.startsWith('/api/projects/') && path.endsWith('/changes')) {
+      // Get changes for a specific project: GET /api/projects/{projectId}/changes
+      final pathSegments = path.split('/');
+      if (pathSegments.length >= 4) {
+        final projectId = pathSegments[3];
+        final queryParams =
+            event['queryStringParameters'] as Map<String, dynamic>? ?? {};
 
-        if (change == null) {
-          return _errorResponse('Change not found', 404);
-        }
-
-        return _successResponse(change);
-      } else {
-        // Get changes with pagination: /api/changes
-        final cursor = int.tryParse(queryParams['cursor']?.toString() ?? '');
+        final cursor =
+            int.tryParse(queryParams['cursor']?.toString() ?? '0') ?? 0;
         final limit =
             int.tryParse(queryParams['limit']?.toString() ?? '100') ?? 100;
 
         final changes = await storage.getChangesWithCursor(
-          projectId: storage.projectId,
-          cursor: cursor,
-          limit: limit.clamp(1, 1000),
+          projectId: projectId,
+          cursor: cursor > 0 ? cursor : null,
+          limit: limit,
         );
 
         return _successResponse({
           'changes': changes,
+          'projectId': projectId,
+          'cursor': cursor,
           'count': changes.length,
-          'cursor': changes.isNotEmpty ? changes.last['seq'] : cursor,
           'timestamp': DateTime.now().toIso8601String(),
         });
+      } else {
+        return _errorResponse('Invalid project changes path', 400);
       }
-    } else if (path.contains('/stats')) {
-      // Get statistics: /api/stats
-      final stats = await storage.getChangeStats(storage.projectId);
-      return _successResponse(stats);
-    } else if (path.contains('/health')) {
-      // Health check: /health
+    } else if (path == '/api/changes') {
+      // Legacy endpoint for backward compatibility
+      final queryParams =
+          event['queryStringParameters'] as Map<String, dynamic>? ?? {};
+      final cursor =
+          int.tryParse(queryParams['cursor']?.toString() ?? '0') ?? 0;
+
+      // Get all projects and combine their changes
+      final projects = await storage.getAllProjects();
+      final allChanges = <Map<String, dynamic>>[];
+
+      for (final projectId in projects) {
+        final projectChanges = await storage.getChangesWithCursor(
+          projectId: projectId,
+          cursor: cursor > 0 ? cursor : null,
+        );
+        allChanges.addAll(projectChanges);
+      }
+
+      // Sort by sequence number
+      allChanges.sort((a, b) => (a['seq'] as int).compareTo(b['seq'] as int));
+
       return _successResponse({
-        'status': 'healthy',
+        'changes': allChanges,
+        'cursor': cursor,
+        'count': allChanges.length,
         'timestamp': DateTime.now().toIso8601String(),
       });
     } else {
@@ -111,8 +140,8 @@ Future<Map<String, dynamic>> _handlePostRequest(
   final body = event['body'] as String? ?? '{}';
 
   try {
-    if (path.contains('/changes')) {
-      // Create changes: POST /api/changes
+    if (path == '/api/changes') {
+      // Create changes: POST /api/changes (multi-project)
       final data = jsonDecode(body);
 
       if (data is! List) {
@@ -124,6 +153,11 @@ Future<Map<String, dynamic>> _handlePostRequest(
       final seqMap = <String, int>{};
 
       for (final changeData in changes) {
+        // Validate that each change has a projectId in the data
+        if (changeData['projectId'] == null) {
+          return _errorResponse('Each change must have a projectId field', 400);
+        }
+
         final originalSeq = changeData['seq'];
         final created = await storage.createChange(changeData);
         createdChanges.add(created);
@@ -138,6 +172,43 @@ Future<Map<String, dynamic>> _handlePostRequest(
         'seqMap': seqMap,
         'timestamp': DateTime.now().toIso8601String(),
       });
+    } else if (path.startsWith('/api/projects/') && path.endsWith('/changes')) {
+      // Create changes for a specific project: POST /api/projects/{projectId}/changes
+      final pathSegments = path.split('/');
+      if (pathSegments.length >= 4) {
+        final projectId = pathSegments[3];
+        final data = jsonDecode(body);
+
+        if (data is! List) {
+          return _errorResponse('Request body must be an array', 400);
+        }
+
+        final changes = data.cast<Map<String, dynamic>>();
+        final createdChanges = <Map<String, dynamic>>[];
+        final seqMap = <String, int>{};
+
+        for (final changeData in changes) {
+          // Ensure the projectId matches the URL parameter
+          changeData['projectId'] = projectId;
+
+          final originalSeq = changeData['seq'];
+          final created = await storage.createChange(changeData);
+          createdChanges.add(created);
+
+          seqMap[originalSeq?.toString() ?? created['seq'].toString()] =
+              created['seq'];
+        }
+
+        return _successResponse({
+          'success': true,
+          'projectId': projectId,
+          'created': createdChanges.length,
+          'seqMap': seqMap,
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+      } else {
+        return _errorResponse('Invalid project changes path', 400);
+      }
     } else {
       return _errorResponse('Not found', 404);
     }

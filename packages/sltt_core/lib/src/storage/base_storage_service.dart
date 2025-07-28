@@ -35,7 +35,7 @@ abstract class BaseStorageService {
   Future<List<String>> getAllProjects();
 
   /// Mark a change as outdated (for local storage services)
-  Future<void> markAsOutdated(int seq, int outdatedBy) async {
+  Future<void> markAsOutdated(String projectId, int seq, int outdatedBy) async {
     // Default implementation - override in local storage services
     throw UnsupportedError(
       'markAsOutdated not supported by this storage service',
