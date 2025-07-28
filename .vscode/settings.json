@@ -38,5 +38,16 @@
     "editor.wordWrap": "bounded",
     "editor.wordWrapColumn": 120,
     "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true
+    "files.insertFinalNewline": true,
+
+    // Save and Run extension - runs dart format on save
+    "saveAndRun": {
+        "commands": [
+            {
+                "match": "\\.dart$",
+                "cmd": "dart format --line-length=80 ${file}",
+                "silent": true
+            }
+        ]
+    }
 }

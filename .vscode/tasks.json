@@ -136,6 +136,22 @@
                 "cwd": "${workspaceFolder}/examples/sync_manager_demo"
             },
             "group": "build"
+        },
+        {
+            "label": "dart-format-current-file",
+            "type": "shell",
+            "command": "dart",
+            "args": ["format", "--line-length", "80", "${file}"],
+            "group": "build",
+            "presentation": {
+                "echo": false,
+                "reveal": "never",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": false
+            },
+            "problemMatcher": []
         }
     ]
 }
