@@ -10,8 +10,7 @@ import 'package:aws_backend/aws_backend.dart';
 Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
   try {
     // Get configuration from environment variables
-    final tableName =
-        Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-changes-dev';
+    final tableName = Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-changes-dev';
     final projectId = Platform.environment['PROJECT_ID'] ?? 'default-project';
     final region = Platform.environment['AWS_REGION'] ?? 'us-east-1';
 
@@ -45,13 +44,9 @@ Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
 }
 
 /// Handle GET requests
-Future<Map<String, dynamic>> _handleGetRequest(
-  DynamoDBStorageService storage,
-  Map<String, dynamic> event,
-) async {
+Future<Map<String, dynamic>> _handleGetRequest(DynamoDBStorageService storage, Map<String, dynamic> event) async {
   final path = event['path'] as String? ?? '/';
-  final queryParams =
-      event['queryStringParameters'] as Map<String, dynamic>? ?? {};
+  final queryParams = event['queryStringParameters'] as Map<String, dynamic>? ?? {};
 
   try {
     if (path.contains('/changes')) {
@@ -68,8 +63,7 @@ Future<Map<String, dynamic>> _handleGetRequest(
       } else {
         // Get changes with pagination: /api/changes
         final cursor = int.tryParse(queryParams['cursor']?.toString() ?? '');
-        final limit =
-            int.tryParse(queryParams['limit']?.toString() ?? '100') ?? 100;
+        final limit = int.tryParse(queryParams['limit']?.toString() ?? '100') ?? 100;
 
         final changes = await storage.getChangesWithCursor(
           projectId: storage.projectId,
@@ -90,10 +84,7 @@ Future<Map<String, dynamic>> _handleGetRequest(
       return _successResponse(stats);
     } else if (path.contains('/health')) {
       // Health check: /health
-      return _successResponse({
-        'status': 'healthy',
-        'timestamp': DateTime.now().toIso8601String(),
-      });
+      return _successResponse({'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()});
     } else {
       return _errorResponse('Not found', 404);
     }
@@ -103,10 +94,7 @@ Future<Map<String, dynamic>> _handleGetRequest(
 }
 
 /// Handle POST requests
-Future<Map<String, dynamic>> _handlePostRequest(
-  DynamoDBStorageService storage,
-  Map<String, dynamic> event,
-) async {
+Future<Map<String, dynamic>> _handlePostRequest(DynamoDBStorageService storage, Map<String, dynamic> event) async {
   final path = event['path'] as String? ?? '/';
   final body = event['body'] as String? ?? '{}';
 
@@ -128,8 +116,7 @@ Future<Map<String, dynamic>> _handlePostRequest(
         final created = await storage.createChange(changeData);
         createdChanges.add(created);
 
-        seqMap[originalSeq?.toString() ?? created['seq'].toString()] =
-            created['seq'];
+        seqMap[originalSeq?.toString() ?? created['seq'].toString()] = created['seq'];
       }
 
       return _successResponse({
@@ -164,13 +151,7 @@ Map<String, dynamic> _successResponse(Map<String, dynamic> data) {
 Map<String, dynamic> _errorResponse(String message, int statusCode) {
   return {
     'statusCode': statusCode,
-    'headers': {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
-    'body': jsonEncode({
-      'error': message,
-      'timestamp': DateTime.now().toIso8601String(),
-    }),
+    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+    'body': jsonEncode({'error': message, 'timestamp': DateTime.now().toIso8601String()}),
   };
 }

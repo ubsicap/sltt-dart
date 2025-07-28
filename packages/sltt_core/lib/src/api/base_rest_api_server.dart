@@ -24,6 +24,16 @@ abstract class BaseRestApiServer {
   /// Storage type description for API documentation
   String get storageTypeDescription;
 
+  /// Extract and URL decode projectId from request parameters
+  String? _extractProjectId(Request request) {
+    final projectIdRaw = request.params['projectId'];
+    if (projectIdRaw == null || projectIdRaw.isEmpty) {
+      return null;
+    }
+    // URL decode the project ID to handle special characters like spaces, @, /, etc.
+    return Uri.decodeComponent(projectIdRaw);
+  }
+
   /// Additional server-specific endpoints (override if needed)
   void addCustomRoutes(Router router) {
     // Default: no custom routes
@@ -190,7 +200,7 @@ abstract class BaseRestApiServer {
   /// Get changes with optional pagination
   Future<Response> _handleGetChanges(Request request) async {
     try {
-      final projectId = request.params['projectId'];
+      final projectId = _extractProjectId(request);
       if (projectId == null || projectId.isEmpty) {
         return _errorResponse('Project ID is required', 400);
       }
@@ -259,12 +269,18 @@ abstract class BaseRestApiServer {
   }
 
   /// Get specific change by sequence number
-  Future<Response> _handleGetChange(
-    Request request,
-    String projectId,
-    String seq,
-  ) async {
+  Future<Response> _handleGetChange(Request request) async {
     try {
+      final projectId = _extractProjectId(request);
+      if (projectId == null || projectId.isEmpty) {
+        return _errorResponse('Project ID is required', 400);
+      }
+
+      final seq = request.params['seq'];
+      if (seq == null || seq.isEmpty) {
+        return _errorResponse('Sequence number is required', 400);
+      }
+
       final changeSeq = int.tryParse(seq);
       if (changeSeq == null) {
         return _errorResponse('Invalid change seq format', 400);
@@ -287,7 +303,7 @@ abstract class BaseRestApiServer {
   /// Create new changes
   Future<Response> _handleCreateChanges(Request request) async {
     try {
-      final projectId = request.params['projectId'];
+      final projectId = _extractProjectId(request);
       if (projectId == null || projectId.isEmpty) {
         return _errorResponse('Project ID is required', 400);
       }
@@ -337,6 +353,8 @@ abstract class BaseRestApiServer {
       final response = <String, dynamic>{
         'success': success,
         'created': createdSeqs.length,
+        'createdSeqs': createdSeqs,
+        'projectId': projectId,
         'timestamp': DateTime.now().toIso8601String(),
       };
 
@@ -365,7 +383,7 @@ abstract class BaseRestApiServer {
   /// Get statistics
   Future<Response> _handleGetStats(Request request) async {
     try {
-      final projectId = request.params['projectId'];
+      final projectId = _extractProjectId(request);
       if (projectId == null || projectId.isEmpty) {
         return _errorResponse('Project ID is required', 400);
       }
