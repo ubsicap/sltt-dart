@@ -60,6 +60,44 @@ A comprehensive mono-repo for offline-first sync systems including core librarie
 ./dev.sh help      # Show all commands
 ```
 
+### Running Tests
+
+The project includes comprehensive tests for all components. Due to Isar database requirements, tests need the native `libisar.so` library to be available.
+
+#### Quick Test Runner (Recommended)
+```bash
+# Auto-setup environment and run all tests
+./test.sh
+
+# Run specific test files
+./test.sh test/integration_test.dart
+```
+
+#### Manual Test Setup
+```bash
+# 1. Set up test environment (copies Isar library)
+./setup_test_env.sh
+
+# 2. Run tests with proper environment
+LD_LIBRARY_PATH=/tmp/dart_test_libs dart test
+
+# 3. Or use the custom test runner
+LD_LIBRARY_PATH=/tmp/dart_test_libs dart run run_tests.dart
+```
+
+#### VS Code Integration
+Use **Ctrl+Shift+P** → **Tasks: Run Task** and select:
+- **"Run Tests with Setup"** - Runs all tests with automatic environment setup
+- **"Run Integration Tests"** - Runs only integration tests
+- **"Setup Test Environment"** - Sets up Isar library for manual testing
+
+#### Available Test Suites
+- **Basic Tests** - Core functionality and unit tests
+- **Integration Tests** - Database integration and multi-project support
+- **AWS Backend Tests** - DynamoDB and AWS service integration
+- **Sync Manager Tests** - Synchronization logic and conflict resolution
+- **Projects Endpoint Tests** - REST API endpoint validation
+
 See individual package READMEs for specific development instructions.
 
 ## Legacy Documentation
