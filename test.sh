@@ -21,7 +21,8 @@ if [ -f "$ISAR_LIB_PATH" ]; then
 
     echo "🧪 Running dart test with proper environment..."
     # Run dart test with all arguments passed through
-    dart test "$@"
+    # LD_LIBRARY_PATH=/tmp/dart_test_libs dart test "$@"
+    LD_LIBRARY_PATH=/tmp/dart_test_libs dart run run_tests.dart
 
 else
     echo "❌ libisar.so not found at expected location: $ISAR_LIB_PATH"
