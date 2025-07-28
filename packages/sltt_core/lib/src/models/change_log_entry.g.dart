@@ -42,8 +42,13 @@ const ChangeLogEntrySchema = CollectionSchema(
       name: r'outdatedBy',
       type: IsarType.long,
     ),
-    r'timestamp': PropertySchema(
+    r'projectId': PropertySchema(
       id: 5,
+      name: r'projectId',
+      type: IsarType.string,
+    ),
+    r'timestamp': PropertySchema(
+      id: 6,
       name: r'timestamp',
       type: IsarType.dateTime,
     )
@@ -54,14 +59,14 @@ const ChangeLogEntrySchema = CollectionSchema(
   deserializeProp: _changeLogEntryDeserializeProp,
   idName: r'seq',
   indexes: {
-    r'entityType': IndexSchema(
-      id: -5109706325448941117,
-      name: r'entityType',
+    r'projectId': IndexSchema(
+      id: 3305656282123791113,
+      name: r'projectId',
       unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
-          name: r'entityType',
+          name: r'projectId',
           type: IndexType.hash,
           caseSensitive: true,
         )
@@ -86,6 +91,7 @@ int _changeLogEntryEstimateSize(
   bytesCount += 3 + object.entityId.length * 3;
   bytesCount += 3 + object.entityType.length * 3;
   bytesCount += 3 + object.operation.length * 3;
+  bytesCount += 3 + object.projectId.length * 3;
   return bytesCount;
 }
 
@@ -100,7 +106,8 @@ void _changeLogEntrySerialize(
   writer.writeString(offsets[2], object.entityType);
   writer.writeString(offsets[3], object.operation);
   writer.writeLong(offsets[4], object.outdatedBy);
-  writer.writeDateTime(offsets[5], object.timestamp);
+  writer.writeString(offsets[5], object.projectId);
+  writer.writeDateTime(offsets[6], object.timestamp);
 }
 
 ChangeLogEntry _changeLogEntryDeserialize(
@@ -115,7 +122,8 @@ ChangeLogEntry _changeLogEntryDeserialize(
     entityType: reader.readString(offsets[2]),
     operation: reader.readString(offsets[3]),
     outdatedBy: reader.readLongOrNull(offsets[4]),
-    timestamp: reader.readDateTime(offsets[5]),
+    projectId: reader.readString(offsets[5]),
+    timestamp: reader.readDateTime(offsets[6]),
   );
   object.seq = id;
   return object;
@@ -139,6 +147,8 @@ P _changeLogEntryDeserializeProp<P>(
     case 4:
       return (reader.readLongOrNull(offset)) as P;
     case 5:
+      return (reader.readString(offset)) as P;
+    case 6:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -238,44 +248,44 @@ extension ChangeLogEntryQueryWhere
   }
 
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause>
-      entityTypeEqualTo(String entityType) {
+      projectIdEqualTo(String projectId) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'entityType',
-        value: [entityType],
+        indexName: r'projectId',
+        value: [projectId],
       ));
     });
   }
 
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterWhereClause>
-      entityTypeNotEqualTo(String entityType) {
+      projectIdNotEqualTo(String projectId) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'entityType',
+              indexName: r'projectId',
               lower: [],
-              upper: [entityType],
+              upper: [projectId],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'entityType',
-              lower: [entityType],
+              indexName: r'projectId',
+              lower: [projectId],
               includeLower: false,
               upper: [],
             ));
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'entityType',
-              lower: [entityType],
+              indexName: r'projectId',
+              lower: [projectId],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'entityType',
+              indexName: r'projectId',
               lower: [],
-              upper: [entityType],
+              upper: [projectId],
               includeUpper: false,
             ));
       }
@@ -904,6 +914,142 @@ extension ChangeLogEntryQueryFilter
   }
 
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      projectIdEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'projectId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      projectIdGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'projectId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      projectIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'projectId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      projectIdBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'projectId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      projectIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'projectId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      projectIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'projectId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      projectIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'projectId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      projectIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'projectId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      projectIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'projectId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      projectIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'projectId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
       seqEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1091,6 +1237,19 @@ extension ChangeLogEntryQuerySortBy
     });
   }
 
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByProjectId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'projectId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByProjectIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'projectId', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByTimestamp() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'timestamp', Sort.asc);
@@ -1174,6 +1333,19 @@ extension ChangeLogEntryQuerySortThenBy
     });
   }
 
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByProjectId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'projectId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByProjectIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'projectId', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenBySeq() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'seq', Sort.asc);
@@ -1237,6 +1409,13 @@ extension ChangeLogEntryQueryWhereDistinct
     });
   }
 
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByProjectId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'projectId', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct>
       distinctByTimestamp() {
     return QueryBuilder.apply(this, (query) {
@@ -1280,6 +1459,12 @@ extension ChangeLogEntryQueryProperty
   QueryBuilder<ChangeLogEntry, int?, QQueryOperations> outdatedByProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'outdatedBy');
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, String, QQueryOperations> projectIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'projectId');
     });
   }
 

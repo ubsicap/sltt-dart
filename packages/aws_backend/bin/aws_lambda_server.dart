@@ -56,7 +56,7 @@ Future<Map<String, dynamic>> _handleGetRequest(
       if (path.contains(RegExp(r'/changes/\d+$'))) {
         // Get specific change: /api/changes/123
         final seq = int.parse(path.split('/').last);
-        final change = await storage.getChange(seq);
+        final change = await storage.getChange(storage.projectId, seq);
 
         if (change == null) {
           return _errorResponse('Change not found', 404);
@@ -69,6 +69,7 @@ Future<Map<String, dynamic>> _handleGetRequest(
         final limit = int.tryParse(queryParams['limit']?.toString() ?? '100') ?? 100;
 
         final changes = await storage.getChangesWithCursor(
+          projectId: storage.projectId,
           cursor: cursor,
           limit: limit.clamp(1, 1000),
         );
@@ -82,7 +83,7 @@ Future<Map<String, dynamic>> _handleGetRequest(
       }
     } else if (path.contains('/stats')) {
       // Get statistics: /api/stats
-      final stats = await storage.getChangeStats();
+      final stats = await storage.getChangeStats(storage.projectId);
       return _successResponse(stats);
     } else if (path.contains('/health')) {
       // Health check: /health

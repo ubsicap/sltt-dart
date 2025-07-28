@@ -59,13 +59,13 @@ abstract class BaseRestApiServer {
   Router buildRouter() {
     final router = Router();
 
-    // Standard endpoints (same for all servers)
+        // Standard endpoints (same for all servers)
     router.get('/health', _handleHealth);
     router.get('/api/help', _handleApiDocs);
-    router.post('/api/changes', _handleCreateChanges);
-    router.get('/api/changes', _handleGetChanges);
-    router.get('/api/changes/<seq>', _handleGetChange);
-    router.get('/api/stats', _handleGetStats);
+    router.post('/api/projects/<projectId>/changes', _handleCreateChanges);
+    router.get('/api/projects/<projectId>/changes', _handleGetChanges);
+    router.get('/api/projects/<projectId>/changes/<seq>', _handleGetChange);
+    router.get('/api/projects/<projectId>/stats', _handleGetStats);
 
     // Allow subclasses to add custom routes
     addCustomRoutes(router);
@@ -110,9 +110,15 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/changes',
-          'description': 'Get all changes with optional pagination',
+          'path': '/api/projects/{projectId}/changes',
+          'description': 'Get all changes for a project with optional pagination',
           'parameters': [
+            {
+              'name': 'projectId',
+              'type': 'string',
+              'required': true,
+              'description': 'Project identifier',
+            },
             {
               'name': 'cursor',
               'type': 'integer',
@@ -129,18 +135,48 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/changes/{seq}',
-          'description': 'Get specific change by sequence number',
+          'path': '/api/projects/{projectId}/changes/{seq}',
+          'description': 'Get specific change by sequence number for a project',
+          'parameters': [
+            {
+              'name': 'projectId',
+              'type': 'string',
+              'required': true,
+              'description': 'Project identifier',
+            },
+            {
+              'name': 'seq',
+              'type': 'integer',
+              'required': true,
+              'description': 'Change sequence number',
+            },
+          ],
         },
         {
           'method': 'POST',
-          'path': '/api/changes',
-          'description': 'Create new changes (array format)',
+          'path': '/api/projects/{projectId}/changes',
+          'description': 'Create new changes for a project (array format)',
+          'parameters': [
+            {
+              'name': 'projectId',
+              'type': 'string',
+              'required': true,
+              'description': 'Project identifier',
+            },
+          ],
         },
         {
           'method': 'GET',
-          'path': '/api/stats',
-          'description': 'Get statistics about changes and entity types',
+          'path': '/api/projects/{projectId}/stats',
+          'description': 'Get statistics about changes and entity types for a project',
+          'parameters': [
+            {
+              'name': 'projectId',
+              'type': 'string',
+              'required': true,
+              'description': 'Project identifier',
+            },
+          ],
         },
       ],
       'timestamp': DateTime.now().toIso8601String(),
@@ -155,6 +191,11 @@ abstract class BaseRestApiServer {
   /// Get changes with optional pagination
   Future<Response> _handleGetChanges(Request request) async {
     try {
+      final projectId = request.params['projectId'];
+      if (projectId == null || projectId.isEmpty) {
+        return _errorResponse('Project ID is required', 400);
+      }
+
       final cursorParam = request.url.queryParameters['cursor'];
       final limitParam = request.url.queryParameters['limit'];
 
@@ -178,6 +219,7 @@ abstract class BaseRestApiServer {
       }
 
       final changes = await storage.getChangesWithCursor(
+        projectId: projectId,
         cursor: cursor,
         limit: limit,
       );
@@ -192,6 +234,7 @@ abstract class BaseRestApiServer {
       if (changes.isNotEmpty && (limit == null || changes.length == limit)) {
         final lastChangeId = changes.last['seq'] as int;
         final moreChanges = await storage.getChangesWithCursor(
+          projectId: projectId,
           cursor: lastChangeId,
           limit: 1,
         );
@@ -211,14 +254,14 @@ abstract class BaseRestApiServer {
   }
 
   /// Get specific change by sequence number
-  Future<Response> _handleGetChange(Request request, String seq) async {
+  Future<Response> _handleGetChange(Request request, String projectId, String seq) async {
     try {
       final changeSeq = int.tryParse(seq);
       if (changeSeq == null) {
         return _errorResponse('Invalid change seq format', 400);
       }
 
-      final change = await storage.getChange(changeSeq);
+      final change = await storage.getChange(projectId, changeSeq);
       if (change == null) {
         return _errorResponse('Change not found', 404);
       }
@@ -235,6 +278,11 @@ abstract class BaseRestApiServer {
   /// Create new changes
   Future<Response> _handleCreateChanges(Request request) async {
     try {
+      final projectId = request.params['projectId'];
+      if (projectId == null || projectId.isEmpty) {
+        return _errorResponse('Project ID is required', 400);
+      }
+
       final body = await request.readAsString();
       final data = jsonDecode(body);
 
@@ -258,6 +306,7 @@ abstract class BaseRestApiServer {
           final originalSeq = changeData['seq'] as int?;
 
           final changeToStore = {
+            'projectId': projectId,
             'entityType': changeData['entityType'] as String,
             'operation': changeData['operation'] as String? ?? 'create',
             'entityId': changeData['entityId'] as String,
@@ -307,11 +356,17 @@ abstract class BaseRestApiServer {
   /// Get statistics
   Future<Response> _handleGetStats(Request request) async {
     try {
-      final changeStats = await storage.getChangeStats();
-      final entityTypeStats = await storage.getEntityTypeStats();
+      final projectId = request.params['projectId'];
+      if (projectId == null || projectId.isEmpty) {
+        return _errorResponse('Project ID is required', 400);
+      }
+
+      final changeStats = await storage.getChangeStats(projectId);
+      final entityTypeStats = await storage.getEntityTypeStats(projectId);
 
       return Response.ok(
         jsonEncode({
+          'projectId': projectId,
           'changeStats': changeStats,
           'entityTypeStats': entityTypeStats,
           'timestamp': DateTime.now().toIso8601String(),

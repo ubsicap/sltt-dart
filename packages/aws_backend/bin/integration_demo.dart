@@ -15,10 +15,12 @@ import 'package:sltt_core/sltt_core.dart';
 Future<void> main() async {
   print('🚀 Starting AWS Integration Demo\n');
 
+  const projectId = 'integration-project-456';
+
   // Create a DynamoDB-backed cloud storage service
   final dynamoCloudStorage = DynamoDBStorageService(
     tableName: 'sltt-integration-demo',
-    projectId: 'integration-project-456',
+    projectId: projectId,
     region: 'us-east-1',
     useLocalDynamoDB: true,
     localEndpoint: 'http://localhost:8000',
@@ -65,7 +67,7 @@ Future<void> main() async {
 
     // Simulate sync from local to DynamoDB cloud
     print('⬆️ Syncing local changes to DynamoDB cloud...');
-    final localChanges = await localOutsyncs.getChangesWithCursor();
+    final localChanges = await localOutsyncs.getChangesWithCursor(projectId: projectId);
 
     final seqMapping = <int, int>{}; // old seq -> new seq
 
@@ -104,7 +106,7 @@ Future<void> main() async {
     final lastLocalSeq = await localDownsyncs.getLastSeq();
     print('   Last local downsync seq: $lastLocalSeq');
 
-    final cloudChanges = await dynamoCloudStorage.getChangesSince(0); // Get all for demo
+    final cloudChanges = await dynamoCloudStorage.getChangesSince(projectId, 0); // Get all for demo
 
     for (final cloudChange in cloudChanges) {
       // Add to local downsyncs storage
@@ -121,30 +123,30 @@ Future<void> main() async {
     // Compare statistics between local and cloud
     print('📊 Storage Statistics Comparison:');
 
-    final localOutstats = await localOutsyncs.getChangeStats();
-    final localDownstats = await localDownsyncs.getChangeStats();
-    final cloudStats = await dynamoCloudStorage.getChangeStats();
+    final localOutstats = await localOutsyncs.getChangeStats(projectId);
+    final localDownstats = await localDownsyncs.getChangeStats(projectId);
+    final cloudStats = await dynamoCloudStorage.getChangeStats(projectId);
 
     print('   Local Outsyncs: ${localOutstats['total']} changes');
     print('   Local Downsyncs: ${localDownstats['total']} changes');
     print('   DynamoDB Cloud: ${cloudStats['total']} changes');
 
-    final cloudEntityStats = await dynamoCloudStorage.getEntityTypeStats();
+    final cloudEntityStats = await dynamoCloudStorage.getEntityTypeStats(projectId);
     print('   Cloud entity types: $cloudEntityStats');
     print('✅ Statistics comparison completed\n');
 
     // Demonstrate pagination across both systems
     print('📄 Testing pagination consistency...');
 
-    final localPage1 = await localDownsyncs.getChangesWithCursor(limit: 2);
+    final localPage1 = await localDownsyncs.getChangesWithCursor(projectId: projectId, limit: 2);
     print('   Local page 1: ${localPage1.length} changes');
 
-    final cloudPage1 = await dynamoCloudStorage.getChangesWithCursor(limit: 2);
+    final cloudPage1 = await dynamoCloudStorage.getChangesWithCursor(projectId: projectId, limit: 2);
     print('   Cloud page 1: ${cloudPage1.length} changes');
 
     if (cloudPage1.isNotEmpty) {
       final cursor = cloudPage1.last['seq'] as int;
-      final cloudPage2 = await dynamoCloudStorage.getChangesWithCursor(cursor: cursor, limit: 2);
+      final cloudPage2 = await dynamoCloudStorage.getChangesWithCursor(projectId: projectId, cursor: cursor, limit: 2);
       print('   Cloud page 2: ${cloudPage2.length} changes (cursor: $cursor)');
     }
     print('✅ Pagination test completed\n');

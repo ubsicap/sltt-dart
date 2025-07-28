@@ -68,22 +68,22 @@ Future<void> main() async {
 
     // Test 2: Get changes with cursor
     print('🔍 Testing change retrieval with cursor...');
-    final allChanges = await storage.getChangesWithCursor();
+    final allChanges = await storage.getChangesWithCursor(projectId: storage.projectId);
     print('   Retrieved ${allChanges.length} changes total');
 
-    final limitedChanges = await storage.getChangesWithCursor(limit: 2);
+    final limitedChanges = await storage.getChangesWithCursor(projectId: storage.projectId, limit: 2);
     print('   Retrieved ${limitedChanges.length} changes with limit=2');
 
     if (limitedChanges.isNotEmpty) {
       final cursor = limitedChanges.last['seq'] as int;
-      final remainingChanges = await storage.getChangesWithCursor(cursor: cursor);
+      final remainingChanges = await storage.getChangesWithCursor(projectId: storage.projectId, cursor: cursor);
       print('   Retrieved ${remainingChanges.length} changes after cursor=$cursor');
     }
     print('✅ Cursor-based retrieval test passed\n');
 
     // Test 3: Get specific change
     print('🎯 Testing specific change retrieval...');
-    final specificChange = await storage.getChange(change1['seq'] as int);
+    final specificChange = await storage.getChange(storage.projectId, change1['seq'] as int);
     if (specificChange != null) {
       print(
         '   Retrieved change ${specificChange['seq']}: ${specificChange['entityType']}/${specificChange['entityId']}',
@@ -96,7 +96,7 @@ Future<void> main() async {
 
     // Test 4: Get changes since sequence
     print('📈 Testing changes since sequence...');
-    final changesSince = await storage.getChangesSince(change1['seq'] as int);
+    final changesSince = await storage.getChangesSince(storage.projectId, change1['seq'] as int);
     print('   Retrieved ${changesSince.length} changes since seq ${change1['seq']}');
     for (final change in changesSince) {
       print('   - ${change['seq']}: ${change['entityType']}/${change['entityId']} (${change['operation']})');
@@ -105,16 +105,16 @@ Future<void> main() async {
 
     // Test 5: Get statistics
     print('📊 Testing statistics...');
-    final changeStats = await storage.getChangeStats();
+    final changeStats = await storage.getChangeStats(storage.projectId);
     print('   Change stats: $changeStats');
 
-    final entityStats = await storage.getEntityTypeStats();
+    final entityStats = await storage.getEntityTypeStats(storage.projectId);
     print('   Entity type stats: $entityStats');
     print('✅ Statistics test passed\n');
 
     // Test 6: Get non-outdated changes
     print('🔄 Testing non-outdated changes...');
-    final nonOutdatedChanges = await storage.getChangesNotOutdated();
+    final nonOutdatedChanges = await storage.getChangesNotOutdated(storage.projectId);
     print('   Retrieved ${nonOutdatedChanges.length} non-outdated changes');
     print('✅ Non-outdated changes test passed\n');
 

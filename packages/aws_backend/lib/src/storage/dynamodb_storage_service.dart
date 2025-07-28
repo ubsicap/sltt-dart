@@ -110,13 +110,13 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>?> getChange(int seq) async {
+  Future<Map<String, dynamic>?> getChange(String requestProjectId, int seq) async {
     if (!_initialized) await initialize();
 
     final getRequest = {
       'TableName': tableName,
       'Key': {
-        'pk': {'S': projectId},
+        'pk': {'S': requestProjectId},
         'seq': {'N': seq.toString()},
       },
     };
@@ -137,6 +137,7 @@ class DynamoDBStorageService implements BaseStorageService {
 
   @override
   Future<List<Map<String, dynamic>>> getChangesWithCursor({
+    required String projectId,
     int? cursor,
     int? limit,
   }) async {
@@ -175,14 +176,14 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getChangesSince(int seq) async {
+  Future<List<Map<String, dynamic>>> getChangesSince(String requestProjectId, int seq) async {
     if (!_initialized) await initialize();
 
     final queryRequest = {
       'TableName': tableName,
       'KeyConditionExpression': 'pk = :pk AND seq > :seq',
       'ExpressionAttributeValues': {
-        ':pk': {'S': projectId},
+        ':pk': {'S': requestProjectId},
         ':seq': {'N': seq.toString()},
       },
       'ScanIndexForward': true, // Sort by seq ascending
@@ -201,7 +202,7 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getChangeStats() async {
+  Future<Map<String, dynamic>> getChangeStats(String requestProjectId) async {
     if (!_initialized) await initialize();
 
     // Get total count of changes for this project
@@ -209,7 +210,7 @@ class DynamoDBStorageService implements BaseStorageService {
       'TableName': tableName,
       'KeyConditionExpression': 'pk = :pk',
       'ExpressionAttributeValues': {
-        ':pk': {'S': projectId},
+        ':pk': {'S': requestProjectId},
       },
       'Select': 'COUNT',
     };
@@ -230,7 +231,7 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getEntityTypeStats() async {
+  Future<Map<String, dynamic>> getEntityTypeStats(String requestProjectId) async {
     if (!_initialized) await initialize();
 
     // For DynamoDB, we use Query instead of Scan for better performance
@@ -239,7 +240,7 @@ class DynamoDBStorageService implements BaseStorageService {
       'TableName': tableName,
       'KeyConditionExpression': 'pk = :pk',
       'ExpressionAttributeValues': {
-        ':pk': {'S': projectId},
+        ':pk': {'S': requestProjectId},
       },
     };
 
@@ -286,7 +287,7 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getChangesNotOutdated() async {
+  Future<List<Map<String, dynamic>>> getChangesNotOutdated(String requestProjectId) async {
     if (!_initialized) await initialize();
 
     final queryRequest = {
@@ -294,7 +295,7 @@ class DynamoDBStorageService implements BaseStorageService {
       'KeyConditionExpression': 'pk = :pk',
       'FilterExpression': 'attribute_not_exists(outdatedBy)',
       'ExpressionAttributeValues': {
-        ':pk': {'S': projectId},
+        ':pk': {'S': requestProjectId},
       },
       'ScanIndexForward': true, // Sort by seq ascending
     };

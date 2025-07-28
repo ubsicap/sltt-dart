@@ -42,6 +42,7 @@ class LocalStorageService implements BaseStorageService {
   @override
   Future<Map<String, dynamic>> createChange(Map<String, dynamic> changeData) async {
     final change = ChangeLogEntry(
+      projectId: changeData['projectId'] ?? '',
       entityType: changeData['entityType'] ?? '',
       operation: changeData['operation'] ?? '',
       timestamp: DateTime.now(),
@@ -55,8 +56,13 @@ class LocalStorageService implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>?> getChange(int seq) async {
-    final change = await _isar.changeLogEntrys.get(seq);
+  Future<Map<String, dynamic>?> getChange(String projectId, int seq) async {
+    final change = await _isar.changeLogEntrys
+        .where()
+        .seqEqualTo(seq)
+        .filter()
+        .projectIdEqualTo(projectId)
+        .findFirst();
     return change?.toJson();
   }
 
@@ -103,11 +109,29 @@ class LocalStorageService implements BaseStorageService {
 
   // Statistics operations
   @override
-  Future<Map<String, int>> getChangeStats() async {
-    final total = await _isar.changeLogEntrys.count();
-    final creates = await _isar.changeLogEntrys.filter().operationEqualTo('create').count();
-    final updates = await _isar.changeLogEntrys.filter().operationEqualTo('update').count();
-    final deletes = await _isar.changeLogEntrys.filter().operationEqualTo('delete').count();
+  Future<Map<String, dynamic>> getChangeStats(String projectId) async {
+    final total = await _isar.changeLogEntrys
+        .filter()
+        .projectIdEqualTo(projectId)
+        .count();
+    final creates = await _isar.changeLogEntrys
+        .filter()
+        .projectIdEqualTo(projectId)
+        .and()
+        .operationEqualTo('create')
+        .count();
+    final updates = await _isar.changeLogEntrys
+        .filter()
+        .projectIdEqualTo(projectId)
+        .and()
+        .operationEqualTo('update')
+        .count();
+    final deletes = await _isar.changeLogEntrys
+        .filter()
+        .projectIdEqualTo(projectId)
+        .and()
+        .operationEqualTo('delete')
+        .count();
 
     return {
       'total': total,
@@ -118,8 +142,11 @@ class LocalStorageService implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, int>> getEntityTypeStats() async {
-    final allEntries = await _isar.changeLogEntrys.where().findAll();
+  Future<Map<String, dynamic>> getEntityTypeStats(String projectId) async {
+    final allEntries = await _isar.changeLogEntrys
+        .filter()
+        .projectIdEqualTo(projectId)
+        .findAll();
     final stats = <String, int>{};
 
     for (final entry in allEntries) {
@@ -161,11 +188,17 @@ class LocalStorageService implements BaseStorageService {
   // Cursor-based pagination and filtering
   @override
   Future<List<Map<String, dynamic>>> getChangesWithCursor({
+    required String projectId,
     int? cursor,
     int? limit,
   }) async {
-    var query = _isar.changeLogEntrys.where();
-    var results = await query.seqGreaterThan(cursor ?? 0).findAll();
+    var query = _isar.changeLogEntrys
+        .where()
+        .seqGreaterThan(cursor ?? 0)
+        .filter()
+        .projectIdEqualTo(projectId);
+    
+    var results = await query.findAll();
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
     }
@@ -177,15 +210,14 @@ class LocalStorageService implements BaseStorageService {
   /// Returns only changes that haven't been marked as outdated,
   /// which prevents syncing obsolete change log entries.
   @override
-  Future<List<Map<String, dynamic>>> getChangesNotOutdated({
-    int? cursor,
-    int? limit,
-  }) async {
-    var query = _isar.changeLogEntrys.where();
-    var results = await query.seqGreaterThan(cursor ?? 0).filter().outdatedByIsNull().findAll();
-    if (limit != null && results.length > limit) {
-      results = results.sublist(0, limit);
-    }
+  Future<List<Map<String, dynamic>>> getChangesNotOutdated(String projectId) async {
+    var results = await _isar.changeLogEntrys
+        .where()
+        .filter()
+        .projectIdEqualTo(projectId)
+        .and()
+        .outdatedByIsNull()
+        .findAll();
     return results.map((e) => e.toJson()).toList();
   }
 
@@ -231,8 +263,13 @@ class LocalStorageService implements BaseStorageService {
 
   // Get changes since a specific sequence number (for syncing)
   @override
-  Future<List<Map<String, dynamic>>> getChangesSince(int seq) async {
-    final results = await _isar.changeLogEntrys.where().seqGreaterThan(seq).findAll();
+  Future<List<Map<String, dynamic>>> getChangesSince(String projectId, int seq) async {
+    final results = await _isar.changeLogEntrys
+        .where()
+        .seqGreaterThan(seq)
+        .filter()
+        .projectIdEqualTo(projectId)
+        .findAll();
     // Sort by seq in ascending order
     results.sort((a, b) => a.seq.compareTo(b.seq));
     return results.map((e) => e.toJson()).toList();
@@ -243,6 +280,7 @@ class LocalStorageService implements BaseStorageService {
     final changes = changesData
         .map(
           (changeData) => ChangeLogEntry(
+            projectId: changeData['projectId'] ?? '',
             entityType: changeData['entityType'] ?? '',
             operation: changeData['operation'] ?? '',
             timestamp: DateTime.now(),

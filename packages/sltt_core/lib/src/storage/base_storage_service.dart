@@ -13,22 +13,23 @@ abstract class BaseStorageService {
   Future<Map<String, dynamic>> createChange(Map<String, dynamic> changeData);
 
   /// Get a specific change by sequence number
-  Future<Map<String, dynamic>?> getChange(int seq);
+  Future<Map<String, dynamic>?> getChange(String projectId, int seq);
 
   /// Get changes with cursor-based pagination
   Future<List<Map<String, dynamic>>> getChangesWithCursor({
+    required String projectId,
     int? cursor,
     int? limit,
   });
 
   /// Get all changes since a specific sequence number
-  Future<List<Map<String, dynamic>>> getChangesSince(int seq);
+  Future<List<Map<String, dynamic>>> getChangesSince(String projectId, int seq);
 
   /// Get statistics about change operations
-  Future<Map<String, dynamic>> getChangeStats();
+  Future<Map<String, dynamic>> getChangeStats(String projectId);
 
   /// Get statistics about entity types
-  Future<Map<String, dynamic>> getEntityTypeStats();
+  Future<Map<String, dynamic>> getEntityTypeStats(String projectId);
 
   /// Mark a change as outdated (for local storage services)
   Future<void> markAsOutdated(int seq, int outdatedBy) async {
@@ -37,8 +38,8 @@ abstract class BaseStorageService {
   }
 
   /// Get changes that are not outdated (for local storage services)
-  Future<List<Map<String, dynamic>>> getChangesNotOutdated() async {
+  Future<List<Map<String, dynamic>>> getChangesNotOutdated(String projectId) async {
     // Default implementation - override in local storage services
-    return getChangesWithCursor();
+    return getChangesWithCursor(projectId: projectId);
   }
 }

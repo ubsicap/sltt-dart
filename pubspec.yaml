@@ -4,7 +4,7 @@ description: A comprehensive mono-repo for offline-first sync systems
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '^3.8.2'
 
 # This is a workspace configuration
 # Individual packages have their own dependencies
