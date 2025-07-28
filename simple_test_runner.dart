@@ -49,7 +49,7 @@ Future<void> main(List<String> args) async {
     totalRun++;
   }
 
-  print('\n' + '=' * 60);
+  print('\n${'=' * 60}');
   print('🟡 TESTING POTENTIALLY PROBLEMATIC TESTS');
   print('=' * 60);
 
@@ -65,7 +65,7 @@ Future<void> main(List<String> args) async {
     totalRun++;
   }
 
-  print('\n' + '=' * 60);
+  print('\n${'=' * 60}');
   print('📊 FINAL SUMMARY');
   print('=' * 60);
   print('Total tests run: $totalRun');

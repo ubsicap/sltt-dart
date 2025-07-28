@@ -84,20 +84,23 @@ Future<void> main(List<String> args) async {
   testResults['Sync Manager Tests'] = syncResult;
   if (syncResult.passed) passedTests++;
   if (syncResult.skipped) skippedTests++;
-  totalTests++; // Summary
-  print('\n' + '=' * 60);
+  totalTests++;
+
+  // Summary
+  print('\n${'=' * 60}');
   print('📊 TEST SUMMARY');
   print('=' * 60);
 
   for (final entry in testResults.entries) {
-    final status = entry.value ? '✅ PASS' : '❌ FAIL';
+    final status = entry.value.passed ? '✅ PASS' : '❌ FAIL';
     print('  ${entry.key.padRight(25)} $status');
   }
 
   print('\n📈 Overall Results:');
   print('  Total Tests: $totalTests');
   print('  Passed: $passedTests');
-  print('  Failed: ${totalTests - passedTests}');
+  print('  Skipped: $skippedTests');
+  print('  Failed: ${totalTests - passedTests - skippedTests}');
   print(
     '  Success Rate: ${((passedTests / totalTests) * 100).toStringAsFixed(1)}%',
   );
@@ -121,11 +124,12 @@ Future<void> main(List<String> args) async {
   print('\n📚 For more info: https://dart.dev/guides/testing');
 }
 
-Future<bool> runTest(
+Future<TestResult> runTest(
   String workingDir,
   String testFile,
-  String description,
-) async {
+  String description, {
+  int timeout = 30,
+}) async {
   try {
     print('   📁 Directory: $workingDir');
     print('   📄 Test File: $testFile');
@@ -139,7 +143,7 @@ Future<bool> runTest(
 
     if (result.exitCode == 0) {
       print('   ✅ PASSED');
-      return true;
+      return TestResult(passed: true);
     } else {
       print('   ❌ FAILED (Exit code: ${result.exitCode})');
       if (result.stderr.toString().isNotEmpty) {
@@ -147,10 +151,10 @@ Future<bool> runTest(
         final lines = stderr.split('\n');
         print('   📋 Error: ${lines.first}');
       }
-      return false;
+      return TestResult(passed: false, error: 'Exit code: ${result.exitCode}');
     }
   } catch (e) {
     print('   ❌ ERROR: $e');
-    return false;
+    return TestResult(passed: false, error: e.toString());
   }
 }
