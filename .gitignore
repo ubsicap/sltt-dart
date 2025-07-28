@@ -10,6 +10,13 @@
 .svn/
 migrate_working_dir/
 
+# Binary files that should not be committed to git
+*.so
+*.exe
+*.dll
+*.dylib
+*.a
+
 # IntelliJ related
 *.iml
 *.ipr
