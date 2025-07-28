@@ -140,14 +140,42 @@ Or use a single Lambda that handles multiple projects based on request context.
 
 The package includes a `serverless.yml` configuration optimized for AWS Lambda deployment:
 
-```bash
-# Install serverless framework and dart plugin
-npm install -g serverless
-npm install serverless-dart
+### Prerequisites
 
+1. **Install Docker** (required for Windows/macOS only):
+   ```bash
+   # Docker is ONLY required for Windows and macOS
+   # Linux and WSL2 can compile natively without Docker
+   
+   # Windows/macOS users: Get Docker at https://docs.docker.com/get-docker/
+   # Linux/WSL2 users: Skip this step - no Docker needed!
+   ```
+
+2. **Install Serverless Framework and Dart plugin**:
+   ```bash
+   npm install -g serverless
+   npm install -D serverless-dart
+   ```
+
+### Deployment
+
+```bash
 # Deploy to AWS with project-specific configuration
-serverless deploy --stage dev --project my-project-123
+serverless deploy --stage dev
+
+# The serverless-dart plugin will automatically:
+# 1. Build your Dart application (natively on Linux/WSL2, or in Docker on Windows/macOS)
+# 2. Compile to native binary using dart compile exe (or dart2native)
+# 3. Package as 'bootstrap' executable for AWS Lambda custom runtime
+# 4. Deploy to AWS with DynamoDB table creation
 ```
+
+### Platform-Specific Notes
+
+- **Linux/WSL2**: ✅ Native compilation - no Docker required
+- **Windows**: ❌ Requires Docker for cross-compilation to Linux x64  
+- **macOS**: ❌ Requires Docker for cross-compilation to Linux x64
+- **Alternative**: Build on Linux/WSL2 machine or use CI/CD pipeline
 
 ### Environment Variables
 
@@ -244,6 +272,31 @@ This demonstrates hybrid local/cloud synchronization.
 - **Batch Operations**: Supports creating multiple changes in one request
 - **Pagination**: Cursor-based pagination prevents memory issues
 - **Project Isolation**: Each project's queries are scoped to its own partition
+
+## Troubleshooting
+
+### Docker Issues (Windows/macOS only)
+- **Problem**: "Cannot connect to Docker daemon"
+  - **Solution**: Ensure Docker Desktop is running
+  - **WSL2/Linux users**: You can skip Docker entirely!
+
+### Compilation Issues  
+- **Problem**: "dart2native: No such file or directory"
+  - **Solution**: Ensure Dart SDK ≥ 2.6 is installed (or use `dart compile exe` in newer versions)
+  - **Check**: `dart --version`
+- **Problem**: "Cross-compilation not supported"
+  - **Solution**: Use Docker on Windows/macOS, or build on Linux/WSL2
+
+### Deployment Issues
+- **Problem**: "serverless-dart plugin not found"
+  - **Solution**: `npm install -D serverless-dart` in your project
+- **Problem**: Permission denied on AWS
+  - **Solution**: Configure AWS credentials: `aws configure`
+
+### Runtime Issues
+- **Problem**: "Runtime.ImportModuleError" in Lambda
+  - **Solution**: Ensure binary is named `bootstrap` (serverless-dart handles this)
+  - **Check**: Your handler in serverless.yml matches your Dart main function
 
 ## Future Enhancements
 
