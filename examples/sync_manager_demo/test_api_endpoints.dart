@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 
@@ -17,10 +18,10 @@ Future<void> main() async {
 
     // Test with various projectId formats including URL-unsafe characters
     final testProjectIds = [
-      'test-project-123',          // Simple case
-      'org/team/project',          // With forward slashes
-      'project@domain.com',        // With @ symbol
-      'my project name',           // With spaces
+      'test-project-123', // Simple case
+      'org/team/project', // With forward slashes
+      'project@domain.com', // With @ symbol
+      'my project name', // With spaces
       'project-v1.2.3+build_456', // With + symbol
     ];
 
@@ -55,10 +56,12 @@ Future<void> main() async {
     for (int i = 0; i < testProjectIds.length; i++) {
       final projectId = testProjectIds[i];
       final encodedProjectId = Uri.encodeComponent(projectId);
-      
-      print('🔍 Testing projectId ${i + 1}/${testProjectIds.length}: "$projectId"');
+
+      print(
+        '🔍 Testing projectId ${i + 1}/${testProjectIds.length}: "$projectId"',
+      );
       print('   URL encoded: "$encodedProjectId"');
-      
+
       try {
         // Test 3a: Create a test change
         print('   📝 Creating change...');
@@ -75,7 +78,9 @@ Future<void> main() async {
         ];
 
         final createResponse = await http.post(
-          Uri.parse('http://localhost:8080/api/projects/$encodedProjectId/changes'),
+          Uri.parse(
+            'http://localhost:8080/api/projects/$encodedProjectId/changes',
+          ),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(changeData),
         );
@@ -83,66 +88,83 @@ Future<void> main() async {
         if (createResponse.statusCode == 200) {
           final createResult = jsonDecode(createResponse.body);
           print('   ✅ Change created: ${createResult['createdSeqs']}');
-          
+
           // Verify that the projectId in response matches original
           final returnedProjectId = createResult['projectId'];
           if (returnedProjectId == projectId) {
             print('   ✅ ProjectId encoding/decoding verified');
           } else {
-            print('   ❌ ProjectId mismatch! Expected: "$projectId", Got: "$returnedProjectId"');
+            print(
+              '   ❌ ProjectId mismatch! Expected: "$projectId", Got: "$returnedProjectId"',
+            );
           }
         } else {
-          print('   ❌ Change creation failed: ${createResponse.statusCode} ${createResponse.body}');
+          print(
+            '   ❌ Change creation failed: ${createResponse.statusCode} ${createResponse.body}',
+          );
           continue;
         }
 
         // Test 3b: Get changes for the project
         print('   � Retrieving changes...');
         final changesResponse = await http.get(
-          Uri.parse('http://localhost:8080/api/projects/$encodedProjectId/changes'),
+          Uri.parse(
+            'http://localhost:8080/api/projects/$encodedProjectId/changes',
+          ),
         );
 
         if (changesResponse.statusCode == 200) {
           final changesResult = jsonDecode(changesResponse.body);
           print('   ✅ Retrieved ${changesResult['changes'].length} changes');
-          
+
           if (changesResult['changes'].isNotEmpty) {
             final change = changesResult['changes'][0];
             final retrievedProjectId = change['projectId'];
-            print('   📦 Change details: seq=${change['seq']}, projectId="$retrievedProjectId"');
-            
+            print(
+              '   📦 Change details: seq=${change['seq']}, projectId="$retrievedProjectId"',
+            );
+
             if (retrievedProjectId == projectId) {
               print('   ✅ Retrieved projectId matches original');
             } else {
-              print('   ❌ Retrieved projectId mismatch! Expected: "$projectId", Got: "$retrievedProjectId"');
+              print(
+                '   ❌ Retrieved projectId mismatch! Expected: "$projectId", Got: "$retrievedProjectId"',
+              );
             }
           }
         } else {
-          print('   ❌ Change retrieval failed: ${changesResponse.statusCode} ${changesResponse.body}');
+          print(
+            '   ❌ Change retrieval failed: ${changesResponse.statusCode} ${changesResponse.body}',
+          );
         }
 
         // Test 3c: Get project statistics
         print('   � Getting statistics...');
         final statsResponse = await http.get(
-          Uri.parse('http://localhost:8080/api/projects/$encodedProjectId/stats'),
+          Uri.parse(
+            'http://localhost:8080/api/projects/$encodedProjectId/stats',
+          ),
         );
 
         if (statsResponse.statusCode == 200) {
           final statsResult = jsonDecode(statsResponse.body);
           print('   ✅ Statistics: ${statsResult['changeStats']}');
-          
+
           final statsProjectId = statsResult['projectId'];
           if (statsProjectId == projectId) {
             print('   ✅ Stats projectId matches original');
           } else {
-            print('   ❌ Stats projectId mismatch! Expected: "$projectId", Got: "$statsProjectId"');
+            print(
+              '   ❌ Stats projectId mismatch! Expected: "$projectId", Got: "$statsProjectId"',
+            );
           }
         } else {
-          print('   ❌ Statistics failed: ${statsResponse.statusCode} ${statsResponse.body}');
+          print(
+            '   ❌ Statistics failed: ${statsResponse.statusCode} ${statsResponse.body}',
+          );
         }
 
         print('   ✅ Test completed for projectId: "$projectId"\n');
-
       } catch (e) {
         print('   ❌ Test failed for projectId "$projectId": $e\n');
       }
@@ -152,7 +174,9 @@ Future<void> main() async {
     print('🔍 Testing error handling...');
     try {
       final badResponse = await http.get(
-        Uri.parse('http://localhost:8080/api/projects//changes'), // Empty projectId
+        Uri.parse(
+          'http://localhost:8080/api/projects//changes',
+        ), // Empty projectId
       );
       print('   Empty projectId response: ${badResponse.statusCode}');
       if (badResponse.statusCode >= 400) {
@@ -162,7 +186,9 @@ Future<void> main() async {
       print('   ✅ Empty projectId properly rejected: $e');
     }
 
-    print('🎉 All API endpoint tests with URL encoding completed successfully!');
+    print(
+      '🎉 All API endpoint tests with URL encoding completed successfully!',
+    );
 
     // Clean up
     await server.stop();

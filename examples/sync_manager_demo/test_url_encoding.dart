@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 
@@ -10,7 +11,10 @@ Future<void> main() async {
 
   try {
     // Create an enhanced REST API server with local storage
-    final server = EnhancedRestApiServer(StorageType.outsyncs, 'URL Test Server');
+    final server = EnhancedRestApiServer(
+      StorageType.outsyncs,
+      'URL Test Server',
+    );
     await server.start(port: 8081);
 
     print('✅ Server started on port 8081\n');
@@ -86,7 +90,8 @@ Future<void> main() async {
           },
         ];
 
-        final createUrl = 'http://localhost:8081/api/projects/$expectedEncoded/changes';
+        final createUrl =
+            'http://localhost:8081/api/projects/$expectedEncoded/changes';
         print('   POST URL: $createUrl');
 
         final createResponse = await http.post(
@@ -99,16 +104,18 @@ Future<void> main() async {
           final createResult = jsonDecode(createResponse.body);
           final returnedProjectId = createResult['projectId'];
           final createdSeqs = createResult['createdSeqs'] as List?;
-          
+
           print('   ✅ Change created successfully');
           print('   📦 Created sequences: $createdSeqs');
           print('   📦 Returned projectId: "$returnedProjectId"');
-          
+
           // Verify that the decoded projectId matches the original
           if (returnedProjectId == projectId) {
             print('   ✅ ProjectId encoding/decoding is correct');
           } else {
-            print('   ❌ ProjectId mismatch! Expected: "$projectId", Got: "$returnedProjectId"');
+            print(
+              '   ❌ ProjectId mismatch! Expected: "$projectId", Got: "$returnedProjectId"',
+            );
           }
         } else {
           print('   ❌ Change creation failed: ${createResponse.statusCode}');
@@ -118,28 +125,33 @@ Future<void> main() async {
 
         // Test 2: Retrieve changes using URL-encoded projectId
         print('   📋 Retrieving changes...');
-        final getUrl = 'http://localhost:8081/api/projects/$expectedEncoded/changes';
+        final getUrl =
+            'http://localhost:8081/api/projects/$expectedEncoded/changes';
         final getResponse = await http.get(Uri.parse(getUrl));
 
         if (getResponse.statusCode == 200) {
           final getResult = jsonDecode(getResponse.body);
           final changes = getResult['changes'] as List;
-          
+
           if (changes.isNotEmpty) {
             final firstChange = changes.first;
             final retrievedProjectId = firstChange['projectId'];
-            
+
             print('   ✅ Changes retrieved successfully');
             print('   📦 Retrieved projectId: "$retrievedProjectId"');
-            
+
             // Verify projectId in the change data matches original
             if (retrievedProjectId == projectId) {
               print('   ✅ Retrieved projectId matches original');
             } else {
-              print('   ❌ Retrieved projectId mismatch! Expected: "$projectId", Got: "$retrievedProjectId"');
+              print(
+                '   ❌ Retrieved projectId mismatch! Expected: "$projectId", Got: "$retrievedProjectId"',
+              );
             }
           } else {
-            print('   ⚠️  No changes found (might be database isolation issue)');
+            print(
+              '   ⚠️  No changes found (might be database isolation issue)',
+            );
           }
         } else {
           print('   ❌ Change retrieval failed: ${getResponse.statusCode}');
@@ -148,27 +160,31 @@ Future<void> main() async {
 
         // Test 3: Get statistics using URL-encoded projectId
         print('   📊 Getting statistics...');
-        final statsUrl = 'http://localhost:8081/api/projects/$expectedEncoded/stats';
+        final statsUrl =
+            'http://localhost:8081/api/projects/$expectedEncoded/stats';
         final statsResponse = await http.get(Uri.parse(statsUrl));
 
         if (statsResponse.statusCode == 200) {
           final statsResult = jsonDecode(statsResponse.body);
           final statsProjectId = statsResult['projectId'];
-          
+
           print('   ✅ Statistics retrieved successfully');
           print('   📦 Stats projectId: "$statsProjectId"');
-          
+
           if (statsProjectId == projectId) {
             print('   ✅ Stats projectId matches original');
           } else {
-            print('   ❌ Stats projectId mismatch! Expected: "$projectId", Got: "$statsProjectId"');
+            print(
+              '   ❌ Stats projectId mismatch! Expected: "$projectId", Got: "$statsProjectId"',
+            );
           }
         } else {
-          print('   ❌ Statistics retrieval failed: ${statsResponse.statusCode}');
+          print(
+            '   ❌ Statistics retrieval failed: ${statsResponse.statusCode}',
+          );
         }
 
         print('   ✅ Test case completed\n');
-
       } catch (e) {
         print('   ❌ Test case failed with error: $e\n');
       }
@@ -177,16 +193,19 @@ Future<void> main() async {
     // Test 4: Verify that unencoded URLs with special characters fail gracefully
     print('🔍 Testing error handling with unencoded special characters...');
     try {
-      final badUrl = 'http://localhost:8081/api/projects/project with spaces/changes';
+      final badUrl =
+          'http://localhost:8081/api/projects/project with spaces/changes';
       print('   Trying unencoded URL: $badUrl');
-      
+
       final badResponse = await http.get(Uri.parse(badUrl));
       print('   Response status: ${badResponse.statusCode}');
-      
+
       if (badResponse.statusCode >= 400) {
         print('   ✅ Server properly rejected unencoded URL');
       } else {
-        print('   ⚠️  Server accepted unencoded URL (might work due to HTTP client auto-encoding)');
+        print(
+          '   ⚠️  Server accepted unencoded URL (might work due to HTTP client auto-encoding)',
+        );
       }
     } catch (e) {
       print('   ✅ Unencoded URL properly rejected: $e');
@@ -194,7 +213,7 @@ Future<void> main() async {
 
     // Test 5: Test edge cases
     print('\n🔍 Testing edge cases...');
-    
+
     // Empty project ID
     try {
       final emptyResponse = await http.get(
