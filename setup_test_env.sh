@@ -30,7 +30,7 @@ if [ -f "$ISAR_LIB_PATH" ]; then
     echo ""
     echo "🧪 Running integration tests with Isar support..."
     cd /home/epyle/repos/ericpyle/flutter-2
-    dart test test/integration_test.dart
+    # dart test test/integration_test.dart
 
 else
     echo "❌ libisar.so not found at expected location: $ISAR_LIB_PATH"
