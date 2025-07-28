@@ -13,6 +13,7 @@ workspace:
   - packages/aws_backend
   - examples/sync_manager_demo
 dev_dependencies:
+  test: ^1.24.0
   http: any
   sltt_core: any
   aws_backend: any
