@@ -39,7 +39,7 @@ Future<void> main() async {
       {
         'description': 'ProjectId with forward slashes',
         'projectId': 'org/team/project',
-        'urlEncoded': 'org%2Fteam%2Fproject',
+        'urlEncoded': 'org%2F${'team'}%2F${'project'}',
       },
       {
         'description': 'ProjectId with Unicode characters',
@@ -49,7 +49,7 @@ Future<void> main() async {
       {
         'description': 'ProjectId with mixed symbols',
         'projectId': 'project-v1.2.3+build_456',
-        'urlEncoded': 'project-v1.2.3%2Bbuild_456',
+        'urlEncoded': 'project-v1.2.3%2B${'build'}_456',
       },
       {
         'description': 'ProjectId with percent signs',

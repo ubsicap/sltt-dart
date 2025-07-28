@@ -1,14 +1,4 @@
 {
-    "cSpell.words": [
-        "downsyncs",
-        "Entrys",
-        "outsync",
-        "outsynced",
-        "outsyncs",
-        "Seqs",
-        "sltt"
-    ],
-
     // Dart-specific formatting settings
     "dart.lineLength": 120,
     "dart.showTodos": true,
@@ -29,8 +19,7 @@
     },
 
     // Dart extension settings
-    "dart.previewLsp": true,
-    "dart.runPubGetOnPubspecChanges": true,
+    "dart.runPubGetOnPubspecChanges": "prompt",
     "dart.automaticCommentSlashes": "tripleSlash",
     "dart.documentation": "full",
 

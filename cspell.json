@@ -1,0 +1,31 @@
+{
+    "version": "0.2",
+    "ignorePaths": [
+        ".gitignore"
+    ],
+    "dictionaryDefinitions": [],
+    "dictionaries": [],
+    "words": [
+        "Djava",
+        "Downstats",
+        "downsync",
+        "downsynced",
+        "Downsyncing",
+        "downsyncs",
+        "Entrys",
+        "epyle",
+        "ericpyle",
+        "HMAC",
+        "libisar",
+        "Outstats",
+        "outsync",
+        "outsynced",
+        "outsyncs",
+        "pubspec",
+        "Seqs",
+        "sltt",
+        "проект"
+    ],
+    "ignoreWords": [],
+    "import": []
+}
