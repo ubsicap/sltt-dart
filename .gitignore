@@ -60,3 +60,10 @@ isar_db/
 *.dylib          # macOS libraries
 **/*.exe         # Windows executables
 *.dmg         # macOS disk images
+packages/aws_backend/node_modules/.bin/components
+
+# Node.js related
+**/node_modules/**
+
+# Serverless Framework related
+**/.serverless/**
