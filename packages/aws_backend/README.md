@@ -151,17 +151,27 @@ The package includes a `serverless.yml` configuration optimized for AWS Lambda d
    # Linux/WSL2 users: Skip this step - no Docker needed!
    ```
 
-2. **Install Serverless Framework and Dart plugin**:
+2. **Install Serverless Framework**:
    ```bash
    npm install -g serverless
-   npm install -D serverless-dart
+   ```
+
+3. **Configure AWS credentials** (if not already done):
+   ```bash
+   # Option 1: Using AWS CLI
+   aws configure
+
+   # Option 2: Using environment variables
+   export AWS_ACCESS_KEY_ID=your-access-key
+   export AWS_SECRET_ACCESS_KEY=your-secret-key
+   export AWS_DEFAULT_REGION=us-east-1
    ```
 
 ### Deployment
 
 ```bash
 # Deploy to AWS with project-specific configuration
-serverless deploy --stage dev
+serverless deploy --stage dev --aws-profile sltt-epyle-sltt-dart
 
 # The serverless-dart plugin will automatically:
 # 1. Build your Dart application (natively on Linux/WSL2, or in Docker on Windows/macOS)
