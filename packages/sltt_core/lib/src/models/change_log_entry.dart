@@ -12,7 +12,7 @@ class ChangeLogEntry {
   late String projectId; // Project identifier for multi-tenancy
   late String entityType; // e.g., 'Document', 'Passage', 'Portion'
   late String operation; // e.g., 'create', 'update', 'delete'
-  late DateTime timestamp; // When the change was first made
+  late DateTime changeAt; // When the change was originally made by the client
   late String entityId; // UUID or primary key of the entity
   late String dataJson; // JSON-encoded entity data
   int? outdatedBy; // id of the change that this entry is outdated by
@@ -26,7 +26,7 @@ class ChangeLogEntry {
     required this.projectId,
     required this.entityType,
     required this.operation,
-    required this.timestamp,
+    required this.changeAt,
     required this.entityId,
     required this.dataJson,
     this.outdatedBy,
@@ -37,7 +37,7 @@ class ChangeLogEntry {
     : projectId = '',
       entityType = '',
       operation = '',
-      timestamp = DateTime.now(),
+      changeAt = DateTime.now(),
       entityId = '',
       dataJson = '';
 
@@ -47,7 +47,7 @@ class ChangeLogEntry {
       'projectId': projectId,
       'entityType': entityType,
       'operation': operation,
-      'timestamp': timestamp.toIso8601String(),
+      'changeAt': changeAt.toIso8601String(),
       'entityId': entityId,
       'data': data,
       'outdatedBy': outdatedBy,
@@ -60,7 +60,7 @@ class ChangeLogEntry {
       projectId: json['projectId'] as String,
       entityType: json['entityType'] as String,
       operation: json['operation'] as String,
-      timestamp: DateTime.parse(json['timestamp'] as String),
+      changeAt: DateTime.parse(json['changeAt'] as String),
       entityId: json['entityId'] as String,
       dataJson: json['data'] as String,
       outdatedBy: json['outdatedBy'] as int?,

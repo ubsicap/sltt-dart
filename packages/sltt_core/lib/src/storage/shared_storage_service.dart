@@ -49,7 +49,7 @@ class LocalStorageService implements BaseStorageService {
       projectId: changeData['projectId'] ?? '',
       entityType: changeData['entityType'] ?? '',
       operation: changeData['operation'] ?? '',
-      timestamp: DateTime.now(),
+      changeAt: DateTime.now(),
       entityId: changeData['entityId'] ?? '',
       dataJson: jsonEncode(changeData['data'] ?? {}),
     );
@@ -71,14 +71,14 @@ class LocalStorageService implements BaseStorageService {
   }
 
   Future<List<ChangeLogEntry>> getAllChanges() async {
-    return await _isar.changeLogEntrys.where().sortByTimestampDesc().findAll();
+    return await _isar.changeLogEntrys.where().sortByChangeAtDesc().findAll();
   }
 
   Future<List<ChangeLogEntry>> getChangesByEntityType(String entityType) async {
     return await _isar.changeLogEntrys
         .filter()
         .entityTypeEqualTo(entityType)
-        .sortByTimestampDesc()
+        .sortByChangeAtDesc()
         .findAll();
   }
 
@@ -86,7 +86,7 @@ class LocalStorageService implements BaseStorageService {
     return await _isar.changeLogEntrys
         .filter()
         .operationEqualTo(operation)
-        .sortByTimestampDesc()
+        .sortByChangeAtDesc()
         .findAll();
   }
 
@@ -94,7 +94,7 @@ class LocalStorageService implements BaseStorageService {
     return await _isar.changeLogEntrys
         .filter()
         .entityIdEqualTo(entityId)
-        .sortByTimestampDesc()
+        .sortByChangeAtDesc()
         .findAll();
   }
 
@@ -104,8 +104,8 @@ class LocalStorageService implements BaseStorageService {
   ) async {
     return await _isar.changeLogEntrys
         .filter()
-        .timestampBetween(startDate, endDate)
-        .sortByTimestampDesc()
+        .changeAtBetween(startDate, endDate)
+        .sortByChangeAtDesc()
         .findAll();
   }
 
@@ -324,8 +324,8 @@ class LocalStorageService implements BaseStorageService {
             projectId: changeData['projectId'] ?? '',
             entityType: changeData['entityType'] ?? '',
             operation: changeData['operation'] ?? '',
-            timestamp: changeData['timestamp'] != null
-                ? DateTime.parse(changeData['timestamp'] as String)
+            changeAt: changeData['changeAt'] != null
+                ? DateTime.parse(changeData['changeAt'] as String)
                 : DateTime.now(),
             entityId: changeData['entityId'] ?? '',
             dataJson: jsonEncode(changeData['data'] ?? {}),

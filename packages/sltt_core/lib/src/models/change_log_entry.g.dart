@@ -17,45 +17,45 @@ const ChangeLogEntrySchema = CollectionSchema(
   name: r'ChangeLogEntry',
   id: 7185386916618891527,
   properties: {
-    r'cloudAt': PropertySchema(
+    r'changeAt': PropertySchema(
       id: 0,
+      name: r'changeAt',
+      type: IsarType.dateTime,
+    ),
+    r'cloudAt': PropertySchema(
+      id: 1,
       name: r'cloudAt',
       type: IsarType.dateTime,
     ),
     r'dataJson': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'dataJson',
       type: IsarType.string,
     ),
     r'entityId': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'entityId',
       type: IsarType.string,
     ),
     r'entityType': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'entityType',
       type: IsarType.string,
     ),
     r'operation': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'operation',
       type: IsarType.string,
     ),
     r'outdatedBy': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'outdatedBy',
       type: IsarType.long,
     ),
     r'projectId': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'projectId',
       type: IsarType.string,
-    ),
-    r'timestamp': PropertySchema(
-      id: 7,
-      name: r'timestamp',
-      type: IsarType.dateTime,
     )
   },
   estimateSize: _changeLogEntryEstimateSize,
@@ -106,14 +106,14 @@ void _changeLogEntrySerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeDateTime(offsets[0], object.cloudAt);
-  writer.writeString(offsets[1], object.dataJson);
-  writer.writeString(offsets[2], object.entityId);
-  writer.writeString(offsets[3], object.entityType);
-  writer.writeString(offsets[4], object.operation);
-  writer.writeLong(offsets[5], object.outdatedBy);
-  writer.writeString(offsets[6], object.projectId);
-  writer.writeDateTime(offsets[7], object.timestamp);
+  writer.writeDateTime(offsets[0], object.changeAt);
+  writer.writeDateTime(offsets[1], object.cloudAt);
+  writer.writeString(offsets[2], object.dataJson);
+  writer.writeString(offsets[3], object.entityId);
+  writer.writeString(offsets[4], object.entityType);
+  writer.writeString(offsets[5], object.operation);
+  writer.writeLong(offsets[6], object.outdatedBy);
+  writer.writeString(offsets[7], object.projectId);
 }
 
 ChangeLogEntry _changeLogEntryDeserialize(
@@ -123,14 +123,14 @@ ChangeLogEntry _changeLogEntryDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = ChangeLogEntry(
-    cloudAt: reader.readDateTimeOrNull(offsets[0]),
-    dataJson: reader.readString(offsets[1]),
-    entityId: reader.readString(offsets[2]),
-    entityType: reader.readString(offsets[3]),
-    operation: reader.readString(offsets[4]),
-    outdatedBy: reader.readLongOrNull(offsets[5]),
-    projectId: reader.readString(offsets[6]),
-    timestamp: reader.readDateTime(offsets[7]),
+    changeAt: reader.readDateTime(offsets[0]),
+    cloudAt: reader.readDateTimeOrNull(offsets[1]),
+    dataJson: reader.readString(offsets[2]),
+    entityId: reader.readString(offsets[3]),
+    entityType: reader.readString(offsets[4]),
+    operation: reader.readString(offsets[5]),
+    outdatedBy: reader.readLongOrNull(offsets[6]),
+    projectId: reader.readString(offsets[7]),
   );
   object.seq = id;
   return object;
@@ -144,9 +144,9 @@ P _changeLogEntryDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 1:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 2:
       return (reader.readString(offset)) as P;
     case 3:
@@ -154,11 +154,11 @@ P _changeLogEntryDeserializeProp<P>(
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
-      return (reader.readLongOrNull(offset)) as P;
-    case 6:
       return (reader.readString(offset)) as P;
+    case 6:
+      return (reader.readLongOrNull(offset)) as P;
     case 7:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -304,6 +304,62 @@ extension ChangeLogEntryQueryWhere
 
 extension ChangeLogEntryQueryFilter
     on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QFilterCondition> {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      changeAtEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'changeAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      changeAtGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'changeAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      changeAtLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'changeAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
+      changeAtBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'changeAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
       cloudAtIsNull() {
     return QueryBuilder.apply(this, (query) {
@@ -1187,62 +1243,6 @@ extension ChangeLogEntryQueryFilter
       ));
     });
   }
-
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
-      timestampEqualTo(DateTime value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'timestamp',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
-      timestampGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'timestamp',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
-      timestampLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'timestamp',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterFilterCondition>
-      timestampBetween(
-    DateTime lower,
-    DateTime upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'timestamp',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
 }
 
 extension ChangeLogEntryQueryObject
@@ -1253,6 +1253,19 @@ extension ChangeLogEntryQueryLinks
 
 extension ChangeLogEntryQuerySortBy
     on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QSortBy> {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByChangeAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'changeAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      sortByChangeAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'changeAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByCloudAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cloudAt', Sort.asc);
@@ -1345,23 +1358,23 @@ extension ChangeLogEntryQuerySortBy
       return query.addSortBy(r'projectId', Sort.desc);
     });
   }
-
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> sortByTimestamp() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.asc);
-    });
-  }
-
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
-      sortByTimestampDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.desc);
-    });
-  }
 }
 
 extension ChangeLogEntryQuerySortThenBy
     on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QSortThenBy> {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByChangeAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'changeAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
+      thenByChangeAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'changeAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByCloudAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cloudAt', Sort.asc);
@@ -1466,23 +1479,16 @@ extension ChangeLogEntryQuerySortThenBy
       return query.addSortBy(r'seq', Sort.desc);
     });
   }
-
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy> thenByTimestamp() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.asc);
-    });
-  }
-
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QAfterSortBy>
-      thenByTimestampDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'timestamp', Sort.desc);
-    });
-  }
 }
 
 extension ChangeLogEntryQueryWhereDistinct
     on QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> {
+  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByChangeAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'changeAt');
+    });
+  }
+
   QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct> distinctByCloudAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'cloudAt');
@@ -1530,13 +1536,6 @@ extension ChangeLogEntryQueryWhereDistinct
       return query.addDistinctBy(r'projectId', caseSensitive: caseSensitive);
     });
   }
-
-  QueryBuilder<ChangeLogEntry, ChangeLogEntry, QDistinct>
-      distinctByTimestamp() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'timestamp');
-    });
-  }
 }
 
 extension ChangeLogEntryQueryProperty
@@ -1544,6 +1543,12 @@ extension ChangeLogEntryQueryProperty
   QueryBuilder<ChangeLogEntry, int, QQueryOperations> seqProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'seq');
+    });
+  }
+
+  QueryBuilder<ChangeLogEntry, DateTime, QQueryOperations> changeAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'changeAt');
     });
   }
 
@@ -1586,12 +1591,6 @@ extension ChangeLogEntryQueryProperty
   QueryBuilder<ChangeLogEntry, String, QQueryOperations> projectIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'projectId');
-    });
-  }
-
-  QueryBuilder<ChangeLogEntry, DateTime, QQueryOperations> timestampProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'timestamp');
     });
   }
 }

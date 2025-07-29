@@ -8,7 +8,7 @@ void main() {
         projectId: 'test-project',
         entityType: 'document',
         operation: 'create',
-        timestamp: DateTime.now(),
+        changeAt: DateTime.now(),
         entityId: 'doc-123',
         dataJson: '{"title": "Test"}',
       );
@@ -25,7 +25,7 @@ void main() {
         projectId: 'test-project',
         entityType: 'document',
         operation: 'create',
-        timestamp: DateTime.now(),
+        changeAt: DateTime.now(),
         entityId: 'doc-123',
         dataJson: '{"title": "Test"}',
       );

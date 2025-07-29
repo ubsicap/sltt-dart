@@ -85,8 +85,8 @@ class DynamoDBStorageService implements BaseStorageService {
     final seq = await _getNextSequence(changeProjectId);
 
     final now = DateTime.now();
-    final originalTimestamp = changeData['timestamp'] != null
-        ? changeData['timestamp'] as String
+    final originalChangeAt = changeData['changeAt'] != null
+        ? changeData['changeAt'] as String
         : now.toIso8601String();
 
     final item = {
@@ -94,10 +94,10 @@ class DynamoDBStorageService implements BaseStorageService {
       'seq': {'N': seq.toString()},
       'entityType': {'S': changeData['entityType'] ?? ''},
       'operation': {'S': changeData['operation'] ?? ''},
-      'timestamp': {'S': originalTimestamp}, // Preserve original timestamp
+      'changeAt': {'S': originalChangeAt}, // When the change was originally made
       'entityId': {'S': changeData['entityId'] ?? ''},
       'dataJson': {'S': jsonEncode(changeData['data'] ?? {})},
-      'cloudAt': {'S': now.toIso8601String()}, // Add cloud reception timestamp
+      'cloudAt': {'S': now.toIso8601String()}, // When cloud storage received it
     };
 
     final putRequest = {'TableName': tableName, 'Item': item};
@@ -113,7 +113,7 @@ class DynamoDBStorageService implements BaseStorageService {
       'projectId': changeProjectId,
       'entityType': changeData['entityType'],
       'operation': changeData['operation'],
-      'timestamp': originalTimestamp,
+      'changeAt': originalChangeAt,
       'entityId': changeData['entityId'],
       'data': changeData['data'] ?? {},
       'cloudAt': now.toIso8601String(),
@@ -359,7 +359,7 @@ class DynamoDBStorageService implements BaseStorageService {
       'seq': int.tryParse(item['seq']?['N'] ?? '0') ?? 0,
       'entityType': item['entityType']?['S'] ?? '',
       'operation': item['operation']?['S'] ?? '',
-      'timestamp': item['timestamp']?['S'] ?? '',
+      'changeAt': item['changeAt']?['S'] ?? '',
       'entityId': item['entityId']?['S'] ?? '',
       'data': _tryParseJson(item['dataJson']?['S']),
       'cloudAt': item['cloudAt']?['S'], // Include cloudAt if present
