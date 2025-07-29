@@ -1,13 +1,11 @@
 # Serverless Framework configuration for SLTT AWS Lambda deployment
 service: sltt-backend
 
-# Use the Dart serverless plugin for optimal packaging
-plugins:
-  - serverless-dart
+# No plugins needed - using manual build process
 
 provider:
   name: aws
-  runtime: provided.al2  # Custom runtime for Dart
+  runtime: provided.al2  # Custom runtime for Dart compiled binary
   region: us-east-1
   stage: ${opt:stage, 'dev'}
 
@@ -40,7 +38,7 @@ provider:
 functions:
   # Main API handler for SLTT changes
   api:
-    handler: bin/aws_lambda_server.main
+    handler: bootstrap  # Lambda custom runtime expects 'bootstrap' executable
     events:
       - http:
           path: /{proxy+}
@@ -79,30 +77,20 @@ resources:
           - Key: Stage
             Value: ${self:provider.stage}
 
-# Dart-specific configuration
-custom:
-  dart:
-    # Optimize for Lambda cold starts
-    optimize: true
-    # Include only necessary files
-    exclude:
-      - test/**
-      - example/**
-      - .dart_tool/**
-      - build/**
-    # Tree-shake unused code
-    tree-shake: true
-    # Minimize dependencies
-    minimal: true
-
 # Package configuration
 package:
   individually: false
+  include:
+    - bootstrap  # Include our compiled Dart executable
   exclude:
     - .git/**
     - .dart_tool/**
     - test/**
     - example/**
+    - bin/**
+    - lib/**
     - '*.md'
     - .gitignore
     - analysis_options.yaml
+    - pubspec.yaml
+    - pubspec.lock

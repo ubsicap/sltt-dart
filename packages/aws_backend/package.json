@@ -1,0 +1,25 @@
+{
+  "name": "aws_backend",
+  "version": "1.0.0",
+  "description": "This package provides AWS DynamoDB storage services for the Dart SLTT (Sign Language Translation Tool) system, optimized for serverless deployment with minimal cold start time.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "build": "rm -f bootstrap && dart compile exe bin/bootstrap.dart -o bootstrap && chmod +x bootstrap",
+    "deploy": "npm run build && npx serverless deploy",
+    "deploy:dev": "npm run build && npx serverless deploy --stage dev --aws-profile sltt-epyle-sltt-dart",
+    "deploy:prod": "npm run build && npx serverless deploy --stage prod --aws-profile sltt-epyle-sltt-dart",
+    "build-and-deploy": "npm run deploy:dev",
+    "clean": "rm -f bootstrap && rm -rf .serverless",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "serverless": "^4.4.7"
+  }
+}

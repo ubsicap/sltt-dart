@@ -67,3 +67,4 @@ packages/aws_backend/node_modules/.bin/components
 
 # Serverless Framework related
 **/.serverless/**
+packages/aws_backend/bootstrap
