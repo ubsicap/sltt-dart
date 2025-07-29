@@ -52,7 +52,10 @@ class AwsRestApiServer extends BaseRestApiServer {
     final headers = event['headers'] as Map<String, dynamic>? ?? {};
     final body = event['body'] as String? ?? '';
 
+    // Create an absolute URI for the Request constructor
     final uri = Uri(
+      scheme: 'https',
+      host: 'api.lambda.local',
       path: path,
       queryParameters: queryParams.cast<String, String>(),
     );

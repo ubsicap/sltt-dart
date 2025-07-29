@@ -10,7 +10,7 @@ provider:
   stage: ${opt:stage, 'dev'}
 
   # Lambda function configuration
-  timeout: 30
+  timeout: 29
   memorySize: 512
 
   # Environment variables
