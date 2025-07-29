@@ -282,8 +282,8 @@ class SyncManager {
     final seqsToDelete = <int>[];
 
     for (final change in downsyncedChanges) {
-      final seq = change['seq'] as int;
       final projectId = change['projectId'] as String;
+      final changeSeq = change['seq'] as int?;
 
       // Find any outsyncs changes that are marked as outdated by this seq
       final outdatedChanges = await _outsyncsStorage.getChangesWithCursor(
@@ -292,7 +292,10 @@ class SyncManager {
 
       for (final outdatedChange in outdatedChanges) {
         final outdatedBy = outdatedChange['outdatedBy'] as int?;
-        if (outdatedBy == seq) {
+        if (outdatedBy != null &&
+            outdatedBy > 0 &&
+            changeSeq != null &&
+            outdatedBy == changeSeq) {
           seqsToDelete.add(outdatedChange['seq'] as int);
         }
       }

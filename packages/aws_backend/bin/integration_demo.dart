@@ -80,7 +80,7 @@ Future<void> main() async {
       // Remove the local sequence number before sending to cloud
       final changeForCloud = Map<String, dynamic>.from(localChange);
       final oldSeq = changeForCloud.remove('seq') as int;
-      changeForCloud.remove('timestamp'); // Cloud will generate new timestamp
+      // Keep original timestamp - cloud will preserve it and add cloudAt
 
       // Create in DynamoDB cloud storage
       final cloudChange = await dynamoCloudStorage.createChange(changeForCloud);

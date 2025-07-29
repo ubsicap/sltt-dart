@@ -12,10 +12,11 @@ class ChangeLogEntry {
   late String projectId; // Project identifier for multi-tenancy
   late String entityType; // e.g., 'Document', 'Passage', 'Portion'
   late String operation; // e.g., 'create', 'update', 'delete'
-  late DateTime timestamp;
+  late DateTime timestamp; // When the change was first made
   late String entityId; // UUID or primary key of the entity
   late String dataJson; // JSON-encoded entity data
   int? outdatedBy; // id of the change that this entry is outdated by
+  DateTime? cloudAt; // When the cloud storage received this change (optional)
 
   @ignore
   Map<String, dynamic> get data => jsonDecode(dataJson);
@@ -29,6 +30,7 @@ class ChangeLogEntry {
     required this.entityId,
     required this.dataJson,
     this.outdatedBy,
+    this.cloudAt,
   });
 
   ChangeLogEntry.empty()
@@ -49,6 +51,7 @@ class ChangeLogEntry {
       'entityId': entityId,
       'data': data,
       'outdatedBy': outdatedBy,
+      'cloudAt': cloudAt?.toIso8601String(),
     };
   }
 
@@ -61,6 +64,9 @@ class ChangeLogEntry {
       entityId: json['entityId'] as String,
       dataJson: json['data'] as String,
       outdatedBy: json['outdatedBy'] as int?,
+      cloudAt: json['cloudAt'] != null
+          ? DateTime.parse(json['cloudAt'] as String)
+          : null,
     );
 
     if (json['seq'] != null) {

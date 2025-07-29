@@ -84,16 +84,20 @@ class DynamoDBStorageService implements BaseStorageService {
     // Get next sequence number for this specific project
     final seq = await _getNextSequence(changeProjectId);
 
+    final now = DateTime.now();
+    final originalTimestamp = changeData['timestamp'] != null
+        ? changeData['timestamp'] as String
+        : now.toIso8601String();
+
     final item = {
       'pk': {'S': changeProjectId},
       'seq': {'N': seq.toString()},
       'entityType': {'S': changeData['entityType'] ?? ''},
       'operation': {'S': changeData['operation'] ?? ''},
-      'timestamp': {
-        'S': changeData['timestamp'] ?? DateTime.now().toIso8601String(),
-      },
+      'timestamp': {'S': originalTimestamp}, // Preserve original timestamp
       'entityId': {'S': changeData['entityId'] ?? ''},
       'dataJson': {'S': jsonEncode(changeData['data'] ?? {})},
+      'cloudAt': {'S': now.toIso8601String()}, // Add cloud reception timestamp
     };
 
     final putRequest = {'TableName': tableName, 'Item': item};
@@ -109,9 +113,10 @@ class DynamoDBStorageService implements BaseStorageService {
       'projectId': changeProjectId,
       'entityType': changeData['entityType'],
       'operation': changeData['operation'],
-      'timestamp': changeData['timestamp'] ?? DateTime.now().toIso8601String(),
+      'timestamp': originalTimestamp,
       'entityId': changeData['entityId'],
       'data': changeData['data'] ?? {},
+      'cloudAt': now.toIso8601String(),
     };
   }
 
@@ -357,6 +362,7 @@ class DynamoDBStorageService implements BaseStorageService {
       'timestamp': item['timestamp']?['S'] ?? '',
       'entityId': item['entityId']?['S'] ?? '',
       'data': _tryParseJson(item['dataJson']?['S']),
+      'cloudAt': item['cloudAt']?['S'], // Include cloudAt if present
     };
   }
 

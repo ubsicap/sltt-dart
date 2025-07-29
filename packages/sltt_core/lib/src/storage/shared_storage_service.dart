@@ -324,9 +324,14 @@ class LocalStorageService implements BaseStorageService {
             projectId: changeData['projectId'] ?? '',
             entityType: changeData['entityType'] ?? '',
             operation: changeData['operation'] ?? '',
-            timestamp: DateTime.now(),
+            timestamp: changeData['timestamp'] != null
+                ? DateTime.parse(changeData['timestamp'] as String)
+                : DateTime.now(),
             entityId: changeData['entityId'] ?? '',
             dataJson: jsonEncode(changeData['data'] ?? {}),
+            outdatedBy: changeData['outdatedBy'] as int?,
+            cloudAt:
+                maybeCreateCloudAt(), // Hook for subclasses to add cloud timestamp
           ),
         )
         .toList();
@@ -337,6 +342,10 @@ class LocalStorageService implements BaseStorageService {
 
     return changes.map((e) => e.toJson()).toList();
   }
+
+  /// Hook method for subclasses to optionally add cloud timestamp.
+  /// Override this in CloudStorageService to return DateTime.now().
+  DateTime? maybeCreateCloudAt() => null;
 
   /// Delete all changes - useful for testing cleanup
   Future<int> deleteAllChanges() async {
@@ -395,4 +404,7 @@ class CloudStorageService extends LocalStorageService {
       _instance ??= CloudStorageService._();
 
   CloudStorageService._() : super('cloud_storage', 'CloudStorage');
+
+  @override
+  DateTime? maybeCreateCloudAt() => DateTime.now();
 }
