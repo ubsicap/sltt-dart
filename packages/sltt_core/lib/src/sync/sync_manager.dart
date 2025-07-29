@@ -35,51 +35,11 @@ class SyncManager {
   }
 
   // Get all projects that have changes to sync
-  Future<List<String>> _getProjectsToSync() async {
-    try {
-      // Get projects from local outsyncs storage
-      final projectIds = await _outsyncsStorage.getAllProjects();
-      return projectIds;
-    } catch (e) {
-      print(
-        '[SyncManager] Error getting projects list: $e, falling back to change-based discovery',
-      );
-    }
-
-    // Fallback: discover projects from local changes
-    final changes = await _outsyncsStorage.getChangesForSync();
-    final projectIds = <String>{};
-    for (final change in changes) {
-      final projectId = change['projectId'] as String?;
-      if (projectId != null) {
-        projectIds.add(projectId);
-      }
-    }
-    return projectIds.toList();
-  }
 
   // Outsync changes from outsyncs to cloud storage
   Future<OutsyncResult> outsyncToCloud() async {
     try {
       print('[SyncManager] Starting outsync to cloud...');
-
-      // Get all projects that need syncing
-      final projectIds = await _getProjectsToSync();
-
-      if (projectIds.isEmpty) {
-        print('[SyncManager] No projects found to sync');
-        return OutsyncResult(
-          success: true,
-          syncedChanges: [],
-          deletedLocalChanges: [],
-          seqMap: {},
-          message: 'No projects to sync',
-        );
-      }
-
-      print(
-        '[SyncManager] Found ${projectIds.length} projects to sync: ${projectIds.join(', ')}',
-      );
 
       // Get changes for sync (excludes outdated changes)
       final changes = await _outsyncsStorage.getChangesForSync();
