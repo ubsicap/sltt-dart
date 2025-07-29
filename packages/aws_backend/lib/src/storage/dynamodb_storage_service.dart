@@ -380,6 +380,9 @@ class DynamoDBStorageService implements BaseStorageService {
           credentialsProvider: AWSCredentialsProvider(credentials),
         );
 
+        // Encode body as bytes to ensure consistency between signing and sending
+        final encodedBody = utf8.encode(body);
+
         final signedRequest = await signer.sign(
           AWSHttpRequest(
             method: AWSHttpMethod.post,
@@ -387,8 +390,9 @@ class DynamoDBStorageService implements BaseStorageService {
             headers: {
               'Content-Type': 'application/x-amz-json-1.0',
               'X-Amz-Target': 'DynamoDB_20120810.$target',
+              'host': uri.host, // Explicitly include host header for SigV4
             },
-            body: utf8.encode(body),
+            body: encodedBody,
           ),
           credentialScope: AWSCredentialScope(
             region: region,
@@ -396,11 +400,17 @@ class DynamoDBStorageService implements BaseStorageService {
           ),
         );
 
-        return await http.post(
-          signedRequest.uri,
-          headers: signedRequest.headers,
-          body: body,
-        );
+        // Use http.Request for finer control over headers and body
+        final client = http.Client();
+        final request = http.Request('POST', signedRequest.uri);
+        request.headers.addAll(signedRequest.headers);
+        request.bodyBytes = encodedBody; // Use the same encoded bytes
+
+        final streamedResponse = await client.send(request);
+        final response = await http.Response.fromStream(streamedResponse);
+        client.close();
+
+        return response;
       } catch (e) {
         print('[DynamoDB] Signing error: $e');
         print('[DynamoDB] Region: $region');
