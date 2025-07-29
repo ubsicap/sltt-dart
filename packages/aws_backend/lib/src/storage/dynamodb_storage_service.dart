@@ -94,7 +94,9 @@ class DynamoDBStorageService implements BaseStorageService {
       'seq': {'N': seq.toString()},
       'entityType': {'S': changeData['entityType'] ?? ''},
       'operation': {'S': changeData['operation'] ?? ''},
-      'changeAt': {'S': originalChangeAt}, // When the change was originally made
+      'changeAt': {
+        'S': originalChangeAt,
+      }, // When the change was originally made
       'entityId': {'S': changeData['entityId'] ?? ''},
       'dataJson': {'S': jsonEncode(changeData['data'] ?? {})},
       'cloudAt': {'S': now.toIso8601String()}, // When cloud storage received it
