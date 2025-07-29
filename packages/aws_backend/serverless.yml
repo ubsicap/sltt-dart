@@ -83,14 +83,5 @@ package:
   include:
     - bootstrap  # Include our compiled Dart executable
   exclude:
-    - .git/**
-    - .dart_tool/**
-    - test/**
-    - example/**
-    - bin/**
-    - lib/**
-    - '*.md'
-    - .gitignore
-    - analysis_options.yaml
-    - pubspec.yaml
-    - pubspec.lock
+    - '**'  # Exclude everything by default
+    - '!bootstrap'  # Then explicitly include only bootstrap

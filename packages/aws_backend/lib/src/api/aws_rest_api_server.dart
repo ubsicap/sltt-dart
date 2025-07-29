@@ -47,8 +47,7 @@ class AwsRestApiServer extends BaseRestApiServer {
   Request _convertApiGatewayEventToRequest(Map<String, dynamic> event) {
     final method = event['httpMethod'] as String? ?? 'GET';
     final path = event['path'] as String? ?? '/';
-    final queryParams =
-        event['queryStringParameters'] as Map<String, dynamic>? ?? {};
+    final queryParams = event['queryStringParameters'] as Map<String, dynamic>?;
     final headers = event['headers'] as Map<String, dynamic>? ?? {};
     final body = event['body'] as String? ?? '';
 
@@ -57,7 +56,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       scheme: 'https',
       host: 'api.lambda.local',
       path: path,
-      queryParameters: queryParams.cast<String, String>(),
+      queryParameters: queryParams?.cast<String, String>(),
     );
 
     return Request(

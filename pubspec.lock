@@ -33,6 +33,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.13.0"
+  aws_common:
+    dependency: transitive
+    description:
+      name: aws_common
+      sha256: "81d235b7a020909ac9a0c76be2122e86e35cb886a19ba73b15cd34b1e8ef5f0b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.10"
+  aws_signature_v4:
+    dependency: transitive
+    description:
+      name: aws_signature_v4
+      sha256: "5f578d6074108edef41e2c1047895dab09c720b77ee922dbcf8e7247ef91e2d8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.8"
   boolean_selector:
     dependency: transitive
     description:
@@ -265,6 +281,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  http2:
+    dependency: transitive
+    description:
+      name: http2
+      sha256: "382d3aefc5bd6dc68c6b892d7664f29b5beb3251611ae946a98d35158a82bbfa"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.1"
   http_methods:
     dependency: transitive
     description:
@@ -385,6 +409,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.2"
+  os_detect:
+    dependency: transitive
+    description:
+      name: os_detect
+      sha256: "7d87c0dd98c6faf110d5aa498e9a6df02ffce4bb78cc9cfc8ad02929be9bb71f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.3"
   package_config:
     dependency: transitive
     description:

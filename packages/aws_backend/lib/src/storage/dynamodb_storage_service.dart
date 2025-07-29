@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:aws_common/aws_common.dart';
+import 'package:aws_signature_v4/aws_signature_v4.dart';
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 
@@ -346,14 +348,43 @@ class DynamoDBStorageService implements BaseStorageService {
     String target,
     Map<String, dynamic> payload,
   ) async {
-    final headers = Map<String, String>.from(_headers);
-    headers['X-Amz-Target'] = 'DynamoDB_20120810.$target';
+    final uri = Uri.parse(_endpoint);
+    final body = jsonEncode(payload);
 
-    return await http.post(
-      Uri.parse(_endpoint),
-      headers: headers,
-      body: jsonEncode(payload),
-    );
+    if (useLocalDynamoDB) {
+      // For local DynamoDB, use fake auth headers
+      final headers = Map<String, String>.from(_headers);
+      headers['X-Amz-Target'] = 'DynamoDB_20120810.$target';
+
+      return await http.post(uri, headers: headers, body: body);
+    } else {
+      // For real AWS DynamoDB, use AWS Signature V4 authentication
+      final signer = const AWSSigV4Signer(
+        credentialsProvider: AWSCredentialsProvider.environment(),
+      );
+
+      final signedRequest = await signer.sign(
+        AWSHttpRequest(
+          method: AWSHttpMethod.post,
+          uri: uri,
+          headers: {
+            'Content-Type': 'application/x-amz-json-1.0',
+            'X-Amz-Target': 'DynamoDB_20120810.$target',
+          },
+          body: utf8.encode(body),
+        ),
+        credentialScope: AWSCredentialScope(
+          region: region,
+          service: AWSService.dynamoDb,
+        ),
+      );
+
+      return await http.post(
+        signedRequest.uri,
+        headers: signedRequest.headers,
+        body: body,
+      );
+    }
   }
 
   Map<String, dynamic> _dynamoItemToMap(Map<String, dynamic> item) {
