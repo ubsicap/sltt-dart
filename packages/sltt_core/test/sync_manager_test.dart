@@ -35,6 +35,13 @@ void main() {
 
       // Initialize sync manager
       await syncManager.initialize();
+
+      // Clean up any leftover data from previous test runs
+      print('🧹 Cleaning up leftover test data...');
+      await outsyncsStorage.deleteAllChanges();
+      await DownsyncsStorageService.instance.deleteAllChanges();
+      await CloudStorageService.instance.deleteAllChanges();
+      print('✅ Database cleanup completed');
     });
 
     tearDownAll(() async {

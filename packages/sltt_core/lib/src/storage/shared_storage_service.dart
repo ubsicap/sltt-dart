@@ -338,6 +338,23 @@ class LocalStorageService implements BaseStorageService {
     return changes.map((e) => e.toJson()).toList();
   }
 
+  /// Delete all changes - useful for testing cleanup
+  Future<int> deleteAllChanges() async {
+    final allChanges = await _isar.changeLogEntrys.where().findAll();
+    final seqsToDelete = allChanges.map((e) => e.seq).toList();
+
+    int deletedCount = 0;
+    await _isar.writeTxn(() async {
+      for (final seq in seqsToDelete) {
+        if (await _isar.changeLogEntrys.delete(seq)) {
+          deletedCount++;
+        }
+      }
+    });
+
+    return deletedCount;
+  }
+
   /// Get all unique project IDs from all changes
   @override
   Future<List<String>> getAllProjects() async {
