@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
@@ -359,31 +360,53 @@ class DynamoDBStorageService implements BaseStorageService {
       return await http.post(uri, headers: headers, body: body);
     } else {
       // For real AWS DynamoDB, use AWS Signature V4 authentication
-      final signer = const AWSSigV4Signer(
-        credentialsProvider: AWSCredentialsProvider.environment(),
-      );
+      try {
+        // Get AWS credentials from environment variables (Lambda provides these)
+        final accessKey = Platform.environment['AWS_ACCESS_KEY_ID'];
+        final secretKey = Platform.environment['AWS_SECRET_ACCESS_KEY'];
+        final sessionToken = Platform.environment['AWS_SESSION_TOKEN'];
 
-      final signedRequest = await signer.sign(
-        AWSHttpRequest(
-          method: AWSHttpMethod.post,
-          uri: uri,
-          headers: {
-            'Content-Type': 'application/x-amz-json-1.0',
-            'X-Amz-Target': 'DynamoDB_20120810.$target',
-          },
-          body: utf8.encode(body),
-        ),
-        credentialScope: AWSCredentialScope(
-          region: region,
-          service: AWSService.dynamoDb,
-        ),
-      );
+        if (accessKey == null || secretKey == null) {
+          throw Exception('AWS credentials not found in environment variables');
+        }
 
-      return await http.post(
-        signedRequest.uri,
-        headers: signedRequest.headers,
-        body: body,
-      );
+        final credentials = AWSCredentials(
+          accessKey,
+          secretKey,
+          sessionToken, // This is important for Lambda temporary credentials
+        );
+
+        final signer = AWSSigV4Signer(
+          credentialsProvider: AWSCredentialsProvider(credentials),
+        );
+
+        final signedRequest = await signer.sign(
+          AWSHttpRequest(
+            method: AWSHttpMethod.post,
+            uri: uri,
+            headers: {
+              'Content-Type': 'application/x-amz-json-1.0',
+              'X-Amz-Target': 'DynamoDB_20120810.$target',
+            },
+            body: utf8.encode(body),
+          ),
+          credentialScope: AWSCredentialScope(
+            region: region,
+            service: AWSService.dynamoDb,
+          ),
+        );
+
+        return await http.post(
+          signedRequest.uri,
+          headers: signedRequest.headers,
+          body: body,
+        );
+      } catch (e) {
+        print('[DynamoDB] Signing error: $e');
+        print('[DynamoDB] Region: $region');
+        print('[DynamoDB] Endpoint: $_endpoint');
+        rethrow;
+      }
     }
   }
 

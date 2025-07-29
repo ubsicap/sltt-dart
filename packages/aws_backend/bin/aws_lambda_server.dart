@@ -12,7 +12,10 @@ Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
     // Get configuration from environment variables
     final tableName =
         Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-changes-dev';
-    final region = Platform.environment['AWS_REGION'] ?? 'us-east-1';
+    final region =
+        Platform.environment['DYNAMODB_REGION'] ??
+        Platform.environment['AWS_REGION'] ??
+        'us-east-1';
 
     // Create DynamoDB storage service
     final storage = DynamoDBStorageService(
