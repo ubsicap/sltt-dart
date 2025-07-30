@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
@@ -10,10 +12,8 @@ void main() {
     late Dio dio;
 
     // Configuration - set to true to test against dev cloud instead of localhost
-    const bool useDevCloud = bool.fromEnvironment(
-      'USE_DEV_CLOUD',
-      defaultValue: false,
-    );
+    // do USE_DEV_CLOUD=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test test/sync_manager_test.dart
+    final bool useDevCloud = Platform.environment['USE_DEV_CLOUD'] == 'true';
 
     // API endpoints
     final String cloudStorageUrl = useDevCloud

@@ -232,6 +232,27 @@ curl "http://localhost:8081/api/changes?cursor=10&limit=5"
 
 ## Testing
 
+### Run Unit Tests
+
+#### Local Testing (Default)
+```bash
+# Run sync manager tests with localhost servers
+dart test test/sync_manager_test.dart
+
+# Or using the test runner script
+LD_LIBRARY_PATH=/tmp/dart_test_libs dart test test/sync_manager_test.dart
+```
+
+#### Dev Cloud Testing
+```bash
+# Run sync manager tests against AWS dev cloud
+USE_DEV_CLOUD=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test test/sync_manager_test.dart
+```
+
+**Environment Variables:**
+- `USE_DEV_CLOUD=true`: Configures tests to use the AWS Lambda dev cloud instead of localhost
+- `LD_LIBRARY_PATH=/tmp/dart_test_libs`: Required for Isar database library access
+
 ### Run API Tests
 ```bash
 # Test complete sync system
@@ -385,23 +406,6 @@ Default configuration:
 - Sync Interval: 5 minutes
 - Database: Local Isar database
 - Object IDs: UUIDv7
-
-## Testing
-
-Run the comprehensive sync system test suite:
-
-```bash
-# Test all sync functionality
-dart run bin/test_sync_manager.dart
-
-# Test specific features
-dart run bin/test_operation_field.dart
-
-# Interactive demonstration
-dart run bin/demo_sync_system.dart
-```
-
-This will test all sync operations, change log functionality, and verify the complete system works correctly.
 
 ## Troubleshooting
 
