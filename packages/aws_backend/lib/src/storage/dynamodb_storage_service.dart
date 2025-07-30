@@ -102,7 +102,7 @@ class DynamoDBStorageService implements BaseStorageService {
     // Get next sequence number for this specific project
     final seq = await _getNextSequence(changeProjectId);
 
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
     final originalChangeAt = changeData['changeAt'] != null
         ? changeData['changeAt'] as String
         : now.toIso8601String();

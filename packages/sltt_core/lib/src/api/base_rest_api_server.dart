@@ -590,7 +590,7 @@ abstract class BaseRestApiServer {
 
       final changeSeq = int.tryParse(seq);
       if (changeSeq == null) {
-        return _errorResponse('Invalid change seq format', 400);
+        return _errorResponse('Invalid change seq format: "$seq"', 400);
       }
 
       final change = await storage.getChange(projectId, changeSeq);

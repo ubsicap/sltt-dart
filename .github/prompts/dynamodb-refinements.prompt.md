@@ -1,3 +1,22 @@
+Fixes:
+- need to normalize entityTypes
+- 'project' is currently required for dynamodb implementation of returning projectIds (stored in entityId)
+- maybe pk should be PROJECT_ID#{projectId}
+
+- changeAt same as cloudAt in the cloud?
+
+- toUtc() everywhere for consistency?
+
+
+Design:
+- pk is projectId. Ideally it would be something like projectId#{projectId}#entityId#{entityId} to
+1) maximize write throughput (especially if many people are writing to same projectId at the same time)
+2) allow for querying by entityId (and seeing all changes)
+
+- could make secondary index on projectId sorted by seq
+
+
+
 ### 🧩 Optional Refinements
 
 - **Streamlining Header Management**
