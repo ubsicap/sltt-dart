@@ -265,7 +265,7 @@ class DynamoDBStorageService implements BaseStorageService {
     final data = jsonDecode(response.body);
     final count = data['Count'] ?? 0;
 
-    return {'totalChanges': count, 'scannedCount': data['ScannedCount'] ?? 0};
+    return {'total': count, 'scannedCount': data['ScannedCount'] ?? 0};
   }
 
   @override

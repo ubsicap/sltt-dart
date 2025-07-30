@@ -124,6 +124,24 @@ abstract class BaseRestApiServer {
           'path': '/api/changes',
           'description':
               'Create new changes (array format) - each change must include projectId',
+          'response': {
+            'type': 'object',
+            'properties': {
+              'success': {
+                'type': 'boolean',
+                'description': 'Whether all changes were created successfully',
+              },
+              'created': {
+                'type': 'integer',
+                'description': 'Number of changes created',
+              },
+              'seqMap': {
+                'type': 'object',
+                'description':
+                    'Map of original sequence numbers to assigned sequence numbers',
+              },
+            },
+          },
         },
         {
           'method': 'GET',
@@ -208,6 +226,49 @@ abstract class BaseRestApiServer {
               'description': 'Project identifier',
             },
           ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'projectId': {
+                'type': 'string',
+                'description': 'The project identifier',
+              },
+              'changeStats': {
+                'type': 'object',
+                'properties': {
+                  'total': {
+                    'type': 'integer',
+                    'description': 'Total number of changes for this project',
+                  },
+                  'creates': {
+                    'type': 'integer',
+                    'description': 'Number of create operations',
+                  },
+                  'updates': {
+                    'type': 'integer',
+                    'description': 'Number of update operations',
+                  },
+                  'deletes': {
+                    'type': 'integer',
+                    'description': 'Number of delete operations',
+                  },
+                },
+              },
+              'entityTypeStats': {
+                'type': 'object',
+                'description': 'Statistics grouped by entity type',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the stats were generated',
+              },
+              'storageType': {
+                'type': 'string',
+                'description': 'Type of storage backend',
+              },
+            },
+          },
         },
       ],
       'timestamp': DateTime.now().toIso8601String(),
@@ -372,7 +433,10 @@ abstract class BaseRestApiServer {
       try {
         changesToCreate = data.cast<Map<String, dynamic>>();
       } on TypeError {
-        return _errorResponse('Invalid change format: each item must be an object', 400);
+        return _errorResponse(
+          'Invalid change format: each item must be an object',
+          400,
+        );
       }
 
       if (changesToCreate.isEmpty) {
