@@ -78,10 +78,25 @@ class DynamoDBStorageService implements BaseStorageService {
   ) async {
     if (!_initialized) await initialize();
 
-    // projectId is now required in changeData
+    // Validate required fields
     final changeProjectId = changeData['projectId'] as String?;
     if (changeProjectId == null || changeProjectId.isEmpty) {
       throw ArgumentError('projectId is required in changeData');
+    }
+
+    final entityType = changeData['entityType'] as String?;
+    if (entityType == null || entityType.isEmpty) {
+      throw ArgumentError('entityType is required in changeData');
+    }
+
+    final operation = changeData['operation'] as String?;
+    if (operation == null || operation.isEmpty) {
+      throw ArgumentError('operation is required in changeData');
+    }
+
+    final entityId = changeData['entityId'] as String?;
+    if (entityId == null || entityId.isEmpty) {
+      throw ArgumentError('entityId is required in changeData');
     }
 
     // Get next sequence number for this specific project
@@ -95,12 +110,12 @@ class DynamoDBStorageService implements BaseStorageService {
     final item = {
       'pk': {'S': changeProjectId},
       'seq': {'N': seq.toString()},
-      'entityType': {'S': changeData['entityType'] ?? ''},
-      'operation': {'S': changeData['operation'] ?? ''},
+      'entityType': {'S': entityType},
+      'operation': {'S': operation},
       'changeAt': {
         'S': originalChangeAt,
       }, // When the change was originally made
-      'entityId': {'S': changeData['entityId'] ?? ''},
+      'entityId': {'S': entityId},
       'dataJson': {'S': jsonEncode(changeData['data'] ?? {})},
       'cloudAt': {'S': now.toIso8601String()}, // When cloud storage received it
     };
@@ -116,10 +131,10 @@ class DynamoDBStorageService implements BaseStorageService {
     return {
       'seq': seq,
       'projectId': changeProjectId,
-      'entityType': changeData['entityType'],
-      'operation': changeData['operation'],
+      'entityType': entityType,
+      'operation': operation,
       'changeAt': originalChangeAt,
-      'entityId': changeData['entityId'],
+      'entityId': entityId,
       'data': changeData['data'] ?? {},
       'cloudAt': now.toIso8601String(),
     };
@@ -423,6 +438,8 @@ class DynamoDBStorageService implements BaseStorageService {
   Map<String, dynamic> _dynamoItemToMap(Map<String, dynamic> item) {
     return {
       'seq': int.tryParse(item['seq']?['N'] ?? '0') ?? 0,
+      'projectId':
+          item['pk']?['S'] ?? '', // Extract projectId from partition key
       'entityType': item['entityType']?['S'] ?? '',
       'operation': item['operation']?['S'] ?? '',
       'changeAt': item['changeAt']?['S'] ?? '',

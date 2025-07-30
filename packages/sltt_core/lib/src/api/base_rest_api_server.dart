@@ -75,6 +75,9 @@ abstract class BaseRestApiServer {
     router.get('/api/projects/<projectId>/changes/<seq>', _handleGetChange);
     router.get('/api/projects/<projectId>/stats', _handleGetStats);
 
+    // Handle OPTIONS requests for CORS
+    router.options('/<path|.*>', _handleOptions);
+
     // Allow subclasses to add custom routes
     addCustomRoutes(router);
 
@@ -231,6 +234,8 @@ abstract class BaseRestApiServer {
         jsonEncode(response),
         headers: {'Content-Type': 'application/json'},
       );
+    } on ArgumentError catch (e) {
+      return _errorResponse(e.message, 400);
     } catch (e, stackTrace) {
       print('Error getting projects: $e');
       print('Stack trace: $stackTrace');
@@ -304,6 +309,8 @@ abstract class BaseRestApiServer {
         jsonEncode(responseData),
         headers: {'Content-Type': 'application/json'},
       );
+    } on ArgumentError catch (e) {
+      return _errorResponse(e.message, 400);
     } catch (e) {
       return _errorResponse('Failed to fetch changes: $e', 500);
     }
@@ -336,6 +343,8 @@ abstract class BaseRestApiServer {
         jsonEncode(change),
         headers: {'Content-Type': 'application/json'},
       );
+    } on ArgumentError catch (e) {
+      return _errorResponse(e.message, 400);
     } catch (e) {
       return _errorResponse('Failed to fetch change: $e', 500);
     }
@@ -345,13 +354,27 @@ abstract class BaseRestApiServer {
   Future<Response> _handleCreateChanges(Request request) async {
     try {
       final body = await request.readAsString();
-      final data = jsonDecode(body);
+
+      // Handle JSON parsing errors
+      late final dynamic data;
+      try {
+        data = jsonDecode(body);
+      } on FormatException catch (e) {
+        return _errorResponse('Invalid JSON format: ${e.message}', 400);
+      }
 
       if (data is! List) {
         return _errorResponse('Request body must be an array of changes', 400);
       }
 
-      final changesToCreate = data.cast<Map<String, dynamic>>();
+      // Safely cast to List<Map<String, dynamic>>
+      late final List<Map<String, dynamic>> changesToCreate;
+      try {
+        changesToCreate = data.cast<Map<String, dynamic>>();
+      } on TypeError {
+        return _errorResponse('Invalid change format: each item must be an object', 400);
+      }
+
       if (changesToCreate.isEmpty) {
         return _errorResponse('No changes provided', 400);
       }
@@ -374,11 +397,26 @@ abstract class BaseRestApiServer {
             );
           }
 
+          // Validate other required fields
+          final entityType = changeData['entityType'] as String?;
+          if (entityType == null || entityType.isEmpty) {
+            throw ArgumentError(
+              'Change at index $i is missing required entityType field',
+            );
+          }
+
+          final entityId = changeData['entityId'] as String?;
+          if (entityId == null || entityId.isEmpty) {
+            throw ArgumentError(
+              'Change at index $i is missing required entityId field',
+            );
+          }
+
           final changeToStore = {
             'projectId': projectId,
-            'entityType': changeData['entityType'] as String,
+            'entityType': entityType,
             'operation': changeData['operation'] as String? ?? 'create',
-            'entityId': changeData['entityId'] as String,
+            'entityId': entityId,
             'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
           };
 
@@ -386,6 +424,9 @@ abstract class BaseRestApiServer {
           final newSeq = created['seq'] as int;
           createdSeqs.add(newSeq);
           originalSeqs.add(originalSeq ?? newSeq);
+        } on ArgumentError catch (e) {
+          // Validation errors should return 400
+          return _errorResponse(e.message, 400);
         } catch (e) {
           failedIndex = i;
           errorMessage = e.toString();
@@ -394,6 +435,15 @@ abstract class BaseRestApiServer {
       }
 
       final success = failedIndex == null;
+
+      // If we failed due to a non-validation error, return 500
+      if (!success) {
+        return _errorResponse(
+          'Failed to create change at index $failedIndex: $errorMessage',
+          500,
+        );
+      }
+
       final response = <String, dynamic>{
         'success': success,
         'created': createdSeqs.length,
@@ -409,15 +459,12 @@ abstract class BaseRestApiServer {
         response['seqMap'] = seqMap;
       }
 
-      if (!success) {
-        response['failedAtIndex'] = failedIndex;
-        response['error'] = errorMessage;
-      }
-
       return Response.ok(
         jsonEncode(response),
         headers: {'Content-Type': 'application/json'},
       );
+    } on ArgumentError catch (e) {
+      return _errorResponse(e.message, 400);
     } catch (e) {
       return _errorResponse('Failed to create changes: $e', 500);
     }
@@ -444,6 +491,8 @@ abstract class BaseRestApiServer {
         }),
         headers: {'Content-Type': 'application/json'},
       );
+    } on ArgumentError catch (e) {
+      return _errorResponse(e.message, 400);
     } catch (e) {
       return _errorResponse('Failed to fetch statistics: $e', 500);
     }
@@ -454,6 +503,19 @@ abstract class BaseRestApiServer {
     return Response.notFound(
       jsonEncode({'error': 'Endpoint not found', 'path': request.url.path}),
       headers: {'Content-Type': 'application/json'},
+    );
+  }
+
+  /// Handle OPTIONS requests for CORS
+  Future<Response> _handleOptions(Request request) async {
+    return Response.ok(
+      '',
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Max-Age': '86400',
+      },
     );
   }
 

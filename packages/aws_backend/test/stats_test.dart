@@ -1,0 +1,36 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:test/test.dart';
+
+void main() {
+  const baseUrl = 'https://u1e8wbi87a.execute-api.us-east-1.amazonaws.com/dev';
+  const testProjectId = '_test_cloud_api_project';
+
+  test('project statistics endpoint', () async {
+    final encodedProjectId = Uri.encodeComponent(testProjectId);
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/projects/$encodedProjectId/stats'),
+    );
+
+    print('✅ Statistics endpoint test:');
+    print('   Status Code: ${response.statusCode}');
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      print('   Response Keys: ${data.keys.toList()}');
+      print('   Project ID: ${data['projectId']}');
+      print('   Change Stats: ${data['changeStats']}');
+      print('   Entity Type Stats: ${data['entityTypeStats']}');
+      print('   Timestamp: ${data['timestamp']}');
+
+      // Basic validations
+      expect(data['projectId'], equals(testProjectId));
+      expect(data['changeStats'], isA<Map>());
+      expect(data['entityTypeStats'], isA<Map>());
+      expect(data['timestamp'], isA<String>());
+    } else {
+      print('   Error: ${response.body}');
+      fail('Statistics endpoint failed with status ${response.statusCode}');
+    }
+  }, tags: ['internet', 'integration']);
+}
