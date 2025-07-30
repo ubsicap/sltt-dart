@@ -1,8 +1,8 @@
-import 'package:test/test.dart';
 import 'package:aws_backend/aws_backend.dart';
+import 'package:test/test.dart';
 
 void main() {
-  group('AWS Backend Tests', () {
+  group('AWS Backend Tests - LocalDynamoDB', () {
     test('DynamoDB storage service can be instantiated', () {
       final storage = DynamoDBStorageService(
         tableName: 'test-table',
