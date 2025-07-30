@@ -113,11 +113,49 @@ abstract class BaseRestApiServer {
           'method': 'GET',
           'path': '/health',
           'description': 'Health check - returns server status',
+          'response': {
+            'type': 'object',
+            'properties': {
+              'status': {
+                'type': 'string',
+                'description': 'Server health status (always "healthy")',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the health check was performed',
+              },
+              'server': {
+                'type': 'string',
+                'description': 'Server name identifier',
+              },
+              'storageType': {
+                'type': 'string',
+                'description': 'Type of storage backend',
+              },
+            },
+          },
         },
         {
           'method': 'GET',
           'path': '/api/help',
           'description': 'API documentation - returns this documentation',
+          'response': {
+            'type': 'object',
+            'properties': {
+              'server': {'type': 'object', 'description': 'Server information'},
+              'endpoints': {
+                'type': 'array',
+                'description':
+                    'List of available API endpoints with documentation',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the documentation was generated',
+              },
+            },
+          },
         },
         {
           'method': 'POST',
@@ -147,6 +185,25 @@ abstract class BaseRestApiServer {
           'method': 'GET',
           'path': '/api/projects',
           'description': 'Get list of all projects that have changes',
+          'response': {
+            'type': 'object',
+            'properties': {
+              'projects': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description': 'List of project identifiers',
+              },
+              'count': {
+                'type': 'integer',
+                'description': 'Number of projects returned',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the project list was generated',
+              },
+            },
+          },
         },
         {
           'method': 'GET',
@@ -167,6 +224,64 @@ abstract class BaseRestApiServer {
               'description': 'Maximum number of results (1-1000)',
             },
           ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'changes': {
+                'type': 'array',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'seq': {
+                      'type': 'integer',
+                      'description': 'Sequence number',
+                    },
+                    'projectId': {
+                      'type': 'string',
+                      'description': 'Project identifier',
+                    },
+                    'entityType': {
+                      'type': 'string',
+                      'description': 'Type of entity',
+                    },
+                    'operation': {
+                      'type': 'string',
+                      'description': 'Operation type (create, update, delete)',
+                    },
+                    'entityId': {
+                      'type': 'string',
+                      'description': 'Entity identifier',
+                    },
+                    'changeAt': {
+                      'type': 'string',
+                      'format': 'ISO8601',
+                      'description': 'When change was made',
+                    },
+                    'data': {
+                      'type': 'object',
+                      'description': 'Change data payload',
+                    },
+                  },
+                },
+                'description': 'List of changes',
+              },
+              'count': {
+                'type': 'integer',
+                'description': 'Number of changes returned',
+              },
+              'cursor': {
+                'type': 'integer',
+                'required': false,
+                'description':
+                    'Next cursor for pagination (if more results available)',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
+              },
+            },
+          },
         },
         {
           'method': 'GET',
@@ -193,6 +308,64 @@ abstract class BaseRestApiServer {
               'description': 'Maximum number of results (1-1000)',
             },
           ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'changes': {
+                'type': 'array',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'seq': {
+                      'type': 'integer',
+                      'description': 'Sequence number',
+                    },
+                    'projectId': {
+                      'type': 'string',
+                      'description': 'Project identifier',
+                    },
+                    'entityType': {
+                      'type': 'string',
+                      'description': 'Type of entity',
+                    },
+                    'operation': {
+                      'type': 'string',
+                      'description': 'Operation type (create, update, delete)',
+                    },
+                    'entityId': {
+                      'type': 'string',
+                      'description': 'Entity identifier',
+                    },
+                    'changeAt': {
+                      'type': 'string',
+                      'format': 'ISO8601',
+                      'description': 'When change was made',
+                    },
+                    'data': {
+                      'type': 'object',
+                      'description': 'Change data payload',
+                    },
+                  },
+                },
+                'description': 'List of changes for the specified project',
+              },
+              'count': {
+                'type': 'integer',
+                'description': 'Number of changes returned',
+              },
+              'cursor': {
+                'type': 'integer',
+                'required': false,
+                'description':
+                    'Next cursor for pagination (if more results available)',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
+              },
+            },
+          },
         },
         {
           'method': 'GET',
@@ -212,6 +385,31 @@ abstract class BaseRestApiServer {
               'description': 'Change sequence number',
             },
           ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'seq': {'type': 'integer', 'description': 'Sequence number'},
+              'projectId': {
+                'type': 'string',
+                'description': 'Project identifier',
+              },
+              'entityType': {'type': 'string', 'description': 'Type of entity'},
+              'operation': {
+                'type': 'string',
+                'description': 'Operation type (create, update, delete)',
+              },
+              'entityId': {
+                'type': 'string',
+                'description': 'Entity identifier',
+              },
+              'changeAt': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When change was made',
+              },
+              'data': {'type': 'object', 'description': 'Change data payload'},
+            },
+          },
         },
         {
           'method': 'GET',
