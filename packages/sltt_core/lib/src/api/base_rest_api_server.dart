@@ -682,6 +682,16 @@ abstract class BaseRestApiServer {
             'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
           };
 
+          // Preserve changeAt if provided
+          if (changeData['changeAt'] != null) {
+            changeToStore['changeAt'] = changeData['changeAt'];
+          }
+
+          // Preserve cloudAt if provided
+          if (changeData['cloudAt'] != null) {
+            changeToStore['cloudAt'] = changeData['cloudAt'];
+          }
+
           final created = await storage.createChange(changeToStore);
           final newSeq = created['seq'] as int;
           createdSeqs.add(newSeq);
