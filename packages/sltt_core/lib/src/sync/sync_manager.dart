@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import '../server/server_ports.dart';
+import '../server/server_urls.dart';
 import '../storage/shared_storage_service.dart';
 
 class SyncManager {
@@ -15,10 +15,16 @@ class SyncManager {
   final DownsyncsStorageService _downsyncsStorage =
       DownsyncsStorageService.instance;
 
-  // API endpoints
-  final String _cloudStorageUrl = 'http://localhost:$kCloudStoragePort';
+  // API endpoints - defaults to AWS dev cloud, can be overridden for testing
+  String _cloudStorageUrl = kCloudDevUrl;
 
   bool _initialized = false;
+
+  /// Configure the cloud storage URL (useful for testing with localhost)
+  void configureCloudUrl(String cloudUrl) {
+    _cloudStorageUrl = cloudUrl;
+    print('[SyncManager] Cloud URL configured to: $_cloudStorageUrl');
+  }
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -31,7 +37,7 @@ class SyncManager {
     _dio.options.receiveTimeout = const Duration(seconds: 30);
 
     _initialized = true;
-    print('[SyncManager] Initialized');
+    print('[SyncManager] Initialized with cloud URL: $_cloudStorageUrl');
   }
 
   // Get all projects that have changes to sync

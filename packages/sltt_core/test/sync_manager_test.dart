@@ -9,10 +9,18 @@ void main() {
     late OutsyncsStorageService outsyncsStorage;
     late Dio dio;
 
+    // Configuration - set to true to test against dev cloud instead of localhost
+    const bool useDevCloud = bool.fromEnvironment(
+      'USE_DEV_CLOUD',
+      defaultValue: false,
+    );
+
     // API endpoints
-    final String cloudStorageUrl = 'http://localhost:$kCloudStoragePort';
-    final String outsyncsUrl = 'http://localhost:$kOutsyncsPort';
-    final String downsyncsUrl = 'http://localhost:$kDownsyncsPort';
+    final String cloudStorageUrl = useDevCloud
+        ? kCloudDevUrl
+        : kLocalhostCloudStorageUrl;
+    final String outsyncsUrl = kLocalhostOutsyncsUrl;
+    final String downsyncsUrl = kLocalhostDownsyncsUrl;
 
     setUpAll(() async {
       serverLauncher = MultiServerLauncher.instance;
@@ -24,14 +32,33 @@ void main() {
       dio.options.connectTimeout = const Duration(seconds: 5);
       dio.options.receiveTimeout = const Duration(seconds: 10);
 
-      // Start all servers
-      print('🔧 Starting all servers...');
-      await serverLauncher.startAllServers();
+      if (useDevCloud) {
+        print('🌩️ Using DEV CLOUD for testing: $cloudStorageUrl');
+        // Configure sync manager to use dev cloud
+        syncManager.configureCloudUrl(cloudStorageUrl);
 
-      final serverStatus = serverLauncher.getServerStatus();
-      expect(serverStatus['downsyncs'], isTrue);
-      expect(serverStatus['outsyncs'], isTrue);
-      expect(serverStatus['cloudStorage'], isTrue);
+        // Start only local servers (outsyncs and downsyncs)
+        await serverLauncher.startServer('outsyncs', kOutsyncsPort);
+        await serverLauncher.startServer('downsyncs', kDownsyncsPort);
+
+        final serverStatus = serverLauncher.getServerStatus();
+        expect(serverStatus['downsyncs'], isTrue);
+        expect(serverStatus['outsyncs'], isTrue);
+        print('✅ Local servers started (cloud storage using AWS dev)');
+      } else {
+        print('🏠 Using LOCALHOST for testing: $cloudStorageUrl');
+        // Configure sync manager to use localhost cloud server
+        syncManager.configureCloudUrl(cloudStorageUrl);
+
+        // Start all servers
+        print('🔧 Starting all servers...');
+        await serverLauncher.startAllServers();
+
+        final serverStatus = serverLauncher.getServerStatus();
+        expect(serverStatus['downsyncs'], isTrue);
+        expect(serverStatus['outsyncs'], isTrue);
+        expect(serverStatus['cloudStorage'], isTrue);
+      }
 
       // Initialize sync manager
       await syncManager.initialize();
@@ -40,7 +67,9 @@ void main() {
       print('🧹 Cleaning up leftover test data...');
       await outsyncsStorage.deleteAllChanges();
       await DownsyncsStorageService.instance.deleteAllChanges();
-      await CloudStorageService.instance.deleteAllChanges();
+      if (!useDevCloud) {
+        await CloudStorageService.instance.deleteAllChanges();
+      }
       print('✅ Database cleanup completed');
     });
 
@@ -86,7 +115,7 @@ void main() {
       );
       expect(outsyncsChange.statusCode, equals(200));
 
-      // Test cloud storage server
+      // Test cloud storage server (localhost or dev cloud)
       final cloudHealth = await dio.get('$cloudStorageUrl/health');
       expect(cloudHealth.statusCode, equals(200));
 
