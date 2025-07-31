@@ -10,8 +10,9 @@ void main() {
     // Check for environment variable to determine test configuration
     // Use USE_DEV_CLOUD=true to test against AWS, USE_CLOUD_STORAGE=true for local cloud storage
     final bool useDevCloud = Platform.environment['USE_DEV_CLOUD'] == 'true';
-    final bool useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] == 'true';
-    
+    final bool useCloudStorage =
+        Platform.environment['USE_CLOUD_STORAGE'] == 'true';
+
     late EnhancedRestApiServer? server;
     late Dio dio;
     late String baseUrl;
@@ -31,7 +32,10 @@ void main() {
         const int testPort = kCloudStoragePort;
         baseUrl = 'http://localhost:$testPort';
         testProjectId = 'api-test-project';
-        server = EnhancedRestApiServer(StorageType.cloudStorage, 'Test Cloud Storage Server');
+        server = EnhancedRestApiServer(
+          StorageType.cloudStorage,
+          'Test Cloud Storage Server',
+        );
         await server!.start(port: testPort);
         shouldTestCloudAt = true;
         print('☁️ Testing against local cloud storage server: $baseUrl');
@@ -40,7 +44,10 @@ void main() {
         const int testPort = 8080;
         baseUrl = 'http://localhost:$testPort';
         testProjectId = 'api-test-project';
-        server = EnhancedRestApiServer(StorageType.outsyncs, 'Test Outsyncs Server');
+        server = EnhancedRestApiServer(
+          StorageType.outsyncs,
+          'Test Outsyncs Server',
+        );
         await server!.start(port: testPort);
         shouldTestCloudAt = false;
         print('🔄 Testing against local outsyncs server: $baseUrl');
@@ -350,10 +357,15 @@ void main() {
       // Test cloudAt behavior based on storage type
       if (shouldTestCloudAt) {
         // Cloud storage should generate cloudAt
-        expect(retrievedChange['cloudAt'], isNotNull,
-            reason: 'Cloud storage should generate cloudAt timestamps');
+        expect(
+          retrievedChange['cloudAt'],
+          isNotNull,
+          reason: 'Cloud storage should generate cloudAt timestamps',
+        );
 
-        final changeAtTime = DateTime.parse(retrievedChange['changeAt']).toUtc();
+        final changeAtTime = DateTime.parse(
+          retrievedChange['changeAt'],
+        ).toUtc();
         final cloudAtTime = DateTime.parse(retrievedChange['cloudAt']).toUtc();
 
         expect(
@@ -368,15 +380,21 @@ void main() {
         print('   Generated cloudAt: ${retrievedChange['cloudAt']}');
       } else {
         // Local outsyncs storage should NOT generate cloudAt
-        expect(retrievedChange['cloudAt'], isNull,
-            reason: 'Local outsyncs storage should not generate cloudAt timestamps');
+        expect(
+          retrievedChange['cloudAt'],
+          isNull,
+          reason:
+              'Local outsyncs storage should not generate cloudAt timestamps',
+        );
 
         print('✅ Local storage test passed!');
         print('   Retrieved changeAt: ${retrievedChange['changeAt']}');
         print('   cloudAt correctly null for local storage');
       }
 
-      print('✅ ChangeAt preservation test passed for ${shouldTestCloudAt ? 'cloud' : 'local'} storage!');
+      print(
+        '✅ ChangeAt preservation test passed for ${shouldTestCloudAt ? 'cloud' : 'local'} storage!',
+      );
     });
   });
 }
