@@ -47,7 +47,7 @@ class ChangeLogEntry {
       'projectId': projectId,
       'entityType': entityType,
       'operation': operation,
-      'changeAt': changeAt.toIso8601String(),
+      'changeAt': changeAt.toUtc().toIso8601String(),
       'entityId': entityId,
       'data': data,
       'outdatedBy': outdatedBy,
