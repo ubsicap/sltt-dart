@@ -39,8 +39,8 @@ Future<void> main() async {
     final result1 = await outsyncsStorage.createChange(testChange1);
     final result2 = await outsyncsStorage.createChange(testChange2);
 
-    print('   ✅ Created change for project-test-1: seq=${result1['seq']}');
-    print('   ✅ Created change for project-test-2: seq=${result2['seq']}');
+    print('   ✅ Created change for project-test-1: seq=${result1.seq}');
+    print('   ✅ Created change for project-test-2: seq=${result2.seq}');
 
     // Test 3: Project discovery
     print('\n✅ Test 3: Testing project discovery...');

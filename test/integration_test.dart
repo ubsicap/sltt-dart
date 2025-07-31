@@ -92,10 +92,10 @@ void main() {
       final result1 = await outsyncsStorage!.createChange(testChange1);
       final result2 = await outsyncsStorage!.createChange(testChange2);
 
-      expect(result1['seq'], isNotNull);
-      expect(result2['seq'], isNotNull);
-      expect(result1['projectId'], equals(testProjectId1));
-      expect(result2['projectId'], equals(testProjectId2));
+      expect(result1.seq, isNotNull);
+      expect(result2.seq, isNotNull);
+      expect(result1.projectId, equals(testProjectId1));
+      expect(result2.projectId, equals(testProjectId2));
 
       // Test project discovery - let's debug what's happening
       final projects = await outsyncsStorage!.getAllProjects();
@@ -122,11 +122,11 @@ void main() {
 
       // Verify isolation between projects
       for (final change in project1Changes) {
-        expect(change['projectId'], equals(testProjectId1));
+        expect(change.projectId, equals(testProjectId1));
       }
 
       for (final change in project2Changes) {
-        expect(change['projectId'], equals(testProjectId2));
+        expect(change.projectId, equals(testProjectId2));
       }
 
       // Test statistics

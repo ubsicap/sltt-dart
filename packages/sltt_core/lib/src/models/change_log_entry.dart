@@ -75,4 +75,23 @@ class ChangeLogEntry {
 
     return entry;
   }
+
+  /// Factory method to create ChangeLogEntry from API data (Map<String, dynamic>)
+  /// Handles proper data conversion and provides defaults for missing fields
+  static ChangeLogEntry fromApiData(Map<String, dynamic> changeData) {
+    return ChangeLogEntry(
+      projectId: changeData['projectId'] as String? ?? '',
+      entityType: changeData['entityType'] as String? ?? '',
+      operation: changeData['operation'] as String? ?? 'create',
+      changeAt: changeData['changeAt'] != null
+          ? DateTime.parse(changeData['changeAt'] as String)
+          : DateTime.now().toUtc(),
+      entityId: changeData['entityId'] as String? ?? '',
+      dataJson: jsonEncode(changeData['data'] ?? {}),
+      outdatedBy: changeData['outdatedBy'] as int?,
+      cloudAt: changeData['cloudAt'] != null
+          ? DateTime.parse(changeData['cloudAt'] as String)
+          : null,
+    );
+  }
 }

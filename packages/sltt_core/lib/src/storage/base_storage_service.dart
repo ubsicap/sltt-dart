@@ -1,3 +1,5 @@
+import '../models/change_log_entry.dart';
+
 /// Abstract base class for all storage service implementations.
 ///
 /// This interface defines the contract that all storage services must implement,
@@ -10,20 +12,20 @@ abstract class BaseStorageService {
   Future<void> close();
 
   /// Create a new change entry
-  Future<Map<String, dynamic>> createChange(Map<String, dynamic> changeData);
+  Future<ChangeLogEntry> createChange(Map<String, dynamic> changeData);
 
   /// Get a specific change by sequence number
-  Future<Map<String, dynamic>?> getChange(String projectId, int seq);
+  Future<ChangeLogEntry?> getChange(String projectId, int seq);
 
   /// Get changes with cursor-based pagination
-  Future<List<Map<String, dynamic>>> getChangesWithCursor({
+  Future<List<ChangeLogEntry>> getChangesWithCursor({
     required String projectId,
     int? cursor,
     int? limit,
   });
 
   /// Get all changes since a specific sequence number
-  Future<List<Map<String, dynamic>>> getChangesSince(String projectId, int seq);
+  Future<List<ChangeLogEntry>> getChangesSince(String projectId, int seq);
 
   /// Get statistics about change operations
   Future<Map<String, dynamic>> getChangeStats(String projectId);
@@ -43,9 +45,7 @@ abstract class BaseStorageService {
   }
 
   /// Get changes that are not outdated (for local storage services)
-  Future<List<Map<String, dynamic>>> getChangesNotOutdated(
-    String projectId,
-  ) async {
+  Future<List<ChangeLogEntry>> getChangesNotOutdated(String projectId) async {
     // Default implementation - override in local storage services
     return getChangesWithCursor(projectId: projectId);
   }

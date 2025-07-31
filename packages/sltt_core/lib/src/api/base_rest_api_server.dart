@@ -545,14 +545,14 @@ abstract class BaseRestApiServer {
       );
 
       final responseData = <String, dynamic>{
-        'changes': changes,
+        'changes': changes.map((c) => c.toJson()).toList(),
         'count': changes.length,
         'timestamp': DateTime.now().toIso8601String(),
       };
 
       // Add cursor to response if there are more changes available
       if (changes.isNotEmpty && (limit == null || changes.length == limit)) {
-        final lastChangeId = changes.last['seq'] as int;
+        final lastChangeId = changes.last.seq;
         final moreChanges = await storage.getChangesWithCursor(
           projectId: projectId,
           cursor: lastChangeId,
@@ -598,9 +598,10 @@ abstract class BaseRestApiServer {
         return _errorResponse('Change not found', 404);
       }
 
-      print('_handleGetChange Response: ${jsonEncode(change)}');
+      final changeJson = change.toJson();
+      print('_handleGetChange Response: ${jsonEncode(changeJson)}');
       return Response.ok(
-        jsonEncode(change),
+        jsonEncode(changeJson),
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {
@@ -694,7 +695,7 @@ abstract class BaseRestApiServer {
           }
 
           final created = await storage.createChange(changeToStore);
-          final newSeq = created['seq'] as int;
+          final newSeq = created.seq;
           createdSeqs.add(newSeq);
           originalSeqs.add(originalSeq ?? newSeq);
         } on ArgumentError catch (e) {

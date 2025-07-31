@@ -49,9 +49,7 @@ Future<void> main() async {
         'author': 'integration-demo',
       },
     });
-    print(
-      '   Local change: ${localChange1['seq']} - ${localChange1['entityType']}',
-    );
+    print('   Local change: ${localChange1.seq} - ${localChange1.entityType}');
 
     final localChange2 = await localOutsyncs.createChange({
       'entityType': 'User',
@@ -63,9 +61,7 @@ Future<void> main() async {
         'preferences': {'theme': 'dark', 'notifications': true},
       },
     });
-    print(
-      '   Local change: ${localChange2['seq']} - ${localChange2['entityType']}',
-    );
+    print('   Local change: ${localChange2.seq} - ${localChange2.entityType}');
     print('✅ Local changes created\n');
 
     // Simulate sync from local to DynamoDB cloud
@@ -78,17 +74,17 @@ Future<void> main() async {
 
     for (final localChange in localChanges) {
       // Remove the local sequence number before sending to cloud
-      final changeForCloud = Map<String, dynamic>.from(localChange);
+      final changeForCloud = localChange.toJson();
       final oldSeq = changeForCloud.remove('seq') as int;
       // Keep original timestamp - cloud will preserve it and add cloudAt
 
       // Create in DynamoDB cloud storage
       final cloudChange = await dynamoCloudStorage.createChange(changeForCloud);
-      final newSeq = cloudChange['seq'] as int;
+      final newSeq = cloudChange.seq;
       seqMapping[oldSeq] = newSeq;
 
       print(
-        '   Synced: local seq $oldSeq -> cloud seq $newSeq (${cloudChange['entityType']})',
+        '   Synced: local seq $oldSeq -> cloud seq $newSeq (${cloudChange.entityType})',
       );
     }
     print('✅ Local to cloud sync completed\n');
@@ -105,9 +101,7 @@ Future<void> main() async {
         'status': 'active',
       },
     });
-    print(
-      '   Cloud change: ${cloudChange1['seq']} - ${cloudChange1['entityType']}',
-    );
+    print('   Cloud change: ${cloudChange1.seq} - ${cloudChange1.entityType}');
     print('✅ Cloud changes created\n');
 
     // Simulate sync from DynamoDB cloud to local
@@ -122,12 +116,12 @@ Future<void> main() async {
 
     for (final cloudChange in cloudChanges) {
       // Add to local downsyncs storage
-      final changeForLocal = Map<String, dynamic>.from(cloudChange);
+      final changeForLocal = cloudChange.toJson();
       changeForLocal.remove('seq'); // Local storage will generate new seq
 
       final localChange = await localDownsyncs.createChange(changeForLocal);
       print(
-        '   Downloaded: cloud seq ${cloudChange['seq']} -> local seq ${localChange['seq']} (${cloudChange['entityType']})',
+        '   Downloaded: cloud seq ${cloudChange.seq} -> local seq ${localChange.seq} (${cloudChange.entityType})',
       );
     }
     print('✅ Cloud to local sync completed\n');
@@ -165,7 +159,7 @@ Future<void> main() async {
     print('   Cloud page 1: ${cloudPage1.length} changes');
 
     if (cloudPage1.isNotEmpty) {
-      final cursor = cloudPage1.last['seq'] as int;
+      final cursor = cloudPage1.last.seq;
       final cloudPage2 = await dynamoCloudStorage.getChangesWithCursor(
         projectId: projectId,
         cursor: cursor,

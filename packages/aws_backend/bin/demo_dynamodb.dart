@@ -40,7 +40,7 @@ Future<void> main() async {
       },
     });
     print(
-      '   Created change: ${change1['seq']} - ${change1['entityType']}/${change1['entityId']}',
+      '   Created change: ${change1.seq} - ${change1.entityType}/${change1.entityId}',
     );
 
     final change2 = await storage.createChange({
@@ -55,7 +55,7 @@ Future<void> main() async {
       },
     });
     print(
-      '   Created change: ${change2['seq']} - ${change2['entityType']}/${change2['entityId']}',
+      '   Created change: ${change2.seq} - ${change2.entityType}/${change2.entityId}',
     );
 
     final change3 = await storage.createChange({
@@ -69,7 +69,7 @@ Future<void> main() async {
       },
     });
     print(
-      '   Created change: ${change3['seq']} - ${change3['entityType']}/${change3['entityId']}',
+      '   Created change: ${change3.seq} - ${change3.entityType}/${change3.entityId}',
     );
     print('✅ Change creation test passed\n');
 
@@ -87,7 +87,7 @@ Future<void> main() async {
     print('   Retrieved ${limitedChanges.length} changes with limit=2');
 
     if (limitedChanges.isNotEmpty) {
-      final cursor = limitedChanges.last['seq'] as int;
+      final cursor = limitedChanges.last.seq;
       final remainingChanges = await storage.getChangesWithCursor(
         projectId: demoProjectId,
         cursor: cursor,
@@ -100,15 +100,12 @@ Future<void> main() async {
 
     // Test 3: Get specific change
     print('🎯 Testing specific change retrieval...');
-    final specificChange = await storage.getChange(
-      demoProjectId,
-      change1['seq'] as int,
-    );
+    final specificChange = await storage.getChange(demoProjectId, change1.seq);
     if (specificChange != null) {
       print(
-        '   Retrieved change ${specificChange['seq']}: ${specificChange['entityType']}/${specificChange['entityId']}',
+        '   Retrieved change ${specificChange.seq}: ${specificChange.entityType}/${specificChange.entityId}',
       );
-      print('   Data: ${specificChange['data']}');
+      print('   Data: ${specificChange.data}');
     } else {
       print('   ❌ Failed to retrieve specific change');
     }
@@ -118,14 +115,14 @@ Future<void> main() async {
     print('📈 Testing changes since sequence...');
     final changesSince = await storage.getChangesSince(
       demoProjectId,
-      change1['seq'] as int,
+      change1.seq,
     );
     print(
-      '   Retrieved ${changesSince.length} changes since seq ${change1['seq']}',
+      '   Retrieved ${changesSince.length} changes since seq ${change1.seq}',
     );
     for (final change in changesSince) {
       print(
-        '   - ${change['seq']}: ${change['entityType']}/${change['entityId']} (${change['operation']})',
+        '   - ${change.seq}: ${change.entityType}/${change.entityId} (${change.operation})',
       );
     }
     print('✅ Changes since test passed\n');

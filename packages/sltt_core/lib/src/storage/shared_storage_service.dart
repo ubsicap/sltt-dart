@@ -42,37 +42,29 @@ class LocalStorageService implements BaseStorageService {
   ///
   /// Returns the created change log entry with auto-generated sequence number.
   @override
-  Future<Map<String, dynamic>> createChange(
-    Map<String, dynamic> changeData,
-  ) async {
+  Future<ChangeLogEntry> createChange(Map<String, dynamic> changeData) async {
     print('changeData: ${jsonEncode(changeData)}');
-    final change = ChangeLogEntry(
-      projectId: changeData['projectId'] ?? '',
-      entityType: changeData['entityType'] ?? '',
-      operation: changeData['operation'] ?? '',
-      changeAt: changeData['changeAt'] != null
-          ? DateTime.parse(changeData['changeAt'])
-          : DateTime.now().toUtc(),
-      cloudAt: maybeCreateCloudAt(),
-      entityId: changeData['entityId'] ?? '',
-      dataJson: jsonEncode(changeData['data'] ?? {}),
-    );
+    final change = ChangeLogEntry.fromApiData(changeData);
+
+    // Set cloudAt if this is a cloud storage service
+    change.cloudAt ??= maybeCreateCloudAt();
+
     print('change: ${jsonEncode(change)}');
     await _isar.writeTxn(() async {
       await _isar.changeLogEntrys.put(change);
     });
-    return change.toJson();
+    return change;
   }
 
   @override
-  Future<Map<String, dynamic>?> getChange(String projectId, int seq) async {
+  Future<ChangeLogEntry?> getChange(String projectId, int seq) async {
     final change = await _isar.changeLogEntrys
         .where()
         .seqEqualTo(seq)
         .filter()
         .projectIdEqualTo(projectId)
         .findFirst();
-    return change?.toJson();
+    return change;
   }
 
   Future<List<ChangeLogEntry>> getAllChanges() async {
@@ -218,7 +210,7 @@ class LocalStorageService implements BaseStorageService {
 
   // Cursor-based pagination and filtering
   @override
-  Future<List<Map<String, dynamic>>> getChangesWithCursor({
+  Future<List<ChangeLogEntry>> getChangesWithCursor({
     required String projectId,
     int? cursor,
     int? limit,
@@ -233,7 +225,7 @@ class LocalStorageService implements BaseStorageService {
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
     }
-    return results.map((e) => e.toJson()).toList();
+    return results;
   }
 
   /// Get changes for syncing - excludes outdated changes.
@@ -241,9 +233,7 @@ class LocalStorageService implements BaseStorageService {
   /// Returns only changes that haven't been marked as outdated,
   /// which prevents syncing obsolete change log entries.
   @override
-  Future<List<Map<String, dynamic>>> getChangesNotOutdated(
-    String projectId,
-  ) async {
+  Future<List<ChangeLogEntry>> getChangesNotOutdated(String projectId) async {
     var results = await _isar.changeLogEntrys
         .where()
         .filter()
@@ -251,7 +241,7 @@ class LocalStorageService implements BaseStorageService {
         .and()
         .outdatedByIsNull()
         .findAll();
-    return results.map((e) => e.toJson()).toList();
+    return results;
   }
 
   /// Get changes for syncing - excludes outdated changes.
@@ -304,7 +294,7 @@ class LocalStorageService implements BaseStorageService {
 
   // Get changes since a specific sequence number (for syncing)
   @override
-  Future<List<Map<String, dynamic>>> getChangesSince(
+  Future<List<ChangeLogEntry>> getChangesSince(
     String projectId,
     int seq,
   ) async {
@@ -316,36 +306,27 @@ class LocalStorageService implements BaseStorageService {
         .findAll();
     // Sort by seq in ascending order
     results.sort((a, b) => a.seq.compareTo(b.seq));
-    return results.map((e) => e.toJson()).toList();
+    return results;
   }
 
   // Store multiple changes (for batch operations)
-  Future<List<Map<String, dynamic>>> createChanges(
+  Future<List<ChangeLogEntry>> createChanges(
     List<Map<String, dynamic>> changesData,
   ) async {
     final changes = changesData
-        .map(
-          (changeData) => ChangeLogEntry(
-            projectId: changeData['projectId'] ?? '',
-            entityType: changeData['entityType'] ?? '',
-            operation: changeData['operation'] ?? '',
-            changeAt: changeData['changeAt'] != null
-                ? DateTime.parse(changeData['changeAt'])
-                : DateTime.now().toUtc(),
-            entityId: changeData['entityId'] ?? '',
-            dataJson: jsonEncode(changeData['data'] ?? {}),
-            outdatedBy: changeData['outdatedBy'] as int?,
-            cloudAt:
-                maybeCreateCloudAt(), // Hook for subclasses to add cloud timestamp
-          ),
-        )
+        .map((changeData) => ChangeLogEntry.fromApiData(changeData))
         .toList();
+
+    // Set cloudAt for changes if this is a cloud storage service
+    for (final change in changes) {
+      change.cloudAt ??= maybeCreateCloudAt();
+    }
 
     await _isar.writeTxn(() async {
       await _isar.changeLogEntrys.putAll(changes);
     });
 
-    return changes.map((e) => e.toJson()).toList();
+    return changes;
   }
 
   /// Hook method for subclasses to optionally add cloud timestamp.

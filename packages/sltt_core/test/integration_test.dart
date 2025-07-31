@@ -50,10 +50,10 @@ void main() {
       final result1 = await outsyncsStorage.createChange(testChange1);
       final result2 = await outsyncsStorage.createChange(testChange2);
 
-      expect(result1['seq'], isNotNull);
-      expect(result2['seq'], isNotNull);
-      expect(result1['projectId'], equals('project-test-1'));
-      expect(result2['projectId'], equals('project-test-2'));
+      expect(result1.seq, isNotNull);
+      expect(result2.seq, isNotNull);
+      expect(result1.projectId, equals('project-test-1'));
+      expect(result2.projectId, equals('project-test-2'));
     });
 
     test('project discovery', () async {
@@ -76,11 +76,11 @@ void main() {
 
       // Verify each change has correct projectId
       for (final change in project1Changes) {
-        expect(change['projectId'], equals('project-test-1'));
+        expect(change.projectId, equals('project-test-1'));
       }
 
       for (final change in project2Changes) {
-        expect(change['projectId'], equals('project-test-2'));
+        expect(change.projectId, equals('project-test-2'));
       }
     });
 

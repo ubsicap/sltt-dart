@@ -73,9 +73,7 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> createChange(
-    Map<String, dynamic> changeData,
-  ) async {
+  Future<ChangeLogEntry> createChange(Map<String, dynamic> changeData) async {
     if (!_initialized) await initialize();
 
     // Validate required fields
@@ -128,23 +126,25 @@ class DynamoDBStorageService implements BaseStorageService {
       throw Exception('Failed to create change: ${response.body}');
     }
 
-    return {
+    // Create ChangeLogEntry from the stored data
+    final resultData = {
       'seq': seq,
       'projectId': changeProjectId,
       'entityType': entityType,
       'operation': operation,
       'changeAt': originalChangeAt,
       'entityId': entityId,
-      'data': changeData['data'] ?? {},
+      'data': jsonEncode(changeData['data'] ?? {}),
       'cloudAt': now.toIso8601String(),
     };
+
+    final changeEntry = ChangeLogEntry.fromApiData(resultData);
+    changeEntry.seq = seq; // Set the seq that was assigned by DynamoDB
+    return changeEntry;
   }
 
   @override
-  Future<Map<String, dynamic>?> getChange(
-    String requestProjectId,
-    int seq,
-  ) async {
+  Future<ChangeLogEntry?> getChange(String requestProjectId, int seq) async {
     if (!_initialized) await initialize();
 
     final getRequest = {
@@ -166,11 +166,12 @@ class DynamoDBStorageService implements BaseStorageService {
 
     if (item == null) return null;
 
-    return _dynamoItemToMap(item);
+    final itemMap = _dynamoItemToMap(item);
+    return ChangeLogEntry.fromApiData(itemMap);
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getChangesWithCursor({
+  Future<List<ChangeLogEntry>> getChangesWithCursor({
     required String projectId,
     int? cursor,
     int? limit,
@@ -207,12 +208,14 @@ class DynamoDBStorageService implements BaseStorageService {
     final items = data['Items'] as List? ?? [];
 
     return items
-        .map<Map<String, dynamic>>((item) => _dynamoItemToMap(item))
+        .map<ChangeLogEntry>(
+          (item) => ChangeLogEntry.fromApiData(_dynamoItemToMap(item)),
+        )
         .toList();
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getChangesSince(
+  Future<List<ChangeLogEntry>> getChangesSince(
     String requestProjectId,
     int seq,
   ) async {
@@ -238,7 +241,9 @@ class DynamoDBStorageService implements BaseStorageService {
     final items = data['Items'] as List? ?? [];
 
     return items
-        .map<Map<String, dynamic>>((item) => _dynamoItemToMap(item))
+        .map<ChangeLogEntry>(
+          (item) => ChangeLogEntry.fromApiData(_dynamoItemToMap(item)),
+        )
         .toList();
   }
 
@@ -329,7 +334,7 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getChangesNotOutdated(
+  Future<List<ChangeLogEntry>> getChangesNotOutdated(
     String requestProjectId,
   ) async {
     if (!_initialized) await initialize();
@@ -354,7 +359,9 @@ class DynamoDBStorageService implements BaseStorageService {
     final items = data['Items'] as List? ?? [];
 
     return items
-        .map<Map<String, dynamic>>((item) => _dynamoItemToMap(item))
+        .map<ChangeLogEntry>(
+          (item) => ChangeLogEntry.fromApiData(_dynamoItemToMap(item)),
+        )
         .toList();
   }
 

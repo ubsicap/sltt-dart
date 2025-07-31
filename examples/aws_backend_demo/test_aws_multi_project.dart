@@ -43,7 +43,7 @@ Future<void> main() async {
     for (final change in testChanges) {
       final result = await storage.createChange(change);
       print(
-        '   ✅ Created change for ${change['projectId']}: seq=${result['seq']}',
+        '   ✅ Created change for ${change['projectId']}: seq=${result.seq}',
       );
     }
 

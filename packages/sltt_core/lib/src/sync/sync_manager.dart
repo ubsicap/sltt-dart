@@ -195,11 +195,14 @@ class SyncManager {
             }
 
             // Immediately store changes in downsyncs storage for crash recovery
-            final newChanges = changesBatch.cast<Map<String, dynamic>>();
+            final newChanges = changesBatch
+                .map((c) => c.toJson())
+                .cast<Map<String, dynamic>>()
+                .toList();
             final storedChanges = await _downsyncsStorage.createChanges(
               newChanges,
             );
-            allNewChanges.addAll(storedChanges);
+            allNewChanges.addAll(storedChanges.map((c) => c.toJson()).toList());
             totalChangesForProject += storedChanges.length;
 
             print(
