@@ -16,6 +16,7 @@ void main() {
           'entityType': 'document',
           'operation': 'delete',
           'entityId': 'temp-document-001',
+          'cid': BaseChangeLogEntry.generateCid(),
           'data': {},
         },
       ];
@@ -101,6 +102,7 @@ void main() {
             'entityType': 'document',
             'operation': 'create',
             'entityId': 'doc-string-data',
+            'cid': BaseChangeLogEntry.generateCid(),
             'data': {
               'title': 'String Document',
               'content': 'Simple string content',
@@ -111,6 +113,7 @@ void main() {
             'entityType': 'member',
             'operation': 'create',
             'entityId': 'user-with-numbers',
+            'cid': BaseChangeLogEntry.generateCid(),
             'data': {
               'name': 'Test User',
               'age': 25,
@@ -123,6 +126,7 @@ void main() {
             'entityType': 'gloss',
             'operation': 'create',
             'entityId': 'list-with-arrays',
+            'cid': BaseChangeLogEntry.generateCid(),
             'data': {
               'items': ['item1', 'item2', 'item3'],
               'numbers': [1, 2, 3, 4, 5],

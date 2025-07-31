@@ -1,4 +1,5 @@
 import 'package:aws_backend/aws_backend.dart';
+import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -35,6 +36,7 @@ void main() {
           'entityType': 'project',
           'operation': 'create',
           'entityId': 'project-gamma',
+          'cid': BaseChangeLogEntry.generateCid(),
           'data': {'name': 'Gamma Project', 'description': 'AWS test project'},
         },
         {
@@ -42,6 +44,7 @@ void main() {
           'entityType': 'document',
           'operation': 'create',
           'entityId': 'doc-456',
+          'cid': BaseChangeLogEntry.generateCid(),
           'data': {'title': 'Delta Document', 'content': 'Test content'},
         },
       ];

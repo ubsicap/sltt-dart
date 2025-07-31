@@ -15,6 +15,8 @@ void main() {
   group('Cloud Create Changes API', () {
     test('preserves custom changeAt and sets cloudAt > changeAt', () async {
       final origSeq = 123;
+      final testCid = BaseChangeLogEntry.generateCid();
+
       // 1. Post a change with a custom changeAt
       final postResponse = await http.post(
         Uri.parse('$baseUrl/api/changes'),
@@ -27,6 +29,7 @@ void main() {
             'operation': 'create',
             'entityId': 'doc-abc',
             'changeAt': customChangeAt,
+            'cid': testCid,
             'data': {'title': 'Cloud Test', 'content': 'Hello cloud!'},
           },
         ]),
