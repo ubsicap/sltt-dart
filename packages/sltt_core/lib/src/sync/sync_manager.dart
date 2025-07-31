@@ -76,38 +76,29 @@ class SyncManager {
         final seqMap = Map<String, int>.from(responseData['seqMap'] ?? {});
 
         if (success) {
-          // Mark changes as outdated immediately to preserve state in case of crash
-          // wait for downsync to delete them
+          // Immediately delete the outsynced changes to clean up local storage
           print(
             '[SyncManager] Successfully outsynced $createdCount changes to cloud',
           );
-          print('[SyncManager] Marking outsynced changes as outdated...');
+          print(
+            '[SyncManager] Deleting outsynced changes from local storage...',
+          );
 
-          // Get the original changes to extract their projectIds
-          final originalChanges = await _outsyncsStorage.getChangesForSync();
-          final changesBySeq = <int, Map<String, dynamic>>{};
-          for (final change in originalChanges) {
-            changesBySeq[change['seq'] as int] = change;
+          final seqsToDelete = seqMap.keys.map(int.parse).toList();
+
+          if (seqsToDelete.isNotEmpty) {
+            final deletedCount = await _outsyncsStorage.deleteChanges(
+              seqsToDelete,
+            );
+            print(
+              '[SyncManager] Deleted $deletedCount outsynced changes from local storage',
+            );
           }
-
-          // Mark each outsynced change as outdated by its new cloud sequence
-          for (final entry in seqMap.entries) {
-            final oldSeq = int.parse(entry.key);
-            final newSeq = entry.value;
-
-            final originalChange = changesBySeq[oldSeq];
-            if (originalChange != null) {
-              final projectId = originalChange['projectId'] as String;
-              await _outsyncsStorage.markAsOutdated(projectId, oldSeq, newSeq);
-            }
-          }
-
-          print('[SyncManager] Marked ${seqMap.length} changes as outdated');
 
           return OutsyncResult(
             success: true,
             syncedChanges: [], // No longer return full payload
-            deletedLocalChanges: [], // Will be populated after downsync cleanup
+            deletedLocalChanges: seqsToDelete,
             seqMap: seqMap,
             message: 'Successfully outsynced $createdCount changes',
           );
@@ -215,9 +206,6 @@ class SyncManager {
               '[SyncManager] Stored ${storedChanges.length} changes for project $projectId (batch)',
             );
 
-            // Immediately clean up corresponding outsyncs to reduce memory footprint
-            await _cleanupOutsyncsForDownsyncedChanges(storedChanges);
-
             // Update cursor for next iteration
             cursor = nextCursor?.toString();
           } else {
@@ -257,10 +245,10 @@ class SyncManager {
   Future<FullSyncResult> performFullSync() async {
     print('[SyncManager] Starting full sync...');
 
-    // Step 1: Outsync to cloud (now marks changes as outdated immediately)
+    // Step 1: Outsync to cloud (deletes local changes immediately)
     final outsyncResult = await outsyncToCloud();
 
-    // Step 2: Downsync from cloud (now cleans up outsyncs immediately)
+    // Step 2: Downsync from cloud
     final downsyncResult = await downsyncFromCloud();
 
     // Create final outsync result with the sequences that were originally outsynced
@@ -279,40 +267,6 @@ class SyncManager {
       downsyncResult: downsyncResult,
       success: outsyncResult.success && downsyncResult.success,
     );
-  }
-
-  // Helper method to clean up outsyncs that correspond to downsynced changes
-  Future<void> _cleanupOutsyncsForDownsyncedChanges(
-    List<Map<String, dynamic>> downsyncedChanges,
-  ) async {
-    final seqsToDelete = <int>[];
-
-    for (final change in downsyncedChanges) {
-      final projectId = change['projectId'] as String;
-      final changeSeq = change['seq'] as int?;
-
-      // Find any outsyncs changes that are marked as outdated by this seq
-      final outdatedChanges = await _outsyncsStorage.getChangesWithCursor(
-        projectId: projectId,
-      );
-
-      for (final outdatedChange in outdatedChanges) {
-        final outdatedBy = outdatedChange['outdatedBy'] as int?;
-        if (outdatedBy != null &&
-            outdatedBy > 0 &&
-            changeSeq != null &&
-            outdatedBy == changeSeq) {
-          seqsToDelete.add(outdatedChange['seq'] as int);
-        }
-      }
-    }
-
-    if (seqsToDelete.isNotEmpty) {
-      final deletedCount = await _outsyncsStorage.deleteChanges(seqsToDelete);
-      print(
-        '[SyncManager] Cleaned up $deletedCount outsynced changes from local storage',
-      );
-    }
   }
 
   // Check sync status and statistics

@@ -285,10 +285,10 @@ void main() {
       expect(outsyncResult.seqMap, isNotEmpty);
       expect(
         outsyncResult.deletedLocalChanges,
-        isEmpty,
-      ); // Should be empty until full sync
+        isNotEmpty,
+      ); // Changes are deleted immediately after successful upload
 
-      // Verify changes were added to cloud but outsyncs still has them
+      // Verify changes were added to cloud and removed from outsyncs
       final outsyncsStatsAfter = await dio.get(
         '$outsyncsUrl/api/projects/$testProjectId/stats',
       );
@@ -306,8 +306,8 @@ void main() {
       expect(cloudCountAfter, greaterThan(cloudCountBefore));
       expect(
         outsyncsCountAfter,
-        equals(outsyncsCountBefore),
-      ); // Preserved until full sync
+        lessThan(outsyncsCountBefore),
+      ); // Changes deleted immediately after upload
     });
 
     test('downsync flow', () async {
