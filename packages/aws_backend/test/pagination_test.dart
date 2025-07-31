@@ -1,10 +1,11 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  const baseUrl = 'https://u1e8wbi87a.execute-api.us-east-1.amazonaws.com/dev';
+  const baseUrl = kCloudDevUrl;
   const testProjectId = '_test_cloud_api_project';
 
   group('Pagination Tests', () {

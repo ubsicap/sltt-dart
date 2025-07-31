@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  const baseUrl = 'https://u1e8wbi87a.execute-api.us-east-1.amazonaws.com/dev';
+  const baseUrl = kCloudDevUrl;
 
   test('api help endpoint returns documentation', () async {
     final response = await http.get(Uri.parse('$baseUrl/api/help'));
