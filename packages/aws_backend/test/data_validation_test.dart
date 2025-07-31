@@ -12,9 +12,9 @@ void main() {
       final changeWithEmptyData = [
         {
           'projectId': testProjectId,
-          'entityType': 'setting',
+          'entityType': 'document',
           'operation': 'delete',
-          'entityId': 'temp-setting-001',
+          'entityId': 'temp-document-001',
           'data': {},
         },
       ];
@@ -43,9 +43,9 @@ void main() {
         final complexChange = [
           {
             'projectId': testProjectId,
-            'entityType': 'configuration',
+            'entityType': 'note',
             'operation': 'create',
-            'entityId': 'config-complex-001',
+            'entityId': 'note-complex-001',
             'data': {
               'settings': {
                 'ui': {
@@ -107,7 +107,7 @@ void main() {
           },
           {
             'projectId': testProjectId,
-            'entityType': 'user',
+            'entityType': 'member',
             'operation': 'create',
             'entityId': 'user-with-numbers',
             'data': {
@@ -119,7 +119,7 @@ void main() {
           },
           {
             'projectId': testProjectId,
-            'entityType': 'list',
+            'entityType': 'gloss',
             'operation': 'create',
             'entityId': 'list-with-arrays',
             'data': {
