@@ -51,7 +51,7 @@ functions:
 
 resources:
   Resources:
-    # DynamoDB table for change log entries
+    # DynamoDB table for change log entries with improved schema
     ChangesTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -60,13 +60,26 @@ resources:
         AttributeDefinitions:
           - AttributeName: pk
             AttributeType: S
-          - AttributeName: seq
-            AttributeType: N
+          - AttributeName: sk
+            AttributeType: S
+          - AttributeName: gsi1pk
+            AttributeType: S
+          - AttributeName: gsi1sk
+            AttributeType: S
         KeySchema:
           - AttributeName: pk
             KeyType: HASH
-          - AttributeName: seq
+          - AttributeName: sk
             KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - AttributeName: gsi1pk
+                KeyType: HASH
+              - AttributeName: gsi1sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
         StreamSpecification:
           StreamViewType: NEW_AND_OLD_IMAGES
         PointInTimeRecoverySpecification:
