@@ -1,109 +1,87 @@
-import 'dart:convert';
-
 import 'package:isar/isar.dart';
 
+import 'base_change_log_entry.dart';
 import 'entity_type.dart';
 
 part 'change_log_entry.g.dart';
 
 @Collection()
-class ChangeLogEntry {
-  Id seq = Isar.autoIncrement;
+class ClientChangeLogEntry extends BaseChangeLogEntry {
+  @override
+  Id get seq =>
+      super.seq == -9223372036854775808 ? Isar.autoIncrement : super.seq;
+  @override
+  set seq(int value) => super.seq = value;
 
   @Index()
-  late String projectId; // Project identifier for multi-tenancy
+  @override
+  String get projectId => super.projectId;
+  @override
+  set projectId(String value) => super.projectId = value;
+
   @Enumerated(EnumType.name)
-  late EntityType entityType; // Normalized entity type
-  late String operation; // e.g., 'create', 'update', 'delete'
-  late DateTime changeAt; // When the change was originally made by the client
-  late String entityId; // UUID or primary key of the entity
-  late String dataJson; // JSON-encoded entity data
-  int? outdatedBy; // id of the change that this entry is outdated by
-  DateTime? cloudAt; // When the cloud storage received this change (optional)
+  @override
+  EntityType get entityType => super.entityType;
+  @override
+  set entityType(EntityType value) => super.entityType = value;
+
+  @Index()
+  @override
+  String get cid => super.cid; // unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
+  @override
+  set cid(String value) => super.cid = value;
 
   @ignore
-  Map<String, dynamic> get data => jsonDecode(dataJson);
-  set data(Map<String, dynamic> value) => dataJson = jsonEncode(value);
+  @override
+  Map<String, dynamic> get data => super.data;
 
-  ChangeLogEntry({
-    required this.projectId,
-    required this.entityType,
-    required this.operation,
-    required this.changeAt,
-    required this.entityId,
-    required this.dataJson,
-    this.outdatedBy,
-    this.cloudAt,
+  ClientChangeLogEntry({
+    required super.projectId,
+    required super.entityType,
+    required super.operation,
+    required super.changeAt,
+    required super.entityId,
+    required super.dataJson,
+    super.outdatedBy,
+    super.cloudAt,
+    super.cid,
   });
 
-  ChangeLogEntry.empty()
-    : projectId = '',
-      entityType = EntityType.document,
-      operation = '',
-      changeAt = DateTime.now(),
-      entityId = '',
-      dataJson = '';
+  ClientChangeLogEntry.empty() : super.empty();
 
-  Map<String, dynamic> toJson() {
-    return {
-      'seq': seq,
-      'projectId': projectId,
-      'entityType': entityType.value,
-      'operation': operation,
-      'changeAt': changeAt.toUtc().toIso8601String(),
-      'entityId': entityId,
-      'data': data,
-      'outdatedBy': outdatedBy,
-      'cloudAt': cloudAt?.toIso8601String(),
-    };
-  }
-
-  static ChangeLogEntry fromJson(Map<String, dynamic> json) {
-    final entry = ChangeLogEntry(
-      projectId: json['projectId'] as String,
-      entityType: EntityType.fromString(json['entityType'] as String),
-      operation: json['operation'] as String,
-      changeAt: DateTime.parse(json['changeAt'] as String),
-      entityId: json['entityId'] as String,
-      dataJson: json['data'] as String,
-      outdatedBy: json['outdatedBy'] as int?,
-      cloudAt: json['cloudAt'] != null
-          ? DateTime.parse(json['cloudAt'] as String)
-          : null,
+  static ClientChangeLogEntry fromJson(Map<String, dynamic> json) {
+    final baseEntry = BaseChangeLogEntry.fromJson(json);
+    final entry = ClientChangeLogEntry(
+      projectId: baseEntry.projectId,
+      entityType: baseEntry.entityType,
+      operation: baseEntry.operation,
+      changeAt: baseEntry.changeAt,
+      entityId: baseEntry.entityId,
+      dataJson: baseEntry.dataJson,
+      outdatedBy: baseEntry.outdatedBy,
+      cloudAt: baseEntry.cloudAt,
+      cid: baseEntry.cid,
     );
-
-    if (json['seq'] != null) {
-      entry.seq = json['seq'] as int;
-    }
-
+    entry.seq = baseEntry.seq;
     return entry;
   }
 
-  /// Factory method to create ChangeLogEntry from API data (Map<String, dynamic>)
+  /// Factory method to create ClientChangeLogEntry from API data (Map<String, dynamic>)
   /// Handles proper data conversion and provides defaults for missing fields
-  static ChangeLogEntry fromApiData(Map<String, dynamic> changeData) {
-    final entry = ChangeLogEntry(
-      projectId: changeData['projectId'] as String? ?? '',
-      entityType:
-          EntityType.tryFromString(changeData['entityType'] as String?) ??
-          EntityType.document,
-      operation: changeData['operation'] as String? ?? 'create',
-      changeAt: changeData['changeAt'] != null
-          ? DateTime.parse(changeData['changeAt'] as String)
-          : DateTime.now().toUtc(),
-      entityId: changeData['entityId'] as String? ?? '',
-      dataJson: jsonEncode(changeData['data'] ?? {}),
-      outdatedBy: changeData['outdatedBy'] as int?,
-      cloudAt: changeData['cloudAt'] != null
-          ? DateTime.parse(changeData['cloudAt'] as String)
-          : null,
+  static ClientChangeLogEntry fromApiData(Map<String, dynamic> changeData) {
+    final baseEntry = BaseChangeLogEntry.fromApiData(changeData);
+    final entry = ClientChangeLogEntry(
+      projectId: baseEntry.projectId,
+      entityType: baseEntry.entityType,
+      operation: baseEntry.operation,
+      changeAt: baseEntry.changeAt,
+      entityId: baseEntry.entityId,
+      dataJson: baseEntry.dataJson,
+      outdatedBy: baseEntry.outdatedBy,
+      cloudAt: baseEntry.cloudAt,
+      cid: baseEntry.cid,
     );
-
-    // Set the seq field if provided in the API data
-    if (changeData['seq'] != null) {
-      entry.seq = changeData['seq'] as int;
-    }
-
+    entry.seq = baseEntry.seq;
     return entry;
   }
 }

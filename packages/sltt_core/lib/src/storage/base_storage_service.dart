@@ -1,4 +1,4 @@
-import '../models/change_log_entry.dart';
+import '../models/base_change_log_entry.dart';
 
 /// Abstract base class for all storage service implementations.
 ///
@@ -45,7 +45,9 @@ abstract class BaseStorageService {
   }
 
   /// Get changes that are not outdated (for local storage services)
-  Future<List<ChangeLogEntry>> getChangesNotOutdated(String projectId) async {
+  Future<List<ChangeLogEntry>> getChangesNotOutdated(
+    String projectId,
+  ) async {
     // Default implementation - override in local storage services
     return getChangesWithCursor(projectId: projectId);
   }

@@ -167,7 +167,8 @@ class DynamoDBStorageService implements BaseStorageService {
     if (item == null) return null;
 
     final itemMap = _dynamoItemToMap(item);
-    final changeEntry = ChangeLogEntry.fromApiData(itemMap);
+    final changeEntry =
+        BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
     // Override with DynamoDB sequence number
     changeEntry.seq = itemMap['seq'] as int;
     return changeEntry;
@@ -212,7 +213,7 @@ class DynamoDBStorageService implements BaseStorageService {
 
     return items.map<ChangeLogEntry>((item) {
       final itemMap = _dynamoItemToMap(item);
-      final changeEntry = ChangeLogEntry.fromApiData(itemMap);
+      final changeEntry = BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
       // Override with DynamoDB sequence number
       changeEntry.seq = itemMap['seq'] as int;
       return changeEntry;
@@ -247,7 +248,7 @@ class DynamoDBStorageService implements BaseStorageService {
 
     return items.map<ChangeLogEntry>((item) {
       final itemMap = _dynamoItemToMap(item);
-      final changeEntry = ChangeLogEntry.fromApiData(itemMap);
+      final changeEntry = BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
       // Override with DynamoDB sequence number
       changeEntry.seq = itemMap['seq'] as int;
       return changeEntry;
@@ -367,7 +368,7 @@ class DynamoDBStorageService implements BaseStorageService {
 
     return items.map<ChangeLogEntry>((item) {
       final itemMap = _dynamoItemToMap(item);
-      final changeEntry = ChangeLogEntry.fromApiData(itemMap);
+      final changeEntry = BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
       // Override with DynamoDB sequence number
       changeEntry.seq = itemMap['seq'] as int;
       return changeEntry;

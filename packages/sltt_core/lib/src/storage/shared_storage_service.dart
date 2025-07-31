@@ -3,7 +3,8 @@ import 'dart:io';
 
 import 'package:isar/isar.dart';
 
-import '../models/change_log_entry.dart';
+import '../models/base_change_log_entry.dart';
+import '../models/change_log_entry.dart' as client;
 import '../models/entity_type.dart';
 import 'base_storage_service.dart';
 
@@ -28,7 +29,7 @@ class LocalStorageService implements BaseStorageService {
 
     // Initialize Isar with the specified database name
     _isar = await Isar.open(
-      [ChangeLogEntrySchema],
+      [client.ChangeLogEntrySchema],
       directory: dir.path,
       name: _databaseName,
     );
@@ -45,16 +46,28 @@ class LocalStorageService implements BaseStorageService {
   @override
   Future<ChangeLogEntry> createChange(Map<String, dynamic> changeData) async {
     print('changeData: ${jsonEncode(changeData)}');
-    final change = ChangeLogEntry.fromApiData(changeData);
+    final change = client.ClientChangeLogEntry.fromApiData(changeData);
 
     // Set cloudAt if this is a cloud storage service
     change.cloudAt ??= maybeCreateCloudAt();
 
     print('change: ${jsonEncode(change)}');
     await _isar.writeTxn(() async {
-      await _isar.changeLogEntrys.put(change);
+      await _isar.collection<client.ClientChangeLogEntry>().put(change);
     });
-    return change;
+
+    // Return as base ChangeLogEntry
+    return ChangeLogEntry(
+      projectId: change.projectId,
+      entityType: change.entityType,
+      operation: change.operation,
+      changeAt: change.changeAt,
+      entityId: change.entityId,
+      dataJson: change.dataJson,
+      outdatedBy: change.outdatedBy,
+      cloudAt: change.cloudAt,
+      cid: change.cid,
+    )..seq = change.seq;
   }
 
   @override
@@ -318,7 +331,9 @@ class LocalStorageService implements BaseStorageService {
     List<Map<String, dynamic>> changesData,
   ) async {
     final changes = changesData
-        .map((changeData) => ChangeLogEntry.fromApiData(changeData))
+        .map(
+          (changeData) => client.ClientChangeLogEntry.fromApiData(changeData),
+        )
         .toList();
 
     // Set cloudAt for changes if this is a cloud storage service
@@ -327,10 +342,25 @@ class LocalStorageService implements BaseStorageService {
     }
 
     await _isar.writeTxn(() async {
-      await _isar.changeLogEntrys.putAll(changes);
+      await _isar.collection<client.ClientChangeLogEntry>().putAll(changes);
     });
 
-    return changes;
+    // Convert ClientChangeLogEntry to ChangeLogEntry for the interface
+    return changes
+        .map(
+          (clientEntry) => ChangeLogEntry(
+            projectId: clientEntry.projectId,
+            entityType: clientEntry.entityType,
+            operation: clientEntry.operation,
+            changeAt: clientEntry.changeAt,
+            entityId: clientEntry.entityId,
+            dataJson: clientEntry.dataJson,
+            outdatedBy: clientEntry.outdatedBy,
+            cloudAt: clientEntry.cloudAt,
+            cid: clientEntry.cid,
+          )..seq = clientEntry.seq,
+        )
+        .toList();
   }
 
   /// Hook method for subclasses to optionally add cloud timestamp.

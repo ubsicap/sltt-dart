@@ -1,7 +1,15 @@
 Fixes:
-- need to normalize entityTypes
-- 'project' is currently required for dynamodb implementation of returning projectIds (stored in entityId)
-- maybe pk should be PROJECT_ID#{projectId}
+
+1. please create a base class for ChangeLogEntry that does not have isar dependencies, so that it can be used by the backend without the isar.dart dependency. (I'm assuming that adds bloat)
+2. rename ChangeLogEntry to ClientChangeLogEntry and the base class should be named ChangeLogEntry
+3. add string cid to ChangeLogEntry and mark it as Index() and comment // unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random)
+4. create a function that can generate cid and use it for assignments where needed
+
+- please add a cid field to ChangeLogEntry which should be Index() because it uniquely identifies the change log
+- I think I need to delete the existing dynamodb tables and schema and recreate them with a new schema:
+- primary index, should be composed of PROJECT_ID#{projectId}#ENTITY_ID#{entityId}
+
+maybe pk should be PROJECT_ID#{projectId}
 
 - changeAt same as cloudAt in the cloud?
 
