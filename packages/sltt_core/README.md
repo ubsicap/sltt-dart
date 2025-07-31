@@ -249,8 +249,21 @@ LD_LIBRARY_PATH=/tmp/dart_test_libs dart test test/sync_manager_test.dart
 USE_DEV_CLOUD=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test test/sync_manager_test.dart
 ```
 
+#### API Endpoints Testing
+```bash
+# Run API endpoints tests with local outsyncs storage (default)
+LD_LIBRARY_PATH=/tmp/dart_test_libs dart test test/api_endpoints_test.dart
+
+# Run API endpoints tests with local cloud storage server
+USE_CLOUD_STORAGE=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test test/api_endpoints_test.dart
+
+# Run API endpoints tests against AWS dev cloud
+USE_DEV_CLOUD=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test test/api_endpoints_test.dart
+```
+
 **Environment Variables:**
 - `USE_DEV_CLOUD=true`: Configures tests to use the AWS Lambda dev cloud instead of localhost
+- `USE_CLOUD_STORAGE=true`: Configures API tests to use local cloud storage server instead of outsyncs storage
 - `LD_LIBRARY_PATH=/tmp/dart_test_libs`: Required for Isar database library access
 
 ### Run API Tests

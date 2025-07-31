@@ -6,9 +6,11 @@
 # Usage:
 #   ./test.sh                                    # Run tests with localhost servers
 #   USE_DEV_CLOUD=true ./test.sh                # Run tests with AWS dev cloud
+#   USE_CLOUD_STORAGE=true ./test.sh            # Run tests with local cloud storage
 #
 # Environment Variables:
-#   USE_DEV_CLOUD=true    Use AWS Lambda dev cloud instead of localhost
+#   USE_DEV_CLOUD=true       Use AWS Lambda dev cloud instead of localhost
+#   USE_CLOUD_STORAGE=true   Use local cloud storage server for API tests
 
 echo "🔧 Setting up test environment..."
 
@@ -31,6 +33,9 @@ if [ -f "$ISAR_LIB_PATH" ]; then
     if [ "$USE_DEV_CLOUD" = "true" ]; then
         echo "🌩️ Using DEV CLOUD for testing"
         USE_DEV_CLOUD=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test "$@"
+    elif [ "$USE_CLOUD_STORAGE" = "true" ]; then
+        echo "☁️ Using LOCAL CLOUD STORAGE for testing"
+        USE_CLOUD_STORAGE=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test "$@"
     else
         echo "🏠 Using LOCALHOST for testing"
         LD_LIBRARY_PATH=/tmp/dart_test_libs dart test "$@"
