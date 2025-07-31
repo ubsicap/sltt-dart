@@ -10,10 +10,20 @@ import 'package:sltt_core/sltt_core.dart';
 ///
 /// Uses HTTP API calls instead of heavy AWS SDK to minimize cold start time.
 /// This service stores change log entries in AWS DynamoDB with the following schema:
-/// - Table name: configurable (e.g., 'sltt-changes-prod')
-/// - Partition key: 'pk' (String) - project ID (e.g., 'project-123')
-/// - Sort key: 'seq' (Number) - auto-incremented sequence number per project
-/// - Attributes: entityType, operation, timestamp, entityId, dataJson, outdatedBy
+///
+/// **Primary Index:**
+/// - Partition key: 'pk' (String) - PROJECT_ID#{projectId}#ENTITY_ID#{entityId}
+/// - Sort key: 'sk' (String) - CID#{cid}
+///
+/// **Secondary Index (GSI1):**
+/// - Partition key: 'gsi1pk' (String) - PROJECT_ID#{projectId}
+/// - Sort key: 'gsi1sk' (String) - SEQ#{seq}
+///
+/// This schema provides:
+/// - Query by entityId to see all changes for that entity
+/// - Maximum write throughput (different entities can write concurrently)
+/// - Query by projectId to see all changes in sequence order
+/// - Efficient range queries for syncing operations
 ///
 /// Each project gets its own isolated partition in the same table, allowing:
 /// - Multiple projects in the same DynamoDB table
@@ -67,6 +77,51 @@ class DynamoDBStorageService implements BaseStorageService {
     }
   }
 
+  /// Delete and recreate the table with the new schema.
+  /// WARNING: This will delete all existing data!
+  Future<void> recreateTableWithNewSchema() async {
+    if (!_initialized) await initialize();
+
+    print('[DynamoDBStorage] Recreating table $tableName with new schema...');
+
+    // Delete existing table if it exists
+    await _deleteTableIfExists();
+
+    // Wait a moment for deletion to complete
+    await Future.delayed(const Duration(seconds: 2));
+
+    // Create table with new schema
+    await _createTableIfNotExists();
+
+    print('[DynamoDBStorage] Table recreation completed');
+  }
+
+  Future<void> _deleteTableIfExists() async {
+    // Check if table exists
+    final describeRequest = {'TableName': tableName};
+
+    final describeResponse = await _dynamoRequest(
+      'DescribeTable',
+      describeRequest,
+    );
+
+    if (describeResponse.statusCode != 200) {
+      // Table doesn't exist
+      return;
+    }
+
+    // Delete table
+    final deleteRequest = {'TableName': tableName};
+
+    final deleteResponse = await _dynamoRequest('DeleteTable', deleteRequest);
+
+    if (deleteResponse.statusCode != 200) {
+      throw Exception('Failed to delete table: ${deleteResponse.body}');
+    }
+
+    print('[DynamoDBStorage] Table $tableName deleted');
+  }
+
   @override
   Future<void> close() async {
     _initialized = false;
@@ -97,6 +152,10 @@ class DynamoDBStorageService implements BaseStorageService {
       throw ArgumentError('entityId is required in changeData');
     }
 
+    // Get or generate CID
+    final cid =
+        changeData['cid'] as String? ?? BaseChangeLogEntry.generateCid();
+
     // Get next sequence number for this specific project
     final seq = await _getNextSequence(changeProjectId);
 
@@ -105,17 +164,29 @@ class DynamoDBStorageService implements BaseStorageService {
         ? changeData['changeAt'] as String
         : now.toIso8601String();
 
+    // Create primary key: PROJECT_ID#{projectId}#ENTITY_ID#{entityId}
+    final primaryKey = 'PROJECT_ID#$changeProjectId#ENTITY_ID#$entityId';
+    // Create sort key: CID#{cid}
+    final sortKey = 'CID#$cid';
+    // Create GSI keys for project-wide queries
+    final gsi1PartitionKey = 'PROJECT_ID#$changeProjectId';
+    final gsi1SortKey =
+        'SEQ#${seq.toString().padLeft(10, '0')}'; // Zero-padded for proper sorting
+
     final item = {
-      'pk': {'S': changeProjectId},
+      'pk': {'S': primaryKey},
+      'sk': {'S': sortKey},
+      'gsi1pk': {'S': gsi1PartitionKey},
+      'gsi1sk': {'S': gsi1SortKey},
       'seq': {'N': seq.toString()},
+      'cid': {'S': cid},
+      'projectId': {'S': changeProjectId},
       'entityType': {'S': entityType},
       'operation': {'S': operation},
-      'changeAt': {
-        'S': originalChangeAt,
-      }, // When the change was originally made
+      'changeAt': {'S': originalChangeAt},
       'entityId': {'S': entityId},
       'dataJson': {'S': jsonEncode(changeData['data'] ?? {})},
-      'cloudAt': {'S': now.toIso8601String()}, // When cloud storage received it
+      'cloudAt': {'S': now.toIso8601String()},
     };
 
     final putRequest = {'TableName': tableName, 'Item': item};
@@ -135,7 +206,7 @@ class DynamoDBStorageService implements BaseStorageService {
       entityId: entityId,
       dataJson: jsonEncode(changeData['data'] ?? {}),
       cloudAt: now,
-      cid: changeData['cid'] ?? BaseChangeLogEntry.generateCid(),
+      cid: cid,
     );
 
     // Override the Isar autoIncrement with DynamoDB-generated sequence
@@ -148,31 +219,31 @@ class DynamoDBStorageService implements BaseStorageService {
   Future<ChangeLogEntry?> getChange(String requestProjectId, int seq) async {
     if (!_initialized) await initialize();
 
-    final getRequest = {
+    // Use GSI to query by project and sequence number
+    final queryRequest = {
       'TableName': tableName,
-      'Key': {
-        'pk': {'S': requestProjectId},
-        'seq': {'N': seq.toString()},
+      'IndexName': 'GSI1',
+      'KeyConditionExpression': 'gsi1pk = :gsi1pk AND gsi1sk = :gsi1sk',
+      'ExpressionAttributeValues': {
+        ':gsi1pk': {'S': 'PROJECT_ID#$requestProjectId'},
+        ':gsi1sk': {'S': 'SEQ#${seq.toString().padLeft(10, '0')}'},
       },
     };
 
-    final response = await _dynamoRequest('GetItem', getRequest);
+    final response = await _dynamoRequest('Query', queryRequest);
 
     if (response.statusCode != 200) {
       throw Exception('Failed to get change: ${response.body}');
     }
 
-    final data = jsonDecode(response.body);
-    final item = data['Item'];
+    final responseData = jsonDecode(response.body);
+    final items = responseData['Items'] as List<dynamic>? ?? [];
 
-    if (item == null) return null;
+    if (items.isEmpty) {
+      return null;
+    }
 
-    final itemMap = _dynamoItemToMap(item);
-    final changeEntry =
-        BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
-    // Override with DynamoDB sequence number
-    changeEntry.seq = itemMap['seq'] as int;
-    return changeEntry;
+    return _itemToChangeLogEntry(items.first);
   }
 
   @override
@@ -185,17 +256,22 @@ class DynamoDBStorageService implements BaseStorageService {
 
     final queryRequest = {
       'TableName': tableName,
-      'KeyConditionExpression': 'pk = :pk',
+      'IndexName': 'GSI1',
+      'KeyConditionExpression': 'gsi1pk = :gsi1pk',
       'ExpressionAttributeValues': {
-        ':pk': {'S': projectId},
+        ':gsi1pk': {'S': 'PROJECT_ID#$projectId'},
       },
       'ScanIndexForward': true, // Sort by seq ascending
     };
 
     if (cursor != null) {
-      queryRequest['ExclusiveStartKey'] = {
-        'pk': {'S': projectId},
-        'seq': {'N': cursor.toString()},
+      // For cursor-based pagination, we need to start from the next sequence
+      final paddedSeq = (cursor + 1).toString().padLeft(10, '0');
+      queryRequest['KeyConditionExpression'] =
+          'gsi1pk = :gsi1pk AND gsi1sk > :cursor';
+      (queryRequest['ExpressionAttributeValues']
+          as Map<String, dynamic>)[':cursor'] = {
+        'S': 'SEQ#$paddedSeq',
       };
     }
 
@@ -212,29 +288,25 @@ class DynamoDBStorageService implements BaseStorageService {
     final data = jsonDecode(response.body);
     final items = data['Items'] as List? ?? [];
 
-    return items.map<ChangeLogEntry>((item) {
-      final itemMap = _dynamoItemToMap(item);
-      final changeEntry =
-          BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
-      // Override with DynamoDB sequence number
-      changeEntry.seq = itemMap['seq'] as int;
-      return changeEntry;
-    }).toList();
+    return items
+        .map<ChangeLogEntry>((item) => _itemToChangeLogEntry(item))
+        .toList();
   }
 
   @override
   Future<List<ChangeLogEntry>> getChangesSince(
-    String requestProjectId,
+    String projectId,
     int seq,
   ) async {
     if (!_initialized) await initialize();
 
     final queryRequest = {
       'TableName': tableName,
-      'KeyConditionExpression': 'pk = :pk AND seq > :seq',
+      'IndexName': 'GSI1',
+      'KeyConditionExpression': 'gsi1pk = :gsi1pk AND gsi1sk > :seq',
       'ExpressionAttributeValues': {
-        ':pk': {'S': requestProjectId},
-        ':seq': {'N': seq.toString()},
+        ':gsi1pk': {'S': 'PROJECT_ID#$projectId'},
+        ':seq': {'S': 'SEQ#${seq.toString().padLeft(10, '0')}'},
       },
       'ScanIndexForward': true, // Sort by seq ascending
     };
@@ -242,32 +314,28 @@ class DynamoDBStorageService implements BaseStorageService {
     final response = await _dynamoRequest('Query', queryRequest);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to get changes since $seq: ${response.body}');
+      throw Exception('Failed to get changes since: ${response.body}');
     }
 
     final data = jsonDecode(response.body);
     final items = data['Items'] as List? ?? [];
 
-    return items.map<ChangeLogEntry>((item) {
-      final itemMap = _dynamoItemToMap(item);
-      final changeEntry =
-          BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
-      // Override with DynamoDB sequence number
-      changeEntry.seq = itemMap['seq'] as int;
-      return changeEntry;
-    }).toList();
+    return items
+        .map<ChangeLogEntry>((item) => _itemToChangeLogEntry(item))
+        .toList();
   }
 
   @override
   Future<Map<String, dynamic>> getChangeStats(String requestProjectId) async {
     if (!_initialized) await initialize();
 
-    // Get total count of changes for this project
+    // Get total count of changes for this project using GSI
     final queryRequest = {
       'TableName': tableName,
-      'KeyConditionExpression': 'pk = :pk',
+      'IndexName': 'GSI1',
+      'KeyConditionExpression': 'gsi1pk = :gsi1pk',
       'ExpressionAttributeValues': {
-        ':pk': {'S': requestProjectId},
+        ':gsi1pk': {'S': 'PROJECT_ID#$requestProjectId'},
       },
       'Select': 'COUNT',
     };
@@ -290,13 +358,13 @@ class DynamoDBStorageService implements BaseStorageService {
   ) async {
     if (!_initialized) await initialize();
 
-    // For DynamoDB, we use Query instead of Scan for better performance
-    // since we're querying for a specific project
+    // Use GSI to query all changes for this project
     final queryRequest = {
       'TableName': tableName,
-      'KeyConditionExpression': 'pk = :pk',
+      'IndexName': 'GSI1',
+      'KeyConditionExpression': 'gsi1pk = :gsi1pk',
       'ExpressionAttributeValues': {
-        ':pk': {'S': requestProjectId},
+        ':gsi1pk': {'S': 'PROJECT_ID#$requestProjectId'},
       },
     };
 
@@ -320,14 +388,43 @@ class DynamoDBStorageService implements BaseStorageService {
 
   @override
   Future<void> markAsOutdated(String projectId, int seq, int outdatedBy) async {
-    // For DynamoDB, we can add an 'outdatedBy' attribute to mark items as outdated
+    // With the new schema, we need to find the item by sequence number first
     if (!_initialized) await initialize();
 
+    // First, find the item using GSI
+    final queryRequest = {
+      'TableName': tableName,
+      'IndexName': 'GSI1',
+      'KeyConditionExpression': 'gsi1pk = :gsi1pk AND gsi1sk = :gsi1sk',
+      'ExpressionAttributeValues': {
+        ':gsi1pk': {'S': 'PROJECT_ID#$projectId'},
+        ':gsi1sk': {'S': 'SEQ#${seq.toString().padLeft(10, '0')}'},
+      },
+    };
+
+    final queryResponse = await _dynamoRequest('Query', queryRequest);
+
+    if (queryResponse.statusCode != 200) {
+      throw Exception('Failed to find change $seq: ${queryResponse.body}');
+    }
+
+    final queryData = jsonDecode(queryResponse.body);
+    final items = queryData['Items'] as List? ?? [];
+
+    if (items.isEmpty) {
+      throw Exception('Change with sequence $seq not found');
+    }
+
+    final item = items.first;
+    final pk = item['pk']['S'];
+    final sk = item['sk']['S'];
+
+    // Now update the item with the outdatedBy attribute
     final updateRequest = {
       'TableName': tableName,
       'Key': {
-        'pk': {'S': projectId},
-        'seq': {'N': seq.toString()},
+        'pk': {'S': pk},
+        'sk': {'S': sk},
       },
       'UpdateExpression': 'SET outdatedBy = :outdatedBy',
       'ExpressionAttributeValues': {
@@ -352,10 +449,11 @@ class DynamoDBStorageService implements BaseStorageService {
 
     final queryRequest = {
       'TableName': tableName,
-      'KeyConditionExpression': 'pk = :pk',
+      'IndexName': 'GSI1',
+      'KeyConditionExpression': 'gsi1pk = :gsi1pk',
       'FilterExpression': 'attribute_not_exists(outdatedBy)',
       'ExpressionAttributeValues': {
-        ':pk': {'S': requestProjectId},
+        ':gsi1pk': {'S': 'PROJECT_ID#$requestProjectId'},
       },
       'ScanIndexForward': true, // Sort by seq ascending
     };
@@ -369,14 +467,44 @@ class DynamoDBStorageService implements BaseStorageService {
     final data = jsonDecode(response.body);
     final items = data['Items'] as List? ?? [];
 
-    return items.map<ChangeLogEntry>((item) {
-      final itemMap = _dynamoItemToMap(item);
-      final changeEntry =
-          BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
-      // Override with DynamoDB sequence number
-      changeEntry.seq = itemMap['seq'] as int;
-      return changeEntry;
-    }).toList();
+    return items
+        .map<ChangeLogEntry>((item) => _itemToChangeLogEntry(item))
+        .toList();
+  }
+
+  /// Get all changes for a specific entity (new capability with improved schema)
+  Future<List<ChangeLogEntry>> getChangesForEntity({
+    required String projectId,
+    required String entityId,
+    int? limit,
+  }) async {
+    if (!_initialized) await initialize();
+
+    final queryRequest = {
+      'TableName': tableName,
+      'KeyConditionExpression': 'pk = :pk',
+      'ExpressionAttributeValues': {
+        ':pk': {'S': 'PROJECT_ID#$projectId#ENTITY_ID#$entityId'},
+      },
+      'ScanIndexForward': false, // Sort by CID descending (newest first)
+    };
+
+    if (limit != null) {
+      queryRequest['Limit'] = limit;
+    }
+
+    final response = await _dynamoRequest('Query', queryRequest);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to get changes for entity: ${response.body}');
+    }
+
+    final data = jsonDecode(response.body);
+    final items = data['Items'] as List? ?? [];
+
+    return items
+        .map<ChangeLogEntry>((item) => _itemToChangeLogEntry(item))
+        .toList();
   }
 
   // Private helper methods
@@ -521,16 +649,28 @@ class DynamoDBStorageService implements BaseStorageService {
       return;
     }
 
-    // Create table
+    // Create table with new schema
     final createRequest = {
       'TableName': tableName,
       'KeySchema': [
         {'AttributeName': 'pk', 'KeyType': 'HASH'},
-        {'AttributeName': 'seq', 'KeyType': 'RANGE'},
+        {'AttributeName': 'sk', 'KeyType': 'RANGE'},
       ],
       'AttributeDefinitions': [
         {'AttributeName': 'pk', 'AttributeType': 'S'},
-        {'AttributeName': 'seq', 'AttributeType': 'N'},
+        {'AttributeName': 'sk', 'AttributeType': 'S'},
+        {'AttributeName': 'gsi1pk', 'AttributeType': 'S'},
+        {'AttributeName': 'gsi1sk', 'AttributeType': 'S'},
+      ],
+      'GlobalSecondaryIndexes': [
+        {
+          'IndexName': 'GSI1',
+          'KeySchema': [
+            {'AttributeName': 'gsi1pk', 'KeyType': 'HASH'},
+            {'AttributeName': 'gsi1sk', 'KeyType': 'RANGE'},
+          ],
+          'Projection': {'ProjectionType': 'ALL'},
+        },
       ],
       'BillingMode': 'PAY_PER_REQUEST',
     };
@@ -550,15 +690,10 @@ class DynamoDBStorageService implements BaseStorageService {
   Future<List<String>> getAllProjects() async {
     await initialize();
 
-    // Use a scan operation with a filter for entityType = 'project'
+    // Use a scan operation to find all project IDs from projectId attribute
     final scanRequest = {
       'TableName': tableName,
-      'FilterExpression': 'entityType = :entityType',
-      'ExpressionAttributeValues': {
-        ':entityType': {'S': 'project'},
-      },
-      'ProjectionExpression':
-          'pk', // Only return the partition key (project ID)
+      'ProjectionExpression': 'projectId',
     };
 
     final response = await _dynamoRequest('Scan', scanRequest);
@@ -573,12 +708,22 @@ class DynamoDBStorageService implements BaseStorageService {
     // Extract unique project IDs
     final projectIds = <String>{};
     for (final item in items) {
-      final pk = item['pk']?['S'] as String?;
-      if (pk != null && pk.isNotEmpty) {
-        projectIds.add(pk);
+      final projectId = item['projectId']?['S'] as String?;
+      if (projectId != null && projectId.isNotEmpty) {
+        projectIds.add(projectId);
       }
     }
 
     return projectIds.toList()..sort();
+  }
+
+  /// Helper method to convert DynamoDB item to ChangeLogEntry
+  ChangeLogEntry _itemToChangeLogEntry(Map<String, dynamic> item) {
+    final itemMap = _dynamoItemToMap(item);
+    final changeEntry =
+        BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
+    // Override with DynamoDB sequence number
+    changeEntry.seq = itemMap['seq'] as int;
+    return changeEntry;
   }
 }
