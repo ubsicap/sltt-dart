@@ -1,12 +1,14 @@
-import 'package:test/test.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+
+import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Projects Endpoint Tests', () {
     late EnhancedRestApiServer server;
-    const int testPort = 8081;
+    const int testPort =
+        8084; // Use port 8084 to avoid conflicts with other tests
     const String baseUrl = 'http://localhost:$testPort';
 
     setUpAll(() async {
