@@ -98,6 +98,16 @@ Use **Ctrl+Shift+P** → **Tasks: Run Task** and select:
 - **Sync Manager Tests** - Synchronization logic and conflict resolution
 - **Projects Endpoint Tests** - REST API endpoint validation
 
+#### Backend-Specific Testing
+```bash
+# Run AWS backend tests
+cd packages/aws_backend
+dart test
+
+# Run with compact output
+dart test --reporter compact
+```
+
 See individual package READMEs for specific development instructions.
 
 ## Legacy Documentation
