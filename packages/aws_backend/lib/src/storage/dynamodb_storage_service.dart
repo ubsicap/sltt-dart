@@ -126,20 +126,20 @@ class DynamoDBStorageService implements BaseStorageService {
       throw Exception('Failed to create change: ${response.body}');
     }
 
-    // Create ChangeLogEntry from the stored data
-    final resultData = {
-      'seq': seq,
-      'projectId': changeProjectId,
-      'entityType': entityType,
-      'operation': operation,
-      'changeAt': originalChangeAt,
-      'entityId': entityId,
-      'data': jsonEncode(changeData['data'] ?? {}),
-      'cloudAt': now.toIso8601String(),
-    };
+    // Create ChangeLogEntry from the stored data with DynamoDB-generated seq
+    final changeEntry = ChangeLogEntry(
+      projectId: changeProjectId,
+      entityType: EntityType.fromString(entityType),
+      operation: operation,
+      changeAt: DateTime.parse(originalChangeAt),
+      entityId: entityId,
+      dataJson: jsonEncode(changeData['data'] ?? {}),
+      cloudAt: now,
+    );
 
-    final changeEntry = ChangeLogEntry.fromApiData(resultData);
-    changeEntry.seq = seq; // Set the seq that was assigned by DynamoDB
+    // Override the Isar autoIncrement with DynamoDB-generated sequence
+    changeEntry.seq = seq;
+
     return changeEntry;
   }
 
@@ -167,7 +167,10 @@ class DynamoDBStorageService implements BaseStorageService {
     if (item == null) return null;
 
     final itemMap = _dynamoItemToMap(item);
-    return ChangeLogEntry.fromApiData(itemMap);
+    final changeEntry = ChangeLogEntry.fromApiData(itemMap);
+    // Override with DynamoDB sequence number
+    changeEntry.seq = itemMap['seq'] as int;
+    return changeEntry;
   }
 
   @override
@@ -207,11 +210,13 @@ class DynamoDBStorageService implements BaseStorageService {
     final data = jsonDecode(response.body);
     final items = data['Items'] as List? ?? [];
 
-    return items
-        .map<ChangeLogEntry>(
-          (item) => ChangeLogEntry.fromApiData(_dynamoItemToMap(item)),
-        )
-        .toList();
+    return items.map<ChangeLogEntry>((item) {
+      final itemMap = _dynamoItemToMap(item);
+      final changeEntry = ChangeLogEntry.fromApiData(itemMap);
+      // Override with DynamoDB sequence number
+      changeEntry.seq = itemMap['seq'] as int;
+      return changeEntry;
+    }).toList();
   }
 
   @override
@@ -240,11 +245,13 @@ class DynamoDBStorageService implements BaseStorageService {
     final data = jsonDecode(response.body);
     final items = data['Items'] as List? ?? [];
 
-    return items
-        .map<ChangeLogEntry>(
-          (item) => ChangeLogEntry.fromApiData(_dynamoItemToMap(item)),
-        )
-        .toList();
+    return items.map<ChangeLogEntry>((item) {
+      final itemMap = _dynamoItemToMap(item);
+      final changeEntry = ChangeLogEntry.fromApiData(itemMap);
+      // Override with DynamoDB sequence number
+      changeEntry.seq = itemMap['seq'] as int;
+      return changeEntry;
+    }).toList();
   }
 
   @override
@@ -358,11 +365,13 @@ class DynamoDBStorageService implements BaseStorageService {
     final data = jsonDecode(response.body);
     final items = data['Items'] as List? ?? [];
 
-    return items
-        .map<ChangeLogEntry>(
-          (item) => ChangeLogEntry.fromApiData(_dynamoItemToMap(item)),
-        )
-        .toList();
+    return items.map<ChangeLogEntry>((item) {
+      final itemMap = _dynamoItemToMap(item);
+      final changeEntry = ChangeLogEntry.fromApiData(itemMap);
+      // Override with DynamoDB sequence number
+      changeEntry.seq = itemMap['seq'] as int;
+      return changeEntry;
+    }).toList();
   }
 
   // Private helper methods

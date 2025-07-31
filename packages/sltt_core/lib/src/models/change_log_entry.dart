@@ -82,7 +82,7 @@ class ChangeLogEntry {
   /// Factory method to create ChangeLogEntry from API data (Map<String, dynamic>)
   /// Handles proper data conversion and provides defaults for missing fields
   static ChangeLogEntry fromApiData(Map<String, dynamic> changeData) {
-    return ChangeLogEntry(
+    final entry = ChangeLogEntry(
       projectId: changeData['projectId'] as String? ?? '',
       entityType:
           EntityType.tryFromString(changeData['entityType'] as String?) ??
@@ -98,5 +98,12 @@ class ChangeLogEntry {
           ? DateTime.parse(changeData['cloudAt'] as String)
           : null,
     );
+
+    // Set the seq field if provided in the API data
+    if (changeData['seq'] != null) {
+      entry.seq = changeData['seq'] as int;
+    }
+
+    return entry;
   }
 }
