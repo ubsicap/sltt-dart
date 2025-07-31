@@ -45,14 +45,19 @@ class LocalStorageService implements BaseStorageService {
   Future<Map<String, dynamic>> createChange(
     Map<String, dynamic> changeData,
   ) async {
+    print('changeData: ${jsonEncode(changeData)}');
     final change = ChangeLogEntry(
       projectId: changeData['projectId'] ?? '',
       entityType: changeData['entityType'] ?? '',
       operation: changeData['operation'] ?? '',
-      changeAt: DateTime.now(),
+      changeAt: changeData['changeAt'] != null
+          ? DateTime.parse(changeData['changeAt'])
+          : DateTime.now().toUtc(),
+      cloudAt: maybeCreateCloudAt(),
       entityId: changeData['entityId'] ?? '',
       dataJson: jsonEncode(changeData['data'] ?? {}),
     );
+    print('change: ${jsonEncode(change)}');
     await _isar.writeTxn(() async {
       await _isar.changeLogEntrys.put(change);
     });
@@ -325,8 +330,8 @@ class LocalStorageService implements BaseStorageService {
             entityType: changeData['entityType'] ?? '',
             operation: changeData['operation'] ?? '',
             changeAt: changeData['changeAt'] != null
-                ? DateTime.parse(changeData['changeAt'] as String)
-                : DateTime.now(),
+                ? DateTime.parse(changeData['changeAt'])
+                : DateTime.now().toUtc(),
             entityId: changeData['entityId'] ?? '',
             dataJson: jsonEncode(changeData['data'] ?? {}),
             outdatedBy: changeData['outdatedBy'] as int?,
@@ -406,5 +411,5 @@ class CloudStorageService extends LocalStorageService {
   CloudStorageService._() : super('cloud_storage', 'CloudStorage');
 
   @override
-  DateTime? maybeCreateCloudAt() => DateTime.now();
+  DateTime? maybeCreateCloudAt() => DateTime.now().toUtc();
 }

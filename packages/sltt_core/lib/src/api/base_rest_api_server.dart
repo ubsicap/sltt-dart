@@ -598,6 +598,7 @@ abstract class BaseRestApiServer {
         return _errorResponse('Change not found', 404);
       }
 
+      print('_handleGetChange Response: ${jsonEncode(change)}');
       return Response.ok(
         jsonEncode(change),
         headers: {'Content-Type': 'application/json'},
@@ -730,6 +731,8 @@ abstract class BaseRestApiServer {
         }
         response['seqMap'] = seqMap;
       }
+
+      print('Response: ${jsonEncode(response)}');
 
       return Response.ok(
         jsonEncode(response),

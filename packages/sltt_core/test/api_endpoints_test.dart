@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
@@ -256,6 +258,77 @@ void main() {
         );
         expect(nextPageResponse.statusCode, equals(200));
       }
+    });
+
+    test('changeAt preservation and cloudAt generation', () async {
+      final testProjectId = 'changeat-test-project';
+      final now = DateTime.now().toUtc();
+      final customChangeAt = now
+          .subtract(const Duration(minutes: 10))
+          .toIso8601String();
+
+      // Create a change with a custom changeAt
+      final changeData = [
+        {
+          'projectId': testProjectId,
+          'entityType': 'document',
+          'operation': 'create',
+          'entityId': 'doc-changeat-test',
+          'changeAt': customChangeAt,
+          'data': {
+            'title': 'ChangeAt Test Document',
+            'content': 'Testing changeAt preservation',
+          },
+        },
+      ];
+
+      final createResponse = await dio.post(
+        '$baseUrl/api/changes',
+        data: changeData,
+      );
+      expect(createResponse.statusCode, equals(200));
+
+      final createResult = createResponse.data as Map<String, dynamic>;
+      expect(createResult['success'], isTrue);
+      expect(createResult['created'], equals(1));
+
+      // Get the created sequence number
+      final seqMap = createResult['seqMap'] as Map<String, dynamic>;
+      final createdSeq = seqMap.values.first as int;
+      print('seqMap: ${jsonEncode(seqMap)}');
+
+      // Fetch the specific change to verify preservation
+      final getResponse = await dio.get(
+        '$baseUrl/api/projects/$testProjectId/changes/$createdSeq',
+      );
+      expect(getResponse.statusCode, equals(200));
+
+      final retrievedChange = getResponse.data as Map<String, dynamic>;
+
+      // Verify changeAt is preserved exactly
+      expect(
+        retrievedChange['changeAt'],
+        equals(customChangeAt),
+        reason: 'changeAt should match the custom value',
+      );
+
+      // Verify cloudAt exists and is after changeAt
+      expect(retrievedChange['cloudAt'], isNotNull);
+
+      final changeAtTime = DateTime.parse(retrievedChange['changeAt']).toUtc();
+      final cloudAtTime = DateTime.parse(retrievedChange['cloudAt']).toUtc();
+
+      expect(
+        cloudAtTime.isAfter(changeAtTime) ||
+            cloudAtTime.isAtSameMomentAs(changeAtTime),
+        isTrue,
+        reason: 'cloudAt should be at or after changeAt',
+      );
+
+      print('✅ ChangeAt preservation test passed!');
+      print('   Original changeAt: $customChangeAt');
+      print('   Retrieved changeAt: ${retrievedChange['changeAt']}');
+      print('   Generated cloudAt: ${retrievedChange['cloudAt']}');
     });
   });
 }
