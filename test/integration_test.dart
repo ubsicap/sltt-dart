@@ -151,7 +151,7 @@ void main() {
     test('change log entry model', () {
       final entry = ChangeLogEntry(
         projectId: 'test-project',
-        entityType: 'document',
+        entityType: EntityType.document,
         operation: 'create',
         changeAt: DateTime.now(),
         entityId: 'doc-123',
@@ -159,7 +159,7 @@ void main() {
       );
 
       expect(entry.projectId, equals('test-project'));
-      expect(entry.entityType, equals('document'));
+      expect(entry.entityType, equals(EntityType.document));
       expect(entry.operation, equals('create'));
       expect(entry.entityId, equals('doc-123'));
       expect(entry.dataJson, equals('{"title": "Test"}'));

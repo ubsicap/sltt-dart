@@ -1,12 +1,12 @@
-import 'package:test/test.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Unit Tests', () {
     test('ChangeLogEntry model creation', () {
       final entry = ChangeLogEntry(
         projectId: 'test-project',
-        entityType: 'document',
+        entityType: EntityType.document,
         operation: 'create',
         changeAt: DateTime.now(),
         entityId: 'doc-123',
@@ -14,7 +14,7 @@ void main() {
       );
 
       expect(entry.projectId, equals('test-project'));
-      expect(entry.entityType, equals('document'));
+      expect(entry.entityType, equals(EntityType.document));
       expect(entry.operation, equals('create'));
       expect(entry.entityId, equals('doc-123'));
       expect(entry.dataJson, equals('{"title": "Test"}'));
@@ -23,7 +23,7 @@ void main() {
     test('ChangeLogEntry toJson conversion', () {
       final entry = ChangeLogEntry(
         projectId: 'test-project',
-        entityType: 'document',
+        entityType: EntityType.document,
         operation: 'create',
         changeAt: DateTime.now(),
         entityId: 'doc-123',

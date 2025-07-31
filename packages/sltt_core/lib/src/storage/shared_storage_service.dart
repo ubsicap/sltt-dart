@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:isar/isar.dart';
 
 import '../models/change_log_entry.dart';
+import '../models/entity_type.dart';
 import 'base_storage_service.dart';
 
 class LocalStorageService implements BaseStorageService {
@@ -71,7 +72,9 @@ class LocalStorageService implements BaseStorageService {
     return await _isar.changeLogEntrys.where().sortByChangeAtDesc().findAll();
   }
 
-  Future<List<ChangeLogEntry>> getChangesByEntityType(String entityType) async {
+  Future<List<ChangeLogEntry>> getChangesByEntityType(
+    EntityType entityType,
+  ) async {
     return await _isar.changeLogEntrys
         .filter()
         .entityTypeEqualTo(entityType)
@@ -170,7 +173,8 @@ class LocalStorageService implements BaseStorageService {
     final stats = <String, int>{};
 
     for (final entry in allEntries) {
-      stats[entry.entityType] = (stats[entry.entityType] ?? 0) + 1;
+      final entityTypeKey = entry.entityType.value;
+      stats[entityTypeKey] = (stats[entityTypeKey] ?? 0) + 1;
     }
 
     return stats;

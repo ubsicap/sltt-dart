@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:isar/isar.dart';
 
+import 'entity_type.dart';
+
 part 'change_log_entry.g.dart';
 
 @Collection()
@@ -10,7 +12,8 @@ class ChangeLogEntry {
 
   @Index()
   late String projectId; // Project identifier for multi-tenancy
-  late String entityType; // e.g., 'Document', 'Passage', 'Portion'
+  @Enumerated(EnumType.name)
+  late EntityType entityType; // Normalized entity type
   late String operation; // e.g., 'create', 'update', 'delete'
   late DateTime changeAt; // When the change was originally made by the client
   late String entityId; // UUID or primary key of the entity
@@ -35,7 +38,7 @@ class ChangeLogEntry {
 
   ChangeLogEntry.empty()
     : projectId = '',
-      entityType = '',
+      entityType = EntityType.document,
       operation = '',
       changeAt = DateTime.now(),
       entityId = '',
@@ -45,7 +48,7 @@ class ChangeLogEntry {
     return {
       'seq': seq,
       'projectId': projectId,
-      'entityType': entityType,
+      'entityType': entityType.value,
       'operation': operation,
       'changeAt': changeAt.toUtc().toIso8601String(),
       'entityId': entityId,
@@ -58,7 +61,7 @@ class ChangeLogEntry {
   static ChangeLogEntry fromJson(Map<String, dynamic> json) {
     final entry = ChangeLogEntry(
       projectId: json['projectId'] as String,
-      entityType: json['entityType'] as String,
+      entityType: EntityType.fromString(json['entityType'] as String),
       operation: json['operation'] as String,
       changeAt: DateTime.parse(json['changeAt'] as String),
       entityId: json['entityId'] as String,
@@ -81,7 +84,9 @@ class ChangeLogEntry {
   static ChangeLogEntry fromApiData(Map<String, dynamic> changeData) {
     return ChangeLogEntry(
       projectId: changeData['projectId'] as String? ?? '',
-      entityType: changeData['entityType'] as String? ?? '',
+      entityType:
+          EntityType.tryFromString(changeData['entityType'] as String?) ??
+          EntityType.document,
       operation: changeData['operation'] as String? ?? 'create',
       changeAt: changeData['changeAt'] != null
           ? DateTime.parse(changeData['changeAt'] as String)
