@@ -17,6 +17,30 @@ class LocalStorageService implements BaseStorageService {
 
   LocalStorageService(this._databaseName, this._logPrefix);
 
+  /// Helper method to convert ClientChangeLogEntry to ChangeLogEntry
+  ChangeLogEntry _convertToChangeLogEntry(
+    client.ClientChangeLogEntry clientEntry,
+  ) {
+    return ChangeLogEntry(
+      projectId: clientEntry.projectId,
+      entityType: clientEntry.entityType,
+      operation: clientEntry.operation,
+      changeAt: clientEntry.changeAt,
+      entityId: clientEntry.entityId,
+      dataJson: clientEntry.dataJson,
+      outdatedBy: clientEntry.outdatedBy,
+      cloudAt: clientEntry.cloudAt,
+      cid: clientEntry.cid,
+    )..seq = clientEntry.seq;
+  }
+
+  /// Helper method to convert list of ClientChangeLogEntry to list of ChangeLogEntry
+  List<ChangeLogEntry> _convertToChangeLogEntries(
+    List<client.ClientChangeLogEntry> clientEntries,
+  ) {
+    return clientEntries.map(_convertToChangeLogEntry).toList();
+  }
+
   @override
   Future<void> initialize() async {
     if (_initialized) return;
@@ -29,7 +53,7 @@ class LocalStorageService implements BaseStorageService {
 
     // Initialize Isar with the specified database name
     _isar = await Isar.open(
-      [client.ChangeLogEntrySchema],
+      [client.ClientChangeLogEntrySchema],
       directory: dir.path,
       name: _databaseName,
     );
@@ -72,59 +96,67 @@ class LocalStorageService implements BaseStorageService {
 
   @override
   Future<ChangeLogEntry?> getChange(String projectId, int seq) async {
-    final change = await _isar.changeLogEntrys
+    final change = await _isar.clientChangeLogEntrys
         .where()
         .seqEqualTo(seq)
         .filter()
         .projectIdEqualTo(projectId)
         .findFirst();
-    return change;
+    return change != null ? _convertToChangeLogEntry(change) : null;
   }
 
   Future<List<ChangeLogEntry>> getAllChanges() async {
-    return await _isar.changeLogEntrys.where().sortByChangeAtDesc().findAll();
+    final results = await _isar.clientChangeLogEntrys
+        .where()
+        .sortByChangeAtDesc()
+        .findAll();
+    return _convertToChangeLogEntries(results);
   }
 
   Future<List<ChangeLogEntry>> getChangesByEntityType(
     EntityType entityType,
   ) async {
-    return await _isar.changeLogEntrys
+    final results = await _isar.clientChangeLogEntrys
         .filter()
         .entityTypeEqualTo(entityType)
         .sortByChangeAtDesc()
         .findAll();
+    return _convertToChangeLogEntries(results);
   }
 
   Future<List<ChangeLogEntry>> getChangesByOperation(String operation) async {
-    return await _isar.changeLogEntrys
+    final results = await _isar.clientChangeLogEntrys
         .filter()
         .operationEqualTo(operation)
         .sortByChangeAtDesc()
         .findAll();
+    return _convertToChangeLogEntries(results);
   }
 
   Future<List<ChangeLogEntry>> getChangesByEntityId(String entityId) async {
-    return await _isar.changeLogEntrys
+    final results = await _isar.clientChangeLogEntrys
         .filter()
         .entityIdEqualTo(entityId)
         .sortByChangeAtDesc()
         .findAll();
+    return _convertToChangeLogEntries(results);
   }
 
   Future<List<ChangeLogEntry>> getChangesInDateRange(
     DateTime startDate,
     DateTime endDate,
   ) async {
-    return await _isar.changeLogEntrys
+    final results = await _isar.clientChangeLogEntrys
         .filter()
         .changeAtBetween(startDate, endDate)
         .sortByChangeAtDesc()
         .findAll();
+    return _convertToChangeLogEntries(results);
   }
 
   /// Get the total count of change log entries.
   Future<int> getChangeCount() async {
-    return await _isar.changeLogEntrys.count();
+    return await _isar.clientChangeLogEntrys.count();
   }
 
   /// Delete multiple changes by sequence numbers.
@@ -135,7 +167,7 @@ class LocalStorageService implements BaseStorageService {
     int deletedCount = 0;
     await _isar.writeTxn(() async {
       for (final seq in seqs) {
-        if (await _isar.changeLogEntrys.delete(seq)) {
+        if (await _isar.clientChangeLogEntrys.delete(seq)) {
           deletedCount++;
         }
       }
@@ -146,23 +178,23 @@ class LocalStorageService implements BaseStorageService {
   // Statistics operations
   @override
   Future<Map<String, dynamic>> getChangeStats(String projectId) async {
-    final total = await _isar.changeLogEntrys
+    final total = await _isar.clientChangeLogEntrys
         .filter()
         .projectIdEqualTo(projectId)
         .count();
-    final creates = await _isar.changeLogEntrys
+    final creates = await _isar.clientChangeLogEntrys
         .filter()
         .projectIdEqualTo(projectId)
         .and()
         .operationEqualTo('create')
         .count();
-    final updates = await _isar.changeLogEntrys
+    final updates = await _isar.clientChangeLogEntrys
         .filter()
         .projectIdEqualTo(projectId)
         .and()
         .operationEqualTo('update')
         .count();
-    final deletes = await _isar.changeLogEntrys
+    final deletes = await _isar.clientChangeLogEntrys
         .filter()
         .projectIdEqualTo(projectId)
         .and()
@@ -179,7 +211,7 @@ class LocalStorageService implements BaseStorageService {
 
   @override
   Future<Map<String, dynamic>> getEntityTypeStats(String projectId) async {
-    final allEntries = await _isar.changeLogEntrys
+    final allEntries = await _isar.clientChangeLogEntrys
         .filter()
         .projectIdEqualTo(projectId)
         .findAll();
@@ -207,16 +239,17 @@ class LocalStorageService implements BaseStorageService {
   /// This removes change log entries that have been marked as outdated
   /// by newer changes, helping to keep the storage size manageable.
   Future<int> deleteOutdatedChanges() async {
-    final outdatedChanges = await _isar.changeLogEntrys
+    final outdatedChanges = await _isar.clientChangeLogEntrys
         .filter()
         .outdatedByIsNotNull()
         .findAll();
+
     final seqsToDelete = outdatedChanges.map((e) => e.seq).toList();
 
     int deletedCount = 0;
     await _isar.writeTxn(() async {
       for (final seq in seqsToDelete) {
-        if (await _isar.changeLogEntrys.delete(seq)) {
+        if (await _isar.clientChangeLogEntrys.delete(seq)) {
           deletedCount++;
         }
       }
@@ -232,17 +265,18 @@ class LocalStorageService implements BaseStorageService {
     int? cursor,
     int? limit,
   }) async {
-    var query = _isar.changeLogEntrys
+    var query = _isar.clientChangeLogEntrys
         .where()
         .seqGreaterThan(cursor ?? 0)
         .filter()
         .projectIdEqualTo(projectId);
 
     var results = await query.findAll();
+
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
     }
-    return results;
+    return _convertToChangeLogEntries(results);
   }
 
   /// Get changes for syncing - excludes outdated changes.
@@ -251,14 +285,14 @@ class LocalStorageService implements BaseStorageService {
   /// which prevents syncing obsolete change log entries.
   @override
   Future<List<ChangeLogEntry>> getChangesNotOutdated(String projectId) async {
-    var results = await _isar.changeLogEntrys
+    var results = await _isar.clientChangeLogEntrys
         .where()
         .filter()
         .projectIdEqualTo(projectId)
         .and()
         .outdatedByIsNull()
         .findAll();
-    return results;
+    return _convertToChangeLogEntries(results);
   }
 
   /// Get changes for syncing - excludes outdated changes.
@@ -269,12 +303,13 @@ class LocalStorageService implements BaseStorageService {
     int? cursor,
     int? limit,
   }) async {
-    var query = _isar.changeLogEntrys.where();
+    var query = _isar.clientChangeLogEntrys.where();
     var results = await query
         .seqGreaterThan(cursor ?? 0)
         .filter()
         .outdatedByIsNull()
         .findAll();
+
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
     }
@@ -292,17 +327,17 @@ class LocalStorageService implements BaseStorageService {
     int outdatedBySeq,
   ) async {
     await _isar.writeTxn(() async {
-      final change = await _isar.changeLogEntrys.get(seq);
+      final change = await _isar.clientChangeLogEntrys.get(seq);
       if (change != null && change.projectId == projectId) {
         change.outdatedBy = outdatedBySeq;
-        await _isar.changeLogEntrys.put(change);
+        await _isar.clientChangeLogEntrys.put(change);
       }
     });
   }
 
   // Get the highest sequence number in the database
   Future<int> getLastSeq() async {
-    final result = await _isar.changeLogEntrys.where().findAll();
+    final result = await _isar.clientChangeLogEntrys.where().findAll();
     if (result.isEmpty) {
       return 0;
     }
@@ -315,15 +350,16 @@ class LocalStorageService implements BaseStorageService {
     String projectId,
     int seq,
   ) async {
-    final results = await _isar.changeLogEntrys
+    final results = await _isar.clientChangeLogEntrys
         .where()
         .seqGreaterThan(seq)
         .filter()
         .projectIdEqualTo(projectId)
         .findAll();
+
     // Sort by seq in ascending order
     results.sort((a, b) => a.seq.compareTo(b.seq));
-    return results;
+    return _convertToChangeLogEntries(results);
   }
 
   // Store multiple changes (for batch operations)
@@ -369,13 +405,14 @@ class LocalStorageService implements BaseStorageService {
 
   /// Delete all changes - useful for testing cleanup
   Future<int> deleteAllChanges() async {
-    final allChanges = await _isar.changeLogEntrys.where().findAll();
+    final allChanges = await _isar.clientChangeLogEntrys.where().findAll();
+
     final seqsToDelete = allChanges.map((e) => e.seq).toList();
 
     int deletedCount = 0;
     await _isar.writeTxn(() async {
       for (final seq in seqsToDelete) {
-        if (await _isar.changeLogEntrys.delete(seq)) {
+        if (await _isar.clientChangeLogEntrys.delete(seq)) {
           deletedCount++;
         }
       }
@@ -387,7 +424,7 @@ class LocalStorageService implements BaseStorageService {
   /// Get all unique project IDs from all changes
   @override
   Future<List<String>> getAllProjects() async {
-    final allChanges = await _isar.changeLogEntrys.where().findAll();
+    final allChanges = await _isar.clientChangeLogEntrys.where().findAll();
 
     // Extract unique project IDs
     final projectIds = <String>{};

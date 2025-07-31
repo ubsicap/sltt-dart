@@ -18,8 +18,11 @@ abstract class BaseChangeLogEntry {
   String
   cid; // unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
 
-  Map<String, dynamic> get data => jsonDecode(dataJson);
-  set data(Map<String, dynamic> value) => dataJson = jsonEncode(value);
+  /// Helper method to decode JSON data
+  Map<String, dynamic> getData() => jsonDecode(dataJson);
+
+  /// Helper method to encode JSON data
+  void setData(Map<String, dynamic> value) => dataJson = jsonEncode(value);
 
   BaseChangeLogEntry({
     required this.projectId,
@@ -30,8 +33,8 @@ abstract class BaseChangeLogEntry {
     required this.dataJson,
     this.outdatedBy,
     this.cloudAt,
-    String? cid,
-  }) : cid = cid ?? generateCid();
+    required this.cid,
+  });
 
   BaseChangeLogEntry.empty()
     : projectId = '',
@@ -86,7 +89,7 @@ abstract class BaseChangeLogEntry {
       'operation': operation,
       'changeAt': changeAt.toUtc().toIso8601String(),
       'entityId': entityId,
-      'data': data,
+      'data': getData(),
       'outdatedBy': outdatedBy,
       'cloudAt': cloudAt?.toIso8601String(),
       'cid': cid,
@@ -107,7 +110,7 @@ abstract class BaseChangeLogEntry {
       cloudAt: json['cloudAt'] != null
           ? DateTime.parse(json['cloudAt'] as String)
           : null,
-      cid: json['cid'] as String?,
+      cid: json['cid'] as String? ?? generateCid(),
     );
 
     if (json['seq'] != null) {
@@ -135,7 +138,7 @@ abstract class BaseChangeLogEntry {
       cloudAt: changeData['cloudAt'] != null
           ? DateTime.parse(changeData['cloudAt'] as String)
           : null,
-      cid: changeData['cid'] as String?,
+      cid: changeData['cid'] as String? ?? generateCid(),
     );
 
     // Set the seq field if provided in the API data
@@ -159,8 +162,12 @@ class ChangeLogEntry extends BaseChangeLogEntry {
     required super.dataJson,
     super.outdatedBy,
     super.cloudAt,
-    super.cid,
+    required super.cid,
   });
 
   ChangeLogEntry.empty() : super.empty();
+
+  /// Convenience property for data access
+  Map<String, dynamic> get data => getData();
+  set data(Map<String, dynamic> value) => setData(value);
 }

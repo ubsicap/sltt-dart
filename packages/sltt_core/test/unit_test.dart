@@ -11,6 +11,7 @@ void main() {
         changeAt: DateTime.now(),
         entityId: 'doc-123',
         dataJson: '{"title": "Test"}',
+        cid: BaseChangeLogEntry.generateCid(),
       );
 
       expect(entry.projectId, equals('test-project'));
@@ -28,6 +29,7 @@ void main() {
         changeAt: DateTime.now(),
         entityId: 'doc-123',
         dataJson: '{"title": "Test"}',
+        cid: BaseChangeLogEntry.generateCid(),
       );
 
       final json = entry.toJson();

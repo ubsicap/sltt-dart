@@ -135,6 +135,7 @@ class DynamoDBStorageService implements BaseStorageService {
       entityId: entityId,
       dataJson: jsonEncode(changeData['data'] ?? {}),
       cloudAt: now,
+      cid: changeData['cid'] ?? BaseChangeLogEntry.generateCid(),
     );
 
     // Override the Isar autoIncrement with DynamoDB-generated sequence
@@ -213,7 +214,8 @@ class DynamoDBStorageService implements BaseStorageService {
 
     return items.map<ChangeLogEntry>((item) {
       final itemMap = _dynamoItemToMap(item);
-      final changeEntry = BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
+      final changeEntry =
+          BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
       // Override with DynamoDB sequence number
       changeEntry.seq = itemMap['seq'] as int;
       return changeEntry;
@@ -248,7 +250,8 @@ class DynamoDBStorageService implements BaseStorageService {
 
     return items.map<ChangeLogEntry>((item) {
       final itemMap = _dynamoItemToMap(item);
-      final changeEntry = BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
+      final changeEntry =
+          BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
       // Override with DynamoDB sequence number
       changeEntry.seq = itemMap['seq'] as int;
       return changeEntry;
@@ -368,7 +371,8 @@ class DynamoDBStorageService implements BaseStorageService {
 
     return items.map<ChangeLogEntry>((item) {
       final itemMap = _dynamoItemToMap(item);
-      final changeEntry = BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
+      final changeEntry =
+          BaseChangeLogEntry.fromApiData(itemMap) as ChangeLogEntry;
       // Override with DynamoDB sequence number
       changeEntry.seq = itemMap['seq'] as int;
       return changeEntry;

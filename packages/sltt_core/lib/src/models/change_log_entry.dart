@@ -32,8 +32,9 @@ class ClientChangeLogEntry extends BaseChangeLogEntry {
   set cid(String value) => super.cid = value;
 
   @ignore
-  @override
-  Map<String, dynamic> get data => super.data;
+  Map<String, dynamic> get data => getData();
+
+  set data(Map<String, dynamic> value) => setData(value);
 
   ClientChangeLogEntry({
     required super.projectId,
@@ -44,7 +45,7 @@ class ClientChangeLogEntry extends BaseChangeLogEntry {
     required super.dataJson,
     super.outdatedBy,
     super.cloudAt,
-    super.cid,
+    required super.cid,
   });
 
   ClientChangeLogEntry.empty() : super.empty();
