@@ -102,6 +102,58 @@ abstract class BaseRestApiServer {
 
   /// API documentation endpoint
   Future<Response> _handleApiDocs(Request request) async {
+    // Shared schema definitions to reduce duplication
+    final changeObjectSchema = {
+      'type': 'object',
+      'properties': {
+        'seq': {'type': 'integer', 'description': 'Sequence number'},
+        'projectId': {'type': 'string', 'description': 'Project identifier'},
+        'entityType': {'type': 'string', 'description': 'Type of entity'},
+        'operation': {
+          'type': 'string',
+          'description': 'Operation type (create, update, delete)',
+        },
+        'entityId': {'type': 'string', 'description': 'Entity identifier'},
+        'changeAt': {
+          'type': 'string',
+          'format': 'ISO8601',
+          'description': 'When change was made',
+        },
+        'data': {'type': 'object', 'description': 'Change data payload'},
+        'cid': {
+          'type': 'string',
+          'description':
+              'Change ID - unique identifier for this change (format: YYYY-mmdd-HHMMss-sss±HHmm-{4-char-random})',
+        },
+      },
+    };
+
+    final paginationResponseSchema = {
+      'type': 'object',
+      'properties': {
+        'changes': {
+          'type': 'array',
+          'items': changeObjectSchema,
+          'description': 'List of changes',
+        },
+        'count': {
+          'type': 'integer',
+          'description': 'Number of changes returned',
+        },
+        'cursor': {
+          'type': 'integer',
+          'required': false,
+          'description':
+              'Next cursor for pagination (if more results available)',
+        },
+        'timestamp': {
+          'type': 'string',
+          'format': 'ISO8601',
+          'description': 'When the response was generated',
+        },
+      },
+    };
+
     final docs = {
       'server': {
         'name': serverName,
@@ -162,6 +214,47 @@ abstract class BaseRestApiServer {
           'path': '/api/changes',
           'description':
               'Create new changes (array format) - each change must include projectId',
+          'requestBody': {
+            'type': 'array',
+            'items': {
+              'type': 'object',
+              'required': ['projectId', 'entityType', 'entityId'],
+              'properties': {
+                'projectId': {
+                  'type': 'string',
+                  'description': 'Project identifier',
+                },
+                'entityType': {
+                  'type': 'string',
+                  'description': 'Type of entity being changed',
+                },
+                'entityId': {
+                  'type': 'string',
+                  'description': 'Unique identifier for the entity',
+                },
+                'operation': {
+                  'type': 'string',
+                  'description': 'Operation type (create, update, delete)',
+                  'default': 'create',
+                },
+                'data': {
+                  'type': 'object',
+                  'description': 'Change data payload',
+                },
+                'changeAt': {
+                  'type': 'string',
+                  'format': 'ISO8601',
+                  'description':
+                      'When change was made (optional, defaults to current time)',
+                },
+                'cid': {
+                  'type': 'string',
+                  'description':
+                      'Change ID (optional, auto-generated if not provided)',
+                },
+              },
+            },
+          },
           'response': {
             'type': 'object',
             'properties': {
@@ -224,64 +317,7 @@ abstract class BaseRestApiServer {
               'description': 'Maximum number of results (1-1000)',
             },
           ],
-          'response': {
-            'type': 'object',
-            'properties': {
-              'changes': {
-                'type': 'array',
-                'items': {
-                  'type': 'object',
-                  'properties': {
-                    'seq': {
-                      'type': 'integer',
-                      'description': 'Sequence number',
-                    },
-                    'projectId': {
-                      'type': 'string',
-                      'description': 'Project identifier',
-                    },
-                    'entityType': {
-                      'type': 'string',
-                      'description': 'Type of entity',
-                    },
-                    'operation': {
-                      'type': 'string',
-                      'description': 'Operation type (create, update, delete)',
-                    },
-                    'entityId': {
-                      'type': 'string',
-                      'description': 'Entity identifier',
-                    },
-                    'changeAt': {
-                      'type': 'string',
-                      'format': 'ISO8601',
-                      'description': 'When change was made',
-                    },
-                    'data': {
-                      'type': 'object',
-                      'description': 'Change data payload',
-                    },
-                  },
-                },
-                'description': 'List of changes',
-              },
-              'count': {
-                'type': 'integer',
-                'description': 'Number of changes returned',
-              },
-              'cursor': {
-                'type': 'integer',
-                'required': false,
-                'description':
-                    'Next cursor for pagination (if more results available)',
-              },
-              'timestamp': {
-                'type': 'string',
-                'format': 'ISO8601',
-                'description': 'When the response was generated',
-              },
-            },
-          },
+          'response': paginationResponseSchema,
         },
         {
           'method': 'GET',
@@ -309,60 +345,13 @@ abstract class BaseRestApiServer {
             },
           ],
           'response': {
-            'type': 'object',
+            ...paginationResponseSchema,
             'properties': {
+              ...paginationResponseSchema['properties'] as Map<String, dynamic>,
               'changes': {
                 'type': 'array',
-                'items': {
-                  'type': 'object',
-                  'properties': {
-                    'seq': {
-                      'type': 'integer',
-                      'description': 'Sequence number',
-                    },
-                    'projectId': {
-                      'type': 'string',
-                      'description': 'Project identifier',
-                    },
-                    'entityType': {
-                      'type': 'string',
-                      'description': 'Type of entity',
-                    },
-                    'operation': {
-                      'type': 'string',
-                      'description': 'Operation type (create, update, delete)',
-                    },
-                    'entityId': {
-                      'type': 'string',
-                      'description': 'Entity identifier',
-                    },
-                    'changeAt': {
-                      'type': 'string',
-                      'format': 'ISO8601',
-                      'description': 'When change was made',
-                    },
-                    'data': {
-                      'type': 'object',
-                      'description': 'Change data payload',
-                    },
-                  },
-                },
+                'items': changeObjectSchema,
                 'description': 'List of changes for the specified project',
-              },
-              'count': {
-                'type': 'integer',
-                'description': 'Number of changes returned',
-              },
-              'cursor': {
-                'type': 'integer',
-                'required': false,
-                'description':
-                    'Next cursor for pagination (if more results available)',
-              },
-              'timestamp': {
-                'type': 'string',
-                'format': 'ISO8601',
-                'description': 'When the response was generated',
               },
             },
           },
@@ -385,31 +374,7 @@ abstract class BaseRestApiServer {
               'description': 'Change sequence number',
             },
           ],
-          'response': {
-            'type': 'object',
-            'properties': {
-              'seq': {'type': 'integer', 'description': 'Sequence number'},
-              'projectId': {
-                'type': 'string',
-                'description': 'Project identifier',
-              },
-              'entityType': {'type': 'string', 'description': 'Type of entity'},
-              'operation': {
-                'type': 'string',
-                'description': 'Operation type (create, update, delete)',
-              },
-              'entityId': {
-                'type': 'string',
-                'description': 'Entity identifier',
-              },
-              'changeAt': {
-                'type': 'string',
-                'format': 'ISO8601',
-                'description': 'When change was made',
-              },
-              'data': {'type': 'object', 'description': 'Change data payload'},
-            },
-          },
+          'response': changeObjectSchema,
         },
         {
           'method': 'GET',
