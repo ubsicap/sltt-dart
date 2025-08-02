@@ -109,6 +109,9 @@ class DynamoDBStorageService implements BaseStorageService {
     final cid =
         changeData['cid'] as String? ?? BaseChangeLogEntry.generateCid();
 
+    // Extract changeBy from changeData
+    final changeBy = changeData['changeBy'] as String? ?? '';
+
     final item = {
       'pk': {'S': 'PROJECT_ID#$changeProjectId#ENTITY_ID#$entityId'},
       'sk': {'S': 'CID#$cid'},
@@ -144,6 +147,7 @@ class DynamoDBStorageService implements BaseStorageService {
       dataJson: jsonEncode(changeData['data'] ?? {}),
       cloudAt: now,
       cid: cid,
+      changeBy: changeBy,
     );
 
     // Override the Isar autoIncrement with DynamoDB-generated sequence

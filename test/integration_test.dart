@@ -157,6 +157,7 @@ void main() {
         entityId: 'doc-123',
         dataJson: '{"title": "Test"}',
         cid: BaseChangeLogEntry.generateCid(),
+        changeBy: 'test-user',
       );
 
       expect(entry.projectId, equals('test-project'));
