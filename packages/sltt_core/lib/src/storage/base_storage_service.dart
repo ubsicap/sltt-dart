@@ -36,6 +36,29 @@ abstract class BaseStorageService {
   /// Get all projects (based on changes with entityType 'project')
   Future<List<String>> getAllProjects();
 
+  /// Get supported entity types for a project
+  Future<List<String>> getSupportedEntityTypes(String projectId) async {
+    // Default implementation - return all entity types that have changes
+    final entityTypeStats = await getEntityTypeStats(projectId);
+    return (entityTypeStats['entityTypeStats'] as Map<String, dynamic>? ?? {})
+        .keys
+        .toList();
+  }
+
+  /// Get entity state data for a specific entity type and project
+  Future<Map<String, dynamic>> getEntityStates({
+    required String projectId,
+    required String entityType,
+    String? cursor,
+    int? limit,
+    bool includeMetadata = false,
+  }) async {
+    // Default implementation - not supported for all storage types
+    throw UnsupportedError(
+      'getEntityStates not supported by this storage service',
+    );
+  }
+
   /// Mark a change as outdated (for local storage services)
   Future<void> markAsOutdated(String projectId, int seq, int outdatedBy) async {
     // Default implementation - override in local storage services
@@ -45,9 +68,7 @@ abstract class BaseStorageService {
   }
 
   /// Get changes that are not outdated (for local storage services)
-  Future<List<ChangeLogEntry>> getChangesNotOutdated(
-    String projectId,
-  ) async {
+  Future<List<ChangeLogEntry>> getChangesNotOutdated(String projectId) async {
     // Default implementation - override in local storage services
     return getChangesWithCursor(projectId: projectId);
   }

@@ -74,6 +74,11 @@ abstract class BaseRestApiServer {
     router.get('/api/projects/<projectId>/changes', _handleGetChanges);
     router.get('/api/projects/<projectId>/changes/<seq>', _handleGetChange);
     router.get('/api/projects/<projectId>/stats', _handleGetStats);
+    router.get('/api/projects/<projectId>/entities', _handleGetEntities);
+    router.get(
+      '/api/projects/<projectId>/entities/<entityType>/state',
+      _handleGetEntityState,
+    );
 
     // Handle OPTIONS requests for CORS
     router.options('/<path|.*>', _handleOptions);
@@ -433,6 +438,116 @@ abstract class BaseRestApiServer {
             },
           },
         },
+        {
+          'method': 'GET',
+          'path': '/api/projects/{projectId}/entities',
+          'description': 'Get list of supported entity types for a project',
+          'parameters': [
+            {
+              'name': 'projectId',
+              'type': 'string',
+              'required': true,
+              'description': 'Project identifier',
+            },
+          ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'projectId': {
+                'type': 'string',
+                'description': 'The project identifier',
+              },
+              'entityTypes': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description':
+                    'List of entity types that have data in this project',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
+              },
+            },
+          },
+        },
+        {
+          'method': 'GET',
+          'path': '/api/projects/{projectId}/entities/{entityType}/state',
+          'description':
+              'Get entity state data with pagination and optional metadata',
+          'parameters': [
+            {
+              'name': 'projectId',
+              'type': 'string',
+              'required': true,
+              'description': 'Project identifier',
+            },
+            {
+              'name': 'entityType',
+              'type': 'string',
+              'required': true,
+              'description': 'Entity type (e.g., document, project, team)',
+            },
+            {
+              'name': 'cursor',
+              'type': 'string',
+              'required': false,
+              'description':
+                  'Pagination cursor (last entityId from previous page)',
+            },
+            {
+              'name': 'limit',
+              'type': 'integer',
+              'required': false,
+              'description':
+                  'Maximum number of entities to return (1-1000, default: 100)',
+            },
+            {
+              'name': 'field_metadata',
+              'type': 'boolean',
+              'required': false,
+              'description':
+                  'Include conflict resolution metadata (default: false)',
+            },
+          ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'projectId': {
+                'type': 'string',
+                'description': 'The project identifier',
+              },
+              'entityType': {
+                'type': 'string',
+                'description': 'The entity type',
+              },
+              'entities': {
+                'type': 'array',
+                'items': {'type': 'object'},
+                'description': 'List of entity state objects',
+              },
+              'cursor': {
+                'type': 'string',
+                'description': 'Next pagination cursor (null if no more data)',
+              },
+              'hasMore': {
+                'type': 'boolean',
+                'description': 'Whether there are more entities available',
+              },
+              'fieldMetadata': {
+                'type': 'boolean',
+                'description':
+                    'Whether field metadata is included in the response',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
+              },
+            },
+          },
+        },
       ],
       'timestamp': DateTime.now().toIso8601String(),
     };
@@ -736,6 +851,103 @@ abstract class BaseRestApiServer {
       return _errorResponse(e.message, 400);
     } catch (e) {
       return _errorResponse('Failed to fetch statistics: $e', 500);
+    }
+  }
+
+  /// Get list of supported entity types for a project
+  Future<Response> _handleGetEntities(Request request) async {
+    try {
+      final projectId = _extractProjectId(request);
+      if (projectId == null || projectId.isEmpty) {
+        return _errorResponse('Project ID is required', 400);
+      }
+
+      // Get supported entity types for this project
+      final supportedEntityTypes = await storage.getSupportedEntityTypes(
+        projectId,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'projectId': projectId,
+          'entityTypes': supportedEntityTypes,
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on ArgumentError catch (e) {
+      return _errorResponse(e.message, 400);
+    } catch (e) {
+      return _errorResponse('Failed to fetch entity types: $e', 500);
+    }
+  }
+
+  /// Get entity state with pagination and optional metadata
+  Future<Response> _handleGetEntityState(Request request) async {
+    try {
+      final projectId = _extractProjectId(request);
+      if (projectId == null || projectId.isEmpty) {
+        return _errorResponse('Project ID is required', 400);
+      }
+
+      final entityType = request.params['entityType'];
+      if (entityType == null || entityType.isEmpty) {
+        return _errorResponse('Entity type is required', 400);
+      }
+
+      // URL decode the entity type to handle special characters
+      final decodedEntityType = Uri.decodeComponent(entityType);
+
+      // Parse query parameters
+      final queryParams = request.url.queryParameters;
+      final cursor = queryParams['cursor'];
+      final limitStr = queryParams['limit'];
+      final fieldMetadataStr = queryParams['field_metadata'];
+
+      // Parse limit parameter
+      int limit = 100; // Default limit
+      if (limitStr != null && limitStr.isNotEmpty) {
+        try {
+          limit = int.parse(limitStr);
+          if (limit <= 0 || limit > 1000) {
+            return _errorResponse('Limit must be between 1 and 1000', 400);
+          }
+        } catch (e) {
+          return _errorResponse(
+            'Invalid limit format: must be a positive integer',
+            400,
+          );
+        }
+      }
+
+      // Parse field_metadata parameter
+      final includeFieldMetadata = fieldMetadataStr?.toLowerCase() == 'true';
+
+      // Get entity state data
+      final stateData = await storage.getEntityStates(
+        projectId: projectId,
+        entityType: decodedEntityType,
+        cursor: cursor,
+        limit: limit,
+        includeMetadata: includeFieldMetadata,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'projectId': projectId,
+          'entityType': decodedEntityType,
+          'entities': stateData['entities'],
+          'cursor': stateData['nextCursor'],
+          'hasMore': stateData['hasMore'],
+          'fieldMetadata': includeFieldMetadata,
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on ArgumentError catch (e) {
+      return _errorResponse(e.message, 400);
+    } catch (e) {
+      return _errorResponse('Failed to fetch entity state: $e', 500);
     }
   }
 

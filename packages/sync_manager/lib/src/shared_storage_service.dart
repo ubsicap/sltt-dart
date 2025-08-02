@@ -733,6 +733,240 @@ class LocalStorageService implements BaseStorageService {
       await _isar.isarDocumentStates.put(documentState);
     });
   }
+
+  @override
+  Future<List<String>> getSupportedEntityTypes(String projectId) async {
+    // Return all entity types supported by this storage service
+    return EntityType.values.map((e) => e.name).toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getEntityStates({
+    required String projectId,
+    required String entityType,
+    String? cursor,
+    int? limit,
+    bool includeMetadata = false,
+  }) async {
+    final actualLimit = limit ?? 50;
+    try {
+      final entityTypeEnum = EntityType.values.firstWhere(
+        (e) => e.name == entityType,
+        orElse: () =>
+            throw ArgumentError('Unsupported entity type: $entityType'),
+      );
+
+      switch (entityTypeEnum) {
+        case EntityType.project:
+          return await _getProjectStatesWithPagination(
+            projectId,
+            actualLimit,
+            cursor,
+            includeMetadata,
+          );
+        case EntityType.document:
+          return await _getDocumentStatesWithPagination(
+            projectId,
+            actualLimit,
+            cursor,
+            includeMetadata,
+          );
+        case EntityType.team:
+          return await _getTeamStatesWithPagination(
+            projectId,
+            actualLimit,
+            cursor,
+            includeMetadata,
+          );
+        default:
+          return {
+            'entities': <Map<String, dynamic>>[],
+            'hasMore': false,
+            'nextCursor': null,
+          };
+      }
+    } on ArgumentError {
+      // Re-throw ArgumentError so it can be caught by the API handler as a 400 error
+      rethrow;
+    } on StateError {
+      // Convert StateError to ArgumentError for proper API error handling
+      throw ArgumentError('Unsupported entity type: $entityType');
+    } catch (e) {
+      throw Exception('Failed to get entity states: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> _getProjectStatesWithPagination(
+    String projectId,
+    int limit,
+    String? cursor,
+    bool includeMetadata,
+  ) async {
+    final query = _isar.isarProjectStates.filter().projectIdEqualTo(projectId);
+
+    final queryWithCursor = cursor != null
+        ? query.entityIdGreaterThan(cursor)
+        : query;
+
+    final entities = await queryWithCursor
+        .sortByEntityId()
+        .limit(limit + 1)
+        .findAll();
+
+    final hasMore = entities.length > limit;
+    final resultEntities = hasMore ? entities.take(limit).toList() : entities;
+
+    return {
+      'entities': resultEntities
+          .map((e) => _projectStateToMap(e, includeMetadata))
+          .toList(),
+      'hasMore': hasMore,
+      'nextCursor': hasMore ? resultEntities.last.entityId : null,
+    };
+  }
+
+  Future<Map<String, dynamic>> _getDocumentStatesWithPagination(
+    String projectId,
+    int limit,
+    String? cursor,
+    bool includeMetadata,
+  ) async {
+    final query = _isar.isarDocumentStates.filter().projectIdEqualTo(projectId);
+
+    final queryWithCursor = cursor != null
+        ? query.entityIdGreaterThan(cursor)
+        : query;
+
+    final entities = await queryWithCursor
+        .sortByEntityId()
+        .limit(limit + 1)
+        .findAll();
+
+    final hasMore = entities.length > limit;
+    final resultEntities = hasMore ? entities.take(limit).toList() : entities;
+
+    return {
+      'entities': resultEntities
+          .map((e) => _documentStateToMap(e, includeMetadata))
+          .toList(),
+      'hasMore': hasMore,
+      'nextCursor': hasMore ? resultEntities.last.entityId : null,
+    };
+  }
+
+  Future<Map<String, dynamic>> _getTeamStatesWithPagination(
+    String projectId,
+    int limit,
+    String? cursor,
+    bool includeMetadata,
+  ) async {
+    final query = _isar.isarTeamStates.filter().projectIdEqualTo(projectId);
+
+    final queryWithCursor = cursor != null
+        ? query.entityIdGreaterThan(cursor)
+        : query;
+
+    final entities = await queryWithCursor
+        .sortByEntityId()
+        .limit(limit + 1)
+        .findAll();
+
+    final hasMore = entities.length > limit;
+    final resultEntities = hasMore ? entities.take(limit).toList() : entities;
+
+    return {
+      'entities': resultEntities
+          .map((e) => _teamStateToMap(e, includeMetadata))
+          .toList(),
+      'hasMore': hasMore,
+      'nextCursor': hasMore ? resultEntities.last.entityId : null,
+    };
+  }
+
+  Map<String, dynamic> _projectStateToMap(
+    IsarProjectState state,
+    bool includeMetadata,
+  ) {
+    final result = <String, dynamic>{
+      'entityId': state.entityId,
+      'projectId': state.projectId,
+      'name': state.name,
+      'description': state.description,
+      'status': state.status.name,
+      'priority': state.priority.name,
+      'leadId': state.leadId,
+      'dueDate': state.dueDate?.toIso8601String(),
+      'settings': state.settings,
+      'deleted': state.deleted,
+    };
+
+    if (includeMetadata) {
+      result['metadata'] = {
+        'changeAt': state.changeAt?.toIso8601String(),
+        'cloudAt': state.cloudAt?.toIso8601String(),
+        'cid': state.cid,
+        'changeBy': state.changeBy,
+        'rank': state.rank,
+        'parentId': state.parentId,
+      };
+    }
+
+    return result;
+  }
+
+  Map<String, dynamic> _documentStateToMap(
+    IsarDocumentState state,
+    bool includeMetadata,
+  ) {
+    final result = <String, dynamic>{
+      'entityId': state.entityId,
+      'projectId': state.projectId,
+      'title': state.title,
+      'content': state.content,
+      'deleted': state.deleted,
+    };
+
+    if (includeMetadata) {
+      result['metadata'] = {
+        'changeAt': state.changeAt?.toIso8601String(),
+        'cloudAt': state.cloudAt?.toIso8601String(),
+        'cid': state.cid,
+        'changeBy': state.changeBy,
+        'rank': state.rank,
+        'parentId': state.parentId,
+      };
+    }
+
+    return result;
+  }
+
+  Map<String, dynamic> _teamStateToMap(
+    IsarTeamState state,
+    bool includeMetadata,
+  ) {
+    final result = <String, dynamic>{
+      'entityId': state.entityId,
+      'projectId': state.projectId,
+      'name': state.name,
+      'description': state.description,
+      'leadId': state.leadId,
+      'settings': state.settings,
+      'deleted': state.deleted,
+    };
+
+    if (includeMetadata) {
+      result['metadata'] = {
+        'changeAt': state.changeAt?.toIso8601String(),
+        'cloudAt': state.cloudAt?.toIso8601String(),
+        'cid': state.cid,
+        'changeBy': state.changeBy,
+        'rank': state.rank,
+        'parentId': state.parentId,
+      };
+    }
+
+    return result;
+  }
 }
 
 // Singleton wrappers for each storage type

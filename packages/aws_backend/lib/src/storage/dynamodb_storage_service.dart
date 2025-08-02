@@ -670,4 +670,43 @@ class DynamoDBStorageService implements BaseStorageService {
 
     return projectIds.toList()..sort();
   }
+
+  @override
+  Future<List<String>> getSupportedEntityTypes(String projectId) async {
+    // DynamoDB backend supports all EntityType values
+    return EntityType.allValues;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getEntityStates({
+    required String projectId,
+    required String entityType,
+    String? cursor,
+    int? limit,
+    bool includeMetadata = false,
+  }) async {
+    if (!_initialized) await initialize();
+
+    // For DynamoDB implementation, we need to query the change log
+    // to reconstruct entity states, similar to how LocalStorageService works
+
+    // This is a simplified implementation that demonstrates the interface
+    // In a full implementation, you would:
+    // 1. Query the change log for the specific project and entity type
+    // 2. Group changes by entityId to get the latest state of each entity
+    // 3. Apply pagination based on the cursor
+    // 4. Include metadata if requested
+
+    try {
+      // For now, return an empty response since we don't have entity state tables
+      // in DynamoDB - this would require additional DynamoDB queries and state reconstruction
+      return {
+        'items': <Map<String, dynamic>>[],
+        'hasNextPage': false,
+        'nextCursor': null,
+      };
+    } catch (e) {
+      throw Exception('Failed to get entity states for $entityType: $e');
+    }
+  }
 }
