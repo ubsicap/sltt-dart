@@ -11,9 +11,11 @@ environment:
 workspace:
   - packages/sltt_core
   - packages/aws_backend
+  - packages/sync_manager
   - examples/sync_manager_demo
 dev_dependencies:
   test: ^1.24.0
   http: any
   sltt_core: any
   aws_backend: any
+  sync_manager: any

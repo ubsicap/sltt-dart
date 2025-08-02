@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/sync_manager.dart';
 
 /// Simple test to verify optional operation field and outdated filtering
 void main() async {

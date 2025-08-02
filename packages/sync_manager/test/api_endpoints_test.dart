@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -305,9 +306,8 @@ void main() {
     test('changeAt preservation and cloudAt generation', () async {
       final changeAtTestProjectId = '$testProjectId-changeat';
       final now = DateTime.now().toUtc();
-      final customChangeAt = now
-          .subtract(const Duration(minutes: 10))
-          .toIso8601String();
+      final customChangeAt =
+          now.subtract(const Duration(minutes: 10)).toIso8601String();
 
       // Create a change with a custom changeAt
       final changeData = [

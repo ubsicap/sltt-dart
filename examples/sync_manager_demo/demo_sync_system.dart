@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/sync_manager.dart';
 
 /// Interactive demonstration of the SLTT Dart sync system.
 ///

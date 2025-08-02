@@ -1,6 +1,5 @@
-import '../storage/base_storage_service.dart';
-import '../storage/shared_storage_service.dart';
-import 'base_rest_api_server.dart';
+import 'package:sltt_core/sltt_core.dart';
+import 'shared_storage_service.dart';
 
 enum StorageType { outsyncs, downsyncs, cloudStorage }
 
@@ -12,7 +11,7 @@ class EnhancedRestApiServer extends BaseRestApiServer {
   final StorageType storageType;
 
   EnhancedRestApiServer(this.storageType, String serverName)
-    : super(serverName: serverName, storage: _createStorage(storageType));
+      : super(serverName: serverName, storage: _createStorage(storageType));
 
   @override
   String get storageTypeDescription =>

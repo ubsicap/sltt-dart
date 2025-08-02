@@ -1,6 +1,6 @@
 #!/usr/bin/env dart
 
-import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/sync_manager.dart';
 
 Future<void> main() async {
   print('🧪 Running comprehensive integration test\n');

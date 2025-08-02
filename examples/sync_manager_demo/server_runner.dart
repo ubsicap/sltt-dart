@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/sync_manager.dart';
 
 void main(List<String> args) async {
   final launcher = MultiServerLauncher.instance;

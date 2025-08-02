@@ -13,9 +13,11 @@ dependencies:
   # HTTP client for testing
   dio: ^5.4.0
 
-  # Local package dependency
+  # Local package dependencies
   sltt_core:
     path: ../../packages/sltt_core
+  sync_manager:
+    path: ../../packages/sync_manager
 
 dev_dependencies:
   test: ^1.24.0
