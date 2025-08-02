@@ -17,12 +17,14 @@ void main() {
     final bool useDevCloud = Platform.environment['USE_DEV_CLOUD'] == 'true';
 
     // Use different project names for dev cloud vs localhost
-    final String testProjectId =
-        useDevCloud ? '_test_cloud_api_project' : 'test-project';
+    final String testProjectId = useDevCloud
+        ? '_test_cloud_api_project'
+        : 'test-project';
 
     // API endpoints
-    final String cloudStorageUrl =
-        useDevCloud ? kCloudDevUrl : kLocalhostCloudStorageUrl;
+    final String cloudStorageUrl = useDevCloud
+        ? kCloudDevUrl
+        : kLocalhostCloudStorageUrl;
     final String outsyncsUrl = kLocalhostOutsyncsUrl;
     final String downsyncsUrl = kLocalhostDownsyncsUrl;
 
@@ -221,10 +223,12 @@ void main() {
       );
       final changesList = storedChanges.data['changes'] as List;
 
-      final change1 =
-          changesList.where((c) => c['entityId'] == entityId1).toList();
-      final change2 =
-          changesList.where((c) => c['entityId'] == entityId2).toList();
+      final change1 = changesList
+          .where((c) => c['entityId'] == entityId1)
+          .toList();
+      final change2 = changesList
+          .where((c) => c['entityId'] == entityId2)
+          .toList();
 
       expect(change1, isNotEmpty);
       expect(change2, isNotEmpty);

@@ -306,8 +306,9 @@ void main() {
     test('changeAt preservation and cloudAt generation', () async {
       final changeAtTestProjectId = '$testProjectId-changeat';
       final now = DateTime.now().toUtc();
-      final customChangeAt =
-          now.subtract(const Duration(minutes: 10)).toIso8601String();
+      final customChangeAt = now
+          .subtract(const Duration(minutes: 10))
+          .toIso8601String();
 
       // Create a change with a custom changeAt
       final changeData = [

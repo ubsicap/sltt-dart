@@ -40,7 +40,7 @@ dart test
 
 # Use VS Code tasks (recommended in IDE)
 # - "Run Tests with Setup"
-# - "Run Integration Tests" 
+# - "Run Integration Tests"
 # - "Setup Test Environment"
 ```
 
@@ -62,7 +62,7 @@ Failed to load dynamic library 'libisar.so': libisar.so: cannot open shared obje
 ### Development Workflow
 
 1. Make code changes
-2. Run tests: `./test.sh` 
+2. Run tests: `./test.sh`
 3. For continuous testing in IDE: Use VS Code tasks
 4. For CI/CD: Ensure scripts use proper environment setup
 

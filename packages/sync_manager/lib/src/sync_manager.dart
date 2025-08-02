@@ -148,8 +148,8 @@ class SyncManager {
       }
 
       final responseData = projectsResponse.data as Map<String, dynamic>;
-      final projects =
-          (responseData['projects'] as List<dynamic>).cast<String>();
+      final projects = (responseData['projects'] as List<dynamic>)
+          .cast<String>();
       print(
         '[SyncManager] Found ${projects.length} projects in cloud: $projects',
       );
@@ -335,12 +335,12 @@ class OutsyncResult {
   });
 
   Map<String, dynamic> toJson() => {
-        'success': success,
-        'syncedChanges': syncedChanges,
-        'deletedLocalChanges': deletedLocalChanges,
-        'seqMap': seqMap,
-        'message': message,
-      };
+    'success': success,
+    'syncedChanges': syncedChanges,
+    'deletedLocalChanges': deletedLocalChanges,
+    'seqMap': seqMap,
+    'message': message,
+  };
 }
 
 class DownsyncResult {
@@ -355,10 +355,10 @@ class DownsyncResult {
   });
 
   Map<String, dynamic> toJson() => {
-        'success': success,
-        'newChanges': newChanges,
-        'message': message,
-      };
+    'success': success,
+    'newChanges': newChanges,
+    'message': message,
+  };
 }
 
 class FullSyncResult {
@@ -373,10 +373,10 @@ class FullSyncResult {
   });
 
   Map<String, dynamic> toJson() => {
-        'outsyncResult': outsyncResult.toJson(),
-        'downsyncResult': downsyncResult.toJson(),
-        'success': success,
-      };
+    'outsyncResult': outsyncResult.toJson(),
+    'downsyncResult': downsyncResult.toJson(),
+    'success': success,
+  };
 }
 
 class SyncStatus {
@@ -393,9 +393,9 @@ class SyncStatus {
   });
 
   Map<String, dynamic> toJson() => {
-        'outsyncsCount': outsyncsCount,
-        'downsyncsCount': downsyncsCount,
-        'cloudCount': cloudCount,
-        'lastSyncTime': lastSyncTime.toIso8601String(),
-      };
+    'outsyncsCount': outsyncsCount,
+    'downsyncsCount': downsyncsCount,
+    'cloudCount': cloudCount,
+    'lastSyncTime': lastSyncTime.toIso8601String(),
+  };
 }
