@@ -1,4 +1,16 @@
-I'd like to refactor the rest_server_api.dart and local_storage_service.dart to 
+
+1) make a clients package with a sync_manager folder src structure and move all the isar entity dart files there so they are not in sltt_core folder, this can help make sure backend does not have access to isar code when it
+after you fix any dart analyze and text issues, pause so I can commit the changes.
+2) add a new collection with `sync` entries that do not inherit from BaseEntityState, but tracks the last sync state for each projectId:
+- projectId (primary key)
+- changeLogId
+- lastChangeAt
+- lastSeq
+3) update the sync manager to use and update sync entries for each projectId, rather than depending on the last seq in outsyncs.
+fix dart analyze and tests, and pause so i can commit
+4) update the sync manager to use the changelog_to_state flow, such that 1) changes to outsyncs get encorporated into the client state but stay in outsyncs until posted to the cloud 2) changes to downsyncs get encorporated to the state, but get deleted from downsyncs after doing so. fix dart analyze and tests, and pause so i can commit
+
+I'd like to refactor the rest_server_api.dart and local_storage_service.dart to
 
 1) add to the rest api so that POST /changes/sync/{seq} stores new changes and also responds with changes since last {seq}, and update tests
 
