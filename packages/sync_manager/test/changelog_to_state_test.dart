@@ -10,9 +10,9 @@ void main() {
   group('Changelog to State Entity Conversion Tests', () {
     late IsarProjectState projectState;
 
-    setUp(() {
-      // Start with empty project state
-      projectState = IsarProjectState();
+    setUpAll(() async {
+      // Initialize project state with required entityId
+      projectState = IsarProjectState()..entityId = '';
     });
 
     test('Scenario 1: Complete changelog to state conversion workflow', () {

@@ -1,5 +1,5 @@
 
-1) make a clients package with a sync_manager folder src structure and move all the isar entity dart files there so they are not in sltt_core folder, this can help make sure backend does not have access to isar code when it
+1) make a sync_manager package and move all the isar entity dart files there so they are not in sltt_core folder, this can help make sure backend does not have access to isar code when it
 after you fix any dart analyze and text issues, pause so I can commit the changes.
 2) add a new collection with `sync` entries that do not inherit from BaseEntityState, but tracks the last sync state for each projectId:
 - projectId (primary key)

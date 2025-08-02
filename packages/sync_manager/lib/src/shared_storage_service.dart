@@ -5,6 +5,7 @@ import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'models/change_log_entry.dart' as client;
+import 'models/sync_state.dart';
 
 class LocalStorageService implements BaseStorageService {
   final String _databaseName;
@@ -52,7 +53,7 @@ class LocalStorageService implements BaseStorageService {
 
     // Initialize Isar with the specified database name
     _isar = await Isar.open(
-      [client.ClientChangeLogEntrySchema],
+      [client.ClientChangeLogEntrySchema, SyncStateSchema],
       directory: dir.path,
       name: _databaseName,
     );
@@ -436,6 +437,78 @@ class LocalStorageService implements BaseStorageService {
     }
 
     return projectIds.toList()..sort();
+  }
+
+  /// Get sync state for a specific project
+  Future<SyncState?> getSyncState(String projectId) async {
+    return await _isar
+        .collection<SyncState>()
+        .filter()
+        .projectIdEqualTo(projectId)
+        .findFirst();
+  }
+
+  /// Create or update sync state for a project
+  Future<SyncState> upsertSyncState(
+    String projectId, {
+    String? changeLogId,
+    DateTime? lastChangeAt,
+    int? lastSeq,
+  }) async {
+    late SyncState syncState;
+
+    await _isar.writeTxn(() async {
+      // Try to find existing sync state
+      SyncState? existing = await _isar.syncStates
+          .filter()
+          .projectIdEqualTo(projectId)
+          .findFirst();
+
+      if (existing != null) {
+        // Update existing
+        existing.updateSync(
+          changeLogId: changeLogId,
+          lastChangeAt: lastChangeAt,
+          lastSeq: lastSeq,
+        );
+        await _isar.syncStates.put(existing);
+        syncState = existing;
+      } else {
+        // Create new
+        syncState = SyncState.forProject(projectId);
+        syncState.updateSync(
+          changeLogId: changeLogId,
+          lastChangeAt: lastChangeAt,
+          lastSeq: lastSeq,
+        );
+        await _isar.syncStates.put(syncState);
+      }
+    });
+
+    return syncState;
+  }
+
+  /// Get all sync states
+  Future<List<SyncState>> getAllSyncStates() async {
+    return await _isar.syncStates.where().findAll();
+  }
+
+  /// Delete sync state for a project
+  Future<bool> deleteSyncState(String projectId) async {
+    late bool deleted;
+    await _isar.writeTxn(() async {
+      final syncState = await _isar.syncStates
+          .filter()
+          .projectIdEqualTo(projectId)
+          .findFirst();
+
+      if (syncState != null) {
+        deleted = await _isar.syncStates.delete(syncState.id);
+      } else {
+        deleted = false;
+      }
+    });
+    return deleted;
   }
 }
 
