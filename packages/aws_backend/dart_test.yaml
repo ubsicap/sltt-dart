@@ -15,28 +15,5 @@ tags:
   slow:
     description: "Tests that involve multiple operations or complex data processing and may take longer"
 
-# Test timeout configuration
-timeout: 60s  # Default timeout for tests
-
-# Test file patterns
-file_reporters:
-  json:
-    path: test_results.json
-
-# Configure test presets for different scenarios
-presets:
-  # Run only unit tests (no external dependencies)
-  unit:
-    exclude_tags: [integration, internet]
-
-  # Run only integration tests
-  integration:
-    tags: integration
-
-  # Run all tests except slow ones (for quick feedback)
-  quick:
-    exclude_tags: slow
-
-  # Run all tests (default)
-  all:
-    # No exclusions - run everything
+# Test timeout configuration - this is the global default
+timeout: 2m
