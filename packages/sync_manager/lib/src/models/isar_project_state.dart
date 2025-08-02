@@ -268,7 +268,8 @@ class IsarProjectState {
     this.changeAt = baseState.changeAt;
     cid = baseState.cid;
     cloudAt = baseState.cloudAt;
-    changeBy = baseState.changeBy;
+    // NOTE: Don't overwrite changeBy - keep the original parameter value for project-specific updates
+    // changeBy = baseState.changeBy;  // <- This was causing the bug
     rankChangeAt = baseState.rankChangeAt;
     rankCid = baseState.rankCid;
     rankChangeBy = baseState.rankChangeBy;
