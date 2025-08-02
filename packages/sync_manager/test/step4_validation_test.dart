@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'package:test/test.dart';
-import '../lib/src/shared_storage_service.dart';
-import '../lib/src/models/change_log_entry.dart';
+
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/models/change_log_entry.dart';
+import 'package:sync_manager/src/shared_storage_service.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Step 4 Validation Tests', () {
@@ -91,8 +92,8 @@ void main() {
       expect(retrievedState!.name, equals('Step 4 Test Team'));
     });
 
-    test('Unsupported entity types are rejected correctly', () async {
-      // Create a document changelog entry (unsupported)
+    test('Document entity changelog_to_state integration works', () async {
+      // Create a document changelog entry
       final changeLogEntry = ClientChangeLogEntry(
         projectId: 'test-project-step4',
         entityType: EntityType.document,
@@ -101,7 +102,45 @@ void main() {
         entityId: 'test-document-step4',
         dataJson: jsonEncode({
           'title': 'Step 4 Test Document',
-          'content': 'This should be rejected',
+          'content': 'Testing document changelog to state integration',
+        }),
+        changeBy: 'test-user',
+        cid: 'test-cid-123',
+      );
+
+      // Apply the changelog entry to state
+      final documentState = await cloudStorage.applyChangelogToState(
+        changeLogEntry,
+      );
+
+      // Verify the state was created correctly
+      expect(documentState, isNotNull);
+      expect(documentState.entityId, equals('test-document-step4'));
+      expect(documentState.title, equals('Step 4 Test Document'));
+      expect(
+        documentState.content,
+        equals('Testing document changelog to state integration'),
+      );
+
+      // Verify we can retrieve the state
+      final retrievedState = await cloudStorage.getDocumentState(
+        'test-document-step4',
+      );
+      expect(retrievedState, isNotNull);
+      expect(retrievedState!.title, equals('Step 4 Test Document'));
+    });
+
+    test('Unsupported entity types are rejected correctly', () async {
+      // Create a unsupported entity changelog entry (e.g., video)
+      final changeLogEntry = ClientChangeLogEntry(
+        projectId: 'test-project-step4',
+        entityType: EntityType.video,
+        operation: 'create',
+        changeAt: DateTime.now().toUtc(),
+        entityId: 'test-video-step4',
+        dataJson: jsonEncode({
+          'title': 'Step 4 Test Video',
+          'url': 'https://example.com/video.mp4',
         }),
         changeBy: 'test-user',
         cid: 'test-cid-789',

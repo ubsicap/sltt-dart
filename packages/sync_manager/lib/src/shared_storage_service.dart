@@ -5,6 +5,7 @@ import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'models/change_log_entry.dart' as client;
+import 'models/isar_document_state.dart';
 import 'models/isar_project_state.dart';
 import 'models/isar_team_state.dart';
 import 'models/sync_state.dart';
@@ -58,6 +59,7 @@ class LocalStorageService implements BaseStorageService {
       [
         client.ClientChangeLogEntrySchema,
         SyncStateSchema,
+        IsarDocumentStateSchema,
         IsarProjectStateSchema,
         IsarTeamStateSchema,
       ],
@@ -518,6 +520,13 @@ class LocalStorageService implements BaseStorageService {
     return deleted;
   }
 
+  /// Clear all sync states (useful for testing)
+  Future<void> clearAllSyncStates() async {
+    await _isar.writeTxn(() async {
+      await _isar.syncStates.clear();
+    });
+  }
+
   // State management methods for IsarProjectState
   Future<void> saveProjectState(IsarProjectState projectState) async {
     await _isar.writeTxn(() async {
@@ -597,6 +606,8 @@ class LocalStorageService implements BaseStorageService {
     final entityType = changeLogEntry.entityType;
 
     switch (entityType) {
+      case EntityType.document:
+        return await _applyChangelogToDocumentState(changeLogEntry);
       case EntityType.project:
         return await _applyChangelogToProjectState(changeLogEntry);
       case EntityType.team:
@@ -672,6 +683,55 @@ class LocalStorageService implements BaseStorageService {
     });
 
     return existingState!;
+  }
+
+  /// Applies changelog entry to document state
+  Future<IsarDocumentState> _applyChangelogToDocumentState(
+    client.ClientChangeLogEntry changeLogEntry,
+  ) async {
+    IsarDocumentState? existingState;
+
+    await _isar.writeTxn(() async {
+      // Get existing state by entityId (document ID)
+      existingState = await getDocumentState(changeLogEntry.entityId);
+
+      if (existingState == null) {
+        // Create new document state from changelog entry
+        existingState = IsarDocumentState();
+        existingState!.entityId = changeLogEntry.entityId;
+        existingState!.entityType = EntityType.document;
+        existingState!.projectId = changeLogEntry.projectId;
+      }
+
+      // Apply the changelog entry to update the state
+      existingState!.updateFromChangeLogEntry(
+        changeAt: changeLogEntry.changeAt,
+        cid: changeLogEntry.cid,
+        changeBy: changeLogEntry.changeBy,
+        cloudAt: changeLogEntry.cloudAt,
+        data: changeLogEntry.data,
+      );
+
+      // Save the updated state
+      await _isar.isarDocumentStates.put(existingState!);
+    });
+
+    return existingState!;
+  }
+
+  /// Gets document state by entity ID
+  Future<IsarDocumentState?> getDocumentState(String entityId) async {
+    return await _isar.isarDocumentStates
+        .filter()
+        .entityIdEqualTo(entityId)
+        .findFirst();
+  }
+
+  /// Saves document state
+  Future<void> saveDocumentState(IsarDocumentState documentState) async {
+    await _isar.writeTxn(() async {
+      await _isar.isarDocumentStates.put(documentState);
+    });
   }
 }
 

@@ -382,6 +382,11 @@ class SyncManager {
     );
   }
 
+  /// Clear all sync states (useful for testing)
+  Future<void> clearAllSyncStates() async {
+    await _cloudStorage.clearAllSyncStates();
+  }
+
   Future<void> close() async {
     if (_initialized) {
       await _outsyncsStorage.close();

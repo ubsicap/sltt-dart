@@ -73,8 +73,10 @@ void main() {
       print('🧹 Cleaning up leftover test data...');
       await outsyncsStorage.deleteAllChanges();
       await DownsyncsStorageService.instance.deleteAllChanges();
+      await syncManager.clearAllSyncStates();
       if (!useDevCloud) {
-        await CloudStorageService.instance.deleteAllChanges();
+        // Don't clear cloud storage here as it breaks test dependencies
+        // Each test should manage its own cloud data as needed
       }
       print('✅ Database cleanup completed');
     });
@@ -312,6 +314,9 @@ void main() {
     });
 
     test('downsync flow', () async {
+      // Reset sync state to ensure we start fresh for this test
+      await syncManager.clearAllSyncStates();
+
       // Get initial downsync count
       final downsyncsStatsBefore = await dio.get(
         '$downsyncsUrl/api/projects/$testProjectId/stats',
@@ -344,8 +349,10 @@ void main() {
         // For dev cloud, count may not increase if no new changes
         expect(downsyncsCountAfter, greaterThanOrEqualTo(downsyncsCountBefore));
       } else {
-        // For localhost, we expect count to increase
-        expect(downsyncsCountAfter, greaterThan(downsyncsCountBefore));
+        // With Step 4 implementation, downsyncs are applied to state then deleted
+        // So count should remain the same (0 before, 0 after) but changes should exist
+        expect(downsyncResult.newChanges, isNotEmpty);
+        expect(downsyncsCountAfter, equals(downsyncsCountBefore));
       }
     });
 
