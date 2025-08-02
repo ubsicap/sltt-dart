@@ -14,6 +14,7 @@ class SyncManager {
       OutsyncsStorageService.instance;
   final DownsyncsStorageService _downsyncsStorage =
       DownsyncsStorageService.instance;
+  final CloudStorageService _cloudStorage = CloudStorageService.instance;
 
   // API endpoints - defaults to AWS dev cloud, can be overridden for testing
   String _cloudStorageUrl = kCloudDevUrl;
@@ -31,6 +32,7 @@ class SyncManager {
 
     await _outsyncsStorage.initialize();
     await _downsyncsStorage.initialize();
+    await _cloudStorage.initialize();
 
     _dio.options.headers['Content-Type'] = 'application/json';
     _dio.options.connectTimeout = const Duration(seconds: 10);
@@ -169,12 +171,15 @@ class SyncManager {
       for (final projectId in projects) {
         print('[SyncManager] Downsyncing project: $projectId');
 
-        // Get the last sequence number for this project from downsyncs storage
-        int lastSeq = await _downsyncsStorage.getLastSeq();
+        // Get the last sync state for this specific project
+        final syncState = await _cloudStorage.getSyncState(projectId);
+        int lastSeq = syncState?.lastSeq ?? 0;
         print('[SyncManager] Starting from seq: $lastSeq');
 
         String? cursor = lastSeq.toString();
         int totalChangesForProject = 0;
+        int highestSeqForProject =
+            lastSeq; // Track highest sequence for this project
 
         // Continue fetching with cursor until no more changes
         do {
@@ -204,6 +209,13 @@ class SyncManager {
             allNewChanges.addAll(storedChanges.map((c) => c.toJson()).toList());
             totalChangesForProject += storedChanges.length;
 
+            // Track the highest sequence number for this project
+            for (final change in storedChanges) {
+              if (change.seq > highestSeqForProject) {
+                highestSeqForProject = change.seq;
+              }
+            }
+
             print(
               '[SyncManager] Stored ${storedChanges.length} changes for project $projectId (batch)',
             );
@@ -221,6 +233,18 @@ class SyncManager {
         print(
           '[SyncManager] Completed downsyncing project $projectId: $totalChangesForProject total changes',
         );
+
+        // Update sync state for this project if we processed any changes
+        if (totalChangesForProject > 0) {
+          await _cloudStorage.upsertSyncState(
+            projectId,
+            lastSeq: highestSeqForProject,
+            lastChangeAt: DateTime.now().toUtc(),
+          );
+          print(
+            '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
+          );
+        }
       }
 
       print(
