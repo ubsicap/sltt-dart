@@ -34,15 +34,15 @@ if [ -f "$ISAR_LIB_PATH" ]; then
     # If no arguments provided, run tests in all packages
     if [ $# -eq 0 ]; then
         echo "🏗️ Running tests in all packages..."
-        
+
         # Test packages with actual test files
         PACKAGES=("packages/sync_manager" "packages/aws_backend" "packages/sltt_core")
-        
+
         for package in "${PACKAGES[@]}"; do
             if [ -d "$package/test" ]; then
                 echo "📦 Testing $package..."
                 cd "$package"
-                
+
                 # Pass through environment variables to dart test
                 if [ "$USE_DEV_CLOUD" = "true" ]; then
                     echo "🌩️ Using DEV CLOUD for testing"
@@ -54,7 +54,7 @@ if [ -f "$ISAR_LIB_PATH" ]; then
                     echo "🏠 Using LOCALHOST for testing"
                     LD_LIBRARY_PATH=/tmp/dart_test_libs dart test
                 fi
-                
+
                 # Return to workspace root
                 cd - > /dev/null
                 echo ""
