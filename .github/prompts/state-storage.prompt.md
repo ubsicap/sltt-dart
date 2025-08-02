@@ -93,3 +93,22 @@ The next thing we need to do is to set up the entity state storage collections.
     - `targetId` (string) - parentId points to video or patch entityId
 
 - `note` state schema which has metadata specific to note entities:
+
+1) add new endpoints for BaseRestApiServer (first for EnhancedRestApiServer, later in aws_backend)
+  - GET /api/projects/{projectId}/entities
+    - provides a json response with a list of supported entityTypes
+  - GET /api/projects/{projectId}/entities/{entityType}/state
+    - paginated
+    - support query &field_metadata=true (by default false)
+       - include in the response metadata needed for conflict resolution or serializing/deserializing the full state of a state collection
+         - orig{field}, {field}ChangeAt, {field}ChangeBy, etc...
+2) add tests for the new endpoints
+
+
+
+
+2) so the thousand dollar step now is to refactor the change to state persistence logic used by the sync manager (where necessary, except without any isar dependencies) to sltt_core to use in  aws_backend dynamodb table, such that
+- changes for each entity (starting with the ones currently used in sync manager related tests) to
+ - look up the latest entity state entry
+ - follow the same conflict resolution logic
+
