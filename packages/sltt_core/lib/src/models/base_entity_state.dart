@@ -139,34 +139,42 @@ class BaseEntityState {
     }
 
     // Update individual fields with conflict resolution
-    _updateFieldIfNewer(
-      'rank',
-      data['rank']?.toString(),
-      changeAt,
-      cid,
-      changeBy,
-    );
-    _updateFieldIfNewer(
-      'deleted',
-      data['deleted'] == true,
-      changeAt,
-      cid,
-      changeBy,
-    );
-    _updateFieldIfNewer(
-      'parentId',
-      data['parentId']?.toString() ?? '',
-      changeAt,
-      cid,
-      changeBy,
-    );
-    _updateFieldIfNewer(
-      'projectId',
-      data['projectId']?.toString() ?? projectId,
-      changeAt,
-      cid,
-      changeBy,
-    );
+    if (data.containsKey('rank')) {
+      _updateFieldIfNewer(
+        'rank',
+        data['rank']?.toString(),
+        changeAt,
+        cid,
+        changeBy,
+      );
+    }
+    if (data.containsKey('deleted')) {
+      _updateFieldIfNewer(
+        'deleted',
+        data['deleted'] == true,
+        changeAt,
+        cid,
+        changeBy,
+      );
+    }
+    if (data.containsKey('parentId')) {
+      _updateFieldIfNewer(
+        'parentId',
+        data['parentId']?.toString() ?? '',
+        changeAt,
+        cid,
+        changeBy,
+      );
+    }
+    if (data.containsKey('projectId')) {
+      _updateFieldIfNewer(
+        'projectId',
+        data['projectId']?.toString() ?? projectId,
+        changeAt,
+        cid,
+        changeBy,
+      );
+    }
   }
 
   /// Update a field only if the change is newer than the current field's change
