@@ -5,6 +5,8 @@ import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'models/change_log_entry.dart' as client;
+import 'models/isar_project_state.dart';
+import 'models/isar_team_state.dart';
 import 'models/sync_state.dart';
 
 class LocalStorageService implements BaseStorageService {
@@ -53,7 +55,12 @@ class LocalStorageService implements BaseStorageService {
 
     // Initialize Isar with the specified database name
     _isar = await Isar.open(
-      [client.ClientChangeLogEntrySchema, SyncStateSchema],
+      [
+        client.ClientChangeLogEntrySchema,
+        SyncStateSchema,
+        IsarProjectStateSchema,
+        IsarTeamStateSchema,
+      ],
       directory: dir.path,
       name: _databaseName,
     );
@@ -509,6 +516,162 @@ class LocalStorageService implements BaseStorageService {
       }
     });
     return deleted;
+  }
+
+  // State management methods for IsarProjectState
+  Future<void> saveProjectState(IsarProjectState projectState) async {
+    await _isar.writeTxn(() async {
+      await _isar.isarProjectStates.put(projectState);
+    });
+  }
+
+  Future<IsarProjectState?> getProjectState(String projectId) async {
+    return await _isar.isarProjectStates
+        .filter()
+        .projectIdEqualTo(projectId)
+        .findFirst();
+  }
+
+  Future<List<IsarProjectState>> getAllProjectStates() async {
+    return await _isar.isarProjectStates.where().findAll();
+  }
+
+  Future<bool> deleteProjectState(String projectId) async {
+    bool deleted = false;
+    await _isar.writeTxn(() async {
+      final projectState = await _isar.isarProjectStates
+          .filter()
+          .projectIdEqualTo(projectId)
+          .findFirst();
+
+      if (projectState != null) {
+        deleted = await _isar.isarProjectStates.delete(projectState.id);
+      } else {
+        deleted = false;
+      }
+    });
+    return deleted;
+  }
+
+  // State management methods for IsarTeamState
+  Future<void> saveTeamState(IsarTeamState teamState) async {
+    await _isar.writeTxn(() async {
+      await _isar.isarTeamStates.put(teamState);
+    });
+  }
+
+  Future<IsarTeamState?> getTeamState(String teamId) async {
+    return await _isar.isarTeamStates
+        .filter()
+        .entityIdEqualTo(teamId)
+        .findFirst();
+  }
+
+  Future<List<IsarTeamState>> getAllTeamStates() async {
+    return await _isar.isarTeamStates.where().findAll();
+  }
+
+  Future<bool> deleteTeamState(String teamId) async {
+    bool deleted = false;
+    await _isar.writeTxn(() async {
+      final teamState = await _isar.isarTeamStates
+          .filter()
+          .entityIdEqualTo(teamId)
+          .findFirst();
+
+      if (teamState != null) {
+        deleted = await _isar.isarTeamStates.delete(teamState.id);
+      } else {
+        deleted = false;
+      }
+    });
+    return deleted;
+  }
+
+  /// Applies a changelog entry to the appropriate state collection
+  /// Returns the updated state entity
+  Future<dynamic> applyChangelogToState(
+    client.ClientChangeLogEntry changeLogEntry,
+  ) async {
+    // Determine entity type and route to appropriate collection
+    final entityType = changeLogEntry.entityType;
+
+    switch (entityType) {
+      case EntityType.project:
+        return await _applyChangelogToProjectState(changeLogEntry);
+      case EntityType.team:
+        return await _applyChangelogToTeamState(changeLogEntry);
+      default:
+        throw ArgumentError('Unsupported entity type for state: $entityType');
+    }
+  }
+
+  /// Applies changelog entry to project state
+  Future<IsarProjectState> _applyChangelogToProjectState(
+    client.ClientChangeLogEntry changeLogEntry,
+  ) async {
+    IsarProjectState? existingState;
+
+    await _isar.writeTxn(() async {
+      // Get existing state or create new
+      existingState = await getProjectState(changeLogEntry.projectId);
+
+      if (existingState == null) {
+        // Create new project state from changelog entry
+        existingState = IsarProjectState();
+        existingState!.entityId = changeLogEntry.entityId;
+        existingState!.entityType = EntityType.project;
+        existingState!.projectId = changeLogEntry.projectId;
+      }
+
+      // Apply the changelog entry to update the state
+      existingState!.updateFromChangeLogEntry(
+        changeAt: changeLogEntry.changeAt,
+        cid: changeLogEntry.cid,
+        changeBy: changeLogEntry.changeBy,
+        cloudAt: changeLogEntry.cloudAt,
+        data: changeLogEntry.data,
+      );
+
+      // Save the updated state
+      await _isar.isarProjectStates.put(existingState!);
+    });
+
+    return existingState!;
+  }
+
+  /// Applies changelog entry to team state
+  Future<IsarTeamState> _applyChangelogToTeamState(
+    client.ClientChangeLogEntry changeLogEntry,
+  ) async {
+    IsarTeamState? existingState;
+
+    await _isar.writeTxn(() async {
+      // Get existing state by entityId (team ID)
+      existingState = await getTeamState(changeLogEntry.entityId);
+
+      if (existingState == null) {
+        // Create new team state from changelog entry
+        existingState = IsarTeamState();
+        existingState!.entityId = changeLogEntry.entityId;
+        existingState!.entityType = EntityType.team;
+        existingState!.projectId = changeLogEntry.projectId;
+      }
+
+      // Apply the changelog entry to update the state
+      existingState!.updateFromChangeLogEntry(
+        changeAt: changeLogEntry.changeAt,
+        cid: changeLogEntry.cid,
+        changeBy: changeLogEntry.changeBy,
+        cloudAt: changeLogEntry.cloudAt,
+        data: changeLogEntry.data,
+      );
+
+      // Save the updated state
+      await _isar.isarTeamStates.put(existingState!);
+    });
+
+    return existingState!;
   }
 }
 

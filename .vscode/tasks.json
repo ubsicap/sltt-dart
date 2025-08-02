@@ -154,25 +154,10 @@
             "problemMatcher": []
         },
         {
-            "label": "Setup Test Environment",
-            "type": "shell",
-            "command": "./setup_test_env.sh",
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-            },
-            "problemMatcher": []
-        },
-        {
             "label": "Run Tests with Setup",
             "type": "shell",
-            "command": "dart",
-            "args": ["test"],
+            "command": "./test.sh",
             "group": "test",
-            "dependsOn": "Setup Test Environment",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -183,10 +168,9 @@
         {
             "label": "Run Integration Tests",
             "type": "shell",
-            "command": "dart",
-            "args": ["test", "test/integration_test.dart"],
+            "command": "./test.sh",
+            "args": ["test/integration_test.dart"],
             "group": "test",
-            "dependsOn": "Setup Test Environment",
         }
     ]
 }

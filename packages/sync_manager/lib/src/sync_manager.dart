@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
 
+import 'models/change_log_entry.dart' as client;
 import 'shared_storage_service.dart';
 
 class SyncManager {
@@ -64,6 +65,10 @@ class SyncManager {
       }
 
       print('[SyncManager] Found ${changes.length} changes to outsync');
+
+      // Apply outsynced changes to state (Step 4: changelog_to_state integration)
+      // For outsyncs: changes get incorporated into state but stay in outsyncs until posted to cloud
+      await _applyChangesToState(changes, 'outsyncs');
 
       // Send changes to cloud storage
       final response = await _dio.post(
@@ -251,6 +256,21 @@ class SyncManager {
         '[SyncManager] Downsync completed. Total changes: ${allNewChanges.length}',
       );
 
+      // Apply downsynced changes to state and then delete them (Step 4: changelog_to_state integration)
+      // For downsyncs: changes get incorporated into state and then get deleted from downsyncs
+      if (allNewChanges.isNotEmpty) {
+        await _applyChangesToState(allNewChanges, 'downsyncs');
+
+        // Delete downsynced changes after applying to state
+        final allSeqs = allNewChanges
+            .map((change) => change['seq'] as int)
+            .toList();
+        final deletedCount = await _downsyncsStorage.deleteChanges(allSeqs);
+        print(
+          '[SyncManager] Deleted $deletedCount downsynced changes after applying to state',
+        );
+      }
+
       return DownsyncResult(
         success: true,
         newChanges: allNewChanges,
@@ -329,6 +349,37 @@ class SyncManager {
         lastSyncTime: DateTime.now(),
       );
     }
+  }
+
+  /// Applies changelog entries to state storage (Step 4: changelog_to_state integration)
+  Future<void> _applyChangesToState(
+    List<Map<String, dynamic>> changes,
+    String source,
+  ) async {
+    print(
+      '[SyncManager] Applying ${changes.length} $source changes to state...',
+    );
+
+    int appliedCount = 0;
+    for (final changeMap in changes) {
+      try {
+        // Convert Map to ClientChangeLogEntry
+        final change = client.ClientChangeLogEntry.fromJson(changeMap);
+
+        // Apply the change to the appropriate state collection
+        await _cloudStorage.applyChangelogToState(change);
+        appliedCount++;
+      } catch (e) {
+        print(
+          '[SyncManager] Failed to apply change ${changeMap['seq']} to state: $e',
+        );
+        // Continue processing other changes
+      }
+    }
+
+    print(
+      '[SyncManager] Applied $appliedCount/${changes.length} $source changes to state',
+    );
   }
 
   Future<void> close() async {
