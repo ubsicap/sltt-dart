@@ -15,6 +15,7 @@ abstract class BaseChangeLogEntry {
   String dataJson; // JSON-encoded entity data
   int? outdatedBy; // id of the change that this entry is outdated by
   DateTime? cloudAt; // When the cloud storage received this change (optional)
+  String changeBy; // memberId who made the change
   String
   cid; // unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
 
@@ -33,6 +34,7 @@ abstract class BaseChangeLogEntry {
     required this.dataJson,
     this.outdatedBy,
     this.cloudAt,
+    required this.changeBy,
     required this.cid,
   });
 
@@ -43,6 +45,7 @@ abstract class BaseChangeLogEntry {
       changeAt = DateTime.now(),
       entityId = '',
       dataJson = '',
+      changeBy = '',
       cid = generateCid();
 
   /// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
@@ -92,6 +95,7 @@ abstract class BaseChangeLogEntry {
       'data': getData(),
       'outdatedBy': outdatedBy,
       'cloudAt': cloudAt?.toIso8601String(),
+      'changeBy': changeBy,
       'cid': cid,
     };
   }
@@ -110,6 +114,7 @@ abstract class BaseChangeLogEntry {
       cloudAt: json['cloudAt'] != null
           ? DateTime.parse(json['cloudAt'] as String)
           : null,
+      changeBy: json['changeBy'] as String? ?? '',
       cid: json['cid'] as String? ?? generateCid(),
     );
 
@@ -138,6 +143,7 @@ abstract class BaseChangeLogEntry {
       cloudAt: changeData['cloudAt'] != null
           ? DateTime.parse(changeData['cloudAt'] as String)
           : null,
+      changeBy: changeData['changeBy'] as String? ?? '',
       cid: changeData['cid'] as String? ?? generateCid(),
     );
 
@@ -162,6 +168,7 @@ class ChangeLogEntry extends BaseChangeLogEntry {
     required super.dataJson,
     super.outdatedBy,
     super.cloudAt,
+    required super.changeBy,
     required super.cid,
   });
 

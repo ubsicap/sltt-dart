@@ -11,6 +11,7 @@ void main() {
         changeAt: DateTime.now(),
         entityId: 'doc-123',
         dataJson: '{"title": "Test"}',
+        changeBy: 'test-user',
         cid: BaseChangeLogEntry.generateCid(),
       );
 
@@ -29,6 +30,7 @@ void main() {
         changeAt: DateTime.now(),
         entityId: 'doc-123',
         dataJson: '{"title": "Test"}',
+        changeBy: 'test-user',
         cid: BaseChangeLogEntry.generateCid(),
       );
 

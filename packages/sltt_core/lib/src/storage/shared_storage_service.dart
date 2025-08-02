@@ -30,6 +30,7 @@ class LocalStorageService implements BaseStorageService {
       dataJson: clientEntry.dataJson,
       outdatedBy: clientEntry.outdatedBy,
       cloudAt: clientEntry.cloudAt,
+      changeBy: clientEntry.changeBy,
       cid: clientEntry.cid,
     )..seq = clientEntry.seq;
   }
@@ -90,6 +91,7 @@ class LocalStorageService implements BaseStorageService {
       dataJson: change.dataJson,
       outdatedBy: change.outdatedBy,
       cloudAt: change.cloudAt,
+      changeBy: change.changeBy,
       cid: change.cid,
     )..seq = change.seq;
   }
@@ -393,6 +395,7 @@ class LocalStorageService implements BaseStorageService {
             dataJson: clientEntry.dataJson,
             outdatedBy: clientEntry.outdatedBy,
             cloudAt: clientEntry.cloudAt,
+            changeBy: clientEntry.changeBy,
             cid: clientEntry.cid,
           )..seq = clientEntry.seq,
         )

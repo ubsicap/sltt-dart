@@ -45,6 +45,7 @@ class ClientChangeLogEntry extends BaseChangeLogEntry {
     required super.dataJson,
     super.outdatedBy,
     super.cloudAt,
+    required super.changeBy,
     required super.cid,
   });
 
@@ -61,6 +62,7 @@ class ClientChangeLogEntry extends BaseChangeLogEntry {
       dataJson: baseEntry.dataJson,
       outdatedBy: baseEntry.outdatedBy,
       cloudAt: baseEntry.cloudAt,
+      changeBy: baseEntry.changeBy,
       cid: baseEntry.cid,
     );
     entry.seq = baseEntry.seq;
@@ -80,6 +82,7 @@ class ClientChangeLogEntry extends BaseChangeLogEntry {
       dataJson: baseEntry.dataJson,
       outdatedBy: baseEntry.outdatedBy,
       cloudAt: baseEntry.cloudAt,
+      changeBy: baseEntry.changeBy,
       cid: baseEntry.cid,
     );
     entry.seq = baseEntry.seq;

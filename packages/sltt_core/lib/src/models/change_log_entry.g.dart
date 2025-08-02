@@ -23,44 +23,49 @@ const ClientChangeLogEntrySchema = CollectionSchema(
       name: r'changeAt',
       type: IsarType.dateTime,
     ),
-    r'cid': PropertySchema(
+    r'changeBy': PropertySchema(
       id: 1,
+      name: r'changeBy',
+      type: IsarType.string,
+    ),
+    r'cid': PropertySchema(
+      id: 2,
       name: r'cid',
       type: IsarType.string,
     ),
     r'cloudAt': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'cloudAt',
       type: IsarType.dateTime,
     ),
     r'dataJson': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'dataJson',
       type: IsarType.string,
     ),
     r'entityId': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'entityId',
       type: IsarType.string,
     ),
     r'entityType': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'entityType',
       type: IsarType.string,
       enumMap: _ClientChangeLogEntryentityTypeEnumValueMap,
     ),
     r'operation': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'operation',
       type: IsarType.string,
     ),
     r'outdatedBy': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'outdatedBy',
       type: IsarType.long,
     ),
     r'projectId': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'projectId',
       type: IsarType.string,
     )
@@ -112,6 +117,7 @@ int _clientChangeLogEntryEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.changeBy.length * 3;
   bytesCount += 3 + object.cid.length * 3;
   bytesCount += 3 + object.dataJson.length * 3;
   bytesCount += 3 + object.entityId.length * 3;
@@ -128,14 +134,15 @@ void _clientChangeLogEntrySerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeDateTime(offsets[0], object.changeAt);
-  writer.writeString(offsets[1], object.cid);
-  writer.writeDateTime(offsets[2], object.cloudAt);
-  writer.writeString(offsets[3], object.dataJson);
-  writer.writeString(offsets[4], object.entityId);
-  writer.writeString(offsets[5], object.entityType.name);
-  writer.writeString(offsets[6], object.operation);
-  writer.writeLong(offsets[7], object.outdatedBy);
-  writer.writeString(offsets[8], object.projectId);
+  writer.writeString(offsets[1], object.changeBy);
+  writer.writeString(offsets[2], object.cid);
+  writer.writeDateTime(offsets[3], object.cloudAt);
+  writer.writeString(offsets[4], object.dataJson);
+  writer.writeString(offsets[5], object.entityId);
+  writer.writeString(offsets[6], object.entityType.name);
+  writer.writeString(offsets[7], object.operation);
+  writer.writeLong(offsets[8], object.outdatedBy);
+  writer.writeString(offsets[9], object.projectId);
 }
 
 ClientChangeLogEntry _clientChangeLogEntryDeserialize(
@@ -146,16 +153,17 @@ ClientChangeLogEntry _clientChangeLogEntryDeserialize(
 ) {
   final object = ClientChangeLogEntry(
     changeAt: reader.readDateTime(offsets[0]),
-    cid: reader.readString(offsets[1]),
-    cloudAt: reader.readDateTimeOrNull(offsets[2]),
-    dataJson: reader.readString(offsets[3]),
-    entityId: reader.readString(offsets[4]),
+    changeBy: reader.readString(offsets[1]),
+    cid: reader.readString(offsets[2]),
+    cloudAt: reader.readDateTimeOrNull(offsets[3]),
+    dataJson: reader.readString(offsets[4]),
+    entityId: reader.readString(offsets[5]),
     entityType: _ClientChangeLogEntryentityTypeValueEnumMap[
-            reader.readStringOrNull(offsets[5])] ??
+            reader.readStringOrNull(offsets[6])] ??
         EntityType.project,
-    operation: reader.readString(offsets[6]),
-    outdatedBy: reader.readLongOrNull(offsets[7]),
-    projectId: reader.readString(offsets[8]),
+    operation: reader.readString(offsets[7]),
+    outdatedBy: reader.readLongOrNull(offsets[8]),
+    projectId: reader.readString(offsets[9]),
   );
   object.seq = id;
   return object;
@@ -173,20 +181,22 @@ P _clientChangeLogEntryDeserializeProp<P>(
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 3:
       return (reader.readString(offset)) as P;
+    case 3:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
+      return (reader.readString(offset)) as P;
+    case 6:
       return (_ClientChangeLogEntryentityTypeValueEnumMap[
               reader.readStringOrNull(offset)] ??
           EntityType.project) as P;
-    case 6:
-      return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 8:
+      return (reader.readLongOrNull(offset)) as P;
+    case 9:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -195,7 +205,10 @@ P _clientChangeLogEntryDeserializeProp<P>(
 
 const _ClientChangeLogEntryentityTypeEnumValueMap = {
   r'project': r'project',
+  r'team': r'team',
   r'plan': r'plan',
+  r'stage': r'stage',
+  r'task': r'task',
   r'member': r'member',
   r'message': r'message',
   r'portion': r'portion',
@@ -203,13 +216,17 @@ const _ClientChangeLogEntryentityTypeEnumValueMap = {
   r'reference': r'reference',
   r'document': r'document',
   r'video': r'video',
+  r'patch': r'patch',
   r'gloss': r'gloss',
   r'note': r'note',
   r'comment': r'comment',
 };
 const _ClientChangeLogEntryentityTypeValueEnumMap = {
   r'project': EntityType.project,
+  r'team': EntityType.team,
   r'plan': EntityType.plan,
+  r'stage': EntityType.stage,
+  r'task': EntityType.task,
   r'member': EntityType.member,
   r'message': EntityType.message,
   r'portion': EntityType.portion,
@@ -217,6 +234,7 @@ const _ClientChangeLogEntryentityTypeValueEnumMap = {
   r'reference': EntityType.reference,
   r'document': EntityType.document,
   r'video': EntityType.video,
+  r'patch': EntityType.patch,
   r'gloss': EntityType.gloss,
   r'note': EntityType.note,
   r'comment': EntityType.comment,
@@ -461,6 +479,144 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
+      QAfterFilterCondition> changeByEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'changeBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
+      QAfterFilterCondition> changeByGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'changeBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
+      QAfterFilterCondition> changeByLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'changeBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
+      QAfterFilterCondition> changeByBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'changeBy',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
+      QAfterFilterCondition> changeByStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'changeBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
+      QAfterFilterCondition> changeByEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'changeBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
+          QAfterFilterCondition>
+      changeByContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'changeBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
+          QAfterFilterCondition>
+      changeByMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'changeBy',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
+      QAfterFilterCondition> changeByIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'changeBy',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
+      QAfterFilterCondition> changeByIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'changeBy',
+        value: '',
       ));
     });
   }
@@ -1521,6 +1677,20 @@ extension ClientChangeLogEntryQuerySortBy
   }
 
   QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+      sortByChangeBy() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'changeBy', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+      sortByChangeByDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'changeBy', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
       sortByCid() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cid', Sort.asc);
@@ -1646,6 +1816,20 @@ extension ClientChangeLogEntryQuerySortThenBy
       thenByChangeAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'changeAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+      thenByChangeBy() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'changeBy', Sort.asc);
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+      thenByChangeByDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'changeBy', Sort.desc);
     });
   }
 
@@ -1786,6 +1970,13 @@ extension ClientChangeLogEntryQueryWhereDistinct
   }
 
   QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+      distinctByChangeBy({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'changeBy', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
       distinctByCid({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'cid', caseSensitive: caseSensitive);
@@ -1854,6 +2045,13 @@ extension ClientChangeLogEntryQueryProperty on QueryBuilder<
       changeAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'changeAt');
+    });
+  }
+
+  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+      changeByProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'changeBy');
     });
   }
 

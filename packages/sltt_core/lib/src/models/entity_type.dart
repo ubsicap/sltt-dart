@@ -2,7 +2,10 @@
 /// Each entity type will eventually have its own schema and collections.
 enum EntityType {
   project('project'),
+  team('team'),
   plan('plan'),
+  stage('stage'),
+  task('task'),
   member('member'),
   message('message'),
   portion('portion'),
@@ -10,6 +13,7 @@ enum EntityType {
   reference('reference'),
   document('document'),
   video('video'),
+  patch('patch'),
   gloss('gloss'),
   note('note'),
   comment('comment');
