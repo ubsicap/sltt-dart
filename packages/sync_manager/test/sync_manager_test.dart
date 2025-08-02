@@ -350,9 +350,12 @@ void main() {
         expect(downsyncsCountAfter, greaterThanOrEqualTo(downsyncsCountBefore));
       } else {
         // With Step 4 implementation, downsyncs are applied to state then deleted
-        // So count should remain the same (0 before, 0 after) but changes should exist
+        // All changes (leftover + new) should be processed and result in clean state
         expect(downsyncResult.newChanges, isNotEmpty);
-        expect(downsyncsCountAfter, equals(downsyncsCountBefore));
+        expect(
+          downsyncsCountAfter,
+          equals(0),
+        ); // All processed changes should be deleted
       }
     });
 
