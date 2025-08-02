@@ -1,7 +1,5 @@
 import 'package:isar/isar.dart';
-
-import 'base_entity_state.dart';
-import 'entity_type.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 part 'isar_team_state.g.dart';
 

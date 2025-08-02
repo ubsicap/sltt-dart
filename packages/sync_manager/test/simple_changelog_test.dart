@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
 /// Simple test to verify changelog to state conversion basics

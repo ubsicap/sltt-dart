@@ -1,7 +1,5 @@
 import 'package:isar/isar.dart';
-
-import 'base_change_log_entry.dart';
-import 'entity_type.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 part 'change_log_entry.g.dart';
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
 /// Tests demonstrating changelog data conversion to state entity information

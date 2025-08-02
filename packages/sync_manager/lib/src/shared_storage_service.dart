@@ -2,11 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:isar/isar.dart';
+import 'package:sltt_core/sltt_core.dart';
 
-import '../models/base_change_log_entry.dart';
-import '../models/change_log_entry.dart' as client;
-import '../models/entity_type.dart';
-import 'base_storage_service.dart';
+import 'models/change_log_entry.dart' as client;
 
 class LocalStorageService implements BaseStorageService {
   final String _databaseName;
