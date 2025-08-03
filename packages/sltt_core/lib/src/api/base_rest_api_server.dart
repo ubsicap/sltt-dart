@@ -501,7 +501,7 @@ abstract class BaseRestApiServer {
               'type': 'integer',
               'required': false,
               'description':
-                  'Maximum number of entities to return (1-1000, default: 100)',
+                  'Maximum number of items to return (1-1000, default: 100)',
             },
             {
               'name': 'field_metadata',
@@ -522,7 +522,7 @@ abstract class BaseRestApiServer {
                 'type': 'string',
                 'description': 'The entity type',
               },
-              'entities': {
+              'items': {
                 'type': 'array',
                 'items': {'type': 'object'},
                 'description': 'List of entity state objects',
