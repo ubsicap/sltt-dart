@@ -533,7 +533,7 @@ abstract class BaseRestApiServer {
               },
               'hasMore': {
                 'type': 'boolean',
-                'description': 'Whether there are more entities available',
+                'description': 'Whether there are more items available',
               },
               'fieldMetadata': {
                 'type': 'boolean',
