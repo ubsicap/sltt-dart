@@ -9,17 +9,30 @@ import 'package:sltt_core/sltt_core.dart';
 /// Lightweight DynamoDB implementation for AWS Lambda deployment.
 ///
 /// Uses HTTP API calls instead of heavy AWS SDK to minimize cold start time.
-/// This service stores change log entries in AWS DynamoDB with the following schema:
-/// - Table name: configurable (e.g., 'sltt-changes-prod')
-/// - Partition key: 'pk' (String) - project ID (e.g., 'project-123')
-/// - Sort key: 'seq' (Number) - auto-incremented sequence number per project
-/// - Attributes: entityType, operation, timestamp, entityId, dataJson, outdatedBy
+/// This service stores data in AWS DynamoDB with a single table design:
 ///
-/// Each project gets its own isolated partition in the same table, allowing:
+/// **Change Log Entries:**
+/// - PK: 'PROJECT_ID#{projectId}#ENTITY_ID#{entityId}'
+/// - SK: 'CID#{cid}'
+/// - GSI1PK: 'PROJECT_ID#{projectId}'
+/// - GSI1SK: 'SEQ#{seq}'
+///
+/// **Entity State Data:**
+/// - PK: 'PROJECT_ID#{projectId}#ENTITY_TYPE#{entityType}'
+/// - SK: '{entityId}' (entityId contains embedded entity type suffix)
+/// - EntityId format: 'YYYY-mmdd-HHMMss-sss±HHmm-XXXX-{suffix}'
+///   where suffix is 4-char entity type (e.g., 'proj', 'docu', 'vidZ', 'cmnt')
+///
+/// **Sequence Counters:**
+/// - PK: 'SEQUENCE#{projectId}'
+/// - SK: 'COUNTER'
+///
+/// Each project gets its own isolated partition, allowing:
 /// - Multiple projects in the same DynamoDB table
 /// - Project-specific sequence numbering (each project starts from 1)
 /// - Efficient queries scoped to a single project
 /// - Cost-effective table sharing across projects
+/// - Fast entity state lookups by entity type
 class DynamoDBStorageService implements BaseStorageService {
   final String tableName;
   final String region;
@@ -152,6 +165,9 @@ class DynamoDBStorageService implements BaseStorageService {
 
     // Override the Isar autoIncrement with DynamoDB-generated sequence
     changeEntry.seq = seq;
+
+    // Store entity data for efficient querying
+    await _storeEntityData(changeEntry);
 
     return changeEntry;
   }
@@ -687,26 +703,246 @@ class DynamoDBStorageService implements BaseStorageService {
   }) async {
     if (!_initialized) await initialize();
 
-    // For DynamoDB implementation, we need to query the change log
-    // to reconstruct entity states, similar to how LocalStorageService works
-
-    // This is a simplified implementation that demonstrates the interface
-    // In a full implementation, you would:
-    // 1. Query the change log for the specific project and entity type
-    // 2. Group changes by entityId to get the latest state of each entity
-    // 3. Apply pagination based on the cursor
-    // 4. Include metadata if requested
+    // Validate entity type exists
+    final validEntityType = EntityType.tryFromString(entityType);
+    if (validEntityType == null) {
+      throw ArgumentError('Invalid entity type: $entityType');
+    }
 
     try {
-      // For now, return an empty response since we don't have entity state tables
-      // in DynamoDB - this would require additional DynamoDB queries and state reconstruction
+      final actualLimit = limit ?? 100;
+      final pk = 'PROJECT_ID#$projectId#ENTITY_TYPE#$entityType';
+
+      final queryInput = {
+        'TableName': tableName,
+        'KeyConditionExpression': 'pk = :pk',
+        'ExpressionAttributeValues': {
+          ':pk': {'S': pk},
+        },
+        'Limit': actualLimit + 1, // Get one extra to check if there are more
+        'ScanIndexForward': true, // Sort by SK ascending
+      };
+
+      // Add cursor for pagination
+      if (cursor != null && cursor.isNotEmpty) {
+        queryInput['ExclusiveStartKey'] = {
+          'pk': {'S': pk},
+          'sk': {'S': cursor},
+        };
+      }
+
+      final response = await _dynamoRequest('Query', queryInput);
+
+      if (response.statusCode != 200) {
+        throw Exception('DynamoDB query failed: ${response.body}');
+      }
+
+      final result = jsonDecode(response.body);
+      final items = result['Items'] as List<dynamic>? ?? [];
+
+      // Check if there are more items
+      final hasMore = items.length > actualLimit;
+      final entitiesToReturn = hasMore
+          ? items.take(actualLimit).toList()
+          : items;
+
+      // Convert DynamoDB items to entity objects
+      final entities = <Map<String, dynamic>>[];
+      String? nextCursor;
+
+      for (final item in entitiesToReturn) {
+        final entity = _convertDynamoItemToEntity(item, includeMetadata);
+        entities.add(entity);
+        nextCursor = item['sk']?['S']; // Update cursor to last processed item
+      }
+
       return {
-        'items': <Map<String, dynamic>>[],
-        'hasNextPage': false,
-        'nextCursor': null,
+        'items': entities,
+        'hasNextPage': hasMore,
+        'nextCursor': hasMore ? nextCursor : null,
       };
     } catch (e) {
       throw Exception('Failed to get entity states for $entityType: $e');
     }
+  }
+
+  /// Helper method to convert DynamoDB item to entity using shared conflict resolution
+  Map<String, dynamic> _convertDynamoItemToEntity(
+    Map<String, dynamic> item,
+    bool includeMetadata,
+  ) {
+    final entity = <String, dynamic>{};
+
+    // Extract basic entity data
+    final sk = item['sk']?['S'] as String? ?? '';
+    entity['entityId'] = _extractEntityIdFromSK(sk);
+
+    // Use BaseEntityState for conflict resolution if we have change data
+    BaseEntityState? entityState;
+    final entityTypeStr = item['entityType']?['S'] as String?;
+    if (entityTypeStr != null) {
+      final entityType = EntityType.tryFromString(entityTypeStr);
+      if (entityType != null) {
+        entityState = BaseEntityState()
+          ..entityId = entity['entityId']
+          ..entityType = entityType
+          ..projectId = item['projectId']?['S'] as String? ?? '';
+      }
+    }
+
+    // Convert entity data from DynamoDB format
+    for (final entry in item.entries) {
+      final key = entry.key;
+      final value = entry.value;
+
+      if (key.startsWith('data_')) {
+        // Entity field data
+        final fieldName = key.substring(5); // Remove 'data_' prefix
+        entity[fieldName] = _convertAttributeValueToJson(value);
+      } else if (includeMetadata) {
+        // Include metadata fields for conflict resolution
+        if (key.endsWith('_meta') ||
+            key.endsWith('ChangeAt') ||
+            key.endsWith('ChangeBy') ||
+            key.endsWith('Cid') ||
+            key == 'cid' ||
+            key == 'cloudAt' ||
+            key == 'changeAt' ||
+            key == 'seq' ||
+            key == 'operation') {
+          entity[key] = _convertAttributeValueToJson(value);
+        }
+      }
+    }
+
+    // If we have an entity state and metadata is requested, include state metadata
+    if (entityState != null && includeMetadata) {
+      final stateJson = entityState.toJson();
+      for (final entry in stateJson.entries) {
+        if (entry.key.endsWith('ChangeAt') ||
+            entry.key.endsWith('Cid') ||
+            entry.key.endsWith('ChangeBy')) {
+          entity[entry.key] = entry.value;
+        }
+      }
+    }
+
+    return entity;
+  }
+
+  /// Extract entityId from SK (SK now IS the entityId with embedded suffix)
+  String _extractEntityIdFromSK(String sk) {
+    // Since SK is now the entityId directly, just return it
+    return sk;
+  }
+
+  /// Helper to convert AttributeValue to JSON-compatible value
+  dynamic _convertAttributeValueToJson(dynamic attr) {
+    if (attr is Map<String, dynamic>) {
+      if (attr.containsKey('S')) return attr['S'];
+      if (attr.containsKey('N')) return num.tryParse(attr['N']) ?? attr['N'];
+      if (attr.containsKey('BOOL')) return attr['BOOL'];
+      if (attr.containsKey('SS')) return attr['SS'];
+      if (attr.containsKey('NS')) {
+        return (attr['NS'] as List).map((n) => num.tryParse(n) ?? n).toList();
+      }
+      if (attr.containsKey('L')) {
+        return (attr['L'] as List).map(_convertAttributeValueToJson).toList();
+      }
+      if (attr.containsKey('M')) {
+        final map = <String, dynamic>{};
+        for (final entry in (attr['M'] as Map<String, dynamic>).entries) {
+          map[entry.key] = _convertAttributeValueToJson(entry.value);
+        }
+        return map;
+      }
+      if (attr.containsKey('NULL')) return null;
+    }
+    return attr;
+  }
+
+  /// Store entity data for efficient querying using single table design
+  Future<void> _storeEntityData(ChangeLogEntry change) async {
+    try {
+      // For entity state storage, use the entityId directly since it already contains the suffix
+      // The entityId should be generated using EntityType.generateEntityId() in client code
+      final pk =
+          'PROJECT_ID#${change.projectId}#ENTITY_TYPE#${change.entityType.value}';
+      final sk = change.entityId; // Use entityId directly as sort key
+
+      final item = <String, dynamic>{
+        'pk': {'S': pk},
+        'sk': {'S': sk},
+        'entityId': {'S': change.entityId},
+        'entityType': {'S': change.entityType.value},
+        'projectId': {'S': change.projectId},
+        'operation': {'S': change.operation},
+        'changeAt': {'S': change.changeAt.toIso8601String()},
+        'seq': {'N': change.seq.toString()},
+      };
+
+      // Store entity data fields with data_ prefix
+      final data = change.data;
+      for (final entry in data.entries) {
+        final key = 'data_${entry.key}';
+        item[key] = _convertJsonToAttributeValue(entry.value);
+      }
+
+      // Store metadata for conflict resolution
+      item['changeAt_meta'] = {'S': change.changeAt.toIso8601String()};
+      item['cid_meta'] = {'S': change.cid};
+      if (change.changeBy.isNotEmpty) {
+        item['changeBy_meta'] = {'S': change.changeBy};
+      }
+      if (change.cloudAt != null) {
+        item['cloudAt_meta'] = {'S': change.cloudAt!.toIso8601String()};
+      }
+
+      final putRequest = {
+        'TableName': tableName,
+        'Item': item,
+        // Use conditional expression to handle updates properly - only update if newer
+        'ConditionExpression':
+            'attribute_not_exists(pk) OR #changeAt < :newChangeAt',
+        'ExpressionAttributeNames': {'#changeAt': 'changeAt'},
+        'ExpressionAttributeValues': {
+          ':newChangeAt': {'S': change.changeAt.toIso8601String()},
+        },
+      };
+
+      final response = await _dynamoRequest('PutItem', putRequest);
+
+      if (response.statusCode != 200 &&
+          !response.body.contains('ConditionalCheckFailedException')) {
+        print('Warning: Failed to store entity data: ${response.body}');
+      }
+    } catch (e) {
+      if (e.toString().contains('ConditionalCheckFailedException')) {
+        // This is expected when trying to store an older change
+        print('Skipping entity storage for older change: ${change.entityId}');
+      } else {
+        print('Error storing entity data: $e');
+        // Don't fail the entire operation if entity storage fails
+      }
+    }
+  }
+
+  /// Helper to convert JSON value to DynamoDB AttributeValue format
+  Map<String, dynamic> _convertJsonToAttributeValue(dynamic value) {
+    if (value == null) return {'NULL': true};
+    if (value is String) return {'S': value};
+    if (value is num) return {'N': value.toString()};
+    if (value is bool) return {'BOOL': value};
+    if (value is List) {
+      return {'L': value.map(_convertJsonToAttributeValue).toList()};
+    }
+    if (value is Map<String, dynamic>) {
+      final map = <String, dynamic>{};
+      for (final entry in value.entries) {
+        map[entry.key] = _convertJsonToAttributeValue(entry.value);
+      }
+      return {'M': map};
+    }
+    return {'S': value.toString()};
   }
 }
