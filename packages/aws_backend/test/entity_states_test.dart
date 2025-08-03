@@ -379,7 +379,7 @@ void main() {
 
         final data = jsonDecode(response.body);
         expect(data['error'], isA<String>());
-        expect(data['error'], contains('Limit too large'));
+        expect(data['error'], contains('Limit must be between 1 and 1000'));
 
         print('✅ Excessive limit parameter test passed!');
         print('   Status: ${response.statusCode}');
