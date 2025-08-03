@@ -105,7 +105,7 @@ dart analyze lib/
 dart analyze --fatal-infos
 dart analyze --no-fatal-warnings
 
-# ❌ INVALID - These options don't exist  
+# ❌ INVALID - These options don't exist
 dart analyze --no-fatal-warnings  # This is actually valid
 dart analyze -c                   # No -c option for analyze
 dart analyze --verbose            # Use dart -v analyze instead
