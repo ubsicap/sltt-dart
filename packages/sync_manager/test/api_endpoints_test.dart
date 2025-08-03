@@ -531,10 +531,10 @@ void main() {
 
       final projectStatesData =
           projectStatesResponse.data as Map<String, dynamic>;
-      expect(projectStatesData['entities'], isA<List>());
+      expect(projectStatesData['items'], isA<List>());
       expect(projectStatesData['hasMore'], isA<bool>());
 
-      final projectEntities = projectStatesData['entities'] as List<dynamic>;
+      final projectEntities = projectStatesData['items'] as List<dynamic>;
       // In a test environment without full sync, entities might be empty
       // Test that the endpoint works and returns the expected structure
       if (projectEntities.isNotEmpty) {

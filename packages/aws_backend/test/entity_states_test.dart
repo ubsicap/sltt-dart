@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
@@ -100,7 +101,7 @@ void main() {
       print('✅ Created ${teamChanges.length} test teams');
 
       // Wait a bit for DynamoDB consistency
-      await Future.delayed(Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 2));
       print('✅ Test data setup complete');
     });
 

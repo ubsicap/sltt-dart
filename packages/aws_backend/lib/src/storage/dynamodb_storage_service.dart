@@ -758,7 +758,7 @@ class DynamoDBStorageService implements BaseStorageService {
 
       return {
         'items': entities,
-        'hasNextPage': hasMore,
+        'hasMore': hasMore,
         'nextCursor': hasMore ? nextCursor : null,
       };
     } catch (e) {

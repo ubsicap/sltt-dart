@@ -35,26 +35,26 @@ void main() {
           reason: 'Response should contain items field',
         );
         expect(
-          data.containsKey('hasNextPage'),
+          data.containsKey('hasMore'),
           isTrue,
-          reason: 'Response should contain hasNextPage field',
+          reason: 'Response should contain hasMore field',
         );
         expect(
-          data.containsKey('nextCursor'),
+          data.containsKey('cursor'),
           isTrue,
-          reason: 'Response should contain nextCursor field',
+          reason: 'Response should contain cursor field',
         );
 
         expect(data['items'], isA<List>(), reason: 'items should be a list');
         expect(
-          data['hasNextPage'],
+          data['hasMore'],
           isA<bool>(),
-          reason: 'hasNextPage should be a boolean',
+          reason: 'hasMore should be a boolean',
         );
 
         print('✅ Entity states endpoint structure test passed!');
         print('   Items count: ${(data['items'] as List).length}');
-        print('   Has next page: ${data['hasNextPage']}');
+        print('   Has more: ${data['hasMore']}');
       },
     );
 

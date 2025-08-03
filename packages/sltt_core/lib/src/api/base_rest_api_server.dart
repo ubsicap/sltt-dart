@@ -936,7 +936,7 @@ abstract class BaseRestApiServer {
         jsonEncode({
           'projectId': projectId,
           'entityType': decodedEntityType,
-          'entities': stateData['entities'],
+          'items': stateData['items'],
           'cursor': stateData['nextCursor'],
           'hasMore': stateData['hasMore'],
           'fieldMetadata': includeFieldMetadata,
