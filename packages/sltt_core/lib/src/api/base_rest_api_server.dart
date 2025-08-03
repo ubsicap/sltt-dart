@@ -756,6 +756,16 @@ abstract class BaseRestApiServer {
             );
           }
 
+          // Validate project entity constraint: entityId must equal projectId
+          if (entityType == 'project') {
+            if (entityId != projectId) {
+              throw ArgumentError(
+                'Project entities must have entityId equal to projectId. '
+                'Expected: $projectId, got: $entityId',
+              );
+            }
+          }
+
           final changeToStore = {
             'projectId': projectId,
             'entityType': entityType,

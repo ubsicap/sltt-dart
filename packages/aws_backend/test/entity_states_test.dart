@@ -17,13 +17,13 @@ void main() {
       print('🚀 Setting up test data for entity states testing...');
 
       // Create a test project first
-      final projectId = EntityType.generateEntityId('project');
       final testProjectChange = [
         {
           'projectId': testProjectId,
           'entityType': 'project',
           'operation': 'create',
-          'entityId': projectId,
+          'entityId':
+              testProjectId, // Project entities must have entityId == projectId
           'data': {
             'name': '_test_entity_states_project',
             'description': 'Test project for entity states endpoint testing',

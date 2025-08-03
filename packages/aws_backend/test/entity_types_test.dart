@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
@@ -15,7 +16,8 @@ void main() {
           'projectId': testProjectId,
           'entityType': 'project',
           'operation': 'create',
-          'entityId': EntityType.generateEntityId('project'),
+          'entityId':
+              testProjectId, // Project entities must have entityId == projectId
           'data': {
             'name': '_test_entity_types_project',
             'description': 'Test project for entity types endpoint testing',
