@@ -71,3 +71,90 @@ Failed to load dynamic library 'libisar.so': libisar.so: cannot open shared obje
 - Created sync_manager package to separate Isar-specific code from backend-agnostic sltt_core
 - This allows aws_backend to use sltt_core without Isar dependencies
 - Client applications use sync_manager for full Isar-based storage and sync functionality
+
+## Valid Dart CLI Commands (v3.8.2)
+
+### Testing Commands
+```bash
+# ✅ CORRECT - Run tests
+dart test
+dart test test/specific_test.dart
+dart test --name "test name pattern"
+dart test --tags "integration"
+dart test --exclude-tags "slow"
+dart test --platform vm
+dart test --platform chrome
+dart test --concurrency 4
+dart test --timeout 60s
+dart test --coverage coverage/
+dart test --reporter compact
+dart test --reporter json
+dart test --no-fatal-warnings
+
+# ❌ INVALID - These options don't exist
+dart test -c                     # Use --compiler instead
+dart test --chain-stack-traces   # Use --[no-]chain-stack-traces
+dart test --verbose              # Use dart -v test instead
+```
+
+### Analysis Commands
+```bash
+# ✅ CORRECT - Analyze code
+dart analyze
+dart analyze lib/
+dart analyze --fatal-infos
+dart analyze --no-fatal-warnings
+
+# ❌ INVALID - These options don't exist  
+dart analyze --no-fatal-warnings  # This is actually valid
+dart analyze -c                   # No -c option for analyze
+dart analyze --verbose            # Use dart -v analyze instead
+```
+
+### Running Programs
+```bash
+# ✅ CORRECT - Run Dart programs
+dart run
+dart run bin/my_script.dart
+dart run package:my_package/script.dart
+dart run --enable-asserts
+dart run --observe=8080
+dart run --verbosity=error
+
+# ❌ INVALID - These options don't exist
+dart run -c                      # No -c option for run
+dart run --debug                 # Use --observe instead
+dart run --production            # No such option
+```
+
+### Global Options (available for all commands)
+```bash
+# ✅ CORRECT - Global options
+dart -v <command>               # Verbose output
+dart --version                  # Show Dart version
+dart --help                     # Show help
+dart --enable-analytics         # Enable analytics
+dart --disable-analytics        # Disable analytics
+dart --suppress-analytics       # Suppress for this run
+
+# ❌ INVALID - These don't exist
+dart -c                         # No global -c option
+dart --debug                    # Not a global option
+dart --quiet                    # Use normal output instead
+```
+
+### Package Management
+```bash
+# ✅ CORRECT - Pub commands
+dart pub get
+dart pub upgrade
+dart pub deps
+dart pub run <package>:<script>
+dart pub global activate <package>
+
+# ✅ CORRECT - Other commands
+dart create <project_name>
+dart format lib/
+dart doc
+dart compile exe bin/my_app.dart
+```
