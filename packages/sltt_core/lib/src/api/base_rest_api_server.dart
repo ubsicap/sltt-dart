@@ -360,7 +360,8 @@ abstract class BaseRestApiServer {
                 'properties': {
                   'total': {
                     'type': 'integer',
-                    'description': 'Total number of changes across all projects',
+                    'description':
+                        'Total number of changes across all projects',
                   },
                   'projectCount': {
                     'type': 'integer',
@@ -370,7 +371,8 @@ abstract class BaseRestApiServer {
               },
               'entityTypeStats': {
                 'type': 'object',
-                'description': 'Count of changes by entity type across all projects',
+                'description':
+                    'Count of changes by entity type across all projects',
               },
               'timestamp': {
                 'type': 'string',
@@ -890,6 +892,17 @@ abstract class BaseRestApiServer {
           response['seqMap'] = seqMap;
         }
 
+        // Add field-level change detection details
+        if (result.changeDetails.isNotEmpty) {
+          response['changeDetails'] = result.changeDetails.map(
+            (cid, details) => MapEntry(cid, {
+              'updatedFields': details.updatedFields,
+              'noOpFields': details.noOpFields,
+              'totalFields': details.totalFields,
+            }),
+          );
+        }
+
         print('Response: ${jsonEncode(response)}');
 
         return Response.ok(
@@ -897,8 +910,12 @@ abstract class BaseRestApiServer {
           headers: {'Content-Type': 'application/json'},
         );
       } on ArgumentError catch (e) {
-        return _errorResponse(e.message, 400);
-      } catch (e) {
+        print('ArgumentError in _handleCreateChanges: $e');
+        print('Stack trace: ${StackTrace.current}');
+        return _errorResponse('Validation error: ${e.message}', 400);
+      } catch (e, stackTrace) {
+        print('Unexpected error in _handleCreateChanges: $e');
+        print('Stack trace: $stackTrace');
         return _errorResponse('Failed to create changes: $e', 500);
       }
     } catch (e) {

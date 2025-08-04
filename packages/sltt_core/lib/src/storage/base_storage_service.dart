@@ -1,4 +1,5 @@
 import '../models/base_change_log_entry.dart';
+import '../services/change_detection_service.dart';
 import '../services/field_change_detector.dart';
 
 /// Result of creating changes with field-level change detection
@@ -37,32 +38,36 @@ abstract class BaseStorageService {
   ///
   /// This is the enhanced version that detects when field values haven't
   /// actually changed and returns information about which changes were no-ops.
-  /// Implementations should override this for full field-level change detection.
+  ///
+  /// The default implementation uses the shared ChangeDetectionService to handle
+  /// the business logic. Storage implementations only need to override
+  /// getCurrentEntityState() to provide entity lookup functionality.
   Future<CreateChangesResult> createChangesWithChangeDetection(
     List<Map<String, dynamic>> changesData,
   ) async {
-    // Default implementation - fallback to basic createChange
-    final createdChanges = <ChangeLogEntry>[];
-    final changeDetails = <String, FieldChangeResult>{};
-
-    for (final changeData in changesData) {
-      final created = await createChange(changeData);
-      createdChanges.add(created);
-
-      // Default assumes all changes resulted in updates (no field-level detection)
-      changeDetails[created.cid] = FieldChangeResult(
-        updatedFields: (changeData['data'] as Map<String, dynamic>? ?? {}).keys
-            .toList(),
-        noOpFields: [],
-        totalFields: (changeData['data'] as Map<String, dynamic>? ?? {}).length,
-      );
-    }
-
-    return CreateChangesResult(
-      createdChanges: createdChanges,
-      noOpChangeCids: [], // Default implementation doesn't detect no-ops
-      changeDetails: changeDetails,
+    return await ChangeDetectionService.processChangesWithDetection(
+      changesData,
+      this,
+      getCurrentEntityState: getCurrentEntityState,
     );
+  }
+
+  /// Get the current state of an entity for field-level comparison.
+  ///
+  /// Storage implementations should override this method to provide entity lookup.
+  /// This is used by the field-level change detection to determine what fields
+  /// have actually changed.
+  ///
+  /// Returns the most recent change entry for the specified entity, or null if
+  /// the entity doesn't exist.
+  Future<ChangeLogEntry?> getCurrentEntityState(
+    String projectId,
+    String entityType,
+    String entityId,
+  ) async {
+    // Default implementation - no entity state lookup available
+    // Storage implementations should override this for full field-level detection
+    return null;
   }
 
   /// Get a specific change by sequence number

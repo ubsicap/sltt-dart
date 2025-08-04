@@ -327,6 +327,137 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
+  Future<ChangeLogEntry?> getCurrentEntityState(
+    String projectId,
+    String entityType,
+    String entityId,
+  ) async {
+    if (!_initialized) await initialize();
+
+    try {
+      // Query the entity state table using the same pattern as getEntityStates()
+      // This looks up the current entity state, not the change log
+      final pk = 'PROJECT_ID#$projectId#ENTITY_TYPE#$entityType';
+      final queryRequest = {
+        'TableName': tableName,
+        'KeyConditionExpression': 'pk = :pk AND sk = :sk',
+        'ExpressionAttributeValues': {
+          ':pk': {'S': pk},
+          ':sk': {'S': entityId},
+        },
+        'Limit': 1,
+      };
+
+      print(
+        '[getCurrentEntityState] Querying entity state for pk: $pk, sk: $entityId',
+      );
+
+      final response = await _dynamoRequest('Query', queryRequest);
+
+      print(
+        '[getCurrentEntityState] Query response status: ${response.statusCode}',
+      );
+      print('[getCurrentEntityState] Query response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        print('getCurrentEntityState query failed: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        throw ArgumentError(
+          'Failed to query current entity state for $entityType:$entityId in project $projectId: ${response.body}',
+        );
+      }
+
+      final data = jsonDecode(response.body);
+      final items = data['Items'] as List? ?? [];
+
+      print('[getCurrentEntityState] Found ${items.length} items');
+
+      if (items.isEmpty) {
+        print(
+          '[getCurrentEntityState] No entity found for $entityType:$entityId',
+        );
+        return null; // Entity not found
+      }
+
+      // Convert the entity state to ChangeLogEntry
+      // Entity state items have a different structure than change log entries
+      final item = items.first;
+      final entityData = <String, dynamic>{};
+
+      // Extract entity data fields (prefixed with 'data_')
+      for (final entry in item.entries) {
+        final key = entry.key;
+        final value = entry.value;
+
+        if (key.startsWith('data_')) {
+          // Entity field data
+          final fieldName = key.substring(5); // Remove 'data_' prefix
+          entityData[fieldName] = _convertAttributeValueToJson(value);
+        }
+      }
+
+      final changeEntry = ChangeLogEntry(
+        projectId: projectId,
+        entityType: EntityType.fromString(entityType),
+        operation:
+            _convertAttributeValueToJson(item['operation']) as String? ??
+            'create',
+        changeAt: DateTime.parse(
+          _convertAttributeValueToJson(item['changeAt']) as String? ??
+              DateTime.now().toIso8601String(),
+        ),
+        entityId: entityId,
+        dataJson: jsonEncode(entityData),
+        cloudAt: item['cloudAt_meta'] != null
+            ? DateTime.parse(
+                _convertAttributeValueToJson(item['cloudAt_meta']) as String,
+              )
+            : null,
+        cid:
+            _convertAttributeValueToJson(item['cid_meta']) as String? ??
+            'unknown',
+        changeBy:
+            _convertAttributeValueToJson(item['changeBy_meta']) as String? ??
+            '',
+      );
+
+      // Set sequence number
+      changeEntry.seq =
+          int.tryParse(
+            _convertAttributeValueToJson(item['seq'])?.toString() ?? '0',
+          ) ??
+          0;
+
+      print(
+        '[getCurrentEntityState] Returning change entry with seq: ${changeEntry.seq}',
+      );
+      return changeEntry;
+    } catch (e, stackTrace) {
+      print('Error in getCurrentEntityState: $e');
+      print('Stack trace: $stackTrace');
+      print(
+        'Parameters: projectId=$projectId, entityType=$entityType, entityId=$entityId',
+      );
+      // Re-throw as ArgumentError to provide better error context
+      throw ArgumentError(
+        'Failed to get current entity state for $entityType:$entityId in project $projectId: $e',
+      );
+    }
+  }
+
+  @override
+  Future<CreateChangesResult> createChangesWithChangeDetection(
+    List<Map<String, dynamic>> changesData,
+  ) async {
+    // Use the shared implementation from the base class
+    return await ChangeDetectionService.processChangesWithDetection(
+      changesData,
+      this,
+      getCurrentEntityState: getCurrentEntityState,
+    );
+  }
+
+  @override
   Future<Map<String, dynamic>> getEntityTypeStats(
     String requestProjectId,
   ) async {

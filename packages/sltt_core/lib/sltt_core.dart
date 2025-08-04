@@ -5,5 +5,6 @@ export 'src/models/base_entity_state.dart';
 export 'src/models/entity_type.dart';
 export 'src/models/enums.dart';
 export 'src/server/server_urls.dart';
+export 'src/services/change_detection_service.dart';
 export 'src/services/field_change_detector.dart';
 export 'src/storage/base_storage_service.dart';
