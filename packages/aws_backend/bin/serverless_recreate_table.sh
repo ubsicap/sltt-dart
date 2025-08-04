@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script to delete DynamoDB table via Serverless and redeploy with new schema
-# 
+#
 # Usage: ./serverless_recreate_table.sh <stage>
 # Example: ./serverless_recreate_table.sh dev
 #
@@ -35,13 +35,13 @@ if [ ! -f "serverless.yml" ]; then
 fi
 
 echo "🔄 Removing existing Serverless stack for stage '$STAGE'..."
-serverless remove --stage "$STAGE" --aws-profile sltt-epyle-sltt-dart
+serverless remove --stage "$STAGE" --aws-profile sltt-dart-dev
 
 echo "⏳ Waiting a moment for AWS resources to be fully cleaned up..."
 sleep 5
 
 echo "🚀 Deploying new stack with updated schema for stage '$STAGE'..."
-serverless deploy --stage "$STAGE" --aws-profile sltt-epyle-sltt-dart
+serverless deploy --stage "$STAGE" --aws-profile sltt-dart-dev
 
 echo "✅ Stack recreated successfully with new DynamoDB schema!"
 echo ""

@@ -171,7 +171,7 @@ The package includes a `serverless.yml` configuration optimized for AWS Lambda d
 
 ```bash
 # Deploy to AWS with project-specific configuration
-serverless deploy --stage dev --aws-profile sltt-epyle-sltt-dart
+serverless deploy --stage dev --aws-profile sltt-dart-dev
 
 # The serverless-dart plugin will automatically:
 # 1. Build your Dart application (natively on Linux/WSL2, or in Docker on Windows/macOS)

@@ -9,8 +9,8 @@
   },
   "scripts": {
     "build": "rm -f bootstrap && dart compile exe bin/bootstrap.dart -o bootstrap && chmod +x bootstrap",
-    "deploy:dev": "npm run build && npx serverless deploy --stage dev --aws-profile sltt-epyle-sltt-dart",
-    "deploy:prod": "npm run build && npx serverless deploy --stage prod --aws-profile sltt-epyle-sltt-dart",
+    "deploy:dev": "npm run build && npx serverless deploy --stage dev --aws-profile sltt-dart-dev",
+    "deploy:prod": "npm run build && npx serverless deploy --stage prod --aws-profile sltt-dart-prd",
     "clean": "rm -f bootstrap && rm -rf .serverless",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
