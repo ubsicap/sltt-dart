@@ -1,4 +1,23 @@
 import '../models/base_change_log_entry.dart';
+import '../services/field_change_detector.dart';
+
+/// Result of creating changes with field-level change detection
+class CreateChangesResult {
+  /// Successfully created changes
+  final List<ChangeLogEntry> createdChanges;
+
+  /// Changes that resulted in no actual updates (no-op changes)
+  final List<String> noOpChangeCids;
+
+  /// Field change details for each processed change
+  final Map<String, FieldChangeResult> changeDetails;
+
+  CreateChangesResult({
+    required this.createdChanges,
+    required this.noOpChangeCids,
+    required this.changeDetails,
+  });
+}
 
 /// Abstract base class for all storage service implementations.
 ///
@@ -13,6 +32,38 @@ abstract class BaseStorageService {
 
   /// Create a new change entry
   Future<ChangeLogEntry> createChange(Map<String, dynamic> changeData);
+
+  /// Create changes with field-level change detection and no-op tracking
+  ///
+  /// This is the enhanced version that detects when field values haven't
+  /// actually changed and returns information about which changes were no-ops.
+  /// Implementations should override this for full field-level change detection.
+  Future<CreateChangesResult> createChangesWithChangeDetection(
+    List<Map<String, dynamic>> changesData,
+  ) async {
+    // Default implementation - fallback to basic createChange
+    final createdChanges = <ChangeLogEntry>[];
+    final changeDetails = <String, FieldChangeResult>{};
+
+    for (final changeData in changesData) {
+      final created = await createChange(changeData);
+      createdChanges.add(created);
+
+      // Default assumes all changes resulted in updates (no field-level detection)
+      changeDetails[created.cid] = FieldChangeResult(
+        updatedFields: (changeData['data'] as Map<String, dynamic>? ?? {}).keys
+            .toList(),
+        noOpFields: [],
+        totalFields: (changeData['data'] as Map<String, dynamic>? ?? {}).length,
+      );
+    }
+
+    return CreateChangesResult(
+      createdChanges: createdChanges,
+      noOpChangeCids: [], // Default implementation doesn't detect no-ops
+      changeDetails: changeDetails,
+    );
+  }
 
   /// Get a specific change by sequence number
   Future<ChangeLogEntry?> getChange(String projectId, int seq);

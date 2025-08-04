@@ -69,6 +69,10 @@ abstract class BaseRestApiServer {
     // Standard endpoints (same for all servers)
     router.get('/health', _handleHealth);
     router.get('/api/help', _handleApiDocs);
+    router.get(
+      '/api/stats',
+      _handleGetGlobalStats,
+    ); // Global stats across all projects
     router.post('/api/changes', _handleCreateChanges);
     router.get('/api/projects', _handleGetProjects); // List all projects
     router.get('/api/projects/<projectId>/changes', _handleGetChanges);
@@ -163,7 +167,15 @@ abstract class BaseRestApiServer {
       'server': {
         'name': serverName,
         'storageType': storageTypeDescription,
-        'description': 'SLTT API server with $storageTypeDescription storage',
+        'description':
+            'SLTT API server with $storageTypeDescription storage - supports field-level change detection and conflict resolution',
+        'features': [
+          'Field-level change detection',
+          'Conflict resolution based on timestamps',
+          'No-op change tracking for optimization',
+          'Automatic sequence number generation',
+          'Multi-project isolation',
+        ],
       },
       'endpoints': [
         {
@@ -218,7 +230,7 @@ abstract class BaseRestApiServer {
           'method': 'POST',
           'path': '/api/changes',
           'description':
-              'Create new changes (array format) - each change must include projectId',
+              'Create new changes (array format) with field-level change detection - each change must include projectId',
           'requestBody': {
             'type': 'array',
             'items': {
@@ -265,16 +277,49 @@ abstract class BaseRestApiServer {
             'properties': {
               'success': {
                 'type': 'boolean',
-                'description': 'Whether all changes were created successfully',
+                'description':
+                    'Whether all changes were processed successfully',
               },
               'created': {
                 'type': 'integer',
-                'description': 'Number of changes created',
+                'description':
+                    'Number of changes actually created (excludes no-ops)',
               },
               'seqMap': {
                 'type': 'object',
                 'description':
-                    'Map of original sequence numbers to assigned sequence numbers',
+                    'Map of original sequence numbers to assigned sequence numbers (only for created changes)',
+              },
+              'noOpChanges': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description':
+                    'List of CIDs for changes that resulted in no updates (field values unchanged)',
+              },
+              'changeDetails': {
+                'type': 'object',
+                'description':
+                    'Field-level change detection results per CID (when available)',
+                'additionalProperties': {
+                  'type': 'object',
+                  'properties': {
+                    'updatedFields': {
+                      'type': 'array',
+                      'items': {'type': 'string'},
+                      'description': 'Fields that were actually updated',
+                    },
+                    'noOpFields': {
+                      'type': 'array',
+                      'items': {'type': 'string'},
+                      'description':
+                          'Fields with newer timestamps but unchanged values',
+                    },
+                    'totalFields': {
+                      'type': 'integer',
+                      'description': 'Total number of fields processed',
+                    },
+                  },
+                },
               },
             },
           },
@@ -299,6 +344,42 @@ abstract class BaseRestApiServer {
                 'type': 'string',
                 'format': 'ISO8601',
                 'description': 'When the project list was generated',
+              },
+            },
+          },
+        },
+        {
+          'method': 'GET',
+          'path': '/api/stats',
+          'description': 'Get global statistics across all projects',
+          'response': {
+            'type': 'object',
+            'properties': {
+              'changeStats': {
+                'type': 'object',
+                'properties': {
+                  'total': {
+                    'type': 'integer',
+                    'description': 'Total number of changes across all projects',
+                  },
+                  'projectCount': {
+                    'type': 'integer',
+                    'description': 'Number of projects with changes',
+                  },
+                },
+              },
+              'entityTypeStats': {
+                'type': 'object',
+                'description': 'Count of changes by entity type across all projects',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the stats were generated',
+              },
+              'storageType': {
+                'type': 'string',
+                'description': 'Type of storage backend',
               },
             },
           },
@@ -723,114 +804,103 @@ abstract class BaseRestApiServer {
         return _errorResponse('No changes provided', 400);
       }
 
-      List<int> createdSeqs = [];
-      List<int> originalSeqs = [];
-      int? failedIndex;
-      String? errorMessage;
-
+      // Validate all changes first
       for (int i = 0; i < changesToCreate.length; i++) {
-        try {
-          final changeData = changesToCreate[i];
-          final originalSeq = changeData['seq'] as int?;
+        final changeData = changesToCreate[i];
 
-          // Validate that each change has a projectId
-          final projectId = changeData['projectId'] as String?;
-          if (projectId == null || projectId.isEmpty) {
-            throw ArgumentError(
-              'Change at index $i is missing required projectId field',
-            );
-          }
-
-          // Validate other required fields
-          final entityType = changeData['entityType'] as String?;
-          if (entityType == null || entityType.isEmpty) {
-            throw ArgumentError(
-              'Change at index $i is missing required entityType field',
-            );
-          }
-
-          final entityId = changeData['entityId'] as String?;
-          if (entityId == null || entityId.isEmpty) {
-            throw ArgumentError(
-              'Change at index $i is missing required entityId field',
-            );
-          }
-
-          // Validate project entity constraint: entityId must equal projectId
-          if (entityType == 'project') {
-            if (entityId != projectId) {
-              throw ArgumentError(
-                'Project entities must have entityId equal to projectId. '
-                'Expected: $projectId, got: $entityId',
-              );
-            }
-          }
-
-          final changeToStore = {
-            'projectId': projectId,
-            'entityType': entityType,
-            'operation': changeData['operation'] as String? ?? 'create',
-            'entityId': entityId,
-            'data': Map<String, dynamic>.from(changeData['data'] ?? {}),
-          };
-
-          // Preserve changeAt if provided
-          if (changeData['changeAt'] != null) {
-            changeToStore['changeAt'] = changeData['changeAt'];
-          }
-
-          // Preserve cloudAt if provided
-          if (changeData['cloudAt'] != null) {
-            changeToStore['cloudAt'] = changeData['cloudAt'];
-          }
-
-          final created = await storage.createChange(changeToStore);
-          final newSeq = created.seq;
-          createdSeqs.add(newSeq);
-          originalSeqs.add(originalSeq ?? newSeq);
-        } on ArgumentError catch (e) {
-          // Validation errors should return 400
-          return _errorResponse(e.message, 400);
-        } catch (e) {
-          failedIndex = i;
-          errorMessage = e.toString();
-          break;
+        // Validate that each change has a projectId
+        final projectId = changeData['projectId'] as String?;
+        if (projectId == null || projectId.isEmpty) {
+          return _errorResponse(
+            'Change at index $i is missing required projectId field',
+            400,
+          );
         }
-      }
 
-      final success = failedIndex == null;
+        // Validate other required fields
+        final entityType = changeData['entityType'] as String?;
+        if (entityType == null || entityType.isEmpty) {
+          return _errorResponse(
+            'Change at index $i is missing required entityType field',
+            400,
+          );
+        }
 
-      // If we failed due to a non-validation error, return 500
-      if (!success) {
-        return _errorResponse(
-          'Failed to create change at index $failedIndex: $errorMessage',
-          500,
+        final entityId = changeData['entityId'] as String?;
+        if (entityId == null || entityId.isEmpty) {
+          return _errorResponse(
+            'Change at index $i is missing required entityId field',
+            400,
+          );
+        }
+
+        // Validate project entity constraint: entityId must equal projectId
+        if (entityType == 'project') {
+          if (entityId != projectId) {
+            return _errorResponse(
+              'Project entities must have entityId equal to projectId. '
+              'Expected: $projectId, got: $entityId',
+              400,
+            );
+          }
+        }
+
+        // Normalize change data
+        changeData['operation'] =
+            changeData['operation'] as String? ?? 'create';
+        changeData['data'] = Map<String, dynamic>.from(
+          changeData['data'] ?? {},
         );
       }
 
-      final response = <String, dynamic>{
-        'success': success,
-        'created': createdSeqs.length,
-        'createdSeqs': createdSeqs,
-        'timestamp': DateTime.now().toIso8601String(),
-      };
+      try {
+        // Use enhanced change detection method
+        final result = await storage.createChangesWithChangeDetection(
+          changesToCreate,
+        );
 
-      if (createdSeqs.isNotEmpty) {
-        final seqMap = <String, int>{};
-        for (int i = 0; i < createdSeqs.length; i++) {
-          seqMap[originalSeqs[i].toString()] = createdSeqs[i];
+        final createdSeqs = result.createdChanges.map((c) => c.seq).toList();
+        final originalSeqs = <int>[];
+
+        // Map original sequence numbers if provided
+        for (int i = 0; i < changesToCreate.length; i++) {
+          final originalSeq = changesToCreate[i]['seq'] as int?;
+          originalSeqs.add(originalSeq ?? result.createdChanges[i].seq);
         }
-        response['seqMap'] = seqMap;
+
+        final response = <String, dynamic>{
+          'success': true,
+          'created': result.createdChanges.length,
+          'createdSeqs': createdSeqs,
+          'timestamp': DateTime.now().toIso8601String(),
+        };
+
+        // Add no-op change information
+        if (result.noOpChangeCids.isNotEmpty) {
+          response['noOpChanges'] = result.noOpChangeCids;
+          response['noOpCount'] = result.noOpChangeCids.length;
+        }
+
+        // Add sequence mapping
+        if (createdSeqs.isNotEmpty) {
+          final seqMap = <String, int>{};
+          for (int i = 0; i < createdSeqs.length; i++) {
+            seqMap[originalSeqs[i].toString()] = createdSeqs[i];
+          }
+          response['seqMap'] = seqMap;
+        }
+
+        print('Response: ${jsonEncode(response)}');
+
+        return Response.ok(
+          jsonEncode(response),
+          headers: {'Content-Type': 'application/json'},
+        );
+      } on ArgumentError catch (e) {
+        return _errorResponse(e.message, 400);
+      } catch (e) {
+        return _errorResponse('Failed to create changes: $e', 500);
       }
-
-      print('Response: ${jsonEncode(response)}');
-
-      return Response.ok(
-        jsonEncode(response),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } on ArgumentError catch (e) {
-      return _errorResponse(e.message, 400);
     } catch (e) {
       return _errorResponse('Failed to create changes: $e', 500);
     }
@@ -861,6 +931,53 @@ abstract class BaseRestApiServer {
       return _errorResponse(e.message, 400);
     } catch (e) {
       return _errorResponse('Failed to fetch statistics: $e', 500);
+    }
+  }
+
+  /// Get global statistics across all projects
+  Future<Response> _handleGetGlobalStats(Request request) async {
+    try {
+      // Get all projects first
+      final projects = await storage.getAllProjects();
+
+      // Aggregate stats across all projects
+      int totalChanges = 0;
+      final Map<String, int> entityTypeTotals = {};
+
+      for (final projectId in projects) {
+        try {
+          final changeStats = await storage.getChangeStats(projectId);
+          final entityTypeStats = await storage.getEntityTypeStats(projectId);
+
+          totalChanges += (changeStats['total'] as int? ?? 0);
+
+          // Aggregate entity type stats
+          for (final entry in entityTypeStats.entries) {
+            final entityType = entry.key;
+            final count = entry.value as int? ?? 0;
+            entityTypeTotals[entityType] =
+                (entityTypeTotals[entityType] ?? 0) + count;
+          }
+        } catch (e) {
+          // Skip individual project errors but continue aggregating
+          print('Warning: Failed to get stats for project $projectId: $e');
+        }
+      }
+
+      return Response.ok(
+        jsonEncode({
+          'changeStats': {
+            'total': totalChanges,
+            'projectCount': projects.length,
+          },
+          'entityTypeStats': entityTypeTotals,
+          'timestamp': DateTime.now().toIso8601String(),
+          'storageType': storageTypeDescription,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e) {
+      return _errorResponse('Failed to fetch global statistics: $e', 500);
     }
   }
 

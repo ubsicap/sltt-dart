@@ -86,6 +86,11 @@ void main() {
       await serverLauncher.stopAllServers();
     });
 
+    setUp(() async {
+      // Clean downsyncs before each test to prevent interference
+      await DownsyncsStorageService.instance.deleteAllChanges();
+    });
+
     test('basic server operations', () async {
       // Test downsyncs server
       final downsyncsHealth = await dio.get('$downsyncsUrl/health');

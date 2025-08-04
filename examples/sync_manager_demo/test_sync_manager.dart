@@ -71,6 +71,9 @@ class SyncManagerTester {
         !status['cloudStorage']!) {
       throw Exception('Not all servers started successfully');
     }
+
+    // Configure sync manager to use localhost cloud storage
+    _syncManager.configureCloudUrl(_cloudStorageUrl);
     print('✅ All servers started successfully\n');
   }
 
@@ -219,18 +222,18 @@ class SyncManagerTester {
       throw Exception('Outsync failed: ${outsyncResult.message}');
     }
 
-    // Verify that seqMap is populated but changes are not deleted yet
+    // Verify that seqMap is populated and changes are now deleted immediately
     if (outsyncResult.seqMap.isEmpty) {
       throw Exception('Expected seqMap to be populated after outsync');
     }
 
-    if (outsyncResult.deletedLocalChanges.isNotEmpty) {
+    if (outsyncResult.deletedLocalChanges.isEmpty) {
       throw Exception(
-        'Expected no local changes to be deleted yet, but found ${outsyncResult.deletedLocalChanges.length}',
+        'Expected local changes to be deleted immediately after successful outsync, but found none',
       );
     }
 
-    // Verify changes were added to cloud storage but outsyncs still has them
+    // Verify changes were added to cloud storage and outsyncs are cleaned up
     final outsyncsStatsAfter = await _dio.get(
       '$_outsyncsUrl/api/projects/test-project/stats',
     );
@@ -249,16 +252,19 @@ class SyncManagerTester {
       throw Exception('Expected cloud changes to increase after outsync');
     }
 
-    if (outsyncsCountAfter != outsyncsCountBefore) {
+    if (outsyncsCountAfter !=
+        (outsyncsCountBefore - outsyncResult.deletedLocalChanges.length)) {
       throw Exception(
-        'Expected outsyncs changes to remain same until full sync completion, before: $outsyncsCountBefore, after: $outsyncsCountAfter',
+        'Expected outsyncs to decrease by ${outsyncResult.deletedLocalChanges.length} after outsync, before: $outsyncsCountBefore, after: $outsyncsCountAfter',
       );
     }
 
     print(
       '   ✅ Successfully outsynced to cloud, seqMap contains ${outsyncResult.seqMap.length} mappings',
     );
-    print('   ✅ Local changes preserved until full sync completion');
+    print(
+      '   ✅ Local changes deleted immediately after successful outsync (${outsyncResult.deletedLocalChanges.length} changes)',
+    );
     print('✅ Outsync flow test passed\n');
   }
 
