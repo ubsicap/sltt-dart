@@ -79,7 +79,10 @@ Future<ChangeAnalysisResult> analyzeChanges(
     final entityType = changeData['entityType'] as String;
     final entityId = changeData['entityId'] as String;
     final requestedOperation = changeData['operation'] as String? ?? 'create';
-    final incomingData = (changeData['data'] as Map<dynamic, dynamic>?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final incomingData =
+        (changeData['data'] as Map<dynamic, dynamic>?)
+            ?.cast<String, dynamic>() ??
+        <String, dynamic>{};
 
     // Generate CID for this change if not provided
     final cid =

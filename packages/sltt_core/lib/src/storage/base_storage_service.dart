@@ -1,6 +1,6 @@
 import '../models/base_change_log_entry.dart';
-import '../services/field_change_detector.dart';
 import '../services/change_analysis_service.dart';
+import '../services/field_change_detector.dart';
 
 /// Result of creating changes with field-level change detection
 class CreateChangesResult {
