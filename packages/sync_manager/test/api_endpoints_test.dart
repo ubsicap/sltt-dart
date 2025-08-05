@@ -62,7 +62,7 @@ void main() {
         print('☁️ Testing against local cloud storage server: $baseUrl');
       } else {
         // Default: test against local outsyncs server (no cloudAt)
-        const int testPort = 8080;
+        const int testPort = 8180;
         baseUrl = 'http://localhost:$testPort';
         testProjectId = 'api-test-project';
         server = EnhancedRestApiServer(
@@ -357,8 +357,12 @@ void main() {
 
       // Get the created sequence number
       final seqMap = createResult['seqMap'] as Map<String, dynamic>;
-      final createdSeq = seqMap.values.first as int;
+      final createdSeqs = createResult['createdSeqs'] as List<dynamic>;
+      final createdSeq = seqMap.isNotEmpty
+          ? seqMap.values.first as int
+          : createdSeqs.first as int;
       print('seqMap: ${jsonEncode(seqMap)}');
+      print('createdSeqs: ${jsonEncode(createdSeqs)}');
 
       // Fetch the specific change to verify preservation
       final getResponse = await dio.get(

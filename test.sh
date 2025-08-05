@@ -35,8 +35,8 @@ if [ -f "$ISAR_LIB_PATH" ]; then
     if [ $# -eq 0 ]; then
         echo "🏗️ Running tests in all packages..."
 
-        # Test packages with actual test files
-        PACKAGES=("packages/sync_manager" "packages/aws_backend" "packages/sltt_core")
+        # Test packages in specified order
+        PACKAGES=("packages/sltt_core" "packages/aws_backend" "packages/sync_manager")
 
         run_package_tests() {
             PKG_PATH="$1"
@@ -44,7 +44,7 @@ if [ -f "$ISAR_LIB_PATH" ]; then
             if [ -d "$PKG_PATH/test" ]; then
                 echo "📦 Testing $PKG_PATH..."
                 cd "$PKG_PATH"
-                TEST_CMD="dart test $@ --reporter compact --concurrency 1 --verbose"
+                TEST_CMD="dart test $@ --fail-fast --reporter compact --concurrency 1"
                 ENV_VARS="LD_LIBRARY_PATH=/tmp/dart_test_libs"
                 if [ -n "$CLOUD_BASE_URL" ]; then
                     echo "🌐 Using CLOUD_BASE_URL: $CLOUD_BASE_URL"
@@ -60,14 +60,19 @@ if [ -f "$ISAR_LIB_PATH" ]; then
                     echo "🏠 Using LOCALHOST for testing"
                 fi
                 eval "$ENV_VARS $TEST_CMD"
+                TEST_EXIT_CODE=$?
                 cd - > /dev/null
                 echo ""
+                if [ $TEST_EXIT_CODE -ne 0 ]; then
+                    echo "❌ Tests failed in $PKG_PATH. Stopping further tests."
+                    exit $TEST_EXIT_CODE
+                fi
             else
                 echo "⏭️ Skipping $PKG_PATH (no test directory)"
             fi
         }
 
-        # If arguments are package paths, only run those
+        # If arguments are package paths, only run those (in provided order)
         PKG_ARGS=()
         for arg in "$@"; do
             if [[ "$arg" == packages/* ]]; then
@@ -92,7 +97,7 @@ if [ -f "$ISAR_LIB_PATH" ]; then
             if [ -d "$PKG_PATH/test" ]; then
                 echo "📦 Testing $PKG_PATH..."
                 cd "$PKG_PATH"
-                TEST_CMD="dart test $@ --reporter compact --concurrency 1 --verbose"
+                TEST_CMD="dart test $@ --fail-fast --reporter compact --concurrency 1"
                 ENV_VARS="LD_LIBRARY_PATH=/tmp/dart_test_libs"
                 if [ -n "$CLOUD_BASE_URL" ]; then
                     echo "🌐 Using CLOUD_BASE_URL: $CLOUD_BASE_URL"
@@ -130,7 +135,7 @@ if [ -f "$ISAR_LIB_PATH" ]; then
             done
         else
             # Otherwise, run tests in workspace root
-            TEST_CMD="dart test $@ --reporter compact --concurrency 1 --verbose"
+            TEST_CMD="dart test $@ --fail-fast --reporter compact --concurrency 1"
             ENV_VARS="LD_LIBRARY_PATH=/tmp/dart_test_libs"
             if [ -n "$CLOUD_BASE_URL" ]; then
                 echo "🌐 Using CLOUD_BASE_URL: $CLOUD_BASE_URL"

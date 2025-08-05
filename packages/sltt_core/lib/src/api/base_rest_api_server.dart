@@ -905,9 +905,10 @@ abstract class BaseRestApiServer {
           response['noOpCount'] = result.noOpChangeCids.length;
         }
 
+        // Always include seqMap, initialize as empty
+        final seqMap = <String, int>{};
         // Add sequence mapping - only for actually created changes
         if (createdSeqs.isNotEmpty && originalSeqs.isNotEmpty) {
-          final seqMap = <String, int>{};
           for (
             int i = 0;
             i < createdSeqs.length && i < originalSeqs.length;
@@ -915,8 +916,8 @@ abstract class BaseRestApiServer {
           ) {
             seqMap[originalSeqs[i].toString()] = createdSeqs[i];
           }
-          response['seqMap'] = seqMap;
         }
+        response['seqMap'] = seqMap;
 
         // Add field-level change detection details
         if (result.changeDetails.isNotEmpty) {
