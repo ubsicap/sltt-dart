@@ -288,7 +288,7 @@ abstract class BaseRestApiServer {
               'seqMap': {
                 'type': 'object',
                 'description':
-                    'Map of original sequence numbers to assigned sequence numbers (only for created changes)',
+                    'Map of Change IDs (CID) to assigned sequence numbers (only for created changes)',
               },
               'noOpChanges': {
                 'type': 'array',

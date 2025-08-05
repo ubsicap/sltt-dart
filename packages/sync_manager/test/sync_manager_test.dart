@@ -184,10 +184,13 @@ void main() {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final entityId1 = 'test-seq-1-$timestamp';
       final entityId2 = 'test-seq-2-$timestamp';
+      final cid1 = 'test-cid-1-$timestamp';
+      final cid2 = 'test-cid-2-$timestamp';
 
       final changes = [
         {
           'seq': 999, // This should be ignored
+          'cid': cid1, // Provide CID for seqMap lookup
           'projectId': testProjectId,
           'entityType': 'TestEntity',
           'operation': 'create',
@@ -196,6 +199,7 @@ void main() {
         },
         {
           'seq': 1000, // This should also be ignored
+          'cid': cid2, // Provide CID for seqMap lookup
           'projectId': testProjectId,
           'entityType': 'TestEntity',
           'operation': 'create',
@@ -214,11 +218,11 @@ void main() {
       expect(responseData['success'], isTrue);
 
       final seqMap = responseData['seqMap'] as Map<String, dynamic>;
-      expect(seqMap['999'], isNotNull);
-      expect(seqMap['1000'], isNotNull);
+      expect(seqMap[cid1], isNotNull);
+      expect(seqMap[cid2], isNotNull);
 
-      final newSeq1 = seqMap['999'] as int;
-      final newSeq2 = seqMap['1000'] as int;
+      final newSeq1 = seqMap[cid1] as int;
+      final newSeq2 = seqMap[cid2] as int;
 
       // Cloud storage should create new sequences
       expect(newSeq1, isNot(equals(999)));
