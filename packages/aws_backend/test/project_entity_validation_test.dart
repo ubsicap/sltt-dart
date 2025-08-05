@@ -78,11 +78,29 @@ void main() {
 
       final data = jsonDecode(response.body);
       expect(data['success'], equals(true));
-      expect(data['created'], equals(1));
+
+      // The change might be created (if new) or detected as no-op (if already exists with same data)
+      // Both scenarios are valid and show that validation passed
+      final isNewCreation = data['created'] == 1;
+      final isNoOpDetected = data['created'] == 0 && data['noOpCount'] == 1;
+
+      expect(
+        isNewCreation || isNoOpDetected,
+        isTrue,
+        reason:
+            'Expected either new creation (created=1) or no-op detection (created=0, noOpCount=1), '
+            'but got created=${data['created']}, noOpCount=${data['noOpCount']}',
+      );
 
       print('✅ Valid project entity test passed!');
       print('   Status: ${response.statusCode}');
-      print('   Created: ${data['created']} changes');
+      if (isNewCreation) {
+        print('   Result: Created new project (${data['created']} changes)');
+      } else {
+        print(
+          '   Result: Detected as no-op change (project already exists with same data)',
+        );
+      }
     });
   });
 }

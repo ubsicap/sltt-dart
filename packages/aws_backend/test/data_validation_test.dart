@@ -98,12 +98,14 @@ void main() {
     test(
       'create multiple changes with different data types',
       () async {
+        // Use unique entity IDs to ensure these are new creations
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
         final multipleChanges = [
           {
             'projectId': testProjectId,
             'entityType': 'document',
             'operation': 'create',
-            'entityId': 'doc-string-data',
+            'entityId': 'doc-string-data-$timestamp',
             'cid': BaseChangeLogEntry.generateCid(),
             'data': {
               'title': 'String Document',
@@ -114,7 +116,7 @@ void main() {
             'projectId': testProjectId,
             'entityType': 'member',
             'operation': 'create',
-            'entityId': 'user-with-numbers',
+            'entityId': 'user-with-numbers-$timestamp',
             'cid': BaseChangeLogEntry.generateCid(),
             'data': {
               'name': 'Test User',
@@ -127,7 +129,7 @@ void main() {
             'projectId': testProjectId,
             'entityType': 'gloss',
             'operation': 'create',
-            'entityId': 'list-with-arrays',
+            'entityId': 'list-with-arrays-$timestamp',
             'cid': BaseChangeLogEntry.generateCid(),
             'data': {
               'items': ['item1', 'item2', 'item3'],

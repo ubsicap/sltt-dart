@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
@@ -19,6 +20,10 @@ void main() {
       final origSeq = 123;
       final testCid = BaseChangeLogEntry.generateCid();
 
+      // Use a unique entity ID to ensure this is actually a new creation
+      final uniqueEntityId =
+          'doc-cloud-test-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(1000)}';
+
       // 1. Post a change with a custom changeAt
       final postResponse = await http.post(
         Uri.parse('$baseUrl/api/changes'),
@@ -29,7 +34,7 @@ void main() {
             'projectId': testProjectId,
             'entityType': 'document',
             'operation': 'create',
-            'entityId': 'doc-abc',
+            'entityId': uniqueEntityId,
             'changeAt': customChangeAt,
             'cid': testCid,
             'data': {'title': 'Cloud Test', 'content': 'Hello cloud!'},
@@ -46,7 +51,7 @@ void main() {
       expect(seqMap, isNotEmpty, reason: 'Expected seqMap to be non-empty');
       print('seqMap: ${jsonEncode(seqMap)}');
 
-      final newSeq = seqMap['$origSeq'] as int?;
+      final newSeq = seqMap[testCid] as int?;
 
       // 2. Fetch changes for the project
       final getResponse = await http.get(
