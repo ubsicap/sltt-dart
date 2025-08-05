@@ -245,7 +245,12 @@ Future<ChangeAnalysisResult> analyzeChanges(
   );
 }
 
-/// Simple value comparison for detecting actual changes.
+/// Shared utility for value comparison across change detection services.
+///
+/// This function is used by multiple services for detecting actual changes:
+/// - change_analysis_service.dart (operation resolution)
+/// - field_change_detector.dart (field-level conflict resolution)
+/// - change_detection_service.dart (basic change detection)
 ///
 /// This method performs deep comparison for complex data structures:
 /// - Handles null values correctly

@@ -1,3 +1,5 @@
+import 'change_analysis_service.dart' show hasValueChanged;
+
 /// Result of a field change detection operation
 class FieldChangeResult {
   /// Fields that were actually updated with new values
@@ -40,6 +42,9 @@ class FieldChangeResult {
 /// - Field-level conflict resolution (only update if newer)
 /// - Value change detection (only update metadata if value actually changed)
 /// - No-op change tracking (for cleanup and optimization)
+///
+/// Note: Uses the shared hasValueChanged utility from change_analysis_service
+/// to ensure consistent value comparison across all change detection services.
 class FieldChangeDetector {
   /// Detect and apply field changes with conflict resolution
   ///
@@ -75,7 +80,8 @@ class FieldChangeDetector {
         final currentValue = currentState[fieldName];
 
         // Check if the value has actually changed
-        final valueChanged = _hasValueChanged(currentValue, incomingValue);
+        // Uses shared hasValueChanged function from change_analysis_service
+        final valueChanged = hasValueChanged(currentValue, incomingValue);
 
         if (valueChanged) {
           // Value has changed - update both value and metadata
@@ -102,46 +108,6 @@ class FieldChangeDetector {
       noOpFields: noOpFields,
       totalFields: incomingData.length,
     );
-  }
-
-  /// Check if two values are different
-  /// Handles various data types and null comparisons
-  static bool _hasValueChanged(dynamic currentValue, dynamic incomingValue) {
-    // Handle null cases
-    if (currentValue == null && incomingValue == null) return false;
-    if (currentValue == null || incomingValue == null) return true;
-
-    // Handle different types
-    if (currentValue.runtimeType != incomingValue.runtimeType) return true;
-
-    // Handle lists
-    if (currentValue is List && incomingValue is List) {
-      if (currentValue.length != incomingValue.length) return true;
-      for (int i = 0; i < currentValue.length; i++) {
-        if (_hasValueChanged(currentValue[i], incomingValue[i])) return true;
-      }
-      return false;
-    }
-
-    // Handle maps
-    if (currentValue is Map && incomingValue is Map) {
-      if (currentValue.length != incomingValue.length) return true;
-      for (final key in currentValue.keys) {
-        if (!incomingValue.containsKey(key)) {
-          return true;
-        }
-        if (_hasValueChanged(currentValue[key], incomingValue[key])) {
-          return true;
-        }
-      }
-      for (final key in incomingValue.keys) {
-        if (!currentValue.containsKey(key)) return true;
-      }
-      return false;
-    }
-
-    // Handle primitives (String, int, double, bool)
-    return currentValue != incomingValue;
   }
 
   /// Utility method to convert field change result to a response format

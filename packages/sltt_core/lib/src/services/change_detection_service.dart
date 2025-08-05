@@ -1,10 +1,14 @@
 import '../models/base_change_log_entry.dart';
 import '../storage/base_storage_service.dart';
+import 'change_analysis_service.dart' show hasValueChanged;
 import 'field_change_detector.dart';
 
 /// Shared service for field-level change detection that can work with any storage backend.
 /// This encapsulates the business logic for detecting field-level changes and determining
 /// whether a change is a no-op, reducing the implementation burden on storage services.
+///
+/// Note: This service now uses the shared hasValueChanged utility from change_analysis_service
+/// to avoid code duplication across different change detection implementations.
 class ChangeDetectionService {
   /// Performs field-level change detection for a batch of changes.
   ///
@@ -92,7 +96,7 @@ class ChangeDetectionService {
             final incomingValue = entry.value;
             final currentValue = currentData[fieldName];
 
-            if (_hasValueChanged(currentValue, incomingValue)) {
+            if (hasValueChanged(currentValue, incomingValue)) {
               updatedFields.add(fieldName);
             } else {
               noOpFields.add(fieldName);
@@ -151,54 +155,5 @@ class ChangeDetectionService {
       noOpChangeCids: noOpChangeCids,
       changeDetails: changeDetails,
     );
-  }
-
-  /// Simple value comparison for detecting actual changes.
-  ///
-  /// This method performs deep comparison for complex data structures:
-  /// - Handles null values correctly
-  /// - Compares basic types directly
-  /// - Recursively compares Maps and Lists
-  /// - Falls back to string comparison for other types
-  static bool _hasValueChanged(dynamic currentValue, dynamic incomingValue) {
-    // Handle null values
-    if (currentValue == null && incomingValue == null) return false;
-    if (currentValue == null || incomingValue == null) return true;
-
-    // For basic types, use direct comparison
-    if (currentValue is String || currentValue is num || currentValue is bool) {
-      return currentValue != incomingValue;
-    }
-
-    // For maps, do deep comparison
-    if (currentValue is Map && incomingValue is Map) {
-      if (currentValue.length != incomingValue.length) return true;
-
-      for (final key in currentValue.keys) {
-        if (!incomingValue.containsKey(key)) return true;
-        if (_hasValueChanged(currentValue[key], incomingValue[key])) {
-          return true;
-        }
-      }
-      for (final key in incomingValue.keys) {
-        if (!currentValue.containsKey(key)) return true;
-      }
-      return false;
-    }
-
-    // For lists, do deep comparison
-    if (currentValue is List && incomingValue is List) {
-      if (currentValue.length != incomingValue.length) return true;
-
-      for (int i = 0; i < currentValue.length; i++) {
-        if (_hasValueChanged(currentValue[i], incomingValue[i])) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    // For other types, convert to string and compare
-    return currentValue.toString() != incomingValue.toString();
   }
 }
