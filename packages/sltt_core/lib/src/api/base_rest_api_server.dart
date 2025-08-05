@@ -907,14 +907,10 @@ abstract class BaseRestApiServer {
 
         // Always include seqMap, initialize as empty
         final seqMap = <String, int>{};
-        // Add sequence mapping - only for actually created changes
-        if (createdSeqs.isNotEmpty && originalSeqs.isNotEmpty) {
-          for (
-            int i = 0;
-            i < createdSeqs.length && i < originalSeqs.length;
-            i++
-          ) {
-            seqMap[originalSeqs[i].toString()] = createdSeqs[i];
+        // Add CID to sequence mapping for created changes
+        for (final createdChange in result.createdChanges) {
+          if (createdChange.cid.isNotEmpty) {
+            seqMap[createdChange.cid] = createdChange.seq;
           }
         }
         response['seqMap'] = seqMap;
