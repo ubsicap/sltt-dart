@@ -38,42 +38,114 @@ if [ -f "$ISAR_LIB_PATH" ]; then
         # Test packages with actual test files
         PACKAGES=("packages/sync_manager" "packages/aws_backend" "packages/sltt_core")
 
-        for package in "${PACKAGES[@]}"; do
-            if [ -d "$package/test" ]; then
-                echo "📦 Testing $package..."
-                cd "$package"
-
-                # Pass through environment variables to dart test
+        run_package_tests() {
+            PKG_PATH="$1"
+            shift
+            if [ -d "$PKG_PATH/test" ]; then
+                echo "📦 Testing $PKG_PATH..."
+                cd "$PKG_PATH"
+                TEST_CMD="dart test $@ --reporter compact --concurrency 1 --verbose"
+                ENV_VARS="LD_LIBRARY_PATH=/tmp/dart_test_libs"
+                if [ -n "$CLOUD_BASE_URL" ]; then
+                    echo "🌐 Using CLOUD_BASE_URL: $CLOUD_BASE_URL"
+                    ENV_VARS="CLOUD_BASE_URL=$CLOUD_BASE_URL $ENV_VARS"
+                fi
                 if [ "$USE_DEV_CLOUD" = "true" ]; then
                     echo "🌩️ Using DEV CLOUD for testing"
-                    USE_DEV_CLOUD=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test
+                    ENV_VARS="USE_DEV_CLOUD=true $ENV_VARS"
                 elif [ "$USE_CLOUD_STORAGE" = "true" ]; then
                     echo "☁️ Using LOCAL CLOUD STORAGE for testing"
-                    USE_CLOUD_STORAGE=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test
+                    ENV_VARS="USE_CLOUD_STORAGE=true $ENV_VARS"
                 else
                     echo "🏠 Using LOCALHOST for testing"
-                    LD_LIBRARY_PATH=/tmp/dart_test_libs dart test
                 fi
-
-                # Return to workspace root
+                eval "$ENV_VARS $TEST_CMD"
                 cd - > /dev/null
                 echo ""
             else
-                echo "⏭️ Skipping $package (no test directory)"
+                echo "⏭️ Skipping $PKG_PATH (no test directory)"
+            fi
+        }
+
+        # If arguments are package paths, only run those
+        PKG_ARGS=()
+        for arg in "$@"; do
+            if [[ "$arg" == packages/* ]]; then
+                PKG_ARGS+=("$arg")
             fi
         done
-    else
-        # Arguments provided, pass them to dart test in workspace root
-        # Pass through environment variables to dart test
-        if [ "$USE_DEV_CLOUD" = "true" ]; then
-            echo "🌩️ Using DEV CLOUD for testing"
-            USE_DEV_CLOUD=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test "$@"
-        elif [ "$USE_CLOUD_STORAGE" = "true" ]; then
-            echo "☁️ Using LOCAL CLOUD STORAGE for testing"
-            USE_CLOUD_STORAGE=true LD_LIBRARY_PATH=/tmp/dart_test_libs dart test "$@"
+
+        if [ ${#PKG_ARGS[@]} -gt 0 ]; then
+            for pkg in "${PKG_ARGS[@]}"; do
+                run_package_tests "$pkg"
+            done
         else
-            echo "🏠 Using LOCALHOST for testing"
-            LD_LIBRARY_PATH=/tmp/dart_test_libs dart test "$@"
+            for package in "${PACKAGES[@]}"; do
+                run_package_tests "$package"
+            done
+        fi
+    else
+        # Arguments provided
+        run_package_tests() {
+            PKG_PATH="$1"
+            shift
+            if [ -d "$PKG_PATH/test" ]; then
+                echo "📦 Testing $PKG_PATH..."
+                cd "$PKG_PATH"
+                TEST_CMD="dart test $@ --reporter compact --concurrency 1 --verbose"
+                ENV_VARS="LD_LIBRARY_PATH=/tmp/dart_test_libs"
+                if [ -n "$CLOUD_BASE_URL" ]; then
+                    echo "🌐 Using CLOUD_BASE_URL: $CLOUD_BASE_URL"
+                    ENV_VARS="CLOUD_BASE_URL=$CLOUD_BASE_URL $ENV_VARS"
+                fi
+                if [ "$USE_DEV_CLOUD" = "true" ]; then
+                    echo "🌩️ Using DEV CLOUD for testing"
+                    ENV_VARS="USE_DEV_CLOUD=true $ENV_VARS"
+                elif [ "$USE_CLOUD_STORAGE" = "true" ]; then
+                    echo "☁️ Using LOCAL CLOUD STORAGE for testing"
+                    ENV_VARS="USE_CLOUD_STORAGE=true $ENV_VARS"
+                else
+                    echo "🏠 Using LOCALHOST for testing"
+                fi
+                eval "$ENV_VARS $TEST_CMD"
+                cd - > /dev/null
+            else
+                echo "⏭️ Skipping $PKG_PATH (no test directory)"
+            fi
+        }
+
+        PKG_ARGS=()
+        OTHER_ARGS=()
+        for arg in "$@"; do
+            if [[ "$arg" == packages/* ]]; then
+                PKG_ARGS+=("$arg")
+            else
+                OTHER_ARGS+=("$arg")
+            fi
+        done
+
+        if [ ${#PKG_ARGS[@]} -gt 0 ]; then
+            for pkg in "${PKG_ARGS[@]}"; do
+                run_package_tests "$pkg" "${OTHER_ARGS[@]}"
+            done
+        else
+            # Otherwise, run tests in workspace root
+            TEST_CMD="dart test $@ --reporter compact --concurrency 1 --verbose"
+            ENV_VARS="LD_LIBRARY_PATH=/tmp/dart_test_libs"
+            if [ -n "$CLOUD_BASE_URL" ]; then
+                echo "🌐 Using CLOUD_BASE_URL: $CLOUD_BASE_URL"
+                ENV_VARS="CLOUD_BASE_URL=$CLOUD_BASE_URL $ENV_VARS"
+            fi
+            if [ "$USE_DEV_CLOUD" = "true" ]; then
+                echo "🌩️ Using DEV CLOUD for testing"
+                ENV_VARS="USE_DEV_CLOUD=true $ENV_VARS"
+            elif [ "$USE_CLOUD_STORAGE" = "true" ]; then
+                echo "☁️ Using LOCAL CLOUD STORAGE for testing"
+                ENV_VARS="USE_CLOUD_STORAGE=true $ENV_VARS"
+            else
+                echo "🏠 Using LOCALHOST for testing"
+            fi
+            eval "$ENV_VARS $TEST_CMD"
         fi
     fi
 
