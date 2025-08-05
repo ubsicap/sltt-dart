@@ -95,6 +95,30 @@ class MockStorageService extends BaseStorageService {
   Future<List<String>> getAllProjects() async {
     throw UnimplementedError();
   }
+
+  @override
+  Future<Map<String, dynamic>> getEntityStates({
+    required String projectId,
+    required String entityType,
+    String? cursor,
+    int? limit,
+    bool includeMetadata = false,
+  }) {
+    // TODO: implement getEntityStates
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<String>> getSupportedEntityTypes(String projectId) {
+    // TODO: implement getSupportedEntityTypes
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> markAsOutdated(String projectId, int seq, int outdatedBy) {
+    // TODO: implement markAsOutdated
+    throw UnimplementedError();
+  }
 }
 
 void main() {
