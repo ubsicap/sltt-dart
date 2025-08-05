@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:aws_backend/aws_backend.dart';
 
@@ -7,41 +6,31 @@ import 'package:aws_backend/aws_backend.dart';
 ///
 /// This handler uses the proper AwsRestApiServer class to ensure
 /// consistent routing and endpoint behavior with local development.
+/// It can also be used by the local debugger when LOCAL_DEBUGGER=true.
 Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
   try {
-    // Get configuration from environment variables
-    final tableName =
-        Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-changes-dev';
-    final region =
-        Platform.environment['DYNAMODB_REGION'] ??
-        Platform.environment['AWS_REGION'] ??
-        'us-east-1';
-
-    // Create DynamoDB storage service
-    final storage = DynamoDBStorageService(
-      tableName: tableName,
-      region: region,
-      useLocalDynamoDB: false, // Always use real AWS in Lambda
-    );
+    // Create DynamoDB storage service using shared factory
+    final storage = StorageFactory.createStorage();
 
     // Initialize storage
     await storage.initialize();
 
-    // Create AwsRestApiServer instance (but don't start HTTP server)
+    // Create AwsRestApiServer instance
     final server = AwsRestApiServer(
       serverName: 'AWS Lambda API',
       storage: storage,
     );
 
-    // Use the server's handleApiGatewayEvent method for proper routing
-    final response = await server.handleApiGatewayEvent(event);
+    // Get router and process the API Gateway event
+    final router = server.getRouter();
+    final response = await server.handleApiGatewayEvent(event, router);
 
     // Clean up
     await storage.close();
 
     return response;
   } catch (e, stackTrace) {
-    print('Lambda error: $e');
+    print('Handler error: $e');
     print('Stack trace: $stackTrace');
     return {
       'statusCode': 500,

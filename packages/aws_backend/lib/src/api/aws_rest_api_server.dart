@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:shelf/shelf.dart';
+import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import '../storage/dynamodb_storage_service.dart';
@@ -18,18 +19,19 @@ class AwsRestApiServer extends BaseRestApiServer {
   @override
   String get storageTypeDescription => 'AWS DynamoDB';
 
+  /// Get the router for use in debugging or custom server setups
+  Router getRouter() => buildRouter();
+
   /// Handle AWS API Gateway event (for Lambda deployment)
   Future<Map<String, dynamic>> handleApiGatewayEvent(
     Map<String, dynamic> event,
+    Router router,
   ) async {
     try {
       // Convert API Gateway event to Shelf request
       final request = _convertApiGatewayEventToRequest(event);
 
-      // Get the router from the base class
-      final router = buildRouter();
-
-      // Process with router
+      // Process with provided router
       final response = await router(request);
 
       // Convert Shelf response to API Gateway response

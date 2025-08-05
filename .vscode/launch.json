@@ -90,6 +90,96 @@
             "console": "terminal",
             "cwd": "${workspaceFolder}",
             "args": []
+        },
+        {
+            "name": "Debug AWS Backend (Dev)",
+            "type": "dart",
+            "request": "launch",
+            "program": "packages/aws_backend/bin/debug_server.dart",
+            "args": [
+                "--aws-profile",
+                "sltt-dart-dev",
+                "--stage",
+                "dev",
+                "--port",
+                "8080"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "AWS_PROFILE": "sltt-dart-dev"
+            },
+            "console": "terminal",
+            "toolArgs": [
+                "--enable-vm-service"
+            ]
+        },
+        {
+            "name": "Debug AWS Backend (Production)",
+            "type": "dart",
+            "request": "launch",
+            "program": "packages/aws_backend/bin/debug_server.dart",
+            "args": [
+                "--aws-profile",
+                "sltt-dart-prd",
+                "--stage",
+                "prod",
+                "--port",
+                "8080"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "AWS_PROFILE": "sltt-dart-prd"
+            },
+            "console": "terminal",
+            "toolArgs": [
+                "--enable-vm-service"
+            ]
+        },
+        {
+            "name": "Debug AWS Backend (Custom)",
+            "type": "dart",
+            "request": "launch",
+            "program": "packages/aws_backend/bin/debug_server.dart",
+            "args": [
+                "--aws-profile",
+                "${input:awsProfile}",
+                "--stage",
+                "${input:stage}",
+                "--port",
+                "${input:port}"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "AWS_PROFILE": "${input:awsProfile}"
+            },
+            "console": "terminal",
+            "toolArgs": [
+                "--enable-vm-service"
+            ]
+        }
+    ],
+    "inputs": [
+        {
+            "id": "awsProfile",
+            "description": "AWS Profile",
+            "default": "sltt-dart-dev",
+            "type": "promptString"
+        },
+        {
+            "id": "stage",
+            "description": "Deployment Stage",
+            "default": "dev",
+            "type": "pickString",
+            "options": [
+                "dev",
+                "prod"
+            ]
+        },
+        {
+            "id": "port",
+            "description": "Local Server Port",
+            "default": "8080",
+            "type": "promptString"
         }
     ]
 }
