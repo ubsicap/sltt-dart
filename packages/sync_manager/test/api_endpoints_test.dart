@@ -562,7 +562,7 @@ void main() {
 
       final documentStatesData =
           documentStatesResponse.data as Map<String, dynamic>;
-      final documentEntities = documentStatesData['entities'] as List<dynamic>;
+      final documentEntities = documentStatesData['items'] as List<dynamic>;
 
       // Test that the endpoint works and returns the expected structure
       if (documentEntities.isNotEmpty) {
@@ -585,7 +585,7 @@ void main() {
       expect(teamStatesResponse.statusCode, equals(200));
 
       final teamStatesData = teamStatesResponse.data as Map<String, dynamic>;
-      final teamEntities = teamStatesData['entities'] as List<dynamic>;
+      final teamEntities = teamStatesData['items'] as List<dynamic>;
 
       // Test that the endpoint works and returns the expected structure
       if (teamEntities.isNotEmpty) {
@@ -635,7 +635,7 @@ void main() {
       expect(firstPageResponse.statusCode, equals(200));
 
       final firstPageData = firstPageResponse.data as Map<String, dynamic>;
-      final firstPageEntities = firstPageData['entities'] as List<dynamic>;
+      final firstPageEntities = firstPageData['items'] as List<dynamic>;
 
       // Test that pagination works even if state is empty in test environment
       if (firstPageEntities.isNotEmpty) {
@@ -651,7 +651,7 @@ void main() {
         expect(secondPageResponse.statusCode, equals(200));
 
         final secondPageData = secondPageResponse.data as Map<String, dynamic>;
-        final secondPageEntities = secondPageData['entities'] as List<dynamic>;
+        final secondPageEntities = secondPageData['items'] as List<dynamic>;
         expect(secondPageEntities, hasLength(2));
 
         // Verify no overlap between pages
@@ -711,9 +711,9 @@ void main() {
           withoutMetadataResponse.data as Map<String, dynamic>;
 
       // Test that the endpoint works and returns the expected structure
-      if ((withoutMetadataData['entities'] as List<dynamic>).isNotEmpty) {
+      if ((withoutMetadataData['items'] as List<dynamic>).isNotEmpty) {
         final entityWithoutMetadata =
-            (withoutMetadataData['entities'] as List<dynamic>).first;
+            (withoutMetadataData['items'] as List<dynamic>).first;
         expect(entityWithoutMetadata.containsKey('metadata'), isFalse);
 
         // Test with metadata
@@ -725,7 +725,7 @@ void main() {
         final withMetadataData =
             withMetadataResponse.data as Map<String, dynamic>;
         final entityWithMetadata =
-            (withMetadataData['entities'] as List<dynamic>).first;
+            (withMetadataData['items'] as List<dynamic>).first;
         expect(entityWithMetadata.containsKey('metadata'), isTrue);
 
         final metadata = entityWithMetadata['metadata'] as Map<String, dynamic>;
@@ -757,7 +757,7 @@ void main() {
       );
       expect(nonexistentResponse.statusCode, equals(200));
       final data = nonexistentResponse.data as Map<String, dynamic>;
-      expect((data['entities'] as List).isEmpty, isTrue);
+      expect((data['items'] as List).isEmpty, isTrue);
 
       // Test invalid entity type
       try {

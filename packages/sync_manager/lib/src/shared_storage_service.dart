@@ -824,7 +824,7 @@ class LocalStorageService implements BaseStorageService {
           );
         default:
           return {
-            'entities': <Map<String, dynamic>>[],
+            'items': <Map<String, dynamic>>[],
             'hasMore': false,
             'nextCursor': null,
           };
@@ -861,7 +861,7 @@ class LocalStorageService implements BaseStorageService {
     final resultEntities = hasMore ? entities.take(limit).toList() : entities;
 
     return {
-      'entities': resultEntities
+      'items': resultEntities
           .map((e) => _projectStateToMap(e, includeMetadata))
           .toList(),
       'hasMore': hasMore,
@@ -890,7 +890,7 @@ class LocalStorageService implements BaseStorageService {
     final resultEntities = hasMore ? entities.take(limit).toList() : entities;
 
     return {
-      'entities': resultEntities
+      'items': resultEntities
           .map((e) => _documentStateToMap(e, includeMetadata))
           .toList(),
       'hasMore': hasMore,
@@ -919,7 +919,7 @@ class LocalStorageService implements BaseStorageService {
     final resultEntities = hasMore ? entities.take(limit).toList() : entities;
 
     return {
-      'entities': resultEntities
+      'items': resultEntities
           .map((e) => _teamStateToMap(e, includeMetadata))
           .toList(),
       'hasMore': hasMore,
