@@ -13,28 +13,28 @@
             "cwd": "${workspaceFolder}"
         },
         {
-            "name": "Demo: Server Runner - Start All",
+            "name": "Sync Manager Server Runner - Start All",
             "type": "dart",
             "request": "launch",
-            "program": "examples/sync_manager_demo/server_runner.dart",
+            "program": "server_runner.dart",
             "console": "terminal",
             "cwd": "${workspaceFolder}",
             "args": ["start-all"]
         },
         {
-            "name": "Demo: Server Runner - Status",
+            "name": "Sync Manager Server Runner - Status",
             "type": "dart",
             "request": "launch",
-            "program": "examples/sync_manager_demo/server_runner.dart",
+            "program": "server_runner.dart",
             "console": "terminal",
             "cwd": "${workspaceFolder}",
             "args": ["status"]
         },
         {
-            "name": "Demo: Server Runner - Sync",
+            "name": "Sync Manager Server Runner - Sync",
             "type": "dart",
             "request": "launch",
-            "program": "examples/sync_manager_demo/server_runner.dart",
+            "program": "server_runner.dart",
             "console": "terminal",
             "cwd": "${workspaceFolder}",
             "args": ["sync"]
