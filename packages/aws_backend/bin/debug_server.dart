@@ -68,24 +68,19 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
 
   try {
     // Get configuration from environment variables (set by run_debug_server.sh)
-    final tableName =
-        Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-backend-changes-$stage';
-    final region = Platform.environment['DYNAMODB_REGION'] ?? 'us-east-1';
     final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] ?? 'true';
     final useLocalDynamoDB = useCloudStorage != 'true';
 
-    print('🗄️  Configuration:');
-    print('   Table: $tableName');
-    print('   Region: $region');
-    print('   USE_CLOUD_STORAGE: $useCloudStorage');
-    print('   useLocalDynamoDB: $useLocalDynamoDB');
-
     // Create DynamoDB storage service
-    final storageInstance = DynamoDBStorageService(
-      tableName: tableName,
-      region: region,
+    final storageInstance = StorageFactory.createStorage(
       useLocalDynamoDB: useLocalDynamoDB,
     );
+
+    print('🗄️  Configuration:');
+    print('   Table: ${storageInstance.tableName}');
+    print('   Region: ${storageInstance.region}');
+    print('   USE_CLOUD_STORAGE: $useCloudStorage');
+    print('   useLocalDynamoDB: ${storageInstance.useLocalDynamoDB}');
 
     print('🗄️  Connecting to DynamoDB...');
 
@@ -104,7 +99,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     await serverInstance.start(port: port);
 
     print('✅ Debug server running on http://localhost:$port');
-    print('📡 Connected to AWS DynamoDB table: $tableName');
+    print('📡 Connected to AWS DynamoDB table: ${storageInstance.tableName}');
     print('🐛 Ready for VS Code debugging!');
     print('');
     print('Available endpoints:');

@@ -5,7 +5,7 @@ import 'package:aws_backend/aws_backend.dart';
 /// Shared utility for creating DynamoDB storage service with consistent configuration
 class StorageFactory {
   /// Create a DynamoDB storage service using environment variables
-  static DynamoDBStorageService createStorage({bool? useLocalDynamoDB}) {
+  static DynamoDBStorageService createStorage({bool useLocalDynamoDB = false}) {
     final tableName =
         Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-changes-dev';
     final region =
@@ -14,8 +14,7 @@ class StorageFactory {
         'us-east-1';
 
     // Default to cloud storage unless explicitly overridden
-    final useLocal =
-        useLocalDynamoDB ?? Platform.environment['USE_CLOUD_STORAGE'] != 'true';
+    final useLocal = useLocalDynamoDB;
 
     return DynamoDBStorageService(
       tableName: tableName,
