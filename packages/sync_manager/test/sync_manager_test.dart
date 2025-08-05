@@ -92,6 +92,8 @@ void main() {
     });
 
     test('basic server operations', () async {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
       // Test downsyncs server
       final downsyncsHealth = await dio.get('$downsyncsUrl/health');
       expect(downsyncsHealth.statusCode, equals(200));
@@ -103,7 +105,7 @@ void main() {
             'projectId': testProjectId,
             'entityType': 'Document',
             'operation': 'create',
-            'entityId': 'test-downsyncs-1',
+            'entityId': 'test-downsyncs-1-$timestamp',
             'data': {'title': 'Test Document'},
           },
         ],
@@ -121,7 +123,7 @@ void main() {
             'projectId': testProjectId,
             'entityType': 'Document',
             'operation': 'create',
-            'entityId': 'test-outsyncs-1',
+            'entityId': 'test-outsyncs-1-$timestamp',
             'data': {'title': 'Test Document'},
           },
         ],
@@ -139,7 +141,7 @@ void main() {
             'projectId': testProjectId,
             'entityType': 'Document',
             'operation': 'create',
-            'entityId': 'test-cloud-1',
+            'entityId': 'test-cloud-1-$timestamp',
             'data': {'title': 'Test Document'},
           },
         ],
@@ -148,19 +150,20 @@ void main() {
     });
 
     test('batch changes endpoint', () async {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
       final batchChanges = [
         {
           'projectId': testProjectId,
           'entityType': 'Document',
           'operation': 'create',
-          'entityId': 'batch-doc-1',
+          'entityId': 'batch-doc-1-$timestamp',
           'data': {'title': 'Batch Document 1'},
         },
         {
           'projectId': testProjectId,
           'entityType': 'Document',
           'operation': 'create',
-          'entityId': 'batch-doc-2',
+          'entityId': 'batch-doc-2-$timestamp',
           'data': {'title': 'Batch Document 2'},
         },
       ];
@@ -248,6 +251,7 @@ void main() {
     });
 
     test('outsync flow', () async {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
       // Add test changes to outsyncs
       await dio.post(
         '$outsyncsUrl/api/changes',
@@ -256,7 +260,7 @@ void main() {
             'projectId': testProjectId,
             'entityType': 'Document',
             'operation': 'create',
-            'entityId': 'outsync-test-1',
+            'entityId': 'outsync-test-1-$timestamp',
             'data': {'title': 'Outsync Test Document 1'},
           },
         ],
@@ -269,7 +273,7 @@ void main() {
             'projectId': testProjectId,
             'entityType': 'Document',
             'operation': 'create',
-            'entityId': 'outsync-test-2',
+            'entityId': 'outsync-test-2-$timestamp',
             'data': {'title': 'Outsync Test Document 2'},
           },
         ],
@@ -369,6 +373,7 @@ void main() {
     });
 
     test('full sync flow', () async {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
       // Add a test change for full sync
       await dio.post(
         '$outsyncsUrl/api/changes',
@@ -377,7 +382,7 @@ void main() {
             'projectId': testProjectId,
             'entityType': 'Document',
             'operation': 'create',
-            'entityId': 'full-sync-test',
+            'entityId': 'full-sync-test-$timestamp',
             'data': {'title': 'Full Sync Test Document'},
           },
         ],
