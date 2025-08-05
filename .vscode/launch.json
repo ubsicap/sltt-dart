@@ -97,66 +97,30 @@
             "request": "launch",
             "program": "packages/aws_backend/bin/debug_server.dart",
             "args": [
-                "--aws-profile",
-                "sltt-dart-dev",
-                "--stage",
-                "dev",
-                "--port",
-                "8080"
+                "--aws-profile", "sltt-dart-dev",
+                "--stage", "dev",
+                "--port", "8080"
             ],
             "cwd": "${workspaceFolder}",
             "env": {
-                "AWS_PROFILE": "sltt-dart-dev"
+                "AWS_PROFILE": "sltt-dart-dev",
+                "AWS_ACCESS_KEY_ID":  "${input:awsAccessKeyId}",
+                "AWS_SECRET_ACCESS_KEY": "${input:awsSecretAccessKey}",
+                "AWS_REGION": "us-east-1",
+                "DYNAMODB_REGION": "us-east-1",
+                "DYNAMODB_TABLE": "sltt-backend-changes-dev",
+                "STAGE": "dev",
+                "USE_CLOUD_STORAGE": "true",
+                "LOCAL_DEBUGGER": "true"
             },
-            "console": "terminal",
-            "toolArgs": [
-                "--enable-vm-service"
-            ]
+            "console": "terminal"
         },
         {
-            "name": "Debug AWS Backend (Production)",
+            "name": "Attach: Debug AWS Backend (Dev)",
             "type": "dart",
-            "request": "launch",
-            "program": "packages/aws_backend/bin/debug_server.dart",
-            "args": [
-                "--aws-profile",
-                "sltt-dart-prd",
-                "--stage",
-                "prod",
-                "--port",
-                "8080"
-            ],
+            "request": "attach",
             "cwd": "${workspaceFolder}",
-            "env": {
-                "AWS_PROFILE": "sltt-dart-prd"
-            },
-            "console": "terminal",
-            "toolArgs": [
-                "--enable-vm-service"
-            ]
         },
-        {
-            "name": "Debug AWS Backend (Custom)",
-            "type": "dart",
-            "request": "launch",
-            "program": "packages/aws_backend/bin/debug_server.dart",
-            "args": [
-                "--aws-profile",
-                "${input:awsProfile}",
-                "--stage",
-                "${input:stage}",
-                "--port",
-                "${input:port}"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "AWS_PROFILE": "${input:awsProfile}"
-            },
-            "console": "terminal",
-            "toolArgs": [
-                "--enable-vm-service"
-            ]
-        }
     ],
     "inputs": [
         {
@@ -179,6 +143,16 @@
             "id": "port",
             "description": "Local Server Port",
             "default": "8080",
+            "type": "promptString"
+        },
+        {
+            "id": "awsAccessKeyId",
+            "description": "AWS Access Key ID",
+            "type": "promptString"
+        },
+        {
+            "id": "awsSecretAccessKey",
+            "description": "AWS Secret Access Key",
             "type": "promptString"
         }
     ]

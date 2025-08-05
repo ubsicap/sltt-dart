@@ -172,5 +172,62 @@
             "args": ["test/integration_test.dart"],
             "group": "test",
         }
+        ,
+        {
+            "label": "Debug AWS Backend (Dev)",
+            "type": "shell",
+            "command": "./run_debug_server.sh",
+            "args": [
+                "--aws-profile", "sltt-dart-dev",
+                "--stage", "dev",
+                "--port", "8080"
+            ],
+            "group": "test",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/aws_backend"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Debug AWS Backend (Production)",
+            "type": "shell",
+            "command": "./packages/aws_backend/run_debug_server.sh",
+            "args": [
+                "--aws-profile", "sltt-dart-prd",
+                "--stage", "prod",
+                "--port", "8080"
+            ],
+            "group": "test",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Debug AWS Backend (Custom)",
+            "type": "shell",
+            "command": "./packages/aws_backend/run_debug_server.sh",
+            "args": [],
+            "group": "test",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        }
     ]
 }

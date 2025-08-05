@@ -3,88 +3,6 @@ import 'dart:io';
 import 'package:aws_backend/aws_backend.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 
-/// Create storage service with custom environment variables
-DynamoDBStorageService createStorageWithConfig({
-  required Map<String, String> envVars,
-  required bool useLocalDynamoDB,
-}) {
-  final tableName = envVars['DYNAMODB_TABLE'] ?? 'sltt-backend-changes-dev';
-  final region = envVars['DYNAMODB_REGION'] ?? 'us-east-1';
-  
-  return DynamoDBStorageService(
-    tableName: tableName,
-    region: region,
-    useLocalDynamoDB: useLocalDynamoDB,
-  );
-}
-
-/// Setup environment variables by running serverless info command
-Future<Map<String, String>> setupEnvironmentFromServerless(
-  String awsProfile,
-  String stage,
-) async {
-  print('📋 Getting serverless deployment info...');
-
-  try {
-    // Run serverless info command to get environment details
-    final result = await Process.run('npx', [
-      'serverless',
-      'info',
-      '--stage',
-      stage,
-      '--aws-profile',
-      awsProfile,
-    ], workingDirectory: Directory.current.path);
-
-    if (result.exitCode != 0) {
-      print('❌ Failed to get serverless info:');
-      print('stdout: ${result.stdout}');
-      print('stderr: ${result.stderr}');
-      throw Exception(
-        'serverless info command failed with exit code ${result.exitCode}',
-      );
-    }
-
-    // Parse the text output to extract environment variables
-    // final output = result.stdout as String;
-    print('✅ Serverless info retrieved successfully');
-    
-    // For now, return default environment variables
-    // TODO: Parse the serverless info output to extract actual values
-    final envVars = {
-      'STAGE': stage,
-      'DYNAMODB_TABLE': 'sltt-backend-changes-$stage',
-      'DYNAMODB_REGION': 'us-east-1',
-      'AWS_REGION': 'us-east-1',
-      'LOCAL_DEBUGGER': 'true',
-    };
-
-    print('   Environment variables:');
-    for (final entry in envVars.entries) {
-      print('   ${entry.key}=${entry.value}');
-    }
-
-    return envVars;
-  } catch (e) {
-    print('⚠️  Warning: Could not get serverless info, using defaults: $e');
-    // Set fallback environment variables
-    final envVars = {
-      'STAGE': stage,
-      'DYNAMODB_TABLE': 'sltt-backend-changes-$stage',
-      'DYNAMODB_REGION': 'us-east-1',
-      'AWS_REGION': 'us-east-1',
-      'LOCAL_DEBUGGER': 'true',
-    };
-    
-    print('   Using fallback environment variables:');
-    for (final entry in envVars.entries) {
-      print('   ${entry.key}=${entry.value}');
-    }
-    
-    return envVars;
-  }
-}
-
 /// Debugger entrypoint for AWS backend that sets up environment variables
 /// from serverless deployment and runs a local shelf server for debugging.
 ///
@@ -104,19 +22,19 @@ Future<void> main(List<String> args) async {
       case '--aws-profile':
         if (i + 1 < args.length) {
           awsProfile = args[i + 1];
-          i++; // Skip next argument
+          i++;
         }
         break;
       case '--stage':
         if (i + 1 < args.length) {
           stage = args[i + 1];
-          i++; // Skip next argument
+          i++;
         }
         break;
       case '--port':
         if (i + 1 < args.length) {
           port = int.tryParse(args[i + 1]) ?? 8080;
-          i++; // Skip next argument
+          i++;
         }
         break;
       case '--help':
@@ -132,16 +50,16 @@ Options:
   --help                  Show this help message
 
 This tool:
-1. Runs 'serverless info' to get deployment information
-2. Sets up environment variables to match the deployed AWS environment
-3. Starts a local shelf server that connects to the real DynamoDB table
-4. Allows VS Code debugging while using real AWS resources
+1. Connects to the real DynamoDB table using AWS credentials from environment
+2. Starts a local shelf server that uses the same logic as AWS Lambda
+3. Allows VS Code debugging while using real AWS resources
+
+Note: For automatic credential setup, use the run_debug_server.sh script instead.
 ''');
         return;
     }
   }
 
-  // Use default profile if not specified
   awsProfile ??= 'sltt-dart-dev';
 
   print('🔧 Setting up debug environment...');
@@ -150,29 +68,27 @@ This tool:
   print('   Port: $port');
 
   try {
-    // Get serverless deployment info and environment variables
-    final envVars = await setupEnvironmentFromServerless(awsProfile, stage);
-
-    // Set debug-specific environment variables
-    envVars['LOCAL_DEBUGGER'] = 'true';
-    // Only set USE_CLOUD_STORAGE if not already set from command line
-    envVars['USE_CLOUD_STORAGE'] ??= 'true';
-
-    // Determine useLocalDynamoDB from USE_CLOUD_STORAGE
-    final useCloudStorage = envVars['USE_CLOUD_STORAGE'] ?? 'true';
+    // Get configuration from environment variables (set by run_debug_server.sh)
+    final tableName =
+        Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-backend-changes-$stage';
+    final region = Platform.environment['DYNAMODB_REGION'] ?? 'us-east-1';
+    final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] ?? 'true';
     final useLocalDynamoDB = useCloudStorage != 'true';
 
-    // Create DynamoDB storage service using our helper function
-    final storageInstance = createStorageWithConfig(
-      envVars: envVars,
+    print('🗄️  Configuration:');
+    print('   Table: $tableName');
+    print('   Region: $region');
+    print('   USE_CLOUD_STORAGE: $useCloudStorage');
+    print('   useLocalDynamoDB: $useLocalDynamoDB');
+
+    // Create DynamoDB storage service
+    final storageInstance = DynamoDBStorageService(
+      tableName: tableName,
+      region: region,
       useLocalDynamoDB: useLocalDynamoDB,
     );
 
     print('🗄️  Connecting to DynamoDB...');
-    print('   Table: ${envVars['DYNAMODB_TABLE']}');
-    print('   Region: ${envVars['DYNAMODB_REGION']}');
-    print('   USE_CLOUD_STORAGE: $useCloudStorage');
-    print('   useLocalDynamoDB: $useLocalDynamoDB');
 
     // Initialize storage
     await storageInstance.initialize();
@@ -195,9 +111,7 @@ This tool:
     );
 
     print('✅ Debug server running on http://localhost:$port');
-    print(
-      '📡 Connected to AWS DynamoDB table: ${envVars['DYNAMODB_TABLE']}',
-    );
+    print('📡 Connected to AWS DynamoDB table: $tableName');
     print('🐛 Ready for VS Code debugging!');
     print('');
     print('Available endpoints:');
