@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  const baseUrl = kCloudDevUrl;
+  final baseUrl = Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl;
+  print('Testing against: $baseUrl');
 
   test('projects endpoint returns list of projects', () async {
     final response = await http.get(Uri.parse('$baseUrl/api/projects'));
