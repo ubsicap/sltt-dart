@@ -857,17 +857,35 @@ abstract class BaseRestApiServer {
 
       try {
         // Use enhanced change detection method
+        print(
+          'About to call createChangesWithChangeDetection with ${changesToCreate.length} changes',
+        );
         final result = await storage.createChangesWithChangeDetection(
           changesToCreate,
+        );
+
+        print(
+          'Change detection result: created=${result.createdChanges.length}, noOps=${result.noOpChangeCids.length}',
         );
 
         final createdSeqs = result.createdChanges.map((c) => c.seq).toList();
         final originalSeqs = <int>[];
 
-        // Map original sequence numbers if provided
+        // Map original sequence numbers if provided - but only for actually created changes
+        int createdIndex = 0;
         for (int i = 0; i < changesToCreate.length; i++) {
-          final originalSeq = changesToCreate[i]['seq'] as int?;
-          originalSeqs.add(originalSeq ?? result.createdChanges[i].seq);
+          final changeCid = changesToCreate[i]['cid'] as String?;
+
+          // Check if this change was actually created (not a no-op)
+          if (changeCid != null && !result.noOpChangeCids.contains(changeCid)) {
+            if (createdIndex < result.createdChanges.length) {
+              final originalSeq = changesToCreate[i]['seq'] as int?;
+              originalSeqs.add(
+                originalSeq ?? result.createdChanges[createdIndex].seq,
+              );
+              createdIndex++;
+            }
+          }
         }
 
         final response = <String, dynamic>{
@@ -883,10 +901,14 @@ abstract class BaseRestApiServer {
           response['noOpCount'] = result.noOpChangeCids.length;
         }
 
-        // Add sequence mapping
-        if (createdSeqs.isNotEmpty) {
+        // Add sequence mapping - only for actually created changes
+        if (createdSeqs.isNotEmpty && originalSeqs.isNotEmpty) {
           final seqMap = <String, int>{};
-          for (int i = 0; i < createdSeqs.length; i++) {
+          for (
+            int i = 0;
+            i < createdSeqs.length && i < originalSeqs.length;
+            i++
+          ) {
             seqMap[originalSeqs[i].toString()] = createdSeqs[i];
           }
           response['seqMap'] = seqMap;
