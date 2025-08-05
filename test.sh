@@ -44,10 +44,10 @@ if [ -f "$ISAR_LIB_PATH" ]; then
             if [ -d "$PKG_PATH/test" ]; then
                 echo "📦 Testing $PKG_PATH..."
                 cd "$PKG_PATH"
-                
+
                 # Build command array to preserve quotes
                 CMD=(dart test "$@" --fail-fast --reporter compact --concurrency 1)
-                
+
                 # Set up environment variables
                 export LD_LIBRARY_PATH="/tmp/dart_test_libs"
                 if [ -n "$CLOUD_BASE_URL" ]; then
@@ -63,7 +63,7 @@ if [ -f "$ISAR_LIB_PATH" ]; then
                 else
                     echo "🏠 Using LOCALHOST for testing"
                 fi
-                
+
                 # Execute the command
                 "${CMD[@]}"
                 TEST_EXIT_CODE=$?
@@ -103,10 +103,10 @@ if [ -f "$ISAR_LIB_PATH" ]; then
             if [ -d "$PKG_PATH/test" ]; then
                 echo "📦 Testing $PKG_PATH..."
                 cd "$PKG_PATH"
-                
+
                 # Build command array to preserve quotes
                 CMD=(dart test "$@" --fail-fast --reporter compact --concurrency 1)
-                
+
                 # Set up environment variables
                 export LD_LIBRARY_PATH="/tmp/dart_test_libs"
                 if [ -n "$CLOUD_BASE_URL" ]; then
@@ -122,7 +122,7 @@ if [ -f "$ISAR_LIB_PATH" ]; then
                 else
                     echo "🏠 Using LOCALHOST for testing"
                 fi
-                
+
                 # Execute the command
                 "${CMD[@]}"
                 cd - > /dev/null
@@ -148,7 +148,7 @@ if [ -f "$ISAR_LIB_PATH" ]; then
         else
             # Otherwise, run tests in workspace root
             CMD=(dart test "$@" --fail-fast --reporter compact --concurrency 1)
-            
+
             # Set up environment variables
             export LD_LIBRARY_PATH="/tmp/dart_test_libs"
             if [ -n "$CLOUD_BASE_URL" ]; then
@@ -164,7 +164,7 @@ if [ -f "$ISAR_LIB_PATH" ]; then
             else
                 echo "🏠 Using LOCALHOST for testing"
             fi
-            
+
             # Execute the command
             "${CMD[@]}"
         fi
