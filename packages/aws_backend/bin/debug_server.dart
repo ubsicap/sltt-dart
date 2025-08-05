@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:aws_backend/aws_backend.dart';
-import 'package:shelf/shelf_io.dart' as shelf_io;
 
 /// Debugger entrypoint for AWS backend that sets up environment variables
 /// from serverless deployment and runs a local shelf server for debugging.
@@ -100,15 +99,9 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
       storage: storageInstance,
     );
 
-    // Get the router and start shelf server directly
-    final router = serverInstance.getRouter();
-
     print('🚀 Starting debug server...');
-    final shelfServer = await shelf_io.serve(
-      router.call,
-      InternetAddress.anyIPv4,
-      port,
-    );
+    // Use the server's start method to ensure middleware is applied
+    await serverInstance.start(port: port);
 
     print('✅ Debug server running on http://localhost:$port');
     print('📡 Connected to AWS DynamoDB table: $tableName');
@@ -127,8 +120,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     // Handle shutdown gracefully
     ProcessSignal.sigint.watch().listen((signal) async {
       print('\n🛑 Shutting down debug server...');
-      await shelfServer.close();
-      await storageInstance.close();
+      await serverInstance.stop();
       print('✅ Debug server stopped');
       exit(0);
     });
