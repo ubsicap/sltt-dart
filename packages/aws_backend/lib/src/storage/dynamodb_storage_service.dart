@@ -33,7 +33,7 @@ import 'package:sltt_core/sltt_core.dart';
 /// - Efficient queries scoped to a single project
 /// - Cost-effective table sharing across projects
 /// - Fast entity state lookups by entity type
-class DynamoDBStorageService implements BaseStorageService {
+class DynamoDBStorageService extends BaseStorageService {
   final String tableName;
   final String region;
   final bool useLocalDynamoDB;
@@ -446,18 +446,6 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<CreateChangesResult> createChangesWithChangeDetection(
-    List<Map<String, dynamic>> changesData,
-  ) async {
-    // Use the shared implementation from the base class
-    return await ChangeDetectionService.processChangesWithDetection(
-      changesData,
-      this,
-      getCurrentEntityState: getCurrentEntityState,
-    );
-  }
-
-  @override
   Future<Map<String, dynamic>> getEntityTypeStats(
     String requestProjectId,
   ) async {
@@ -553,9 +541,7 @@ class DynamoDBStorageService implements BaseStorageService {
   }
 
   @override
-  Future<List<ChangeLogEntry>> getChangesNotOutdated(
-    String requestProjectId,
-  ) async {
+  Future<List<ChangeLogEntry>> getChangesNotOutdated(String projectId) async {
     if (!_initialized) await initialize();
 
     final queryRequest = {
@@ -564,7 +550,7 @@ class DynamoDBStorageService implements BaseStorageService {
       'KeyConditionExpression': 'gsi1pk = :gsi1pk',
       'FilterExpression': 'attribute_not_exists(outdatedBy)',
       'ExpressionAttributeValues': {
-        ':gsi1pk': {'S': 'PROJECT_ID#$requestProjectId'},
+        ':gsi1pk': {'S': 'PROJECT_ID#$projectId'},
       },
       'ScanIndexForward': true, // Sort by gsi1sk (SEQ) ascending
     };

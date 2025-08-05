@@ -10,7 +10,7 @@ import 'models/isar_project_state.dart';
 import 'models/isar_team_state.dart';
 import 'models/sync_state.dart';
 
-class LocalStorageService implements BaseStorageService {
+class LocalStorageService extends BaseStorageService {
   final String _databaseName;
   final String _logPrefix;
 
@@ -408,19 +408,6 @@ class LocalStorageService implements BaseStorageService {
           )..seq = clientEntry.seq,
         )
         .toList();
-  }
-
-  /// Store multiple changes with field-level change detection
-  @override
-  Future<CreateChangesResult> createChangesWithChangeDetection(
-    List<Map<String, dynamic>> changesData,
-  ) async {
-    // Use the shared change detection service from sltt_core
-    return await ChangeDetectionService.processChangesWithDetection(
-      changesData,
-      this,
-      getCurrentEntityState: getCurrentEntityState,
-    );
   }
 
   /// Get the current state of an entity for field-level comparison
