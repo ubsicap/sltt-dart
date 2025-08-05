@@ -657,11 +657,15 @@ abstract class BaseRestApiServer {
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {
-      return _errorResponse(e.message, 400);
+      return _errorResponse('$e', 400);
     } catch (e, stackTrace) {
       print('Error getting projects: $e');
       print('Stack trace: $stackTrace');
-      return _errorResponse('Failed to get projects: ${e.toString()}', 500);
+      return _errorResponse(
+        'Failed to get projects: ${e.toString()}',
+        500,
+        stackTrace,
+      );
     }
   }
 
@@ -732,7 +736,7 @@ abstract class BaseRestApiServer {
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {
-      return _errorResponse(e.message, 400);
+      return _errorResponse('$e', 400);
     } catch (e) {
       return _errorResponse('Failed to fetch changes: $e', 500);
     }
@@ -768,7 +772,7 @@ abstract class BaseRestApiServer {
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {
-      return _errorResponse(e.message, 400);
+      return _errorResponse('$e', 400);
     } catch (e) {
       return _errorResponse('Failed to fetch change: $e', 500);
     }
@@ -934,11 +938,11 @@ abstract class BaseRestApiServer {
       } on ArgumentError catch (e) {
         print('ArgumentError in _handleCreateChanges: $e');
         print('Stack trace: ${StackTrace.current}');
-        return _errorResponse('Validation error: ${e.message}', 400);
+        return _errorResponse('Validation error: $e', 400, StackTrace.current);
       } catch (e, stackTrace) {
         print('Unexpected error in _handleCreateChanges: $e');
         print('Stack trace: $stackTrace');
-        return _errorResponse('Failed to create changes: $e', 500);
+        return _errorResponse('Failed to create changes: $e', 500, stackTrace);
       }
     } catch (e) {
       return _errorResponse('Failed to create changes: $e', 500);
@@ -967,7 +971,7 @@ abstract class BaseRestApiServer {
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {
-      return _errorResponse(e.message, 400);
+      return _errorResponse('$e', 400);
     } catch (e) {
       return _errorResponse('Failed to fetch statistics: $e', 500);
     }
@@ -1042,7 +1046,7 @@ abstract class BaseRestApiServer {
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {
-      return _errorResponse(e.message, 400);
+      return _errorResponse('$e', 400);
     } catch (e) {
       return _errorResponse('Failed to fetch entity types: $e', 500);
     }
@@ -1111,7 +1115,7 @@ abstract class BaseRestApiServer {
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {
-      return _errorResponse(e.message, 400);
+      return _errorResponse('$e', 400);
     } catch (e) {
       return _errorResponse('Failed to fetch entity state: $e', 500);
     }
@@ -1139,14 +1143,25 @@ abstract class BaseRestApiServer {
   }
 
   /// Helper method for error responses
-  Response _errorResponse(String message, int statusCode) {
+  Response _errorResponse(
+    String message,
+    int statusCode, [
+    StackTrace? stackTrace,
+  ]) {
+    final errorBody = <String, dynamic>{
+      'error': message,
+      'timestamp': DateTime.now().toIso8601String(),
+      'server': serverName,
+    };
+
+    // Include stack trace information if provided
+    if (stackTrace != null) {
+      errorBody['stackTrace'] = stackTrace.toString();
+    }
+
     return Response(
       statusCode,
-      body: jsonEncode({
-        'error': message,
-        'timestamp': DateTime.now().toIso8601String(),
-        'server': serverName,
-      }),
+      body: jsonEncode(errorBody),
       headers: {'Content-Type': 'application/json'},
     );
   }

@@ -45,7 +45,7 @@ class SyncManagerTester {
     } catch (e) {
       print('\n❌ Test failed: $e');
       if (e is DioException) {
-        print('DioException: ${e.message}');
+        print('DioException: ${'$e'}');
         print('Response data: ${e.response?.data}');
       }
       rethrow;
