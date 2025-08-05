@@ -178,7 +178,7 @@ void main() {
         final changeData = [
           {
             'projectId': projectId,
-            'entityType': 'Document',
+            'entityType': 'document',
             'operation': 'create',
             'entityId': 'doc-${DateTime.now().millisecondsSinceEpoch}',
             'data': {
@@ -252,14 +252,14 @@ void main() {
       final batchChanges = [
         {
           'projectId': '$testProjectId-batch',
-          'entityType': 'Document',
+          'entityType': 'document',
           'operation': 'create',
           'entityId': 'batch-doc-1',
           'data': {'title': 'Batch Document 1'},
         },
         {
           'projectId': '$testProjectId-batch',
-          'entityType': 'Document',
+          'entityType': 'document',
           'operation': 'create',
           'entityId': 'batch-doc-2',
           'data': {'title': 'Batch Document 2'},
@@ -294,7 +294,7 @@ void main() {
         5,
         (index) => {
           'projectId': '$testProjectId-pagination',
-          'entityType': 'Document',
+          'entityType': 'document',
           'operation': 'create',
           'entityId': 'pagination-doc-$index',
           'data': {'title': 'Pagination Document $index'},

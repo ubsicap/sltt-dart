@@ -46,7 +46,7 @@ Future<void> main() async {
     print('🔍 Testing change creation...');
     final changeData = [
       {
-        'entityType': 'Document',
+        'entityType': 'document',
         'operation': 'create',
         'entityId': 'doc-123',
         'data': {'title': 'Test Document', 'content': 'Hello World'},

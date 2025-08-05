@@ -30,7 +30,7 @@ Future<void> main() async {
     // Test 1: Create some changes
     print('📝 Testing change creation...');
     final change1 = await storage.createChange({
-      'entityType': 'Document',
+      'entityType': 'document',
       'operation': 'create',
       'entityId': 'doc-001',
       'data': {
@@ -44,7 +44,7 @@ Future<void> main() async {
     );
 
     final change2 = await storage.createChange({
-      'entityType': 'Document',
+      'entityType': 'document',
       'operation': 'update',
       'entityId': 'doc-001',
       'data': {

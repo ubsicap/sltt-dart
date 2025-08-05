@@ -103,7 +103,7 @@ void main() {
         data: [
           {
             'projectId': testProjectId,
-            'entityType': 'Document',
+            'entityType': 'document',
             'operation': 'create',
             'entityId': 'test-downsyncs-1-$timestamp',
             'data': {'title': 'Test Document'},
@@ -121,7 +121,7 @@ void main() {
         data: [
           {
             'projectId': testProjectId,
-            'entityType': 'Document',
+            'entityType': 'document',
             'operation': 'create',
             'entityId': 'test-outsyncs-1-$timestamp',
             'data': {'title': 'Test Document'},
@@ -139,7 +139,7 @@ void main() {
         data: [
           {
             'projectId': testProjectId,
-            'entityType': 'Document',
+            'entityType': 'document',
             'operation': 'create',
             'entityId': 'test-cloud-1-$timestamp',
             'data': {'title': 'Test Document'},
@@ -154,14 +154,14 @@ void main() {
       final batchChanges = [
         {
           'projectId': testProjectId,
-          'entityType': 'Document',
+          'entityType': 'document',
           'operation': 'create',
           'entityId': 'batch-doc-1-$timestamp',
           'data': {'title': 'Batch Document 1'},
         },
         {
           'projectId': testProjectId,
-          'entityType': 'Document',
+          'entityType': 'document',
           'operation': 'create',
           'entityId': 'batch-doc-2-$timestamp',
           'data': {'title': 'Batch Document 2'},
@@ -258,7 +258,7 @@ void main() {
         data: [
           {
             'projectId': testProjectId,
-            'entityType': 'Document',
+            'entityType': 'document',
             'operation': 'create',
             'entityId': 'outsync-test-1-$timestamp',
             'data': {'title': 'Outsync Test Document 1'},
@@ -271,7 +271,7 @@ void main() {
         data: [
           {
             'projectId': testProjectId,
-            'entityType': 'Document',
+            'entityType': 'document',
             'operation': 'create',
             'entityId': 'outsync-test-2-$timestamp',
             'data': {'title': 'Outsync Test Document 2'},
@@ -380,7 +380,7 @@ void main() {
         data: [
           {
             'projectId': testProjectId,
-            'entityType': 'Document',
+            'entityType': 'document',
             'operation': 'create',
             'entityId': 'full-sync-test-$timestamp',
             'data': {'title': 'Full Sync Test Document'},

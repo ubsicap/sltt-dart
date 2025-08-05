@@ -77,7 +77,7 @@ await storage.initialize();
 
 // Use the same API as LocalStorageService
 final change = await storage.createChange({
-  'entityType': 'Document',
+  'entityType': 'document',
   'operation': 'create',
   'entityId': 'doc-001',
   'data': {'title': 'My Document'},

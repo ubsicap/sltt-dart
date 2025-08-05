@@ -7,7 +7,7 @@
 class ChangeLogEntry {
   Id id = Isar.autoIncrement;
 
-  late String entityType; // e.g., 'Document', 'Passage', 'Portion'
+  late String entityType; // e.g., 'document', 'Passage', 'Portion'
   late String operation;  // e.g., 'create', 'update', 'delete'
   late DateTime timestamp;
   late String entityId;   // UUID or primary key of the entity
