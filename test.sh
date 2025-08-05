@@ -44,22 +44,28 @@ if [ -f "$ISAR_LIB_PATH" ]; then
             if [ -d "$PKG_PATH/test" ]; then
                 echo "📦 Testing $PKG_PATH..."
                 cd "$PKG_PATH"
-                TEST_CMD="dart test $@ --fail-fast --reporter compact --concurrency 1"
-                ENV_VARS="LD_LIBRARY_PATH=/tmp/dart_test_libs"
+                
+                # Build command array to preserve quotes
+                CMD=(dart test "$@" --fail-fast --reporter compact --concurrency 1)
+                
+                # Set up environment variables
+                export LD_LIBRARY_PATH="/tmp/dart_test_libs"
                 if [ -n "$CLOUD_BASE_URL" ]; then
                     echo "🌐 Using CLOUD_BASE_URL: $CLOUD_BASE_URL"
-                    ENV_VARS="CLOUD_BASE_URL=$CLOUD_BASE_URL $ENV_VARS"
+                    export CLOUD_BASE_URL="$CLOUD_BASE_URL"
                 fi
                 if [ "$USE_DEV_CLOUD" = "true" ]; then
                     echo "🌩️ Using DEV CLOUD for testing"
-                    ENV_VARS="USE_DEV_CLOUD=true $ENV_VARS"
+                    export USE_DEV_CLOUD="true"
                 elif [ "$USE_CLOUD_STORAGE" = "true" ]; then
                     echo "☁️ Using LOCAL CLOUD STORAGE for testing"
-                    ENV_VARS="USE_CLOUD_STORAGE=true $ENV_VARS"
+                    export USE_CLOUD_STORAGE="true"
                 else
                     echo "🏠 Using LOCALHOST for testing"
                 fi
-                eval "$ENV_VARS $TEST_CMD"
+                
+                # Execute the command
+                "${CMD[@]}"
                 TEST_EXIT_CODE=$?
                 cd - > /dev/null
                 echo ""
@@ -97,22 +103,28 @@ if [ -f "$ISAR_LIB_PATH" ]; then
             if [ -d "$PKG_PATH/test" ]; then
                 echo "📦 Testing $PKG_PATH..."
                 cd "$PKG_PATH"
-                TEST_CMD="dart test $@ --fail-fast --reporter compact --concurrency 1"
-                ENV_VARS="LD_LIBRARY_PATH=/tmp/dart_test_libs"
+                
+                # Build command array to preserve quotes
+                CMD=(dart test "$@" --fail-fast --reporter compact --concurrency 1)
+                
+                # Set up environment variables
+                export LD_LIBRARY_PATH="/tmp/dart_test_libs"
                 if [ -n "$CLOUD_BASE_URL" ]; then
                     echo "🌐 Using CLOUD_BASE_URL: $CLOUD_BASE_URL"
-                    ENV_VARS="CLOUD_BASE_URL=$CLOUD_BASE_URL $ENV_VARS"
+                    export CLOUD_BASE_URL="$CLOUD_BASE_URL"
                 fi
                 if [ "$USE_DEV_CLOUD" = "true" ]; then
                     echo "🌩️ Using DEV CLOUD for testing"
-                    ENV_VARS="USE_DEV_CLOUD=true $ENV_VARS"
+                    export USE_DEV_CLOUD="true"
                 elif [ "$USE_CLOUD_STORAGE" = "true" ]; then
                     echo "☁️ Using LOCAL CLOUD STORAGE for testing"
-                    ENV_VARS="USE_CLOUD_STORAGE=true $ENV_VARS"
+                    export USE_CLOUD_STORAGE="true"
                 else
                     echo "🏠 Using LOCALHOST for testing"
                 fi
-                eval "$ENV_VARS $TEST_CMD"
+                
+                # Execute the command
+                "${CMD[@]}"
                 cd - > /dev/null
             else
                 echo "⏭️ Skipping $PKG_PATH (no test directory)"
@@ -135,22 +147,26 @@ if [ -f "$ISAR_LIB_PATH" ]; then
             done
         else
             # Otherwise, run tests in workspace root
-            TEST_CMD="dart test $@ --fail-fast --reporter compact --concurrency 1"
-            ENV_VARS="LD_LIBRARY_PATH=/tmp/dart_test_libs"
+            CMD=(dart test "$@" --fail-fast --reporter compact --concurrency 1)
+            
+            # Set up environment variables
+            export LD_LIBRARY_PATH="/tmp/dart_test_libs"
             if [ -n "$CLOUD_BASE_URL" ]; then
                 echo "🌐 Using CLOUD_BASE_URL: $CLOUD_BASE_URL"
-                ENV_VARS="CLOUD_BASE_URL=$CLOUD_BASE_URL $ENV_VARS"
+                export CLOUD_BASE_URL="$CLOUD_BASE_URL"
             fi
             if [ "$USE_DEV_CLOUD" = "true" ]; then
                 echo "🌩️ Using DEV CLOUD for testing"
-                ENV_VARS="USE_DEV_CLOUD=true $ENV_VARS"
+                export USE_DEV_CLOUD="true"
             elif [ "$USE_CLOUD_STORAGE" = "true" ]; then
                 echo "☁️ Using LOCAL CLOUD STORAGE for testing"
-                ENV_VARS="USE_CLOUD_STORAGE=true $ENV_VARS"
+                export USE_CLOUD_STORAGE="true"
             else
                 echo "🏠 Using LOCALHOST for testing"
             fi
-            eval "$ENV_VARS $TEST_CMD"
+            
+            # Execute the command
+            "${CMD[@]}"
         fi
     fi
 
