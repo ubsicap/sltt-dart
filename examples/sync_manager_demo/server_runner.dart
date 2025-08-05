@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:sync_manager/sync_manager.dart';
 
 void main(List<String> args) async {
@@ -147,6 +148,6 @@ int _getDefaultPort(String serverType) {
     case 'cloudstorage':
       return kCloudStoragePort;
     default:
-      return 8080;
+      return 8283;
   }
 }
