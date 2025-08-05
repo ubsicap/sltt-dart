@@ -1,6 +1,6 @@
 import 'package:sltt_core/src/models/base_change_log_entry.dart';
 import 'package:sltt_core/src/models/entity_type.dart';
-import 'package:sltt_core/src/storage/base_storage_service.dart';
+import 'package:sltt_core/src/services/change_analysis_service.dart';
 import 'package:test/test.dart';
 
 /// Mock ChangeLogEntry for testing

@@ -1,4 +1,5 @@
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sltt_core/src/services/change_analysis_service.dart';
 import 'package:test/test.dart';
 
 void main() {
