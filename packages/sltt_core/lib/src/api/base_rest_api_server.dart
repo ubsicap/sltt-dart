@@ -1145,6 +1145,12 @@ abstract class BaseRestApiServer {
     int statusCode, [
     StackTrace? stackTrace,
   ]) {
+    // Log error to console
+    print('[$serverName] Error ($statusCode): $message');
+    if (stackTrace != null) {
+      print('[$serverName] Stack trace: $stackTrace');
+    }
+
     final errorBody = <String, dynamic>{
       'error': message,
       'timestamp': DateTime.now().toIso8601String(),

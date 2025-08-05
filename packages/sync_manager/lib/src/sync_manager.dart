@@ -66,6 +66,16 @@ class SyncManager {
 
       print('[SyncManager] Found ${changes.length} changes to outsync');
 
+      // Create a mapping from CID to local sequence number for later deletion
+      final cidToLocalSeq = <String, int>{};
+      for (final change in changes) {
+        final cid = change['cid'] as String?;
+        final seq = change['seq'] as int?;
+        if (cid != null && seq != null) {
+          cidToLocalSeq[cid] = seq;
+        }
+      }
+
       // Apply outsynced changes to state (Step 4: changelog_to_state integration)
       // For outsyncs: changes get incorporated into state but stay in outsyncs until posted to cloud
       await _applyChangesToState(changes, 'outsyncs');
@@ -91,7 +101,18 @@ class SyncManager {
             '[SyncManager] Deleting outsynced changes from local storage...',
           );
 
-          final seqsToDelete = seqMap.keys.map(int.parse).toList();
+          // Convert CID-based seqMap to local sequence numbers for deletion
+          final seqsToDelete = <int>[];
+          for (final cid in seqMap.keys) {
+            final localSeq = cidToLocalSeq[cid];
+            if (localSeq != null) {
+              seqsToDelete.add(localSeq);
+            } else {
+              print(
+                '[SyncManager] Warning: Could not find local sequence for CID: $cid',
+              );
+            }
+          }
 
           if (seqsToDelete.isNotEmpty) {
             final deletedCount = await _outsyncsStorage.deleteChanges(
@@ -113,10 +134,12 @@ class SyncManager {
           // Handle partial failure
           final failedAtIndex = responseData['failedAtIndex'] as int?;
           final error = responseData['error'] as String?;
+          final stackTrace = responseData['stackTrace'] as String?;
 
           print(
             '[SyncManager] Partial outsync failed at index $failedAtIndex: $error',
           );
+          print('[SyncManager] Stack trace: $stackTrace');
 
           return OutsyncResult(
             success: false,
@@ -124,19 +147,25 @@ class SyncManager {
             deletedLocalChanges: [],
             seqMap: seqMap,
             message: 'Partial outsync failed at index $failedAtIndex: $error',
+            error: error,
+            errorStackTrace: stackTrace,
           );
         }
       } else {
         throw Exception('Outsync failed with status: ${response.statusCode}');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('[SyncManager] Outsync failed: $e');
+      print('[SyncManager] Stack trace: $stackTrace');
       return OutsyncResult(
         success: false,
         syncedChanges: [],
         deletedLocalChanges: [],
         seqMap: {},
         message: 'Outsync failed: $e',
+        error: e.toString(), // Capture original error
+        errorStackTrace: stackTrace
+            .toString(), // Include error stack for debugging
       );
     }
   }
@@ -297,15 +326,15 @@ class SyncManager {
     // Step 2: Downsync from cloud
     final downsyncResult = await downsyncFromCloud();
 
-    // Create final outsync result with the sequences that were originally outsynced
-    final deletedLocalSeqs = outsyncResult.seqMap.keys.map(int.parse).toList();
-
+    // Use the already computed deleted local sequences from outsync result
     final finalOutsyncResult = OutsyncResult(
       success: outsyncResult.success,
       syncedChanges: outsyncResult.syncedChanges,
-      deletedLocalChanges: deletedLocalSeqs,
+      deletedLocalChanges: outsyncResult.deletedLocalChanges,
       seqMap: outsyncResult.seqMap,
       message: outsyncResult.message,
+      error: outsyncResult.error,
+      errorStackTrace: outsyncResult.errorStackTrace,
     );
 
     return FullSyncResult(
@@ -402,8 +431,10 @@ class OutsyncResult {
   final bool success;
   final List<Map<String, dynamic>> syncedChanges;
   final List<int> deletedLocalChanges;
-  final Map<String, int> seqMap; // Maps old seq (as string) to new seq
+  final Map<String, int> seqMap; // Maps CID to cloud sequence number
   final String message;
+  final String? error; // Optional error for debugging
+  final String? errorStackTrace;
 
   OutsyncResult({
     required this.success,
@@ -411,6 +442,8 @@ class OutsyncResult {
     required this.deletedLocalChanges,
     required this.seqMap,
     required this.message,
+    this.error,
+    this.errorStackTrace,
   });
 
   Map<String, dynamic> toJson() => {
