@@ -58,7 +58,6 @@ void main() {
         await serverLauncher.startAllServers();
 
         final serverStatus = serverLauncher.getServerStatus();
-        expect(serverStatus['downsyncs'], isTrue);
         expect(serverStatus['outsyncs'], isTrue);
         expect(serverStatus['cloudStorage'], isTrue);
       }

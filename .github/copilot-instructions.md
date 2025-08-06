@@ -12,6 +12,12 @@ This project uses Isar database which requires native library dependencies. When
 # ✅ CORRECT - Use test.sh for proper Isar library setup
 ./test.sh
 
+# ✅ CORRECT - Run tests for specific package
+./test.sh packages/sync_manager
+
+# ✅ CORRECT - Run specific test file
+./test.sh packages/sync_manager test/sync_manager_test.dart
+
 # ✅ CORRECT - Use VS Code tasks that include setup
 # Ctrl+Shift+P → "Tasks: Run Task" → "Run Tests with Setup"
 # Ctrl+Shift+P → "Tasks: Run Task" → "Run Integration Tests"
@@ -35,7 +41,13 @@ dart test
 # Run all tests with setup
 ./test.sh
 
-# Run specific test file
+# Run tests for specific package
+./test.sh packages/sync_manager
+
+# Run specific test file  
+./test.sh packages/sync_manager test/sync_manager_test.dart
+
+# Run integration tests
 ./test.sh test/integration_test.dart
 
 # Use VS Code tasks (recommended in IDE)
