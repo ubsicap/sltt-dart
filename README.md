@@ -6,11 +6,7 @@ A comprehensive mono-repo for offline-first sync systems including core librarie
 
 - **[sltt_core](packages/sltt_core/)** - Core sync system with multi-server architecture and change tracking
 - **flutter_app** - Flutter mobile application (coming soon)
-- **aws_backend** - AWS Lambda backend service (coming soon)
-
-## Examples
-
-- **[sync_manager_demo](examples/sync_manager_demo/)** - Interactive demo and test suite for the core sync system
+- **aws_backend** - AWS Lambda backend service
 
 ## Getting Started
 
@@ -25,8 +21,6 @@ A comprehensive mono-repo for offline-first sync systems including core librarie
    ```bash
    cd packages/sltt_core
    dart pub get
-   cd ../examples/sync_manager_demo
-   dart pub get
    ```
 
 2. Generate code:
@@ -35,30 +29,12 @@ A comprehensive mono-repo for offline-first sync systems including core librarie
    dart run build_runner build
    ```
 
-3. Run the demo:
-   ```bash
-   ./dev.sh demo
-   # or manually:
-   cd examples/sync_manager_demo
-   dart run demo_sync_system.dart
-   ```
-
 ## Development
 
 ### VS Code Setup
 - Open `sltt_dart.code-workspace` for multi-folder development
 - Use F5 to launch configurations for debugging
 - Use Ctrl+Shift+P → "Tasks: Run Task" for common operations
-
-### Development Scripts
-```bash
-./dev.sh setup     # Initial project setup
-./dev.sh demo      # Run interactive demo
-./dev.sh servers   # Start all servers
-./dev.sh test      # Run all tests
-./dev.sh status    # Check server status
-./dev.sh help      # Show all commands
-```
 
 ### Running Tests
 
