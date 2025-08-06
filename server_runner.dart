@@ -10,9 +10,7 @@ void main(List<String> args) async {
     print('Usage: dart bin/server_runner.dart <command> [options]');
     print('Commands:');
     print('  start-all              - Start all three servers');
-    print(
-      '  start <type>           - Start specific server (downsyncs, outsyncs, cloud)',
-    );
+    print('  start <type>           - Start specific server (outsyncs, cloud)');
     print('  stop-all               - Stop all servers');
     print('  stop <type>            - Stop specific server');
     print('  status                 - Show server status');
@@ -46,7 +44,7 @@ void main(List<String> args) async {
       case 'start':
         if (args.length < 2) {
           print('Usage: dart bin/server_runner.dart start <type>');
-          print('Types: downsyncs, outsyncs, cloud');
+          print('Types: outsyncs, cloud');
           return;
         }
 
