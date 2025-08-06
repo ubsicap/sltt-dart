@@ -9,11 +9,9 @@ Future<void> main() async {
     // Test 1: Storage service instantiation
     print('✅ Test 1: Creating storage services...');
     final outsyncsStorage = OutsyncsStorageService.instance;
-    final downsyncsStorage = DownsyncsStorageService.instance;
     final cloudStorage = CloudStorageService.instance;
 
     await outsyncsStorage.initialize();
-    await downsyncsStorage.initialize();
     await cloudStorage.initialize();
     print('   ✅ All storage services initialized successfully');
 
@@ -65,7 +63,6 @@ Future<void> main() async {
     // Test 5: Cleanup
     print('\n✅ Test 5: Cleanup...');
     await outsyncsStorage.close();
-    await downsyncsStorage.close();
     await cloudStorage.close();
     print('   ✅ All storage services closed');
 
@@ -81,7 +78,6 @@ Future<void> main() async {
     // Try to cleanup on error
     try {
       await OutsyncsStorageService.instance.close();
-      await DownsyncsStorageService.instance.close();
       await CloudStorageService.instance.close();
     } catch (_) {
       // Ignore cleanup errors

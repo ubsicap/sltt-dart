@@ -4,29 +4,24 @@ import 'package:test/test.dart';
 void main() {
   group('Integration Tests', () {
     late OutsyncsStorageService outsyncsStorage;
-    late DownsyncsStorageService downsyncsStorage;
     late CloudStorageService cloudStorage;
 
     setUpAll(() async {
       outsyncsStorage = OutsyncsStorageService.instance;
-      downsyncsStorage = DownsyncsStorageService.instance;
       cloudStorage = CloudStorageService.instance;
 
       await outsyncsStorage.initialize();
-      await downsyncsStorage.initialize();
       await cloudStorage.initialize();
     });
 
     tearDownAll(() async {
       await outsyncsStorage.close();
-      await downsyncsStorage.close();
       await cloudStorage.close();
     });
 
     test('storage services initialization', () async {
       // Storage services should be initialized from setUpAll
       expect(outsyncsStorage, isNotNull);
-      expect(downsyncsStorage, isNotNull);
       expect(cloudStorage, isNotNull);
     });
 

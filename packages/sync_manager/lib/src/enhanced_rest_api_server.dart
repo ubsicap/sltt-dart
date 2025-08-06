@@ -2,7 +2,7 @@ import 'package:sltt_core/sltt_core.dart';
 
 import 'shared_storage_service.dart';
 
-enum StorageType { outsyncs, downsyncs, cloudStorage }
+enum StorageType { outsyncs, cloudStorage }
 
 /// Enhanced REST API server using local Isar storage.
 ///
@@ -23,8 +23,6 @@ class EnhancedRestApiServer extends BaseRestApiServer {
     switch (storageType) {
       case StorageType.outsyncs:
         return OutsyncsStorageService.instance;
-      case StorageType.downsyncs:
-        return DownsyncsStorageService.instance;
       case StorageType.cloudStorage:
         return CloudStorageService.instance;
     }

@@ -44,17 +44,13 @@ void main() {
     });
 
     test('server port constants', () {
-      expect(kDownsyncsPort, isA<int>());
       expect(kOutsyncsPort, isA<int>());
       expect(kCloudStoragePort, isA<int>());
 
       // Ports should be different
-      expect(kDownsyncsPort, isNot(equals(kOutsyncsPort)));
-      expect(kDownsyncsPort, isNot(equals(kCloudStoragePort)));
       expect(kOutsyncsPort, isNot(equals(kCloudStoragePort)));
 
       // Ports should be in valid range
-      expect(kDownsyncsPort, greaterThan(1000));
       expect(kOutsyncsPort, greaterThan(1000));
       expect(kCloudStoragePort, greaterThan(1000));
     });
@@ -82,10 +78,6 @@ void main() {
       final outsyncs2 = OutsyncsStorageService.instance;
       expect(identical(outsyncs1, outsyncs2), isTrue);
 
-      final downsyncs1 = DownsyncsStorageService.instance;
-      final downsyncs2 = DownsyncsStorageService.instance;
-      expect(identical(downsyncs1, downsyncs2), isTrue);
-
       final cloud1 = CloudStorageService.instance;
       final cloud2 = CloudStorageService.instance;
       expect(identical(cloud1, cloud2), isTrue);
@@ -93,7 +85,6 @@ void main() {
 
     test('storage types enum', () {
       expect(StorageType.outsyncs, isNotNull);
-      expect(StorageType.downsyncs, isNotNull);
       expect(StorageType.cloudStorage, isNotNull);
 
       // Test that we can create servers with different storage types
@@ -101,17 +92,12 @@ void main() {
         StorageType.outsyncs,
         'Test1',
       );
-      final downsyncsServer = EnhancedRestApiServer(
-        StorageType.downsyncs,
-        'Test2',
-      );
       final cloudServer = EnhancedRestApiServer(
         StorageType.cloudStorage,
-        'Test3',
+        'Test2',
       );
 
       expect(outsyncsServer, isNotNull);
-      expect(downsyncsServer, isNotNull);
       expect(cloudServer, isNotNull);
     });
 
@@ -187,19 +173,16 @@ void main() {
     test('sync status structure', () {
       final syncStatus = SyncStatus(
         outsyncsCount: 10,
-        downsyncsCount: 5,
         cloudCount: 15,
         lastSyncTime: DateTime.now(),
       );
 
       expect(syncStatus.outsyncsCount, equals(10));
-      expect(syncStatus.downsyncsCount, equals(5));
       expect(syncStatus.cloudCount, equals(15));
       expect(syncStatus.lastSyncTime, isA<DateTime>());
 
       final json = syncStatus.toJson();
       expect(json['outsyncsCount'], equals(10));
-      expect(json['downsyncsCount'], equals(5));
       expect(json['cloudCount'], equals(15));
       expect(json['lastSyncTime'], isA<String>());
     });

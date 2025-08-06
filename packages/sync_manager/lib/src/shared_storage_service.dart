@@ -1009,14 +1009,6 @@ class OutsyncsStorageService extends LocalStorageService {
   OutsyncsStorageService._() : super('outsyncs', 'OutsyncsStorage');
 }
 
-class DownsyncsStorageService extends LocalStorageService {
-  static DownsyncsStorageService? _instance;
-  static DownsyncsStorageService get instance =>
-      _instance ??= DownsyncsStorageService._();
-
-  DownsyncsStorageService._() : super('downsyncs', 'DownsyncsStorage');
-}
-
 class CloudStorageService extends LocalStorageService {
   static CloudStorageService? _instance;
   static CloudStorageService get instance =>

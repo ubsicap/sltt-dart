@@ -13,8 +13,6 @@ class SyncManager {
   final Dio _dio = Dio();
   final OutsyncsStorageService _outsyncsStorage =
       OutsyncsStorageService.instance;
-  final DownsyncsStorageService _downsyncsStorage =
-      DownsyncsStorageService.instance;
   final CloudStorageService _cloudStorage = CloudStorageService.instance;
 
   // API endpoints - defaults to AWS dev cloud, can be overridden for testing
@@ -32,7 +30,6 @@ class SyncManager {
     if (_initialized) return;
 
     await _outsyncsStorage.initialize();
-    await _downsyncsStorage.initialize();
     await _cloudStorage.initialize();
 
     _dio.options.headers['Content-Type'] = 'application/json';
@@ -233,25 +230,27 @@ class SyncManager {
               break;
             }
 
-            // Immediately store changes in downsyncs storage for crash recovery
+            // Apply changes directly to state storage without storing in downsyncs
             final newChanges = changesBatch
                 .cast<Map<String, dynamic>>()
                 .toList();
-            final storedChanges = await _downsyncsStorage.createChanges(
-              newChanges,
-            );
-            allNewChanges.addAll(storedChanges.map((c) => c.toJson()).toList());
-            totalChangesForProject += storedChanges.length;
+
+            // Apply changes directly to state storage
+            await _applyChangesToState(newChanges, 'cloud downsyncs');
+
+            allNewChanges.addAll(newChanges);
+            totalChangesForProject += newChanges.length;
 
             // Track the highest sequence number for this project
-            for (final change in storedChanges) {
-              if (change.seq > highestSeqForProject) {
-                highestSeqForProject = change.seq;
+            for (final change in newChanges) {
+              final seq = change['seq'] as int;
+              if (seq > highestSeqForProject) {
+                highestSeqForProject = seq;
               }
             }
 
             print(
-              '[SyncManager] Stored ${storedChanges.length} changes for project $projectId (batch)',
+              '[SyncManager] Applied ${newChanges.length} changes for project $projectId (batch)',
             );
 
             // Update cursor for next iteration
@@ -284,21 +283,6 @@ class SyncManager {
       print(
         '[SyncManager] Downsync completed. Total changes: ${allNewChanges.length}',
       );
-
-      // Apply downsynced changes to state and then delete them (Step 4: changelog_to_state integration)
-      // For downsyncs: changes get incorporated into state and then get deleted from downsyncs
-      if (allNewChanges.isNotEmpty) {
-        await _applyChangesToState(allNewChanges, 'downsyncs');
-
-        // Delete downsynced changes after applying to state
-        final allSeqs = allNewChanges
-            .map((change) => change['seq'] as int)
-            .toList();
-        final deletedCount = await _downsyncsStorage.deleteChanges(allSeqs);
-        print(
-          '[SyncManager] Deleted $deletedCount downsynced changes after applying to state',
-        );
-      }
 
       return DownsyncResult(
         success: true,
@@ -348,7 +332,6 @@ class SyncManager {
   Future<SyncStatus> getSyncStatus() async {
     try {
       final outsyncsCount = await _outsyncsStorage.getChangeCount();
-      final downsyncsCount = await _downsyncsStorage.getChangeCount();
 
       // Try to get cloud storage stats
       int cloudCount = 0;
@@ -364,7 +347,6 @@ class SyncManager {
 
       return SyncStatus(
         outsyncsCount: outsyncsCount,
-        downsyncsCount: downsyncsCount,
         cloudCount: cloudCount,
         lastSyncTime:
             DateTime.now(), // In a real implementation, this would be persisted
@@ -373,7 +355,6 @@ class SyncManager {
       print('[SyncManager] Failed to get sync status: $e');
       return SyncStatus(
         outsyncsCount: 0,
-        downsyncsCount: 0,
         cloudCount: 0,
         lastSyncTime: DateTime.now(),
       );
@@ -419,7 +400,6 @@ class SyncManager {
   Future<void> close() async {
     if (_initialized) {
       await _outsyncsStorage.close();
-      await _downsyncsStorage.close();
       _initialized = false;
       print('[SyncManager] Closed');
     }
@@ -493,20 +473,17 @@ class FullSyncResult {
 
 class SyncStatus {
   final int outsyncsCount;
-  final int downsyncsCount;
   final int cloudCount;
   final DateTime lastSyncTime;
 
   SyncStatus({
     required this.outsyncsCount,
-    required this.downsyncsCount,
     required this.cloudCount,
     required this.lastSyncTime,
   });
 
   Map<String, dynamic> toJson() => {
     'outsyncsCount': outsyncsCount,
-    'downsyncsCount': downsyncsCount,
     'cloudCount': cloudCount,
     'lastSyncTime': lastSyncTime.toIso8601String(),
   };

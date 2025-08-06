@@ -140,8 +140,6 @@ void main(List<String> args) async {
 
 int _getDefaultPort(String serverType) {
   switch (serverType.toLowerCase()) {
-    case 'downsyncs':
-      return kDownsyncsPort;
     case 'outsyncs':
       return kOutsyncsPort;
     case 'cloud':

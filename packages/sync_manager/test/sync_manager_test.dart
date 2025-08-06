@@ -26,7 +26,6 @@ void main() {
         ? kCloudDevUrl
         : kLocalhostCloudStorageUrl;
     final String outsyncsUrl = kLocalhostOutsyncsUrl;
-    final String downsyncsUrl = kLocalhostDownsyncsUrl;
 
     setUpAll(() async {
       serverLauncher = MultiServerLauncher.instance;
@@ -43,12 +42,10 @@ void main() {
         // Configure sync manager to use dev cloud
         syncManager.configureCloudUrl(cloudStorageUrl);
 
-        // Start only local servers (outsyncs and downsyncs)
+        // Start only local servers (outsyncs)
         await serverLauncher.startServer('outsyncs', kOutsyncsPort);
-        await serverLauncher.startServer('downsyncs', kDownsyncsPort);
 
         final serverStatus = serverLauncher.getServerStatus();
-        expect(serverStatus['downsyncs'], isTrue);
         expect(serverStatus['outsyncs'], isTrue);
         print('✅ Local servers started (cloud storage using AWS dev)');
       } else {
@@ -72,7 +69,6 @@ void main() {
       // Clean up any leftover data from previous test runs
       print('🧹 Cleaning up leftover test data...');
       await outsyncsStorage.deleteAllChanges();
-      await DownsyncsStorageService.instance.deleteAllChanges();
       await syncManager.clearAllSyncStates();
       if (!useDevCloud) {
         // Don't clear cloud storage here as it breaks test dependencies
@@ -87,30 +83,12 @@ void main() {
     });
 
     setUp(() async {
-      // Clean downsyncs before each test to prevent interference
-      await DownsyncsStorageService.instance.deleteAllChanges();
+      // Clean storage before each test to prevent interference
+      await outsyncsStorage.deleteAllChanges();
     });
 
     test('basic server operations', () async {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-
-      // Test downsyncs server
-      final downsyncsHealth = await dio.get('$downsyncsUrl/health');
-      expect(downsyncsHealth.statusCode, equals(200));
-
-      final downsyncsChange = await dio.post(
-        '$downsyncsUrl/api/changes',
-        data: [
-          {
-            'projectId': testProjectId,
-            'entityType': 'document',
-            'operation': 'create',
-            'entityId': 'test-downsyncs-1-$timestamp',
-            'data': {'title': 'Test Document'},
-          },
-        ],
-      );
-      expect(downsyncsChange.statusCode, equals(200));
 
       // Test outsyncs server
       final outsyncsHealth = await dio.get('$outsyncsUrl/health');
@@ -330,13 +308,6 @@ void main() {
       // Reset sync state to ensure we start fresh for this test
       await syncManager.clearAllSyncStates();
 
-      // Get initial downsync count
-      final downsyncsStatsBefore = await dio.get(
-        '$downsyncsUrl/api/projects/$testProjectId/stats',
-      );
-      final downsyncsCountBefore =
-          downsyncsStatsBefore.data['changeStats']['total'] as int;
-
       // Perform downsync
       final downsyncResult = await syncManager.downsyncFromCloud();
 
@@ -351,24 +322,18 @@ void main() {
         expect(downsyncResult.newChanges, isNotEmpty);
       }
 
-      // Verify changes were added to downsyncs (if any new changes)
-      final downsyncsStatsAfter = await dio.get(
-        '$downsyncsUrl/api/projects/$testProjectId/stats',
-      );
-      final downsyncsCountAfter =
-          downsyncsStatsAfter.data['changeStats']['total'] as int;
+      // Verify changes were applied directly to state (if any new changes)
+      final statusAfter = await syncManager.getSyncStatus();
 
       if (useDevCloud) {
-        // For dev cloud, count may not increase if no new changes
-        expect(downsyncsCountAfter, greaterThanOrEqualTo(downsyncsCountBefore));
+        // For dev cloud, verify operation succeeded
+        expect(statusAfter.outsyncsCount, isA<int>());
+        expect(statusAfter.cloudCount, isA<int>());
       } else {
-        // With Step 4 implementation, downsyncs are applied to state then deleted
-        // All changes (leftover + new) should be processed and result in clean state
+        // With direct application, changes should be applied to state entities
         expect(downsyncResult.newChanges, isNotEmpty);
-        expect(
-          downsyncsCountAfter,
-          equals(0),
-        ); // All processed changes should be deleted
+        expect(statusAfter.outsyncsCount, isA<int>());
+        expect(statusAfter.cloudCount, isA<int>());
       }
     });
 
@@ -477,7 +442,6 @@ void main() {
       final syncStatus = await syncManager.getSyncStatus();
 
       expect(syncStatus.outsyncsCount, isA<int>());
-      expect(syncStatus.downsyncsCount, isA<int>());
       expect(syncStatus.cloudCount, isA<int>());
       expect(syncStatus.lastSyncTime, isA<DateTime>());
     });

@@ -9,18 +9,10 @@ class MultiServerLauncher {
   MultiServerLauncher._();
 
   EnhancedRestApiServer? _outsyncsServer;
-  EnhancedRestApiServer? _downsyncsServer;
   EnhancedRestApiServer? _cloudStorageServer;
 
   Future<void> startAllServers() async {
     print('[MultiServerLauncher] Starting all servers...');
-
-    // Start downsyncs server on port kDownsyncsPort
-    _downsyncsServer = EnhancedRestApiServer(
-      StorageType.downsyncs,
-      'downsyncs',
-    );
-    await _downsyncsServer!.start(port: kDownsyncsPort);
 
     // Start outsyncs server on port kOutsyncsPort
     _outsyncsServer = EnhancedRestApiServer(StorageType.outsyncs, 'outsyncs');
@@ -38,17 +30,6 @@ class MultiServerLauncher {
 
   Future<void> startServer(String serverType, int port) async {
     switch (serverType.toLowerCase()) {
-      case 'downsyncs':
-        if (_downsyncsServer == null) {
-          _downsyncsServer = EnhancedRestApiServer(
-            StorageType.downsyncs,
-            'downsyncs',
-          );
-          await _downsyncsServer!.start(port: port);
-        } else {
-          print('[MultiServerLauncher] Downsyncs server is already running');
-        }
-        break;
       case 'outsyncs':
         if (_outsyncsServer == null) {
           _outsyncsServer = EnhancedRestApiServer(
@@ -82,11 +63,6 @@ class MultiServerLauncher {
   Future<void> stopAllServers() async {
     print('[MultiServerLauncher] Stopping all servers...');
 
-    if (_downsyncsServer != null) {
-      await _downsyncsServer!.stop();
-      _downsyncsServer = null;
-    }
-
     if (_outsyncsServer != null) {
       await _outsyncsServer!.stop();
       _outsyncsServer = null;
@@ -102,12 +78,6 @@ class MultiServerLauncher {
 
   Future<void> stopServer(String serverType) async {
     switch (serverType.toLowerCase()) {
-      case 'downsyncs':
-        if (_downsyncsServer != null) {
-          await _downsyncsServer!.stop();
-          _downsyncsServer = null;
-        }
-        break;
       case 'outsyncs':
         if (_outsyncsServer != null) {
           await _outsyncsServer!.stop();
@@ -128,7 +98,6 @@ class MultiServerLauncher {
 
   Map<String, bool> getServerStatus() {
     return {
-      'downsyncs': _downsyncsServer?.isRunning ?? false,
       'outsyncs': _outsyncsServer?.isRunning ?? false,
       'cloudStorage': _cloudStorageServer?.isRunning ?? false,
     };
@@ -136,7 +105,6 @@ class MultiServerLauncher {
 
   Map<String, String?> getServerAddresses() {
     return {
-      'downsyncs': _downsyncsServer?.address,
       'outsyncs': _outsyncsServer?.address,
       'cloudStorage': _cloudStorageServer?.address,
     };

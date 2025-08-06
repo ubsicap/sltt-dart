@@ -12,18 +12,15 @@ void markTestSkipped(String reason) {
 void main() {
   group('Root Project Integration Tests', () {
     late OutsyncsStorageService? outsyncsStorage;
-    late DownsyncsStorageService? downsyncsStorage;
     late CloudStorageService? cloudStorage;
     bool isarAvailable = false;
 
     setUpAll(() async {
       try {
         outsyncsStorage = OutsyncsStorageService.instance;
-        downsyncsStorage = DownsyncsStorageService.instance;
         cloudStorage = CloudStorageService.instance;
 
         await outsyncsStorage!.initialize();
-        await downsyncsStorage!.initialize();
         await cloudStorage!.initialize();
 
         isarAvailable = true;
@@ -35,7 +32,6 @@ void main() {
         print('   Skipping database-dependent tests, running basic tests only');
         isarAvailable = false;
         outsyncsStorage = null;
-        downsyncsStorage = null;
         cloudStorage = null;
       }
     });
@@ -43,7 +39,6 @@ void main() {
     tearDownAll(() async {
       if (isarAvailable) {
         await outsyncsStorage?.close();
-        await downsyncsStorage?.close();
         await cloudStorage?.close();
       }
     });
@@ -57,7 +52,6 @@ void main() {
       }
 
       expect(outsyncsStorage, isNotNull);
-      expect(downsyncsStorage, isNotNull);
       expect(cloudStorage, isNotNull);
     });
 
@@ -139,13 +133,10 @@ void main() {
     });
 
     test('server port constants are defined', () {
-      expect(kDownsyncsPort, isA<int>());
       expect(kOutsyncsPort, isA<int>());
       expect(kCloudStoragePort, isA<int>());
 
       // Ports should be different
-      expect(kDownsyncsPort, isNot(equals(kOutsyncsPort)));
-      expect(kDownsyncsPort, isNot(equals(kCloudStoragePort)));
       expect(kOutsyncsPort, isNot(equals(kCloudStoragePort)));
     });
 
