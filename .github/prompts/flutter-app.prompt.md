@@ -18,6 +18,7 @@ Dashboard:
 Entity Browser:
 - Bread-crumb navigation to follow the hierarchy of entities (according to their parentId)
 - nameLocal are most important
+- edit and save buttons
 - entity is at top of page
 - create / update / delete
 
