@@ -199,9 +199,6 @@ dart run bin/server_runner.dart start-all
 # Start outsyncs server (port 8082)
 dart run bin/server_runner.dart start outsyncs
 
-# Start downsyncs server (port 8081)
-dart run bin/server_runner.dart start downsyncs
-
 # Start cloud storage server (port 8083)
 dart run bin/server_runner.dart start cloud
 ```
@@ -280,11 +277,11 @@ GET /api/changes?cursor=100&limit=10
   "changes": [
     {
       "seq": 101,
-      "entityType": "Document",
+      "entityType": "document",
       "operation": "create",
       "entityId": "doc-123",
       "timestamp": "2025-07-26T15:30:00.000Z",
-      "data": {"title": "My Document"}
+      "data": {"title": "My document"}
     }
   ],
   "count": 1,
@@ -315,7 +312,7 @@ GET /api/stats                    # Get change and entity type statistics
 curl -X POST http://localhost:8082/api/changes \
   -H "Content-Type: application/json" \
   -d '{
-    "entityType": "Document",
+    "entityType": "document",
     "operation": "create",
     "entityId": "doc-123",
     "data": {
@@ -330,7 +327,7 @@ curl -X POST http://localhost:8082/api/changes \
 curl -X POST http://localhost:8083/api/changes/sync/0 \
   -H "Content-Type: application/json" \
   -d '[{
-    "entityType": "Document",
+    "entityType": "document",
     "operation": "update",
     "entityId": "doc-123",
     "data": {"title": "Updated Document"}
