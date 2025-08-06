@@ -44,7 +44,7 @@ dart test
 # Run tests for specific package
 ./test.sh packages/sync_manager
 
-# Run specific test file  
+# Run specific test file
 ./test.sh packages/sync_manager test/sync_manager_test.dart
 
 # Run integration tests
