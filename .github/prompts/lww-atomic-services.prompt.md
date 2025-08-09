@@ -3,6 +3,7 @@ TODO:
 - add `noOpFields` string list to change log entry
 - add `outdatedBys` map to change log entry (field name -> cid)
 - add `isChange` string to change log entry (for filtering on changes that are not noOp or outdated)
+- add `model` string for breaking changes and `downsyncs` collection to `queue` database (with `outsyncs` collection)
 
 atomic-lww-algorithm:
 # Atomic Last-Writer-Wins (LWW) Algorithm for Change Log Entries
