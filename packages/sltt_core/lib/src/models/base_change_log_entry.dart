@@ -9,6 +9,7 @@ abstract class BaseChangeLogEntry {
   int seq = -9223372036854775808; // Default to Isar.autoIncrement equivalent
   String projectId; // Project identifier for multi-tenancy
   EntityType entityType; // Normalized entity type
+  /// todo: OperationEnum?
   String operation; // e.g., 'create', 'update', 'delete'
   DateTime changeAt; // When the change was originally made by the client
   String entityId; // UUID or primary key of the entity
@@ -20,6 +21,7 @@ abstract class BaseChangeLogEntry {
   cid; // unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
 
   /// Helper method to decode JSON data
+  /// TODO: use Map<String, dynamic> instead of String for dataJson
   Map<String, dynamic> getData() => jsonDecode(dataJson);
 
   /// Helper method to encode JSON data

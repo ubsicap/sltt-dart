@@ -37,7 +37,7 @@ sltt_core/changeStateAnalysis(change, existingEntityStateFields):
     - `isDuplicateCid`
     - `cloudAt` - in case of duplicate cid went from local -> cloud -> local
 
-- detectDuplicate(change, existingEntityStateFields):
+- getMaybeIsDuplicateCidResult(change, existingEntityStateFields):
     - if the change log entry cid is the same as the existing entity state cid:
         - this is a duplicate.
         - if change.cloudAt
@@ -45,7 +45,7 @@ sltt_core/changeStateAnalysis(change, existingEntityStateFields):
     - ?? if change.outdatedBy has a non-null cid value
              - add each field to outdatedBys list?
 
-- getOperation(change, existingEntityStateFields):
+- calculateOperation(change, existingEntityStateFields):
     - if change.cloudAt has a value then
         - change.operation is the source of truth, no need to change
     - else
@@ -55,7 +55,7 @@ sltt_core/changeStateAnalysis(change, existingEntityStateFields):
             - `operation` is `create`
         - else if existing entity state fields:
             - `operation` is `update`
-- fieldChangesOrNoOps(change, existingEntityStateFields):
+- `getFieldChangesOrNoOps(change, existingEntityStateFields)`:
     - determine which fields are different from the existing entity state fields
         - store those in a `fieldChanges` key/value map,
         - otherwise store them in a `noOpFields` list
