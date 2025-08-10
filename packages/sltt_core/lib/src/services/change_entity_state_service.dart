@@ -3,6 +3,91 @@ import 'dart:convert';
 import 'package:sltt_core/src/models/base_change_log_entry.dart';
 import 'package:sltt_core/src/models/base_entity_state.dart';
 
+class LastWriteWinsResult {
+  final ChangeLogEntry newChangeLogEntry;
+  final BaseEntityState? newEntityState;
+
+  LastWriteWinsResult({required this.newChangeLogEntry, this.newEntityState});
+}
+
+///
+getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+  ChangeLogEntry changeLogEntry,
+  BaseEntityState? entityState,
+) {
+  // Check if the change log entry is a duplicate
+  final duplicateCheck = getMaybeIsDuplicateCidResult(
+    changeLogEntry,
+    entityState,
+  );
+
+  if (duplicateCheck.isDuplicate) {
+    // If it's a duplicate, update cloudAt if available
+    changeLogEntry.cloudAt = duplicateCheck.cloudAt;
+    return;
+  }
+
+  // Get field changes or no-op fields
+  final fieldChangesOrNoOps = getFieldChangesOrNoOps(
+    changeLogEntry,
+    entityState,
+  );
+  final fieldChanges = fieldChangesOrNoOps.fieldChanges;
+  final noOpFields = fieldChangesOrNoOps.noOpFields;
+
+  // Get field updates or outdated fields
+  final fieldUpdatesOrOutdatedBys = getDataAndStateUpdatesOrOutdatedBys(
+    changeLogEntry,
+    entityState,
+    fieldChanges,
+    noOpFields,
+  );
+
+  final changeDataUpdates =
+      fieldUpdatesOrOutdatedBys['changeDataUpdates'] as Map<String, dynamic>;
+  // todo: use instead of BaseEntityState.fromChangeLogEntry?
+  // final stateUpdates =
+  //    fieldUpdatesOrOutdatedBys['stateUpdates'] as Map<String, dynamic>;
+  final outdatedBys = fieldUpdatesOrOutdatedBys['outdatedBys'] as List<String>;
+
+  // Calculate the operation type
+  final operation = calculateOperation(
+    changeLogEntry,
+    entityState,
+    fieldChanges,
+    noOpFields,
+    outdatedBys,
+  );
+
+  final newChangeLogEntry = BaseChangeLogEntry.fromJson({
+    ...changeLogEntry.toJson(),
+    'operation': operation,
+    'outdatedBys': outdatedBys,
+    'noOpFields': noOpFields,
+    'isChange': operation != 'noOp' && operation != 'outdated',
+    'cloudAt': changeLogEntry.cloudAt,
+  });
+
+  newChangeLogEntry.setData(changeDataUpdates);
+
+  // Update the entity state if necessary
+  return LastWriteWinsResult(
+    newChangeLogEntry: newChangeLogEntry,
+    newEntityState: operation != 'noOp' && operation != 'outdated'
+        ? BaseEntityState.fromChangeLogEntry(
+            entityId: newChangeLogEntry.entityId,
+            entityType: newChangeLogEntry.entityType,
+            projectId: newChangeLogEntry.projectId,
+            changeAt: newChangeLogEntry.changeAt,
+            cid: newChangeLogEntry.cid,
+            changeBy: newChangeLogEntry.changeBy,
+            cloudAt: newChangeLogEntry.cloudAt,
+            data: changeDataUpdates,
+          )
+        : null,
+  );
+}
+
 /// Result type for getMaybeIsduplicateCid
 class GetMaybeIsDuplicateCidResult {
   final bool isDuplicate;
@@ -11,22 +96,34 @@ class GetMaybeIsDuplicateCidResult {
   GetMaybeIsDuplicateCidResult({required this.isDuplicate, this.cloudAt});
 }
 
-/// getMaybeIsduplicateCid(changeLogEntry: ChangeLogEntry, baseEntityState: BaseEntityState):
+/// getMaybeIsduplicateCid(changeLogEntry: ChangeLogEntry, entityState: BaseEntityState):
 /// Checks if the given change log entry is a duplicate based on its cid.
 ///
 /// @returns { isDuplicate: boolean, cloudAt?: DateTime }
 GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult(
   ChangeLogEntry changeLogEntry,
-  BaseEntityState baseEntityState,
+  BaseEntityState? entityState,
 ) {
   // Implement the logic to check for duplicate cid
   bool isDuplicate = false;
   DateTime? cloudAt;
 
-  if (baseEntityState.cid == changeLogEntry.cid) {
-    // If the base entity state cid matches the change log entry cid, it's a duplicate
-    isDuplicate = true;
-    cloudAt = baseEntityState.cloudAt;
+  if (entityState == null) {
+    // If no entity state, it's not our duplicate
+    return GetMaybeIsDuplicateCidResult(isDuplicate: false);
+  }
+
+  final entryState = entityState.toJson();
+  final changeLogData = changeLogEntry.getData();
+  final changeLogCid = changeLogEntry.cid;
+
+  // Check if any field in the entity state matches the change log entry cid
+  for (final key in changeLogData.keys) {
+    if (key.endsWith('Cid') && entryState[key] == changeLogCid) {
+      isDuplicate = true;
+      cloudAt = changeLogEntry.cloudAt;
+      break;
+    }
   }
 
   return GetMaybeIsDuplicateCidResult(
@@ -35,12 +132,12 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult(
   );
 }
 
-/// calculateOperation(changeLogEntry: ChangeLogEntry, baseEntityState: BaseEntityState):
+/// calculateOperation(changeLogEntry: ChangeLogEntry, entityState: BaseEntityState):
 /// returns { operation: string } 'noOp', 'outdated', 'create', 'update', or 'delete'
 /// Determines the operation type based on the change log entry and current entity state.
 String calculateOperation(
   ChangeLogEntry changeLogEntry,
-  BaseEntityState? baseEntityState,
+  BaseEntityState? entityState,
   Map<String, dynamic> fieldChanges, // Map of field changes
   List<String> noOpFields, // List of fields that are no-ops
   List<String> outdatedBys, // List of fields that are outdated
@@ -48,7 +145,7 @@ String calculateOperation(
   final changeData = changeLogEntry.getData();
 
   // If the base entity state is null, we assume it's a create operation
-  if (baseEntityState == null) {
+  if (entityState == null) {
     return 'create';
   }
 
@@ -83,19 +180,29 @@ String stableStringify(dynamic value) {
   }
 }
 
-/// getFieldChangesOrNoOps(changeLogEntry: ChangeLogEntry, baseEntityState: BaseEntityState):
+class GetFieldChangesOrNoOpResult {
+  final Map<String, dynamic> fieldChanges;
+  final List<String> noOpFields;
+
+  GetFieldChangesOrNoOpResult({
+    required this.fieldChanges,
+    required this.noOpFields,
+  });
+}
+
+/// getFieldChangesOrNoOps(changeLogEntry: ChangeLogEntry, entityState: BaseEntityState):
 /// returns { fieldChanges: Map<String, dynamic>, noOpFields: List<String> }
-Map<String, dynamic> getFieldChangesOrNoOps(
+GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
   ChangeLogEntry changeLogEntry,
-  BaseEntityState? baseEntityState,
+  BaseEntityState? entityState,
 ) {
   final changeData = changeLogEntry.getData();
   final fieldChanges = <String, dynamic>{};
   final noOpFields = <String>[];
   final incomingData = changeData['data'] as Map<String, dynamic>;
 
-  if (baseEntityState != null) {
-    final existingData = baseEntityState.toJson();
+  if (entityState != null) {
+    final existingData = entityState.toJson();
 
     incomingData.forEach((field, value) {
       if (stableStringify(existingData[field]) != stableStringify(value)) {
@@ -109,22 +216,25 @@ Map<String, dynamic> getFieldChangesOrNoOps(
     fieldChanges.addAll(incomingData);
   }
 
-  return {'fieldChanges': fieldChanges, 'noOpFields': noOpFields};
+  return GetFieldChangesOrNoOpResult(
+    fieldChanges: fieldChanges,
+    noOpFields: noOpFields,
+  );
 }
 
-/// fieldUpdatesOrOutdatedBys(changeLogEntry: ChangeLogEntry, baseEntityState: BaseEntityState, fieldChanges):
+/// fieldUpdatesOrOutdatedBys(changeLogEntry: ChangeLogEntry, entityState: BaseEntityState, fieldChanges):
 /// returns { fieldUpdates: Map<String, dynamic>, outdatedBys: List<String> }
-Map<String, dynamic> fieldUpdatesOrOutdatedBys(
+Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
   ChangeLogEntry changeLogEntry,
-  BaseEntityState? baseEntityState,
+  BaseEntityState? entityState,
   Map<String, dynamic> fieldChanges,
   List<String> noOpFields, // List of fields that are no-ops
 ) {
   final fieldUpdates = <String, dynamic>{};
   final outdatedBys = <String>[];
 
-  if (baseEntityState != null) {
-    final existingData = baseEntityState.toJson();
+  if (entityState != null) {
+    final existingData = entityState.toJson();
 
     fieldChanges.forEach((field, value) {
       final existingFieldChangeAt =
@@ -140,11 +250,26 @@ Map<String, dynamic> fieldUpdatesOrOutdatedBys(
   }
 
   return {
-    'fieldUpdates': fieldUpdates,
+    'stateUpdates': {
+      ...fieldUpdates,
+      ...fieldUpdates.map(
+        (key, value) => MapEntry('${key}ChangeAt', changeLogEntry.changeAt),
+      ),
+      ...fieldUpdates.map(
+        (key, value) => MapEntry('${key}Cid', changeLogEntry.cid),
+      ),
+      ...fieldUpdates.map(
+        (key, value) => MapEntry('${key}ChangeBy', changeLogEntry.changeBy),
+      ),
+      ...fieldUpdates.map(
+        (key, value) => MapEntry('${key}CloudAt', changeLogEntry.cloudAt),
+      ),
+    },
+    'changeDataUpdates': fieldUpdates,
     'outdatedBys': outdatedBys,
     'operation': calculateOperation(
       changeLogEntry,
-      baseEntityState,
+      entityState,
       fieldChanges,
       noOpFields,
       outdatedBys,

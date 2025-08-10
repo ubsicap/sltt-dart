@@ -3,15 +3,15 @@ TODO:
 - add `noOpFields` string list to change log entry
 - add `outdatedBys` map to change log entry (field name -> cid)
 - add `isChange` string to change log entry (for filtering on changes that are not noOp or outdated)
+- add `cloudAt` to each entity state field (to track when the change was applied to the cloud)
 - add `model` string for breaking changes and `downsyncs` collection to `queue` database (with `outsyncs` collection)
 Question: should we store change log and state as map string, dynamic to preserve any data from apps with newer data?
 
 
 atomic-lww-algorithm:
 # Atomic Last-Writer-Wins (LWW) Algorithm for Change Log Entries
-- call `changeLogEntryToMap(ChangeLogEntry)`
-- call `entityState<>ToMap(entityState)?
-- call `changeStateAnalysis(change, existingEntityStateFields)`
+applyAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState()
+- call `getMaybeIsDuplicateCidResult(changeLogEntry, entityState)`
 - if `isDuplicateCid` - set `cloudAt` if exists, otherwise don't store change log entry or update entity state
 - else if `fieldUpdates` are empty and `noOpFields` are present:
     - set `operation` to `noOp`

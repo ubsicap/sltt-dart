@@ -102,7 +102,7 @@ abstract class BaseChangeLogEntry {
     };
   }
 
-  static BaseChangeLogEntry fromJson(Map<String, dynamic> json) {
+  static ChangeLogEntry fromJson(Map<String, dynamic> json) {
     final entry = ChangeLogEntry(
       projectId: json['projectId'] as String,
       entityType: EntityType.fromString(json['entityType'] as String),
