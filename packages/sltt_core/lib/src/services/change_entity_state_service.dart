@@ -4,7 +4,7 @@ import 'package:sltt_core/src/models/base_change_log_entry.dart';
 import 'package:sltt_core/src/models/base_entity_state.dart';
 
 class LastWriteWinsResult {
-  final ChangeLogEntry newChangeLogEntry;
+  final BaseChangeLogEntry newChangeLogEntry;
   final BaseEntityState? newEntityState;
 
   LastWriteWinsResult({required this.newChangeLogEntry, this.newEntityState});
@@ -62,13 +62,11 @@ getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
   final newChangeLogEntry = BaseChangeLogEntry.fromJson({
     ...changeLogEntry.toJson(),
     'operation': operation,
-    'outdatedBys': outdatedBys,
-    'noOpFields': noOpFields,
-    'isChange': operation != 'noOp' && operation != 'outdated',
+    'operationInfo': {'outdatedBys': outdatedBys, 'noOpFields': noOpFields},
+    'stateChanged': operation != 'noOp' && operation != 'outdated',
+    'data': changeDataUpdates,
     'cloudAt': changeLogEntry.cloudAt,
   });
-
-  newChangeLogEntry.setData(changeDataUpdates);
 
   // Update the entity state if necessary
   return LastWriteWinsResult(
@@ -114,7 +112,7 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult(
   }
 
   final entryState = entityState.toJson();
-  final changeLogData = changeLogEntry.getData();
+  final changeLogData = changeLogEntry.data;
   final changeLogCid = changeLogEntry.cid;
 
   // Check if any field in the entity state matches the change log entry cid
@@ -142,7 +140,7 @@ String calculateOperation(
   List<String> noOpFields, // List of fields that are no-ops
   List<String> outdatedBys, // List of fields that are outdated
 ) {
-  final changeData = changeLogEntry.getData();
+  final changeData = changeLogEntry.data;
 
   // If the base entity state is null, we assume it's a create operation
   if (entityState == null) {
@@ -196,7 +194,7 @@ GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
   ChangeLogEntry changeLogEntry,
   BaseEntityState? entityState,
 ) {
-  final changeData = changeLogEntry.getData();
+  final changeData = changeLogEntry.data;
   final fieldChanges = <String, dynamic>{};
   final noOpFields = <String>[];
   final incomingData = changeData['data'] as Map<String, dynamic>;
