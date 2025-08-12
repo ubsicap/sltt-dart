@@ -2,27 +2,47 @@ import 'dart:math';
 
 import 'entity_type.dart';
 
-abstract class HasSeq {
-  int? get seq;
+/// implementations should provide this info
+abstract class DbResponsibilities {
+  /// used for sorting changes in a database
+  int get seq;
+
+  /// The type of operation being performed
+  String get operation;
+
+  /// Additional metadata about the operation
+  /// the shape varies by operation type
+  Map<String, dynamic> get operationInfo;
+
+  /// Indicates if the state of the entity has changed
+  bool get stateChanged;
+
+  /// The unique ID for this change log entry
+  /// added by cloud storage server
+  DateTime? get cloudAt;
 }
 
 /// Abstract base class for ChangeLogEntry without Isar dependencies
 /// Can be used by backend services that don't need Isar
 /// implementations should provide their own `seq` handling
-abstract class BaseChangeLogEntry implements HasSeq {
+abstract class BaseChangeLogEntry implements DbResponsibilities {
   String
   cid; // unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random} from generateCid()
   String projectId; // Project identifier
   EntityType entityType; // Normalized entity type
-  String
-  operation; // e.g., 'create', 'update', 'delete', 'noOp', 'outdated', 'error'
-  Map<String, dynamic> operationInfo = {}; // Additional operation metadata
+  @override
+  String operation; // e.g., 'create', 'update', 'delete', 'noOp', 'outdated', 'error'
+  @override
+  Map<String, dynamic> operationInfo; // Additional operation metadata
+  @override
+  bool stateChanged; // Indicates if the state of the entity has changed
   DateTime changeAt; // When the change was originally made by the client
   String entityId; // UUID or primary key of the entity
   Map<String, dynamic> data;
   int? dataRev = 1; // data model revision for compatibility
 
   /// the payload of the change
+  @override
   DateTime? cloudAt; // When the cloud storage received this change (optional)
   String changeBy; // memberId who made the change
   int? version = 1; // change log schema version for compatibility
@@ -33,6 +53,7 @@ abstract class BaseChangeLogEntry implements HasSeq {
     required this.projectId,
     required this.entityType,
     required this.operation,
+    required this.stateChanged,
     required this.operationInfo,
     required this.changeAt,
     required this.entityId,
@@ -82,6 +103,7 @@ abstract class BaseChangeLogEntry implements HasSeq {
       operation: readField(json, 'operation') as String,
       operationInfo:
           readField(json, 'operationInfo') as Map<String, dynamic>? ?? {},
+      stateChanged: readField(json, 'stateChanged') as bool? ?? false,
       changeAt: DateTime.parse(readField(json, 'changeAt') as String),
       entityId: readField(json, 'entityId') as String,
       data: readField(json, 'data') as Map<String, dynamic>? ?? {},
@@ -103,7 +125,7 @@ abstract class BaseChangeLogEntry implements HasSeq {
 /// Used internally by factory methods and can be used by backend services
 class ChangeLogEntry extends BaseChangeLogEntry {
   @override
-  int? get seq => DateTime.now().millisecondsSinceEpoch; // override to provide ordering in a db
+  int get seq => DateTime.now().millisecondsSinceEpoch; // override to provide ordering in a db
 
   ChangeLogEntry({
     required super.projectId,
@@ -113,6 +135,7 @@ class ChangeLogEntry extends BaseChangeLogEntry {
     required super.changeAt,
     required super.entityId,
     required super.data,
+    required super.stateChanged,
     super.dataRev,
     super.cloudAt,
     required super.changeBy,
