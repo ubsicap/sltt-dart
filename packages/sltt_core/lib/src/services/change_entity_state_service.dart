@@ -49,15 +49,11 @@ getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
   // final stateUpdates =
   //    fieldUpdatesOrOutdatedBys['stateUpdates'] as Map<String, dynamic>;
   final outdatedBys = fieldUpdatesOrOutdatedBys['outdatedBys'] as List<String>;
+  final stateUpdates =
+      fieldUpdatesOrOutdatedBys['stateUpdates'] as Map<String, dynamic>;
 
   // Calculate the operation type
-  final operation = calculateOperation(
-    changeLogEntry,
-    entityState,
-    fieldChanges,
-    noOpFields,
-    outdatedBys,
-  );
+  final operation = fieldUpdatesOrOutdatedBys['operation'] as String;
 
   final newChangeLogEntry = BaseChangeLogEntry.fromJson({
     ...changeLogEntry.toJson(),
