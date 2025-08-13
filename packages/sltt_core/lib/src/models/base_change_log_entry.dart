@@ -74,22 +74,15 @@ abstract class BaseChangeLogEntry implements DbResponsibilities {
   });
 
   factory BaseChangeLogEntry.fromJson(Map<String, dynamic> json) {
-    final change = _$BaseChangeLogEntryFromJson(json);
-
-    // establish known fields
-    // (By default nullable fields are included)
-    final knownFields = change.toJson().keys.toSet();
-    final unknownFields = Map<String, dynamic>.fromEntries(
-      json.entries.where((entry) => !knownFields.contains(entry.key)),
+    final change = deserializeWithUnknownFieldData(
+      _$BaseChangeLogEntryFromJson,
+      json,
     );
-    // preserve unknown fields
-    change.unknown = unknownFields;
     return change;
   }
 
   Map<String, dynamic> toJson() {
-    final json = _$BaseChangeLogEntryToJson(this);
-    json.addAll(unknown); // Re-include unknown fields
+    final json = serializeWithUnknownFieldData(this);
     return json;
   }
 }
@@ -148,6 +141,28 @@ ChangeLogOperation _operationFromString(String value) {
     default:
       return ChangeLogOperation.error;
   }
+}
+
+Map<String, dynamic> serializeWithUnknownFieldData(BaseChangeLogEntry entry) {
+  final json = entry.toJson();
+  json.addAll(entry.unknown);
+  return json;
+}
+
+BaseChangeLogEntry deserializeWithUnknownFieldData(
+  BaseChangeLogEntry Function(Map<String, dynamic> json) fromJson,
+  Map<String, dynamic> json,
+) {
+  final entry = fromJson(json);
+  // establish known fields
+  // (By default nullable fields are included)
+  final knownFields = entry.toJson().keys.toSet();
+  final unknownFields = Map<String, dynamic>.fromEntries(
+    json.entries.where((entry) => !knownFields.contains(entry.key)),
+  );
+  // preserve unknown fields
+  entry.unknown = unknownFields;
+  return entry;
 }
 
 /// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
