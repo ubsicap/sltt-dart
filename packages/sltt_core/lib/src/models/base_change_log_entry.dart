@@ -1,6 +1,10 @@
 import 'dart:math';
 
+import 'package:json_annotation/json_annotation.dart';
+
 import 'entity_type.dart';
+
+part 'base_change_log_entry.g.dart';
 
 /// implementations should provide this info
 abstract class DbResponsibilities {
@@ -25,6 +29,7 @@ abstract class DbResponsibilities {
 /// Abstract base class for ChangeLogEntry without Isar dependencies
 /// Can be used by backend services that don't need Isar
 /// implementations should provide their own `seq` handling
+@JsonSerializable()
 abstract class BaseChangeLogEntry implements DbResponsibilities {
   String
   cid; // unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random} from generateCid()
@@ -47,6 +52,8 @@ abstract class BaseChangeLogEntry implements DbResponsibilities {
   String changeBy; // memberId who made the change
   int? version = 1; // change log schema version for compatibility
   /// any fields not read from json are put here for future field migration
+  /// This will hold any unmapped fields
+  @JsonKey(includeFromJson: true, includeToJson: true)
   Map<String, dynamic> unknown = {};
 
   BaseChangeLogEntry({
@@ -66,58 +73,36 @@ abstract class BaseChangeLogEntry implements DbResponsibilities {
     required this.unknown,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'projectId': projectId,
-      'entityType': entityType.value,
-      'operation': operation,
-      'operationInfo': operationInfo,
-      'changeAt': changeAt.toUtc().toIso8601String(),
-      'entityId': entityId,
-      'data': data,
-      'dataRev': dataRev,
-      'cloudAt': cloudAt?.toIso8601String(),
-      'changeBy': changeBy,
-      'cid': cid,
-      'version': version,
-      'unknown': unknown,
-    };
-  }
+  factory BaseChangeLogEntry.fromJson(Map<String, dynamic> json) {
+    final change = _$BaseChangeLogEntryFromJson(json);
 
-  static BaseChangeLogEntry fromJson(Map<String, dynamic> json) {
-    // any fields not read from json should be put in unknown
-    // this allows for future compatibility without breaking changes
-    final usedFields = <String>{};
-
-    // track all fields that are used
-    dynamic readField(Map<String, dynamic> json, String field) {
-      usedFields.add(field);
-      return json[field];
-    }
-
-    final entry = ChangeLogEntry(
-      projectId: readField(json, 'projectId') as String,
-      entityType: EntityType.fromString(
-        readField(json, 'entityType') as String,
-      ),
-      operation: readField(json, 'operation') as String,
-      operationInfo:
-          readField(json, 'operationInfo') as Map<String, dynamic>? ?? {},
-      stateChanged: readField(json, 'stateChanged') as bool? ?? false,
-      changeAt: DateTime.parse(readField(json, 'changeAt') as String),
-      entityId: readField(json, 'entityId') as String,
-      data: readField(json, 'data') as Map<String, dynamic>? ?? {},
-      dataRev: readField(json, 'dataRev') as int?,
-      cloudAt: readField(json, 'cloudAt') != null
-          ? DateTime.parse(readField(json, 'cloudAt') as String)
-          : null,
-      changeBy: readField(json, 'changeBy') as String? ?? '',
-      cid: readField(json, 'cid') as String? ?? generateCid(),
-      version: readField(json, 'version') as int?,
-      unknown: getUnknownFields(json, usedFields),
+    // establish known fields
+    final baseChangeLogEntry = ChangeLogEntry(
+      changeAt: DateTime.now(),
+      entityId: '',
+      projectId: '',
+      entityType: EntityType.project,
+      operation: '',
+      stateChanged: false,
+      operationInfo: {},
+      data: {},
+      changeBy: '',
+      cid: '',
     );
 
-    return entry;
+    final knownFields = baseChangeLogEntry.toJson().keys.toSet();
+    final unknownFields = Map<String, dynamic>.fromEntries(
+      json.entries.where((entry) => !knownFields.contains(entry.key)),
+    );
+    // preserve unknown fields
+    change.unknown = unknownFields;
+    return change;
+  }
+
+  Map<String, dynamic> toJson() {
+    final json = _$BaseChangeLogEntryToJson(this);
+    json.addAll(unknown); // Re-include unknown fields
+    return json;
   }
 }
 
