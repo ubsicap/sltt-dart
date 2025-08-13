@@ -77,20 +77,8 @@ abstract class BaseChangeLogEntry implements DbResponsibilities {
     final change = _$BaseChangeLogEntryFromJson(json);
 
     // establish known fields
-    final baseChangeLogEntry = ChangeLogEntry(
-      changeAt: DateTime.now(),
-      entityId: '',
-      projectId: '',
-      entityType: EntityType.project,
-      operation: '',
-      stateChanged: false,
-      operationInfo: {},
-      data: {},
-      changeBy: '',
-      cid: '',
-    );
-
-    final knownFields = baseChangeLogEntry.toJson().keys.toSet();
+    // (By default nullable fields are included)
+    final knownFields = change.toJson().keys.toSet();
     final unknownFields = Map<String, dynamic>.fromEntries(
       json.entries.where((entry) => !knownFields.contains(entry.key)),
     );
