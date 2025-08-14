@@ -2,35 +2,16 @@ import 'dart:math';
 
 import 'package:json_annotation/json_annotation.dart';
 
+import '../services/json_serialization_service.dart';
 import 'entity_type.dart';
 
 part 'base_change_log_entry.g.dart';
-
-/// implementations should provide this info
-abstract class DbResponsibilities {
-  /// used for sorting changes in a database
-  int get seq;
-
-  /// The type of operation being performed
-  String get operation;
-
-  /// Additional metadata about the operation
-  /// the shape varies by operation type
-  Map<String, dynamic> get operationInfo;
-
-  /// Indicates if the state of the entity has changed
-  bool get stateChanged;
-
-  /// The unique ID for this change log entry
-  /// added by cloud storage server
-  DateTime? get cloudAt;
-}
 
 /// Abstract base class for ChangeLogEntry without Isar dependencies
 /// Can be used by backend services that don't need Isar
 /// implementations should provide their own `seq` handling
 @JsonSerializable()
-abstract class BaseChangeLogEntry implements DbResponsibilities {
+abstract class BaseChangeLogEntry with DbResponsibilities, HasUnknownField {
   String
   cid; // unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random} from generateCid()
   String projectId; // Project identifier
@@ -53,6 +34,7 @@ abstract class BaseChangeLogEntry implements DbResponsibilities {
   int? version = 1; // change log schema version for compatibility
   /// any fields not read from json are put here for future field migration
   /// This will hold any unmapped fields
+  @override
   @JsonKey(includeFromJson: true, includeToJson: true)
   Map<String, dynamic> unknown = {};
 
@@ -81,10 +63,31 @@ abstract class BaseChangeLogEntry implements DbResponsibilities {
     return change;
   }
 
+  @override
   Map<String, dynamic> toJson() {
     final json = serializeWithUnknownFieldData(this);
     return json;
   }
+}
+
+/// implementations should provide this info
+mixin DbResponsibilities {
+  /// used for sorting changes in a database
+  int get seq;
+
+  /// The type of operation being performed
+  String get operation;
+
+  /// Additional metadata about the operation
+  /// the shape varies by operation type
+  Map<String, dynamic> get operationInfo;
+
+  /// Indicates if the state of the entity has changed
+  bool get stateChanged;
+
+  /// The unique ID for this change log entry
+  /// added by cloud storage server
+  DateTime? get cloudAt;
 }
 
 /// Concrete implementation of BaseChangeLogEntry for cases where we need to instantiate it directly
@@ -132,28 +135,6 @@ ChangeLogOperation _operationFromString(String value) {
     default:
       return ChangeLogOperation.error;
   }
-}
-
-Map<String, dynamic> serializeWithUnknownFieldData(BaseChangeLogEntry entry) {
-  final json = entry.toJson();
-  json.addAll(entry.unknown);
-  return json;
-}
-
-BaseChangeLogEntry deserializeWithUnknownFieldData(
-  BaseChangeLogEntry Function(Map<String, dynamic> json) fromJson,
-  Map<String, dynamic> json,
-) {
-  final entry = fromJson(json);
-  // establish known fields
-  // (By default nullable fields are included)
-  final knownFields = entry.toJson().keys.toSet();
-  final unknownFields = Map<String, dynamic>.fromEntries(
-    json.entries.where((entry) => !knownFields.contains(entry.key)),
-  );
-  // preserve unknown fields
-  entry.unknown = unknownFields;
-  return entry;
 }
 
 /// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
