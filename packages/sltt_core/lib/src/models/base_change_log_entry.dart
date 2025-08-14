@@ -41,14 +41,14 @@ abstract class BaseChangeLogEntry implements DbResponsibilities {
   Map<String, dynamic> operationInfo; // Additional operation metadata
   @override
   bool stateChanged; // Indicates if the state of the entity has changed
-  DateTime changeAt; // When the change was originally made by the client
+  DateTime changeAt; // UTC when the change was originally made by the client
   String entityId; // UUID or primary key of the entity
   Map<String, dynamic> data;
   int? dataRev = 1; // data model revision for compatibility
 
   /// the payload of the change
   @override
-  DateTime? cloudAt; // When the cloud storage received this change (optional)
+  DateTime? cloudAt; // UTC When the cloud storage received this change (optional)
   String changeBy; // memberId who made the change
   int? version = 1; // change log schema version for compatibility
   /// any fields not read from json are put here for future field migration
@@ -109,15 +109,6 @@ class ChangeLogEntry extends BaseChangeLogEntry {
     super.version,
     super.unknown = const {},
   });
-}
-
-Map<String, dynamic> getUnknownFields(
-  Map<String, dynamic> json,
-  Set<String> usedFields,
-) {
-  return Map.fromEntries(
-    json.entries.where((entry) => !usedFields.contains(entry.key)),
-  );
 }
 
 /// operation enum
