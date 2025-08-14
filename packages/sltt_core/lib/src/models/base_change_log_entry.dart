@@ -25,13 +25,13 @@ abstract class BaseChangeLogEntry with DbResponsibilities, HasUnknownField {
   DateTime changeAt; // UTC when the change was originally made by the client
   String entityId; // UUID or primary key of the entity
   Map<String, dynamic> data;
-  int? dataRev = 1; // data model revision for compatibility
+  int? dataRev = 0; // data model revision for compatibility
 
   /// the payload of the change
   @override
   DateTime? cloudAt; // UTC When the cloud storage received this change (optional)
   String changeBy; // memberId who made the change
-  int? version = 1; // change log schema version for compatibility
+  int? version = 0; // change log schema version for compatibility
   /// any fields not read from json are put here for future field migration
   /// This will hold any unmapped fields
   @override

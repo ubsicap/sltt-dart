@@ -1,254 +1,81 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'entity_type.dart';
 
 /// Base class for entity state storage with common metadata
 /// This provides the core state schema common across all entity types
 /// Backend-agnostic - no database-specific dependencies
-class BaseEntityState {
-  /// Database ID (implementation-specific)
-  int? id;
-
+abstract class BaseEntityState {
   /// Primary key - entityId with entity type abbreviation
   late String entityId;
 
   /// Immutable - entity type enum
   late EntityType entityType;
 
+  /// Latest change timestamp
+  DateTime? change_changeAt;
+
+  /// First UTC change timestamp
+  DateTime? change_changeAt_orig_;
+
+  String change_cid = ''; // Latest change ID
+  String change_cid_orig_ = ''; // First change ID
+
+  DateTime? change_cloudAt; // Latest cloud timestamp
+  DateTime? change_cloudAt_orig_; // First UTC cloud timestamp
+
+  String change_changeBy = ''; // Latest change author
+  String change_changeBy_orig_ = ''; // First change author
+
+  int? change_dataRev = 0;
+
   /// Mutable fields with conflict resolution support
-  String? rank; // Used to sort in parent
+  String? data_rank; // Used to sort in parent
 
-  bool deleted = false; // Deletion status
+  bool data_deleted = false; // Deletion status
 
-  String parentId = ''; // Points to parent entity
+  String data_parentId = ''; // Points to parent entity
 
-  String projectId = ''; // Current project ID
-
-  DateTime? changeAt; // Latest change timestamp
-
-  String cid = ''; // Latest change ID
-
-  DateTime? cloudAt; // Latest cloud timestamp
-
-  String changeBy = ''; // Latest change author
-
+  String data_projectId = ''; // Current project ID
   /// Original (first) values for tracking entity creation
-  String origProjectId = ''; // Original project ID
-
-  DateTime? origChangeAt; // First change timestamp
-
-  String origChangeBy = ''; // First change author
-
-  String origCid = ''; // First change ID
-
-  DateTime? origCloudAt; // First cloud timestamp
+  String data_projectId_orig_ = ''; // Original project ID
 
   /// Change tracking fields for conflict resolution
   /// Each mutable field has corresponding changeAt, cid, and changeBy fields
 
   // rank field tracking
-  DateTime? rankChangeAt;
-  String rankCid = '';
-  String rankChangeBy = '';
+  DateTime? data_rank_changeAt_;
+  String data_rank_cid = '';
+  String data_rank_changeBy_ = '';
 
   // deleted field tracking
-  DateTime? deletedChangeAt;
-  String deletedCid = '';
-  String deletedChangeBy = '';
+  DateTime? data_deleted_changeAt_;
+  String data_deleted_cid = '';
+  String data_deleted_changeBy_ = '';
 
   // parentId field tracking
-  DateTime? parentIdChangeAt;
-  String parentIdCid = '';
-  String parentIdChangeBy = '';
+  DateTime? data_parentId_changeAt_;
+  String data_parentId_cid = '';
+  String data_parentId_changeBy_ = '';
 
   // projectId field tracking
-  DateTime? projectIdChangeAt;
-  String projectIdCid = '';
-  String projectIdChangeBy = '';
+  DateTime? data_projectId_changeAt_;
+  String data_projectId_cid = '';
+  String data_projectId_changeBy_ = '';
 
   BaseEntityState();
+}
 
-  /// Factory method to create BaseEntityState from change log entry
-  factory BaseEntityState.fromChangeLogEntry({
-    required String entityId,
-    required EntityType entityType,
-    required String projectId,
-    required DateTime changeAt,
-    required String cid,
-    required String changeBy,
-    DateTime? cloudAt,
-    Map<String, dynamic> data = const {},
-  }) {
-    final state = BaseEntityState()
-      ..entityId = entityId
-      ..entityType = entityType
-      ..projectId = projectId
-      ..changeAt = changeAt
-      ..cid = cid
-      ..changeBy = changeBy
-      ..cloudAt = cloudAt
-      ..origProjectId = projectId
-      ..origChangeAt = changeAt
-      ..origChangeBy = changeBy
-      ..origCid = cid
-      ..origCloudAt = cloudAt;
+mixin CoreEntityMetaData {
+  String get entityId;
+  EntityType get entityType;
+}
 
-    // Set initial change tracking for all fields
-    state
-      ..projectIdChangeAt = changeAt
-      ..projectIdCid = cid
-      ..projectIdChangeBy = changeBy;
+mixin CoreEntityDataFields {}
 
-    // Apply data from change log entry
-    if (data.containsKey('rank')) {
-      state.rank = data['rank']?.toString();
-      state.rankChangeAt = changeAt;
-      state.rankCid = cid;
-      state.rankChangeBy = changeBy;
-    }
-
-    if (data.containsKey('deleted')) {
-      state.deleted = data['deleted'] == true;
-      state.deletedChangeAt = changeAt;
-      state.deletedCid = cid;
-      state.deletedChangeBy = changeBy;
-    }
-
-    if (data.containsKey('parentId')) {
-      state.parentId = data['parentId']?.toString() ?? '';
-      state.parentIdChangeAt = changeAt;
-      state.parentIdCid = cid;
-      state.parentIdChangeBy = changeBy;
-    }
-
-    return state;
-  }
-
-  /// Update state from change log entry with conflict resolution
-  void updateFromChangeLogEntry({
-    required DateTime changeAt,
-    required String cid,
-    required String changeBy,
-    DateTime? cloudAt,
-    required Map<String, dynamic> data,
-  }) {
-    // Update latest change metadata
-    if (this.changeAt == null || changeAt.isAfter(this.changeAt!)) {
-      this.changeAt = changeAt;
-      this.cid = cid;
-      this.changeBy = changeBy;
-      this.cloudAt = cloudAt;
-    }
-
-    // Update individual fields with conflict resolution
-    if (data.containsKey('rank')) {
-      _updateFieldIfNewer(
-        'rank',
-        data['rank']?.toString(),
-        changeAt,
-        cid,
-        changeBy,
-      );
-    }
-    if (data.containsKey('deleted')) {
-      _updateFieldIfNewer(
-        'deleted',
-        data['deleted'] == true,
-        changeAt,
-        cid,
-        changeBy,
-      );
-    }
-    if (data.containsKey('parentId')) {
-      _updateFieldIfNewer(
-        'parentId',
-        data['parentId']?.toString() ?? '',
-        changeAt,
-        cid,
-        changeBy,
-      );
-    }
-    if (data.containsKey('projectId')) {
-      _updateFieldIfNewer(
-        'projectId',
-        data['projectId']?.toString() ?? projectId,
-        changeAt,
-        cid,
-        changeBy,
-      );
-    }
-  }
-
-  /// Update a field only if the change is newer than the current field's change
-  void _updateFieldIfNewer(
-    String fieldName,
-    dynamic value,
-    DateTime changeAt,
-    String cid,
-    String changeBy,
-  ) {
-    DateTime? currentChangeAt;
-    switch (fieldName) {
-      case 'rank':
-        currentChangeAt = rankChangeAt;
-        break;
-      case 'deleted':
-        currentChangeAt = deletedChangeAt;
-        break;
-      case 'parentId':
-        currentChangeAt = parentIdChangeAt;
-        break;
-      case 'projectId':
-        currentChangeAt = projectIdChangeAt;
-        break;
-    }
-
-    if (currentChangeAt == null || changeAt.isAfter(currentChangeAt)) {
-      switch (fieldName) {
-        case 'rank':
-          rank = value?.toString();
-          rankChangeAt = changeAt;
-          rankCid = cid;
-          rankChangeBy = changeBy;
-          break;
-        case 'deleted':
-          deleted = value == true;
-          deletedChangeAt = changeAt;
-          deletedCid = cid;
-          deletedChangeBy = changeBy;
-          break;
-        case 'parentId':
-          parentId = value?.toString() ?? '';
-          parentIdChangeAt = changeAt;
-          parentIdCid = cid;
-          parentIdChangeBy = changeBy;
-          break;
-        case 'projectId':
-          projectId = value?.toString() ?? projectId;
-          projectIdChangeAt = changeAt;
-          projectIdCid = cid;
-          projectIdChangeBy = changeBy;
-          break;
-      }
-    }
-  }
-
-  /// Convert to JSON representation
-  Map<String, dynamic> toJson() {
-    return {
-      'entityId': entityId,
-      'entityType': entityType.value,
-      'rank': rank,
-      'deleted': deleted,
-      'parentId': parentId,
-      'projectId': projectId,
-      'changeAt': changeAt?.toIso8601String(),
-      'cid': cid,
-      'cloudAt': cloudAt?.toIso8601String(),
-      'changeBy': changeBy,
-      'origProjectId': origProjectId,
-      'origChangeAt': origChangeAt?.toIso8601String(),
-      'origChangeBy': origChangeBy,
-      'origCid': origCid,
-      'origCloudAt': origCloudAt?.toIso8601String(),
-    };
-  }
+mixin CoreChangeLogEntryFields {
+  DateTime? changeAt;
+  String get changeBy;
+  String get cid;
+  DateTime? get cloudAt;
 }
