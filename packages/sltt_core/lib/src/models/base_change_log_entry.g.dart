@@ -8,7 +8,8 @@ part of 'base_change_log_entry.dart';
 
 BaseChangeLogEntry _$BaseChangeLogEntryFromJson(Map<String, dynamic> json) =>
     BaseChangeLogEntry(
-      projectId: json['projectId'] as String,
+      domainType: json['domainType'] as String,
+      domainId: json['domainId'] as String,
       entityType: $enumDecode(_$EntityTypeEnumMap, json['entityType']),
       operation: json['operation'] as String,
       stateChanged: json['stateChanged'] as bool,
@@ -22,14 +23,15 @@ BaseChangeLogEntry _$BaseChangeLogEntryFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['cloudAt'] as String),
       changeBy: json['changeBy'] as String,
       cid: json['cid'] as String,
-      version: (json['version'] as num?)?.toInt(),
+      schemaVersion: (json['schemaVersion'] as num?)?.toInt(),
       unknown: json['unknown'] as Map<String, dynamic>,
     );
 
 Map<String, dynamic> _$BaseChangeLogEntryToJson(BaseChangeLogEntry instance) =>
     <String, dynamic>{
       'cid': instance.cid,
-      'projectId': instance.projectId,
+      'domainType': instance.domainType,
+      'domainId': instance.domainId,
       'entityType': _$EntityTypeEnumMap[instance.entityType]!,
       'operation': instance.operation,
       'operationInfo': instance.operationInfo,
@@ -40,7 +42,7 @@ Map<String, dynamic> _$BaseChangeLogEntryToJson(BaseChangeLogEntry instance) =>
       'dataSchemaRev': instance.dataSchemaRev,
       'cloudAt': instance.cloudAt?.toIso8601String(),
       'changeBy': instance.changeBy,
-      'version': instance.version,
+      'schemaVersion': instance.schemaVersion,
       'unknown': instance.unknown,
     };
 
