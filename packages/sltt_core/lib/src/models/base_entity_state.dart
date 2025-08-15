@@ -40,10 +40,6 @@ abstract class BaseEntityState {
 
   String data_parentId = ''; // Points to parent entity
 
-  String change_changeLogId = ''; // e.g. Current project ID
-  /// Original (first) values for tracking entity creation
-  String change_changeLogId_orig_ = ''; // e.g. Original project ID
-
   /// Change tracking fields for conflict resolution
   /// Each mutable field has corresponding changeAt, cid, and changeBy fields
 
@@ -51,21 +47,19 @@ abstract class BaseEntityState {
   DateTime? data_rank_changeAt_;
   String data_rank_cid = '';
   String data_rank_changeBy_ = '';
+  int? data_rank_dataRev = 0;
 
   // deleted field tracking
   DateTime? data_deleted_changeAt_;
   String data_deleted_cid = '';
   String data_deleted_changeBy_ = '';
+  int? data_deleted_dataRev = 0;
 
   // parentId field tracking
   DateTime? data_parentId_changeAt_;
   String data_parentId_cid = '';
   String data_parentId_changeBy_ = '';
-
-  // projectId field tracking
-  DateTime? data_projectId_changeAt_;
-  String data_projectId_cid = '';
-  String data_projectId_changeBy_ = '';
+  int? data_parentId_dataRev = 0;
 
   BaseEntityState();
 }
@@ -75,11 +69,40 @@ mixin CoreEntityMetaData {
   EntityType get entityType;
 }
 
-mixin CoreEntityDataFields {}
+mixin CoreEntityDataFields {
+  /// latest rank - Used to sort in parent
+  String? data_rank;
+
+  /// latest deleted - Deletion status
+  bool get data_deleted;
+
+  /// latest parentId - Points to parent entity
+  String get data_parentId;
+
+  /// Change tracking fields for conflict resolution
+  int? get data_rank_dataRev_;
+  DateTime? get data_rank_changeAt_;
+  String get data_rank_cid;
+  String get data_rank_changeBy_;
+  DateTime? get data_rank_cloudAt_;
+
+  int? get data_deleted_dataRev_;
+  DateTime? get data_deleted_changeAt_;
+  String get data_deleted_cid;
+  String get data_deleted_changeBy_;
+  DateTime? get data_deleted_cloudAt_;
+
+  int? get data_parentId_dataRev_;
+  DateTime? get data_parentId_changeAt_;
+  String get data_parentId_cid;
+  String get data_parentId_changeBy_;
+  DateTime? get data_parentId_cloudAt_;
+}
 
 mixin CoreChangeLogEntryFields {
   DateTime? changeAt;
   String get changeBy;
   String get cid;
+  String get dataRev;
   DateTime? get cloudAt;
 }
