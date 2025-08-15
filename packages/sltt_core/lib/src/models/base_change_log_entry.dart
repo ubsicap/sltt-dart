@@ -39,14 +39,14 @@ abstract class BaseChangeLogEntry
   @override
   String entityId; // UUID or primary key of the entity
   Map<String, dynamic> data;
-  int? dataRev = 0; // data model revision for compatibility
+  int? dataSchemaRev = 0; // data model revision for compatibility
 
   /// the payload of the change
   @override
   DateTime? cloudAt; // UTC When the cloud storage received this change (optional)
   @override
   String changeBy; // memberId who made the change
-  int? version = 0; // change log schema version for compatibility
+  int? schemaVersion = 0; // change log schema version for compatibility
   /// any fields not read from json are put here for future field migration
   /// This will hold any unmapped fields
   @override
@@ -63,11 +63,11 @@ abstract class BaseChangeLogEntry
     required this.changeAt,
     required this.entityId,
     required this.data,
-    this.dataRev,
+    this.dataSchemaRev,
     this.cloudAt,
     required this.changeBy,
     required this.cid,
-    this.version,
+    this.schemaVersion,
     required this.unknown,
   });
 
@@ -132,11 +132,11 @@ class ChangeLogEntry extends BaseChangeLogEntry {
     required super.entityId,
     required super.data,
     required super.stateChanged,
-    super.dataRev,
+    super.dataSchemaRev,
     super.cloudAt,
     required super.changeBy,
     required super.cid,
-    super.version,
+    super.schemaVersion,
     super.unknown = const {},
   });
 }

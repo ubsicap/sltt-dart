@@ -16,7 +16,7 @@ BaseChangeLogEntry _$BaseChangeLogEntryFromJson(Map<String, dynamic> json) =>
       changeAt: DateTime.parse(json['changeAt'] as String),
       entityId: json['entityId'] as String,
       data: json['data'] as Map<String, dynamic>,
-      dataRev: (json['dataRev'] as num?)?.toInt(),
+      dataSchemaRev: (json['dataSchemaRev'] as num?)?.toInt(),
       cloudAt: json['cloudAt'] == null
           ? null
           : DateTime.parse(json['cloudAt'] as String),
@@ -37,7 +37,7 @@ Map<String, dynamic> _$BaseChangeLogEntryToJson(BaseChangeLogEntry instance) =>
       'changeAt': instance.changeAt.toIso8601String(),
       'entityId': instance.entityId,
       'data': instance.data,
-      'dataRev': instance.dataRev,
+      'dataSchemaRev': instance.dataSchemaRev,
       'cloudAt': instance.cloudAt?.toIso8601String(),
       'changeBy': instance.changeBy,
       'version': instance.version,

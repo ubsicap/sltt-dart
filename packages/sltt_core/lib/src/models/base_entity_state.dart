@@ -20,7 +20,7 @@ abstract class BaseEntityState
 
   /// Schema Version number for EntityState
   @override
-  int? version;
+  int? schemaVersion;
 
   /// Current project ID
   String change_domainId = '';
@@ -41,7 +41,7 @@ abstract class BaseEntityState
   String change_cid_orig_ = '';
 
   /// latest data schema revision (no need for _orig_)
-  int? change_dataRev;
+  int? change_dataSchemaRev;
 
   /// Latest cloud timestamp
   DateTime? change_cloudAt;
@@ -66,7 +66,7 @@ abstract class BaseEntityState
   String? data_rank;
 
   /// rank field conflict resolution
-  int? data_rank_dataRev;
+  int? data_rank_dataSchemaRev;
   @override
   DateTime? data_rank_changeAt_;
   @override
@@ -81,7 +81,7 @@ abstract class BaseEntityState
   bool? data_deleted = false;
 
   // deleted field conflict resolution
-  int? data_deleted_dataRev;
+  int? data_deleted_dataSchemaRev;
   @override
   DateTime? data_deleted_changeAt_;
   @override
@@ -95,7 +95,7 @@ abstract class BaseEntityState
   String data_parentId = '';
 
   /// parentId field conflict resolution
-  int? data_parentId_dataRev;
+  int? data_parentId_dataSchemaRev;
   @override
   DateTime data_parentId_changeAt_;
   @override
@@ -114,24 +114,24 @@ abstract class BaseEntityState
     required this.change_changeAt_orig_,
     required this.change_cid,
     required this.change_cid_orig_,
-    this.change_dataRev,
+    this.change_dataSchemaRev,
     this.change_cloudAt,
     this.change_cloudAt_orig_,
     required this.change_changeBy,
-    this.data_rank_dataRev,
+    this.data_rank_dataSchemaRev,
     this.data_rank,
     this.data_rank_changeAt_,
     this.data_rank_cid_,
     this.data_rank_changeBy_,
     this.data_rank_cloudAt_,
     this.data_deleted,
-    this.data_deleted_dataRev,
+    this.data_deleted_dataSchemaRev,
     this.data_deleted_changeAt_,
     this.data_deleted_cid_,
     this.data_deleted_changeBy_,
     this.data_deleted_cloudAt_,
     required this.data_parentId,
-    required this.data_parentId_dataRev,
+    required this.data_parentId_dataSchemaRev,
     required this.data_parentId_changeAt_,
     required this.data_parentId_cid_,
     required this.data_parentId_changeBy_,
@@ -142,26 +142,26 @@ abstract class BaseEntityState
 mixin CoreEntityMetaData {
   String get entityId;
   EntityType get entityType;
-  int? get version;
+  int? get schemaVersion;
 }
 
 mixin CoreEntityDataFields {
   String? get data_rank;
-  int? get data_rank_dataRev_;
+  int? get data_rank_dataSchemaRev_;
   DateTime? get data_rank_changeAt_;
   String? get data_rank_cid_;
   String? get data_rank_changeBy_;
   DateTime? get data_rank_cloudAt_;
 
   bool? get data_deleted;
-  int? get data_deleted_dataRev_;
+  int? get data_deleted_dataSchemaRev_;
   DateTime? get data_deleted_changeAt_;
   String? get data_deleted_cid_;
   String? get data_deleted_changeBy_;
   DateTime? get data_deleted_cloudAt_;
 
   String get data_parentId;
-  int? get data_parentId_dataRev_;
+  int? get data_parentId_dataSchemaRev_;
   DateTime get data_parentId_changeAt_;
   String get data_parentId_cid_;
   String get data_parentId_changeBy_;
@@ -172,6 +172,6 @@ mixin CoreChangeLogEntryFields {
   DateTime? changeAt;
   String get changeBy;
   String get cid;
-  String get dataRev;
+  String get dataSchemaRev;
   DateTime? get cloudAt;
 }
