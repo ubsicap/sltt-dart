@@ -68,18 +68,19 @@ getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
   return LastWriteWinsResult(
     newChangeLogEntry: newChangeLogEntry,
     newEntityState: operation != 'noOp' && operation != 'outdated'
-        ? BaseEntityState.fromChangeLogEntry(
-            entityId: newChangeLogEntry.entityId,
-            entityType: newChangeLogEntry.entityType,
-            projectId: newChangeLogEntry.projectId,
-            changeAt: newChangeLogEntry.changeAt,
-            cid: newChangeLogEntry.cid,
-            changeBy: newChangeLogEntry.changeBy,
-            cloudAt: newChangeLogEntry.cloudAt,
-            data: changeDataUpdates,
-          )
+        ? forkWithStateUpdates(entityState, stateUpdates)
         : null,
   );
+}
+
+BaseEntityState forkWithStateUpdates(
+  BaseEntityState? sourceEntityState,
+  Map<String, dynamic> stateUpdates,
+) {
+  final clone = sourceEntityState?.toJson() ?? {};
+  final newJson = {...clone, ...stateUpdates};
+  final newEntityState = BaseEntityState.fromJson(newJson);
+  return newEntityState;
 }
 
 /// Result type for getMaybeIsduplicateCid
