@@ -9,6 +9,7 @@ T deserializeWithUnknownFieldData<T extends HasUnknownField>(
   Map<String, dynamic> json,
 ) {
   final entry = fromJson(json);
+  // Fix: I think this will actually result in a set of all fields?
   final knownFields = entry.toJson().keys.toSet();
   final unknownFields = Map<String, dynamic>.fromEntries(
     json.entries.where((entry) => !knownFields.contains(entry.key)),
