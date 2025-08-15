@@ -11,8 +11,7 @@ part 'base_change_log_entry.g.dart';
 /// Can be used by backend services that don't need Isar
 /// implementations should provide their own `seq` handling
 @JsonSerializable()
-abstract class BaseChangeLogEntry
-    with ImmutableFields, DbResponsibilities, HasUnknownField {
+abstract class BaseChangeLogEntry with ImmutableFields, DbResponsibilities {
   /// unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random} from generateCid()
   @override
   String cid;
@@ -97,7 +96,7 @@ mixin ImmutableFields {
 }
 
 /// implementations should provide this info
-mixin DbResponsibilities {
+mixin DbResponsibilities implements HasUnknownField {
   /// used for sorting changes in a database
   int get seq;
 
