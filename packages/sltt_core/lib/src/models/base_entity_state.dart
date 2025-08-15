@@ -5,16 +5,24 @@ import 'entity_type.dart';
 /// Base class for entity state storage with common metadata
 /// This provides the core state schema common across all entity types
 /// Backend-agnostic - no database-specific dependencies
-abstract class BaseEntityState {
+abstract class BaseEntityState
+    implements
+        CoreEntityMetaData,
+        CoreEntityDataFields,
+        CoreChangeLogEntryFields {
   /// Primary key - entityId with entity type abbreviation
-  late String entityId;
+  @override
+  String entityId;
 
   /// Immutable - entity type enum
-  late EntityType entityType;
+  @override
+  EntityType entityType;
 
-  String change_domainId = ''; // e.g. Current project ID
+  /// Current project ID
+  String change_domainId = '';
+
   /// Original (first) values for tracking entity creation
-  String change_domainId_orig_ = ''; // e.g. Original project ID
+  String change_domainId_orig_ = '';
 
   /// Latest change timestamp
   DateTime? change_changeAt;
@@ -22,46 +30,109 @@ abstract class BaseEntityState {
   /// First UTC change timestamp
   DateTime? change_changeAt_orig_;
 
-  String change_cid = ''; // Latest change ID
-  String change_cid_orig_ = ''; // First change ID
+  /// Latest change ID
+  String change_cid = '';
 
-  DateTime? change_cloudAt; // Latest cloud timestamp
-  DateTime? change_cloudAt_orig_; // First UTC cloud timestamp
+  /// Original (first) change ID
+  String change_cid_orig_ = '';
 
-  String change_changeBy = ''; // Latest change author
-  String change_changeBy_orig_ = ''; // First change author
+  /// latest data schema revision (no need for _orig_)
+  int? change_dataRev;
 
-  int? change_dataRev = 0;
+  /// Latest cloud timestamp
+  DateTime? change_cloudAt;
 
-  /// Mutable fields with conflict resolution support
-  String? data_rank; // Used to sort in parent
+  /// First UTC cloud timestamp
+  DateTime? change_cloudAt_orig_;
 
-  bool data_deleted = false; // Deletion status
+  /// Latest change author
+  String change_changeBy = '';
 
-  String data_parentId = ''; // Points to parent entity
+  /// Original (first) change author
+  String change_changeBy_orig_ = '';
+
+  /// --- Mutable fields with conflict resolution support ---
 
   /// Change tracking fields for conflict resolution
   /// Each mutable field has corresponding changeAt, cid, and changeBy fields
+  /// todo?: append _orig_? for debugging
 
-  // rank field tracking
+  /// rank - Used to sort in parent
+  @override
+  String? data_rank;
+
+  /// rank field conflict resolution
+  int? data_rank_dataRev;
+  @override
   DateTime? data_rank_changeAt_;
-  String data_rank_cid = '';
-  String data_rank_changeBy_ = '';
-  int? data_rank_dataRev = 0;
+  @override
+  String? data_rank_cid_;
+  @override
+  String? data_rank_changeBy_;
+  @override
+  DateTime? data_rank_cloudAt_;
 
-  // deleted field tracking
+  /// Deletion status
+  @override
+  bool? data_deleted = false;
+
+  // deleted field conflict resolution
+  int? data_deleted_dataRev;
+  @override
   DateTime? data_deleted_changeAt_;
-  String data_deleted_cid = '';
-  String data_deleted_changeBy_ = '';
-  int? data_deleted_dataRev = 0;
+  @override
+  String? data_deleted_cid_ = '';
+  @override
+  String? data_deleted_changeBy_ = '';
+  @override
+  DateTime? data_deleted_cloudAt_;
 
-  // parentId field tracking
-  DateTime? data_parentId_changeAt_;
-  String data_parentId_cid = '';
+  @override
+  String data_parentId = '';
+
+  /// parentId field conflict resolution
+  int? data_parentId_dataRev;
+  @override
+  DateTime data_parentId_changeAt_;
+  @override
+  String data_parentId_cid_ = '';
+  @override
   String data_parentId_changeBy_ = '';
-  int? data_parentId_dataRev = 0;
+  @override
+  DateTime? data_parentId_cloudAt_;
 
-  BaseEntityState();
+  BaseEntityState({
+    required this.entityId,
+    required this.entityType,
+    required this.change_domainId,
+    required this.change_domainId_orig_,
+    required this.change_changeAt,
+    required this.change_changeAt_orig_,
+    required this.change_cid,
+    required this.change_cid_orig_,
+    this.change_dataRev,
+    this.change_cloudAt,
+    this.change_cloudAt_orig_,
+    required this.change_changeBy,
+    this.data_rank_dataRev,
+    this.data_rank,
+    this.data_rank_changeAt_,
+    this.data_rank_cid_,
+    this.data_rank_changeBy_,
+    this.data_rank_cloudAt_,
+    this.data_deleted,
+    this.data_deleted_dataRev,
+    this.data_deleted_changeAt_,
+    this.data_deleted_cid_,
+    this.data_deleted_changeBy_,
+    this.data_deleted_cloudAt_,
+    required this.data_parentId,
+    required this.data_parentId_dataRev,
+    required this.data_parentId_changeAt_,
+    required this.data_parentId_cid_,
+    required this.data_parentId_changeBy_,
+    this.data_parentId_cloudAt_,
+  });
 }
 
 mixin CoreEntityMetaData {
@@ -70,31 +141,24 @@ mixin CoreEntityMetaData {
 }
 
 mixin CoreEntityDataFields {
-  /// latest rank - Used to sort in parent
-  String? data_rank;
-
-  /// latest deleted - Deletion status
-  bool get data_deleted;
-
-  /// latest parentId - Points to parent entity
-  String get data_parentId;
-
-  /// Change tracking fields for conflict resolution
+  String? get data_rank;
   int? get data_rank_dataRev_;
   DateTime? get data_rank_changeAt_;
-  String get data_rank_cid;
-  String get data_rank_changeBy_;
+  String? get data_rank_cid_;
+  String? get data_rank_changeBy_;
   DateTime? get data_rank_cloudAt_;
 
+  bool? get data_deleted;
   int? get data_deleted_dataRev_;
   DateTime? get data_deleted_changeAt_;
-  String get data_deleted_cid;
-  String get data_deleted_changeBy_;
+  String? get data_deleted_cid_;
+  String? get data_deleted_changeBy_;
   DateTime? get data_deleted_cloudAt_;
 
+  String get data_parentId;
   int? get data_parentId_dataRev_;
-  DateTime? get data_parentId_changeAt_;
-  String get data_parentId_cid;
+  DateTime get data_parentId_changeAt_;
+  String get data_parentId_cid_;
   String get data_parentId_changeBy_;
   DateTime? get data_parentId_cloudAt_;
 }
