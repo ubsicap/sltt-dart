@@ -114,7 +114,7 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult(
 
   // Check if any field in the entity state matches the change log entry cid
   for (final key in changeLogData.keys) {
-    if (key.endsWith('Cid') && entryState[key] == changeLogCid) {
+    if (key.endsWith('_cid_') && entryState[key] == changeLogCid) {
       isDuplicate = true;
       cloudAt = changeLogEntry.cloudAt;
       break;
@@ -233,7 +233,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
 
     fieldChanges.forEach((field, value) {
       final existingFieldChangeAt =
-          existingData['${field}ChangeAt'] as DateTime?;
+          existingData['${field}_changeAt_'] as DateTime?;
       if (changeLogEntry.changeAt.isAfter(
         existingFieldChangeAt ?? DateTime.fromMillisecondsSinceEpoch(0),
       )) {
