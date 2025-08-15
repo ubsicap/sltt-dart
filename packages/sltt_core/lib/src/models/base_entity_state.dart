@@ -12,9 +12,9 @@ abstract class BaseEntityState {
   /// Immutable - entity type enum
   late EntityType entityType;
 
-  String change_changeLogId = ''; // e.g. Current project ID
+  String change_domainId = ''; // e.g. Current project ID
   /// Original (first) values for tracking entity creation
-  String change_changeLogId_orig_ = ''; // e.g. Original project ID
+  String change_domainId_orig_ = ''; // e.g. Original project ID
 
   /// Latest change timestamp
   DateTime? change_changeAt;

@@ -12,13 +12,13 @@ import 'package:sltt_core/sltt_core.dart';
 /// This service stores data in AWS DynamoDB with a single table design:
 ///
 /// **Change Log Entries:**
-/// - PK: 'CHANGE_LOG_TYPE#{changeLogType}#CHANGE_LOG_ID#{changeLogId}#ENTITY_ID#{entityId}'
+/// - PK: 'DOMAIN_TYPE#{domainType}#DOMAIN_ID#{domainId}#ENTITY_ID#{entityId}'
 /// - SK: 'CID#{cid}'
-/// - GSI1PK: 'CHANGE_LOG_ID#{changeLogId}'
+/// - GSI1PK: 'CHANGE_LOG_ID#{domainId}'
 /// - GSI1SK: 'SEQ#{seq}'
 ///
 /// **Entity State Data:**
-/// - PK: 'CHANGE_LOG_TYPE#{changeLogType}#CHANGE_LOG_ID#{changeLogId}#ENTITY_TYPE#{entityType}'
+/// - PK: 'DOMAIN_TYPE#{domainType}#DOMAIN_ID#{domainId}#ENTITY_TYPE#{entityType}'
 /// - SK: '{entityId}' (entityId contains embedded entity type suffix)
 /// - EntityId format: 'YYYY-mmdd-HHMMss-sss±HHmm-XXXX-{suffix}'
 ///   where suffix is 4-char entity type (e.g., 'proj', 'docu', 'vidZ', 'cmnt')

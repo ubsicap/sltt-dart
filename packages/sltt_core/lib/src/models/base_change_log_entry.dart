@@ -19,12 +19,12 @@ abstract class BaseChangeLogEntry
 
   /// discrete sets for getting change logs: user, team, project
   @override
-  String changeLogType;
+  String domainType;
 
   /// Unique identifier for the change log that has these entries
   /// (e.g. userId, teamId, projectId)
   @override
-  String changeLogId;
+  String domainId;
 
   @override
   EntityType entityType; // Normalized entity type
@@ -54,8 +54,8 @@ abstract class BaseChangeLogEntry
   Map<String, dynamic> unknown = {};
 
   BaseChangeLogEntry({
-    required this.changeLogType,
-    required this.changeLogId,
+    required this.domainType,
+    required this.domainId,
     required this.entityType,
     required this.operation,
     required this.stateChanged,
@@ -88,8 +88,8 @@ abstract class BaseChangeLogEntry
 
 mixin ImmutableFields {
   String get cid;
-  String get changeLogType;
-  String get changeLogId;
+  String get domainType;
+  String get domainId;
   EntityType get entityType;
   String get entityId;
   DateTime get changeAt;
@@ -123,8 +123,8 @@ class ChangeLogEntry extends BaseChangeLogEntry {
   int get seq => DateTime.now().millisecondsSinceEpoch; // override to provide ordering in a db
 
   ChangeLogEntry({
-    required super.changeLogType,
-    required super.changeLogId,
+    required super.domainType,
+    required super.domainId,
     required super.entityType,
     required super.operation,
     required super.operationInfo,
