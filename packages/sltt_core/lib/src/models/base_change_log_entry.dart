@@ -74,13 +74,16 @@ abstract class BaseChangeLogEntry with ImmutableFields, DbResponsibilities {
     final change = deserializeWithUnknownFieldData(
       _$BaseChangeLogEntryFromJson,
       json,
+      _$BaseChangeLogEntryToJson,
     );
     return change;
   }
 
-  @override
   Map<String, dynamic> toJson() {
-    final json = serializeWithUnknownFieldData(this);
+    final json = serializeWithUnknownFieldData(
+      this,
+      _$BaseChangeLogEntryToJson,
+    );
     return json;
   }
 }

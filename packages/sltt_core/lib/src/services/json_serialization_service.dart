@@ -1,18 +1,18 @@
 mixin HasUnknownField {
   Map<String, dynamic> get unknown;
   set unknown(Map<String, dynamic> value);
-  Map<String, dynamic> toJson();
 }
 
 T deserializeWithUnknownFieldData<T extends HasUnknownField>(
   T Function(Map<String, dynamic> json) fromJson,
   Map<String, dynamic> json,
+  Map<String, dynamic> Function(T value) baseToJson,
 ) {
   final entry = fromJson(json);
-  // Fix: I think this will actually result in a set of all fields?
-  final knownFields = entry.toJson().keys.toSet();
+  // Use the generated/base toJson to get only known fields (no unknown merge)
+  final knownFields = baseToJson(entry).keys.toSet();
   final unknownFields = Map<String, dynamic>.fromEntries(
-    json.entries.where((entry) => !knownFields.contains(entry.key)),
+    json.entries.where((e) => !knownFields.contains(e.key)),
   );
   entry.unknown = unknownFields;
   return entry;
@@ -20,8 +20,8 @@ T deserializeWithUnknownFieldData<T extends HasUnknownField>(
 
 Map<String, dynamic> serializeWithUnknownFieldData<T extends HasUnknownField>(
   T entry,
+  Map<String, dynamic> Function(T value) baseToJson,
 ) {
-  final json = entry.toJson();
-  json.addAll(entry.unknown);
-  return json;
+  final json = baseToJson(entry);
+  return {...json, ...entry.unknown};
 }

@@ -154,13 +154,13 @@ abstract class BaseEntityState
     final baseEntityState = deserializeWithUnknownFieldData(
       _$BaseEntityStateFromJson,
       json,
+      _$BaseEntityStateToJson,
     );
     return baseEntityState;
   }
 
-  @override
   Map<String, dynamic> toJson() {
-    final json = serializeWithUnknownFieldData(this);
+    final json = serializeWithUnknownFieldData(this, _$BaseEntityStateToJson);
     return json;
   }
 }
