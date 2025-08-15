@@ -1,16 +1,12 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 
 import 'entity_type.dart';
 
-part 'base_entity_state.g.dart';
-
 /// Base class for entity state storage with common metadata
 /// This provides the core state schema common across all entity types
 /// Backend-agnostic - no database-specific dependencies
-@JsonSerializable()
 abstract class BaseEntityState
     implements
         CoreEntityMetaData,
@@ -150,19 +146,8 @@ abstract class BaseEntityState
     this.data_parentId_cloudAt_,
   });
 
-  factory BaseEntityState.fromJson(Map<String, dynamic> json) {
-    final baseEntityState = deserializeWithUnknownFieldData(
-      _$BaseEntityStateFromJson,
-      json,
-      _$BaseEntityStateToJson,
-    );
-    return baseEntityState;
-  }
-
-  Map<String, dynamic> toJson() {
-    final json = serializeWithUnknownFieldData(this, _$BaseEntityStateToJson);
-    return json;
-  }
+  // Abstract methods to be implemented by concrete subclasses
+  Map<String, dynamic> toJson();
 }
 
 mixin CoreEntityMetaData {

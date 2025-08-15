@@ -1,16 +1,11 @@
 import 'dart:math';
 
-import 'package:json_annotation/json_annotation.dart';
-
 import '../services/json_serialization_service.dart';
 import 'entity_type.dart';
-
-part 'base_change_log_entry.g.dart';
 
 /// Abstract base class for ChangeLogEntry without Isar dependencies
 /// Can be used by backend services that don't need Isar
 /// implementations should provide their own `seq` handling
-@JsonSerializable()
 abstract class BaseChangeLogEntry with ImmutableFields, DbResponsibilities {
   /// unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random} from generateCid()
   @override
@@ -49,7 +44,6 @@ abstract class BaseChangeLogEntry with ImmutableFields, DbResponsibilities {
   /// any fields not read from json are put here for future field migration
   /// This will hold any unmapped fields
   @override
-  @JsonKey(includeFromJson: true, includeToJson: true)
   Map<String, dynamic> unknown = {};
 
   BaseChangeLogEntry({
@@ -70,22 +64,8 @@ abstract class BaseChangeLogEntry with ImmutableFields, DbResponsibilities {
     required this.unknown,
   });
 
-  factory BaseChangeLogEntry.fromJson(Map<String, dynamic> json) {
-    final change = deserializeWithUnknownFieldData(
-      _$BaseChangeLogEntryFromJson,
-      json,
-      _$BaseChangeLogEntryToJson,
-    );
-    return change;
-  }
-
-  Map<String, dynamic> toJson() {
-    final json = serializeWithUnknownFieldData(
-      this,
-      _$BaseChangeLogEntryToJson,
-    );
-    return json;
-  }
+  // Abstract methods to be implemented by concrete subclasses
+  Map<String, dynamic> toJson();
 }
 
 mixin ImmutableFields {
@@ -116,31 +96,6 @@ mixin DbResponsibilities implements HasUnknownField {
   /// The unique ID for this change log entry
   /// added by cloud storage server
   DateTime? get cloudAt;
-}
-
-/// Concrete implementation of BaseChangeLogEntry for cases where we need to instantiate it directly
-/// Used internally by factory methods and can be used by backend services
-class ChangeLogEntry extends BaseChangeLogEntry {
-  @override
-  int get seq => DateTime.now().millisecondsSinceEpoch; // override to provide ordering in a db
-
-  ChangeLogEntry({
-    required super.domainType,
-    required super.domainId,
-    required super.entityType,
-    required super.operation,
-    required super.operationInfo,
-    required super.changeAt,
-    required super.entityId,
-    required super.data,
-    required super.stateChanged,
-    super.dataSchemaRev,
-    super.cloudAt,
-    required super.changeBy,
-    required super.cid,
-    super.schemaVersion,
-    super.unknown = const {},
-  });
 }
 
 /// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}

@@ -1,13 +1,76 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'base_entity_state.dart';
+part of 'test_concrete_models.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-BaseEntityState _$BaseEntityStateFromJson(Map<String, dynamic> json) =>
-    BaseEntityState(
+ConcreteChangeLogEntry _$ConcreteChangeLogEntryFromJson(
+        Map<String, dynamic> json) =>
+    ConcreteChangeLogEntry(
+      entityId: json['entityId'] as String,
+      entityType: $enumDecode(_$EntityTypeEnumMap, json['entityType']),
+      domainId: json['domainId'] as String,
+      domainType: json['domainType'] as String,
+      changeAt: DateTime.parse(json['changeAt'] as String),
+      cid: json['cid'] as String,
+      changeBy: json['changeBy'] as String,
+      data: json['data'] as Map<String, dynamic>,
+      operation: json['operation'] as String,
+      operationInfo: json['operationInfo'] as Map<String, dynamic>,
+      stateChanged: json['stateChanged'] as bool,
+      unknown: json['unknown'] as Map<String, dynamic>,
+      dataSchemaRev: (json['dataSchemaRev'] as num?)?.toInt(),
+      cloudAt: json['cloudAt'] == null
+          ? null
+          : DateTime.parse(json['cloudAt'] as String),
+      schemaVersion: (json['schemaVersion'] as num?)?.toInt(),
+      seq: (json['seq'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$ConcreteChangeLogEntryToJson(
+        ConcreteChangeLogEntry instance) =>
+    <String, dynamic>{
+      'cid': instance.cid,
+      'domainType': instance.domainType,
+      'domainId': instance.domainId,
+      'entityType': _$EntityTypeEnumMap[instance.entityType]!,
+      'operation': instance.operation,
+      'operationInfo': instance.operationInfo,
+      'stateChanged': instance.stateChanged,
+      'changeAt': instance.changeAt.toIso8601String(),
+      'entityId': instance.entityId,
+      'data': instance.data,
+      'dataSchemaRev': instance.dataSchemaRev,
+      'cloudAt': instance.cloudAt?.toIso8601String(),
+      'changeBy': instance.changeBy,
+      'schemaVersion': instance.schemaVersion,
+      'unknown': instance.unknown,
+      'seq': instance.seq,
+    };
+
+const _$EntityTypeEnumMap = {
+  EntityType.project: 'project',
+  EntityType.team: 'team',
+  EntityType.plan: 'plan',
+  EntityType.stage: 'stage',
+  EntityType.task: 'task',
+  EntityType.member: 'member',
+  EntityType.message: 'message',
+  EntityType.portion: 'portion',
+  EntityType.passage: 'passage',
+  EntityType.reference: 'reference',
+  EntityType.document: 'document',
+  EntityType.video: 'video',
+  EntityType.patch: 'patch',
+  EntityType.gloss: 'gloss',
+  EntityType.note: 'note',
+  EntityType.comment: 'comment',
+};
+
+ConcreteEntityState _$ConcreteEntityStateFromJson(Map<String, dynamic> json) =>
+    ConcreteEntityState(
       entityId: json['entityId'] as String,
       entityType: $enumDecode(_$EntityTypeEnumMap, json['entityType']),
       change_domainId: json['change_domainId'] as String,
@@ -63,9 +126,13 @@ BaseEntityState _$BaseEntityStateFromJson(Map<String, dynamic> json) =>
     )
       ..schemaVersion = (json['schemaVersion'] as num?)?.toInt()
       ..unknown = json['unknown'] as Map<String, dynamic>
-      ..change_changeBy_orig_ = json['change_changeBy_orig_'] as String;
+      ..change_changeBy_orig_ = json['change_changeBy_orig_'] as String
+      ..changeAt = json['changeAt'] == null
+          ? null
+          : DateTime.parse(json['changeAt'] as String);
 
-Map<String, dynamic> _$BaseEntityStateToJson(BaseEntityState instance) =>
+Map<String, dynamic> _$ConcreteEntityStateToJson(
+        ConcreteEntityState instance) =>
     <String, dynamic>{
       'entityId': instance.entityId,
       'entityType': _$EntityTypeEnumMap[instance.entityType]!,
@@ -105,23 +172,5 @@ Map<String, dynamic> _$BaseEntityStateToJson(BaseEntityState instance) =>
       'data_parentId_changeBy_': instance.data_parentId_changeBy_,
       'data_parentId_cloudAt_':
           instance.data_parentId_cloudAt_?.toIso8601String(),
+      'changeAt': instance.changeAt?.toIso8601String(),
     };
-
-const _$EntityTypeEnumMap = {
-  EntityType.project: 'project',
-  EntityType.team: 'team',
-  EntityType.plan: 'plan',
-  EntityType.stage: 'stage',
-  EntityType.task: 'task',
-  EntityType.member: 'member',
-  EntityType.message: 'message',
-  EntityType.portion: 'portion',
-  EntityType.passage: 'passage',
-  EntityType.reference: 'reference',
-  EntityType.document: 'document',
-  EntityType.video: 'video',
-  EntityType.patch: 'patch',
-  EntityType.gloss: 'gloss',
-  EntityType.note: 'note',
-  EntityType.comment: 'comment',
-};
