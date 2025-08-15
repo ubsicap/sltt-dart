@@ -11,10 +11,22 @@ part 'base_change_log_entry.g.dart';
 /// Can be used by backend services that don't need Isar
 /// implementations should provide their own `seq` handling
 @JsonSerializable()
-abstract class BaseChangeLogEntry with DbResponsibilities, HasUnknownField {
-  String
-  cid; // unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random} from generateCid()
-  String projectId; // Project identifier
+abstract class BaseChangeLogEntry
+    with ImmutableFields, DbResponsibilities, HasUnknownField {
+  /// unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random} from generateCid()
+  @override
+  String cid;
+
+  /// discrete sets for getting change logs: user, team, project
+  @override
+  String changeLogType;
+
+  /// Unique identifier for the change log that has these entries
+  /// (e.g. userId, teamId, projectId)
+  @override
+  String changeLogId;
+
+  @override
   EntityType entityType; // Normalized entity type
   @override
   String operation; // e.g., 'create', 'update', 'delete', 'noOp', 'outdated', 'error'
@@ -22,7 +34,9 @@ abstract class BaseChangeLogEntry with DbResponsibilities, HasUnknownField {
   Map<String, dynamic> operationInfo; // Additional operation metadata
   @override
   bool stateChanged; // Indicates if the state of the entity has changed
+  @override
   DateTime changeAt; // UTC when the change was originally made by the client
+  @override
   String entityId; // UUID or primary key of the entity
   Map<String, dynamic> data;
   int? dataRev = 0; // data model revision for compatibility
@@ -30,6 +44,7 @@ abstract class BaseChangeLogEntry with DbResponsibilities, HasUnknownField {
   /// the payload of the change
   @override
   DateTime? cloudAt; // UTC When the cloud storage received this change (optional)
+  @override
   String changeBy; // memberId who made the change
   int? version = 0; // change log schema version for compatibility
   /// any fields not read from json are put here for future field migration
@@ -39,7 +54,8 @@ abstract class BaseChangeLogEntry with DbResponsibilities, HasUnknownField {
   Map<String, dynamic> unknown = {};
 
   BaseChangeLogEntry({
-    required this.projectId,
+    required this.changeLogType,
+    required this.changeLogId,
     required this.entityType,
     required this.operation,
     required this.stateChanged,
@@ -70,6 +86,16 @@ abstract class BaseChangeLogEntry with DbResponsibilities, HasUnknownField {
   }
 }
 
+mixin ImmutableFields {
+  String get cid;
+  String get changeLogType;
+  String get changeLogId;
+  EntityType get entityType;
+  String get entityId;
+  DateTime get changeAt;
+  String get changeBy;
+}
+
 /// implementations should provide this info
 mixin DbResponsibilities {
   /// used for sorting changes in a database
@@ -97,7 +123,8 @@ class ChangeLogEntry extends BaseChangeLogEntry {
   int get seq => DateTime.now().millisecondsSinceEpoch; // override to provide ordering in a db
 
   ChangeLogEntry({
-    required super.projectId,
+    required super.changeLogType,
+    required super.changeLogId,
     required super.entityType,
     required super.operation,
     required super.operationInfo,

@@ -12,6 +12,10 @@ abstract class BaseEntityState {
   /// Immutable - entity type enum
   late EntityType entityType;
 
+  String change_changeLogId = ''; // e.g. Current project ID
+  /// Original (first) values for tracking entity creation
+  String change_changeLogId_orig_ = ''; // e.g. Original project ID
+
   /// Latest change timestamp
   DateTime? change_changeAt;
 
@@ -36,9 +40,9 @@ abstract class BaseEntityState {
 
   String data_parentId = ''; // Points to parent entity
 
-  String data_projectId = ''; // Current project ID
+  String change_changeLogId = ''; // e.g. Current project ID
   /// Original (first) values for tracking entity creation
-  String data_projectId_orig_ = ''; // Original project ID
+  String change_changeLogId_orig_ = ''; // e.g. Original project ID
 
   /// Change tracking fields for conflict resolution
   /// Each mutable field has corresponding changeAt, cid, and changeBy fields
