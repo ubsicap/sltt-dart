@@ -915,17 +915,6 @@ abstract class BaseRestApiServer {
         }
         response['seqMap'] = seqMap;
 
-        // Add field-level change detection details
-        if (result.changeDetails.isNotEmpty) {
-          response['changeDetails'] = result.changeDetails.map(
-            (cid, details) => MapEntry(cid, {
-              'updatedFields': details.updatedFields,
-              'noOpFields': details.noOpFields,
-              'totalFields': details.totalFields,
-            }),
-          );
-        }
-
         print('Response: ${jsonEncode(response)}');
 
         return Response.ok(

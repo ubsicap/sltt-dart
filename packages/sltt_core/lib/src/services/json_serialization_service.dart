@@ -1,5 +1,6 @@
 mixin HasUnknownField {
-  Map<String, dynamic> unknown = {};
+  Map<String, dynamic> get unknown;
+  set unknown(Map<String, dynamic> value);
   Map<String, dynamic> toJson();
 }
 

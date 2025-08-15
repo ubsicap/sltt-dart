@@ -141,29 +141,6 @@ class ChangeLogEntry extends BaseChangeLogEntry {
   });
 }
 
-/// operation enum
-enum ChangeLogOperation { create, update, delete, noOp, outdated, error }
-
-/// Helper to convert string to ChangeLogOperation enum
-ChangeLogOperation _operationFromString(String value) {
-  switch (value) {
-    case 'create':
-      return ChangeLogOperation.create;
-    case 'update':
-      return ChangeLogOperation.update;
-    case 'delete':
-      return ChangeLogOperation.delete;
-    case 'noOp':
-      return ChangeLogOperation.noOp;
-    case 'outdated':
-      return ChangeLogOperation.outdated;
-    case 'error':
-      return ChangeLogOperation.error;
-    default:
-      return ChangeLogOperation.error;
-  }
-}
-
 /// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
 String generateCid([DateTime? timestamp]) {
   final now = timestamp ?? DateTime.now();
