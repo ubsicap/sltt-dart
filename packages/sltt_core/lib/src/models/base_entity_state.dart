@@ -18,6 +18,10 @@ abstract class BaseEntityState
   @override
   EntityType entityType;
 
+  /// Schema Version number for EntityState
+  @override
+  int? version;
+
   /// Current project ID
   String change_domainId = '';
 
@@ -138,6 +142,7 @@ abstract class BaseEntityState
 mixin CoreEntityMetaData {
   String get entityId;
   EntityType get entityType;
+  int? get version;
 }
 
 mixin CoreEntityDataFields {
