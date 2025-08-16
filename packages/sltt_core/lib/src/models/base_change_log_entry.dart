@@ -6,7 +6,8 @@ import 'entity_type.dart';
 /// Abstract base class for ChangeLogEntry without Isar dependencies
 /// Can be used by backend services that don't need Isar
 /// implementations should provide their own `seq` handling
-abstract class BaseChangeLogEntry with ImmutableFields, DbResponsibilities {
+abstract class BaseChangeLogEntry
+    with ImmutableFields, StorageResponsibilities {
   /// unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random} from generateCid()
   @override
   String cid;
@@ -79,7 +80,7 @@ mixin ImmutableFields {
 }
 
 /// implementations should provide this info
-mixin DbResponsibilities implements HasUnknownField {
+mixin StorageResponsibilities implements HasUnknownField {
   /// used for sorting changes in a database
   int get seq;
 
