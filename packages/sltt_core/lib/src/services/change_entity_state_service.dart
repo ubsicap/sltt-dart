@@ -14,8 +14,9 @@ class LastWriteWinsResult {
 getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
   BaseChangeLogEntry changeLogEntry,
   BaseEntityState? entityState, {
-  BaseChangeLogEntry Function(Map<String, dynamic>)? changeLogEntryFactory,
-  BaseEntityState Function(Map<String, dynamic>)? entityStateFactory,
+  required BaseChangeLogEntry Function(Map<String, dynamic>)?
+  changeLogEntryFactory,
+  required BaseEntityState Function(Map<String, dynamic>) entityStateFactory,
 }) {
   // Check if the change log entry is a duplicate
   final duplicateCheck = getMaybeIsDuplicateCidResult(
@@ -89,7 +90,7 @@ getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
 BaseEntityState forkWithStateUpdates(
   BaseEntityState? sourceEntityState,
   Map<String, dynamic> stateUpdates,
-  BaseEntityState Function(Map<String, dynamic>)? entityStateFactory, {
+  BaseEntityState Function(Map<String, dynamic>) entityStateFactory, {
   BaseChangeLogEntry? changeLogEntry,
 }) {
   Map<String, dynamic> clone;
@@ -147,13 +148,7 @@ BaseEntityState forkWithStateUpdates(
   // Remove null values that the generated fromJson can't handle
   newJson.removeWhere((key, value) => value == null && key != 'unknown');
 
-  if (entityStateFactory != null) {
-    return entityStateFactory(newJson);
-  } else {
-    throw Exception(
-      'entityStateFactory is required for creating new EntityState instances',
-    );
-  }
+  return entityStateFactory(newJson);
 }
 
 /// Result type for getMaybeIsduplicateCid
