@@ -79,7 +79,8 @@ abstract class BaseEntityState
   String? data_rank;
 
   /// rank field conflict resolution
-  int? data_rank_dataSchemaRev;
+  @override
+  int? data_rank_dataSchemaRev_;
   @override
   DateTime? data_rank_changeAt_;
   @override
@@ -94,7 +95,8 @@ abstract class BaseEntityState
   bool? data_deleted = false;
 
   // deleted field conflict resolution
-  int? data_deleted_dataSchemaRev;
+  @override
+  int? data_deleted_dataSchemaRev_ = 0;
   @override
   DateTime? data_deleted_changeAt_;
   @override
@@ -107,8 +109,9 @@ abstract class BaseEntityState
   @override
   String data_parentId = '';
 
+  @override
   /// parentId field conflict resolution
-  int? data_parentId_dataSchemaRev;
+  int? data_parentId_dataSchemaRev_;
   @override
   DateTime data_parentId_changeAt_;
   @override
@@ -132,20 +135,20 @@ abstract class BaseEntityState
     this.change_cloudAt,
     this.change_cloudAt_orig_,
     required this.change_changeBy,
-    this.data_rank_dataSchemaRev,
+    this.data_rank_dataSchemaRev_,
     this.data_rank,
     this.data_rank_changeAt_,
     this.data_rank_cid_,
     this.data_rank_changeBy_,
     this.data_rank_cloudAt_,
     this.data_deleted,
-    this.data_deleted_dataSchemaRev,
+    this.data_deleted_dataSchemaRev_,
     this.data_deleted_changeAt_,
     this.data_deleted_cid_,
     this.data_deleted_changeBy_,
     this.data_deleted_cloudAt_,
     required this.data_parentId,
-    required this.data_parentId_dataSchemaRev,
+    this.data_parentId_dataSchemaRev_,
     required this.data_parentId_changeAt_,
     required this.data_parentId_cid_,
     required this.data_parentId_changeBy_,

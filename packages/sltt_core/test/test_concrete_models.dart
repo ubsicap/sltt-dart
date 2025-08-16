@@ -64,35 +64,25 @@ class ConcreteEntityState extends BaseEntityState {
     super.change_cloudAt,
     super.change_cloudAt_orig_,
     required super.change_changeBy,
-    super.data_rank_dataSchemaRev,
+    super.data_rank_dataSchemaRev_,
     super.data_rank,
     super.data_rank_changeAt_,
     super.data_rank_cid_,
     super.data_rank_changeBy_,
     super.data_rank_cloudAt_,
     super.data_deleted,
-    super.data_deleted_dataSchemaRev,
+    super.data_deleted_dataSchemaRev_,
     super.data_deleted_changeAt_,
     super.data_deleted_cid_,
     super.data_deleted_changeBy_,
     super.data_deleted_cloudAt_,
     required super.data_parentId,
-    required super.data_parentId_dataSchemaRev,
+    required super.data_parentId_dataSchemaRev_,
     required super.data_parentId_changeAt_,
     required super.data_parentId_cid_,
     required super.data_parentId_changeBy_,
     super.data_parentId_cloudAt_,
   });
-
-  // Implement CoreEntityDataFields getters
-  @override
-  int? get data_deleted_dataSchemaRev_ => data_deleted_dataSchemaRev;
-
-  @override
-  int? get data_parentId_dataSchemaRev_ => data_parentId_dataSchemaRev;
-
-  @override
-  int? get data_rank_dataSchemaRev_ => data_rank_dataSchemaRev;
 
   factory ConcreteEntityState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
