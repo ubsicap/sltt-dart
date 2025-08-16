@@ -1,14 +1,13 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'test_concrete_models.dart';
+part of 'test_models.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-ConcreteChangeLogEntry _$ConcreteChangeLogEntryFromJson(
-        Map<String, dynamic> json) =>
-    ConcreteChangeLogEntry(
+TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
+    TestChangeLogEntry(
       entityId: json['entityId'] as String,
       entityType: $enumDecode(_$EntityTypeEnumMap, json['entityType']),
       domainId: json['domainId'] as String,
@@ -29,8 +28,7 @@ ConcreteChangeLogEntry _$ConcreteChangeLogEntryFromJson(
       seq: (json['seq'] as num?)?.toInt() ?? 0,
     );
 
-Map<String, dynamic> _$ConcreteChangeLogEntryToJson(
-        ConcreteChangeLogEntry instance) =>
+Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
     <String, dynamic>{
       'cid': instance.cid,
       'domainType': instance.domainType,
@@ -69,8 +67,8 @@ const _$EntityTypeEnumMap = {
   EntityType.comment: 'comment',
 };
 
-ConcreteEntityState _$ConcreteEntityStateFromJson(Map<String, dynamic> json) =>
-    ConcreteEntityState(
+TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
+    TestEntityState(
       entityId: json['entityId'] as String,
       entityType: $enumDecode(_$EntityTypeEnumMap, json['entityType']),
       schemaVersion: (json['schemaVersion'] as num?)?.toInt(),
@@ -126,8 +124,7 @@ ConcreteEntityState _$ConcreteEntityStateFromJson(Map<String, dynamic> json) =>
       ..unknown = json['unknown'] as Map<String, dynamic>
       ..change_changeBy_orig_ = json['change_changeBy_orig_'] as String;
 
-Map<String, dynamic> _$ConcreteEntityStateToJson(
-        ConcreteEntityState instance) =>
+Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
     <String, dynamic>{
       'entityId': instance.entityId,
       'entityType': _$EntityTypeEnumMap[instance.entityType]!,

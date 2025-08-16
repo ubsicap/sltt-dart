@@ -6,16 +6,16 @@ import 'package:sltt_core/src/models/base_entity_state.dart';
 import 'package:sltt_core/src/models/entity_type.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 
-part 'test_concrete_models.g.dart';
+part 'test_models.g.dart';
 
 /// Concrete implementation of BaseChangeLogEntry for testing
 /// This is similar to the existing ChangeLogEntry but specifically for tests
 @JsonSerializable()
-class ConcreteChangeLogEntry extends BaseChangeLogEntry {
+class TestChangeLogEntry extends BaseChangeLogEntry {
   @override
   final int seq;
 
-  ConcreteChangeLogEntry({
+  TestChangeLogEntry({
     required super.entityId,
     required super.entityType,
     required super.domainId,
@@ -34,23 +34,23 @@ class ConcreteChangeLogEntry extends BaseChangeLogEntry {
     this.seq = 0,
   });
 
-  factory ConcreteChangeLogEntry.fromJson(Map<String, dynamic> json) =>
+  factory TestChangeLogEntry.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
-        _$ConcreteChangeLogEntryFromJson,
+        _$TestChangeLogEntryFromJson,
         json,
-        _$ConcreteChangeLogEntryToJson,
+        _$TestChangeLogEntryToJson,
       );
 
   @override
   Map<String, dynamic> toJson() =>
-      serializeWithUnknownFieldData(this, _$ConcreteChangeLogEntryToJson);
+      serializeWithUnknownFieldData(this, _$TestChangeLogEntryToJson);
 }
 
 /// Concrete implementation of BaseEntityState for testing
 /// This is similar to the existing EntityState but specifically for tests
 @JsonSerializable(includeIfNull: true)
-class ConcreteEntityState extends BaseEntityState {
-  ConcreteEntityState({
+class TestEntityState extends BaseEntityState {
+  TestEntityState({
     required super.entityId,
     required super.entityType,
     super.schemaVersion,
@@ -84,19 +84,16 @@ class ConcreteEntityState extends BaseEntityState {
     super.data_parentId_cloudAt_,
   });
 
-  factory ConcreteEntityState.fromJson(Map<String, dynamic> json) =>
+  factory TestEntityState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
-        _$ConcreteEntityStateFromJson,
+        _$TestEntityStateFromJson,
         json,
-        _$ConcreteEntityStateToJson,
+        _$TestEntityStateToJson,
       );
 
   @override
   Map<String, dynamic> toJson() {
-    final json = serializeWithUnknownFieldData(
-      this,
-      _$ConcreteEntityStateToJson,
-    );
+    final json = serializeWithUnknownFieldData(this, _$TestEntityStateToJson);
     // Remove null values for normal serialization
     return Map<String, dynamic>.fromEntries(
       json.entries.where((entry) => entry.value != null),

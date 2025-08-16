@@ -2,16 +2,16 @@ import 'package:sltt_core/src/models/entity_type.dart';
 import 'package:sltt_core/src/services/change_entity_state_service.dart';
 import 'package:test/test.dart';
 
-import 'test_concrete_models.dart';
+import 'test_models.dart';
 
 void main() {
   group('ChangeEntityStateService', () {
     late DateTime baseTime;
-    late ConcreteEntityState entityState;
+    late TestEntityState entityState;
 
     setUp(() {
       baseTime = DateTime.parse('2023-01-01T00:00:00Z');
-      entityState = ConcreteEntityState.fromJson(<String, dynamic>{
+      entityState = TestEntityState.fromJson(<String, dynamic>{
         'entityId': 'entity1',
         'entityType': 'task',
         'change_domainId': 'project1',
@@ -39,7 +39,7 @@ void main() {
 
     group('getMaybeIsDuplicateCidResult', () {
       test('should return true for duplicate CID', () {
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -63,7 +63,7 @@ void main() {
       });
 
       test('should return false for different CID', () {
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -89,7 +89,7 @@ void main() {
 
     group('calculateOperation', () {
       test('should calculate create operation for new entity', () {
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity2',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -110,7 +110,7 @@ void main() {
       });
 
       test('should calculate update operation for existing entity', () {
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -137,7 +137,7 @@ void main() {
       });
 
       test('should calculate delete operation', () {
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -164,7 +164,7 @@ void main() {
       });
 
       test('should calculate noOp for no changes', () {
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -191,7 +191,7 @@ void main() {
       });
 
       test('should calculate outdated for older changes', () {
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -222,7 +222,7 @@ void main() {
       test('should handle field-level conflict resolution', () {
         // Create a change log entry with newer field changes
         final newerTime = baseTime.add(const Duration(minutes: 5));
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -241,8 +241,8 @@ void main() {
             getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
               changeLogEntry,
               entityState,
-              changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
-              entityStateFactory: ConcreteEntityState.fromJson,
+              changeLogEntryFactory: TestChangeLogEntry.fromJson,
+              entityStateFactory: TestEntityState.fromJson,
             );
 
         expect(result.newChangeLogEntry, isNotNull);
@@ -254,7 +254,7 @@ void main() {
       test('should reject older changes', () {
         // Create a change log entry with older field changes
         final olderTime = baseTime.subtract(const Duration(minutes: 5));
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -273,8 +273,8 @@ void main() {
             getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
               changeLogEntry,
               entityState,
-              changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
-              entityStateFactory: ConcreteEntityState.fromJson,
+              changeLogEntryFactory: TestChangeLogEntry.fromJson,
+              entityStateFactory: TestEntityState.fromJson,
             );
 
         expect(result.newChangeLogEntry.operation, equals('outdated'));
@@ -283,7 +283,7 @@ void main() {
       });
 
       test('should handle new entity creation', () {
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity2',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -302,8 +302,8 @@ void main() {
             getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
               changeLogEntry,
               null, // No existing entity state
-              changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
-              entityStateFactory: ConcreteEntityState.fromJson,
+              changeLogEntryFactory: TestChangeLogEntry.fromJson,
+              entityStateFactory: TestEntityState.fromJson,
             );
 
         expect(result.newChangeLogEntry.operation, equals('create'));
@@ -314,7 +314,7 @@ void main() {
       });
 
       test('should handle entity deletion', () {
-        final changeLogEntry = ConcreteChangeLogEntry(
+        final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -333,8 +333,8 @@ void main() {
             getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
               changeLogEntry,
               entityState,
-              changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
-              entityStateFactory: ConcreteEntityState.fromJson,
+              changeLogEntryFactory: TestChangeLogEntry.fromJson,
+              entityStateFactory: TestEntityState.fromJson,
             );
 
         expect(result.newChangeLogEntry.operation, equals('delete'));
@@ -346,7 +346,7 @@ void main() {
         () {
           // Test the case where incoming change is newer than the latest timestamp
           final newerTime = baseTime.add(const Duration(minutes: 5));
-          final changeLogEntry = ConcreteChangeLogEntry(
+          final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity1',
             entityType: EntityType.task,
             domainId: 'project1',
@@ -365,8 +365,8 @@ void main() {
               getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
                 changeLogEntry,
                 entityState, // Uses baseTime as latest change
-                changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
-                entityStateFactory: ConcreteEntityState.fromJson,
+                changeLogEntryFactory: TestChangeLogEntry.fromJson,
+                entityStateFactory: TestEntityState.fromJson,
               );
 
           expect(result.newChangeLogEntry.operation, equals('update'));
@@ -386,7 +386,7 @@ void main() {
           final newerFieldTime = baseTime.add(const Duration(minutes: 2));
 
           // Create entity state where latest is baseTime but rank field was updated more recently
-          final entityStateWithNewerField = ConcreteEntityState.fromJson({
+          final entityStateWithNewerField = TestEntityState.fromJson({
             'entityId': 'entity1',
             'entityType': 'task',
             'change_domainId': 'project1',
@@ -412,7 +412,7 @@ void main() {
             'unknown': <String, dynamic>{},
           });
 
-          final changeLogEntry = ConcreteChangeLogEntry(
+          final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity1',
             entityType: EntityType.task,
             domainId: 'project1',
@@ -432,8 +432,8 @@ void main() {
               getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
                 changeLogEntry,
                 entityStateWithNewerField,
-                changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
-                entityStateFactory: ConcreteEntityState.fromJson,
+                changeLogEntryFactory: TestChangeLogEntry.fromJson,
+                entityStateFactory: TestEntityState.fromJson,
               );
 
           expect(result.newChangeLogEntry.operation, equals('outdated'));
@@ -452,7 +452,7 @@ void main() {
           ); // Between olderTime and baseTime
 
           // Create entity state where latest is baseTime but rank field is older
-          final entityStateWithOlderField = ConcreteEntityState.fromJson({
+          final entityStateWithOlderField = TestEntityState.fromJson({
             'entityId': 'entity1',
             'entityType': 'task',
             'change_domainId': 'project1',
@@ -478,7 +478,7 @@ void main() {
             'unknown': <String, dynamic>{},
           });
 
-          final changeLogEntry = ConcreteChangeLogEntry(
+          final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity1',
             entityType: EntityType.task,
             domainId: 'project1',
@@ -497,8 +497,8 @@ void main() {
               getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
                 changeLogEntry,
                 entityStateWithOlderField,
-                changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
-                entityStateFactory: ConcreteEntityState.fromJson,
+                changeLogEntryFactory: TestChangeLogEntry.fromJson,
+                entityStateFactory: TestEntityState.fromJson,
               );
 
           expect(result.newChangeLogEntry.operation, equals('update'));
