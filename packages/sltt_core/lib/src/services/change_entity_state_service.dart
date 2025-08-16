@@ -345,6 +345,13 @@ GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
   );
 }
 
+DateTime _toDateTime(dynamic v, DateTime defaultValue) {
+  if (v == null) return defaultValue;
+  if (v is DateTime) return v;
+  if (v is String) return DateTime.tryParse(v) ?? defaultValue;
+  return defaultValue;
+}
+
 /// fieldUpdatesOrOutdatedBys(changeLogEntry: ChangeLogEntry, entityState: BaseEntityState, fieldChanges):
 /// returns { fieldUpdates: Map<String, dynamic>, outdatedBys: List<String> }
 Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
@@ -360,7 +367,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
     // Access entity state properties directly for latest metadata check
     final existingChangeAt = entityState.change_changeAt;
 
-    final existingData = entityState.toJson();
+    final existingStateJson = entityState.toJson();
 
     bool isChangeNewerThanLatest = false;
 
@@ -382,18 +389,13 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
       // Change is not newer than latest, check field by field
       fieldChanges.forEach((field, value) {
         final entityFieldKey =
-            'data_$field'; // Change log has 'rank', entity has 'data_rank'
-        final existingFieldChangeAtData =
-            existingData['${entityFieldKey}_changeAt_'];
-        final existingFieldChangeAt = existingFieldChangeAtData is DateTime
-            ? existingFieldChangeAtData
-            : (existingFieldChangeAtData is String
-                  ? DateTime.tryParse(existingFieldChangeAtData)
-                  : null);
+            'data_$field'; // Change log has 'rank', entity has 'data_rank'            ;
 
-        if (changeLogEntry.changeAt.isAfter(
-          existingFieldChangeAt ?? DateTime.fromMillisecondsSinceEpoch(0),
-        )) {
+        final existingFieldChangeAt = _toDateTime(
+          existingStateJson['${entityFieldKey}_changeAt_'],
+          DateTime.fromMillisecondsSinceEpoch(0),
+        );
+        if (changeLogEntry.changeAt.isAfter(existingFieldChangeAt)) {
           fieldUpdates[field] = value;
         } else {
           outdatedBys.add(field);
