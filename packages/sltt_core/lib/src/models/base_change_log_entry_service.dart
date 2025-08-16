@@ -41,10 +41,56 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>(
       ...(safeJson['operationInfo'] as Map<String, dynamic>? ?? {}),
       'entityType': parsed.raw,
     };
-    return deserializeWithUnknownFieldData(fromJson, safeJson, baseToJson);
+    try {
+      return deserializeWithUnknownFieldData(fromJson, safeJson, baseToJson);
+    } catch (e, st) {
+      final recovery = _createSafeJsonFromDeserializationError(e, st, json);
+      return deserializeWithUnknownFieldData(fromJson, recovery, baseToJson);
+    }
   }
+  try {
+    return deserializeWithUnknownFieldData(fromJson, json, baseToJson);
+  } catch (e, st) {
+    final recovery = _createSafeJsonFromDeserializationError(e, st, json);
+    return deserializeWithUnknownFieldData(fromJson, recovery, baseToJson);
+  }
+}
 
-  return deserializeWithUnknownFieldData(fromJson, json, baseToJson);
+/// Build a safe JSON to use when deserialization of the original JSON fails.
+Map<String, dynamic> _createSafeJsonFromDeserializationError(
+  Object error,
+  StackTrace? stack,
+  Map<String, dynamic> originalJson,
+) {
+  final serializedError = error.toString();
+  final errorInfo = <String, dynamic>{'error': serializedError};
+  if (stack != null) errorInfo['errorStack'] = stack.toString();
+
+  final safeJson = Map<String, dynamic>.from(originalJson);
+
+  // Ensure minimal required fields exist and normalize entityType
+  safeJson['entityType'] = EntityType.unknown.value;
+  safeJson['operation'] = 'error';
+  safeJson['operationInfo'] = {
+    ...(safeJson['operationInfo'] as Map<String, dynamic>? ?? {}),
+    'error': errorInfo['error'] ?? '',
+    'errorStack': errorInfo['errorStack'] ?? '',
+    'json': originalJson,
+  };
+
+  // Ensure required change-log fields exist so fromJson factories can succeed
+  safeJson['entityId'] = safeJson['entityId'] ?? 'unknown';
+  safeJson['domainId'] = safeJson['domainId'] ?? '';
+  safeJson['domainType'] = safeJson['domainType'] ?? '';
+  safeJson['changeAt'] =
+      safeJson['changeAt'] ?? DateTime.now().toIso8601String();
+  safeJson['cid'] = safeJson['cid'] ?? generateCid();
+  safeJson['changeBy'] = safeJson['changeBy'] ?? '';
+  safeJson['data'] = safeJson['data'] ?? <String, dynamic>{};
+  safeJson['stateChanged'] = safeJson['stateChanged'] ?? false;
+  safeJson['unknown'] = safeJson['unknown'] ?? <String, dynamic>{};
+
+  return safeJson;
 }
 
 /// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
