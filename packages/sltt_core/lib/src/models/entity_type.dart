@@ -3,6 +3,8 @@ import 'dart:math';
 /// Enumeration of all supported entity types in the SLTT system.
 /// Each entity type will eventually have its own schema and collections.
 enum EntityType {
+  /// Unknown value for forward compatibility when clients send newer entity types
+  unknown('unknown'),
   project('project'),
   team('team'),
   plan('plan'),

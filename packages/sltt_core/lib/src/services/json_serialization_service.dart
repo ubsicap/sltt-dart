@@ -1,3 +1,5 @@
+// entity type helpers moved to base_change_log_entry_service.dart
+
 mixin HasUnknownField {
   Map<String, dynamic> get unknown;
   set unknown(Map<String, dynamic> value);

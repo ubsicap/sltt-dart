@@ -1,5 +1,62 @@
 import 'dart:math';
 
+import '../services/json_serialization_service.dart';
+import 'entity_type.dart';
+
+/// Helper used when parsing potentially unknown entityType strings
+class _EntityTypeOrRaw {
+  final EntityType? entityType;
+  final String? raw;
+  _EntityTypeOrRaw({required this.entityType, required this.raw});
+}
+
+_EntityTypeOrRaw _parseEntityType(dynamic raw) {
+  if (raw == null) return _EntityTypeOrRaw(entityType: null, raw: null);
+  if (raw is String) {
+    final parsed = EntityType.tryFromString(raw);
+    if (parsed != null) return _EntityTypeOrRaw(entityType: parsed, raw: null);
+    return _EntityTypeOrRaw(entityType: null, raw: raw);
+  }
+  return _EntityTypeOrRaw(entityType: null, raw: raw?.toString());
+}
+
+/// Deserialize a BaseChangeLogEntry subclass using the provided factory.
+/// If the json['entityType'] can't be parsed, returns an instance with
+/// operation='unknownEntityType', entityType=EntityType.unknown and
+/// operationInfo capturing the unparseable value.
+T deserializeChangeLogEntrySafely<T extends HasUnknownField>(
+  T Function(Map<String, dynamic>) fromJson,
+  Map<String, dynamic> json,
+  Map<String, dynamic> Function(T) baseToJson,
+) {
+  final parsed = _parseEntityType(json['entityType']);
+
+  if (parsed.entityType == null && parsed.raw != null) {
+    final safeJson = Map<String, dynamic>.from(json);
+    safeJson['entityType'] = EntityType.unknown.value;
+    final entry = deserializeWithUnknownFieldData(
+      fromJson,
+      safeJson,
+      baseToJson,
+    );
+
+    try {
+      final map = baseToJson(entry);
+      map['operation'] = 'unknownEntityType';
+      map['operationInfo'] = {
+        ...(map['operationInfo'] as Map? ?? {}),
+        'entityType': parsed.raw,
+      };
+      final newEntry = fromJson(map);
+      return newEntry;
+    } catch (e) {
+      return deserializeWithUnknownFieldData(fromJson, safeJson, baseToJson);
+    }
+  }
+
+  return deserializeWithUnknownFieldData(fromJson, json, baseToJson);
+}
+
 /// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
 String generateCid([DateTime? timestamp]) {
   final now = timestamp ?? DateTime.now();
