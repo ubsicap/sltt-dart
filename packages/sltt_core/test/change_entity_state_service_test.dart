@@ -377,65 +377,140 @@ void main() {
         },
       );
 
-      test('should use field-level pathway when change is older than latest', () {
-        // Test the case where incoming change is older than latest, forcing field-level check
-        final olderTime = baseTime.subtract(const Duration(minutes: 5));
-        final newerFieldTime = baseTime.add(const Duration(minutes: 2));
+      test(
+        'should use field-level pathway when change is older than latest - outdated',
+        () {
+          // Test the case where incoming change is older than latest, forcing field-level check
+          // AND the incoming change is also older than the field timestamp -> outdated
+          final olderTime = baseTime.subtract(const Duration(minutes: 5));
+          final newerFieldTime = baseTime.add(const Duration(minutes: 2));
 
-        // Create entity state where latest is baseTime but rank field was updated more recently
-        final entityStateWithNewerField = ConcreteEntityState.fromJson({
-          'entityId': 'entity1',
-          'entityType': 'task',
-          'change_domainId': 'project1',
-          'change_domainId_orig_': 'project1',
-          'change_changeAt': baseTime
-              .toIso8601String(), // Latest overall change
-          'change_changeAt_orig_': baseTime.toIso8601String(),
-          'change_cid': 'latest-cid',
-          'change_cid_orig_': 'latest-cid',
-          'change_changeBy': 'user1',
-          'change_changeBy_orig_': 'user1',
-          'data_parentId': 'parent1',
-          'data_parentId_dataSchemaRev': 1,
-          'data_parentId_changeAt_': baseTime.toIso8601String(),
-          'data_parentId_cid_': 'cid1',
-          'data_parentId_changeBy_': 'user1',
-          'data_rank': '1',
-          'data_rank_dataSchemaRev': 1,
-          'data_rank_changeAt_': newerFieldTime
-              .toIso8601String(), // Field is newer than incoming
-          'data_rank_cid_': 'field-cid',
-          'data_rank_changeBy_': 'user1',
-          'unknown': <String, dynamic>{},
-        });
+          // Create entity state where latest is baseTime but rank field was updated more recently
+          final entityStateWithNewerField = ConcreteEntityState.fromJson({
+            'entityId': 'entity1',
+            'entityType': 'task',
+            'change_domainId': 'project1',
+            'change_domainId_orig_': 'project1',
+            'change_changeAt': baseTime
+                .toIso8601String(), // Latest overall change
+            'change_changeAt_orig_': baseTime.toIso8601String(),
+            'change_cid': 'latest-cid',
+            'change_cid_orig_': 'latest-cid',
+            'change_changeBy': 'user1',
+            'change_changeBy_orig_': 'user1',
+            'data_parentId': 'parent1',
+            'data_parentId_dataSchemaRev': 1,
+            'data_parentId_changeAt_': baseTime.toIso8601String(),
+            'data_parentId_cid_': 'cid1',
+            'data_parentId_changeBy_': 'user1',
+            'data_rank': '1',
+            'data_rank_dataSchemaRev': 1,
+            'data_rank_changeAt_': newerFieldTime
+                .toIso8601String(), // Field is newer than incoming
+            'data_rank_cid_': 'field-cid',
+            'data_rank_changeBy_': 'user1',
+            'unknown': <String, dynamic>{},
+          });
 
-        final changeLogEntry = ConcreteChangeLogEntry(
-          entityId: 'entity1',
-          entityType: EntityType.task,
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt:
-              olderTime, // Older than latest, will be rejected at field level too
-          cid: 'old-cid',
-          changeBy: 'user0',
-          data: {'rank': '0'},
-          operation: 'update',
-          operationInfo: {},
-          stateChanged: true,
-          unknown: {},
-        );
+          final changeLogEntry = ConcreteChangeLogEntry(
+            entityId: 'entity1',
+            entityType: EntityType.task,
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt:
+                olderTime, // Older than latest, will be rejected at field level too
+            cid: 'old-cid',
+            changeBy: 'user0',
+            data: {'rank': '0'},
+            operation: 'update',
+            operationInfo: {},
+            stateChanged: true,
+            unknown: {},
+          );
 
-        final result =
-            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-              changeLogEntry,
-              entityStateWithNewerField,
-              changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
-              entityStateFactory: ConcreteEntityState.fromJson,
-            );
+          final result =
+              getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+                changeLogEntry,
+                entityStateWithNewerField,
+                changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
+                entityStateFactory: ConcreteEntityState.fromJson,
+              );
 
-        expect(result.newChangeLogEntry.operation, equals('outdated'));
-        expect(result.newEntityState, isNull); // No state change for outdated
-      });
+          expect(result.newChangeLogEntry.operation, equals('outdated'));
+          expect(result.newEntityState, isNull); // No state change for outdated
+        },
+      );
+
+      test(
+        'should use field-level pathway when change is older than latest - update',
+        () {
+          // Test the case where incoming change is older than latest, forcing field-level check
+          // BUT the incoming change is newer than the field timestamp -> update
+          final olderTime = baseTime.subtract(const Duration(minutes: 5));
+          final newerFieldTime = baseTime.subtract(
+            const Duration(minutes: 2),
+          ); // Between olderTime and baseTime
+
+          // Create entity state where latest is baseTime but rank field is older
+          final entityStateWithOlderField = ConcreteEntityState.fromJson({
+            'entityId': 'entity1',
+            'entityType': 'task',
+            'change_domainId': 'project1',
+            'change_domainId_orig_': 'project1',
+            'change_changeAt': baseTime
+                .toIso8601String(), // Latest overall change
+            'change_changeAt_orig_': baseTime.toIso8601String(),
+            'change_cid': 'latest-cid',
+            'change_cid_orig_': 'latest-cid',
+            'change_changeBy': 'user1',
+            'change_changeBy_orig_': 'user1',
+            'data_parentId': 'parent1',
+            'data_parentId_dataSchemaRev': 1,
+            'data_parentId_changeAt_': baseTime.toIso8601String(),
+            'data_parentId_cid_': 'cid1',
+            'data_parentId_changeBy_': 'user1',
+            'data_rank': '1',
+            'data_rank_dataSchemaRev': 1,
+            'data_rank_changeAt_': olderTime
+                .toIso8601String(), // Field is older than incoming
+            'data_rank_cid_': 'old-field-cid',
+            'data_rank_changeBy_': 'user0',
+            'unknown': <String, dynamic>{},
+          });
+
+          final changeLogEntry = ConcreteChangeLogEntry(
+            entityId: 'entity1',
+            entityType: EntityType.task,
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: newerFieldTime, // Older than latest, but newer than field
+            cid: 'mid-cid',
+            changeBy: 'user2',
+            data: {'rank': '2'},
+            operation: 'update',
+            operationInfo: {},
+            stateChanged: true,
+            unknown: {},
+          );
+
+          final result =
+              getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+                changeLogEntry,
+                entityStateWithOlderField,
+                changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
+                entityStateFactory: ConcreteEntityState.fromJson,
+              );
+
+          expect(result.newChangeLogEntry.operation, equals('update'));
+          expect(result.newEntityState?.data_rank, equals('2'));
+          // Latest metadata should be updated to reflect this change
+          expect(
+            result.newEntityState?.change_changeAt,
+            equals(newerFieldTime),
+          );
+          expect(result.newEntityState?.change_cid, equals('mid-cid'));
+        },
+      );
     });
   });
 }
