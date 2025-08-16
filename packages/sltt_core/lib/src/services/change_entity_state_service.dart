@@ -76,7 +76,12 @@ getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
   return LastWriteWinsResult(
     newChangeLogEntry: newChangeLogEntry,
     newEntityState: operation != 'noOp' && operation != 'outdated'
-        ? forkWithStateUpdates(entityState, stateUpdates, entityStateFactory)
+        ? forkWithStateUpdates(
+            entityState,
+            stateUpdates,
+            entityStateFactory,
+            changeLogEntry: changeLogEntry,
+          )
         : null,
   );
 }
@@ -84,10 +89,68 @@ getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
 BaseEntityState forkWithStateUpdates(
   BaseEntityState? sourceEntityState,
   Map<String, dynamic> stateUpdates,
-  BaseEntityState Function(Map<String, dynamic>)? entityStateFactory,
-) {
-  final clone = sourceEntityState?.toJson() ?? {};
+  BaseEntityState Function(Map<String, dynamic>)? entityStateFactory, {
+  BaseChangeLogEntry? changeLogEntry,
+}) {
+  Map<String, dynamic> clone;
+
+  if (sourceEntityState != null) {
+    clone = sourceEntityState.toJson();
+  } else if (changeLogEntry != null) {
+    // Create a new entity state from the change log entry
+    clone = {
+      'entityId': changeLogEntry.entityId,
+      'entityType': changeLogEntry.entityType.toString().split('.').last,
+      'change_domainId': changeLogEntry.domainId,
+      'change_domainId_orig_': changeLogEntry.domainId,
+      'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
+      'change_changeAt_orig_': changeLogEntry.changeAt.toIso8601String(),
+      'change_cid': changeLogEntry.cid,
+      'change_cid_orig_': changeLogEntry.cid,
+      'change_changeBy': changeLogEntry.changeBy,
+      'change_changeBy_orig_': changeLogEntry.changeBy,
+      'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
+      'change_cloudAt': changeLogEntry.cloudAt?.toIso8601String(),
+      'change_cloudAt_orig_': changeLogEntry.cloudAt?.toIso8601String(),
+    };
+
+    // Add required data fields from the change log entry data
+    for (final entry in changeLogEntry.data.entries) {
+      final key = entry.key;
+      final value = entry.value;
+
+      if (!key.startsWith('_') && key != 'deleted') {
+        // Add the data field and its metadata
+        clone['data_$key'] = value;
+        clone['data_${key}_dataSchemaRev'] = changeLogEntry.dataSchemaRev ?? 1;
+        clone['data_${key}_changeAt_'] = changeLogEntry.changeAt
+            .toIso8601String();
+        clone['data_${key}_cid_'] = changeLogEntry.cid;
+        clone['data_${key}_changeBy_'] = changeLogEntry.changeBy;
+        if (changeLogEntry.cloudAt != null) {
+          clone['data_${key}_cloudAt_'] = changeLogEntry.cloudAt!
+              .toIso8601String();
+        }
+      }
+    }
+  } else {
+    clone = {};
+  }
+
   final newJson = {...clone, ...stateUpdates};
+
+  // Ensure unknown field is always a Map for deserialization
+  if (!newJson.containsKey('unknown') || newJson['unknown'] == null) {
+    newJson['unknown'] = <String, dynamic>{};
+  }
+
+  // Remove null values that the generated fromJson can't handle
+  newJson.removeWhere((key, value) => value == null && key != 'unknown');
+
+  // DEBUG: Create a baseline ConcreteEntityState to see what fields it needs
+  print(
+    'DEBUG: Attempting to create entity with keys: ${newJson.keys.toList()}',
+  );
 
   if (entityStateFactory != null) {
     return entityStateFactory(newJson);
@@ -124,11 +187,10 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult(
   }
 
   final entryState = entityState.toJson();
-  final changeLogData = changeLogEntry.data;
   final changeLogCid = changeLogEntry.cid;
 
   // Check if any field in the entity state matches the change log entry cid
-  for (final key in changeLogData.keys) {
+  for (final key in entryState.keys) {
     if (key.endsWith('_cid_') && entryState[key] == changeLogCid) {
       isDuplicate = true;
       cloudAt = changeLogEntry.cloudAt;
@@ -164,9 +226,58 @@ String calculateOperation(
     return 'delete';
   }
 
-  // If there are no field changes, it's a no-op
-  if (fieldChanges.isEmpty && noOpFields.isNotEmpty) {
-    return 'noOp';
+  // If there are no pre-computed field changes, analyze the change log entry directly
+  if (fieldChanges.isEmpty && outdatedBys.isEmpty) {
+    // Check if the change log entry has actual data changes
+    final hasDataChanges = changeData.keys
+        .where((key) => !key.startsWith('_') && key != 'deleted')
+        .isNotEmpty;
+
+    if (!hasDataChanges) {
+      return 'noOp';
+    }
+
+    final entityJson = entityState.toJson();
+
+    // Check if the values are actually different
+    bool hasActualChanges = false;
+    bool isOutdated = false;
+
+    for (final key in changeData.keys) {
+      if (key.startsWith('_') || key == 'deleted') continue;
+
+      final entityFieldKey =
+          'data_$key'; // Change log has 'rank', entity has 'data_rank'
+      final entityValue = entityJson[entityFieldKey];
+      final changeValue = changeData[key];
+
+      // Check if value is different
+      if (stableStringify(entityValue) != stableStringify(changeValue)) {
+        hasActualChanges = true;
+
+        // Check if this change is outdated based on field timestamp
+        final fieldChangeAtData = entityJson['${entityFieldKey}_changeAt_'];
+        final fieldChangeAt = fieldChangeAtData is DateTime
+            ? fieldChangeAtData
+            : (fieldChangeAtData is String
+                  ? DateTime.tryParse(fieldChangeAtData)
+                  : null);
+        if (fieldChangeAt != null &&
+            !changeLogEntry.changeAt.isAfter(fieldChangeAt)) {
+          isOutdated = true;
+        }
+      }
+    }
+
+    if (!hasActualChanges) {
+      return 'noOp';
+    }
+
+    if (isOutdated) {
+      return 'outdated';
+    }
+
+    return 'update';
   }
 
   // If there are outdated fields, we return 'outdated'
@@ -216,7 +327,10 @@ GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
     final existingData = entityState.toJson();
 
     incomingData.forEach((field, value) {
-      if (stableStringify(existingData[field]) != stableStringify(value)) {
+      final entityFieldKey =
+          'data_$field'; // Change log has 'rank', entity has 'data_rank'
+      if (stableStringify(existingData[entityFieldKey]) !=
+          stableStringify(value)) {
         fieldChanges[field] = value;
       } else {
         noOpFields.add(field);
@@ -247,34 +361,89 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
   if (entityState != null) {
     final existingData = entityState.toJson();
 
-    fieldChanges.forEach((field, value) {
-      final existingFieldChangeAt =
-          existingData['${field}_changeAt_'] as DateTime?;
-      if (changeLogEntry.changeAt.isAfter(
-        existingFieldChangeAt ?? DateTime.fromMillisecondsSinceEpoch(0),
-      )) {
+    // First check global: compare change.cid with change_cid and change.changeAt with change_changeAt
+    final existingChangeCid = existingData['change_cid'] as String?;
+    final existingChangeAtData = existingData['change_changeAt'];
+    final existingChangeAt = existingChangeAtData is DateTime
+        ? existingChangeAtData
+        : (existingChangeAtData is String
+              ? DateTime.tryParse(existingChangeAtData)
+              : null);
+
+    bool canProceedGlobally = false;
+
+    if (existingChangeCid == null || existingChangeAt == null) {
+      // No existing global metadata, proceed with all fields
+      canProceedGlobally = true;
+    } else if (changeLogEntry.cid == existingChangeCid ||
+        changeLogEntry.changeAt.isAfter(existingChangeAt)) {
+      // CID matches or incoming change is newer globally
+      canProceedGlobally = true;
+    }
+
+    if (canProceedGlobally) {
+      // Global check passed, update all changed fields
+      fieldChanges.forEach((field, value) {
         fieldUpdates[field] = value;
-      } else {
-        outdatedBys.add(field);
-      }
-    });
+      });
+    } else {
+      // Global check failed, check field by field
+      fieldChanges.forEach((field, value) {
+        final entityFieldKey =
+            'data_$field'; // Change log has 'rank', entity has 'data_rank'
+        final existingFieldChangeAtData =
+            existingData['${entityFieldKey}_changeAt_'];
+        final existingFieldChangeAt = existingFieldChangeAtData is DateTime
+            ? existingFieldChangeAtData
+            : (existingFieldChangeAtData is String
+                  ? DateTime.tryParse(existingFieldChangeAtData)
+                  : null);
+
+        if (changeLogEntry.changeAt.isAfter(
+          existingFieldChangeAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+        )) {
+          fieldUpdates[field] = value;
+        } else {
+          outdatedBys.add(field);
+        }
+      });
+    }
+  } else {
+    // No entity state, treat all as updates
+    fieldUpdates.addAll(fieldChanges);
   }
 
   return {
     'stateUpdates': {
-      ...fieldUpdates,
+      // Transform field updates to use data_ prefix for entity state
+      ...fieldUpdates.map((key, value) => MapEntry('data_$key', value)),
+      // Field-specific metadata
       ...fieldUpdates.map(
-        (key, value) => MapEntry('${key}ChangeAt', changeLogEntry.changeAt),
+        (key, value) => MapEntry(
+          'data_${key}_changeAt_',
+          changeLogEntry.changeAt.toIso8601String(),
+        ),
       ),
       ...fieldUpdates.map(
-        (key, value) => MapEntry('${key}Cid', changeLogEntry.cid),
+        (key, value) => MapEntry('data_${key}_cid_', changeLogEntry.cid),
       ),
       ...fieldUpdates.map(
-        (key, value) => MapEntry('${key}ChangeBy', changeLogEntry.changeBy),
+        (key, value) =>
+            MapEntry('data_${key}_changeBy_', changeLogEntry.changeBy),
       ),
       ...fieldUpdates.map(
-        (key, value) => MapEntry('${key}CloudAt', changeLogEntry.cloudAt),
+        (key, value) => MapEntry(
+          'data_${key}_cloudAt_',
+          changeLogEntry.cloudAt?.toIso8601String(),
+        ),
       ),
+      // Global metadata
+      if (fieldUpdates.isNotEmpty) ...{
+        'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
+        'change_cid': changeLogEntry.cid,
+        'change_changeBy': changeLogEntry.changeBy,
+        'change_cloudAt': changeLogEntry.cloudAt?.toIso8601String(),
+      },
     },
     'changeDataUpdates': fieldUpdates,
     'outdatedBys': outdatedBys,

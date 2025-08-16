@@ -45,7 +45,8 @@ class ConcreteChangeLogEntry extends BaseChangeLogEntry {
 }
 
 /// Concrete implementation of BaseEntityState for testing
-@JsonSerializable()
+/// This is similar to the existing EntityState but specifically for tests
+@JsonSerializable(includeIfNull: true)
 class ConcreteEntityState extends BaseEntityState {
   ConcreteEntityState({
     required super.entityId,
@@ -120,6 +121,14 @@ class ConcreteEntityState extends BaseEntityState {
       );
 
   @override
-  Map<String, dynamic> toJson() =>
-      serializeWithUnknownFieldData(this, _$ConcreteEntityStateToJson);
+  Map<String, dynamic> toJson() {
+    final json = serializeWithUnknownFieldData(
+      this,
+      _$ConcreteEntityStateToJson,
+    );
+    // Remove null values for normal serialization
+    return Map<String, dynamic>.fromEntries(
+      json.entries.where((entry) => entry.value != null),
+    );
+  }
 }

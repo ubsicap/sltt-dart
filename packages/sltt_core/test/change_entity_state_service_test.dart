@@ -3,36 +3,43 @@ import 'package:sltt_core/src/services/change_entity_state_service.dart';
 import 'package:test/test.dart';
 
 import 'test_concrete_models.dart';
-import 'test_models.dart';
 
 void main() {
   group('ChangeEntityStateService', () {
     late DateTime baseTime;
-    late TestEntityState entityState;
+    late ConcreteEntityState entityState;
 
     setUp(() {
       baseTime = DateTime.parse('2023-01-01T00:00:00Z');
-      entityState = TestEntityState(
-        entityId: 'entity1',
-        entityType: EntityType.task,
-        change_domainId: 'project1',
-        change_domainId_orig_: 'project1',
-        change_changeAt: baseTime,
-        change_changeAt_orig_: baseTime,
-        change_cid: 'cid1',
-        change_cid_orig_: 'cid1',
-        change_changeBy: 'user1',
-        data_parentId: 'parent1',
-        data_parentId_dataSchemaRev: 1,
-        data_parentId_changeAt_: baseTime,
-        data_parentId_cid_: 'cid1',
-        data_parentId_changeBy_: 'user1',
-      );
+      entityState = ConcreteEntityState.fromJson(<String, dynamic>{
+        'entityId': 'entity1',
+        'entityType': 'task',
+        'change_domainId': 'project1',
+        'change_domainId_orig_': 'project1',
+        'change_changeAt': baseTime.toIso8601String(),
+        'change_changeAt_orig_': baseTime.toIso8601String(),
+        'change_cid': 'cid1',
+        'change_cid_orig_': 'cid1',
+        'change_changeBy': 'user1',
+        'change_changeBy_orig_': 'user1',
+        'data_parentId': 'parent1',
+        'data_parentId_dataSchemaRev': 1,
+        'data_parentId_changeAt_': baseTime.toIso8601String(),
+        'data_parentId_cid_': 'cid1',
+        'data_parentId_changeBy_': 'user1',
+        // Add some rank data for testing
+        'data_rank': '1',
+        'data_rank_dataSchemaRev': 1,
+        'data_rank_changeAt_': baseTime.toIso8601String(),
+        'data_rank_cid_': 'cid1',
+        'data_rank_changeBy_': 'user1',
+        'unknown': <String, dynamic>{},
+      });
     });
 
     group('getMaybeIsDuplicateCidResult', () {
       test('should return true for duplicate CID', () {
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -56,7 +63,7 @@ void main() {
       });
 
       test('should return false for different CID', () {
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -82,7 +89,7 @@ void main() {
 
     group('calculateOperation', () {
       test('should calculate create operation for new entity', () {
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity2',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -103,7 +110,7 @@ void main() {
       });
 
       test('should calculate update operation for existing entity', () {
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -130,7 +137,7 @@ void main() {
       });
 
       test('should calculate delete operation', () {
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -157,7 +164,7 @@ void main() {
       });
 
       test('should calculate noOp for no changes', () {
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -184,7 +191,7 @@ void main() {
       });
 
       test('should calculate outdated for older changes', () {
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -215,7 +222,7 @@ void main() {
       test('should handle field-level conflict resolution', () {
         // Create a change log entry with newer field changes
         final newerTime = baseTime.add(const Duration(minutes: 5));
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -247,7 +254,7 @@ void main() {
       test('should reject older changes', () {
         // Create a change log entry with older field changes
         final olderTime = baseTime.subtract(const Duration(minutes: 5));
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -276,7 +283,7 @@ void main() {
       });
 
       test('should handle new entity creation', () {
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity2',
           entityType: EntityType.task,
           domainId: 'project1',
@@ -307,7 +314,7 @@ void main() {
       });
 
       test('should handle entity deletion', () {
-        final changeLogEntry = TestChangeLogEntry(
+        final changeLogEntry = ConcreteChangeLogEntry(
           entityId: 'entity1',
           entityType: EntityType.task,
           domainId: 'project1',
