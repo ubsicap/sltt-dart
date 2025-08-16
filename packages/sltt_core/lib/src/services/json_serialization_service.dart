@@ -11,19 +11,7 @@ T deserializeWithUnknownFieldData<T extends HasUnknownField>(
   Map<String, dynamic> json,
   Map<String, dynamic> Function(T value) baseToJson,
 ) {
-  // Normalize any nested Map values to Map<String, dynamic> so the
-  // generated fromJson (which expects Map<String, dynamic>) doesn't fail
-  // when given _Map<dynamic,dynamic> instances.
-  final normalized = <String, dynamic>{};
-  json.forEach((k, v) {
-    if (v is Map) {
-      normalized[k] = (v).cast<String, dynamic>();
-    } else {
-      normalized[k] = v;
-    }
-  });
-
-  final entry = fromJson({'unknown': <String, dynamic>{}, ...normalized});
+  final entry = fromJson({'unknown': <String, dynamic>{}, ...json});
   // Use the generated/base toJson to get only known fields (no unknown merge)
   final knownFields = baseToJson(entry).keys.toSet();
   final unknownFields = Map<String, dynamic>.fromEntries(

@@ -38,7 +38,7 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>(
     // the entry contains the information needed for later rehydration.
     safeJson['operation'] = 'unknownEntityType';
     safeJson['operationInfo'] = {
-      ...(safeJson['operationInfo'] as Map? ?? {}),
+      ...(safeJson['operationInfo'] as Map<String, dynamic>? ?? {}),
       'entityType': parsed.raw,
     };
     return deserializeWithUnknownFieldData(fromJson, safeJson, baseToJson);
