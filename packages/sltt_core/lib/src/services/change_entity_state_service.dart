@@ -359,26 +359,32 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
   final outdatedBys = <String>[];
 
   if (entityState != null) {
+    // Access entity state properties directly for global check
+    final existingChangeCid = entityState.change_cid;
+    final existingChangeAt = entityState.change_changeAt;
+
+    // For field-level access, we still need JSON with nulls included
+    // Create a special JSON that includes null values for comparison
     final existingData = entityState.toJson();
 
-    // First check global: compare change.cid with change_cid and change.changeAt with change_changeAt
-    final existingChangeCid = existingData['change_cid'] as String?;
-    final existingChangeAtData = existingData['change_changeAt'];
-    final existingChangeAt = existingChangeAtData is DateTime
-        ? existingChangeAtData
-        : (existingChangeAtData is String
-              ? DateTime.tryParse(existingChangeAtData)
-              : null);
+    // Add back the null values we need for comparison
+    existingData['change_changeAt'] = existingChangeAt?.toIso8601String();
+    existingData['change_cid'] = existingChangeCid;
 
     bool canProceedGlobally = false;
 
-    if (existingChangeCid == null || existingChangeAt == null) {
-      // No existing global metadata, proceed with all fields
-      canProceedGlobally = true;
-    } else if (changeLogEntry.cid == existingChangeCid ||
-        changeLogEntry.changeAt.isAfter(existingChangeAt)) {
-      // CID matches or incoming change is newer globally
-      canProceedGlobally = true;
+    // Only proceed globally if we have global metadata AND the change is newer/duplicate
+    if (existingChangeAt != null && !existingChangeCid.isEmpty) {
+      if (changeLogEntry.cid == existingChangeCid ||
+          changeLogEntry.changeAt.isAfter(existingChangeAt)) {
+        // CID matches or incoming change is newer globally
+        canProceedGlobally = true;
+      } else {
+        canProceedGlobally = false;
+      }
+    } else {
+      // No global metadata, must check field by field
+      canProceedGlobally = false;
     }
 
     if (canProceedGlobally) {
