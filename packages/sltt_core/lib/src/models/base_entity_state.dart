@@ -122,7 +122,6 @@ abstract class BaseEntityState
     required this.entityId,
     required this.entityType,
     this.schemaVersion,
-    this.unknown = const {},
     required this.change_domainId,
     required this.change_domainId_orig_,
     required this.change_changeAt,

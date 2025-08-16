@@ -54,7 +54,6 @@ class ConcreteEntityState extends BaseEntityState {
     required super.entityId,
     required super.entityType,
     super.schemaVersion,
-    super.unknown,
     required super.change_domainId,
     required super.change_domainId_orig_,
     required super.change_changeAt,
