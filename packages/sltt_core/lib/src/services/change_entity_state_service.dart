@@ -179,12 +179,20 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult(
   final entryState = entityState.toJson();
   final changeLogCid = changeLogEntry.cid;
 
-  // Check if any field in the entity state matches the change log entry cid
-  for (final key in entryState.keys) {
-    if (key.endsWith('_cid_') && entryState[key] == changeLogCid) {
-      isDuplicate = true;
-      cloudAt = changeLogEntry.cloudAt;
-      break;
+  // todo: add test for checking latest cid first
+  if (entityState.change_cid == changeLogCid) {
+    isDuplicate = true;
+    cloudAt = changeLogEntry.cloudAt;
+  }
+
+  if (!isDuplicate) {
+    // Check if any field in the entity state matches the change log entry cid
+    for (final key in entryState.keys) {
+      if (key.endsWith('_cid_') && entryState[key] == changeLogCid) {
+        isDuplicate = true;
+        cloudAt = changeLogEntry.cloudAt;
+        break;
+      }
     }
   }
 
@@ -350,16 +358,9 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
 
   if (entityState != null) {
     // Access entity state properties directly for latest metadata check
-    final existingChangeCid = entityState.change_cid;
     final existingChangeAt = entityState.change_changeAt;
 
-    // For field-level access, we still need JSON with nulls included
-    // Create a special JSON that includes null values for comparison
     final existingData = entityState.toJson();
-
-    // Add back the values we need for comparison
-    existingData['change_changeAt'] = existingChangeAt.toIso8601String();
-    existingData['change_cid'] = existingChangeCid;
 
     bool isChangeNewerThanLatest = false;
 
