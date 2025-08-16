@@ -363,13 +363,13 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
   final fieldUpdates = <String, dynamic>{};
   final outdatedBys = <String>[];
 
+  bool isChangeNewerThanLatest = false;
+
   if (entityState != null) {
     // Access entity state properties directly for latest metadata check
     final existingChangeAt = entityState.change_changeAt;
 
     final existingStateJson = entityState.toJson();
-
-    bool isChangeNewerThanLatest = false;
 
     // Check if incoming change is newer than the latest change in the entity state
     if (changeLogEntry.changeAt.isAfter(existingChangeAt)) {
@@ -403,6 +403,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
       });
     }
   } else {
+    isChangeNewerThanLatest = true;
     // No entity state, treat all as updates
     fieldUpdates.addAll(fieldChanges);
   }
@@ -410,8 +411,9 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
   return {
     'stateUpdates': {
       // Transform field updates to use data_ prefix for entity state
+      // update data_ field values
       ...fieldUpdates.map((key, value) => MapEntry('data_$key', value)),
-      // Field-specific metadata
+      // update data_ field-specific metadata
       ...fieldUpdates.map(
         (key, value) => MapEntry(
           'data_${key}_changeAt_',
@@ -432,7 +434,10 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
         ),
       ),
       // latest metadata
-      if (fieldUpdates.isNotEmpty) ...{
+      if (isChangeNewerThanLatest && fieldUpdates.isNotEmpty) ...{
+        // fix: this is not necessarily true. It's possible for
+        // updates to happen on an older field that's not more recent
+        // then the latest changeAt
         'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
         'change_cid': changeLogEntry.cid,
         'change_changeBy': changeLogEntry.changeBy,

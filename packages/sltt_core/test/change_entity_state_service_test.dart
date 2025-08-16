@@ -503,12 +503,9 @@ void main() {
 
           expect(result.newChangeLogEntry.operation, equals('update'));
           expect(result.newEntityState?.data_rank, equals('2'));
-          // Latest metadata should be updated to reflect this change
-          expect(
-            result.newEntityState?.change_changeAt,
-            equals(newerFieldTime),
-          );
-          expect(result.newEntityState?.change_cid, equals('mid-cid'));
+          // Latest metadata should NOT be updated to reflect this change
+          expect(result.newEntityState?.change_changeAt, equals(baseTime));
+          expect(result.newEntityState?.change_cid, equals('latest-cid'));
         },
       );
     });
