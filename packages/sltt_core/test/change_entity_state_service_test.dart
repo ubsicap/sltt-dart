@@ -313,6 +313,36 @@ void main() {
         expect(result.newEntityState?.data_parentId, equals('parent2'));
       });
 
+      test('should populate nameLocal from change data', () {
+        final changeLogEntry = TestChangeLogEntry(
+          entityId: 'entity3',
+          entityType: EntityType.task,
+          domainId: 'project1',
+          domainType: 'project',
+          changeAt: baseTime.add(const Duration(minutes: 1)),
+          cid: 'cid5',
+          changeBy: 'user1',
+          data: {'nameLocal': 'Localized Name', 'parentId': 'parent3'},
+          operation: 'create',
+          operationInfo: {},
+          stateChanged: true,
+          unknown: {},
+        );
+
+        final result =
+            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+              changeLogEntry,
+              null,
+              changeLogEntryFactory: TestChangeLogEntry.fromJson,
+              entityStateFactory: TestEntityState.fromJson,
+            );
+
+        expect(result.newChangeLogEntry.operation, equals('create'));
+        expect(result.newEntityState, isNotNull);
+        expect(result.newEntityState?.data_parentId, equals('parent3'));
+        expect(result.newEntityState?.data_nameLocal, equals('Localized Name'));
+      });
+
       test('should handle entity deletion', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',

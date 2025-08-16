@@ -69,6 +69,7 @@ const _$EntityTypeEnumMap = {
 
 TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
     TestEntityState(
+      data_nameLocal: json['data_nameLocal'] as String? ?? '',
       entityId: json['entityId'] as String,
       entityType: $enumDecode(_$EntityTypeEnumMap, json['entityType']),
       schemaVersion: (json['schemaVersion'] as num?)?.toInt(),
@@ -164,4 +165,5 @@ Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
       'data_parentId_changeBy_': instance.data_parentId_changeBy_,
       'data_parentId_cloudAt_':
           instance.data_parentId_cloudAt_?.toIso8601String(),
+      'data_nameLocal': instance.data_nameLocal,
     };

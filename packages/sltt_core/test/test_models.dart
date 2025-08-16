@@ -50,7 +50,10 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
 /// This is similar to the existing EntityState but specifically for tests
 @JsonSerializable(includeIfNull: true)
 class TestEntityState extends BaseEntityState {
+  final String data_nameLocal;
+
   TestEntityState({
+    this.data_nameLocal = '',
     required super.entityId,
     required super.entityType,
     super.schemaVersion,
