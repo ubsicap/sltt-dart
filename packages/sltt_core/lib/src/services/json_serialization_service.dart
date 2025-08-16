@@ -3,6 +3,7 @@ mixin HasUnknownField {
   set unknown(Map<String, dynamic> value);
 }
 
+/// baseToJson() should return all fields even with null values.
 T deserializeWithUnknownFieldData<T extends HasUnknownField>(
   T Function(Map<String, dynamic> json) fromJson,
   Map<String, dynamic> json,
