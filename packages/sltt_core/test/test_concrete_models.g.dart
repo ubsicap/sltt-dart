@@ -135,10 +135,15 @@ Map<String, dynamic> _$ConcreteEntityStateToJson(
       'unknown': instance.unknown,
       'change_domainId': instance.change_domainId,
       'change_domainId_orig_': instance.change_domainId_orig_,
+      'change_changeAt': instance.change_changeAt.toIso8601String(),
       'change_changeAt_orig_':
           instance.change_changeAt_orig_?.toIso8601String(),
+      'change_cid': instance.change_cid,
       'change_cid_orig_': instance.change_cid_orig_,
+      'change_dataSchemaRev': instance.change_dataSchemaRev,
+      'change_cloudAt': instance.change_cloudAt?.toIso8601String(),
       'change_cloudAt_orig_': instance.change_cloudAt_orig_?.toIso8601String(),
+      'change_changeBy': instance.change_changeBy,
       'change_changeBy_orig_': instance.change_changeBy_orig_,
       'data_rank': instance.data_rank,
       'data_rank_dataSchemaRev': instance.data_rank_dataSchemaRev,
@@ -162,9 +167,4 @@ Map<String, dynamic> _$ConcreteEntityStateToJson(
       'data_parentId_changeBy_': instance.data_parentId_changeBy_,
       'data_parentId_cloudAt_':
           instance.data_parentId_cloudAt_?.toIso8601String(),
-      'change_changeAt': instance.change_changeAt.toIso8601String(),
-      'change_changeBy': instance.change_changeBy,
-      'change_cid': instance.change_cid,
-      'change_dataSchemaRev': instance.change_dataSchemaRev,
-      'change_cloudAt': instance.change_cloudAt?.toIso8601String(),
     };

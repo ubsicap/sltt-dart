@@ -8,7 +8,7 @@ T deserializeWithUnknownFieldData<T extends HasUnknownField>(
   Map<String, dynamic> json,
   Map<String, dynamic> Function(T value) baseToJson,
 ) {
-  final entry = fromJson(json);
+  final entry = fromJson({'unknown': <String, dynamic>{}, ...json});
   // Use the generated/base toJson to get only known fields (no unknown merge)
   final knownFields = baseToJson(entry).keys.toSet();
   final unknownFields = Map<String, dynamic>.fromEntries(

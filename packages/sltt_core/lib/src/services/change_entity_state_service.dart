@@ -93,60 +93,12 @@ BaseEntityState forkWithStateUpdates(
   BaseEntityState Function(Map<String, dynamic>) entityStateFactory, {
   BaseChangeLogEntry? changeLogEntry,
 }) {
-  Map<String, dynamic> clone;
-
-  if (sourceEntityState != null) {
-    clone = sourceEntityState.toJson();
-  } else if (changeLogEntry != null) {
-    // Create a new entity state from the change log entry
-    clone = {
-      'entityId': changeLogEntry.entityId,
-      'entityType': changeLogEntry.entityType.toString().split('.').last,
-      'change_domainId': changeLogEntry.domainId,
-      'change_domainId_orig_': changeLogEntry.domainId,
-      'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
-      'change_changeAt_orig_': changeLogEntry.changeAt.toIso8601String(),
-      'change_cid': changeLogEntry.cid,
-      'change_cid_orig_': changeLogEntry.cid,
-      'change_changeBy': changeLogEntry.changeBy,
-      'change_changeBy_orig_': changeLogEntry.changeBy,
-      'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
-      'change_cloudAt': changeLogEntry.cloudAt?.toIso8601String(),
-      'change_cloudAt_orig_': changeLogEntry.cloudAt?.toIso8601String(),
-    };
-
-    // Add required data fields from the change log entry data
-    for (final entry in changeLogEntry.data.entries) {
-      final key = entry.key;
-      final value = entry.value;
-
-      if (!key.startsWith('_') && key != 'deleted') {
-        // Add the data field and its metadata
-        clone['data_$key'] = value;
-        clone['data_${key}_dataSchemaRev'] = changeLogEntry.dataSchemaRev ?? 1;
-        clone['data_${key}_changeAt_'] = changeLogEntry.changeAt
-            .toIso8601String();
-        clone['data_${key}_cid_'] = changeLogEntry.cid;
-        clone['data_${key}_changeBy_'] = changeLogEntry.changeBy;
-        if (changeLogEntry.cloudAt != null) {
-          clone['data_${key}_cloudAt_'] = changeLogEntry.cloudAt!
-              .toIso8601String();
-        }
-      }
-    }
-  } else {
-    clone = {};
-  }
+  Map<String, dynamic> clone = sourceEntityState?.toJson() ?? {};
 
   final newJson = {...clone, ...stateUpdates};
 
-  // Ensure unknown field is always a Map for deserialization
-  if (!newJson.containsKey('unknown') || newJson['unknown'] == null) {
-    newJson['unknown'] = <String, dynamic>{};
-  }
-
   // Remove null values that the generated fromJson can't handle
-  newJson.removeWhere((key, value) => value == null && key != 'unknown');
+  newJson.removeWhere((key, value) => value == null);
 
   return entityStateFactory(newJson);
 }
@@ -410,6 +362,25 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
 
   return {
     'stateUpdates': {
+      if (entityState == null) ...{
+        'entityId': changeLogEntry.entityId,
+        'entityType': changeLogEntry.entityType.toString().split('.').last,
+        'change_domainId_orig_': changeLogEntry.domainId,
+        'change_changeAt_orig_': changeLogEntry.changeAt.toIso8601String(),
+        'change_cid_orig_': changeLogEntry.cid,
+        'change_changeBy_orig_': changeLogEntry.changeBy,
+        'change_cloudAt_orig_': changeLogEntry.cloudAt?.toIso8601String(),
+        'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
+      },
+      // latest metadata
+      if (isChangeNewerThanLatest && fieldUpdates.isNotEmpty) ...{
+        'change_domainType': changeLogEntry.domainType,
+        'change_domainId': changeLogEntry.domainId,
+        'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
+        'change_cid': changeLogEntry.cid,
+        'change_changeBy': changeLogEntry.changeBy,
+        'change_cloudAt': changeLogEntry.cloudAt?.toIso8601String(),
+      },
       // Transform field updates to use data_ prefix for entity state
       // update data_ field values
       ...fieldUpdates.map((key, value) => MapEntry('data_$key', value)),
@@ -433,22 +404,6 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
           changeLogEntry.cloudAt?.toIso8601String(),
         ),
       ),
-      // latest metadata
-      if (isChangeNewerThanLatest && fieldUpdates.isNotEmpty) ...{
-        'change_domainType': changeLogEntry.domainType,
-        'change_domainId': changeLogEntry.domainId,
-        'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
-        'change_cid': changeLogEntry.cid,
-        'change_changeBy': changeLogEntry.changeBy,
-        'change_cloudAt': changeLogEntry.cloudAt?.toIso8601String(),
-      },
-      if (entityState == null) ...{
-        'change_domainId_orig_': changeLogEntry.domainId,
-        'change_changeAt_orig_': changeLogEntry.changeAt.toIso8601String(),
-        'change_cid_orig_': changeLogEntry.cid,
-        'change_changeBy_orig_': changeLogEntry.changeBy,
-        'change_cloudAt_orig_': changeLogEntry.cloudAt?.toIso8601String(),
-      },
     },
     'changeDataUpdates': fieldUpdates,
     'outdatedBys': outdatedBys,

@@ -121,6 +121,8 @@ abstract class BaseEntityState
   BaseEntityState({
     required this.entityId,
     required this.entityType,
+    this.schemaVersion,
+    this.unknown = const {},
     required this.change_domainId,
     required this.change_domainId_orig_,
     required this.change_changeAt,
@@ -189,6 +191,6 @@ mixin CoreChangeLogEntryFields {
   DateTime get change_changeAt;
   String get change_changeBy;
   String get change_cid;
-  int? get change_dataSchemaRev;
   DateTime? get change_cloudAt;
+  int? get change_dataSchemaRev;
 }
