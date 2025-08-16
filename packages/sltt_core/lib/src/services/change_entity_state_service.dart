@@ -435,10 +435,19 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
       ),
       // latest metadata
       if (isChangeNewerThanLatest && fieldUpdates.isNotEmpty) ...{
+        'change_domainType': changeLogEntry.domainType,
+        'change_domainId': changeLogEntry.domainId,
         'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
         'change_cid': changeLogEntry.cid,
         'change_changeBy': changeLogEntry.changeBy,
         'change_cloudAt': changeLogEntry.cloudAt?.toIso8601String(),
+      },
+      if (entityState == null) ...{
+        'change_domainId_orig_': changeLogEntry.domainId,
+        'change_changeAt_orig_': changeLogEntry.changeAt.toIso8601String(),
+        'change_cid_orig_': changeLogEntry.cid,
+        'change_changeBy_orig_': changeLogEntry.changeBy,
+        'change_cloudAt_orig_': changeLogEntry.cloudAt?.toIso8601String(),
       },
     },
     'changeDataUpdates': fieldUpdates,
