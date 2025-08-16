@@ -3,7 +3,7 @@ import '../models/base_change_log_entry.dart';
 /// Result of creating changes with field-level change detection
 class CreateChangesResult {
   /// Successfully created changes
-  final List<ChangeLogEntry> createdChanges;
+  final List<BaseChangeLogEntry> createdChanges;
 
   /// Changes that resulted in no actual updates (no-op changes)
   final List<String> noOpChangeCids;
@@ -28,8 +28,8 @@ class StorageServiceDefaults {
   }
 
   /// Default implementation for getting changes not outdated
-  static Future<List<ChangeLogEntry>> getChangesNotOutdated(
-    Future<List<ChangeLogEntry>> Function({
+  static Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
+    Future<List<BaseChangeLogEntry>> Function({
       required String projectId,
       int? cursor,
       int? limit,
@@ -53,7 +53,7 @@ abstract class BaseStorageService {
   Future<void> close();
 
   /// Create a new change entry
-  Future<ChangeLogEntry> createChange(Map<String, dynamic> changeData);
+  Future<BaseChangeLogEntry> createChange(Map<String, dynamic> changeData);
 
   /// Create changes with field-level change detection and no-op tracking
   ///
@@ -62,7 +62,7 @@ abstract class BaseStorageService {
   Future<CreateChangesResult> createChangesWithChangeDetection(
     List<Map<String, dynamic>> changesData,
   ) async {
-    final createdChanges = <ChangeLogEntry>[];
+    final createdChanges = <BaseChangeLogEntry>[];
 
     return CreateChangesResult(
       createdChanges: createdChanges,
@@ -78,24 +78,24 @@ abstract class BaseStorageService {
   ///
   /// Returns the most recent change entry for the specified entity, or null if
   /// the entity doesn't exist.
-  Future<ChangeLogEntry?> getCurrentEntityState(
+  Future<BaseChangeLogEntry?> getCurrentEntityState(
     String projectId,
     String entityType,
     String entityId,
   );
 
   /// Get a specific change by sequence number
-  Future<ChangeLogEntry?> getChange(String projectId, int seq);
+  Future<BaseChangeLogEntry?> getChange(String projectId, int seq);
 
   /// Get changes with cursor-based pagination
-  Future<List<ChangeLogEntry>> getChangesWithCursor({
+  Future<List<BaseChangeLogEntry>> getChangesWithCursor({
     required String projectId,
     int? cursor,
     int? limit,
   });
 
   /// Get all changes since a specific sequence number
-  Future<List<ChangeLogEntry>> getChangesSince(String projectId, int seq);
+  Future<List<BaseChangeLogEntry>> getChangesSince(String projectId, int seq);
 
   /// Get statistics about change operations
   Future<Map<String, dynamic>> getChangeStats(String projectId);
@@ -126,7 +126,9 @@ abstract class BaseStorageService {
   Future<void> markAsOutdated(String projectId, int seq, int outdatedBy);
 
   /// Get changes that are not outdated (for local storage services)
-  Future<List<ChangeLogEntry>> getChangesNotOutdated(String projectId) async {
+  Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
+    String projectId,
+  ) async {
     // Default implementation - override in local storage services
     return getChangesWithCursor(projectId: projectId);
   }
