@@ -354,7 +354,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
   final outdatedBys = <String>[];
 
   if (entityState != null) {
-    // Access entity state properties directly for global check
+    // Access entity state properties directly for latest metadata check
     final existingChangeCid = entityState.change_cid;
     final existingChangeAt = entityState.change_changeAt;
 
@@ -433,7 +433,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
           changeLogEntry.cloudAt?.toIso8601String(),
         ),
       ),
-      // Global metadata
+      // latest metadata
       if (fieldUpdates.isNotEmpty) ...{
         'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
         'change_cid': changeLogEntry.cid,
