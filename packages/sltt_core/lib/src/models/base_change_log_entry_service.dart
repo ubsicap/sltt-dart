@@ -34,24 +34,14 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>(
   if (parsed.entityType == null && parsed.raw != null) {
     final safeJson = Map<String, dynamic>.from(json);
     safeJson['entityType'] = EntityType.unknown.value;
-    final entry = deserializeWithUnknownFieldData(
-      fromJson,
-      safeJson,
-      baseToJson,
-    );
-
-    try {
-      final map = baseToJson(entry);
-      map['operation'] = 'unknownEntityType';
-      map['operationInfo'] = {
-        ...(map['operationInfo'] as Map? ?? {}),
-        'entityType': parsed.raw,
-      };
-      final newEntry = fromJson(map);
-      return newEntry;
-    } catch (e) {
-      return deserializeWithUnknownFieldData(fromJson, safeJson, baseToJson);
-    }
+    // Directly set the sentinel operation and record the raw entityType so
+    // the entry contains the information needed for later rehydration.
+    safeJson['operation'] = 'unknownEntityType';
+    safeJson['operationInfo'] = {
+      ...(safeJson['operationInfo'] as Map? ?? {}),
+      'entityType': parsed.raw,
+    };
+    return deserializeWithUnknownFieldData(fromJson, safeJson, baseToJson);
   }
 
   return deserializeWithUnknownFieldData(fromJson, json, baseToJson);
