@@ -37,27 +37,32 @@ abstract class BaseEntityState
   String change_domainId_orig_ = '';
 
   /// Latest change timestamp
-  DateTime? change_changeAt;
+  @override
+  DateTime change_changeAt;
 
   /// First UTC change timestamp
   DateTime? change_changeAt_orig_;
 
   /// Latest change ID
+  @override
   String change_cid = '';
 
   /// Original (first) change ID
   String change_cid_orig_ = '';
 
   /// latest data schema revision (no need for _orig_)
+  @override
   int? change_dataSchemaRev;
 
   /// Latest cloud timestamp
+  @override
   DateTime? change_cloudAt;
 
   /// First UTC cloud timestamp
   DateTime? change_cloudAt_orig_;
 
   /// Latest change author
+  @override
   String change_changeBy = '';
 
   /// Original (first) change author
@@ -119,7 +124,7 @@ abstract class BaseEntityState
     required this.change_domainId,
     required this.change_domainId_orig_,
     required this.change_changeAt,
-    required this.change_changeAt_orig_,
+    this.change_changeAt_orig_,
     required this.change_cid,
     required this.change_cid_orig_,
     this.change_dataSchemaRev,
@@ -181,9 +186,9 @@ mixin CoreEntityDataFields {
 }
 
 mixin CoreChangeLogEntryFields {
-  DateTime? changeAt;
-  String get changeBy;
-  String get cid;
-  String get dataSchemaRev;
-  DateTime? get cloudAt;
+  DateTime get change_changeAt;
+  String get change_changeBy;
+  String get change_cid;
+  int? get change_dataSchemaRev;
+  DateTime? get change_cloudAt;
 }

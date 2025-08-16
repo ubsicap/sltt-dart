@@ -340,6 +340,102 @@ void main() {
         expect(result.newChangeLogEntry.operation, equals('delete'));
         expect(result.newEntityState?.data_deleted, equals(true));
       });
+
+      test(
+        'should use latest timestamp pathway when change is newer than latest',
+        () {
+          // Test the case where incoming change is newer than the latest timestamp
+          final newerTime = baseTime.add(const Duration(minutes: 5));
+          final changeLogEntry = ConcreteChangeLogEntry(
+            entityId: 'entity1',
+            entityType: EntityType.task,
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: newerTime, // Newer than latest in entity state
+            cid: 'new-cid',
+            changeBy: 'user2',
+            data: {'rank': '2'},
+            operation: 'update',
+            operationInfo: {},
+            stateChanged: true,
+            unknown: {},
+          );
+
+          final result =
+              getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+                changeLogEntry,
+                entityState, // Uses baseTime as latest change
+                changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
+                entityStateFactory: ConcreteEntityState.fromJson,
+              );
+
+          expect(result.newChangeLogEntry.operation, equals('update'));
+          expect(result.newEntityState?.data_rank, equals('2'));
+          // Latest metadata should be updated
+          expect(result.newEntityState?.change_changeAt, equals(newerTime));
+          expect(result.newEntityState?.change_cid, equals('new-cid'));
+        },
+      );
+
+      test('should use field-level pathway when change is older than latest', () {
+        // Test the case where incoming change is older than latest, forcing field-level check
+        final olderTime = baseTime.subtract(const Duration(minutes: 5));
+        final newerFieldTime = baseTime.add(const Duration(minutes: 2));
+
+        // Create entity state where latest is baseTime but rank field was updated more recently
+        final entityStateWithNewerField = ConcreteEntityState.fromJson({
+          'entityId': 'entity1',
+          'entityType': 'task',
+          'change_domainId': 'project1',
+          'change_domainId_orig_': 'project1',
+          'change_changeAt': baseTime
+              .toIso8601String(), // Latest overall change
+          'change_changeAt_orig_': baseTime.toIso8601String(),
+          'change_cid': 'latest-cid',
+          'change_cid_orig_': 'latest-cid',
+          'change_changeBy': 'user1',
+          'change_changeBy_orig_': 'user1',
+          'data_parentId': 'parent1',
+          'data_parentId_dataSchemaRev': 1,
+          'data_parentId_changeAt_': baseTime.toIso8601String(),
+          'data_parentId_cid_': 'cid1',
+          'data_parentId_changeBy_': 'user1',
+          'data_rank': '1',
+          'data_rank_dataSchemaRev': 1,
+          'data_rank_changeAt_': newerFieldTime
+              .toIso8601String(), // Field is newer than incoming
+          'data_rank_cid_': 'field-cid',
+          'data_rank_changeBy_': 'user1',
+          'unknown': <String, dynamic>{},
+        });
+
+        final changeLogEntry = ConcreteChangeLogEntry(
+          entityId: 'entity1',
+          entityType: EntityType.task,
+          domainId: 'project1',
+          domainType: 'project',
+          changeAt:
+              olderTime, // Older than latest, will be rejected at field level too
+          cid: 'old-cid',
+          changeBy: 'user0',
+          data: {'rank': '0'},
+          operation: 'update',
+          operationInfo: {},
+          stateChanged: true,
+          unknown: {},
+        );
+
+        final result =
+            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+              changeLogEntry,
+              entityStateWithNewerField,
+              changeLogEntryFactory: ConcreteChangeLogEntry.fromJson,
+              entityStateFactory: ConcreteEntityState.fromJson,
+            );
+
+        expect(result.newChangeLogEntry.operation, equals('outdated'));
+        expect(result.newEntityState, isNull); // No state change for outdated
+      });
     });
   });
 }

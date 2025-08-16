@@ -73,9 +73,7 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
       entityType: $enumDecode(_$EntityTypeEnumMap, json['entityType']),
       change_domainId: json['change_domainId'] as String,
       change_domainId_orig_: json['change_domainId_orig_'] as String,
-      change_changeAt: json['change_changeAt'] == null
-          ? null
-          : DateTime.parse(json['change_changeAt'] as String),
+      change_changeAt: DateTime.parse(json['change_changeAt'] as String),
       change_changeAt_orig_: json['change_changeAt_orig_'] == null
           ? null
           : DateTime.parse(json['change_changeAt_orig_'] as String),
@@ -137,7 +135,7 @@ Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
       'unknown': instance.unknown,
       'change_domainId': instance.change_domainId,
       'change_domainId_orig_': instance.change_domainId_orig_,
-      'change_changeAt': instance.change_changeAt?.toIso8601String(),
+      'change_changeAt': instance.change_changeAt.toIso8601String(),
       'change_changeAt_orig_':
           instance.change_changeAt_orig_?.toIso8601String(),
       'change_cid': instance.change_cid,

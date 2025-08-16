@@ -362,33 +362,28 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
     // Create a special JSON that includes null values for comparison
     final existingData = entityState.toJson();
 
-    // Add back the null values we need for comparison
-    existingData['change_changeAt'] = existingChangeAt?.toIso8601String();
+    // Add back the values we need for comparison
+    existingData['change_changeAt'] = existingChangeAt.toIso8601String();
     existingData['change_cid'] = existingChangeCid;
 
-    bool canProceedGlobally = false;
+    bool isChangeNewerThanLatest = false;
 
-    // Only proceed globally if we have global metadata AND the change is newer/duplicate
-    if (existingChangeAt != null && existingChangeCid.isNotEmpty) {
-      if (changeLogEntry.cid == existingChangeCid ||
-          changeLogEntry.changeAt.isAfter(existingChangeAt)) {
-        // CID matches or incoming change is newer globally
-        canProceedGlobally = true;
-      } else {
-        canProceedGlobally = false;
-      }
+    // Check if incoming change is newer than the latest change in the entity state
+    if (changeLogEntry.changeAt.isAfter(existingChangeAt)) {
+      // Incoming change is newer than latest change
+      isChangeNewerThanLatest = true;
     } else {
-      // No global metadata, must check field by field
-      canProceedGlobally = false;
+      // Incoming change is older than or equal to latest change
+      isChangeNewerThanLatest = false;
     }
 
-    if (canProceedGlobally) {
-      // Global check passed, update all changed fields
+    if (isChangeNewerThanLatest) {
+      // Change is newer than latest, update all changed fields
       fieldChanges.forEach((field, value) {
         fieldUpdates[field] = value;
       });
     } else {
-      // Global check failed, check field by field
+      // Change is not newer than latest, check field by field
       fieldChanges.forEach((field, value) {
         final entityFieldKey =
             'data_$field'; // Change log has 'rank', entity has 'data_rank'

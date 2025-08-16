@@ -81,28 +81,6 @@ class ConcreteEntityState extends BaseEntityState {
     super.data_parentId_cloudAt_,
   });
 
-  // Implement CoreChangeLogEntryFields getters
-  @override
-  DateTime? get changeAt => change_changeAt;
-
-  @override
-  String get changeBy => change_changeBy;
-
-  @override
-  String get cid => change_cid;
-
-  @override
-  String get dataSchemaRev => change_dataSchemaRev?.toString() ?? '0';
-
-  @override
-  DateTime? get cloudAt => change_cloudAt;
-
-  // Implement CoreChangeLogEntryFields setter
-  @override
-  set changeAt(DateTime? value) {
-    change_changeAt = value;
-  }
-
   // Implement CoreEntityDataFields getters
   @override
   int? get data_deleted_dataSchemaRev_ => data_deleted_dataSchemaRev;
