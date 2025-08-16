@@ -147,11 +147,6 @@ BaseEntityState forkWithStateUpdates(
   // Remove null values that the generated fromJson can't handle
   newJson.removeWhere((key, value) => value == null && key != 'unknown');
 
-  // DEBUG: Create a baseline ConcreteEntityState to see what fields it needs
-  print(
-    'DEBUG: Attempting to create entity with keys: ${newJson.keys.toList()}',
-  );
-
   if (entityStateFactory != null) {
     return entityStateFactory(newJson);
   } else {
@@ -374,7 +369,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
     bool canProceedGlobally = false;
 
     // Only proceed globally if we have global metadata AND the change is newer/duplicate
-    if (existingChangeAt != null && !existingChangeCid.isEmpty) {
+    if (existingChangeAt != null && existingChangeCid.isNotEmpty) {
       if (changeLogEntry.cid == existingChangeCid ||
           changeLogEntry.changeAt.isAfter(existingChangeAt)) {
         // CID matches or incoming change is newer globally
