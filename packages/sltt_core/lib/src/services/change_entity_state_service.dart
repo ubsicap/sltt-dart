@@ -435,9 +435,6 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
       ),
       // latest metadata
       if (isChangeNewerThanLatest && fieldUpdates.isNotEmpty) ...{
-        // fix: this is not necessarily true. It's possible for
-        // updates to happen on an older field that's not more recent
-        // then the latest changeAt
         'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
         'change_cid': changeLogEntry.cid,
         'change_changeBy': changeLogEntry.changeBy,
