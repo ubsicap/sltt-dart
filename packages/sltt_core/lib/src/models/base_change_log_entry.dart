@@ -10,6 +10,12 @@ abstract class BaseChangeLogEntry
   @override
   String cid;
 
+  /// Identifier for the storage instance that the change originated from
+  /// (e.g. local DB id, cloud id). Used to decide whether to trim change data
+  /// when transferring between different storage targets.
+  @override
+  String storageId;
+
   /// discrete sets for getting change logs: user, team, project
   @override
   String domainType;
@@ -46,6 +52,7 @@ abstract class BaseChangeLogEntry
   Map<String, dynamic> unknown = {};
 
   BaseChangeLogEntry({
+    required this.storageId,
     required this.domainType,
     required this.domainId,
     required this.entityType,
@@ -69,6 +76,7 @@ abstract class BaseChangeLogEntry
 
 mixin ImmutableFields {
   String get cid;
+  String get storageId;
   String get domainType;
   String get domainId;
   EntityType get entityType;

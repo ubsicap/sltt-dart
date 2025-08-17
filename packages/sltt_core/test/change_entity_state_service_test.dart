@@ -46,6 +46,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime,
           cid: 'cid1', // Same as entity state
+          storageId: 'local',
           changeBy: 'user1',
           data: {'rank': '1'},
           operation: 'update',
@@ -70,6 +71,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime,
           cid: 'cid2', // Different from entity state
+          storageId: 'local',
           changeBy: 'user1',
           data: {'rank': '2'},
           operation: 'update',
@@ -96,6 +98,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
           cid: 'cid2',
+          storageId: 'local',
           changeBy: 'user1',
           data: {'rank': '1'},
           operation: 'create',
@@ -117,6 +120,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
           cid: 'cid2',
+          storageId: 'local',
           changeBy: 'user1',
           data: {'rank': '2'},
           operation: 'update',
@@ -144,6 +148,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
           cid: 'cid2',
+          storageId: 'local',
           changeBy: 'user1',
           data: {'deleted': true},
           operation: 'delete',
@@ -171,6 +176,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
           cid: 'cid2',
+          storageId: 'local',
           changeBy: 'user1',
           data: {'rank': '1'}, // Same as current
           operation: 'update',
@@ -198,6 +204,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime.subtract(const Duration(minutes: 1)), // Older
           cid: 'cid2',
+          storageId: 'local',
           changeBy: 'user1',
           data: {'rank': '2'},
           operation: 'update',
@@ -229,6 +236,7 @@ void main() {
           domainType: 'project',
           changeAt: newerTime,
           cid: 'cid2',
+          storageId: 'local',
           changeBy: 'user2',
           data: {'rank': '2'},
           operation: 'update',
@@ -241,6 +249,7 @@ void main() {
             getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
               changeLogEntry,
               entityState,
+              targetStorageId: 'local',
               changeLogEntryFactory: TestChangeLogEntry.fromJson,
               entityStateFactory: TestEntityState.fromJson,
             );
@@ -289,6 +298,7 @@ void main() {
               getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
                 changeLogEntry,
                 entityState,
+                targetStorageId: 'local',
                 changeLogEntryFactory: TestChangeLogEntry.fromJson,
                 entityStateFactory: TestEntityState.fromJson,
               );
@@ -358,6 +368,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime, // between olderTime and newerFieldTime
           cid: 'cid7',
+          storageId: 'local',
           changeBy: 'user2',
           data: {'rank': '1', 'parentId': 'parent2', 'nameLocal': 'Same Name'},
           operation: 'update',
@@ -370,6 +381,7 @@ void main() {
             getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
               changeLogEntry,
               entityStateMixed,
+              targetStorageId: 'local',
               changeLogEntryFactory: TestChangeLogEntry.fromJson,
               entityStateFactory: TestEntityState.fromJson,
             );
@@ -409,6 +421,7 @@ void main() {
           domainType: 'project',
           changeAt: olderTime,
           cid: 'cid2',
+          storageId: 'local',
           changeBy: 'user2',
           data: {'rank': '3'},
           operation: 'update',
@@ -421,6 +434,7 @@ void main() {
             getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
               changeLogEntry,
               entityState,
+              targetStorageId: 'local',
               changeLogEntryFactory: TestChangeLogEntry.fromJson,
               entityStateFactory: TestEntityState.fromJson,
             );
@@ -466,6 +480,7 @@ void main() {
             getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
               changeLogEntry,
               null, // No existing entity state
+              targetStorageId: 'local',
               changeLogEntryFactory: TestChangeLogEntry.fromJson,
               entityStateFactory: TestEntityState.fromJson,
             );
@@ -515,6 +530,7 @@ void main() {
             getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
               changeLogEntry,
               null,
+              targetStorageId: 'local',
               changeLogEntryFactory: TestChangeLogEntry.fromJson,
               entityStateFactory: TestEntityState.fromJson,
             );
@@ -551,6 +567,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
           cid: 'cid4',
+          storageId: 'local',
           changeBy: 'user1',
           data: {'deleted': true},
           operation: 'delete',
@@ -563,6 +580,7 @@ void main() {
             getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
               changeLogEntry,
               entityState,
+              targetStorageId: 'local',
               changeLogEntryFactory: TestChangeLogEntry.fromJson,
               entityStateFactory: TestEntityState.fromJson,
             );
@@ -610,6 +628,7 @@ void main() {
               getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
                 changeLogEntry,
                 entityState, // Uses baseTime as latest change
+                targetStorageId: 'local',
                 changeLogEntryFactory: TestChangeLogEntry.fromJson,
                 entityStateFactory: TestEntityState.fromJson,
               );
@@ -692,6 +711,7 @@ void main() {
               getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
                 changeLogEntry,
                 entityStateWithNewerField,
+                targetStorageId: 'local',
                 changeLogEntryFactory: TestChangeLogEntry.fromJson,
                 entityStateFactory: TestEntityState.fromJson,
               );
@@ -772,6 +792,7 @@ void main() {
               getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
                 changeLogEntry,
                 entityStateWithOlderField,
+                targetStorageId: 'local',
                 changeLogEntryFactory: TestChangeLogEntry.fromJson,
                 entityStateFactory: TestEntityState.fromJson,
               );

@@ -14,6 +14,7 @@ class LastWriteWinsResult {
 getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
   BaseChangeLogEntry changeLogEntry,
   BaseEntityState? entityState, {
+  required String targetStorageId,
   required BaseChangeLogEntry Function(Map<String, dynamic>)?
   changeLogEntryFactory,
   required BaseEntityState Function(Map<String, dynamic>) entityStateFactory,
@@ -58,12 +59,15 @@ getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
   // Calculate the operation type
   final operation = fieldUpdatesOrOutdatedBys['operation'] as String;
 
+  // Preserve original data payload when transferring to a different target storage
+  final shouldPreserveData = changeLogEntry.storageId != targetStorageId;
+
   final newChangeLogEntryJson = {
     ...changeLogEntry.toJson(),
     'operation': operation,
     'operationInfo': {'outdatedBys': outdatedBys, 'noOpFields': noOpFields},
     'stateChanged': operation != 'noOp' && operation != 'outdated',
-    'data': changeDataUpdates,
+    'data': shouldPreserveData ? changeLogEntry.data : changeDataUpdates,
     'cloudAt': changeLogEntry.cloudAt,
   };
 

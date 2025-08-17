@@ -7,6 +7,7 @@ void main() {
   test('deserializeChangeLogEntrySafely handles unknown entityType', () {
     final rawJson = {
       'entityId': 'e1',
+      'storageId': 'local',
       'entityType': 'brandNewType', // unknown to this client
       'domainId': 'd1',
       'domainType': 'project',
@@ -37,6 +38,7 @@ void main() {
 
   test('deserializeChangeLogEntrySafely recovers from factory error', () {
     final rawJson = {
+      'storageId': 'local',
       'entityId': 'e1',
       'entityType': 'task',
       'domainId': 'd1',
