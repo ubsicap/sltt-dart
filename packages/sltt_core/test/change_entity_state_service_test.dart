@@ -266,6 +266,139 @@ void main() {
         );
       });
 
+      test(
+        'should record noOpFields and only include changed fields in change data',
+        () {
+          // incoming has rank same as existing (no-op), parentId changed and nameLocal new
+          final changeLogEntry = TestChangeLogEntry(
+            entityId: 'entity1',
+            entityType: EntityType.task,
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: baseTime.add(const Duration(minutes: 1)),
+            cid: 'cid6',
+            changeBy: 'user2',
+            data: {'rank': '1', 'parentId': 'parent2', 'nameLocal': 'New Name'},
+            operation: 'update',
+            operationInfo: {},
+            stateChanged: true,
+            unknown: {},
+          );
+
+          final result =
+              getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+                changeLogEntry,
+                entityState,
+                changeLogEntryFactory: TestChangeLogEntry.fromJson,
+                entityStateFactory: TestEntityState.fromJson,
+              );
+
+          expect(result.newChangeLogEntry.operation, equals('update'));
+          // rank should be reported as no-op
+          expect(
+            result.newChangeLogEntry.operationInfo['noOpFields'],
+            contains('rank'),
+          );
+          expect(
+            result.newChangeLogEntry.operationInfo['outdatedBys'],
+            equals([]),
+          );
+          // data should only include the applied fields (parentId and nameLocal)
+          expect(
+            result.newChangeLogEntry.data,
+            equals({'parentId': 'parent2', 'nameLocal': 'New Name'}),
+          );
+          expect(result.newEntityState?.data_parentId, equals('parent2'));
+          expect(result.newEntityState?.data_nameLocal, equals('New Name'));
+        },
+      );
+
+      test('should include only non-outdated, non-noop fields in output data', () {
+        // Build an entity where rank is newer (so incoming rank is outdated), parentId is older (so it should update),
+        // and nameLocal matches existing (no-op).
+        final olderTime = baseTime.subtract(const Duration(minutes: 5));
+        final newerFieldTime = baseTime.add(const Duration(minutes: 2));
+
+        final entityStateMixed = TestEntityState.fromJson({
+          'entityId': 'entity1',
+          'entityType': 'task',
+          'change_domainId': 'project1',
+          'change_domainId_orig_': 'project1',
+          'change_changeAt': baseTime.toIso8601String(),
+          'change_changeAt_orig_': baseTime.toIso8601String(),
+          'change_cid': 'latest-cid',
+          'change_cid_orig_': 'latest-cid',
+          'change_changeBy': 'user1',
+          'change_changeBy_orig_': 'user1',
+          // parentId was last updated well before incoming change
+          'data_parentId': 'parent1',
+          'data_parentId_dataSchemaRev': 1,
+          'data_parentId_changeAt_': olderTime.toIso8601String(),
+          'data_parentId_cid_': 'cid1',
+          'data_parentId_changeBy_': 'user1',
+          // rank was updated after incoming change -> incoming rank should be outdated
+          'data_rank': '9',
+          'data_rank_dataSchemaRev': 1,
+          'data_rank_changeAt_': newerFieldTime.toIso8601String(),
+          'data_rank_cid_': 'field-cid',
+          'data_rank_changeBy_': 'user1',
+          // nameLocal already matches incoming
+          'data_nameLocal': 'Same Name',
+          'data_nameLocal_dataSchemaRev': 1,
+          'data_nameLocal_changeAt_': baseTime.toIso8601String(),
+          'data_nameLocal_cid_': 'cid-name',
+          'data_nameLocal_changeBy_': 'user1',
+          'unknown': <String, dynamic>{},
+        });
+
+        final changeLogEntry = TestChangeLogEntry(
+          entityId: 'entity1',
+          entityType: EntityType.task,
+          domainId: 'project1',
+          domainType: 'project',
+          changeAt: baseTime, // between olderTime and newerFieldTime
+          cid: 'cid7',
+          changeBy: 'user2',
+          data: {'rank': '1', 'parentId': 'parent2', 'nameLocal': 'Same Name'},
+          operation: 'update',
+          operationInfo: {},
+          stateChanged: true,
+          unknown: {},
+        );
+
+        final result =
+            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+              changeLogEntry,
+              entityStateMixed,
+              changeLogEntryFactory: TestChangeLogEntry.fromJson,
+              entityStateFactory: TestEntityState.fromJson,
+            );
+
+        // rank should be outdated, nameLocal no-op, parentId should be applied
+        expect(
+          result.newChangeLogEntry.operation,
+          anyOf(equals('update'), equals('outdated')),
+        );
+        expect(
+          result.newChangeLogEntry.operationInfo['outdatedBys'],
+          contains('rank'),
+        );
+        expect(
+          result.newChangeLogEntry.operationInfo['noOpFields'],
+          contains('nameLocal'),
+        );
+        // Only parentId should be present in output data
+        expect(result.newChangeLogEntry.data, equals({'parentId': 'parent2'}));
+        // The entity state may or may not be updated depending on whether the
+        // overall operation was considered 'outdated' (no state update) or 'update'.
+        if (result.newEntityState != null) {
+          expect(result.newEntityState?.data_parentId, equals('parent2'));
+        } else {
+          // If no new entity state, enforce that the operation was marked outdated
+          expect(result.newChangeLogEntry.operation, equals('outdated'));
+        }
+      });
+
       test('should reject older changes', () {
         // Create a change log entry with older field changes
         final olderTime = baseTime.subtract(const Duration(minutes: 5));
