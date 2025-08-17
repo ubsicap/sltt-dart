@@ -1,7 +1,9 @@
 import 'dart:math';
 
 import '../services/json_serialization_service.dart';
+import 'base_change_log_entry.dart';
 import 'entity_type.dart';
+import 'factory_pair.dart';
 
 /// Helper used when parsing potentially unknown entityType strings
 class _EntityTypeOrRaw {
@@ -18,6 +20,45 @@ _EntityTypeOrRaw _parseEntityType(dynamic raw) {
     return _EntityTypeOrRaw(entityType: null, raw: raw);
   }
   return _EntityTypeOrRaw(entityType: null, raw: raw?.toString());
+}
+
+// --- Factory registration helpers -----------------------------------------
+// These maps hold registered (fromJson, toBaseJson) pairs per EntityType.
+final Map<EntityType, FactoryPair<BaseChangeLogEntry>>
+_changeLogEntryFactories = {};
+
+/// Register a factory pair for a specific [entityType] to deserialize
+/// `BaseEntityState` subclasses.
+// Note: entity-state factory helpers were moved to `base_entity_state_service.dart`.
+
+/// Register a factory pair for a specific [entityType] to deserialize
+/// `BaseChangeLogEntry` subclasses.
+void registerChangeLogEntryFactory(
+  EntityType entityType,
+  BaseChangeLogEntry Function(Map<String, dynamic>) fromJson,
+  Map<String, dynamic> Function(BaseChangeLogEntry) toBaseJson,
+) {
+  _changeLogEntryFactories[entityType] = FactoryPair(fromJson, toBaseJson);
+}
+
+/// Deserialize the provided [json] into the registered `BaseChangeLogEntry`
+/// instance for the indicated `entityType` using the safe deserialization
+/// wrapper (which will produce a recovery JSON on error).
+BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
+  Map<String, dynamic> json,
+) {
+  final parsed = _parseEntityType(json['entityType']);
+  final entityType = parsed.entityType ?? EntityType.unknown;
+  final pair = _changeLogEntryFactories[entityType];
+  if (pair == null) {
+    throw Exception('No registered change log entry factory for $entityType');
+  }
+  // Reuse existing safe deserialization helper which will attempt recovery
+  return deserializeChangeLogEntrySafely<BaseChangeLogEntry>(
+    pair.fromJson,
+    json,
+    pair.toBaseJson,
+  );
 }
 
 /// Deserialize a BaseChangeLogEntry subclass using the provided factory.
