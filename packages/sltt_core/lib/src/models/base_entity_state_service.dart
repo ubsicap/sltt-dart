@@ -31,12 +31,10 @@ BaseEntityState deserializeEntityStateSafely(Map<String, dynamic> json) {
       json,
       pair.toBaseJson,
     );
-  } catch (e, st) {
-    final recovery = _createSafeJsonFromDeserializationError(e, st, json);
-    return deserializeWithUnknownFieldData(
-      pair.fromJson,
-      recovery,
-      pair.toBaseJson,
-    );
+  } catch (e) {
+    // Entity-state specific deserialization errors are not recovered here.
+    // Let the caller handle or surface the error so higher-level logic
+    // (e.g., change-log deserialization recovery) can decide how to proceed.
+    rethrow;
   }
 }
