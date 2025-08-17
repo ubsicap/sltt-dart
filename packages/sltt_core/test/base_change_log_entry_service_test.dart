@@ -26,11 +26,12 @@ void main() {
       (v) => v.toJson(),
     );
 
-    // After deserialization, operation should be unknownEntityType
-    expect(result.operation, equals('unknownEntityType'));
+    // After deserialization, operation should be 'hold'
+    expect(result.operation, equals('hold'));
     // entityType should be EntityType.unknown
     expect(result.entityType.toString().contains('unknown'), isTrue);
     // operationInfo should contain the raw entityType value
+    expect(result.operationInfo['hold'], equals('entityType'));
     expect(result.operationInfo['entityType'], equals('brandNewType'));
   });
 
