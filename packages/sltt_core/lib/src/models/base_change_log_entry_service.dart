@@ -36,43 +36,6 @@ void registerChangeLogEntryFactoryGroup(
   _changeLogEntryFactoryGroup = group;
 }
 
-/// Register a factory pair for a specific [entityType] to deserialize
-/// `BaseEntityState` subclasses.
-// Note: entity-state factory helpers were moved to `base_entity_state_service.dart`.
-
-/// Legacy helper retained for compatibility: register a change-log factory
-/// for a single entityType by wrapping it into the global factory group if
-/// no group is already registered.
-void registerChangeLogEntryFactory(
-  EntityType entityType,
-  BaseChangeLogEntry Function(Map<String, dynamic>) fromJson,
-  Map<String, dynamic> Function(BaseChangeLogEntry) toBaseJson,
-) {
-  // If a group is already set, keep it; otherwise create a minimal group
-  // that uses the provided pair and a conservative toSafeJson that simply
-  // picks keys the concrete toBaseJson emits.
-  if (_changeLogEntryFactoryGroup == null) {
-    FactoryGroup<BaseChangeLogEntry> minimalGroup = FactoryGroup(
-      fromJson,
-      toBaseJson,
-      (Map<String, dynamic> inJson) {
-        // By default, try to produce a safe JSON by deserializing and
-        // serializing using the provided pair. If that fails, fall back
-        // to a minimal error JSON produced elsewhere.
-        final instance = toBaseJson(
-          deserializeWithUnknownFieldData(
-            fromJson,
-            inJson,
-            toBaseJson as dynamic,
-          ),
-        );
-        return instance;
-      },
-    );
-    _changeLogEntryFactoryGroup = minimalGroup;
-  }
-}
-
 /// Deserialize the provided [json] into the registered `BaseChangeLogEntry`
 /// instance for the indicated `entityType` using the safe deserialization
 /// wrapper (which will produce a recovery JSON on error).
