@@ -23,22 +23,54 @@ _EntityTypeOrRaw _parseEntityType(dynamic raw) {
 }
 
 // --- Factory registration helpers -----------------------------------------
-// These maps hold registered (fromJson, toBaseJson) pairs per EntityType.
-final Map<EntityType, FactoryPair<BaseChangeLogEntry>>
-_changeLogEntryFactories = {};
+// Single factory group used for change-log entry deserialization and
+// for producing a safe JSON shape on recovery.
+FactoryGroup<BaseChangeLogEntry>? _changeLogEntryFactoryGroup;
+
+/// Register a single factory group for change-log entries. The group's
+/// `toSafeJson` will be used during recovery to produce a JSON shape that
+/// is safe to deserialize for the concrete change-log entry type.
+void registerChangeLogEntryFactoryGroup(
+  FactoryGroup<BaseChangeLogEntry> group,
+) {
+  _changeLogEntryFactoryGroup = group;
+}
 
 /// Register a factory pair for a specific [entityType] to deserialize
 /// `BaseEntityState` subclasses.
 // Note: entity-state factory helpers were moved to `base_entity_state_service.dart`.
 
-/// Register a factory pair for a specific [entityType] to deserialize
-/// `BaseChangeLogEntry` subclasses.
+/// Legacy helper retained for compatibility: register a change-log factory
+/// for a single entityType by wrapping it into the global factory group if
+/// no group is already registered.
 void registerChangeLogEntryFactory(
   EntityType entityType,
   BaseChangeLogEntry Function(Map<String, dynamic>) fromJson,
   Map<String, dynamic> Function(BaseChangeLogEntry) toBaseJson,
 ) {
-  _changeLogEntryFactories[entityType] = FactoryPair(fromJson, toBaseJson);
+  // If a group is already set, keep it; otherwise create a minimal group
+  // that uses the provided pair and a conservative toSafeJson that simply
+  // picks keys the concrete toBaseJson emits.
+  if (_changeLogEntryFactoryGroup == null) {
+    FactoryGroup<BaseChangeLogEntry> minimalGroup = FactoryGroup(
+      fromJson,
+      toBaseJson,
+      (Map<String, dynamic> inJson) {
+        // By default, try to produce a safe JSON by deserializing and
+        // serializing using the provided pair. If that fails, fall back
+        // to a minimal error JSON produced elsewhere.
+        final instance = toBaseJson(
+          deserializeWithUnknownFieldData(
+            fromJson,
+            inJson,
+            toBaseJson as dynamic,
+          ),
+        );
+        return instance;
+      },
+    );
+    _changeLogEntryFactoryGroup = minimalGroup;
+  }
 }
 
 /// Deserialize the provided [json] into the registered `BaseChangeLogEntry`
@@ -47,17 +79,15 @@ void registerChangeLogEntryFactory(
 BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
   Map<String, dynamic> json,
 ) {
-  final parsed = _parseEntityType(json['entityType']);
-  final entityType = parsed.entityType ?? EntityType.unknown;
-  final pair = _changeLogEntryFactories[entityType];
-  if (pair == null) {
-    throw Exception('No registered change log entry factory for $entityType');
+  final group = _changeLogEntryFactoryGroup;
+  if (group == null) {
+    throw Exception('No registered change log entry factory group');
   }
   // Reuse existing safe deserialization helper which will attempt recovery
   return deserializeChangeLogEntrySafely<BaseChangeLogEntry>(
-    pair.fromJson,
+    group.fromJson,
     json,
-    pair.toBaseJson,
+    group.toBaseJson,
   );
 }
 
@@ -85,6 +115,16 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>(
     try {
       return deserializeWithUnknownFieldData(fromJson, safeJson, baseToJson);
     } catch (e, st) {
+      // If a factory group can produce a safe JSON for this input, prefer
+      // that as it may contain richer, concrete-class-friendly fields.
+      if (_changeLogEntryFactoryGroup != null) {
+        try {
+          final safe = _changeLogEntryFactoryGroup!.toSafeJson(json);
+          return deserializeWithUnknownFieldData(fromJson, safe, baseToJson);
+        } catch (_) {
+          // If toSafeJson throws, fall back to generic recovery below.
+        }
+      }
       final recovery = _createSafeJsonFromDeserializationError(e, st, json);
       return deserializeWithUnknownFieldData(fromJson, recovery, baseToJson);
     }
@@ -92,6 +132,14 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>(
   try {
     return deserializeWithUnknownFieldData(fromJson, json, baseToJson);
   } catch (e, st) {
+    if (_changeLogEntryFactoryGroup != null) {
+      try {
+        final safe = _changeLogEntryFactoryGroup!.toSafeJson(json);
+        return deserializeWithUnknownFieldData(fromJson, safe, baseToJson);
+      } catch (_) {
+        // continue to generic recovery
+      }
+    }
     final recovery = _createSafeJsonFromDeserializationError(e, st, json);
     return deserializeWithUnknownFieldData(fromJson, recovery, baseToJson);
   }
