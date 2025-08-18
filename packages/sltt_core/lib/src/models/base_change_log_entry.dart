@@ -5,7 +5,7 @@ import 'entity_type.dart';
 /// Can be used by backend services that don't need Isar
 /// implementations should provide their own `seq` handling
 abstract class BaseChangeLogEntry
-    with ImmutableFields, StorageResponsibilities {
+    with Serializable, ImmutableFields, StorageResponsibilities {
   /// unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random} from generateCid()
   @override
   String cid;
@@ -71,6 +71,12 @@ abstract class BaseChangeLogEntry
   });
 
   // Abstract methods to be implemented by concrete subclasses
+  // toJson() is provided by [Serializable].
+}
+
+/// Provides JSON serialization contracts for models.
+mixin Serializable {
+  /// Full JSON representation used for storage or transport
   Map<String, dynamic> toJson();
 }
 
