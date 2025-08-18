@@ -1,21 +1,27 @@
 import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sltt_core/src/models/base_change_log_entry_service.dart';
 
 part 'change_log_entry.g.dart';
 
+registerChangeLogEntryFactoryGroup(
+  'ClientChangeLogEntry',
+  (Map<String, dynamic> json) => ClientChangeLogEntry.fromJson(json),
+  (BaseChangeLogEntry entry) => entry.toJson(),
+);
+
 @Collection()
 class ClientChangeLogEntry extends BaseChangeLogEntry {
+  Id _seq = Isar.autoIncrement;
   @override
-  Id get seq =>
-      super.seq == -9223372036854775808 ? Isar.autoIncrement : super.seq;
-  @override
-  set seq(int value) => super.seq = value;
+  Id get seq => _seq;
+  set seq(int value) => _seq = value;
 
   @Index()
   @override
-  String get projectId => super.projectId;
+  String get domainId => super.domainId;
   @override
-  set projectId(String value) => super.projectId = value;
+  set domainId(String value) => super.domainId = value;
 
   @Enumerated(EnumType.name)
   @override
@@ -29,61 +35,32 @@ class ClientChangeLogEntry extends BaseChangeLogEntry {
   @override
   set cid(String value) => super.cid = value;
 
+  @override
   @ignore
   Map<String, dynamic> get data => getData();
 
+  @override
   set data(Map<String, dynamic> value) => setData(value);
 
   ClientChangeLogEntry({
-    required super.projectId,
+    required super.domainId,
     required super.entityType,
     required super.operation,
     required super.changeAt,
     required super.entityId,
-    required super.dataJson,
-    super.outdatedBy,
+    required super.data,
     super.cloudAt,
     required super.changeBy,
     required super.cid,
+    required super.storageId,
+    required super.domainType,
+    required super.stateChanged,
+    required super.operationInfo,
+    required super.unknown,
   });
 
-  ClientChangeLogEntry.empty() : super.empty();
-
   static ClientChangeLogEntry fromJson(Map<String, dynamic> json) {
-    final baseEntry = BaseChangeLogEntry.fromJson(json);
-    final entry = ClientChangeLogEntry(
-      projectId: baseEntry.projectId,
-      entityType: baseEntry.entityType,
-      operation: baseEntry.operation,
-      changeAt: baseEntry.changeAt,
-      entityId: baseEntry.entityId,
-      dataJson: baseEntry.dataJson,
-      outdatedBy: baseEntry.outdatedBy,
-      cloudAt: baseEntry.cloudAt,
-      changeBy: baseEntry.changeBy,
-      cid: baseEntry.cid,
-    );
-    entry.seq = baseEntry.seq;
-    return entry;
-  }
-
-  /// Factory method to create ClientChangeLogEntry from API data (Map<String, dynamic>)
-  /// Handles proper data conversion and provides defaults for missing fields
-  static ClientChangeLogEntry fromApiData(Map<String, dynamic> changeData) {
-    final baseEntry = BaseChangeLogEntry.fromApiData(changeData);
-    final entry = ClientChangeLogEntry(
-      projectId: baseEntry.projectId,
-      entityType: baseEntry.entityType,
-      operation: baseEntry.operation,
-      changeAt: baseEntry.changeAt,
-      entityId: baseEntry.entityId,
-      dataJson: baseEntry.dataJson,
-      outdatedBy: baseEntry.outdatedBy,
-      cloudAt: baseEntry.cloudAt,
-      changeBy: baseEntry.changeBy,
-      cid: baseEntry.cid,
-    );
-    entry.seq = baseEntry.seq;
-    return entry;
+    final entry = deserializeChangeLogEntryUsingRegistry(json);
+    return entry as ClientChangeLogEntry;
   }
 }

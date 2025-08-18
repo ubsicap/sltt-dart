@@ -19,12 +19,13 @@ class LocalStorageService extends BaseStorageService {
 
   LocalStorageService(this._databaseName, this._logPrefix);
 
-  /// Helper method to convert ClientChangeLogEntry to ChangeLogEntry
-  ChangeLogEntry _convertToChangeLogEntry(
+  /// Helper method to convert ClientChangeLogEntry to BaseChangeLogEntry
+  BaseChangeLogEntry _convertToChangeLogEntry(
     client.ClientChangeLogEntry clientEntry,
   ) {
-    return ChangeLogEntry(
-      projectId: clientEntry.projectId,
+    return BaseChangeLogEntry(
+      domainType: clientEntry.domainType,
+      domainId: clientEntry.projectId,
       entityType: clientEntry.entityType,
       operation: clientEntry.operation,
       changeAt: clientEntry.changeAt,
@@ -37,8 +38,8 @@ class LocalStorageService extends BaseStorageService {
     )..seq = clientEntry.seq;
   }
 
-  /// Helper method to convert list of ClientChangeLogEntry to list of ChangeLogEntry
-  List<ChangeLogEntry> _convertToChangeLogEntries(
+  /// Helper method to convert list of ClientChangeLogEntry to list of BaseChangeLogEntry
+  List<BaseChangeLogEntry> _convertToChangeLogEntries(
     List<client.ClientChangeLogEntry> clientEntries,
   ) {
     return clientEntries.map(_convertToChangeLogEntry).toList();
@@ -77,7 +78,9 @@ class LocalStorageService extends BaseStorageService {
   ///
   /// Returns the created change log entry with auto-generated sequence number.
   @override
-  Future<ChangeLogEntry> createChange(Map<String, dynamic> changeData) async {
+  Future<BaseChangeLogEntry> createChange(
+    Map<String, dynamic> changeData,
+  ) async {
     print('changeData: ${jsonEncode(changeData)}');
     final change = client.ClientChangeLogEntry.fromApiData(changeData);
 
@@ -89,8 +92,8 @@ class LocalStorageService extends BaseStorageService {
       await _isar.collection<client.ClientChangeLogEntry>().put(change);
     });
 
-    // Return as base ChangeLogEntry
-    return ChangeLogEntry(
+    // Return as base BaseChangeLogEntry
+    return BaseChangeLogEntry(
       projectId: change.projectId,
       entityType: change.entityType,
       operation: change.operation,
@@ -105,7 +108,7 @@ class LocalStorageService extends BaseStorageService {
   }
 
   @override
-  Future<ChangeLogEntry?> getChange(String projectId, int seq) async {
+  Future<BaseChangeLogEntry?> getChange(String projectId, int seq) async {
     final change = await _isar.clientChangeLogEntrys
         .where()
         .seqEqualTo(seq)
@@ -115,7 +118,7 @@ class LocalStorageService extends BaseStorageService {
     return change != null ? _convertToChangeLogEntry(change) : null;
   }
 
-  Future<List<ChangeLogEntry>> getAllChanges() async {
+  Future<List<BaseChangeLogEntry>> getAllChanges() async {
     final results = await _isar.clientChangeLogEntrys
         .where()
         .sortByChangeAtDesc()
@@ -123,7 +126,7 @@ class LocalStorageService extends BaseStorageService {
     return _convertToChangeLogEntries(results);
   }
 
-  Future<List<ChangeLogEntry>> getChangesByEntityType(
+  Future<List<BaseChangeLogEntry>> getChangesByEntityType(
     EntityType entityType,
   ) async {
     final results = await _isar.clientChangeLogEntrys
@@ -134,7 +137,9 @@ class LocalStorageService extends BaseStorageService {
     return _convertToChangeLogEntries(results);
   }
 
-  Future<List<ChangeLogEntry>> getChangesByOperation(String operation) async {
+  Future<List<BaseChangeLogEntry>> getChangesByOperation(
+    String operation,
+  ) async {
     final results = await _isar.clientChangeLogEntrys
         .filter()
         .operationEqualTo(operation)
@@ -143,7 +148,7 @@ class LocalStorageService extends BaseStorageService {
     return _convertToChangeLogEntries(results);
   }
 
-  Future<List<ChangeLogEntry>> getChangesByEntityId(String entityId) async {
+  Future<List<BaseChangeLogEntry>> getChangesByEntityId(String entityId) async {
     final results = await _isar.clientChangeLogEntrys
         .filter()
         .entityIdEqualTo(entityId)
@@ -152,7 +157,7 @@ class LocalStorageService extends BaseStorageService {
     return _convertToChangeLogEntries(results);
   }
 
-  Future<List<ChangeLogEntry>> getChangesInDateRange(
+  Future<List<BaseChangeLogEntry>> getChangesInDateRange(
     DateTime startDate,
     DateTime endDate,
   ) async {
@@ -270,7 +275,7 @@ class LocalStorageService extends BaseStorageService {
 
   // Cursor-based pagination and filtering
   @override
-  Future<List<ChangeLogEntry>> getChangesWithCursor({
+  Future<List<BaseChangeLogEntry>> getChangesWithCursor({
     required String projectId,
     int? cursor,
     int? limit,
@@ -294,7 +299,9 @@ class LocalStorageService extends BaseStorageService {
   /// Returns only changes that haven't been marked as outdated,
   /// which prevents syncing obsolete change log entries.
   @override
-  Future<List<ChangeLogEntry>> getChangesNotOutdated(String projectId) async {
+  Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
+    String projectId,
+  ) async {
     var results = await _isar.clientChangeLogEntrys
         .where()
         .filter()
@@ -356,7 +363,7 @@ class LocalStorageService extends BaseStorageService {
 
   // Get changes since a specific sequence number (for syncing)
   @override
-  Future<List<ChangeLogEntry>> getChangesSince(
+  Future<List<BaseChangeLogEntry>> getChangesSince(
     String projectId,
     int seq,
   ) async {
@@ -373,7 +380,7 @@ class LocalStorageService extends BaseStorageService {
   }
 
   // Store multiple changes (for batch operations)
-  Future<List<ChangeLogEntry>> createChanges(
+  Future<List<BaseChangeLogEntry>> createChanges(
     List<Map<String, dynamic>> changesData,
   ) async {
     final changes = changesData
@@ -391,10 +398,10 @@ class LocalStorageService extends BaseStorageService {
       await _isar.collection<client.ClientChangeLogEntry>().putAll(changes);
     });
 
-    // Convert ClientChangeLogEntry to ChangeLogEntry for the interface
+    // Convert ClientChangeLogEntry to BaseChangeLogEntry for the interface
     return changes
         .map(
-          (clientEntry) => ChangeLogEntry(
+          (clientEntry) => BaseChangeLogEntry(
             projectId: clientEntry.projectId,
             entityType: clientEntry.entityType,
             operation: clientEntry.operation,
@@ -412,7 +419,7 @@ class LocalStorageService extends BaseStorageService {
 
   /// Get the current state of an entity for field-level comparison
   @override
-  Future<ChangeLogEntry?> getCurrentEntityState(
+  Future<BaseChangeLogEntry?> getCurrentEntityState(
     String projectId,
     String entityType,
     String entityId,
@@ -1014,7 +1021,9 @@ class CloudStorageService extends LocalStorageService {
   DateTime? maybeCreateCloudAt() => DateTime.now().toUtc();
 
   @override
-  Future<ChangeLogEntry> createChange(Map<String, dynamic> changeData) async {
+  Future<BaseChangeLogEntry> createChange(
+    Map<String, dynamic> changeData,
+  ) async {
     print('changeData: ${jsonEncode(changeData)}');
 
     // For cloud storage, always force sequence auto-generation by removing seq
@@ -1031,8 +1040,8 @@ class CloudStorageService extends LocalStorageService {
       await _isar.collection<client.ClientChangeLogEntry>().put(change);
     });
 
-    // Return as base ChangeLogEntry
-    return ChangeLogEntry(
+    // Return as base BaseChangeLogEntry
+    return BaseChangeLogEntry(
       projectId: change.projectId,
       entityType: change.entityType,
       operation: change.operation,
