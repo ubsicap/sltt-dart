@@ -128,19 +128,6 @@ Map<String, dynamic> _createSafeJsonFromDeserializationError({
     'json': originalJson,
   };
 
-  // Ensure required change-log fields exist so fromJson factories can succeed
-  safeJson['entityId'] = safeJson['entityId'] ?? 'unknown';
-  safeJson['domainId'] = safeJson['domainId'] ?? '';
-  safeJson['domainType'] = safeJson['domainType'] ?? '';
-  safeJson['storageId'] = safeJson['storageId'] ?? '';
-  safeJson['changeAt'] =
-      safeJson['changeAt'] ?? DateTime.now().toIso8601String();
-  safeJson['cid'] = safeJson['cid'] ?? generateCid();
-  safeJson['changeBy'] = safeJson['changeBy'] ?? '';
-  safeJson['data'] = safeJson['data'] ?? <String, dynamic>{};
-  safeJson['stateChanged'] = safeJson['stateChanged'] ?? false;
-  safeJson['unknown'] = safeJson['unknown'] ?? <String, dynamic>{};
-
   return safeJson;
 }
 
