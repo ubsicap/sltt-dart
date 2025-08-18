@@ -6,8 +6,7 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
-
-import '../storage/base_storage_service.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 /// Base REST API server that provides common functionality for all storage types.
 ///
@@ -74,11 +73,12 @@ abstract class BaseRestApiServer {
       _handleGetGlobalStats,
     ); // Global stats across all projects
     router.post('/api/changes', _handleCreateChanges);
+    router.get('/api/domains', _handleGetDomainsAndTheirCollections);
+    router.get('/api/domains/<domainType>/entities', _handleGetEntities);
     router.get('/api/projects', _handleGetProjects); // List all projects
     router.get('/api/projects/<projectId>/changes', _handleGetChanges);
     router.get('/api/projects/<projectId>/changes/<seq>', _handleGetChange);
     router.get('/api/projects/<projectId>/stats', _handleGetStats);
-    router.get('/api/projects/<projectId>/entities', _handleGetEntities);
     router.get(
       '/api/projects/<projectId>/entities/<entityType>/state',
       _handleGetEntityState,
@@ -523,33 +523,54 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/projects/{projectId}/entities',
-          'description': 'Get list of supported entity types for a project',
+          'path': '/api/domains',
+          'description': 'Get list of supported domains and their collections',
+          'response': {
+            'type': 'object',
+            'properties': {
+              'domains': {
+                'type': 'array',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'name': {'type': 'string', 'description': 'Domain name'},
+                    'collections': {
+                      'type': 'array',
+                      'items': {
+                        'type': 'string',
+                        'description': 'Collection name',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          'method': 'GET',
+          'path': '/api/domains/{domainType}/entities',
+          'description': 'Get list of supported entity types for a domain',
           'parameters': [
             {
-              'name': 'projectId',
+              'name': 'domainType',
               'type': 'string',
               'required': true,
-              'description': 'Project identifier',
+              'description': 'Domain type identifier',
             },
           ],
           'response': {
             'type': 'object',
             'properties': {
-              'projectId': {
+              'domainType': {
                 'type': 'string',
-                'description': 'The project identifier',
+                'description': 'The domain type identifier',
               },
               'entityTypes': {
                 'type': 'array',
                 'items': {'type': 'string'},
                 'description':
-                    'List of entity types that have data in this project',
-              },
-              'timestamp': {
-                'type': 'string',
-                'format': 'ISO8601',
-                'description': 'When the response was generated',
+                    'List of entity types that have data in this domain',
               },
             },
           },
@@ -639,6 +660,34 @@ abstract class BaseRestApiServer {
       jsonEncode(docs),
       headers: {'Content-Type': 'application/json'},
     );
+  }
+
+  Future<Response> _handleGetDomainsAndTheirCollections(Request request) async {
+    try {
+      final domainTypes = ['project']; // todo: 'user', 'team'
+      final collections = [
+        {
+          'project': ['projects'],
+        },
+      ];
+
+      final response = {'domains': domainTypes, 'collections': collections};
+
+      return Response.ok(
+        jsonEncode(response),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on ArgumentError catch (e) {
+      return _errorResponse('$e', 400);
+    } catch (e, stackTrace) {
+      print('Error getting domains: $e');
+      print('Stack trace: $stackTrace');
+      return _errorResponse(
+        'Failed to get domains: ${e.toString()}',
+        500,
+        stackTrace,
+      );
+    }
   }
 
   /// Get all project IDs
@@ -1010,25 +1059,24 @@ abstract class BaseRestApiServer {
     }
   }
 
-  /// Get list of supported entity types for a project
+  /// Get list of supported entity types for a domainType
   Future<Response> _handleGetEntities(Request request) async {
     try {
-      final projectId = _extractProjectId(request);
-      if (projectId == null || projectId.isEmpty) {
-        return _errorResponse('Project ID is required', 400);
+      final domainType = request.params['domainType'];
+      if (domainType == null || domainType.isEmpty) {
+        return _errorResponse('Domain type is required', 400);
       }
 
-      // Get supported entity types for this project
-      final supportedEntityTypes = await storage.getSupportedEntityTypes(
-        projectId,
-      );
+      // Get supported entity types for this domainType
+      var entityTypes = <String>[];
+      if (domainType == 'project') {
+        entityTypes = EntityType.allValues;
+      } else {
+        return _errorResponse('Unsupported domain type: $domainType', 400);
+      }
 
       return Response.ok(
-        jsonEncode({
-          'projectId': projectId,
-          'entityTypes': supportedEntityTypes,
-          'timestamp': DateTime.now().toIso8601String(),
-        }),
+        jsonEncode({'domainType': domainType, 'entityTypes': entityTypes}),
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {

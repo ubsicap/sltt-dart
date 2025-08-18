@@ -16,11 +16,6 @@ class CreateChangesResult {
 
 /// Default implementation functions that storage services can use
 class StorageServiceDefaults {
-  /// Default implementation for getting supported entity types
-  static Future<List<String>> getSupportedEntityTypes(String projectId) async {
-    return EntityType.allValues;
-  }
-
   /// Default implementation for getting changes not outdated
   static Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
     Future<List<BaseChangeLogEntry>> Function({
@@ -99,11 +94,6 @@ abstract class BaseStorageService {
 
   /// Get all projects (based on changes with entityType 'project')
   Future<List<String>> getAllProjects();
-
-  /// Get supported entity types for a project
-  ///
-  /// Subclasses can use StorageServiceDefaults.getSupportedEntityTypes() for a default implementation
-  Future<List<String>> getSupportedEntityTypes(String projectId);
 
   /// Get entity state data for a specific entity type and project
   ///
