@@ -275,6 +275,48 @@ void main() {
         );
       });
 
+      test('preserves incoming data when targetStorageId differs (cloud)', () {
+        // incoming change originated from 'local' but is being sent to 'cloud'
+        final newerTime = baseTime.add(const Duration(minutes: 5));
+        final changeLogEntry = TestChangeLogEntry(
+          entityId: 'entity1',
+          entityType: EntityType.task,
+          domainId: 'project1',
+          domainType: 'project',
+          changeAt: newerTime,
+          cid: 'cid-local-1',
+          storageId: 'local',
+          changeBy: 'user2',
+          data: {'rank': entityState.data_rank},
+          operation: 'update',
+          operationInfo: {},
+          stateChanged: true,
+          unknown: {},
+        );
+
+        final result =
+            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+              changeLogEntry,
+              entityState,
+              targetStorageId: 'cloud',
+              changeLogEntryFactory: TestChangeLogEntry.fromJson,
+              entityStateFactory: TestEntityState.fromJson,
+            );
+
+        // Because storageId != targetStorageId, the original payload should be preserved
+        expect(
+          result.newChangeLogEntry.data,
+          equals({'rank': entityState.data_rank}),
+        );
+        // Operation should still be computed (update) and state update may occur
+        expect(result.newChangeLogEntry.operation, equals('noOp'));
+        // Operation info should include noOpFields
+        expect(
+          result.newChangeLogEntry.operationInfo['noOpFields'],
+          equals(['rank']),
+        );
+      });
+
       test(
         'should record noOpFields and only include changed fields in change data',
         () {
