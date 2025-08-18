@@ -1,4 +1,4 @@
-import '../models/base_change_log_entry.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 /// Result of creating changes with field-level change detection
 class CreateChangesResult {
@@ -17,14 +17,8 @@ class CreateChangesResult {
 /// Default implementation functions that storage services can use
 class StorageServiceDefaults {
   /// Default implementation for getting supported entity types
-  static Future<List<String>> getSupportedEntityTypes(
-    Future<Map<String, dynamic>> Function(String) getEntityTypeStats,
-    String projectId,
-  ) async {
-    final entityTypeStats = await getEntityTypeStats(projectId);
-    return (entityTypeStats['entityTypeStats'] as Map<String, dynamic>? ?? {})
-        .keys
-        .toList();
+  static Future<List<String>> getSupportedEntityTypes(String projectId) async {
+    return EntityType.allValues;
   }
 
   /// Default implementation for getting changes not outdated

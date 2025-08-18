@@ -805,12 +805,6 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<List<String>> getSupportedEntityTypes(String projectId) async {
-    // DynamoDB backend supports all EntityType values
-    return EntityType.allValues;
-  }
-
-  @override
   Future<Map<String, dynamic>> getEntityStates({
     required String projectId,
     required String entityType,

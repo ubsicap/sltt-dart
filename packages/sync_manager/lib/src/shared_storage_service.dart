@@ -766,12 +766,6 @@ class LocalStorageService extends BaseStorageService {
   }
 
   @override
-  Future<List<String>> getSupportedEntityTypes(String projectId) async {
-    // Return all entity types supported by this storage service
-    return EntityType.values.map((e) => e.name).toList();
-  }
-
-  @override
   Future<Map<String, dynamic>> getEntityStates({
     required String projectId,
     required String entityType,
