@@ -1,4 +1,4 @@
-import 'dart:math';
+import '../services/uid_service.dart';
 
 /// Enumeration of all supported entity types in the SLTT system.
 /// Each entity type will eventually have its own schema and collections.
@@ -110,15 +110,7 @@ enum EntityType {
     final timezonePart = '$offsetSign$offsetHours$offsetMinutes';
 
     // 4-character random part
-    const chars =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    final random = Random();
-    final randomPart = String.fromCharCodes(
-      Iterable.generate(
-        4,
-        (_) => chars.codeUnitAt(random.nextInt(chars.length)),
-      ),
-    );
+    final randomPart = generateRandomChars(4);
 
     return '$datePart$timezonePart-$randomPart-$suffix';
   }

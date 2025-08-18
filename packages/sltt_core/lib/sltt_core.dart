@@ -6,4 +6,5 @@ export 'src/models/entity_type.dart';
 export 'src/models/enums.dart';
 export 'src/server/server_urls.dart';
 export 'src/services/change_entity_state_service.dart';
+export 'src/services/uid_service.dart';
 export 'src/storage/base_storage_service.dart';

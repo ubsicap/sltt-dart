@@ -1,9 +1,8 @@
-import 'dart:math';
-
 import '../models/base_change_log_entry.dart';
 import '../models/entity_type.dart';
 import '../models/factory_pair.dart';
 import 'json_serialization_service.dart';
+import 'uid_service.dart';
 
 /// Helper used when parsing potentially unknown entityType strings
 class _EntityTypeOrRaw {
@@ -154,12 +153,7 @@ String generateCid([DateTime? timestamp]) {
   final timezonePart = '$offsetSign$offsetHours$offsetMinutes';
 
   // 4-character random part
-  const chars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  final random = Random();
-  final randomPart = String.fromCharCodes(
-    Iterable.generate(4, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
-  );
+  final randomPart = generateRandomChars(4);
 
   return '$datePart$timezonePart-$randomPart';
 }

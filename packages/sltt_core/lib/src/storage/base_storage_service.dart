@@ -35,6 +35,30 @@ class StorageServiceDefaults {
 /// This interface defines the contract that all storage services must implement,
 /// whether they use local Isar databases, DynamoDB, or other storage backends.
 abstract class BaseStorageService {
+  /// Standard length for storage IDs (YYMMDDHHMM + 4 random chars)
+  static const int kStorageIdLength = 14;
+
+  /// Generate a short, human-ish storage id: YYMMDDHHMM + 4 random [0-9A-Z]
+  static String generateShortStorageId() {
+    final now = DateTime.now().toUtc();
+    String two(int v) => v.toString().padLeft(2, '0');
+    final yy = two(now.year % 100);
+    final mm = two(now.month);
+    final dd = two(now.day);
+    final hh = two(now.hour);
+    final min = two(now.minute);
+    final prefix = '$yy$mm$dd$hh$min';
+
+    const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    final id = prefix + generateRandomChars(4, chars: alphabet);
+    // Sanity: ensure fixed length
+    return id.length == kStorageIdLength
+        ? id
+        : (id.length > kStorageIdLength
+              ? id.substring(0, kStorageIdLength)
+              : id.padRight(kStorageIdLength, '0'));
+  }
+
   /// Initialize the storage service
   Future<void> initialize();
 
@@ -116,4 +140,12 @@ abstract class BaseStorageService {
     // Default implementation - override in local storage services
     return getChangesWithCursor(projectId: projectId);
   }
+
+  /// Retrieve the persisted storageId for this storage backend/instance.
+  /// Implementations should persist this across restarts when possible.
+  Future<String> getStorageId();
+
+  /// Ensure a storageId exists and is persisted if possible; return it.
+  /// Should be invoked during initialize().
+  Future<String> ensureStorageId();
 }
