@@ -1,4 +1,4 @@
-import 'package:sltt_core/src/models/base_change_log_entry_service.dart';
+import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
 import 'package:test/test.dart';
 
 import 'test_models.dart';

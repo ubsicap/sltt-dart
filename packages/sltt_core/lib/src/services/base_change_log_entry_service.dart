@@ -1,9 +1,9 @@
 import 'dart:math';
 
-import '../services/json_serialization_service.dart';
-import 'base_change_log_entry.dart';
-import 'entity_type.dart';
-import 'factory_pair.dart';
+import 'json_serialization_service.dart';
+import '../models/base_change_log_entry.dart';
+import '../models/entity_type.dart';
+import '../models/factory_pair.dart';
 
 /// Helper used when parsing potentially unknown entityType strings
 class _EntityTypeOrRaw {

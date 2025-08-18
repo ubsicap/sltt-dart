@@ -1,6 +1,6 @@
 import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/models/base_change_log_entry_service.dart';
+import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
 
 part 'change_log_entry.g.dart';
 
