@@ -35,28 +35,27 @@ class StorageServiceDefaults {
 /// This interface defines the contract that all storage services must implement,
 /// whether they use local Isar databases, DynamoDB, or other storage backends.
 abstract class BaseStorageService {
-  /// Standard length for storage IDs (YYMMDDHHMM + 4 random chars)
-  static const int kStorageIdLength = 14;
-
-  /// Generate a short, human-ish storage id: YYMMDDHHMM + 4 random [0-9A-Z]
+  /// Generate a short (16 char), human-ish storage id: YYMMDDHHMM + 2 timezone + 1 random [A-Z] + 3 random [0-9A-Z]
   static String generateShortStorageId() {
-    final now = DateTime.now().toUtc();
+    final now = DateTime.now();
     String two(int v) => v.toString().padLeft(2, '0');
     final yy = two(now.year % 100);
     final mm = two(now.month);
     final dd = two(now.day);
     final hh = two(now.hour);
     final min = two(now.minute);
-    final prefix = '$yy$mm$dd$hh$min';
-
-    const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    final id = prefix + generateRandomChars(4, chars: alphabet);
-    // Sanity: ensure fixed length
-    return id.length == kStorageIdLength
-        ? id
-        : (id.length > kStorageIdLength
-              ? id.substring(0, kStorageIdLength)
-              : id.padRight(kStorageIdLength, '0'));
+    final tzOffsetHours = now.timeZoneOffset.inHours;
+    final tzSign = tzOffsetHours.isNegative ? '-' : '+';
+    final prefix = '$yy$mm$dd$hh$min$tzSign${two(tzOffsetHours.abs())}';
+    // start random characters with alphabet to visually separate from timestamp
+    final medial = generateRandomChars(1, chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+    // end with 3 random alphanumeric characters
+    final suffix = generateRandomChars(
+      3,
+      chars: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    );
+    final id = prefix + medial + suffix;
+    return id;
   }
 
   /// Initialize the storage service
