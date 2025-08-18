@@ -10,7 +10,7 @@ part 'test_models.g.dart';
 
 /// Concrete implementation of BaseChangeLogEntry for testing
 /// This is similar to the existing ChangeLogEntry but specifically for tests
-@JsonSerializable()
+@JsonSerializable(checked: true)
 class TestChangeLogEntry extends BaseChangeLogEntry {
   @override
   final int seq;
@@ -49,7 +49,7 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
 
 /// Concrete implementation of BaseEntityState for testing
 /// This is similar to the existing EntityState but specifically for tests
-@JsonSerializable(includeIfNull: true)
+@JsonSerializable(includeIfNull: true, checked: true)
 class TestEntityState extends BaseEntityState {
   final String data_nameLocal;
 

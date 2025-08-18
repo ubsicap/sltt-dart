@@ -7,26 +7,38 @@ part of 'test_models.dart';
 // **************************************************************************
 
 TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
-    TestChangeLogEntry(
-      entityId: json['entityId'] as String,
-      entityType: $enumDecode(_$EntityTypeEnumMap, json['entityType']),
-      domainId: json['domainId'] as String,
-      domainType: json['domainType'] as String,
-      changeAt: DateTime.parse(json['changeAt'] as String),
-      cid: json['cid'] as String,
-      storageId: json['storageId'] as String? ?? 'local',
-      changeBy: json['changeBy'] as String,
-      data: json['data'] as Map<String, dynamic>,
-      operation: json['operation'] as String,
-      operationInfo: json['operationInfo'] as Map<String, dynamic>,
-      stateChanged: json['stateChanged'] as bool,
-      unknown: json['unknown'] as Map<String, dynamic>,
-      dataSchemaRev: (json['dataSchemaRev'] as num?)?.toInt(),
-      cloudAt: json['cloudAt'] == null
-          ? null
-          : DateTime.parse(json['cloudAt'] as String),
-      schemaVersion: (json['schemaVersion'] as num?)?.toInt(),
-      seq: (json['seq'] as num?)?.toInt() ?? 0,
+    $checkedCreate(
+      'TestChangeLogEntry',
+      json,
+      ($checkedConvert) {
+        final val = TestChangeLogEntry(
+          entityId: $checkedConvert('entityId', (v) => v as String),
+          entityType: $checkedConvert(
+              'entityType', (v) => $enumDecode(_$EntityTypeEnumMap, v)),
+          domainId: $checkedConvert('domainId', (v) => v as String),
+          domainType: $checkedConvert('domainType', (v) => v as String),
+          changeAt:
+              $checkedConvert('changeAt', (v) => DateTime.parse(v as String)),
+          cid: $checkedConvert('cid', (v) => v as String),
+          storageId:
+              $checkedConvert('storageId', (v) => v as String? ?? 'local'),
+          changeBy: $checkedConvert('changeBy', (v) => v as String),
+          data: $checkedConvert('data', (v) => v as Map<String, dynamic>),
+          operation: $checkedConvert('operation', (v) => v as String),
+          operationInfo: $checkedConvert(
+              'operationInfo', (v) => v as Map<String, dynamic>),
+          stateChanged: $checkedConvert('stateChanged', (v) => v as bool),
+          unknown: $checkedConvert('unknown', (v) => v as Map<String, dynamic>),
+          dataSchemaRev:
+              $checkedConvert('dataSchemaRev', (v) => (v as num?)?.toInt()),
+          cloudAt: $checkedConvert(
+              'cloudAt', (v) => v == null ? null : DateTime.parse(v as String)),
+          schemaVersion:
+              $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
+          seq: $checkedConvert('seq', (v) => (v as num?)?.toInt() ?? 0),
+        );
+        return val;
+      },
     );
 
 Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
@@ -71,62 +83,78 @@ const _$EntityTypeEnumMap = {
 };
 
 TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
-    TestEntityState(
-      data_nameLocal: json['data_nameLocal'] as String? ?? '',
-      entityId: json['entityId'] as String,
-      entityType: $enumDecode(_$EntityTypeEnumMap, json['entityType']),
-      schemaVersion: (json['schemaVersion'] as num?)?.toInt(),
-      change_domainId: json['change_domainId'] as String,
-      change_domainId_orig_: json['change_domainId_orig_'] as String,
-      change_changeAt: DateTime.parse(json['change_changeAt'] as String),
-      change_changeAt_orig_: json['change_changeAt_orig_'] == null
-          ? null
-          : DateTime.parse(json['change_changeAt_orig_'] as String),
-      change_cid: json['change_cid'] as String,
-      change_cid_orig_: json['change_cid_orig_'] as String,
-      change_dataSchemaRev: (json['change_dataSchemaRev'] as num?)?.toInt(),
-      change_cloudAt: json['change_cloudAt'] == null
-          ? null
-          : DateTime.parse(json['change_cloudAt'] as String),
-      change_cloudAt_orig_: json['change_cloudAt_orig_'] == null
-          ? null
-          : DateTime.parse(json['change_cloudAt_orig_'] as String),
-      change_changeBy: json['change_changeBy'] as String,
-      data_rank_dataSchemaRev_:
-          (json['data_rank_dataSchemaRev_'] as num?)?.toInt(),
-      data_rank: json['data_rank'] as String?,
-      data_rank_changeAt_: json['data_rank_changeAt_'] == null
-          ? null
-          : DateTime.parse(json['data_rank_changeAt_'] as String),
-      data_rank_cid_: json['data_rank_cid_'] as String?,
-      data_rank_changeBy_: json['data_rank_changeBy_'] as String?,
-      data_rank_cloudAt_: json['data_rank_cloudAt_'] == null
-          ? null
-          : DateTime.parse(json['data_rank_cloudAt_'] as String),
-      data_deleted: json['data_deleted'] as bool?,
-      data_deleted_dataSchemaRev_:
-          (json['data_deleted_dataSchemaRev_'] as num?)?.toInt(),
-      data_deleted_changeAt_: json['data_deleted_changeAt_'] == null
-          ? null
-          : DateTime.parse(json['data_deleted_changeAt_'] as String),
-      data_deleted_cid_: json['data_deleted_cid_'] as String?,
-      data_deleted_changeBy_: json['data_deleted_changeBy_'] as String?,
-      data_deleted_cloudAt_: json['data_deleted_cloudAt_'] == null
-          ? null
-          : DateTime.parse(json['data_deleted_cloudAt_'] as String),
-      data_parentId: json['data_parentId'] as String,
-      data_parentId_dataSchemaRev_:
-          (json['data_parentId_dataSchemaRev_'] as num?)?.toInt(),
-      data_parentId_changeAt_:
-          DateTime.parse(json['data_parentId_changeAt_'] as String),
-      data_parentId_cid_: json['data_parentId_cid_'] as String,
-      data_parentId_changeBy_: json['data_parentId_changeBy_'] as String,
-      data_parentId_cloudAt_: json['data_parentId_cloudAt_'] == null
-          ? null
-          : DateTime.parse(json['data_parentId_cloudAt_'] as String),
-    )
-      ..unknown = json['unknown'] as Map<String, dynamic>
-      ..change_changeBy_orig_ = json['change_changeBy_orig_'] as String;
+    $checkedCreate(
+      'TestEntityState',
+      json,
+      ($checkedConvert) {
+        final val = TestEntityState(
+          data_nameLocal:
+              $checkedConvert('data_nameLocal', (v) => v as String? ?? ''),
+          entityId: $checkedConvert('entityId', (v) => v as String),
+          entityType: $checkedConvert(
+              'entityType', (v) => $enumDecode(_$EntityTypeEnumMap, v)),
+          schemaVersion:
+              $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
+          change_domainId:
+              $checkedConvert('change_domainId', (v) => v as String),
+          change_domainId_orig_:
+              $checkedConvert('change_domainId_orig_', (v) => v as String),
+          change_changeAt: $checkedConvert(
+              'change_changeAt', (v) => DateTime.parse(v as String)),
+          change_changeAt_orig_: $checkedConvert('change_changeAt_orig_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
+          change_cid: $checkedConvert('change_cid', (v) => v as String),
+          change_cid_orig_:
+              $checkedConvert('change_cid_orig_', (v) => v as String),
+          change_dataSchemaRev: $checkedConvert(
+              'change_dataSchemaRev', (v) => (v as num?)?.toInt()),
+          change_cloudAt: $checkedConvert('change_cloudAt',
+              (v) => v == null ? null : DateTime.parse(v as String)),
+          change_cloudAt_orig_: $checkedConvert('change_cloudAt_orig_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
+          change_changeBy:
+              $checkedConvert('change_changeBy', (v) => v as String),
+          data_rank_dataSchemaRev_: $checkedConvert(
+              'data_rank_dataSchemaRev_', (v) => (v as num?)?.toInt()),
+          data_rank: $checkedConvert('data_rank', (v) => v as String?),
+          data_rank_changeAt_: $checkedConvert('data_rank_changeAt_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
+          data_rank_cid_:
+              $checkedConvert('data_rank_cid_', (v) => v as String?),
+          data_rank_changeBy_:
+              $checkedConvert('data_rank_changeBy_', (v) => v as String?),
+          data_rank_cloudAt_: $checkedConvert('data_rank_cloudAt_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
+          data_deleted: $checkedConvert('data_deleted', (v) => v as bool?),
+          data_deleted_dataSchemaRev_: $checkedConvert(
+              'data_deleted_dataSchemaRev_', (v) => (v as num?)?.toInt()),
+          data_deleted_changeAt_: $checkedConvert('data_deleted_changeAt_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
+          data_deleted_cid_:
+              $checkedConvert('data_deleted_cid_', (v) => v as String?),
+          data_deleted_changeBy_:
+              $checkedConvert('data_deleted_changeBy_', (v) => v as String?),
+          data_deleted_cloudAt_: $checkedConvert('data_deleted_cloudAt_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
+          data_parentId: $checkedConvert('data_parentId', (v) => v as String),
+          data_parentId_dataSchemaRev_: $checkedConvert(
+              'data_parentId_dataSchemaRev_', (v) => (v as num?)?.toInt()),
+          data_parentId_changeAt_: $checkedConvert(
+              'data_parentId_changeAt_', (v) => DateTime.parse(v as String)),
+          data_parentId_cid_:
+              $checkedConvert('data_parentId_cid_', (v) => v as String),
+          data_parentId_changeBy_:
+              $checkedConvert('data_parentId_changeBy_', (v) => v as String),
+          data_parentId_cloudAt_: $checkedConvert('data_parentId_cloudAt_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
+        );
+        $checkedConvert(
+            'unknown', (v) => val.unknown = v as Map<String, dynamic>);
+        $checkedConvert('change_changeBy_orig_',
+            (v) => val.change_changeBy_orig_ = v as String);
+        return val;
+      },
+    );
 
 Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
     <String, dynamic>{
