@@ -863,11 +863,14 @@ abstract class BaseRestApiServer {
       for (int i = 0; i < changesToCreate.length; i++) {
         final changeData = changesToCreate[i];
 
-        // Validate that each change has a projectId
-        final projectId = changeData['projectId'] as String?;
-        if (projectId == null || projectId.isEmpty) {
+        // todo: is there a way for JsonSerializable to help us handle validation errors?
+        // alternative: use json schema from api/help to validate incoming changes
+
+        // Validate that each change has a domainId
+        final domainId = changeData['domainId'] as String?;
+        if (domainId == null || domainId.isEmpty) {
           return _errorResponse(
-            'Change at index $i is missing required projectId field',
+            'Change at index $i is missing required domainId field',
             400,
           );
         }
@@ -891,10 +894,10 @@ abstract class BaseRestApiServer {
 
         // Validate project entity constraint: entityId must equal projectId
         if (entityType == 'project') {
-          if (entityId != projectId) {
+          if (entityId != domainId) {
             return _errorResponse(
               'Project entities must have entityId equal to projectId. '
-              'Expected: $projectId, got: $entityId',
+              'Expected: $domainId, got: $entityId',
               400,
             );
           }
