@@ -22,9 +22,23 @@ void main() {
     };
 
     final result = deserializeChangeLogEntrySafely<TestChangeLogEntry>(
-      (m) => TestChangeLogEntry.fromJson(m),
-      rawJson,
-      (v) => v.toJson(),
+      fromJson: (m) => TestChangeLogEntry.fromJson(m),
+      json: rawJson,
+      baseToJson: (v) => v.toJson(),
+      toSafeJson: (orig) => {
+        // default safe shape the concrete model can parse
+        ...orig,
+        'entityType': 'unknown',
+        'operation': 'hold',
+        'operationInfo': {
+          ...(orig['operationInfo'] as Map<String, dynamic>? ?? {}),
+          'hold': 'entityType',
+          'entityType': orig['entityType'],
+        },
+        'data': (orig['data'] as Map<String, dynamic>? ?? <String, dynamic>{}),
+        'unknown':
+            (orig['unknown'] as Map<String, dynamic>? ?? <String, dynamic>{}),
+      },
     );
 
     // After deserialization, operation should be 'hold'
@@ -66,9 +80,20 @@ void main() {
     }
 
     final result = deserializeChangeLogEntrySafely<TestChangeLogEntry>(
-      (m) => throwingFactory<TestChangeLogEntry>(m),
-      rawJson,
-      (v) => v.toJson(),
+      fromJson: (m) => throwingFactory<TestChangeLogEntry>(m),
+      json: rawJson,
+      baseToJson: (v) => v.toJson(),
+      toSafeJson: (orig) => {
+        ...orig,
+        'entityType': 'unknown',
+        'operation': 'error',
+        'operationInfo': {
+          ...(orig['operationInfo'] as Map<String, dynamic>? ?? {}),
+        },
+        'data': (orig['data'] as Map<String, dynamic>? ?? <String, dynamic>{}),
+        'unknown':
+            (orig['unknown'] as Map<String, dynamic>? ?? <String, dynamic>{}),
+      },
     );
 
     expect(result.operation, equals('error'));

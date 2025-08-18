@@ -1,9 +1,9 @@
 import 'dart:math';
 
-import 'json_serialization_service.dart';
 import '../models/base_change_log_entry.dart';
 import '../models/entity_type.dart';
 import '../models/factory_pair.dart';
+import 'json_serialization_service.dart';
 
 /// Helper used when parsing potentially unknown entityType strings
 class _EntityTypeOrRaw {
@@ -48,9 +48,10 @@ BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
   }
   // Reuse existing safe deserialization helper which will attempt recovery
   return deserializeChangeLogEntrySafely<BaseChangeLogEntry>(
-    group.fromJson,
-    json,
-    group.toBaseJson,
+    fromJson: group.fromJson,
+    json: json,
+    baseToJson: group.toBaseJson,
+    toSafeJson: group.toSafeJson,
   );
 }
 
@@ -58,20 +59,18 @@ BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
 /// If the json['entityType'] can't be parsed, returns an instance with
 /// operation='unknownEntityType', entityType=EntityType.unknown and
 /// operationInfo capturing the unparseable value.
-T deserializeChangeLogEntrySafely<T extends HasUnknownField>(
-  T Function(Map<String, dynamic>) fromJson,
-  Map<String, dynamic> json,
-  Map<String, dynamic> Function(T) baseToJson,
-) {
+T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
+  required T Function(Map<String, dynamic>) fromJson,
+  required Map<String, dynamic> json,
+  required Map<String, dynamic> Function(T) baseToJson,
+  required Map<String, dynamic> Function(Map<String, dynamic>) toSafeJson,
+}) {
   final parsed = _parseEntityType(json['entityType']);
 
   if (parsed.entityType == null && parsed.raw != null) {
-    final safeJson = Map<String, dynamic>.from(json);
+    // Start from caller-provided safe shape and then overlay our hold semantics
+    final safeJson = toSafeJson(json);
     safeJson['entityType'] = EntityType.unknown.value;
-    // Directly set the sentinel operation to 'hold' and record the raw
-    // entityType so the entry contains the information needed for later
-    // rehydration. We also set an explicit 'hold' marker in operationInfo
-    // so callers can detect held entries.
     safeJson['operation'] = 'hold';
     safeJson['operationInfo'] = {
       ...(safeJson['operationInfo'] as Map<String, dynamic>? ?? {}),
@@ -81,47 +80,43 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>(
     try {
       return deserializeWithUnknownFieldData(fromJson, safeJson, baseToJson);
     } catch (e, st) {
-      // If a factory group can produce a safe JSON for this input, prefer
-      // that as it may contain richer, concrete-class-friendly fields.
-      if (_changeLogEntryFactoryGroup != null) {
-        try {
-          final safe = _changeLogEntryFactoryGroup!.toSafeJson(json);
-          return deserializeWithUnknownFieldData(fromJson, safe, baseToJson);
-        } catch (_) {
-          // If toSafeJson throws, fall back to generic recovery below.
-        }
-      }
-      final recovery = _createSafeJsonFromDeserializationError(e, st, json);
+      final recovery = _createSafeJsonFromDeserializationError(
+        error: e,
+        stack: st,
+        originalJson: json,
+        toSafeJson: toSafeJson,
+      );
       return deserializeWithUnknownFieldData(fromJson, recovery, baseToJson);
     }
   }
   try {
     return deserializeWithUnknownFieldData(fromJson, json, baseToJson);
   } catch (e, st) {
-    if (_changeLogEntryFactoryGroup != null) {
-      try {
-        final safe = _changeLogEntryFactoryGroup!.toSafeJson(json);
-        return deserializeWithUnknownFieldData(fromJson, safe, baseToJson);
-      } catch (_) {
-        // continue to generic recovery
-      }
-    }
-    final recovery = _createSafeJsonFromDeserializationError(e, st, json);
+    // Delegate recovery JSON construction to the shared helper
+    final recovery = _createSafeJsonFromDeserializationError(
+      error: e,
+      stack: st,
+      originalJson: json,
+      toSafeJson: toSafeJson,
+    );
     return deserializeWithUnknownFieldData(fromJson, recovery, baseToJson);
   }
 }
 
 /// Build a safe JSON to use when deserialization of the original JSON fails.
-Map<String, dynamic> _createSafeJsonFromDeserializationError(
-  Object error,
+Map<String, dynamic> _createSafeJsonFromDeserializationError({
+  required Object error,
   StackTrace? stack,
-  Map<String, dynamic> originalJson,
-) {
+  required Map<String, dynamic> originalJson,
+  required Map<String, dynamic> Function(Map<String, dynamic>) toSafeJson,
+}) {
   final serializedError = error.toString();
   final errorInfo = <String, dynamic>{'error': serializedError};
   if (stack != null) errorInfo['errorStack'] = stack.toString();
 
-  final safeJson = Map<String, dynamic>.from(originalJson);
+  // Start with caller-provided safe shape to maximize compatibility with
+  // concrete fromJson, then overlay standardized error semantics.
+  final safeJson = toSafeJson(originalJson);
 
   // Ensure minimal required fields exist and normalize entityType
   safeJson['entityType'] = EntityType.unknown.value;
@@ -137,6 +132,7 @@ Map<String, dynamic> _createSafeJsonFromDeserializationError(
   safeJson['entityId'] = safeJson['entityId'] ?? 'unknown';
   safeJson['domainId'] = safeJson['domainId'] ?? '';
   safeJson['domainType'] = safeJson['domainType'] ?? '';
+  safeJson['storageId'] = safeJson['storageId'] ?? '';
   safeJson['changeAt'] =
       safeJson['changeAt'] ?? DateTime.now().toIso8601String();
   safeJson['cid'] = safeJson['cid'] ?? generateCid();
