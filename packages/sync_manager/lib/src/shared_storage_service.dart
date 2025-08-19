@@ -419,14 +419,25 @@ class LocalStorageService extends BaseStorageService {
 
   /// Get the current state of an entity for field-level comparison
   @override
-  Future<BaseChangeLogEntry?> getCurrentEntityState(
+  Future<BaseEntityState?> getCurrentEntityState(
     String projectId,
     String entityType,
     String entityId,
   ) async {
     // Get the most recent change for this entity
-    final results = await _isar.clientChangeLogEntrys
-        .where()
+    final Map<String, dynamic> entityCollections = {
+      'project': _isar.isarProjectStates,
+      'document': _isar.isarDocumentStates,
+      'team': _isar.isarTeamStates,
+    };
+
+    final collection = await entityCollections[entityType];
+    if (collection == null) {
+      return null;
+    }
+
+    final results = await collection
+        ?.where()
         .filter()
         .projectIdEqualTo(projectId)
         .and()
@@ -445,7 +456,7 @@ class LocalStorageService extends BaseStorageService {
       return null;
     }
 
-    return _convertToChangeLogEntry(results.first);
+    return results.first;
   }
 
   /// Hook method for subclasses to optionally add cloud timestamp.

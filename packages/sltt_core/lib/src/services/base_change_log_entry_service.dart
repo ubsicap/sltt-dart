@@ -56,8 +56,8 @@ BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
 
 /// Deserialize a BaseChangeLogEntry subclass using the provided factory.
 /// If the json['entityType'] can't be parsed, returns an instance with
-/// operation='unknownEntityType', entityType=EntityType.unknown and
-/// operationInfo capturing the unparseable value.
+/// operation='hold', entityType=EntityType.unknown and
+/// operationInfo capturing the unparsable value.
 T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
   required T Function(Map<String, dynamic>) fromJson,
   required Map<String, dynamic> json,

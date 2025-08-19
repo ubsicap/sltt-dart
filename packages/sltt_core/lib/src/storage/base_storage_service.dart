@@ -90,7 +90,7 @@ abstract class BaseStorageService {
   ///
   /// Returns the most recent change entry for the specified entity, or null if
   /// the entity doesn't exist.
-  Future<BaseChangeLogEntry?> getCurrentEntityState(
+  Future<BaseEntityState?> getCurrentEntityState(
     String projectId,
     String entityType,
     String entityId,
@@ -142,6 +142,7 @@ abstract class BaseStorageService {
 
   /// Retrieve the persisted storageId for this storage backend/instance.
   /// Implementations should persist this across restarts when possible.
+  /// Question: should this pass a domainType in case there are multiple storages?
   Future<String> getStorageId();
 
   /// Ensure a storageId exists and is persisted if possible; return it.

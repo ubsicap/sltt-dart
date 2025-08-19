@@ -327,7 +327,7 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<ChangeLogEntry?> getCurrentEntityState(
+  Future<BaseEntityState?> getCurrentEntityState(
     String projectId,
     String entityType,
     String entityId,
@@ -396,52 +396,10 @@ class DynamoDBStorageService extends BaseStorageService {
         }
       }
 
-      final changeEntry = ChangeLogEntry(
-        projectId: projectId,
-        entityType: EntityType.fromString(entityType),
-        operation:
-            _convertAttributeValueToJson(item['operation']) as String? ??
-            'create',
-        changeAt: DateTime.parse(
-          _convertAttributeValueToJson(item['changeAt']) as String? ??
-              DateTime.now().toIso8601String(),
-        ),
-        entityId: entityId,
-        dataJson: jsonEncode(entityData),
-        cloudAt: item['cloudAt_meta'] != null
-            ? DateTime.parse(
-                _convertAttributeValueToJson(item['cloudAt_meta']) as String,
-              )
-            : null,
-        cid:
-            _convertAttributeValueToJson(item['cid_meta']) as String? ??
-            'unknown',
-        changeBy:
-            _convertAttributeValueToJson(item['changeBy_meta']) as String? ??
-            '',
-      );
-
-      // Set sequence number
-      changeEntry.seq =
-          int.tryParse(
-            _convertAttributeValueToJson(item['seq'])?.toString() ?? '0',
-          ) ??
-          0;
-
-      print(
-        '[getCurrentEntityState] Returning change entry with seq: ${changeEntry.seq}',
-      );
-      return changeEntry;
-    } catch (e, stackTrace) {
+      return null; // todo
+    } catch (e) {
       print('Error in getCurrentEntityState: $e');
-      print('Stack trace: $stackTrace');
-      print(
-        'Parameters: projectId=$projectId, entityType=$entityType, entityId=$entityId',
-      );
-      // Re-throw as ArgumentError to provide better error context
-      throw ArgumentError(
-        'Failed to get current entity state for $entityType:$entityId in project $projectId: $e',
-      );
+      return null;
     }
   }
 

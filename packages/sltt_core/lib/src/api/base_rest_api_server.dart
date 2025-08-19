@@ -7,6 +7,8 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
+import 'package:sltt_core/src/services/base_entity_state_service.dart';
 
 /// Base REST API server that provides common functionality for all storage types.
 ///
@@ -284,11 +286,6 @@ abstract class BaseRestApiServer {
                 'type': 'integer',
                 'description':
                     'Number of changes actually created (excludes no-ops)',
-              },
-              'seqMap': {
-                'type': 'object',
-                'description':
-                    'Map of Change IDs (CID) to assigned sequence numbers (only for created changes)',
               },
               'noOpChanges': {
                 'type': 'array',
@@ -858,61 +855,58 @@ abstract class BaseRestApiServer {
       if (changesToCreate.isEmpty) {
         return _errorResponse('No changes provided', 400);
       }
+      final targetStorageId = await storage.getStorageId();
 
       // Validate all changes first
       for (int i = 0; i < changesToCreate.length; i++) {
         final changeData = changesToCreate[i];
+        final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
+          changeData,
+        );
+        final cid = changeLogEntry.cid;
 
-        // todo: is there a way for JsonSerializable to help us handle validation errors?
-        // alternative: use json schema from api/help to validate incoming changes
-
-        // Validate that each change has a domainId
-        final domainId = changeData['domainId'] as String?;
-        if (domainId == null || domainId.isEmpty) {
-          return _errorResponse(
-            'Change at index $i is missing required domainId field',
-            400,
-          );
-        }
-
-        // Validate other required fields
-        final entityType = changeData['entityType'] as String?;
-        if (entityType == null || entityType.isEmpty) {
-          return _errorResponse(
-            'Change at index $i is missing required entityType field',
-            400,
-          );
-        }
-
-        final entityId = changeData['entityId'] as String?;
-        if (entityId == null || entityId.isEmpty) {
-          return _errorResponse(
-            'Change at index $i is missing required entityId field',
-            400,
-          );
-        }
-
-        // Validate project entity constraint: entityId must equal projectId
-        if (entityType == 'project') {
-          if (entityId != domainId) {
+        if (changeLogEntry.storageId == targetStorageId) {
+          // treat these changes as atomic since they originated on the same system
+          // so exit early on any errors
+          if (changeLogEntry.operation == 'error') {
             return _errorResponse(
-              'Project entities must have entityId equal to projectId. '
-              'Expected: $domainId, got: $entityId',
+              'Change[$i] cid($cid) deserialization encountered error: ${changeLogEntry.operationInfo}',
               400,
             );
           }
+          if (changeLogEntry.operation == 'hold') {
+            // how could this ever happen on the same storage??
+            return _errorResponse(
+              'Change[$i] cid($cid) deserialization resulted in `hold`: ${changeLogEntry.operationInfo}',
+              400,
+            );
+          }
+        } else {
+          // treat these as a batch from a remote or LAN storage.
+          // Preserve unknown entities for future processing
+          // Q. Should we also preserve errors locally or only in the cloud?
+          if (changeLogEntry.operation == 'error') {}
+          if (changeLogEntry.operation == 'hold') {}
         }
-
-        // Normalize change data
-        changeData['operation'] =
-            changeData['operation'] as String? ?? 'create';
-        changeData['data'] = Map<String, dynamic>.from(
-          changeData['data'] ?? {},
+        final entityState = await storage.getCurrentEntityState(
+          changeLogEntry.domainId,
+          changeLogEntry.entityType.toString(),
+          changeLogEntry.entityId,
         );
+        final changeLogEntryFactory = deserializeChangeLogEntryUsingRegistry;
+        final entityStateFactory = deserializeEntityStateSafely;
+        // Use enhanced change detection method
+        final result =
+            await getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+              changeLogEntry,
+              entityState,
+              targetStorageId: targetStorageId,
+              changeLogEntryFactory: changeLogEntryFactory,
+              entityStateFactory: entityStateFactory,
+            );
       }
 
       try {
-        // Use enhanced change detection method
         print(
           'About to call createChangesWithChangeDetection with ${changesToCreate.length} changes',
         );
