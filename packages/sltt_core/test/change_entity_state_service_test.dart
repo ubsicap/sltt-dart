@@ -253,24 +253,24 @@ void main() {
               changeLogEntryFactory: TestChangeLogEntry.fromJson,
               entityStateFactory: TestEntityState.fromJson,
             );
-        expect(result.newChangeLogEntry, isNotNull);
+        expect(result.changeLogEntryToWrite, isNotNull);
         expect(result.newEntityState, isNotNull);
         // The rank should be updated to '2' since the change is newer
         expect(result.newEntityState?.data_rank, equals('2'));
         // Validate new change log entry fields
-        expect(result.newChangeLogEntry.operation, equals('update'));
+        expect(result.changeLogEntryToWrite?.operation, equals('update'));
         expect(
-          result.newChangeLogEntry.operationInfo['outdatedBys'],
+          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
           equals([]),
         );
         expect(
-          result.newChangeLogEntry.operationInfo['noOpFields'],
+          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
           equals([]),
         );
-        expect(result.newChangeLogEntry.stateChanged, isTrue);
-        expect(result.newChangeLogEntry.data, equals({'rank': '2'}));
+        expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
+        expect(result.changeLogEntryToWrite?.data, equals({'rank': '2'}));
         expect(
-          result.newChangeLogEntry.cloudAt,
+          result.changeLogEntryToWrite?.cloudAt,
           equals(changeLogEntry.cloudAt),
         );
       });
@@ -305,14 +305,14 @@ void main() {
 
         // Because storageId != targetStorageId, the original payload should be preserved
         expect(
-          result.newChangeLogEntry.data,
+          result.changeLogEntryToWrite?.data,
           equals({'rank': entityState.data_rank}),
         );
         // Operation should still be computed (update) and state update may occur
-        expect(result.newChangeLogEntry.operation, equals('noOp'));
+        expect(result.changeLogEntryToWrite?.operation, equals('noOp'));
         // Operation info should include noOpFields
         expect(
-          result.newChangeLogEntry.operationInfo['noOpFields'],
+          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
           equals(['rank']),
         );
       });
@@ -345,23 +345,29 @@ void main() {
                 entityStateFactory: TestEntityState.fromJson,
               );
 
-          expect(result.newChangeLogEntry.operation, equals('update'));
+          expect(result.changeLogEntryToWrite?.operation, equals('update'));
           // rank should be reported as no-op
           expect(
-            result.newChangeLogEntry.operationInfo['noOpFields'],
+            result.changeLogEntryToWrite?.operationInfo['noOpFields'],
             contains('rank'),
           );
           expect(
-            result.newChangeLogEntry.operationInfo['outdatedBys'],
+            result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
             equals([]),
           );
           // data should only include the applied fields (parentId and nameLocal)
           expect(
-            result.newChangeLogEntry.data,
+            result.changeLogEntryToWrite?.data,
             equals({'parentId': 'parent2', 'nameLocal': 'New Name'}),
           );
           expect(result.newEntityState?.data_parentId, equals('parent2'));
-          expect(result.newEntityState?.data_nameLocal, equals('New Name'));
+          expect(
+            (result.newEntityState != null
+                    ? result.newEntityState as TestEntityState
+                    : null)
+                ?.data_nameLocal,
+            equals('New Name'),
+          );
         },
       );
 
@@ -430,26 +436,29 @@ void main() {
 
         // rank should be outdated, nameLocal no-op, parentId should be applied
         expect(
-          result.newChangeLogEntry.operation,
+          result.changeLogEntryToWrite?.operation,
           anyOf(equals('update'), equals('outdated')),
         );
         expect(
-          result.newChangeLogEntry.operationInfo['outdatedBys'],
+          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
           contains('rank'),
         );
         expect(
-          result.newChangeLogEntry.operationInfo['noOpFields'],
+          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
           contains('nameLocal'),
         );
         // Only parentId should be present in output data
-        expect(result.newChangeLogEntry.data, equals({'parentId': 'parent2'}));
+        expect(
+          result.changeLogEntryToWrite?.data,
+          equals({'parentId': 'parent2'}),
+        );
         // The entity state may or may not be updated depending on whether the
         // overall operation was considered 'outdated' (no state update) or 'update'.
         if (result.newEntityState != null) {
           expect(result.newEntityState?.data_parentId, equals('parent2'));
         } else {
           // If no new entity state, enforce that the operation was marked outdated
-          expect(result.newChangeLogEntry.operation, equals('outdated'));
+          expect(result.changeLogEntryToWrite?.operation, equals('outdated'));
         }
       });
 
@@ -481,23 +490,23 @@ void main() {
               entityStateFactory: TestEntityState.fromJson,
             );
 
-        expect(result.newChangeLogEntry.operation, equals('outdated'));
+        expect(result.changeLogEntryToWrite?.operation, equals('outdated'));
         // The rank should remain unchanged since the change is older
         expect(result.newEntityState?.data_rank, isNull);
         // Validate new change log entry fields for outdated result
         expect(
-          result.newChangeLogEntry.operationInfo['outdatedBys'],
+          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
           contains('rank'),
         );
         expect(
-          result.newChangeLogEntry.operationInfo['noOpFields'],
+          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
           equals([]),
         );
-        expect(result.newChangeLogEntry.stateChanged, isFalse);
+        expect(result.changeLogEntryToWrite?.stateChanged, isFalse);
         // For outdated operations the produced data payload should be empty (no applied updates)
-        expect(result.newChangeLogEntry.data, equals({}));
+        expect(result.changeLogEntryToWrite?.data, equals({}));
         expect(
-          result.newChangeLogEntry.cloudAt,
+          result.changeLogEntryToWrite?.cloudAt,
           equals(changeLogEntry.cloudAt),
         );
       });
@@ -527,27 +536,27 @@ void main() {
               entityStateFactory: TestEntityState.fromJson,
             );
 
-        expect(result.newChangeLogEntry.operation, equals('create'));
+        expect(result.changeLogEntryToWrite?.operation, equals('create'));
         expect(result.newEntityState, isNotNull);
         expect(result.newEntityState?.entityId, equals('entity2'));
         expect(result.newEntityState?.data_rank, equals('1'));
         expect(result.newEntityState?.data_parentId, equals('parent2'));
         // Validate new change log entry fields
         expect(
-          result.newChangeLogEntry.operationInfo['outdatedBys'],
+          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
           equals([]),
         );
         expect(
-          result.newChangeLogEntry.operationInfo['noOpFields'],
+          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
           equals([]),
         );
-        expect(result.newChangeLogEntry.stateChanged, isTrue);
+        expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
         expect(
-          result.newChangeLogEntry.data,
+          result.changeLogEntryToWrite?.data,
           equals({'rank': '1', 'parentId': 'parent2'}),
         );
         expect(
-          result.newChangeLogEntry.cloudAt,
+          result.changeLogEntryToWrite?.cloudAt,
           equals(changeLogEntry.cloudAt),
         );
       });
@@ -577,26 +586,32 @@ void main() {
               entityStateFactory: TestEntityState.fromJson,
             );
 
-        expect(result.newChangeLogEntry.operation, equals('create'));
+        expect(result.changeLogEntryToWrite?.operation, equals('create'));
         expect(result.newEntityState, isNotNull);
         expect(result.newEntityState?.data_parentId, equals('parent3'));
-        expect(result.newEntityState?.data_nameLocal, equals('Localized Name'));
+        expect(
+          (result.newEntityState != null
+                  ? result.newEntityState as TestEntityState
+                  : null)
+              ?.data_nameLocal,
+          equals('Localized Name'),
+        );
         // Validate change log entry
         expect(
-          result.newChangeLogEntry.operationInfo['outdatedBys'],
+          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
           equals([]),
         );
         expect(
-          result.newChangeLogEntry.operationInfo['noOpFields'],
+          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
           equals([]),
         );
-        expect(result.newChangeLogEntry.stateChanged, isTrue);
+        expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
         expect(
-          result.newChangeLogEntry.data,
+          result.changeLogEntryToWrite?.data,
           equals({'nameLocal': 'Localized Name', 'parentId': 'parent3'}),
         );
         expect(
-          result.newChangeLogEntry.cloudAt,
+          result.changeLogEntryToWrite?.cloudAt,
           equals(changeLogEntry.cloudAt),
         );
       });
@@ -627,21 +642,21 @@ void main() {
               entityStateFactory: TestEntityState.fromJson,
             );
 
-        expect(result.newChangeLogEntry.operation, equals('delete'));
+        expect(result.changeLogEntryToWrite?.operation, equals('delete'));
         expect(result.newEntityState?.data_deleted, equals(true));
         // Validate change log entry for delete
         expect(
-          result.newChangeLogEntry.operationInfo['outdatedBys'],
+          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
           equals([]),
         );
         expect(
-          result.newChangeLogEntry.operationInfo['noOpFields'],
+          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
           equals([]),
         );
-        expect(result.newChangeLogEntry.stateChanged, isTrue);
-        expect(result.newChangeLogEntry.data, equals({'deleted': true}));
+        expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
+        expect(result.changeLogEntryToWrite?.data, equals({'deleted': true}));
         expect(
-          result.newChangeLogEntry.cloudAt,
+          result.changeLogEntryToWrite?.cloudAt,
           equals(changeLogEntry.cloudAt),
         );
       });
@@ -675,24 +690,24 @@ void main() {
                 entityStateFactory: TestEntityState.fromJson,
               );
 
-          expect(result.newChangeLogEntry.operation, equals('update'));
+          expect(result.changeLogEntryToWrite?.operation, equals('update'));
           expect(result.newEntityState?.data_rank, equals('2'));
           // Latest metadata should be updated
           expect(result.newEntityState?.change_changeAt, equals(newerTime));
           expect(result.newEntityState?.change_cid, equals('new-cid'));
           // Validate change log entry
           expect(
-            result.newChangeLogEntry.operationInfo['outdatedBys'],
+            result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
             equals([]),
           );
           expect(
-            result.newChangeLogEntry.operationInfo['noOpFields'],
+            result.changeLogEntryToWrite?.operationInfo['noOpFields'],
             equals([]),
           );
-          expect(result.newChangeLogEntry.stateChanged, isTrue);
-          expect(result.newChangeLogEntry.data, equals({'rank': '2'}));
+          expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
+          expect(result.changeLogEntryToWrite?.data, equals({'rank': '2'}));
           expect(
-            result.newChangeLogEntry.cloudAt,
+            result.changeLogEntryToWrite?.cloudAt,
             equals(changeLogEntry.cloudAt),
           );
         },
@@ -758,21 +773,21 @@ void main() {
                 entityStateFactory: TestEntityState.fromJson,
               );
 
-          expect(result.newChangeLogEntry.operation, equals('outdated'));
+          expect(result.changeLogEntryToWrite?.operation, equals('outdated'));
           expect(result.newEntityState, isNull); // No state change for outdated
           // Validate change log entry fields for outdated
           expect(
-            result.newChangeLogEntry.operationInfo['outdatedBys'],
+            result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
             contains('rank'),
           );
           expect(
-            result.newChangeLogEntry.operationInfo['noOpFields'],
+            result.changeLogEntryToWrite?.operationInfo['noOpFields'],
             equals([]),
           );
-          expect(result.newChangeLogEntry.stateChanged, isFalse);
-          expect(result.newChangeLogEntry.data, equals({}));
+          expect(result.changeLogEntryToWrite?.stateChanged, isFalse);
+          expect(result.changeLogEntryToWrite?.data, equals({}));
           expect(
-            result.newChangeLogEntry.cloudAt,
+            result.changeLogEntryToWrite?.cloudAt,
             equals(changeLogEntry.cloudAt),
           );
         },
@@ -839,24 +854,24 @@ void main() {
                 entityStateFactory: TestEntityState.fromJson,
               );
 
-          expect(result.newChangeLogEntry.operation, equals('update'));
+          expect(result.changeLogEntryToWrite?.operation, equals('update'));
           expect(result.newEntityState?.data_rank, equals('2'));
           // Latest metadata should NOT be updated to reflect this change
           expect(result.newEntityState?.change_changeAt, equals(baseTime));
           expect(result.newEntityState?.change_cid, equals('latest-cid'));
           // Validate change log entry fields for field-level update
           expect(
-            result.newChangeLogEntry.operationInfo['outdatedBys'],
+            result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
             equals([]),
           );
           expect(
-            result.newChangeLogEntry.operationInfo['noOpFields'],
+            result.changeLogEntryToWrite?.operationInfo['noOpFields'],
             equals([]),
           );
-          expect(result.newChangeLogEntry.stateChanged, isTrue);
-          expect(result.newChangeLogEntry.data, equals({'rank': '2'}));
+          expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
+          expect(result.changeLogEntryToWrite?.data, equals({'rank': '2'}));
           expect(
-            result.newChangeLogEntry.cloudAt,
+            result.changeLogEntryToWrite?.cloudAt,
             equals(changeLogEntry.cloudAt),
           );
         },

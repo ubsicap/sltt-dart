@@ -896,14 +896,23 @@ abstract class BaseRestApiServer {
         final changeLogEntryFactory = deserializeChangeLogEntryUsingRegistry;
         final entityStateFactory = deserializeEntityStateSafely;
         // Use enhanced change detection method
-        final result =
-            await getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-              changeLogEntry,
-              entityState,
-              targetStorageId: targetStorageId,
-              changeLogEntryFactory: changeLogEntryFactory,
-              entityStateFactory: entityStateFactory,
-            );
+        try {
+          final result =
+              getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+                changeLogEntry,
+                entityState,
+                targetStorageId: targetStorageId,
+                changeLogEntryFactory: changeLogEntryFactory,
+                entityStateFactory: entityStateFactory,
+              );
+          storage.createChange(result)
+        } catch (e) {
+          // TODO: do something reasonable
+          return _errorResponse(
+            'Change[$i] cid($cid) processing failed: $e',
+            400,
+          );
+        }
       }
 
       try {
