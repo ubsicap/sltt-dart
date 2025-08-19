@@ -64,8 +64,8 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
   required Map<String, dynamic> Function(T) baseToJson,
   required Map<String, dynamic> Function(Map<String, dynamic>) toSafeJson,
 }) {
+  var json2 = json;
   final parsed = _parseEntityType(json['entityType']);
-
   if (parsed.entityType == null && parsed.raw != null) {
     // Start from caller-provided safe shape and then overlay our hold semantics
     final safeJson = toSafeJson(json);
@@ -76,20 +76,10 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
       'hold': 'entityType',
       'entityType': parsed.raw,
     };
-    try {
-      return deserializeWithUnknownFieldData(fromJson, safeJson, baseToJson);
-    } catch (e, st) {
-      final recovery = _createSafeJsonFromDeserializationError(
-        error: e,
-        stack: st,
-        originalJson: json,
-        toSafeJson: toSafeJson,
-      );
-      return deserializeWithUnknownFieldData(fromJson, recovery, baseToJson);
-    }
+    json2 = safeJson;
   }
   try {
-    return deserializeWithUnknownFieldData(fromJson, json, baseToJson);
+    return deserializeWithUnknownFieldData(fromJson, json2, baseToJson);
   } catch (e, st) {
     // Delegate recovery JSON construction to the shared helper
     final recovery = _createSafeJsonFromDeserializationError(
