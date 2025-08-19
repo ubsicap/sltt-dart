@@ -1065,10 +1065,11 @@ abstract class BaseRestApiServer {
       }
 
       // Get supported entity types for this domainType
-      var entityTypes = <String>[];
+      late final List<String> entityTypes;
       if (domainType == 'project') {
         entityTypes = EntityType.allValues;
       } else {
+        entityTypes = [];
         return _errorResponse('Unsupported domain type: $domainType', 400);
       }
 

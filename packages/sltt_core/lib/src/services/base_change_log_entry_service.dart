@@ -64,7 +64,7 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
   required Map<String, dynamic> Function(T) baseToJson,
   required Map<String, dynamic> Function(Map<String, dynamic>) toSafeJson,
 }) {
-  var json2 = json;
+  late final Map<String, dynamic> json2;
   final parsed = _parseEntityType(json['entityType']);
   if (parsed.entityType == null && parsed.raw != null) {
     // Start from caller-provided safe shape and then overlay our hold semantics
@@ -77,6 +77,8 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
       'entityType': parsed.raw,
     };
     json2 = safeJson;
+  } else {
+    json2 = json;
   }
   try {
     return deserializeWithUnknownFieldData(fromJson, json2, baseToJson);
