@@ -897,15 +897,15 @@ abstract class BaseRestApiServer {
         final entityStateFactory = deserializeEntityStateSafely;
         // Use enhanced change detection method
         try {
-          final result =
-              getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-                changeLogEntry,
-                entityState,
-                targetStorageId: targetStorageId,
-                changeLogEntryFactory: changeLogEntryFactory,
-                entityStateFactory: entityStateFactory,
-              );
-          storage.createChange(result)
+          // final result =
+          getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
+            changeLogEntry,
+            entityState,
+            targetStorageId: targetStorageId,
+            changeLogEntryFactory: changeLogEntryFactory,
+            entityStateFactory: entityStateFactory,
+          );
+          // storage.createChange(result);
         } catch (e) {
           // TODO: do something reasonable
           return _errorResponse(
