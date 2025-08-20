@@ -225,7 +225,7 @@ void main() {
       });
     });
 
-    group('getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState', () {
+    group('getUpdatesForChangeLogEntryAndEntityState', () {
       test('should handle field-level conflict resolution', () {
         // Create a change log entry with newer field changes
         final newerTime = baseTime.add(const Duration(minutes: 5));
@@ -244,33 +244,33 @@ void main() {
           stateChanged: true,
           unknown: {},
         );
+        final updates = getUpdatesForChangeLogEntryAndEntityState(
+          changeLogEntry,
+          entityState,
+          targetStorageId: 'local',
+        );
 
-        final result =
-            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-              changeLogEntry,
-              entityState,
-              targetStorageId: 'local',
-              changeLogEntryFactory: TestChangeLogEntry.fromJson,
-              entityStateFactory: TestEntityState.fromJson,
-            );
-        expect(result.changeLogEntryToWrite, isNotNull);
-        expect(result.newEntityState, isNotNull);
-        // The rank should be updated to '2' since the change is newer
-        expect(result.newEntityState?.data_rank, equals('2'));
-        // Validate new change log entry fields
-        expect(result.changeLogEntryToWrite?.operation, equals('update'));
+        // Entity state should update via stateUpdates
+        expect(updates.stateUpdates['data_rank'], equals('2'));
+        // Latest metadata should be updated since change is newer
         expect(
-          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
+          updates.stateUpdates['change_changeAt'],
+          equals(newerTime.toIso8601String()),
+        );
+        // Validate change-log entry updates
+        expect(updates.changeUpdates['operation'], equals('update'));
+        expect(
+          updates.changeUpdates['operationInfo']['outdatedBys'],
           equals([]),
         );
         expect(
-          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+          updates.changeUpdates['operationInfo']['noOpFields'],
           equals([]),
         );
-        expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
-        expect(result.changeLogEntryToWrite?.data, equals({'rank': '2'}));
+        expect(updates.changeUpdates['stateChanged'], isTrue);
+        expect(updates.changeUpdates['data'], equals({'rank': '2'}));
         expect(
-          result.changeLogEntryToWrite?.cloudAt,
+          updates.changeUpdates['cloudAt'],
           equals(changeLogEntry.cloudAt),
         );
       });
@@ -293,28 +293,19 @@ void main() {
           stateChanged: true,
           unknown: {},
         );
-
-        final result =
-            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-              changeLogEntry,
-              entityState,
-              targetStorageId: 'cloud',
-              changeLogEntryFactory: TestChangeLogEntry.fromJson,
-              entityStateFactory: TestEntityState.fromJson,
-            );
-
-        // Because storageId != targetStorageId, the original payload should be preserved
-        expect(
-          result.changeLogEntryToWrite?.data,
-          equals({'rank': entityState.data_rank}),
+        final updates = getUpdatesForChangeLogEntryAndEntityState(
+          changeLogEntry,
+          entityState,
+          targetStorageId: 'cloud',
         );
-        // Operation should still be computed (update) and state update may occur
-        expect(result.changeLogEntryToWrite?.operation, equals('noOp'));
-        // Operation info should include noOpFields
+
+        // Operation should be computed as noOp and report noOpFields; data subset is omitted
+        expect(updates.changeUpdates['operation'], equals('noOp'));
         expect(
-          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+          updates.changeUpdates['operationInfo']['noOpFields'],
           equals(['rank']),
         );
+        expect(updates.changeUpdates['data'], isNull);
       });
 
       test(
@@ -336,38 +327,30 @@ void main() {
             unknown: {},
           );
 
-          final result =
-              getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-                changeLogEntry,
-                entityState,
-                targetStorageId: 'local',
-                changeLogEntryFactory: TestChangeLogEntry.fromJson,
-                entityStateFactory: TestEntityState.fromJson,
-              );
+          final updates = getUpdatesForChangeLogEntryAndEntityState(
+            changeLogEntry,
+            entityState,
+            targetStorageId: 'local',
+          );
 
-          expect(result.changeLogEntryToWrite?.operation, equals('update'));
+          expect(updates.changeUpdates['operation'], equals('update'));
           // rank should be reported as no-op
           expect(
-            result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+            updates.changeUpdates['operationInfo']['noOpFields'],
             contains('rank'),
           );
           expect(
-            result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
+            updates.changeUpdates['operationInfo']['outdatedBys'],
             equals([]),
           );
           // data should only include the applied fields (parentId and nameLocal)
           expect(
-            result.changeLogEntryToWrite?.data,
+            updates.changeUpdates['data'],
             equals({'parentId': 'parent2', 'nameLocal': 'New Name'}),
           );
-          expect(result.newEntityState?.data_parentId, equals('parent2'));
-          expect(
-            (result.newEntityState != null
-                    ? result.newEntityState as TestEntityState
-                    : null)
-                ?.data_nameLocal,
-            equals('New Name'),
-          );
+          // stateUpdates should reflect the same field changes
+          expect(updates.stateUpdates['data_parentId'], equals('parent2'));
+          expect(updates.stateUpdates['data_nameLocal'], equals('New Name'));
         },
       );
 
@@ -425,41 +408,27 @@ void main() {
           unknown: {},
         );
 
-        final result =
-            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-              changeLogEntry,
-              entityStateMixed,
-              targetStorageId: 'local',
-              changeLogEntryFactory: TestChangeLogEntry.fromJson,
-              entityStateFactory: TestEntityState.fromJson,
-            );
+        final updates = getUpdatesForChangeLogEntryAndEntityState(
+          changeLogEntry,
+          entityStateMixed,
+          targetStorageId: 'local',
+        );
 
         // rank should be outdated, nameLocal no-op, parentId should be applied
         expect(
-          result.changeLogEntryToWrite?.operation,
+          updates.changeUpdates['operation'],
           anyOf(equals('update'), equals('outdated')),
         );
         expect(
-          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
+          updates.changeUpdates['operationInfo']['outdatedBys'],
           contains('rank'),
         );
         expect(
-          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+          updates.changeUpdates['operationInfo']['noOpFields'],
           contains('nameLocal'),
         );
         // Only parentId should be present in output data
-        expect(
-          result.changeLogEntryToWrite?.data,
-          equals({'parentId': 'parent2'}),
-        );
-        // The entity state may or may not be updated depending on whether the
-        // overall operation was considered 'outdated' (no state update) or 'update'.
-        if (result.newEntityState != null) {
-          expect(result.newEntityState?.data_parentId, equals('parent2'));
-        } else {
-          // If no new entity state, enforce that the operation was marked outdated
-          expect(result.changeLogEntryToWrite?.operation, equals('outdated'));
-        }
+        expect(updates.changeUpdates['data'], equals({'parentId': 'parent2'}));
       });
 
       test('should reject older changes', () {
@@ -481,32 +450,27 @@ void main() {
           unknown: {},
         );
 
-        final result =
-            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-              changeLogEntry,
-              entityState,
-              targetStorageId: 'local',
-              changeLogEntryFactory: TestChangeLogEntry.fromJson,
-              entityStateFactory: TestEntityState.fromJson,
-            );
+        final updates = getUpdatesForChangeLogEntryAndEntityState(
+          changeLogEntry,
+          entityState,
+          targetStorageId: 'local',
+        );
 
-        expect(result.changeLogEntryToWrite?.operation, equals('outdated'));
-        // The rank should remain unchanged since the change is older
-        expect(result.newEntityState?.data_rank, isNull);
+        expect(updates.changeUpdates['operation'], equals('outdated'));
         // Validate new change log entry fields for outdated result
         expect(
-          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
+          updates.changeUpdates['operationInfo']['outdatedBys'],
           contains('rank'),
         );
         expect(
-          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+          updates.changeUpdates['operationInfo']['noOpFields'],
           equals([]),
         );
-        expect(result.changeLogEntryToWrite?.stateChanged, isFalse);
+        expect(updates.changeUpdates['stateChanged'], isFalse);
         // For outdated operations the produced data payload should be empty (no applied updates)
-        expect(result.changeLogEntryToWrite?.data, equals({}));
+        expect(updates.changeUpdates['data'], equals({}));
         expect(
-          result.changeLogEntryToWrite?.cloudAt,
+          updates.changeUpdates['cloudAt'],
           equals(changeLogEntry.cloudAt),
         );
       });
@@ -527,36 +491,33 @@ void main() {
           unknown: {},
         );
 
-        final result =
-            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-              changeLogEntry,
-              null, // No existing entity state
-              targetStorageId: 'local',
-              changeLogEntryFactory: TestChangeLogEntry.fromJson,
-              entityStateFactory: TestEntityState.fromJson,
-            );
+        final updates = getUpdatesForChangeLogEntryAndEntityState(
+          changeLogEntry,
+          null, // No existing entity state
+          targetStorageId: 'local',
+        );
 
-        expect(result.changeLogEntryToWrite?.operation, equals('create'));
-        expect(result.newEntityState, isNotNull);
-        expect(result.newEntityState?.entityId, equals('entity2'));
-        expect(result.newEntityState?.data_rank, equals('1'));
-        expect(result.newEntityState?.data_parentId, equals('parent2'));
+        expect(updates.changeUpdates['operation'], equals('create'));
+        // stateUpdates should initialize entity fields appropriately
+        expect(updates.stateUpdates['entityId'], equals('entity2'));
+        expect(updates.stateUpdates['data_rank'], equals('1'));
+        expect(updates.stateUpdates['data_parentId'], equals('parent2'));
         // Validate new change log entry fields
         expect(
-          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
+          updates.changeUpdates['operationInfo']['outdatedBys'],
           equals([]),
         );
         expect(
-          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+          updates.changeUpdates['operationInfo']['noOpFields'],
           equals([]),
         );
-        expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
+        expect(updates.changeUpdates['stateChanged'], isTrue);
         expect(
-          result.changeLogEntryToWrite?.data,
+          updates.changeUpdates['data'],
           equals({'rank': '1', 'parentId': 'parent2'}),
         );
         expect(
-          result.changeLogEntryToWrite?.cloudAt,
+          updates.changeUpdates['cloudAt'],
           equals(changeLogEntry.cloudAt),
         );
       });
@@ -577,41 +538,34 @@ void main() {
           unknown: {},
         );
 
-        final result =
-            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-              changeLogEntry,
-              null,
-              targetStorageId: 'local',
-              changeLogEntryFactory: TestChangeLogEntry.fromJson,
-              entityStateFactory: TestEntityState.fromJson,
-            );
+        final updates = getUpdatesForChangeLogEntryAndEntityState(
+          changeLogEntry,
+          null,
+          targetStorageId: 'local',
+        );
 
-        expect(result.changeLogEntryToWrite?.operation, equals('create'));
-        expect(result.newEntityState, isNotNull);
-        expect(result.newEntityState?.data_parentId, equals('parent3'));
+        expect(updates.changeUpdates['operation'], equals('create'));
+        expect(updates.stateUpdates['data_parentId'], equals('parent3'));
         expect(
-          (result.newEntityState != null
-                  ? result.newEntityState as TestEntityState
-                  : null)
-              ?.data_nameLocal,
+          updates.stateUpdates['data_nameLocal'],
           equals('Localized Name'),
         );
         // Validate change log entry
         expect(
-          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
+          updates.changeUpdates['operationInfo']['outdatedBys'],
           equals([]),
         );
         expect(
-          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+          updates.changeUpdates['operationInfo']['noOpFields'],
           equals([]),
         );
-        expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
+        expect(updates.changeUpdates['stateChanged'], isTrue);
         expect(
-          result.changeLogEntryToWrite?.data,
+          updates.changeUpdates['data'],
           equals({'nameLocal': 'Localized Name', 'parentId': 'parent3'}),
         );
         expect(
-          result.changeLogEntryToWrite?.cloudAt,
+          updates.changeUpdates['cloudAt'],
           equals(changeLogEntry.cloudAt),
         );
       });
@@ -633,30 +587,27 @@ void main() {
           unknown: {},
         );
 
-        final result =
-            getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-              changeLogEntry,
-              entityState,
-              targetStorageId: 'local',
-              changeLogEntryFactory: TestChangeLogEntry.fromJson,
-              entityStateFactory: TestEntityState.fromJson,
-            );
+        final updates = getUpdatesForChangeLogEntryAndEntityState(
+          changeLogEntry,
+          entityState,
+          targetStorageId: 'local',
+        );
 
-        expect(result.changeLogEntryToWrite?.operation, equals('delete'));
-        expect(result.newEntityState?.data_deleted, equals(true));
+        expect(updates.changeUpdates['operation'], equals('delete'));
+        expect(updates.stateUpdates['data_deleted'], equals(true));
         // Validate change log entry for delete
         expect(
-          result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
+          updates.changeUpdates['operationInfo']['outdatedBys'],
           equals([]),
         );
         expect(
-          result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+          updates.changeUpdates['operationInfo']['noOpFields'],
           equals([]),
         );
-        expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
-        expect(result.changeLogEntryToWrite?.data, equals({'deleted': true}));
+        expect(updates.changeUpdates['stateChanged'], isTrue);
+        expect(updates.changeUpdates['data'], equals({'deleted': true}));
         expect(
-          result.changeLogEntryToWrite?.cloudAt,
+          updates.changeUpdates['cloudAt'],
           equals(changeLogEntry.cloudAt),
         );
       });
@@ -681,33 +632,33 @@ void main() {
             unknown: {},
           );
 
-          final result =
-              getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-                changeLogEntry,
-                entityState, // Uses baseTime as latest change
-                targetStorageId: 'local',
-                changeLogEntryFactory: TestChangeLogEntry.fromJson,
-                entityStateFactory: TestEntityState.fromJson,
-              );
+          final updates = getUpdatesForChangeLogEntryAndEntityState(
+            changeLogEntry,
+            entityState, // Uses baseTime as latest change
+            targetStorageId: 'local',
+          );
 
-          expect(result.changeLogEntryToWrite?.operation, equals('update'));
-          expect(result.newEntityState?.data_rank, equals('2'));
+          expect(updates.changeUpdates['operation'], equals('update'));
+          expect(updates.stateUpdates['data_rank'], equals('2'));
           // Latest metadata should be updated
-          expect(result.newEntityState?.change_changeAt, equals(newerTime));
-          expect(result.newEntityState?.change_cid, equals('new-cid'));
+          expect(
+            updates.stateUpdates['change_changeAt'],
+            equals(newerTime.toIso8601String()),
+          );
+          expect(updates.stateUpdates['change_cid'], equals('new-cid'));
           // Validate change log entry
           expect(
-            result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
+            updates.changeUpdates['operationInfo']['outdatedBys'],
             equals([]),
           );
           expect(
-            result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+            updates.changeUpdates['operationInfo']['noOpFields'],
             equals([]),
           );
-          expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
-          expect(result.changeLogEntryToWrite?.data, equals({'rank': '2'}));
+          expect(updates.changeUpdates['stateChanged'], isTrue);
+          expect(updates.changeUpdates['data'], equals({'rank': '2'}));
           expect(
-            result.changeLogEntryToWrite?.cloudAt,
+            updates.changeUpdates['cloudAt'],
             equals(changeLogEntry.cloudAt),
           );
         },
@@ -764,30 +715,26 @@ void main() {
             unknown: {},
           );
 
-          final result =
-              getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-                changeLogEntry,
-                entityStateWithNewerField,
-                targetStorageId: 'local',
-                changeLogEntryFactory: TestChangeLogEntry.fromJson,
-                entityStateFactory: TestEntityState.fromJson,
-              );
+          final updates = getUpdatesForChangeLogEntryAndEntityState(
+            changeLogEntry,
+            entityStateWithNewerField,
+            targetStorageId: 'local',
+          );
 
-          expect(result.changeLogEntryToWrite?.operation, equals('outdated'));
-          expect(result.newEntityState, isNull); // No state change for outdated
+          expect(updates.changeUpdates['operation'], equals('outdated'));
           // Validate change log entry fields for outdated
           expect(
-            result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
+            updates.changeUpdates['operationInfo']['outdatedBys'],
             contains('rank'),
           );
           expect(
-            result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+            updates.changeUpdates['operationInfo']['noOpFields'],
             equals([]),
           );
-          expect(result.changeLogEntryToWrite?.stateChanged, isFalse);
-          expect(result.changeLogEntryToWrite?.data, equals({}));
+          expect(updates.changeUpdates['stateChanged'], isFalse);
+          expect(updates.changeUpdates['data'], equals({}));
           expect(
-            result.changeLogEntryToWrite?.cloudAt,
+            updates.changeUpdates['cloudAt'],
             equals(changeLogEntry.cloudAt),
           );
         },
@@ -845,33 +792,30 @@ void main() {
             unknown: {},
           );
 
-          final result =
-              getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
-                changeLogEntry,
-                entityStateWithOlderField,
-                targetStorageId: 'local',
-                changeLogEntryFactory: TestChangeLogEntry.fromJson,
-                entityStateFactory: TestEntityState.fromJson,
-              );
+          final updates = getUpdatesForChangeLogEntryAndEntityState(
+            changeLogEntry,
+            entityStateWithOlderField,
+            targetStorageId: 'local',
+          );
 
-          expect(result.changeLogEntryToWrite?.operation, equals('update'));
-          expect(result.newEntityState?.data_rank, equals('2'));
+          expect(updates.changeUpdates['operation'], equals('update'));
+          expect(updates.stateUpdates['data_rank'], equals('2'));
           // Latest metadata should NOT be updated to reflect this change
-          expect(result.newEntityState?.change_changeAt, equals(baseTime));
-          expect(result.newEntityState?.change_cid, equals('latest-cid'));
+          expect(updates.stateUpdates.containsKey('change_changeAt'), isFalse);
+          expect(updates.stateUpdates.containsKey('change_cid'), isFalse);
           // Validate change log entry fields for field-level update
           expect(
-            result.changeLogEntryToWrite?.operationInfo['outdatedBys'],
+            updates.changeUpdates['operationInfo']['outdatedBys'],
             equals([]),
           );
           expect(
-            result.changeLogEntryToWrite?.operationInfo['noOpFields'],
+            updates.changeUpdates['operationInfo']['noOpFields'],
             equals([]),
           );
-          expect(result.changeLogEntryToWrite?.stateChanged, isTrue);
-          expect(result.changeLogEntryToWrite?.data, equals({'rank': '2'}));
+          expect(updates.changeUpdates['stateChanged'], isTrue);
+          expect(updates.changeUpdates['data'], equals({'rank': '2'}));
           expect(
-            result.changeLogEntryToWrite?.cloudAt,
+            updates.changeUpdates['cloudAt'],
             equals(changeLogEntry.cloudAt),
           );
         },

@@ -35,8 +35,9 @@ class GetUpdateResults {
 /// plus the stateUpdates (metadata + data_ field metadata) and the subset of change data to write.
 GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   BaseChangeLogEntry changeLogEntry,
-  BaseEntityState? entityState,
-) {
+  BaseEntityState? entityState, {
+  required String targetStorageId,
+}) {
   // Duplicate CID detection
   final duplicateCheck = getMaybeIsDuplicateCidResult(
     changeLogEntry,
@@ -78,12 +79,13 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   final stateChanged = operation != 'noOp' && operation != 'outdated';
 
   // Build the full set of change-log entry updates callers can apply
+  final shouldPreserveData = changeLogEntry.storageId != targetStorageId;
   final changeLogEntryUpdates = <String, dynamic>{
     'operation': operation,
     'operationInfo': {'outdatedBys': outdatedBys, 'noOpFields': noOpFields},
     'stateChanged': stateChanged,
     'cloudAt': changeLogEntry.cloudAt,
-    'data': changeDataUpdates,
+    if (!shouldPreserveData) 'data': changeDataUpdates,
   };
 
   return GetUpdateResults(
@@ -112,6 +114,7 @@ LastWriteWinsResult getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
   final updates = getUpdatesForChangeLogEntryAndEntityState(
     changeLogEntry,
     entityState,
+    targetStorageId: targetStorageId,
   );
 
   if (updates.isDuplicate) {
@@ -129,15 +132,8 @@ LastWriteWinsResult getAtomicLastWriteWinsToChangeLogEntryAndUpdateEntityState(
     );
   }
 
-  // Preserve original data payload when transferring to a different target storage
-  final shouldPreserveData = changeLogEntry.storageId != targetStorageId;
-
-  // Start from the precomputed change updates
+  // Start from the precomputed change updates (already respects targetStorageId)
   final Map<String, dynamic> changeLogEntryUpdates = {...updates.changeUpdates};
-  if (shouldPreserveData) {
-    // Strip data when preserving the original payload
-    changeLogEntryUpdates.remove('data');
-  }
 
   final stateUpdates = updates.stateUpdates;
   final stateChanged =
