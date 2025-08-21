@@ -8,7 +8,6 @@ import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
-import 'package:sltt_core/src/services/base_entity_state_service.dart';
 
 /// Base REST API server that provides common functionality for all storage types.
 ///
@@ -859,8 +858,12 @@ abstract class BaseRestApiServer {
       final resultsSummary = <String, dynamic>{
         'created': [],
         'updated': [],
-        'noOpChanges': [],
-        'dupCids': [],
+        'deleted': [],
+        'noOps': [],
+        'clouded': [], // duplicates from the cloud
+        'dups': [],
+        'unknowns': [],
+        'info': [],
         'errors': [],
       };
 
@@ -900,8 +903,8 @@ abstract class BaseRestApiServer {
           changeLogEntry.entityType.toString(),
           changeLogEntry.entityId,
         );
-        final changeLogEntryFactory = deserializeChangeLogEntryUsingRegistry;
-        final entityStateFactory = deserializeEntityStateSafely;
+        // final changeLogEntryFactory = deserializeChangeLogEntryUsingRegistry;
+        // final entityStateFactory = deserializeEntityStateSafely;
         // Use enhanced change detection method
         try {
           final result = getUpdatesForChangeLogEntryAndEntityState(
@@ -915,10 +918,41 @@ abstract class BaseRestApiServer {
             entityState: entityState,
             stateUpdates: result.stateUpdates,
           );
-          if (updateResults.newChangeLogEntry.operation == 'create') {
-            resultsSummary['created'].add(updateResults.newChangeLogEntry);
-          } else if (updateResults.newChangeLogEntry.operation == 'update') {
-            resultsSummary['updated'].add(updateResults.newChangeLogEntry);
+          final newOperation = updateResults.newChangeLogEntry.operation;
+          if (newOperation == 'create') {
+            resultsSummary['created'].add(updateResults.newChangeLogEntry.cid);
+          } else if (newOperation == 'update') {
+            resultsSummary['updated'].add(updateResults.newChangeLogEntry.cid);
+          } else if (newOperation == 'delete') {
+            resultsSummary['deleted'].add(updateResults.newChangeLogEntry.cid);
+          } else if (newOperation == 'no-op') {
+            resultsSummary['noOps'].add(updateResults.newChangeLogEntry.cid);
+          } else if (result.isDuplicate) {
+            if (result.stateUpdates.isNotEmpty) {
+              resultsSummary['clouded'].add(changeLogEntry.cid);
+            } else {
+              resultsSummary['dups'].add(changeLogEntry.cid);
+            }
+          } else if (updateResults.newChangeLogEntry.operation == 'error') {
+            resultsSummary['errors'].add({
+              'cid': updateResults.newChangeLogEntry.cid,
+              'info': updateResults.newChangeLogEntry.operationInfo,
+            });
+          }
+          // TODO: summarize unknown fields?
+          if (updateResults.newChangeLogEntry.unknown.isNotEmpty) {
+            resultsSummary['unknowns'].add({
+              'cid': updateResults.newChangeLogEntry.cid,
+              'unknown': updateResults.newChangeLogEntry.unknown,
+            });
+          }
+          if (updateResults.newChangeLogEntry.operation != 'error' &&
+              updateResults.newChangeLogEntry.operationInfo.isNotEmpty) {
+            resultsSummary['info'].add({
+              'cid': updateResults.newChangeLogEntry.cid,
+              'operation': updateResults.newChangeLogEntry.operation,
+              'info': updateResults.newChangeLogEntry.operationInfo,
+            });
           }
         } catch (e) {
           // TODO: do something reasonable
