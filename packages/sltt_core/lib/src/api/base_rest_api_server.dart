@@ -975,53 +975,10 @@ abstract class BaseRestApiServer {
           'Change detection result: created=${result.createdChanges.length}, noOps=${result.noOpChangeCids.length}',
         );
 
-        final createdSeqs = result.createdChanges.map((c) => c.seq).toList();
-        final originalSeqs = <int>[];
-
-        // Map original sequence numbers if provided - but only for actually created changes
-        int createdIndex = 0;
-        for (int i = 0; i < changesToCreate.length; i++) {
-          final changeCid = changesToCreate[i]['cid'] as String?;
-
-          // Check if this change was actually created (not a no-op)
-          if (changeCid != null && !result.noOpChangeCids.contains(changeCid)) {
-            if (createdIndex < result.createdChanges.length) {
-              final originalSeq = changesToCreate[i]['seq'] as int?;
-              originalSeqs.add(
-                originalSeq ?? result.createdChanges[createdIndex].seq,
-              );
-              createdIndex++;
-            }
-          }
-        }
-
-        final response = <String, dynamic>{
-          'success': true,
-          'created': result.createdChanges.length,
-          'createdSeqs': createdSeqs,
-          'timestamp': DateTime.now().toIso8601String(),
-        };
-
-        // Add no-op change information
-        if (result.noOpChangeCids.isNotEmpty) {
-          response['noOpChanges'] = result.noOpChangeCids;
-          response['noOpCount'] = result.noOpChangeCids.length;
-        }
-
-        // Always include seqMap, initialize as empty
-        final seqMap = <String, int>{};
-        // Add CID to sequence mapping for created changes
-        for (final createdChange in result.createdChanges) {
-          if (createdChange.cid.isNotEmpty) {
-            seqMap[createdChange.cid] = createdChange.seq;
-          }
-        }
-        response['seqMap'] = seqMap;
-
-        print('Response: ${jsonEncode(response)}');
+        print('Response: ${jsonEncode(resultsSummary)}');
 
         return Response.ok(
-          jsonEncode(response),
+          jsonEncode(resultsSummary),
           headers: {'Content-Type': 'application/json'},
         );
       } on ArgumentError catch (e) {
