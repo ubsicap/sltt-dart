@@ -967,12 +967,9 @@ abstract class BaseRestApiServer {
         print(
           'About to call createChangesWithChangeDetection with ${changesToCreate.length} changes',
         );
-        final result = await storage.createChangesWithChangeDetection(
-          changesToCreate,
-        );
 
         print(
-          'Change detection result: created=${result.createdChanges.length}, noOps=${result.noOpChangeCids.length}',
+          'Change detection result: created=${resultsSummary['created'].length}, noOps=${resultsSummary['noOps'].length}',
         );
 
         print('Response: ${jsonEncode(resultsSummary)}');
