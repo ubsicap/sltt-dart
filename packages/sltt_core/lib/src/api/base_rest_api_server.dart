@@ -231,16 +231,16 @@ abstract class BaseRestApiServer {
           'method': 'POST',
           'path': '/api/changes',
           'description':
-              'Create new changes (array format) with field-level change detection - each change must include projectId',
+              'Create new changes (array format) with field-level change detection',
           'requestBody': {
             'type': 'array',
             'items': {
               'type': 'object',
-              'required': ['projectId', 'entityType', 'entityId'],
+              'required': ['domainId', 'entityType', 'entityId'],
               'properties': {
-                'projectId': {
+                'domainId': {
                   'type': 'string',
-                  'description': 'Project identifier',
+                  'description': 'Domain identifier (e.g. projectId)',
                 },
                 'entityType': {
                   'type': 'string',
@@ -273,49 +273,137 @@ abstract class BaseRestApiServer {
               },
             },
           },
+          'parameters': [
+            {
+              'name': 'changeUpdates',
+              'in': 'query',
+              'type': 'boolean',
+              'required': false,
+              'description':
+                  'If true, include per-change `changeUpdates` details in the response',
+            },
+            {
+              'name': 'stateUpdates',
+              'in': 'query',
+              'type': 'boolean',
+              'required': false,
+              'description':
+                  'If true, include per-change `stateUpdates` details in the response',
+            },
+          ],
           'response': {
             'type': 'object',
             'properties': {
-              'success': {
-                'type': 'boolean',
+              'storageType': {
+                'type': 'string',
+                'description': 'Type of storage backend handling the request',
+              },
+              'storageId': {
+                'type': 'string',
                 'description':
-                    'Whether all changes were processed successfully',
+                    'Identifier for the storage instance that processed the request',
               },
               'created': {
-                'type': 'integer',
-                'description':
-                    'Number of changes actually created (excludes no-ops)',
-              },
-              'noOpChanges': {
                 'type': 'array',
                 'items': {'type': 'string'},
                 'description':
-                    'List of CIDs for changes that resulted in no updates (field values unchanged)',
+                    'List of CIDs that resulted in create operations',
               },
-              'changeDetails': {
-                'type': 'object',
+              'updated': {
+                'type': 'array',
+                'items': {'type': 'string'},
                 'description':
-                    'Field-level change detection results per CID (when available)',
-                'additionalProperties': {
+                    'List of CIDs that resulted in update operations',
+              },
+              'deleted': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description':
+                    'List of CIDs that resulted in delete operations',
+              },
+              'noOps': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description':
+                    'List of CIDs that were no-ops (no state change)',
+              },
+              'clouded': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description':
+                    'List of CIDs that were duplicates from cloud and required cloud-only metadata updates',
+              },
+              'dups': {
+                'type': 'array',
+                'items': {'type': 'string'},
+                'description':
+                    'List of CIDs identified as duplicate (no updates)',
+              },
+              'unknowns': {
+                'type': 'array',
+                'items': {
                   'type': 'object',
                   'properties': {
-                    'updatedFields': {
-                      'type': 'array',
-                      'items': {'type': 'string'},
-                      'description': 'Fields that were actually updated',
-                    },
-                    'noOpFields': {
-                      'type': 'array',
-                      'items': {'type': 'string'},
-                      'description':
-                          'Fields with newer timestamps but unchanged values',
-                    },
-                    'totalFields': {
-                      'type': 'integer',
-                      'description': 'Total number of fields processed',
-                    },
+                    'cid': {'type': 'string'},
+                    'unknown': {'type': 'object'},
                   },
                 },
+                'description':
+                    'Preserved unknown fields from deserialized change entries',
+              },
+              'info': {
+                'type': 'array',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'cid': {'type': 'string'},
+                    'operation': {'type': 'string'},
+                    'info': {'type': 'object'},
+                  },
+                },
+                'description':
+                    'Informational operation details (e.g., no-op fields, outdatedBys) for non-error changes',
+              },
+              'errors': {
+                'type': 'array',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'cid': {'type': 'string'},
+                    'info': {'type': 'object'},
+                  },
+                },
+                'description':
+                    'List of errors encountered while processing specific changes',
+              },
+              'changeUpdates': {
+                'type': 'array',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'cid': {'type': 'string'},
+                    'updates': {'type': 'object'},
+                  },
+                },
+                'description':
+                    'Per-change computed changeUpdate objects (included when ?changeUpdates=true)',
+              },
+              'stateUpdates': {
+                'type': 'array',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'cid': {'type': 'string'},
+                    'state': {'type': 'object'},
+                  },
+                },
+                'description':
+                    'Per-change computed state update objects (included when ?stateUpdates=true)',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
               },
             },
           },
@@ -856,6 +944,10 @@ abstract class BaseRestApiServer {
       }
       final targetStorageId = await storage.getStorageId();
       final resultsSummary = <String, dynamic>{
+        'storageType': storage.getStorageType(),
+        'storageId': targetStorageId,
+        'stateUpdates': [],
+        'changeUpdates': [],
         'created': [],
         'updated': [],
         'deleted': [],
@@ -952,6 +1044,19 @@ abstract class BaseRestApiServer {
               'cid': updateResults.newChangeLogEntry.cid,
               'operation': updateResults.newChangeLogEntry.operation,
               'info': updateResults.newChangeLogEntry.operationInfo,
+            });
+          }
+          if (request.url.queryParameters['changeUpdates'] == 'true') {
+            resultsSummary['changeUpdates'].add({
+              'cid': updateResults.newChangeLogEntry.cid,
+              'updates': result.changeUpdates,
+            });
+          }
+          if (request.url.queryParameters['stateUpdates'] == 'true') {
+            // Only add state updates if explicitly requested
+            resultsSummary['stateUpdates'].add({
+              'cid': updateResults.newChangeLogEntry.cid,
+              'state': result.stateUpdates,
             });
           }
         } catch (e) {

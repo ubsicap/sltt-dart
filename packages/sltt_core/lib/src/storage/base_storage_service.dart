@@ -147,6 +147,8 @@ abstract class BaseStorageService {
     return getChangesWithCursor(projectId: projectId);
   }
 
+  String getStorageType();
+
   /// Retrieve the persisted storageId for this storage backend/instance.
   /// Implementations should persist this across restarts when possible.
   /// Question: should this pass a domainType in case there are multiple storages?
