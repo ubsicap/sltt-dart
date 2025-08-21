@@ -856,6 +856,13 @@ abstract class BaseRestApiServer {
         return _errorResponse('No changes provided', 400);
       }
       final targetStorageId = await storage.getStorageId();
+      final resultsSummary = <String, dynamic>{
+        'created': [],
+        'updated': [],
+        'noOpChanges': [],
+        'dupCids': [],
+        'errors': [],
+      };
 
       // Validate all changes first
       for (int i = 0; i < changesToCreate.length; i++) {
@@ -902,19 +909,16 @@ abstract class BaseRestApiServer {
             entityState,
             targetStorageId: targetStorageId,
           );
-          if (!result.isDuplicate) {
-            final fullChange = {
-              ...changeLogEntry.toJson(),
-              ...result.changeUpdates,
-            };
-            storage.createChange(fullChange);
-          }
-          if (result.stateUpdates.isNotEmpty) {
-            final fullStateUpdates = forkWithStateUpdates(
-              entityState,
-              result.stateUpdates,
-              entityStateFactory,
-            );
+          final updateResults = await storage.updateChangeLogAndState(
+            changeLogEntry: changeLogEntry,
+            changeUpdates: result.changeUpdates,
+            entityState: entityState,
+            stateUpdates: result.stateUpdates,
+          );
+          if (updateResults.newChangeLogEntry.operation == 'create') {
+            resultsSummary['created'].add(updateResults.newChangeLogEntry);
+          } else if (updateResults.newChangeLogEntry.operation == 'update') {
+            resultsSummary['updated'].add(updateResults.newChangeLogEntry);
           }
         } catch (e) {
           // TODO: do something reasonable

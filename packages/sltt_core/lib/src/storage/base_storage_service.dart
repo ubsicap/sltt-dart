@@ -67,6 +67,13 @@ abstract class BaseStorageService {
   /// Create a new change entry
   Future<BaseChangeLogEntry> createChange(Map<String, dynamic> changeData);
 
+  Future<UpdateChangeLogAndStateResult> updateChangeLogAndState({
+    required BaseChangeLogEntry changeLogEntry,
+    required Map<String, dynamic> changeUpdates,
+    BaseEntityState? entityState,
+    required Map<String, dynamic> stateUpdates,
+  });
+
   /// Create changes with field-level change detection and no-op tracking
   ///
   /// This method uses the pure analyzeChanges function to determine what should
@@ -149,3 +156,9 @@ abstract class BaseStorageService {
   /// Should be invoked during initialize().
   Future<String> ensureStorageId();
 }
+
+/// Return type for updateChangeLogAndState: a tuple of change log entry and entity state.
+typedef UpdateChangeLogAndStateResult = ({
+  BaseChangeLogEntry newChangeLogEntry,
+  BaseEntityState newEntityState,
+});
