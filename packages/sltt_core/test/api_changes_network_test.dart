@@ -180,7 +180,7 @@ void main() {
   // Use a fixed base time for deterministic field-level tests
   final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
-  Future<Map<String, dynamic>> _postSingleChange(
+  Future<Map<String, dynamic>> postSingleChange(
     Map<String, dynamic> change,
   ) async {
     final uri = baseUrl.replace(
@@ -197,11 +197,11 @@ void main() {
     return jsonDecode(body) as Map<String, dynamic>;
   }
 
-  Future<void> _seedChange(Map<String, dynamic> change) async {
-    await _postSingleChange(change);
+  Future<void> seedChange(Map<String, dynamic> change) async {
+    await postSingleChange(change);
   }
 
-  Map<String, dynamic> _changePayload({
+  Map<String, dynamic> changePayload({
     required String projectId,
     required String entityType,
     required String entityId,
@@ -274,7 +274,7 @@ void main() {
     final storage = InMemoryStorage(storageId: 'local');
     final app = TestServer(serverName: 'core-it', storage: storage);
 
-    final handler = const Pipeline().addHandler(app.router());
+    final handler = const Pipeline().addHandler(app.router().call);
     server = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, 0);
     baseUrl = Uri.parse('http://localhost:${server.port}');
   });
@@ -344,8 +344,8 @@ void main() {
           final project = 'proj-fl';
           final entity = 'entity-fl-1';
           // Seed initial state rank=1 at baseTime
-          await _seedChange(
-            _changePayload(
+          await seedChange(
+            changePayload(
               projectId: project,
               entityType: 'task',
               entityId: entity,
@@ -355,8 +355,8 @@ void main() {
           );
           // Apply newer change rank=2
           final newer = baseTime.add(const Duration(minutes: 5));
-          final resp = await _postSingleChange(
-            _changePayload(
+          final resp = await postSingleChange(
+            changePayload(
               projectId: project,
               entityType: 'task',
               entityId: entity,
@@ -387,8 +387,8 @@ void main() {
           final project = 'proj-cross';
           final entity = 'entity-cross-1';
           // Seed initial state rank=1
-          await _seedChange(
-            _changePayload(
+          await seedChange(
+            changePayload(
               projectId: project,
               entityType: 'task',
               entityId: entity,
@@ -397,8 +397,8 @@ void main() {
             ),
           );
           // Post same rank with different storageId to trigger data omission
-          final resp = await _postSingleChange(
-            _changePayload(
+          final resp = await postSingleChange(
+            changePayload(
               projectId: project,
               entityType: 'task',
               entityId: entity,
@@ -424,8 +424,8 @@ void main() {
           final project = 'proj-noop';
           final entity = 'entity-noop-1';
           // Seed initial state: rank=1, parentId=parent1
-          await _seedChange(
-            _changePayload(
+          await seedChange(
+            changePayload(
               projectId: project,
               entityType: 'task',
               entityId: entity,
@@ -434,8 +434,8 @@ void main() {
             ),
           );
           // Update with rank same (no-op), parentId changed, nameLocal new
-          final resp = await _postSingleChange(
-            _changePayload(
+          final resp = await postSingleChange(
+            changePayload(
               projectId: project,
               entityType: 'task',
               entityId: entity,
@@ -472,8 +472,8 @@ void main() {
           final olderTime = baseTime.subtract(const Duration(minutes: 5));
           final newerFieldTime = baseTime.add(const Duration(minutes: 2));
           // Seed older parentId and nameLocal
-          await _seedChange(
-            _changePayload(
+          await seedChange(
+            changePayload(
               projectId: project,
               entityType: 'task',
               entityId: entity,
@@ -486,8 +486,8 @@ void main() {
             ),
           );
           // Update rank to be newer than upcoming changeAt
-          await _seedChange(
-            _changePayload(
+          await seedChange(
+            changePayload(
               projectId: project,
               entityType: 'task',
               entityId: entity,
@@ -497,8 +497,8 @@ void main() {
             ),
           );
           // Now send a change between olderTime and newerFieldTime
-          final resp = await _postSingleChange(
-            _changePayload(
+          final resp = await postSingleChange(
+            changePayload(
               projectId: project,
               entityType: 'task',
               entityId: entity,
@@ -525,8 +525,8 @@ void main() {
         final project = 'proj-old';
         final entity = 'entity-old-1';
         // Seed at baseTime
-        await _seedChange(
-          _changePayload(
+        await seedChange(
+          changePayload(
             projectId: project,
             entityType: 'task',
             entityId: entity,
@@ -536,8 +536,8 @@ void main() {
         );
         // Older update
         final older = baseTime.subtract(const Duration(minutes: 5));
-        final resp = await _postSingleChange(
-          _changePayload(
+        final resp = await postSingleChange(
+          changePayload(
             projectId: project,
             entityType: 'task',
             entityId: entity,
@@ -557,8 +557,8 @@ void main() {
       test('handles new entity creation', () async {
         final project = 'proj-create';
         final entity = 'entity-new-1';
-        final resp = await _postSingleChange(
-          _changePayload(
+        final resp = await postSingleChange(
+          changePayload(
             projectId: project,
             entityType: 'task',
             entityId: entity,
@@ -585,8 +585,8 @@ void main() {
       test('populates nameLocal from change data on create', () async {
         final project = 'proj-name';
         final entity = 'entity-name-1';
-        final resp = await _postSingleChange(
-          _changePayload(
+        final resp = await postSingleChange(
+          changePayload(
             projectId: project,
             entityType: 'task',
             entityId: entity,
@@ -613,8 +613,8 @@ void main() {
         final project = 'proj-del';
         final entity = 'entity-del-1';
         // Seed entity
-        await _seedChange(
-          _changePayload(
+        await seedChange(
+          changePayload(
             projectId: project,
             entityType: 'task',
             entityId: entity,
@@ -623,8 +623,8 @@ void main() {
           ),
         );
         // Delete
-        final resp = await _postSingleChange(
-          _changePayload(
+        final resp = await postSingleChange(
+          changePayload(
             projectId: project,
             entityType: 'task',
             entityId: entity,

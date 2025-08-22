@@ -325,7 +325,7 @@ IsarDocumentState _isarDocumentStateDeserialize(
   object.entityId = reader.readString(offsets[12]);
   object.entityType = _IsarDocumentStateentityTypeValueEnumMap[
           reader.readStringOrNull(offsets[13])] ??
-      EntityType.project;
+      EntityType.unknown;
   object.id = id;
   object.origChangeAt = reader.readDateTimeOrNull(offsets[14]);
   object.origChangeBy = reader.readString(offsets[15]);
@@ -387,7 +387,7 @@ P _isarDocumentStateDeserializeProp<P>(
     case 13:
       return (_IsarDocumentStateentityTypeValueEnumMap[
               reader.readStringOrNull(offset)] ??
-          EntityType.project) as P;
+          EntityType.unknown) as P;
     case 14:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 15:
@@ -436,6 +436,7 @@ P _isarDocumentStateDeserializeProp<P>(
 }
 
 const _IsarDocumentStateentityTypeEnumValueMap = {
+  r'unknown': r'unknown',
   r'project': r'project',
   r'team': r'team',
   r'plan': r'plan',
@@ -454,6 +455,7 @@ const _IsarDocumentStateentityTypeEnumValueMap = {
   r'comment': r'comment',
 };
 const _IsarDocumentStateentityTypeValueEnumMap = {
+  r'unknown': EntityType.unknown,
   r'project': EntityType.project,
   r'team': EntityType.team,
   r'plan': EntityType.plan,
