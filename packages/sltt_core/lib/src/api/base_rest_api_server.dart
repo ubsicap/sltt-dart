@@ -972,14 +972,14 @@ abstract class BaseRestApiServer {
           // so exit early on any errors
           if (changeLogEntry.operation == 'error') {
             return _errorResponse(
-              'Change[$i] cid($cid) deserialization encountered error: ${changeLogEntry.operationInfo}',
+              'Change[$i] cid($cid) deserialization encountered error: ${changeLogEntry.getOperationInfo()}',
               400,
             );
           }
           if (changeLogEntry.operation == 'hold') {
             // how could this ever happen on the same storage??
             return _errorResponse(
-              'Change[$i] cid($cid) deserialization resulted in `hold`: ${changeLogEntry.operationInfo}',
+              'Change[$i] cid($cid) deserialization resulted in `hold`: ${changeLogEntry.getOperationInfo()}',
               400,
             );
           }
@@ -1028,22 +1028,22 @@ abstract class BaseRestApiServer {
           } else if (updateResults.newChangeLogEntry.operation == 'error') {
             resultsSummary['errors'].add({
               'cid': updateResults.newChangeLogEntry.cid,
-              'info': updateResults.newChangeLogEntry.operationInfo,
+              'info': updateResults.newChangeLogEntry.getOperationInfo(),
             });
           }
           // TODO: summarize unknown fields?
-          if (updateResults.newChangeLogEntry.unknown.isNotEmpty) {
+          if (updateResults.newChangeLogEntry.getUnknown().isNotEmpty) {
             resultsSummary['unknowns'].add({
               'cid': updateResults.newChangeLogEntry.cid,
-              'unknown': updateResults.newChangeLogEntry.unknown,
+              'unknown': updateResults.newChangeLogEntry.getUnknown(),
             });
           }
           if (updateResults.newChangeLogEntry.operation != 'error' &&
-              updateResults.newChangeLogEntry.operationInfo.isNotEmpty) {
+              updateResults.newChangeLogEntry.getOperationInfo().isNotEmpty) {
             resultsSummary['info'].add({
               'cid': updateResults.newChangeLogEntry.cid,
               'operation': updateResults.newChangeLogEntry.operation,
-              'info': updateResults.newChangeLogEntry.operationInfo,
+              'info': updateResults.newChangeLogEntry.getOperationInfo(),
             });
           }
           if (request.url.queryParameters['changeUpdates'] == 'true') {

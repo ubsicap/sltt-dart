@@ -258,7 +258,7 @@ String calculateOperation(
   List<String> noOpFields, // List of fields that are no-ops
   List<String> outdatedBys, // List of fields that are outdated
 ) {
-  final changeData = changeLogEntry.data;
+  final changeData = changeLogEntry.getData();
 
   // If the base entity state is null, we assume it's a create operation
   if (entityState == null) {
@@ -361,7 +361,7 @@ GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
   BaseChangeLogEntry changeLogEntry,
   BaseEntityState? entityState,
 ) {
-  final changeData = changeLogEntry.data;
+  final changeData = changeLogEntry.getData();
   final fieldChanges = <String, dynamic>{};
   final noOpFields = <String>[];
   // The changeData is the incoming field data directly

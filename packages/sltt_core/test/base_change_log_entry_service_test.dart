@@ -46,8 +46,8 @@ void main() {
     // entityType should be EntityType.unknown
     expect(result.entityType.toString().contains('unknown'), isTrue);
     // operationInfo should contain the raw entityType value
-    expect(result.operationInfo['hold'], equals('entityType'));
-    expect(result.operationInfo['entityType'], equals('brandNewType'));
+    expect(result.getOperationInfo()['hold'], equals('entityType'));
+    expect(result.getOperationInfo()['entityType'], equals('brandNewType'));
   });
 
   test('deserializeChangeLogEntrySafely recovers from factory error', () {
@@ -97,9 +97,9 @@ void main() {
     );
 
     expect(result.operation, equals('error'));
-    expect(result.operationInfo, isA<Map<String, dynamic>>());
-    expect(result.operationInfo['error'], isA<String>());
-    expect(result.operationInfo['errorStack'], isA<String>());
-    expect(result.operationInfo['json'], isA<Map<String, dynamic>>());
+    expect(result.getOperationInfo(), isA<Map<String, dynamic>>());
+    expect(result.getOperationInfo()['error'], isA<String>());
+    expect(result.getOperationInfo()['errorStack'], isA<String>());
+    expect(result.getOperationInfo()['json'], isA<Map<String, dynamic>>());
   });
 }

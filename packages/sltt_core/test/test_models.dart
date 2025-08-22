@@ -17,27 +17,6 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
   @override
   final int seq;
 
-  // Do not shadow the base JSON-string storage fields. The base class
-  // provides `dataJson` and `operationInfoJson` accessors; tests should
-  // interact via the helper methods (getData/setData etc.) to avoid
-  // exposing Map-typed members on the base class.
-
-  // Provide concrete Map accessors for tests. These delegate to the base
-  // class's JSON-backed storage so the core package remains storage-agnostic
-  // (no Map-typed members on the base class) while tests can still access
-  // the map-shaped payloads.
-  @override
-  Map<String, dynamic> get data => getData();
-
-  @override
-  Map<String, dynamic> get operationInfo => getOperationInfo();
-
-  @override
-  Map<String, dynamic> get unknown => getUnknown();
-
-  @override
-  set unknown(Map<String, dynamic> v) => unknownJson = jsonEncode(v);
-
   // Forwarding implementations to satisfy HasUnknownField contract.
   // No explicit overrides needed here; the base mixin and class provide
   // the JSON-string fields and helper methods. Keeping Map getters above
