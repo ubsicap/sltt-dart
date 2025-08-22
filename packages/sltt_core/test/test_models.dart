@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:convert';
+
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/src/models/base_change_log_entry.dart';
 import 'package:sltt_core/src/models/base_entity_state.dart';
@@ -16,6 +17,11 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
   @override
   final int seq;
 
+  // Do not shadow the base JSON-string storage fields. The base class
+  // provides `dataJson` and `operationInfoJson` accessors; tests should
+  // interact via the helper methods (getData/setData etc.) to avoid
+  // exposing Map-typed members on the base class.
+
   // Provide concrete Map accessors for tests. These delegate to the base
   // class's JSON-backed storage so the core package remains storage-agnostic
   // (no Map-typed members on the base class) while tests can still access
@@ -29,6 +35,7 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
   @override
   Map<String, dynamic> get unknown => getUnknown();
 
+  @override
   set unknown(Map<String, dynamic> v) => unknownJson = jsonEncode(v);
 
   // Forwarding implementations to satisfy HasUnknownField contract.
@@ -73,6 +80,8 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
 @JsonSerializable(includeIfNull: true, checked: true)
 class TestEntityState extends BaseEntityState {
   final String data_nameLocal;
+  // Do not shadow base JSON storage fields; use the base accessors via
+  // the helper methods (getData/getOperationInfo) instead.
 
   TestEntityState({
     this.data_nameLocal = '',

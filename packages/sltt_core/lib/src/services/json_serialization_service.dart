@@ -41,6 +41,13 @@ mixin HasUnknownField {
         : <String, dynamic>{};
   }
 
+  /// Set single key inside data map and persist as JSON.
+  void setData(String k, dynamic v) {
+    final m = getData();
+    m[k] = v;
+    dataJson = jsonEncode(m);
+  }
+
   /// Return parsed operationInfo map.
   Map<String, dynamic> getOperationInfo() {
     if (operationInfoJson.isEmpty) return <String, dynamic>{};

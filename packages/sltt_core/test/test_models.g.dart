@@ -23,12 +23,14 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
           storageId:
               $checkedConvert('storageId', (v) => v as String? ?? 'local'),
           changeBy: $checkedConvert('changeBy', (v) => v as String),
-          data: $checkedConvert('data', (v) => v as Map<String, dynamic>),
+          data: $checkedConvert(
+              'data', (v) => v as Map<String, dynamic>? ?? const {}),
           operation: $checkedConvert('operation', (v) => v as String),
           operationInfo: $checkedConvert(
-              'operationInfo', (v) => v as Map<String, dynamic>),
+              'operationInfo', (v) => v as Map<String, dynamic>? ?? const {}),
           stateChanged: $checkedConvert('stateChanged', (v) => v as bool),
-          unknown: $checkedConvert('unknown', (v) => v as Map<String, dynamic>),
+          unknown: $checkedConvert(
+              'unknown', (v) => v as Map<String, dynamic>? ?? const {}),
           dataSchemaRev:
               $checkedConvert('dataSchemaRev', (v) => (v as num?)?.toInt()),
           cloudAt: $checkedConvert(
@@ -37,6 +39,10 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
               $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
           seq: $checkedConvert('seq', (v) => (v as num?)?.toInt() ?? 0),
         );
+        $checkedConvert(
+            'operationInfoJson', (v) => val.operationInfoJson = v as String);
+        $checkedConvert('dataJson', (v) => val.dataJson = v as String);
+        $checkedConvert('unknownJson', (v) => val.unknownJson = v as String);
         return val;
       },
     );
@@ -49,17 +55,20 @@ Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
       'domainId': instance.domainId,
       'entityType': _$EntityTypeEnumMap[instance.entityType]!,
       'operation': instance.operation,
-      'operationInfo': instance.operationInfo,
+      'operationInfoJson': instance.operationInfoJson,
       'stateChanged': instance.stateChanged,
       'changeAt': instance.changeAt.toIso8601String(),
       'entityId': instance.entityId,
-      'data': instance.data,
+      'dataJson': instance.dataJson,
       'dataSchemaRev': instance.dataSchemaRev,
       'cloudAt': instance.cloudAt?.toIso8601String(),
       'changeBy': instance.changeBy,
       'schemaVersion': instance.schemaVersion,
-      'unknown': instance.unknown,
+      'unknownJson': instance.unknownJson,
       'seq': instance.seq,
+      'data': instance.data,
+      'operationInfo': instance.operationInfo,
+      'unknown': instance.unknown,
     };
 
 const _$EntityTypeEnumMap = {
@@ -148,10 +157,14 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
           data_parentId_cloudAt_: $checkedConvert('data_parentId_cloudAt_',
               (v) => v == null ? null : DateTime.parse(v as String)),
         );
+        $checkedConvert('unknownJson', (v) => val.unknownJson = v as String);
+        $checkedConvert('dataJson', (v) => val.dataJson = v as String);
         $checkedConvert(
-            'unknown', (v) => val.unknown = v as Map<String, dynamic>);
+            'operationInfoJson', (v) => val.operationInfoJson = v as String);
         $checkedConvert('change_changeBy_orig_',
             (v) => val.change_changeBy_orig_ = v as String);
+        $checkedConvert(
+            'unknown', (v) => val.unknown = v as Map<String, dynamic>);
         return val;
       },
     );
@@ -161,7 +174,9 @@ Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
       'entityId': instance.entityId,
       'entityType': _$EntityTypeEnumMap[instance.entityType]!,
       'schemaVersion': instance.schemaVersion,
-      'unknown': instance.unknown,
+      'unknownJson': instance.unknownJson,
+      'dataJson': instance.dataJson,
+      'operationInfoJson': instance.operationInfoJson,
       'change_domainId': instance.change_domainId,
       'change_domainId_orig_': instance.change_domainId_orig_,
       'change_changeAt': instance.change_changeAt.toIso8601String(),
@@ -197,4 +212,5 @@ Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
       'data_parentId_cloudAt_':
           instance.data_parentId_cloudAt_?.toIso8601String(),
       'data_nameLocal': instance.data_nameLocal,
+      'unknown': instance.unknown,
     };

@@ -58,17 +58,6 @@ abstract class BaseChangeLogEntry
   @override
   String unknownJson = '{}';
 
-  // Backwards-compatible Map accessors used throughout the codebase/tests.
-  Map<String, dynamic> get data => getData();
-  set data(Map<String, dynamic> v) => dataJson = jsonEncode(v);
-
-  Map<String, dynamic> get operationInfo => getOperationInfo();
-  set operationInfo(Map<String, dynamic> v) =>
-      operationInfoJson = jsonEncode(v);
-
-  Map<String, dynamic> get unknown => getUnknown();
-  set unknown(Map<String, dynamic> v) => unknownJson = jsonEncode(v);
-
   BaseChangeLogEntry({
     required this.storageId,
     required this.domainType,
@@ -111,6 +100,7 @@ mixin ImmutableFields {
 mixin StorageResponsibilities {
   int get seq;
   String get operation;
+  String get operationInfoJson;
   bool get stateChanged;
   DateTime? get cloudAt;
 }
