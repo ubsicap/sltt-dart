@@ -1,55 +1,73 @@
+import 'dart:convert';
+
 import '../services/json_serialization_service.dart';
 import 'entity_type.dart';
 
-/// Abstract base class for ChangeLogEntry without Isar dependencies
-/// Can be used by backend services that don't need Isar
-/// implementations should provide their own `seq` handling
+/// Abstract base for change log entries. Stores map-like payloads as JSON
+/// strings (`dataJson`, `operationInfoJson`, `unknownJson`) to remain
+/// storage-agnostic.
 abstract class BaseChangeLogEntry
-    with Serializable, ImmutableFields, StorageResponsibilities {
-  /// unique id for changeLogEntry: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random} from generateCid()
+    with
+        Serializable,
+        ImmutableFields,
+        StorageResponsibilities,
+        HasUnknownField {
   @override
   String cid;
 
-  /// Identifier for the storage instance that the change originated from
-  /// (e.g. local DB id, cloud id). Used to decide whether to trim change data
-  /// when transferring between different storage targets.
   @override
   String storageId;
 
-  /// discrete sets for getting change logs: user, team, project
   @override
   String domainType;
 
-  /// Unique identifier for the change log that has these entries
-  /// (e.g. userId, teamId, projectId)
   @override
   String domainId;
 
   @override
-  EntityType entityType; // Normalized entity type
-  @override
-  String operation; // e.g., 'create', 'update', 'delete', 'noOp', 'outdated', 'error'
-  @override
-  Map<String, dynamic> operationInfo; // Additional operation metadata
-  @override
-  bool stateChanged; // Indicates if the state of the entity has changed
-  @override
-  DateTime changeAt; // UTC when the change was originally made by the client
-  @override
-  String entityId; // UUID or primary key of the entity
-  Map<String, dynamic> data;
-  int? dataSchemaRev = 0; // data model revision for compatibility
+  EntityType entityType;
 
-  /// the payload of the change
   @override
-  DateTime? cloudAt; // UTC When the cloud storage received this change (optional)
+  String operation;
+
   @override
-  String changeBy; // memberId who made the change
-  int? schemaVersion = 0; // change log schema version for compatibility
-  /// any fields not read from json are put here for future field migration
-  /// This will hold any unmapped fields
+  String operationInfoJson = '{}';
+
   @override
-  Map<String, dynamic> unknown = {};
+  bool stateChanged;
+
+  @override
+  DateTime changeAt;
+
+  @override
+  String entityId;
+
+  @override
+  String dataJson = '{}';
+
+  int? dataSchemaRev = 0;
+
+  @override
+  DateTime? cloudAt;
+
+  @override
+  String changeBy;
+
+  int? schemaVersion = 0;
+
+  @override
+  String unknownJson = '{}';
+
+  // Backwards-compatible Map accessors used throughout the codebase/tests.
+  Map<String, dynamic> get data => getData();
+  set data(Map<String, dynamic> v) => dataJson = jsonEncode(v);
+
+  Map<String, dynamic> get operationInfo => getOperationInfo();
+  set operationInfo(Map<String, dynamic> v) =>
+      operationInfoJson = jsonEncode(v);
+
+  Map<String, dynamic> get unknown => getUnknown();
+  set unknown(Map<String, dynamic> v) => unknownJson = jsonEncode(v);
 
   BaseChangeLogEntry({
     required this.storageId,
@@ -58,25 +76,24 @@ abstract class BaseChangeLogEntry
     required this.entityType,
     required this.operation,
     required this.stateChanged,
-    required this.operationInfo,
+    Map<String, dynamic> operationInfo = const {},
     required this.changeAt,
     required this.entityId,
-    required this.data,
+    Map<String, dynamic> data = const {},
     this.dataSchemaRev,
     this.cloudAt,
     required this.changeBy,
     required this.cid,
     this.schemaVersion,
-    required this.unknown,
-  });
-
-  // Abstract methods to be implemented by concrete subclasses
-  // toJson() is provided by [Serializable].
+    Map<String, dynamic> unknown = const {},
+  }) {
+    operationInfoJson = jsonEncode(operationInfo);
+    dataJson = jsonEncode(data);
+    unknownJson = jsonEncode(unknown);
+  }
 }
 
-/// Provides JSON serialization contracts for models.
 mixin Serializable {
-  /// Full JSON representation used for storage or transport
   Map<String, dynamic> toJson();
 }
 
@@ -91,22 +108,9 @@ mixin ImmutableFields {
   String get changeBy;
 }
 
-/// implementations should provide this info
-mixin StorageResponsibilities implements HasUnknownField {
-  /// used for sorting changes in a database
+mixin StorageResponsibilities {
   int get seq;
-
-  /// The type of operation being performed
   String get operation;
-
-  /// Additional metadata about the operation
-  /// the shape varies by operation type
-  Map<String, dynamic> get operationInfo;
-
-  /// Indicates if the state of the entity has changed
   bool get stateChanged;
-
-  /// The unique ID for this change log entry
-  /// added by cloud storage server
   DateTime? get cloudAt;
 }

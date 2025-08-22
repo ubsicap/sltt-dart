@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:convert';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/src/models/base_change_log_entry.dart';
 import 'package:sltt_core/src/models/base_entity_state.dart';
@@ -14,6 +15,26 @@ part 'test_models.g.dart';
 class TestChangeLogEntry extends BaseChangeLogEntry {
   @override
   final int seq;
+
+  // Provide concrete Map accessors for tests. These delegate to the base
+  // class's JSON-backed storage so the core package remains storage-agnostic
+  // (no Map-typed members on the base class) while tests can still access
+  // the map-shaped payloads.
+  @override
+  Map<String, dynamic> get data => getData();
+
+  @override
+  Map<String, dynamic> get operationInfo => getOperationInfo();
+
+  @override
+  Map<String, dynamic> get unknown => getUnknown();
+
+  set unknown(Map<String, dynamic> v) => unknownJson = jsonEncode(v);
+
+  // Forwarding implementations to satisfy HasUnknownField contract.
+  // No explicit overrides needed here; the base mixin and class provide
+  // the JSON-string fields and helper methods. Keeping Map getters above
+  // gives test code convenient access.
 
   TestChangeLogEntry({
     required super.entityId,
@@ -87,6 +108,13 @@ class TestEntityState extends BaseEntityState {
     required super.data_parentId_changeBy_,
     super.data_parentId_cloudAt_,
   });
+
+  /// Provide Map accessors for unknown fields so the generated
+  /// `test_models.g.dart` can assign unknown fields during deserialization.
+  @override
+  Map<String, dynamic> get unknown => getUnknown();
+
+  set unknown(Map<String, dynamic> v) => unknownJson = jsonEncode(v);
 
   factory TestEntityState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(

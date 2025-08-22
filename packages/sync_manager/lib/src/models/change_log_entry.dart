@@ -50,6 +50,7 @@ final _clientChangeLogEntryFactoryRegistration = (() {
 @JsonSerializable(checked: true)
 class ClientChangeLogEntry implements BaseChangeLogEntry {
   // Isar id/seq
+  @override
   Id seq = Isar.autoIncrement;
 
   // Immutable/core fields
@@ -86,10 +87,13 @@ class ClientChangeLogEntry implements BaseChangeLogEntry {
 
   // Persist Map fields as JSON strings for Isar, expose via computed getters
   @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
   String dataJson;
   @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
   String operationInfoJson;
   @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
   String unknownJson;
 
   // JSON-facing (ignored by Isar)
@@ -97,12 +101,14 @@ class ClientChangeLogEntry implements BaseChangeLogEntry {
   @override
   @JsonKey(name: 'data', toJson: _mapToJson, fromJson: _jsonToMap)
   Map<String, dynamic> get data => _jsonToMap(dataJson);
+  @override
   set data(Map<String, dynamic> v) => dataJson = _mapToJson(v);
 
   @ignore
   @override
   @JsonKey(name: 'operationInfo', toJson: _mapToJson, fromJson: _jsonToMap)
   Map<String, dynamic> get operationInfo => _jsonToMap(operationInfoJson);
+  @override
   set operationInfo(Map<String, dynamic> v) =>
       operationInfoJson = _mapToJson(v);
 
@@ -112,14 +118,37 @@ class ClientChangeLogEntry implements BaseChangeLogEntry {
   @override
   DateTime? cloudAt;
 
+  @override
   int? dataSchemaRev;
+  @override
   int? schemaVersion;
 
   @ignore
   @override
   @JsonKey(name: 'unknown', toJson: _mapToJson, fromJson: _jsonToMap)
   Map<String, dynamic> get unknown => _jsonToMap(unknownJson);
+  @override
   set unknown(Map<String, dynamic> v) => unknownJson = _mapToJson(v);
+
+  // Provide HasUnknownField-style helper methods so that when this class
+  // "implements BaseChangeLogEntry" it satisfies the mixin's interface.
+  Map<String, dynamic> getUnknown() => _jsonToMap(unknownJson);
+
+  Map<String, dynamic> getData() => _jsonToMap(dataJson);
+
+  Map<String, dynamic> getOperationInfo() => _jsonToMap(operationInfoJson);
+
+  void setUnknown(String k, dynamic v) {
+    final m = _jsonToMap(unknownJson);
+    m[k] = v;
+    unknownJson = _mapToJson(m);
+  }
+
+  void setOperationInfo(String k, dynamic v) {
+    final m = _jsonToMap(operationInfoJson);
+    m[k] = v;
+    operationInfoJson = _mapToJson(m);
+  }
 
   ClientChangeLogEntry({
     required this.domainId,

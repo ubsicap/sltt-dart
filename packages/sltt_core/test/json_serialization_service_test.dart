@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 import 'package:test/test.dart';
@@ -42,10 +43,20 @@ void main() {
 class SchemaVersion1 with HasUnknownField {
   final String a;
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  Map<String, dynamic> unknown;
+  String unknownJson;
 
-  SchemaVersion1({required this.a, this.unknown = const {}});
+  // Provide the JSON-string backed fields required by HasUnknownField.
+  @override
+  String dataJson = '{}';
+
+  @override
+  String operationInfoJson = '{}';
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  Map<String, dynamic> get unknown => getUnknown();
+
+  SchemaVersion1({required this.a, Map<String, dynamic> unknown = const {}})
+    : unknownJson = jsonEncode(unknown);
 
   factory SchemaVersion1.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData<SchemaVersion1>(
@@ -66,10 +77,23 @@ class SchemaVersion2 with HasUnknownField {
   final String a;
   final String b;
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  Map<String, dynamic> unknown;
+  String unknownJson;
 
-  SchemaVersion2({required this.a, required this.b, this.unknown = const {}});
+  // Provide the JSON-string backed fields required by HasUnknownField.
+  @override
+  String dataJson = '{}';
+
+  @override
+  String operationInfoJson = '{}';
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  Map<String, dynamic> get unknown => getUnknown();
+
+  SchemaVersion2({
+    required this.a,
+    required this.b,
+    Map<String, dynamic> unknown = const {},
+  }) : unknownJson = jsonEncode(unknown);
 
   factory SchemaVersion2.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData<SchemaVersion2>(

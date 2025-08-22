@@ -8,11 +8,11 @@ import 'entity_type.dart';
 /// This provides the core state schema common across all entity types
 /// Backend-agnostic - no database-specific dependencies
 abstract class BaseEntityState
+    with HasUnknownField
     implements
         CoreEntityMetaData,
         CoreEntityDataFields,
-        CoreChangeLogEntryFields,
-        HasUnknownField {
+        CoreChangeLogEntryFields {
   /// Primary key - entityId with entity type abbreviation
   @override
   String entityId;
@@ -25,10 +25,21 @@ abstract class BaseEntityState
   @override
   int? schemaVersion;
 
-  /// Any fields not read from json are put here for future field migration
-  /// This will hold any unmapped fields
+  /// Any fields not read from json are put here for future field migration.
+  /// Store unknown/data/operationInfo as compact JSON strings to remain
+  /// storage-agnostic; provide Map getters via the HasUnknownField mixin.
   @override
-  Map<String, dynamic> unknown = {};
+  String unknownJson = '{}';
+
+  @override
+  String dataJson = '{}';
+
+  @override
+  String operationInfoJson = '{}';
+
+  /// Map view of unknown fields for callers/tests.
+  @override
+  Map<String, dynamic> get unknown => getUnknown();
 
   /// Current project ID
   String change_domainId = '';
