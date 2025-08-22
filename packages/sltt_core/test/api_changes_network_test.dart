@@ -4,13 +4,11 @@ import 'dart:io';
 
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
-import 'package:test/test.dart';
 import 'package:shelf_router/shelf_router.dart';
-
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/api/base_rest_api_server.dart';
 import 'package:sltt_core/src/models/factory_pair.dart';
 import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
+import 'package:test/test.dart';
 
 import 'test_models.dart';
 
@@ -167,8 +165,7 @@ class InMemoryStorage implements BaseStorageService {
 }
 
 class TestServer extends BaseRestApiServer {
-  TestServer({required String serverName, required BaseStorageService storage})
-    : super(serverName: serverName, storage: storage);
+  TestServer({required super.serverName, required super.storage});
 
   @override
   String get storageTypeDescription => storage.getStorageType();
@@ -219,7 +216,7 @@ void main() {
     final storage = InMemoryStorage(storageId: 'local');
     final app = TestServer(serverName: 'core-it', storage: storage);
 
-    final handler = const Pipeline().addHandler(app.router());
+    final handler = const Pipeline().addHandler(app.router().call);
     server = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, 0);
     baseUrl = Uri.parse('http://localhost:${server.port}');
   });
