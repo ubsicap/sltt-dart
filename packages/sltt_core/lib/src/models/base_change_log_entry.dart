@@ -68,7 +68,7 @@ abstract class BaseChangeLogEntry
     Map<String, dynamic> operationInfo = const {},
     required this.changeAt,
     required this.entityId,
-    Map<String, dynamic> data = const {},
+    required Map<String, dynamic> data,
     this.dataSchemaRev,
     this.cloudAt,
     required this.changeBy,

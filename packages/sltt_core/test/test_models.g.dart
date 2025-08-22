@@ -23,14 +23,8 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
           storageId:
               $checkedConvert('storageId', (v) => v as String? ?? 'local'),
           changeBy: $checkedConvert('changeBy', (v) => v as String),
-          data: $checkedConvert(
-              'data', (v) => v as Map<String, dynamic>? ?? const {}),
           operation: $checkedConvert('operation', (v) => v as String),
-          operationInfo: $checkedConvert(
-              'operationInfo', (v) => v as Map<String, dynamic>? ?? const {}),
           stateChanged: $checkedConvert('stateChanged', (v) => v as bool),
-          unknown: $checkedConvert(
-              'unknown', (v) => v as Map<String, dynamic>? ?? const {}),
           dataSchemaRev:
               $checkedConvert('dataSchemaRev', (v) => (v as num?)?.toInt()),
           cloudAt: $checkedConvert(
@@ -66,9 +60,6 @@ Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
       'schemaVersion': instance.schemaVersion,
       'unknownJson': instance.unknownJson,
       'seq': instance.seq,
-      'data': instance.data,
-      'operationInfo': instance.operationInfo,
-      'unknown': instance.unknown,
     };
 
 const _$EntityTypeEnumMap = {

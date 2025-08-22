@@ -33,14 +33,17 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
     required super.changeBy,
     required super.data,
     required super.operation,
-    required super.operationInfo,
+    Map<String, dynamic>? operationInfo,
     required super.stateChanged,
-    required super.unknown,
+    Map<String, dynamic>? unknown,
     super.dataSchemaRev,
     super.cloudAt,
     super.schemaVersion,
     this.seq = 0,
-  });
+  }) : super(
+         operationInfo: operationInfo ?? const {},
+         unknown: unknown ?? const {},
+       );
 
   factory TestChangeLogEntry.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
