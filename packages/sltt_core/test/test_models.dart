@@ -31,19 +31,38 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
     required super.cid,
     super.storageId = 'local',
     required super.changeBy,
-    required super.data,
+    required super.dataJson,
     required super.operation,
-    Map<String, dynamic>? operationInfo,
+    Map<String, dynamic>? operationInfoJson,
     required super.stateChanged,
-    Map<String, dynamic>? unknown,
+    Map<String, dynamic>? unknownJson,
     super.dataSchemaRev,
     super.cloudAt,
     super.schemaVersion,
     this.seq = 0,
-  }) : super(
-         operationInfo: operationInfo ?? const {},
-         unknown: unknown ?? const {},
-       );
+  });
+
+  // Convenience constructor for tests that want to pass Maps instead of
+  // pre-encoded JSON strings for data/operationInfo/unknown.
+  TestChangeLogEntry.fromMaps({
+    required super.entityId,
+    required super.entityType,
+    required super.domainId,
+    required super.domainType,
+    required super.changeAt,
+    required super.cid,
+    super.storageId = 'local',
+    required super.changeBy,
+    required super.data,
+    required super.operation,
+    super.operationInfo,
+    required super.stateChanged,
+    super.unknown,
+    super.dataSchemaRev,
+    super.cloudAt,
+    super.schemaVersion,
+    this.seq = 0,
+  }) : super.fromJsonWithMaps();
 
   factory TestChangeLogEntry.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(

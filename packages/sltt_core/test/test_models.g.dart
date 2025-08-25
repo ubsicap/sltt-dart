@@ -23,8 +23,13 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
           storageId:
               $checkedConvert('storageId', (v) => v as String? ?? 'local'),
           changeBy: $checkedConvert('changeBy', (v) => v as String),
+          dataJson: $checkedConvert('dataJson', (v) => v as String),
           operation: $checkedConvert('operation', (v) => v as String),
+          operationInfoJson: $checkedConvert(
+              'operationInfoJson', (v) => v as Map<String, dynamic>?),
           stateChanged: $checkedConvert('stateChanged', (v) => v as bool),
+          unknownJson:
+              $checkedConvert('unknownJson', (v) => v as Map<String, dynamic>?),
           dataSchemaRev:
               $checkedConvert('dataSchemaRev', (v) => (v as num?)?.toInt()),
           cloudAt: $checkedConvert(
@@ -33,10 +38,6 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
               $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
           seq: $checkedConvert('seq', (v) => (v as num?)?.toInt() ?? 0),
         );
-        $checkedConvert(
-            'operationInfoJson', (v) => val.operationInfoJson = v as String);
-        $checkedConvert('dataJson', (v) => val.dataJson = v as String);
-        $checkedConvert('unknownJson', (v) => val.unknownJson = v as String);
         return val;
       },
     );

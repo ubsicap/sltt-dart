@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 import 'package:test/test.dart';
@@ -11,7 +10,8 @@ void main() {
     final json = obj.toJson();
     expect(json, containsPair('a', 'foo'));
     expect(json, containsPair('b', 'bar'));
-    expect(json.length, 2);
+    expect(json, containsPair('unknownJson', '{}'));
+    expect(json.length, 3);
   });
 
   test('SchemaVersion2.fromJson() works for its own json', () {
@@ -19,23 +19,25 @@ void main() {
     final obj = SchemaVersion2.fromJson(json);
     expect(obj.a, 'foo');
     expect(obj.b, 'bar');
-    expect(obj.unknown, isEmpty);
+    expect(obj.unknownJson, '{}');
+    expect(obj.getUnknown(), isEmpty);
   });
 
   test('SchemaVersion1.fromJson() puts unknown fields in .unknown', () {
     final json = {'a': 'foo', 'b': 'bar'};
     final obj = SchemaVersion1.fromJson(json);
     expect(obj.a, 'foo');
-    expect(obj.unknown, containsPair('b', 'bar'));
-    expect(obj.unknown.length, 1);
+    expect(obj.unknownJson, equals('{"b":"bar"}'));
+    expect(obj.getUnknown(), equals({'b': 'bar'}));
   });
 
   test('SchemaVersion1.toJson() merges unknown fields', () {
-    final obj = SchemaVersion1(a: 'foo', unknown: {'b': 'bar'});
+    final obj = SchemaVersion1(a: 'foo', unknownJson: '{"b": "bar"}');
     final json = obj.toJson();
     expect(json, containsPair('a', 'foo'));
     expect(json, containsPair('b', 'bar'));
-    expect(json.length, 2);
+    expect(json, containsPair('unknownJson', '{"b": "bar"}'));
+    expect(json.length, 3);
   });
 }
 
@@ -45,18 +47,9 @@ class SchemaVersion1 with HasUnknownField {
   @override
   String unknownJson;
 
-  // Provide the JSON-string backed fields required by HasUnknownField.
-  @override
-  String dataJson = '{}';
-
-  @override
-  String operationInfoJson = '{}';
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
   Map<String, dynamic> get unknown => getUnknown();
 
-  SchemaVersion1({required this.a, Map<String, dynamic> unknown = const {}})
-    : unknownJson = jsonEncode(unknown);
+  SchemaVersion1({required this.a, this.unknownJson = '{}'});
 
   factory SchemaVersion1.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData<SchemaVersion1>(
@@ -79,21 +72,7 @@ class SchemaVersion2 with HasUnknownField {
   @override
   String unknownJson;
 
-  // Provide the JSON-string backed fields required by HasUnknownField.
-  @override
-  String dataJson = '{}';
-
-  @override
-  String operationInfoJson = '{}';
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  Map<String, dynamic> get unknown => getUnknown();
-
-  SchemaVersion2({
-    required this.a,
-    required this.b,
-    Map<String, dynamic> unknown = const {},
-  }) : unknownJson = jsonEncode(unknown);
+  SchemaVersion2({required this.a, required this.b, this.unknownJson = '{}'});
 
   factory SchemaVersion2.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData<SchemaVersion2>(

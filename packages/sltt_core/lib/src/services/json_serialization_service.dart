@@ -10,12 +10,6 @@ mixin HasUnknownField {
   String get unknownJson;
   set unknownJson(String value);
 
-  String get dataJson;
-  set dataJson(String value);
-
-  String get operationInfoJson;
-  set operationInfoJson(String value);
-
   /// Return parsed unknown map.
   Map<String, dynamic> getUnknown() {
     if (unknownJson.isEmpty) return <String, dynamic>{};
@@ -31,38 +25,6 @@ mixin HasUnknownField {
     m[k] = v;
     unknownJson = jsonEncode(m);
   }
-
-  /// Return parsed data map.
-  Map<String, dynamic> getData() {
-    if (dataJson.isEmpty) return <String, dynamic>{};
-    final decoded = jsonDecode(dataJson);
-    return (decoded is Map)
-        ? decoded.cast<String, dynamic>()
-        : <String, dynamic>{};
-  }
-
-  /// Set single key inside data map and persist as JSON.
-  void setData(String k, dynamic v) {
-    final m = getData();
-    m[k] = v;
-    dataJson = jsonEncode(m);
-  }
-
-  /// Return parsed operationInfo map.
-  Map<String, dynamic> getOperationInfo() {
-    if (operationInfoJson.isEmpty) return <String, dynamic>{};
-    final decoded = jsonDecode(operationInfoJson);
-    return (decoded is Map)
-        ? decoded.cast<String, dynamic>()
-        : <String, dynamic>{};
-  }
-
-  /// Set single key inside operationInfo and persist.
-  void setOperationInfo(String k, dynamic v) {
-    final m = getOperationInfo();
-    m[k] = v;
-    operationInfoJson = jsonEncode(m);
-  }
 }
 
 /// baseToJson() should return all fields even with null values.
@@ -72,7 +34,7 @@ T deserializeWithUnknownFieldData<T extends HasUnknownField>(
   Map<String, dynamic> Function(T value) baseToJson,
 ) {
   // Give fromJson an empty `unknown` map to satisfy generated constructors
-  final entry = fromJson({'unknown': <String, dynamic>{}, ...json});
+  final entry = fromJson({'unknownJson': '{}', ...json});
   // Use the generated/base toJson to get only known fields (no unknown merge)
   final knownFields = baseToJson(entry).keys.toSet();
   final unknownFields = Map<String, dynamic>.fromEntries(

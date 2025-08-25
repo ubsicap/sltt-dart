@@ -42,7 +42,6 @@ abstract class BaseChangeLogEntry
   @override
   String entityId;
 
-  @override
   String dataJson = '{}';
 
   int? dataSchemaRev = 0;
@@ -58,6 +57,39 @@ abstract class BaseChangeLogEntry
   @override
   String unknownJson = '{}';
 
+  /// Return parsed data map.
+  Map<String, dynamic> getData() {
+    if (dataJson.isEmpty) return <String, dynamic>{};
+    final decoded = jsonDecode(dataJson);
+    return (decoded is Map)
+        ? decoded.cast<String, dynamic>()
+        : <String, dynamic>{};
+  }
+
+  /// Set single key inside data map and persist as JSON.
+  void setData(String k, dynamic v) {
+    final m = getData();
+    m[k] = v;
+    dataJson = jsonEncode(m);
+  }
+
+  /// Return parsed operationInfo map.
+  Map<String, dynamic> getOperationInfo() {
+    if (operationInfoJson.isEmpty) return <String, dynamic>{};
+    final decoded = jsonDecode(operationInfoJson);
+    return (decoded is Map)
+        ? decoded.cast<String, dynamic>()
+        : <String, dynamic>{};
+  }
+
+  /// Set single key inside operationInfo and persist.
+  void setOperationInfo(String k, dynamic v) {
+    final m = getOperationInfo();
+    m[k] = v;
+    operationInfoJson = jsonEncode(m);
+  }
+
+  // Primary constructor: work directly with JSON-string payload fields
   BaseChangeLogEntry({
     required this.storageId,
     required this.domainType,
@@ -65,21 +97,54 @@ abstract class BaseChangeLogEntry
     required this.entityType,
     required this.operation,
     required this.stateChanged,
-    Map<String, dynamic> operationInfo = const {},
     required this.changeAt,
     required this.entityId,
-    required Map<String, dynamic> data,
+    required this.dataJson,
+    this.operationInfoJson = '{}',
     this.dataSchemaRev,
     this.cloudAt,
     required this.changeBy,
     required this.cid,
     this.schemaVersion,
+    this.unknownJson = '{}',
+  });
+
+  // Convenience constructor: accept Maps and encode to JSON strings
+  BaseChangeLogEntry.fromJsonWithMaps({
+    required String storageId,
+    required String domainType,
+    required String domainId,
+    required EntityType entityType,
+    required String operation,
+    required bool stateChanged,
+    Map<String, dynamic> operationInfo = const {},
+    required DateTime changeAt,
+    required String entityId,
+    required Map<String, dynamic> data,
+    int? dataSchemaRev,
+    DateTime? cloudAt,
+    required String changeBy,
+    required String cid,
+    int? schemaVersion,
     Map<String, dynamic> unknown = const {},
-  }) {
-    operationInfoJson = jsonEncode(operationInfo);
-    dataJson = jsonEncode(data);
-    unknownJson = jsonEncode(unknown);
-  }
+  }) : this(
+         storageId: storageId,
+         domainType: domainType,
+         domainId: domainId,
+         entityType: entityType,
+         operation: operation,
+         stateChanged: stateChanged,
+         changeAt: changeAt,
+         entityId: entityId,
+         dataJson: jsonEncode(data),
+         operationInfoJson: jsonEncode(operationInfo),
+         dataSchemaRev: dataSchemaRev,
+         cloudAt: cloudAt,
+         changeBy: changeBy,
+         cid: cid,
+         schemaVersion: schemaVersion,
+         unknownJson: jsonEncode(unknown),
+       );
 }
 
 mixin Serializable {
