@@ -9,6 +9,9 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
 
+/// Maximum payload size for DynamoDB/APIGateway (in bytes)
+final dynamodbPayloadLimit = 380000;
+
 /// Base REST API server that provides common functionality for all storage types.
 ///
 /// This eliminates code duplication between different server implementations
@@ -1004,6 +1007,15 @@ abstract class BaseRestApiServer {
             entityState,
             targetStorageId: targetStorageId,
           );
+          // throw error if targetStorageId is same as changeLogEntry.storageId and total update payload is greater than dynamodb payload limits
+          if (targetStorageId == changeLogEntry.storageId &&
+              ({...changeLogEntry.toJson(), ...result.changeUpdates}.length >
+                  dynamodbPayloadLimit)) {
+            return _errorResponse(
+              'Change[$i] cid($cid) exceeds payload limits',
+              400,
+            );
+          }
           final updateResults = await storage.updateChangeLogAndState(
             changeLogEntry: changeLogEntry,
             changeUpdates: result.changeUpdates,
