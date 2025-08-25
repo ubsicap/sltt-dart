@@ -152,8 +152,6 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
         $checkedConvert('unknownJson', (v) => val.unknownJson = v as String);
         $checkedConvert('change_changeBy_orig_',
             (v) => val.change_changeBy_orig_ = v as String);
-        $checkedConvert(
-            'unknown', (v) => val.unknown = v as Map<String, dynamic>);
         return val;
       },
     );
@@ -199,5 +197,4 @@ Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
       'data_parentId_cloudAt_':
           instance.data_parentId_cloudAt_?.toIso8601String(),
       'data_nameLocal': instance.data_nameLocal,
-      'unknown': instance.unknown,
     };

@@ -1,7 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'dart:convert';
-
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/src/models/base_change_log_entry.dart';
 import 'package:sltt_core/src/models/base_entity_state.dart';
@@ -118,13 +116,6 @@ class TestEntityState extends BaseEntityState {
     required super.data_parentId_changeBy_,
     super.data_parentId_cloudAt_,
   });
-
-  /// Provide Map accessors for unknown fields so the generated
-  /// `test_models.g.dart` can assign unknown fields during deserialization.
-  @override
-  Map<String, dynamic> get unknown => getUnknown();
-
-  set unknown(Map<String, dynamic> v) => unknownJson = jsonEncode(v);
 
   factory TestEntityState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(

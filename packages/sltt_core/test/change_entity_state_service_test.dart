@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sltt_core/src/models/entity_type.dart';
 import 'package:sltt_core/src/services/change_entity_state_service.dart';
 import 'package:test/test.dart';
@@ -33,7 +35,7 @@ void main() {
         'data_rank_changeAt_': baseTime.toIso8601String(),
         'data_rank_cid_': 'cid1',
         'data_rank_changeBy_': 'user1',
-        'unknown': <String, dynamic>{},
+        'unknownJson': '{}',
       });
     });
 
@@ -48,11 +50,11 @@ void main() {
           cid: 'cid1', // Same as entity state
           storageId: 'local',
           changeBy: 'user1',
-          data: {'rank': '1'},
+          dataJson: jsonEncode({'rank': '1'}),
           operation: 'update',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final result = getMaybeIsDuplicateCidResult(
@@ -73,11 +75,11 @@ void main() {
           cid: 'cid2', // Different from entity state
           storageId: 'local',
           changeBy: 'user1',
-          data: {'rank': '2'},
+          dataJson: jsonEncode({'rank': '2'}),
           operation: 'update',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final result = getMaybeIsDuplicateCidResult(
@@ -100,11 +102,11 @@ void main() {
           cid: 'cid2',
           storageId: 'local',
           changeBy: 'user1',
-          data: {'rank': '1'},
+          dataJson: jsonEncode({'rank': '1'}),
           operation: 'create',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final operation = calculateOperation(changeLogEntry, null, {}, [], []);
@@ -122,11 +124,11 @@ void main() {
           cid: 'cid2',
           storageId: 'local',
           changeBy: 'user1',
-          data: {'rank': '2'},
+          dataJson: jsonEncode({'rank': '2'}),
           operation: 'update',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final operation = calculateOperation(
@@ -150,11 +152,11 @@ void main() {
           cid: 'cid2',
           storageId: 'local',
           changeBy: 'user1',
-          data: {'deleted': true},
+          dataJson: jsonEncode({'deleted': true}),
           operation: 'delete',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final operation = calculateOperation(
@@ -178,11 +180,11 @@ void main() {
           cid: 'cid2',
           storageId: 'local',
           changeBy: 'user1',
-          data: {'rank': '1'}, // Same as current
+          dataJson: jsonEncode({'rank': '1'}), // Same as current
           operation: 'update',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: false,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final operation = calculateOperation(
@@ -206,11 +208,11 @@ void main() {
           cid: 'cid2',
           storageId: 'local',
           changeBy: 'user1',
-          data: {'rank': '2'},
+          dataJson: jsonEncode({'rank': '2'}),
           operation: 'update',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final operation = calculateOperation(
@@ -238,11 +240,11 @@ void main() {
           cid: 'cid2',
           storageId: 'local',
           changeBy: 'user2',
-          data: {'rank': '2'},
+          dataJson: jsonEncode({'rank': '2'}),
           operation: 'update',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
@@ -287,11 +289,11 @@ void main() {
           cid: 'cid-local-1',
           storageId: 'local',
           changeBy: 'user2',
-          data: {'rank': entityState.data_rank},
+          dataJson: jsonEncode({'rank': entityState.data_rank}),
           operation: 'update',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
@@ -320,11 +322,15 @@ void main() {
             changeAt: baseTime.add(const Duration(minutes: 1)),
             cid: 'cid6',
             changeBy: 'user2',
-            data: {'rank': '1', 'parentId': 'parent2', 'nameLocal': 'New Name'},
+            dataJson: jsonEncode({
+              'rank': '1',
+              'parentId': 'parent2',
+              'nameLocal': 'New Name',
+            }),
             operation: 'update',
-            operationInfo: {},
+            operationInfoJson: jsonEncode({}),
             stateChanged: true,
-            unknown: {},
+            unknownJson: jsonEncode({}),
           );
 
           final updates = getUpdatesForChangeLogEntryAndEntityState(
@@ -389,7 +395,7 @@ void main() {
           'data_nameLocal_changeAt_': baseTime.toIso8601String(),
           'data_nameLocal_cid_': 'cid-name',
           'data_nameLocal_changeBy_': 'user1',
-          'unknown': <String, dynamic>{},
+          'unknownJson': '{}',
         });
 
         final changeLogEntry = TestChangeLogEntry(
@@ -401,11 +407,15 @@ void main() {
           cid: 'cid7',
           storageId: 'local',
           changeBy: 'user2',
-          data: {'rank': '1', 'parentId': 'parent2', 'nameLocal': 'Same Name'},
+          dataJson: jsonEncode({
+            'rank': '1',
+            'parentId': 'parent2',
+            'nameLocal': 'Same Name',
+          }),
           operation: 'update',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final updates = getUpdatesForChangeLogEntryAndEntityState(
@@ -443,11 +453,11 @@ void main() {
           cid: 'cid2',
           storageId: 'local',
           changeBy: 'user2',
-          data: {'rank': '3'},
+          dataJson: jsonEncode({'rank': '3'}),
           operation: 'update',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final updates = getUpdatesForChangeLogEntryAndEntityState(
@@ -484,11 +494,11 @@ void main() {
           changeAt: baseTime.add(const Duration(minutes: 1)),
           cid: 'cid3',
           changeBy: 'user1',
-          data: {'rank': '1', 'parentId': 'parent2'},
+          dataJson: jsonEncode({'rank': '1', 'parentId': 'parent2'}),
           operation: 'create',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final updates = getUpdatesForChangeLogEntryAndEntityState(
@@ -531,11 +541,14 @@ void main() {
           changeAt: baseTime.add(const Duration(minutes: 1)),
           cid: 'cid5',
           changeBy: 'user1',
-          data: {'nameLocal': 'Localized Name', 'parentId': 'parent3'},
+          dataJson: jsonEncode({
+            'nameLocal': 'Localized Name',
+            'parentId': 'parent3',
+          }),
           operation: 'create',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final updates = getUpdatesForChangeLogEntryAndEntityState(
@@ -580,11 +593,11 @@ void main() {
           cid: 'cid4',
           storageId: 'local',
           changeBy: 'user1',
-          data: {'deleted': true},
+          dataJson: jsonEncode({'deleted': true}),
           operation: 'delete',
-          operationInfo: {},
+          operationInfoJson: jsonEncode({}),
           stateChanged: true,
-          unknown: {},
+          unknownJson: jsonEncode({}),
         );
 
         final updates = getUpdatesForChangeLogEntryAndEntityState(
@@ -625,11 +638,11 @@ void main() {
             changeAt: newerTime, // Newer than latest in entity state
             cid: 'new-cid',
             changeBy: 'user2',
-            data: {'rank': '2'},
+            dataJson: jsonEncode({'rank': '2'}),
             operation: 'update',
-            operationInfo: {},
+            operationInfoJson: jsonEncode({}),
             stateChanged: true,
-            unknown: {},
+            unknownJson: jsonEncode({}),
           );
 
           final updates = getUpdatesForChangeLogEntryAndEntityState(
@@ -696,7 +709,7 @@ void main() {
                 .toIso8601String(), // Field is newer than incoming
             'data_rank_cid_': 'field-cid',
             'data_rank_changeBy_': 'user1',
-            'unknown': <String, dynamic>{},
+            'unknownJson': '{}',
           });
 
           final changeLogEntry = TestChangeLogEntry(
@@ -708,11 +721,11 @@ void main() {
                 olderTime, // Older than latest, will be rejected at field level too
             cid: 'old-cid',
             changeBy: 'user0',
-            data: {'rank': '0'},
+            dataJson: jsonEncode({'rank': '0'}),
             operation: 'update',
-            operationInfo: {},
+            operationInfoJson: jsonEncode({}),
             stateChanged: true,
-            unknown: {},
+            unknownJson: jsonEncode({}),
           );
 
           final updates = getUpdatesForChangeLogEntryAndEntityState(
@@ -774,7 +787,7 @@ void main() {
                 .toIso8601String(), // Field is older than incoming
             'data_rank_cid_': 'old-field-cid',
             'data_rank_changeBy_': 'user0',
-            'unknown': <String, dynamic>{},
+            'unknownJson': '{}',
           });
 
           final changeLogEntry = TestChangeLogEntry(
@@ -785,11 +798,11 @@ void main() {
             changeAt: newerFieldTime, // Older than latest, but newer than field
             cid: 'mid-cid',
             changeBy: 'user2',
-            data: {'rank': '2'},
+            dataJson: jsonEncode({'rank': '2'}),
             operation: 'update',
-            operationInfo: {},
+            operationInfoJson: jsonEncode({}),
             stateChanged: true,
-            unknown: {},
+            unknownJson: jsonEncode({}),
           );
 
           final updates = getUpdatesForChangeLogEntryAndEntityState(
