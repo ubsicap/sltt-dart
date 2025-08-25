@@ -298,10 +298,13 @@ void main() {
           'cid': generateCid(),
           'storageId': 'local',
           'operation': 'update',
-          'operationInfo': <String, dynamic>{},
+          'operationInfoJson': '{}',
           'stateChanged': false,
-          'unknown': <String, dynamic>{},
-          'data': {'nameLocal': 'Core API Net Test', 'parentId': 'root'},
+          'unknownJson': '{}',
+          'dataJson': jsonEncode({
+            'nameLocal': 'Core API Net Test',
+            'parentId': 'root',
+          }),
         },
       ];
 
