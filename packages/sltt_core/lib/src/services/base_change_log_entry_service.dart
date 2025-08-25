@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../models/base_change_log_entry.dart';
 import '../models/entity_type.dart';
 import '../models/factory_pair.dart';
@@ -112,12 +114,12 @@ Map<String, dynamic> _createSafeJsonFromDeserializationError({
   // Ensure minimal required fields exist and normalize entityType
   safeJson['entityType'] = EntityType.unknown.value;
   safeJson['operation'] = 'error';
-  safeJson['operationInfo'] = {
-    ...(safeJson['operationInfo'] as Map<String, dynamic>? ?? {}),
+  safeJson['operationInfoJson'] = jsonEncode({
+    ...(jsonDecode(safeJson['operationInfoJson'] ?? '{}')),
     'error': errorInfo['error'] ?? '',
     'errorStack': errorInfo['errorStack'] ?? '',
     'json': originalJson,
-  };
+  });
 
   return safeJson;
 }

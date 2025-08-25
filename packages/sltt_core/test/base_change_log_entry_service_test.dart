@@ -59,11 +59,11 @@ void main() {
       'changeAt': DateTime.now().toIso8601String(),
       'cid': 'cid-err',
       'changeBy': 'u1',
-      'data': <String, dynamic>{},
+      'dataJson': '{}',
       'operation': 'update',
-      'operationInfo': <String, dynamic>{},
+      'operationInfoJson': '{}',
       'stateChanged': true,
-      'unknown': <String, dynamic>{},
+      'unknownJson': '{}',
     };
 
     // Create a fromJson that throws only for the original incoming JSON
@@ -86,12 +86,9 @@ void main() {
         ...orig,
         'entityType': 'unknown',
         'operation': 'error',
-        'operationInfo': {
-          ...(orig['operationInfo'] as Map<String, dynamic>? ?? {}),
-        },
-        'data': (orig['data'] as Map<String, dynamic>? ?? <String, dynamic>{}),
-        'unknown':
-            (orig['unknown'] as Map<String, dynamic>? ?? <String, dynamic>{}),
+        'operationInfoJson': (orig['operationInfoJson'] ?? '{}'),
+        'dataJson': (orig['dataJson'] ?? '{}'),
+        'unknownJson': (orig['unknownJson'] ?? '{}'),
       },
     );
 
