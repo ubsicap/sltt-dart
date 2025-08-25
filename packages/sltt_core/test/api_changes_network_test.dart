@@ -229,10 +229,10 @@ void main() {
       'cid': generateCid(changeAt),
       'storageId': storageId,
       'operation': operation,
-      'operationInfo': <String, dynamic>{},
+      'operationInfoJson': '{}',
       'stateChanged': false,
-      'unknown': <String, dynamic>{},
-      'data': adjustedData,
+      'unknownJson': '{}',
+      'dataJson': jsonEncode(adjustedData),
     };
   }
 
@@ -255,17 +255,11 @@ void main() {
             'cid': original['cid'] ?? generateCid(now),
             'storageId': original['storageId'] ?? 'local',
             'changeBy': original['changeBy'] ?? 'tester',
-            'data':
-                (original['data'] as Map<String, dynamic>?) ??
-                <String, dynamic>{},
+            'dataJson': original['dataJson'] ?? '{}',
             'operation': original['operation'] ?? 'update',
-            'operationInfo':
-                (original['operationInfo'] as Map<String, dynamic>?) ??
-                <String, dynamic>{},
+            'operationInfoJson': original['operationInfoJson'] ?? '{}',
             'stateChanged': original['stateChanged'] ?? false,
-            'unknown':
-                (original['unknown'] as Map<String, dynamic>?) ??
-                <String, dynamic>{},
+            'unknownJson': original['unknownJson'] ?? '{}',
           };
         },
       ),
