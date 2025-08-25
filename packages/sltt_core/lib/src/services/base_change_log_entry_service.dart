@@ -73,11 +73,11 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
     final safeJson = toSafeJson(json);
     safeJson['entityType'] = EntityType.unknown.value;
     safeJson['operation'] = 'hold';
-    safeJson['operationInfo'] = {
-      ...(safeJson['operationInfo'] as Map<String, dynamic>? ?? {}),
+    safeJson['operationInfoJson'] = jsonEncode({
+      ...(jsonDecode(safeJson['operationInfoJson'] ?? '{}')),
       'hold': 'entityType',
       'entityType': parsed.raw,
-    };
+    });
     json2 = safeJson;
   } else {
     json2 = json;
