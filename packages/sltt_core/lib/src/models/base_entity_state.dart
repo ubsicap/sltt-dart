@@ -31,12 +31,6 @@ abstract class BaseEntityState
   @override
   String unknownJson = '{}';
 
-  @override
-  String dataJson = '{}';
-
-  @override
-  String operationInfoJson = '{}';
-
   /// Map view of unknown fields for callers/tests.
   @override
   Map<String, dynamic> get unknown => getUnknown();

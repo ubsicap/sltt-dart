@@ -14,11 +14,9 @@ void main() {
       'changeAt': DateTime.now().toIso8601String(),
       'cid': 'cid1',
       'changeBy': 'u1',
-      'data': <String, dynamic>{},
+      'dataJson': '{}',
       'operation': 'update',
-      'operationInfo': <String, dynamic>{},
       'stateChanged': true,
-      'unknown': <String, dynamic>{},
     };
 
     final result = deserializeChangeLogEntrySafely<TestChangeLogEntry>(
@@ -30,14 +28,13 @@ void main() {
         ...orig,
         'entityType': 'unknown',
         'operation': 'hold',
-        'operationInfo': {
-          ...(orig['operationInfo'] as Map<String, dynamic>? ?? {}),
+        'operationInfoJson': {
+          ...(orig['operationInfoJson'] ?? '{}'),
           'hold': 'entityType',
           'entityType': orig['entityType'],
         },
-        'data': (orig['data'] as Map<String, dynamic>? ?? <String, dynamic>{}),
-        'unknown':
-            (orig['unknown'] as Map<String, dynamic>? ?? <String, dynamic>{}),
+        'dataJson': (orig['dataJson'] ?? '{}'),
+        'unknownJson': (orig['unknownJson'] ?? '{}'),
       },
     );
 
