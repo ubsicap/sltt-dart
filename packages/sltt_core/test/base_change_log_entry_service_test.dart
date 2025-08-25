@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
 import 'package:test/test.dart';
 
@@ -28,11 +30,11 @@ void main() {
         ...orig,
         'entityType': 'unknown',
         'operation': 'hold',
-        'operationInfoJson': {
-          ...(orig['operationInfoJson'] ?? '{}'),
+        'operationInfoJson': jsonEncode({
+          ...(jsonDecode(orig['operationInfoJson'] ?? '{}')),
           'hold': 'entityType',
           'entityType': orig['entityType'],
-        },
+        }),
         'dataJson': (orig['dataJson'] ?? '{}'),
         'unknownJson': (orig['unknownJson'] ?? '{}'),
       },
