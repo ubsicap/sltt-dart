@@ -37,6 +37,7 @@ abstract class BaseChangeLogEntry
   bool stateChanged;
 
   @override
+  @UtcDateTimeConverter()
   DateTime changeAt;
 
   @override
@@ -47,6 +48,7 @@ abstract class BaseChangeLogEntry
   int? dataSchemaRev = 0;
 
   @override
+  @UtcDateTimeConverter()
   DateTime? cloudAt;
 
   @override

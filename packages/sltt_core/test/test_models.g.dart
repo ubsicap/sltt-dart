@@ -17,8 +17,8 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
               'entityType', (v) => $enumDecode(_$EntityTypeEnumMap, v)),
           domainId: $checkedConvert('domainId', (v) => v as String),
           domainType: $checkedConvert('domainType', (v) => v as String),
-          changeAt:
-              $checkedConvert('changeAt', (v) => DateTime.parse(v as String)),
+          changeAt: $checkedConvert('changeAt',
+              (v) => const UtcDateTimeConverter().fromJson(v as String)),
           cid: $checkedConvert('cid', (v) => v as String),
           storageId:
               $checkedConvert('storageId', (v) => v as String? ?? 'local'),
@@ -33,7 +33,9 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
           dataSchemaRev:
               $checkedConvert('dataSchemaRev', (v) => (v as num?)?.toInt()),
           cloudAt: $checkedConvert(
-              'cloudAt', (v) => v == null ? null : DateTime.parse(v as String)),
+              'cloudAt',
+              (v) => _$JsonConverterFromJson<String, DateTime>(
+                  v, const UtcDateTimeConverter().fromJson)),
           schemaVersion:
               $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
           seq: $checkedConvert('seq', (v) => (v as num?)?.toInt() ?? 0),
@@ -52,11 +54,12 @@ Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
       'operation': instance.operation,
       'operationInfoJson': instance.operationInfoJson,
       'stateChanged': instance.stateChanged,
-      'changeAt': instance.changeAt.toIso8601String(),
+      'changeAt': const UtcDateTimeConverter().toJson(instance.changeAt),
       'entityId': instance.entityId,
       'dataJson': instance.dataJson,
       'dataSchemaRev': instance.dataSchemaRev,
-      'cloudAt': instance.cloudAt?.toIso8601String(),
+      'cloudAt': _$JsonConverterToJson<String, DateTime>(
+          instance.cloudAt, const UtcDateTimeConverter().toJson),
       'changeBy': instance.changeBy,
       'schemaVersion': instance.schemaVersion,
       'unknownJson': instance.unknownJson,
@@ -82,6 +85,18 @@ const _$EntityTypeEnumMap = {
   EntityType.note: 'note',
   EntityType.comment: 'comment',
 };
+
+Value? _$JsonConverterFromJson<Json, Value>(
+  Object? json,
+  Value? Function(Json json) fromJson,
+) =>
+    json == null ? null : fromJson(json as Json);
+
+Json? _$JsonConverterToJson<Json, Value>(
+  Value? value,
+  Json? Function(Value value) toJson,
+) =>
+    value == null ? null : toJson(value);
 
 TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
     $checkedCreate(

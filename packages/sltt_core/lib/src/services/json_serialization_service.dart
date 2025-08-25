@@ -1,6 +1,8 @@
 // entity type helpers moved to base_change_log_entry_service.dart
 import 'dart:convert';
 
+import 'package:json_annotation/json_annotation.dart';
+
 /// Storage-agnostic contract for preserving unknown-field data. To avoid
 /// exposing `Map<String,dynamic>` typed members in base types (which
 /// causes some code-generators like Isar to fail when scanning class
@@ -58,3 +60,25 @@ Map<String, dynamic> serializeWithUnknownFieldData<T extends HasUnknownField>(
 }
 
 // (no extension helpers required; mixin provides default implementations)
+
+/// Converter that forces DateTime values to UTC when serializing/deserializing
+/// with json_serializable.
+///
+/// Usage:
+/// ```dart
+/// @UtcDateTimeConverter()
+/// final DateTime changeAt;
+/// ```
+class UtcDateTimeConverter implements JsonConverter<DateTime, String> {
+  const UtcDateTimeConverter();
+
+  @override
+  DateTime fromJson(String json) {
+    // Parse and normalize to UTC
+    // if this were stored in UTC this should be a no-op
+    return DateTime.parse(json).toUtc();
+  }
+
+  @override
+  String toJson(DateTime object) => object.toUtc().toIso8601String();
+}
