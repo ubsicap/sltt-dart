@@ -124,7 +124,8 @@ Map<String, dynamic> _createSafeJsonFromDeserializationError({
   return safeJson;
 }
 
-/// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}
+/// TODO: use same timestamp for changeAt that is HLC by bumping ms counter
+/// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss[-_]HHmm-{4-character-random}
 String generateCid([DateTime? timestamp]) {
   final now = timestamp ?? DateTime.now();
   final utc = now.toUtc();
