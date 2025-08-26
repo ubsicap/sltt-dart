@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:isar/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
@@ -78,17 +76,4 @@ class ClientChangeLogEntry extends BaseChangeLogEntry {
   @override
   Map<String, dynamic> toJson() =>
       serializeWithUnknownFieldData(this, _$ClientChangeLogEntryToJson);
-}
-
-// Json helpers for map <-> string storage
-String _mapToJson(Map<String, dynamic> map) => jsonEncode(map);
-Map<String, dynamic> _jsonToMap(Object? value) {
-  if (value == null) return <String, dynamic>{};
-  if (value is String && value.isEmpty) return <String, dynamic>{};
-  if (value is String) {
-    final decoded = jsonDecode(value);
-    if (decoded is Map) return decoded.cast<String, dynamic>();
-  }
-  if (value is Map) return value.cast<String, dynamic>();
-  return <String, dynamic>{};
 }
