@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
-import 'package:sync_manager/sync_manager.dart';
+import 'package:sync_manager/sync_manager.dart.todo';
 
 Future<void> main() async {
   print('🧪 Testing new project-based API endpoints\n');

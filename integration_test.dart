@@ -1,6 +1,6 @@
 #!/usr/bin/env dart
 
-import 'package:sync_manager/sync_manager.dart';
+import 'package:sync_manager/sync_manager.dart.todo';
 
 Future<void> main() async {
   print('🧪 Running comprehensive integration test\n');
