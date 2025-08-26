@@ -37,7 +37,7 @@ final _isarChangeLogEntryFactoryRegistration = (() {
 })();
 
 @Collection()
-@JsonSerializable(checked: true)
+@JsonSerializable(includeIfNull: true, checked: true)
 class IsarChangeLogEntry extends BaseChangeLogEntry {
   // Isar id/seq
   @override
