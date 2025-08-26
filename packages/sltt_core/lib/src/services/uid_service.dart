@@ -22,17 +22,17 @@ String generateRandomChars(
   return String.fromCharCodes(codeUnits);
 }
 
-/// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss[-_]HHmm-{4-character-random}
+/// Generates a unique CID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HHmm-{4-character-random}
 String generateCid([DateTime? timestamp]) {
   final now = timestamp ?? HlcTimestampGenerator.generate();
-  final utc = now.toUtc();
+  final local = now.toLocal();
 
   // Format: YYYY-mmdd-HHMMss-sss
   final datePart =
-      '${utc.year.toString().padLeft(4, '0')}-'
-      '${utc.month.toString().padLeft(2, '0')}${utc.day.toString().padLeft(2, '0')}-'
-      '${utc.hour.toString().padLeft(2, '0')}${utc.minute.toString().padLeft(2, '0')}${utc.second.toString().padLeft(2, '0')}-'
-      '${utc.millisecond.toString().padLeft(3, '0')}';
+      '${local.year.toString().padLeft(4, '0')}-'
+      '${local.month.toString().padLeft(2, '0')}${local.day.toString().padLeft(2, '0')}-'
+      '${local.hour.toString().padLeft(2, '0')}${local.minute.toString().padLeft(2, '0')}${local.second.toString().padLeft(2, '0')}-'
+      '${local.millisecond.toString().padLeft(3, '0')}';
 
   // Timezone offset: ±HHmm
   final offset = now.timeZoneOffset;

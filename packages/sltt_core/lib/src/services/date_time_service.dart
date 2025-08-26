@@ -6,7 +6,7 @@
 class HlcTimestampGenerator {
   static DateTime _lastTimestamp = DateTime.now().toUtc();
 
-  /// Generates a new HLC timestamp.
+  /// Generates a new (UTC) HLC timestamp.
   static DateTime generate() {
     final now = DateTime.now().toUtc();
     if (now.isAfter(_lastTimestamp)) {
