@@ -8,7 +8,7 @@ part 'isar_change_log_entry.g.dart';
 // ignore: unused_element
 final _isarChangeLogEntryFactoryRegistration = (() {
   registerChangeLogEntryFactoryGroup(
-    FactoryGroup<BaseChangeLogEntry>(
+    SafeJsonSerializationFactoryGroup<BaseChangeLogEntry>(
       (json) => IsarChangeLogEntry.fromJson(json),
       (entry) => (entry as IsarChangeLogEntry).toJson(),
       (original) {

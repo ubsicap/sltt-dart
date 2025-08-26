@@ -237,7 +237,7 @@ void main() {
   setUpAll(() async {
     // Register change-log entry factory group for tests
     registerChangeLogEntryFactoryGroup(
-      FactoryGroup<BaseChangeLogEntry>(
+      SafeJsonSerializationFactoryGroup<BaseChangeLogEntry>(
         (json) => TestChangeLogEntry.fromJson(json),
         (entry) => (entry as TestChangeLogEntry).toJson(),
         (original) {

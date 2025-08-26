@@ -3,7 +3,8 @@ import 'package:sltt_core/src/models/entity_type.dart';
 import 'package:sltt_core/src/models/factory_pair.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 
-final Map<EntityType, FactoryPair<BaseEntityState>> _entityStateFactories = {};
+final Map<EntityType, JsonSerializationFactoryGroup<BaseEntityState>>
+_entityStateFactories = {};
 
 /// Register a factory pair for a specific [entityType] to deserialize
 /// `BaseEntityState` subclasses.
@@ -12,7 +13,10 @@ void registerEntityStateFactory(
   BaseEntityState Function(Map<String, dynamic>) fromJson,
   Map<String, dynamic> Function(BaseEntityState) toBaseJson,
 ) {
-  _entityStateFactories[entityType] = FactoryPair(fromJson, toBaseJson);
+  _entityStateFactories[entityType] = JsonSerializationFactoryGroup(
+    fromJson,
+    toBaseJson,
+  );
 }
 
 /// Deserialize the provided [json] into the registered `BaseEntityState`
@@ -26,11 +30,7 @@ BaseEntityState deserializeEntityStateSafely(Map<String, dynamic> json) {
     throw Exception('No registered entity state factory for $entityType');
   }
   try {
-    return deserializeWithUnknownFieldData(
-      pair.fromJson,
-      json,
-      pair.toBaseJson,
-    );
+    return deserializeWithUnknownFieldData(pair.restore, json, pair.toBaseJson);
   } catch (e) {
     // Entity-state specific deserialization errors are not recovered here.
     // Let the caller handle or surface the error so higher-level logic

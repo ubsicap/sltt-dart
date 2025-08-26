@@ -135,11 +135,11 @@ class TestEntityState extends BaseEntityState {
     required super.entityType,
     super.schemaVersion,
     required super.change_domainId,
-    super.change_domainId_orig_,
+    required super.change_domainId_orig_,
     required super.change_changeAt,
-    super.change_changeAt_orig_,
+    required super.change_changeAt_orig_,
     required super.change_cid,
-    super.change_cid_orig_,
+    required super.change_cid_orig_,
     super.change_dataSchemaRev,
     super.change_cloudAt,
     super.change_cloudAt_orig_,
@@ -194,6 +194,44 @@ class TestEntityState extends BaseEntityState {
        data_parentId_changeBy_ = data_parentId_changeBy_,
        data_parentId_cloudAt_ = data_parentId_cloudAt_;
 
+  factory TestEntityState.fromNew(Map<String, dynamic> json) {
+    // get all the fields with _orig_
+    final entityState = _$TestEntityStateFromJson(json);
+    final allJsonFields = _$TestEntityStateToJson(entityState);
+    final allOrigEntries = allJsonFields.entries.where((entry) {
+      if (entry.key.endsWith('_orig_')) {
+        if (entry.value != null) {
+          throw ArgumentError(
+            'Orig field ${entry.key} should not be set in new entity JSON',
+          );
+        }
+        // field basis for _orig_ field
+        final baseFieldKey = getBaseFieldFromOrigField(entry.key);
+        if (json[baseFieldKey] == null) {
+          throw ArgumentError(
+            'Base field "$baseFieldKey" must be set in new entity JSON to set "${entry.key}"',
+          );
+        }
+        return true;
+      } else {
+        return false;
+      }
+    }).toList();
+    final fullJson = {
+      ...json,
+      ...Map.fromEntries(
+        allOrigEntries.map(
+          (e) => MapEntry(e.key, json[getBaseFieldFromOrigField(e.key)]),
+        ),
+      ),
+    };
+    return deserializeWithUnknownFieldData(
+      _$TestEntityStateFromJson,
+      fullJson,
+      _$TestEntityStateToJson,
+    );
+  }
+
   factory TestEntityState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
         _$TestEntityStateFromJson,
@@ -209,4 +247,8 @@ class TestEntityState extends BaseEntityState {
       json.entries.where((entry) => entry.value != null),
     );
   }
+}
+
+String getBaseFieldFromOrigField(String origField) {
+  return origField.substring(0, origField.length - '_orig_'.length);
 }

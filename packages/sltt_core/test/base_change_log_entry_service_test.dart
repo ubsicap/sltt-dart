@@ -23,7 +23,7 @@ void main() {
     };
 
     final result = deserializeChangeLogEntrySafely<TestChangeLogEntry>(
-      fromJson: (m) => TestChangeLogEntry.fromJson(m),
+      restore: (m) => TestChangeLogEntry.fromJson(m),
       json: rawJson,
       baseToJson: (v) => v.toJson(),
       toSafeJson: (orig) => {
@@ -86,7 +86,7 @@ void main() {
     }
 
     final result = deserializeChangeLogEntrySafely<TestChangeLogEntry>(
-      fromJson: (m) => throwingFactory<TestChangeLogEntry>(m),
+      restore: (m) => throwingFactory<TestChangeLogEntry>(m),
       json: rawJson,
       baseToJson: (v) => v.toJson(),
       toSafeJson: (orig) => {
