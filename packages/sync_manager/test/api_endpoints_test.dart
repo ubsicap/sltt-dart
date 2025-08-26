@@ -27,7 +27,7 @@ void main() {
       if (server != null) {
         final storage = server!.storage;
         if (storage is LocalStorageService) {
-          // Convert the changes to ClientChangeLogEntry and apply them to state
+          // Convert the changes to IsarChangeLogEntry and apply them to state
           for (final changeMap in changeMaps) {
             try {
               final change = IsarChangeLogEntry.fromJson(changeMap);

@@ -4,7 +4,7 @@ import 'package:sltt_core/sltt_core.dart';
 
 part 'isar_change_log_entry.g.dart';
 
-// Register the ClientChangeLogEntry factory group for safe (de)serialization
+// Register the IsarChangeLogEntry factory group for safe (de)serialization
 final _isarChangeLogEntryFactoryRegistration = (() {
   registerChangeLogEntryFactoryGroup(
     FactoryGroup<BaseChangeLogEntry>(

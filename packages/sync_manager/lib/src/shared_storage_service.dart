@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
-import 'models/change_log_entry.dart' as client;
+import 'models/isar_change_log_entry.dart' as client;
 import 'models/isar_document_state.dart';
 import 'models/isar_project_state.dart';
 import 'models/isar_team_state.dart';
@@ -19,9 +19,9 @@ class LocalStorageService extends BaseStorageService {
 
   LocalStorageService(this._databaseName, this._logPrefix);
 
-  /// Helper method to convert ClientChangeLogEntry to BaseChangeLogEntry
+  /// Helper method to convert IsarChangeLogEntry to BaseChangeLogEntry
   BaseChangeLogEntry _convertToChangeLogEntry(
-    client.ClientChangeLogEntry clientEntry,
+    client.IsarChangeLogEntry clientEntry,
   ) {
     return BaseChangeLogEntry(
       domainType: clientEntry.domainType,
@@ -38,9 +38,9 @@ class LocalStorageService extends BaseStorageService {
     )..seq = clientEntry.seq;
   }
 
-  /// Helper method to convert list of ClientChangeLogEntry to list of BaseChangeLogEntry
+  /// Helper method to convert list of IsarChangeLogEntry to list of BaseChangeLogEntry
   List<BaseChangeLogEntry> _convertToChangeLogEntries(
-    List<client.ClientChangeLogEntry> clientEntries,
+    List<client.IsarChangeLogEntry> clientEntries,
   ) {
     return clientEntries.map(_convertToChangeLogEntry).toList();
   }
@@ -58,7 +58,7 @@ class LocalStorageService extends BaseStorageService {
     // Initialize Isar with the specified database name
     _isar = await Isar.open(
       [
-        client.ClientChangeLogEntrySchema,
+        client.IsarChangeLogEntrySchema,
         SyncStateSchema,
         IsarDocumentStateSchema,
         IsarProjectStateSchema,
@@ -82,14 +82,14 @@ class LocalStorageService extends BaseStorageService {
     Map<String, dynamic> changeData,
   ) async {
     print('changeData: ${jsonEncode(changeData)}');
-    final change = client.ClientChangeLogEntry.fromApiData(changeData);
+    final change = client.IsarChangeLogEntry.fromApiData(changeData);
 
     // Set cloudAt if this is a cloud storage service
     change.cloudAt ??= maybeCreateCloudAt();
 
     print('change: ${jsonEncode(change)}');
     await _isar.writeTxn(() async {
-      await _isar.collection<client.ClientChangeLogEntry>().put(change);
+      await _isar.collection<client.IsarChangeLogEntry>().put(change);
     });
 
     // Return as base BaseChangeLogEntry
@@ -384,9 +384,7 @@ class LocalStorageService extends BaseStorageService {
     List<Map<String, dynamic>> changesData,
   ) async {
     final changes = changesData
-        .map(
-          (changeData) => client.ClientChangeLogEntry.fromApiData(changeData),
-        )
+        .map((changeData) => client.IsarChangeLogEntry.fromApiData(changeData))
         .toList();
 
     // Set cloudAt for changes if this is a cloud storage service
@@ -395,10 +393,10 @@ class LocalStorageService extends BaseStorageService {
     }
 
     await _isar.writeTxn(() async {
-      await _isar.collection<client.ClientChangeLogEntry>().putAll(changes);
+      await _isar.collection<client.IsarChangeLogEntry>().putAll(changes);
     });
 
-    // Convert ClientChangeLogEntry to BaseChangeLogEntry for the interface
+    // Convert IsarChangeLogEntry to BaseChangeLogEntry for the interface
     return changes
         .map(
           (clientEntry) => BaseChangeLogEntry(
@@ -649,7 +647,7 @@ class LocalStorageService extends BaseStorageService {
   /// Applies a changelog entry to the appropriate state collection
   /// Returns the updated state entity
   Future<dynamic> applyChangelogToState(
-    client.ClientChangeLogEntry changeLogEntry,
+    client.IsarChangeLogEntry changeLogEntry,
   ) async {
     // Determine entity type and route to appropriate collection
     final entityType = changeLogEntry.entityType;
@@ -668,7 +666,7 @@ class LocalStorageService extends BaseStorageService {
 
   /// Applies changelog entry to project state
   Future<IsarProjectState> _applyChangelogToProjectState(
-    client.ClientChangeLogEntry changeLogEntry,
+    client.IsarChangeLogEntry changeLogEntry,
   ) async {
     IsarProjectState? existingState;
 
@@ -702,7 +700,7 @@ class LocalStorageService extends BaseStorageService {
 
   /// Applies changelog entry to team state
   Future<IsarTeamState> _applyChangelogToTeamState(
-    client.ClientChangeLogEntry changeLogEntry,
+    client.IsarChangeLogEntry changeLogEntry,
   ) async {
     IsarTeamState? existingState;
 
@@ -736,7 +734,7 @@ class LocalStorageService extends BaseStorageService {
 
   /// Applies changelog entry to document state
   Future<IsarDocumentState> _applyChangelogToDocumentState(
-    client.ClientChangeLogEntry changeLogEntry,
+    client.IsarChangeLogEntry changeLogEntry,
   ) async {
     IsarDocumentState? existingState;
 
@@ -1041,14 +1039,14 @@ class CloudStorageService extends LocalStorageService {
     final cloudChangeData = Map<String, dynamic>.from(changeData);
     cloudChangeData.remove('seq'); // Force auto-increment in cloud storage
 
-    final change = client.ClientChangeLogEntry.fromApiData(cloudChangeData);
+    final change = client.IsarChangeLogEntry.fromApiData(cloudChangeData);
 
     // Set cloudAt since this is a cloud storage service
     change.cloudAt ??= maybeCreateCloudAt();
 
     print('change: ${jsonEncode(change)}');
     await _isar.writeTxn(() async {
-      await _isar.collection<client.ClientChangeLogEntry>().put(change);
+      await _isar.collection<client.IsarChangeLogEntry>().put(change);
     });
 
     // Return as base BaseChangeLogEntry

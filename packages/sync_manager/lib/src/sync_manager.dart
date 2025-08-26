@@ -373,8 +373,8 @@ class SyncManager {
     int appliedCount = 0;
     for (final changeMap in changes) {
       try {
-        // Convert Map to ClientChangeLogEntry
-        final change = client.ClientChangeLogEntry.fromJson(changeMap);
+        // Convert Map to IsarChangeLogEntry
+        final change = client.IsarChangeLogEntry.fromJson(changeMap);
 
         // Apply the change to the appropriate state collection
         await _cloudStorage.applyChangelogToState(change);

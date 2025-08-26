@@ -20,7 +20,7 @@ void main() {
 
     test('Project entity changelog_to_state integration works', () async {
       // Create a project changelog entry
-      final changeLogEntry = ClientChangeLogEntry(
+      final changeLogEntry = IsarChangeLogEntry(
         projectId: 'test-project-step4',
         entityType: EntityType.project,
         operation: 'create',
@@ -58,7 +58,7 @@ void main() {
 
     test('Team entity changelog_to_state integration works', () async {
       // Create a team changelog entry
-      final changeLogEntry = ClientChangeLogEntry(
+      final changeLogEntry = IsarChangeLogEntry(
         projectId: 'test-project-step4',
         entityType: EntityType.team,
         operation: 'create',
@@ -94,7 +94,7 @@ void main() {
 
     test('Document entity changelog_to_state integration works', () async {
       // Create a document changelog entry
-      final changeLogEntry = ClientChangeLogEntry(
+      final changeLogEntry = IsarChangeLogEntry(
         projectId: 'test-project-step4',
         entityType: EntityType.document,
         operation: 'create',
@@ -132,7 +132,7 @@ void main() {
 
     test('Unsupported entity types are rejected correctly', () async {
       // Create a unsupported entity changelog entry (e.g., video)
-      final changeLogEntry = ClientChangeLogEntry(
+      final changeLogEntry = IsarChangeLogEntry(
         projectId: 'test-project-step4',
         entityType: EntityType.video,
         operation: 'create',
