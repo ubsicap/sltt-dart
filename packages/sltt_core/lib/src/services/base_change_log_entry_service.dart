@@ -138,7 +138,9 @@ String generateCid([DateTime? timestamp]) {
 
   // Timezone offset: ±HHmm
   final offset = now.timeZoneOffset;
-  final offsetSign = offset.isNegative ? '-' : '+';
+
+  /// NOTE: '+' is not as url safe as '_'
+  final offsetSign = offset.isNegative ? '-' : '_';
   final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
   final offsetMinutes = (offset.inMinutes.abs() % 60).toString().padLeft(
     2,
