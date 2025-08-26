@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import '../services/json_serialization_service.dart';
-import 'entity_type.dart';
 
 /// Abstract base for change log entries. Stores map-like payloads as JSON
 /// strings (`dataJson`, `operationInfoJson`, `unknownJson`) to remain
@@ -25,7 +24,7 @@ abstract class BaseChangeLogEntry
   String domainId;
 
   @override
-  EntityType entityType;
+  String entityType;
 
   @override
   String operation;
@@ -116,7 +115,7 @@ abstract class BaseChangeLogEntry
     required String storageId,
     required String domainType,
     required String domainId,
-    required EntityType entityType,
+    required String entityType,
     required String operation,
     required bool stateChanged,
     Map<String, dynamic> operationInfo = const {},
@@ -158,7 +157,7 @@ mixin ImmutableFields {
   String get storageId;
   String get domainType;
   String get domainId;
-  EntityType get entityType;
+  String get entityType;
   String get entityId;
   DateTime get changeAt;
   String get changeBy;

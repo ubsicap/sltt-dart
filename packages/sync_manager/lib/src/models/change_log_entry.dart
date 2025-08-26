@@ -48,128 +48,29 @@ final _clientChangeLogEntryFactoryRegistration = (() {
 
 @Collection()
 @JsonSerializable(checked: true)
-class ClientChangeLogEntry implements BaseChangeLogEntry {
+class ClientChangeLogEntry extends BaseChangeLogEntry {
   // Isar id/seq
   @override
   Id seq = Isar.autoIncrement;
 
-  // Immutable/core fields
-  @Index()
-  @override
-  String cid;
-
-  @override
-  String storageId;
-
-  @override
-  String domainType;
-
-  @Index()
-  @override
-  String domainId;
-
-  @Enumerated(EnumType.name)
-  @override
-  EntityType entityType;
-
-  @override
-  String entityId;
-
-  @override
-  DateTime changeAt;
-
-  @override
-  String changeBy;
-
-  // Operation/meta
-  @override
-  String operation;
-
-  // Persist Map fields as JSON strings for Isar, expose via computed getters
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  String dataJson;
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  String operationInfoJson;
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  String unknownJson;
-
-  // JSON-facing (ignored by Isar)
-  @ignore
-  @override
-  @JsonKey(name: 'data', toJson: _mapToJson, fromJson: _jsonToMap)
-  Map<String, dynamic> get data => _jsonToMap(dataJson);
-  @override
-  set data(Map<String, dynamic> v) => dataJson = _mapToJson(v);
-
-  @ignore
-  @override
-  @JsonKey(name: 'operationInfo', toJson: _mapToJson, fromJson: _jsonToMap)
-  Map<String, dynamic> get operationInfo => _jsonToMap(operationInfoJson);
-  @override
-  set operationInfo(Map<String, dynamic> v) =>
-      operationInfoJson = _mapToJson(v);
-
-  @override
-  bool stateChanged;
-
-  @override
-  DateTime? cloudAt;
-
-  @override
-  int? dataSchemaRev;
-  @override
-  int? schemaVersion;
-
-  @ignore
-  @override
-  @JsonKey(name: 'unknown', toJson: _mapToJson, fromJson: _jsonToMap)
-  Map<String, dynamic> get unknown => _jsonToMap(unknownJson);
-  @override
-  set unknown(Map<String, dynamic> v) => unknownJson = _mapToJson(v);
-
-  // Provide HasUnknownField-style helper methods so that when this class
-  // "implements BaseChangeLogEntry" it satisfies the mixin's interface.
-  Map<String, dynamic> getUnknown() => _jsonToMap(unknownJson);
-
-  Map<String, dynamic> getData() => _jsonToMap(dataJson);
-
-  Map<String, dynamic> getOperationInfo() => _jsonToMap(operationInfoJson);
-
-  void setUnknown(String k, dynamic v) {
-    final m = _jsonToMap(unknownJson);
-    m[k] = v;
-    unknownJson = _mapToJson(m);
-  }
-
-  void setOperationInfo(String k, dynamic v) {
-    final m = _jsonToMap(operationInfoJson);
-    m[k] = v;
-    operationInfoJson = _mapToJson(m);
-  }
-
   ClientChangeLogEntry({
-    required this.domainId,
-    required this.entityType,
-    required this.operation,
-    required this.changeAt,
-    required this.entityId,
-    Map<String, dynamic> data = const {},
-    this.cloudAt,
-    required this.changeBy,
-    required this.cid,
-    required this.storageId,
-    required this.domainType,
-    required this.stateChanged,
-    Map<String, dynamic> operationInfo = const {},
-    Map<String, dynamic> unknown = const {},
-    this.dataSchemaRev,
-    this.schemaVersion,
-  }) : dataJson = _mapToJson(data),
-       operationInfoJson = _mapToJson(operationInfo),
-       unknownJson = _mapToJson(unknown);
+    required super.domainId,
+    required super.entityType,
+    required super.operation,
+    required super.changeAt,
+    required super.entityId,
+    required super.dataJson,
+    super.cloudAt,
+    required super.changeBy,
+    required super.cid,
+    required super.storageId,
+    required super.domainType,
+    required super.stateChanged,
+    super.operationInfoJson,
+    super.unknownJson,
+    super.dataSchemaRev,
+    super.schemaVersion,
+  });
 
   // json_serializable with unknown-field preservation
   factory ClientChangeLogEntry.fromJson(Map<String, dynamic> json) =>
