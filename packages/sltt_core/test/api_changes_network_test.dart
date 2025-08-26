@@ -284,7 +284,7 @@ void main() {
         path: '/api/changes',
         queryParameters: {'changeUpdates': 'true', 'stateUpdates': 'true'},
       );
-
+      final now = DateTime.now().toUtc();
       final payload = [
         {
           'projectId': 'proj-1', // accepted as domainId
@@ -294,8 +294,8 @@ void main() {
           'entityId': 'entity-1',
           'changeBy': 'tester',
           // minimal required fields for a valid TestChangeLogEntry
-          'changeAt': DateTime.now().toUtc().toIso8601String(),
-          'cid': generateCid(),
+          'changeAt': now.toIso8601String(),
+          'cid': generateCid(now),
           'storageId': 'local',
           'operation': 'update',
           'operationInfoJson': '{}',
