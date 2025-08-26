@@ -2,7 +2,8 @@ import 'dart:convert';
 
 import '../services/json_serialization_service.dart';
 
-/// Abstract base for change log entries. Stores map-like payloads as JSON
+/// (Isar compatible)
+/// abstract base for change log entries. Stores map-like payloads as JSON
 /// strings (`dataJson`, `operationInfoJson`, `unknownJson`) to remain
 /// storage-agnostic.
 abstract class BaseChangeLogEntry
