@@ -78,6 +78,76 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
 @JsonSerializable(includeIfNull: true, checked: true)
 class TestEntityState extends BaseEntityState {
   final String data_nameLocal;
+  // Concrete backing fields to satisfy BaseEntityState abstract accessors
+  @override
+  String entityId = '';
+  @override
+  String entityType = '';
+  @override
+  int? schemaVersion;
+  @override
+  String unknownJson = '{}';
+  @override
+  String change_domainId = '';
+  @override
+  String change_domainId_orig_ = '';
+  @override
+  DateTime change_changeAt = DateTime.fromMillisecondsSinceEpoch(0);
+  @override
+  DateTime? change_changeAt_orig_;
+  @override
+  String change_cid = '';
+  @override
+  String change_cid_orig_ = '';
+  @override
+  int? change_dataSchemaRev;
+  @override
+  DateTime? change_cloudAt;
+  @override
+  DateTime? change_cloudAt_orig_;
+  @override
+  String change_changeBy = '';
+  @override
+  String change_changeBy_orig_ = '';
+
+  @override
+  String? data_rank;
+  @override
+  int? data_rank_dataSchemaRev_;
+  @override
+  DateTime? data_rank_changeAt_;
+  @override
+  String? data_rank_cid_;
+  @override
+  String? data_rank_changeBy_;
+  @override
+  DateTime? data_rank_cloudAt_;
+
+  @override
+  bool? data_deleted = false;
+  @override
+  int? data_deleted_dataSchemaRev_ = 0;
+  @override
+  DateTime? data_deleted_changeAt_;
+  @override
+  String? data_deleted_cid_ = '';
+  @override
+  String? data_deleted_changeBy_ = '';
+  @override
+  DateTime? data_deleted_cloudAt_;
+
+  @override
+  String data_parentId = '';
+  @override
+  int? data_parentId_dataSchemaRev_;
+  @override
+  DateTime data_parentId_changeAt_ = DateTime.fromMillisecondsSinceEpoch(0);
+  @override
+  String data_parentId_cid_ = '';
+  @override
+  String data_parentId_changeBy_ = '';
+  @override
+  DateTime? data_parentId_cloudAt_;
   // Do not shadow base JSON storage fields; use the base accessors via
   // the helper methods (getData/getOperationInfo) instead.
 

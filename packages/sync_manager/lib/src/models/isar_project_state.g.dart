@@ -5690,16 +5690,18 @@ IsarProjectState _$IsarProjectStateFromJson(Map<String, dynamic> json) =>
           data_parentId_cloudAt_: $checkedConvert('data_parentId_cloudAt_',
               (v) => v == null ? null : DateTime.parse(v as String)),
         );
+        $checkedConvert('id', (v) => val.id = (v as num).toInt());
         $checkedConvert('unknownJson', (v) => val.unknownJson = v as String);
         $checkedConvert('change_changeBy_orig_',
             (v) => val.change_changeBy_orig_ = v as String);
-        $checkedConvert('id', (v) => val.id = (v as num).toInt());
         return val;
       },
     );
 
 Map<String, dynamic> _$IsarProjectStateToJson(IsarProjectState instance) =>
     <String, dynamic>{
+      'id': instance.id,
+      'entityId': instance.entityId,
       'entityType': instance.entityType,
       'schemaVersion': instance.schemaVersion,
       'unknownJson': instance.unknownJson,
@@ -5737,6 +5739,4 @@ Map<String, dynamic> _$IsarProjectStateToJson(IsarProjectState instance) =>
       'data_parentId_changeBy_': instance.data_parentId_changeBy_,
       'data_parentId_cloudAt_':
           instance.data_parentId_cloudAt_?.toIso8601String(),
-      'id': instance.id,
-      'entityId': instance.entityId,
     };

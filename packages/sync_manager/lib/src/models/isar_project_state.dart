@@ -17,6 +17,103 @@ class IsarProjectState extends BaseEntityState {
   @Index(unique: true)
   late String entityId;
 
+  @override
+  String entityType = 'project';
+
+  @override
+  int? schemaVersion;
+
+  @override
+  String unknownJson = '{}';
+
+  /// Current project ID
+  @override
+  String change_domainId = '';
+
+  /// Original (first) values for tracking entity creation
+  @override
+  String change_domainId_orig_ = '';
+
+  /// Latest change timestamp
+  @override
+  DateTime change_changeAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// First UTC change timestamp
+  @override
+  DateTime? change_changeAt_orig_;
+
+  /// Latest change ID
+  @override
+  String change_cid = '';
+
+  /// Original (first) change ID
+  @override
+  String change_cid_orig_ = '';
+
+  /// latest data schema revision (no need for _orig_)
+  @override
+  int? change_dataSchemaRev;
+
+  /// Latest cloud timestamp
+  @override
+  DateTime? change_cloudAt;
+
+  /// First UTC cloud timestamp
+  @override
+  DateTime? change_cloudAt_orig_;
+
+  /// Latest change author
+  @override
+  String change_changeBy = '';
+
+  /// Original (first) change author
+  @override
+  String change_changeBy_orig_ = '';
+
+  @override
+  String? data_rank;
+
+  @override
+  int? data_rank_dataSchemaRev_;
+  @override
+  DateTime? data_rank_changeAt_;
+  @override
+  String? data_rank_cid_;
+  @override
+  String? data_rank_changeBy_;
+  @override
+  DateTime? data_rank_cloudAt_;
+
+  @override
+  bool? data_deleted = false;
+
+  // deleted field conflict resolution
+  @override
+  int? data_deleted_dataSchemaRev_ = 0;
+  @override
+  DateTime? data_deleted_changeAt_;
+  @override
+  String? data_deleted_cid_ = '';
+  @override
+  String? data_deleted_changeBy_ = '';
+  @override
+  DateTime? data_deleted_cloudAt_;
+
+  @override
+  String data_parentId = '';
+
+  @override
+  /// parentId field conflict resolution
+  int? data_parentId_dataSchemaRev_;
+  @override
+  DateTime data_parentId_changeAt_ = DateTime.fromMillisecondsSinceEpoch(0);
+  @override
+  String data_parentId_cid_ = '';
+  @override
+  String data_parentId_changeBy_ = '';
+  @override
+  DateTime? data_parentId_cloudAt_;
+
   IsarProjectState({
     required this.entityId,
     super.entityType = 'project',

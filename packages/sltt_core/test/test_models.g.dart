@@ -151,6 +151,7 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
     <String, dynamic>{
+      'data_nameLocal': instance.data_nameLocal,
       'entityId': instance.entityId,
       'entityType': instance.entityType,
       'schemaVersion': instance.schemaVersion,
@@ -189,5 +190,4 @@ Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
       'data_parentId_changeBy_': instance.data_parentId_changeBy_,
       'data_parentId_cloudAt_':
           instance.data_parentId_cloudAt_?.toIso8601String(),
-      'data_nameLocal': instance.data_nameLocal,
     };
