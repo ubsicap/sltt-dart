@@ -29,10 +29,6 @@ abstract class BaseEntityState
   @override
   String unknownJson = '{}';
 
-  /// Map view of unknown fields for callers/tests.
-  @override
-  Map<String, dynamic> get unknown => getUnknown();
-
   /// Current project ID
   String change_domainId = '';
 
@@ -166,7 +162,7 @@ mixin CoreEntityMetaData {
   String get entityId;
   String get entityType;
   int? get schemaVersion;
-  Map<String, dynamic> get unknown;
+  String? get unknownJson;
 }
 
 mixin CoreEntityDataFields {
