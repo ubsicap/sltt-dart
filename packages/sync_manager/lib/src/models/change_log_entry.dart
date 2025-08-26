@@ -28,17 +28,11 @@ final _clientChangeLogEntryFactoryRegistration = (() {
           'cid': original['cid'] ?? generateCid(now),
           'storageId': original['storageId'] ?? 'local',
           'changeBy': original['changeBy'] ?? 'client',
-          'data':
-              (original['data'] as Map<String, dynamic>?) ??
-              <String, dynamic>{},
+          'dataJson': original['dataJson'] ?? '{}',
           'operation': original['operation'] ?? 'update',
-          'operationInfo':
-              (original['operationInfo'] as Map<String, dynamic>?) ??
-              <String, dynamic>{},
+          'operationInfoJson': original['operationInfoJson'] ?? '{}',
           'stateChanged': original['stateChanged'] ?? false,
-          'unknown':
-              (original['unknown'] as Map<String, dynamic>?) ??
-              <String, dynamic>{},
+          'unknownJson': original['unknownJson'] ?? '{}',
         };
       },
     ),
