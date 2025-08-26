@@ -63,7 +63,7 @@ class InMemoryStorage implements BaseStorageService {
       ..removeWhere((k, v) => v == null);
     // Ensure required defaults for entity state
     merged.putIfAbsent('entityId', () => newChange.entityId);
-    merged.putIfAbsent('entityType', () => newChange.entityType.value);
+    merged.putIfAbsent('entityType', () => newChange.entityType);
     merged.putIfAbsent('change_domainId', () => newChange.domainId);
     merged.putIfAbsent('change_domainId_orig_', () => newChange.domainId);
     merged.putIfAbsent(
@@ -81,7 +81,7 @@ class InMemoryStorage implements BaseStorageService {
     final newState = TestEntityState.fromJson(merged);
     _states[_key(
           newChange.domainId,
-          newChange.entityType.value,
+          newChange.entityType,
           newChange.entityId,
         )] =
         newState;

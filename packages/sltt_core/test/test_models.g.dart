@@ -13,8 +13,7 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
       ($checkedConvert) {
         final val = TestChangeLogEntry(
           entityId: $checkedConvert('entityId', (v) => v as String),
-          entityType: $checkedConvert(
-              'entityType', (v) => $enumDecode(_$EntityTypeEnumMap, v)),
+          entityType: $checkedConvert('entityType', (v) => v as String),
           domainId: $checkedConvert('domainId', (v) => v as String),
           domainType: $checkedConvert('domainType', (v) => v as String),
           changeAt: $checkedConvert('changeAt',
@@ -50,7 +49,7 @@ Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
       'storageId': instance.storageId,
       'domainType': instance.domainType,
       'domainId': instance.domainId,
-      'entityType': _$EntityTypeEnumMap[instance.entityType]!,
+      'entityType': instance.entityType,
       'operation': instance.operation,
       'operationInfoJson': instance.operationInfoJson,
       'stateChanged': instance.stateChanged,
@@ -65,26 +64,6 @@ Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
       'unknownJson': instance.unknownJson,
       'seq': instance.seq,
     };
-
-const _$EntityTypeEnumMap = {
-  EntityType.unknown: 'unknown',
-  EntityType.project: 'project',
-  EntityType.team: 'team',
-  EntityType.plan: 'plan',
-  EntityType.stage: 'stage',
-  EntityType.task: 'task',
-  EntityType.member: 'member',
-  EntityType.message: 'message',
-  EntityType.portion: 'portion',
-  EntityType.passage: 'passage',
-  EntityType.reference: 'reference',
-  EntityType.document: 'document',
-  EntityType.video: 'video',
-  EntityType.patch: 'patch',
-  EntityType.gloss: 'gloss',
-  EntityType.note: 'note',
-  EntityType.comment: 'comment',
-};
 
 Value? _$JsonConverterFromJson<Json, Value>(
   Object? json,
@@ -213,3 +192,23 @@ Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
           instance.data_parentId_cloudAt_?.toIso8601String(),
       'data_nameLocal': instance.data_nameLocal,
     };
+
+const _$EntityTypeEnumMap = {
+  EntityType.unknown: 'unknown',
+  EntityType.project: 'project',
+  EntityType.team: 'team',
+  EntityType.plan: 'plan',
+  EntityType.stage: 'stage',
+  EntityType.task: 'task',
+  EntityType.member: 'member',
+  EntityType.message: 'message',
+  EntityType.portion: 'portion',
+  EntityType.passage: 'passage',
+  EntityType.reference: 'reference',
+  EntityType.document: 'document',
+  EntityType.video: 'video',
+  EntityType.patch: 'patch',
+  EntityType.gloss: 'gloss',
+  EntityType.note: 'note',
+  EntityType.comment: 'comment',
+};

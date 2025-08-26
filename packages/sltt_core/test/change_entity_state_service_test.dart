@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:sltt_core/src/models/entity_type.dart';
 import 'package:sltt_core/src/services/change_entity_state_service.dart';
 import 'package:test/test.dart';
 
@@ -43,7 +42,7 @@ void main() {
       test('should return true for duplicate CID', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime,
@@ -68,7 +67,7 @@ void main() {
       test('should return false for different CID', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime,
@@ -95,7 +94,7 @@ void main() {
       test('should calculate create operation for new entity', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity2',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
@@ -117,7 +116,7 @@ void main() {
       test('should calculate update operation for existing entity', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
@@ -145,7 +144,7 @@ void main() {
       test('should calculate delete operation', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
@@ -173,7 +172,7 @@ void main() {
       test('should calculate noOp for no changes', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
@@ -201,7 +200,7 @@ void main() {
       test('should calculate outdated for older changes', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime.subtract(const Duration(minutes: 1)), // Older
@@ -233,7 +232,7 @@ void main() {
         final newerTime = baseTime.add(const Duration(minutes: 5));
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: newerTime,
@@ -282,7 +281,7 @@ void main() {
         final newerTime = baseTime.add(const Duration(minutes: 5));
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: newerTime,
@@ -316,7 +315,7 @@ void main() {
           // incoming has rank same as existing (no-op), parentId changed and nameLocal new
           final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity1',
-            entityType: EntityType.task,
+            entityType: 'task',
             domainId: 'project1',
             domainType: 'project',
             changeAt: baseTime.add(const Duration(minutes: 1)),
@@ -400,7 +399,7 @@ void main() {
 
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime, // between olderTime and newerFieldTime
@@ -446,7 +445,7 @@ void main() {
         final olderTime = baseTime.subtract(const Duration(minutes: 5));
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: olderTime,
@@ -488,7 +487,7 @@ void main() {
       test('should handle new entity creation', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity2',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
@@ -535,7 +534,7 @@ void main() {
       test('should populate nameLocal from change data', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity3',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
@@ -586,7 +585,7 @@ void main() {
       test('should handle entity deletion', () {
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
-          entityType: EntityType.task,
+          entityType: 'task',
           domainId: 'project1',
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
@@ -632,7 +631,7 @@ void main() {
           final newerTime = baseTime.add(const Duration(minutes: 5));
           final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity1',
-            entityType: EntityType.task,
+            entityType: 'task',
             domainId: 'project1',
             domainType: 'project',
             changeAt: newerTime, // Newer than latest in entity state
@@ -714,7 +713,7 @@ void main() {
 
           final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity1',
-            entityType: EntityType.task,
+            entityType: 'task',
             domainId: 'project1',
             domainType: 'project',
             changeAt:
@@ -792,7 +791,7 @@ void main() {
 
           final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity1',
-            entityType: EntityType.task,
+            entityType: 'task',
             domainId: 'project1',
             domainType: 'project',
             changeAt: newerFieldTime, // Older than latest, but newer than field
