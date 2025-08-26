@@ -12,7 +12,7 @@ void main() {
 
     setUp(() {
       baseTime = DateTime.parse('2023-01-01T00:00:00Z');
-      entityState = TestEntityState.fromJson(<String, dynamic>{
+      final esJson = <String, dynamic>{
         'entityId': 'entity1',
         'entityType': 'task',
         'change_domainId': 'project1',
@@ -24,18 +24,19 @@ void main() {
         'change_changeBy': 'user1',
         'change_changeBy_orig_': 'user1',
         'data_parentId': 'parent1',
-        'data_parentId_dataSchemaRev': 1,
+        'data_parentId_dataSchemaRev_': 1,
         'data_parentId_changeAt_': baseTime.toIso8601String(),
         'data_parentId_cid_': 'cid1',
         'data_parentId_changeBy_': 'user1',
         // Add some rank data for testing
         'data_rank': '1',
-        'data_rank_dataSchemaRev': 1,
+        'data_rank_dataSchemaRev_': 1,
         'data_rank_changeAt_': baseTime.toIso8601String(),
         'data_rank_cid_': 'cid1',
         'data_rank_changeBy_': 'user1',
         'unknownJson': '{}',
-      });
+      };
+      entityState = TestEntityState.fromJson(esJson);
     });
 
     group('getMaybeIsDuplicateCidResult', () {
@@ -378,13 +379,13 @@ void main() {
           'change_changeBy_orig_': 'user1',
           // parentId was last updated well before incoming change
           'data_parentId': 'parent1',
-          'data_parentId_dataSchemaRev': 1,
+          'data_parentId_dataSchemaRev_': 1,
           'data_parentId_changeAt_': olderTime.toIso8601String(),
           'data_parentId_cid_': 'cid1',
           'data_parentId_changeBy_': 'user1',
           // rank was updated after incoming change -> incoming rank should be outdated
           'data_rank': '9',
-          'data_rank_dataSchemaRev': 1,
+          'data_rank_dataSchemaRev_': 1,
           'data_rank_changeAt_': newerFieldTime.toIso8601String(),
           'data_rank_cid_': 'field-cid',
           'data_rank_changeBy_': 'user1',
@@ -698,12 +699,13 @@ void main() {
             'change_changeBy': 'user1',
             'change_changeBy_orig_': 'user1',
             'data_parentId': 'parent1',
-            'data_parentId_dataSchemaRev': 1,
+            'data_parentId_dataSchemaRev_': 1,
             'data_parentId_changeAt_': baseTime.toIso8601String(),
             'data_parentId_cid_': 'cid1',
             'data_parentId_changeBy_': 'user1',
             'data_rank': '1',
             'data_rank_dataSchemaRev': 1,
+            'data_rank_dataSchemaRev_': 1,
             'data_rank_changeAt_': newerFieldTime
                 .toIso8601String(), // Field is newer than incoming
             'data_rank_cid_': 'field-cid',
@@ -776,12 +778,12 @@ void main() {
             'change_changeBy': 'user1',
             'change_changeBy_orig_': 'user1',
             'data_parentId': 'parent1',
-            'data_parentId_dataSchemaRev': 1,
+            'data_parentId_dataSchemaRev_': 1,
             'data_parentId_changeAt_': baseTime.toIso8601String(),
             'data_parentId_cid_': 'cid1',
             'data_parentId_changeBy_': 'user1',
             'data_rank': '1',
-            'data_rank_dataSchemaRev': 1,
+            'data_rank_dataSchemaRev_': 1,
             'data_rank_changeAt_': olderTime
                 .toIso8601String(), // Field is older than incoming
             'data_rank_cid_': 'old-field-cid',
