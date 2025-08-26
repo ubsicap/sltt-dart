@@ -58,23 +58,23 @@ class TestEntityState extends BaseEntityState {
   final String data_nameLocal;
   // Concrete backing fields to satisfy BaseEntityState abstract accessors
   @override
-  String entityId = '';
+  String entityId;
   @override
-  String entityType = '';
+  String entityType;
   @override
   int? schemaVersion;
   @override
   String unknownJson = '{}';
   @override
-  String change_domainId = '';
+  String change_domainId;
   @override
   late String change_domainId_orig_;
   @override
-  DateTime change_changeAt = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime change_changeAt;
   @override
   late DateTime change_changeAt_orig_;
   @override
-  String change_cid = '';
+  String change_cid;
   @override
   late String change_cid_orig_;
   @override
@@ -84,7 +84,7 @@ class TestEntityState extends BaseEntityState {
   @override
   late DateTime? change_cloudAt_orig_;
   @override
-  String change_changeBy = '';
+  String change_changeBy;
   @override
   late String change_changeBy_orig_;
 
@@ -104,33 +104,33 @@ class TestEntityState extends BaseEntityState {
   @override
   bool? data_deleted = false;
   @override
-  int? data_deleted_dataSchemaRev_ = 0;
+  int? data_deleted_dataSchemaRev_;
   @override
   DateTime? data_deleted_changeAt_;
   @override
-  String? data_deleted_cid_ = '';
+  String? data_deleted_cid_;
   @override
-  String? data_deleted_changeBy_ = '';
+  String? data_deleted_changeBy_;
   @override
   DateTime? data_deleted_cloudAt_;
 
   @override
-  String data_parentId = '';
+  String data_parentId;
   @override
   int? data_parentId_dataSchemaRev_;
   @override
-  DateTime data_parentId_changeAt_ = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime data_parentId_changeAt_;
   @override
-  String data_parentId_cid_ = '';
+  String data_parentId_cid_;
   @override
-  String data_parentId_changeBy_ = '';
+  String data_parentId_changeBy_;
   @override
   DateTime? data_parentId_cloudAt_;
   // Do not shadow base JSON storage fields; use the base accessors via
   // the helper methods (getData/getOperationInfo) instead.
 
   TestEntityState({
-    this.data_nameLocal = '',
+    required this.data_nameLocal,
     required super.entityId,
     required super.entityType,
     super.schemaVersion,

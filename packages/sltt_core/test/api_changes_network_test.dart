@@ -345,7 +345,7 @@ void main() {
               entityType: 'task',
               entityId: entity,
               changeAt: baseTime,
-              data: {'rank': '1'},
+              data: {'rank': '1', 'nameLocal': 'Test Task'},
             ),
           );
           // Apply newer change rank=2
@@ -388,7 +388,7 @@ void main() {
               entityType: 'task',
               entityId: entity,
               changeAt: baseTime,
-              data: {'rank': '1'},
+              data: {'rank': '1', 'nameLocal': 'Test Task'},
             ),
           );
           // Post same rank with different storageId to trigger data omission
@@ -425,7 +425,11 @@ void main() {
               entityType: 'task',
               entityId: entity,
               changeAt: baseTime,
-              data: {'rank': '1', 'parentId': 'parent1'},
+              data: {
+                'rank': '1',
+                'parentId': 'parent1',
+                'nameLocal': 'Test Task',
+              },
             ),
           );
           // Update with rank same (no-op), parentId changed, nameLocal new
@@ -526,7 +530,7 @@ void main() {
             entityType: 'task',
             entityId: entity,
             changeAt: baseTime,
-            data: {'rank': '1'},
+            data: {'rank': '1', 'nameLocal': 'Test Task'},
           ),
         );
         // Older update
@@ -559,7 +563,11 @@ void main() {
             entityId: entity,
             changeAt: baseTime.add(const Duration(minutes: 1)),
             operation: 'create',
-            data: {'rank': '1', 'parentId': 'parent2'},
+            data: {
+              'rank': '1',
+              'parentId': 'parent2',
+              'nameLocal': 'Test Task',
+            },
           ),
         );
         final cu =
@@ -614,7 +622,7 @@ void main() {
             entityType: 'task',
             entityId: entity,
             changeAt: baseTime,
-            data: {'rank': '1'},
+            data: {'rank': '1', 'nameLocal': 'Test Task'},
           ),
         );
         // Delete

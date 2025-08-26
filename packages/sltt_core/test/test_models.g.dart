@@ -83,8 +83,7 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
       json,
       ($checkedConvert) {
         final val = TestEntityState(
-          data_nameLocal:
-              $checkedConvert('data_nameLocal', (v) => v as String? ?? ''),
+          data_nameLocal: $checkedConvert('data_nameLocal', (v) => v as String),
           entityId: $checkedConvert('entityId', (v) => v as String),
           entityType: $checkedConvert('entityType', (v) => v as String),
           schemaVersion:
