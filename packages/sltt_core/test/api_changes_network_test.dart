@@ -8,6 +8,7 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sltt_core/src/models/factory_pair.dart';
 import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
+import 'package:sltt_core/src/services/date_time_service.dart';
 import 'package:test/test.dart';
 
 import 'test_models.dart';
@@ -244,7 +245,7 @@ void main() {
         (entry) => (entry as TestChangeLogEntry).toJson(),
         (original) {
           // Produce a safe shape for TestChangeLogEntry
-          final now = DateTime.now().toUtc();
+          final now = HlcTimestampGenerator.generate();
           return {
             'entityId': original['entityId'] ?? 'e-test',
             'entityType': original['entityType'] ?? 'project',
