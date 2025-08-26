@@ -5,7 +5,7 @@ library sync_manager;
 
 export 'src/enhanced_rest_api_server.dart';
 // Export models
-export 'src/models/change_log_entry.dart';
+export 'src/models/client_change_log_entry.dart';
 export 'src/models/isar_project_state.dart';
 export 'src/models/isar_team_state.dart';
 export 'src/models/sync_state.dart';
