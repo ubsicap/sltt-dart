@@ -156,7 +156,6 @@ mixin Serializable {
 mixin ImmutableFields {
   String get cid;
   String get storageId;
-  String get clientId;
   String get domainType;
   String get domainId;
   String get entityType;

@@ -5,7 +5,6 @@ import 'package:sltt_core/src/models/base_change_log_entry.dart';
 import 'package:sltt_core/src/models/base_entity_state.dart';
 import 'package:sltt_core/src/models/entity_type.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
-import 'package:sltt_core/src/services/client_id_service.dart';
 
 part 'test_models.g.dart';
 
@@ -15,9 +14,6 @@ part 'test_models.g.dart';
 class TestChangeLogEntry extends BaseChangeLogEntry {
   @override
   final int seq;
-  // Provide concrete clientId to satisfy ImmutableFields contract.
-  @override
-  final String clientId;
 
   // Forwarding implementations to satisfy HasUnknownField contract.
   // No explicit overrides needed here; the base mixin and class provide
@@ -31,7 +27,6 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
     required super.domainType,
     required super.changeAt,
     required super.cid,
-    String? clientId,
     super.storageId = 'local',
     required super.changeBy,
     required super.dataJson,
@@ -43,7 +38,7 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
     super.cloudAt,
     super.schemaVersion,
     this.seq = 0,
-  }) : clientId = clientId ?? ClientIdService.clientId;
+  });
 
   // Convenience constructor for tests that want to pass Maps instead of
   // pre-encoded JSON strings for data/operationInfo/unknown.
@@ -54,7 +49,6 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
     required super.domainType,
     required super.changeAt,
     required super.cid,
-    String? clientId,
     super.storageId = 'local',
     required super.changeBy,
     required super.data,
@@ -66,8 +60,7 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
     super.cloudAt,
     super.schemaVersion,
     this.seq = 0,
-  }) : clientId = clientId ?? ClientIdService.clientId,
-       super.fromJsonWithMaps();
+  }) : super.fromJsonWithMaps();
 
   factory TestChangeLogEntry.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
