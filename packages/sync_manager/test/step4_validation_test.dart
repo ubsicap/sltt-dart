@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sync_manager/src/models/change_log_entry.dart';
+import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 import 'package:sync_manager/src/shared_storage_service.dart';
 import 'package:test/test.dart';
 
