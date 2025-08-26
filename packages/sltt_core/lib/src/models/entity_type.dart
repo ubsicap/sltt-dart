@@ -87,32 +87,8 @@ enum EntityType {
   /// Similar to BaseChangeLogEntry.generateCid() but with entity type suffix
   static String generateEntityId(String entityType, [DateTime? timestamp]) {
     final suffix = getSuffix(entityType);
-
-    // Use the same base format as generateCid
-    final now = timestamp ?? DateTime.now();
-    final utc = now.toUtc();
-
-    // Format: YYYY-mmdd-HHMMss-sss
-    final datePart =
-        '${utc.year.toString().padLeft(4, '0')}-'
-        '${utc.month.toString().padLeft(2, '0')}${utc.day.toString().padLeft(2, '0')}-'
-        '${utc.hour.toString().padLeft(2, '0')}${utc.minute.toString().padLeft(2, '0')}${utc.second.toString().padLeft(2, '0')}-'
-        '${utc.millisecond.toString().padLeft(3, '0')}';
-
-    // Timezone offset: ±HHmm
-    final offset = now.timeZoneOffset;
-    final offsetSign = offset.isNegative ? '-' : '+';
-    final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
-    final offsetMinutes = (offset.inMinutes.abs() % 60).toString().padLeft(
-      2,
-      '0',
-    );
-    final timezonePart = '$offsetSign$offsetHours$offsetMinutes';
-
-    // 4-character random part
-    final randomPart = generateRandomChars(4);
-
-    return '$datePart$timezonePart-$randomPart-$suffix';
+    final cid = generateCid(timestamp);
+    return '$cid-$suffix';
   }
 
   /// Instance method to generate entity ID for this entity type

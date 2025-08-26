@@ -4,7 +4,6 @@ import '../models/base_change_log_entry.dart';
 import '../models/entity_type.dart';
 import '../models/factory_pair.dart';
 import 'json_serialization_service.dart';
-import 'uid_service.dart';
 
 /// Helper used when parsing potentially unknown entityType strings
 class _EntityTypeOrRaw {
@@ -122,35 +121,4 @@ Map<String, dynamic> _createSafeJsonFromDeserializationError({
   });
 
   return safeJson;
-}
-
-/// TODO: use same timestamp for changeAt that is HLC by bumping ms counter
-/// Generates a unique CID (Change ID) in format: YYYY-mmdd-HHMMss-sss[-_]HHmm-{4-character-random}
-String generateCid([DateTime? timestamp]) {
-  final now = timestamp ?? DateTime.now();
-  final utc = now.toUtc();
-
-  // Format: YYYY-mmdd-HHMMss-sss
-  final datePart =
-      '${utc.year.toString().padLeft(4, '0')}-'
-      '${utc.month.toString().padLeft(2, '0')}${utc.day.toString().padLeft(2, '0')}-'
-      '${utc.hour.toString().padLeft(2, '0')}${utc.minute.toString().padLeft(2, '0')}${utc.second.toString().padLeft(2, '0')}-'
-      '${utc.millisecond.toString().padLeft(3, '0')}';
-
-  // Timezone offset: ±HHmm
-  final offset = now.timeZoneOffset;
-
-  /// NOTE: '+' is not as url safe as '_'
-  final offsetSign = offset.isNegative ? '-' : '_';
-  final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
-  final offsetMinutes = (offset.inMinutes.abs() % 60).toString().padLeft(
-    2,
-    '0',
-  );
-  final timezonePart = '$offsetSign$offsetHours$offsetMinutes';
-
-  // 4-character random part
-  final randomPart = generateRandomChars(4);
-
-  return '$datePart$timezonePart-$randomPart';
 }
