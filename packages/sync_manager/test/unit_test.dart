@@ -88,11 +88,11 @@ void main() {
       expect(StorageType.cloudStorage, isNotNull);
 
       // Test that we can create servers with different storage types
-      final outsyncsServer = EnhancedRestApiServer(
+      final outsyncsServer = LocalhostRestApiServer(
         StorageType.outsyncs,
         'Test1',
       );
-      final cloudServer = EnhancedRestApiServer(
+      final cloudServer = LocalhostRestApiServer(
         StorageType.cloudStorage,
         'Test2',
       );

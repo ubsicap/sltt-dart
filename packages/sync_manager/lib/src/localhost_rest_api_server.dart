@@ -8,10 +8,10 @@ enum StorageType { outsyncs, cloudStorage }
 ///
 /// This server extends the base functionality with local storage capabilities
 /// and provides the same API endpoints as other SLTT servers.
-class EnhancedRestApiServer extends BaseRestApiServer {
+class LocalhostRestApiServer extends BaseRestApiServer {
   final StorageType storageType;
 
-  EnhancedRestApiServer(this.storageType, String serverName)
+  LocalhostRestApiServer(this.storageType, String serverName)
     : super(serverName: serverName, storage: _createStorage(storageType));
 
   @override

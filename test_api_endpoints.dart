@@ -10,7 +10,7 @@ Future<void> main() async {
   print('🧪 Testing new project-based API endpoints\n');
 
   // Create an enhanced REST API server with local storage
-  final server = EnhancedRestApiServer(StorageType.outsyncs, 'Test Server');
+  final server = LocalhostRestApiServer(StorageType.outsyncs, 'Test Server');
   await server.start(port: 8080);
 
   print('✅ Server started on port 8080\n');

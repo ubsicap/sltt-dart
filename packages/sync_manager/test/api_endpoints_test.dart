@@ -14,7 +14,7 @@ void main() {
     final bool useCloudStorage =
         Platform.environment['USE_CLOUD_STORAGE'] == 'true';
 
-    late EnhancedRestApiServer? server;
+    late LocalhostRestApiServer? server;
     late Dio dio;
     late String baseUrl;
     late String testProjectId;
@@ -53,7 +53,7 @@ void main() {
         const int testPort = kCloudStoragePort;
         baseUrl = 'http://localhost:$testPort';
         testProjectId = 'api-test-project';
-        server = EnhancedRestApiServer(
+        server = LocalhostRestApiServer(
           StorageType.cloudStorage,
           'Test Cloud Storage Server',
         );
@@ -65,7 +65,7 @@ void main() {
         const int testPort = 8180;
         baseUrl = 'http://localhost:$testPort';
         testProjectId = 'api-test-project';
-        server = EnhancedRestApiServer(
+        server = LocalhostRestApiServer(
           StorageType.outsyncs,
           'Test Outsyncs Server',
         );

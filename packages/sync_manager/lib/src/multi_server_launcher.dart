@@ -1,4 +1,4 @@
-import 'enhanced_rest_api_server.dart';
+import 'localhost_rest_api_server.dart';
 import 'server_ports.dart';
 
 class MultiServerLauncher {
@@ -8,18 +8,18 @@ class MultiServerLauncher {
 
   MultiServerLauncher._();
 
-  EnhancedRestApiServer? _outsyncsServer;
-  EnhancedRestApiServer? _cloudStorageServer;
+  LocalhostRestApiServer? _outsyncsServer;
+  LocalhostRestApiServer? _cloudStorageServer;
 
   Future<void> startAllServers() async {
     print('[MultiServerLauncher] Starting all servers...');
 
     // Start outsyncs server on port kOutsyncsPort
-    _outsyncsServer = EnhancedRestApiServer(StorageType.outsyncs, 'outsyncs');
+    _outsyncsServer = LocalhostRestApiServer(StorageType.outsyncs, 'outsyncs');
     await _outsyncsServer!.start(port: kOutsyncsPort);
 
     // Start cloud storage server on port kCloudStoragePort
-    _cloudStorageServer = EnhancedRestApiServer(
+    _cloudStorageServer = LocalhostRestApiServer(
       StorageType.cloudStorage,
       'cloudStorage',
     );
@@ -32,7 +32,7 @@ class MultiServerLauncher {
     switch (serverType.toLowerCase()) {
       case 'outsyncs':
         if (_outsyncsServer == null) {
-          _outsyncsServer = EnhancedRestApiServer(
+          _outsyncsServer = LocalhostRestApiServer(
             StorageType.outsyncs,
             'outsyncs',
           );
@@ -44,7 +44,7 @@ class MultiServerLauncher {
       case 'cloud':
       case 'cloudstorage':
         if (_cloudStorageServer == null) {
-          _cloudStorageServer = EnhancedRestApiServer(
+          _cloudStorageServer = LocalhostRestApiServer(
             StorageType.cloudStorage,
             'cloudStorage',
           );

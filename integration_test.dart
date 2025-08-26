@@ -54,7 +54,7 @@ Future<void> main() async {
 
     // Test 4: REST API Server creation
     print('\n✅ Test 4: Testing REST API server...');
-    final server = EnhancedRestApiServer(
+    final server = LocalhostRestApiServer(
       StorageType.outsyncs,
       'Integration Test Server',
     );

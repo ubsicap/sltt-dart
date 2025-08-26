@@ -6,13 +6,13 @@ import 'package:test/test.dart';
 
 void main() {
   group('Projects Endpoint Tests', () {
-    late EnhancedRestApiServer server;
+    late LocalhostRestApiServer server;
     const int testPort =
         8084; // Use port 8084 to avoid conflicts with other tests
     const String baseUrl = 'http://localhost:$testPort';
 
     setUpAll(() async {
-      server = EnhancedRestApiServer(
+      server = LocalhostRestApiServer(
         StorageType.outsyncs,
         'Projects Test Server',
       );
