@@ -1,9 +1,6 @@
 import 'package:isar/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/models/factory_pair.dart';
-import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
-import 'package:sltt_core/src/services/json_serialization_service.dart';
 
 part 'client_change_log_entry.g.dart';
 
@@ -16,7 +13,7 @@ final _clientChangeLogEntryFactoryRegistration = (() {
       (original) {
         // Build a safe JSON shape for recovery on deserialization errors
         // TODO: can we have a service do most of the mapping?
-        final now = DateTime.now().toUtc();
+        final now = HlcTimestampGenerator.generate();
         return {
           'entityId': original['entityId'] ?? 'e-client',
           'entityType': original['entityType'] ?? 'unknown',
