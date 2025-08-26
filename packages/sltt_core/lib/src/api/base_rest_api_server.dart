@@ -1011,17 +1011,18 @@ abstract class BaseRestApiServer {
           // on cloud storage, dynamodb will return its own error
           if (targetStorageId == changeLogEntry.storageId) {
             final mergedState = {
-                if (entityState != null) ...entityState.toJson(),
-                ...result.stateUpdates,
-              };
+              if (entityState != null) ...entityState.toJson(),
+              ...result.stateUpdates,
+            };
             final entityStateRecordSize = utf8
                 .encode(jsonEncode(mergedState))
                 .lengthInBytes;
             if (entityStateRecordSize > dynamodbPayloadLimit) {
-            return _errorResponse(
-              'Change[$i] cid($cid) exceeds payload limits ($dynamodbPayloadLimit bytes)',
-              400,
-            );
+              return _errorResponse(
+                'Change[$i] cid($cid) exceeds payload limits ($dynamodbPayloadLimit bytes)',
+                400,
+              );
+            }
           }
           final updateResults = await storage.updateChangeLogAndState(
             changeLogEntry: changeLogEntry,
