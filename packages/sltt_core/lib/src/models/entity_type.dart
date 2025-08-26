@@ -27,30 +27,6 @@ enum EntityType {
   /// The string representation of the entity type
   final String value;
 
-  /// Convert from string to EntityType enum
-  static EntityType fromString(String value) {
-    for (final entityType in EntityType.values) {
-      if (entityType.value.toLowerCase() == value.toLowerCase()) {
-        return entityType;
-      }
-    }
-    throw ArgumentError('Unknown entity type: $value');
-  }
-
-  /// Convert from string to EntityType enum, returning null for unknown values
-  static EntityType? tryFromString(String? value) {
-    if (value == null) return null;
-    try {
-      return fromString(value);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Get all entity type values as strings
-  static List<String> get allValues =>
-      EntityType.values.map((e) => e.value).toList();
-
   /// Entity type suffix mapping for consistent entity ID generation
   /// Uses most representative 4 characters, padding with Z where needed
   static const Map<String, String> suffixMapping = {
@@ -75,6 +51,30 @@ enum EntityType {
   /// Get the 4-character suffix for this entity type
   String get suffix =>
       suffixMapping[value] ?? value.substring(0, 4).padRight(4, 'Z');
+
+  /// Convert from string to EntityType enum
+  static EntityType fromString(String value) {
+    for (final entityType in EntityType.values) {
+      if (entityType.value.toLowerCase() == value.toLowerCase()) {
+        return entityType;
+      }
+    }
+    throw ArgumentError('Unknown entity type: $value');
+  }
+
+  /// Convert from string to EntityType enum, returning null for unknown values
+  static EntityType? tryFromString(String? value) {
+    if (value == null) return null;
+    try {
+      return fromString(value);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get all entity type values as strings
+  static List<String> get allValues =>
+      EntityType.values.map((e) => e.value).toList();
 
   /// Get entity suffix for any entity type value
   static String getSuffix(String entityType) {
