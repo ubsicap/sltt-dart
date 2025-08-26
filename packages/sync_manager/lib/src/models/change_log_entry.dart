@@ -17,6 +17,7 @@ final _clientChangeLogEntryFactoryRegistration = (() {
       (entry) => (entry as ClientChangeLogEntry).toJson(),
       (original) {
         // Build a safe JSON shape for recovery on deserialization errors
+        // TODO: can we have a service do most of the mapping?
         final now = DateTime.now().toUtc();
         return {
           'entityId': original['entityId'] ?? 'e-client',
