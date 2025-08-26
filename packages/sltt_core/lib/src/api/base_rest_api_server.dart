@@ -9,7 +9,7 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
 
-/// Maximum payload size for DynamoDB/APIGateway (in bytes)
+/// 380KB (~400KB) Maximum payload size for DynamoDB/APIGateway (in bytes)
 final dynamodbPayloadLimit = 380000;
 
 /// Base REST API server that provides common functionality for all storage types.
@@ -1007,12 +1007,19 @@ abstract class BaseRestApiServer {
             entityState,
             targetStorageId: targetStorageId,
           );
-          // throw error if targetStorageId is same as changeLogEntry.storageId and total update payload is greater than dynamodb payload limits
-          if (targetStorageId == changeLogEntry.storageId &&
-              ({...changeLogEntry.toJson(), ...result.changeUpdates}.length >
-                  dynamodbPayloadLimit)) {
+          // return error if targetStorageId is same as changeLogEntry.storageId and total state update payload is greater than dynamodb payload limits (assume state record is greater than change record)
+          // on cloud storage, dynamodb will return its own error
+          if (targetStorageId == changeLogEntry.storageId) {
+            final mergedState = {
+                if (entityState != null) ...entityState.toJson(),
+                ...result.stateUpdates,
+              };
+            final entityStateRecordSize = utf8
+                .encode(jsonEncode(mergedState))
+                .lengthInBytes;
+            if (entityStateRecordSize > dynamodbPayloadLimit) {
             return _errorResponse(
-              'Change[$i] cid($cid) exceeds payload limits',
+              'Change[$i] cid($cid) exceeds payload limits ($dynamodbPayloadLimit bytes)',
               400,
             );
           }
