@@ -92,14 +92,14 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
           change_domainId:
               $checkedConvert('change_domainId', (v) => v as String),
           change_domainId_orig_:
-              $checkedConvert('change_domainId_orig_', (v) => v as String),
+              $checkedConvert('change_domainId_orig_', (v) => v as String?),
           change_changeAt: $checkedConvert(
               'change_changeAt', (v) => DateTime.parse(v as String)),
           change_changeAt_orig_: $checkedConvert('change_changeAt_orig_',
               (v) => v == null ? null : DateTime.parse(v as String)),
           change_cid: $checkedConvert('change_cid', (v) => v as String),
           change_cid_orig_:
-              $checkedConvert('change_cid_orig_', (v) => v as String),
+              $checkedConvert('change_cid_orig_', (v) => v as String?),
           change_dataSchemaRev: $checkedConvert(
               'change_dataSchemaRev', (v) => (v as num?)?.toInt()),
           change_cloudAt: $checkedConvert('change_cloudAt',
@@ -159,8 +159,7 @@ Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
       'change_domainId': instance.change_domainId,
       'change_domainId_orig_': instance.change_domainId_orig_,
       'change_changeAt': instance.change_changeAt.toIso8601String(),
-      'change_changeAt_orig_':
-          instance.change_changeAt_orig_?.toIso8601String(),
+      'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),
       'change_cid': instance.change_cid,
       'change_cid_orig_': instance.change_cid_orig_,
       'change_dataSchemaRev': instance.change_dataSchemaRev,

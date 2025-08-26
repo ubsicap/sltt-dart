@@ -1,4 +1,4 @@
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, prefer_initializing_formals
 
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/src/models/base_change_log_entry.dart';
@@ -37,7 +37,7 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
     super.cloudAt,
     super.schemaVersion,
     this.seq = 0,
-  });
+  }) : super();
 
   // Convenience constructor for tests that want to pass Maps instead of
   // pre-encoded JSON strings for data/operationInfo/unknown.
@@ -90,25 +90,25 @@ class TestEntityState extends BaseEntityState {
   @override
   String change_domainId = '';
   @override
-  String change_domainId_orig_ = '';
+  late String change_domainId_orig_;
   @override
   DateTime change_changeAt = DateTime.fromMillisecondsSinceEpoch(0);
   @override
-  DateTime? change_changeAt_orig_;
+  late DateTime change_changeAt_orig_;
   @override
   String change_cid = '';
   @override
-  String change_cid_orig_ = '';
+  late String change_cid_orig_;
   @override
   int? change_dataSchemaRev;
   @override
   DateTime? change_cloudAt;
   @override
-  DateTime? change_cloudAt_orig_;
+  late DateTime? change_cloudAt_orig_;
   @override
   String change_changeBy = '';
   @override
-  String change_changeBy_orig_ = '';
+  late String change_changeBy_orig_;
 
   @override
   String? data_rank;
@@ -157,34 +157,64 @@ class TestEntityState extends BaseEntityState {
     required super.entityType,
     super.schemaVersion,
     required super.change_domainId,
-    required super.change_domainId_orig_,
+    super.change_domainId_orig_,
     required super.change_changeAt,
-    required super.change_changeAt_orig_,
+    super.change_changeAt_orig_,
     required super.change_cid,
-    required super.change_cid_orig_,
+    super.change_cid_orig_,
     super.change_dataSchemaRev,
     super.change_cloudAt,
     super.change_cloudAt_orig_,
     required super.change_changeBy,
-    super.data_rank_dataSchemaRev_,
-    super.data_rank,
-    super.data_rank_changeAt_,
-    super.data_rank_cid_,
-    super.data_rank_changeBy_,
-    super.data_rank_cloudAt_,
-    super.data_deleted,
-    super.data_deleted_dataSchemaRev_,
-    super.data_deleted_changeAt_,
-    super.data_deleted_cid_,
-    super.data_deleted_changeBy_,
-    super.data_deleted_cloudAt_,
+    int? data_rank_dataSchemaRev_,
+    String? data_rank,
+    DateTime? data_rank_changeAt_,
+    String? data_rank_cid_,
+    String? data_rank_changeBy_,
+    DateTime? data_rank_cloudAt_,
+    bool? data_deleted,
+    int? data_deleted_dataSchemaRev_,
+    DateTime? data_deleted_changeAt_,
+    String? data_deleted_cid_,
+    String? data_deleted_changeBy_,
+    DateTime? data_deleted_cloudAt_,
     required super.data_parentId,
     required super.data_parentId_dataSchemaRev_,
     required super.data_parentId_changeAt_,
     required super.data_parentId_cid_,
     required super.data_parentId_changeBy_,
     super.data_parentId_cloudAt_,
-  });
+  }) : entityId = entityId,
+       entityType = entityType,
+       schemaVersion = schemaVersion,
+       change_domainId = change_domainId,
+       change_domainId_orig_ = change_domainId_orig_ ?? change_domainId,
+       change_changeAt = change_changeAt,
+       change_changeAt_orig_ = change_changeAt_orig_ ?? change_changeAt,
+       change_cid = change_cid,
+       change_cid_orig_ = change_cid_orig_ ?? change_cid,
+       change_dataSchemaRev = change_dataSchemaRev,
+       change_cloudAt = change_cloudAt,
+       change_cloudAt_orig_ = change_cloudAt_orig_ ?? change_cloudAt,
+       change_changeBy = change_changeBy,
+       data_rank_dataSchemaRev_ = data_rank_dataSchemaRev_,
+       data_rank = data_rank,
+       data_rank_changeAt_ = data_rank_changeAt_,
+       data_rank_cid_ = data_rank_cid_,
+       data_rank_changeBy_ = data_rank_changeBy_,
+       data_rank_cloudAt_ = data_rank_cloudAt_,
+       data_deleted = data_deleted,
+       data_deleted_dataSchemaRev_ = data_deleted_dataSchemaRev_,
+       data_deleted_changeAt_ = data_deleted_changeAt_,
+       data_deleted_cid_ = data_deleted_cid_,
+       data_deleted_changeBy_ = data_deleted_changeBy_,
+       data_deleted_cloudAt_ = data_deleted_cloudAt_,
+       data_parentId = data_parentId,
+       data_parentId_dataSchemaRev_ = data_parentId_dataSchemaRev_,
+       data_parentId_changeAt_ = data_parentId_changeAt_,
+       data_parentId_cid_ = data_parentId_cid_,
+       data_parentId_changeBy_ = data_parentId_changeBy_,
+       data_parentId_cloudAt_ = data_parentId_cloudAt_;
 
   factory TestEntityState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(

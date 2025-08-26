@@ -48,8 +48,8 @@ abstract class BaseEntityState
   set change_changeAt(DateTime v);
 
   /// First UTC change timestamp
-  DateTime? get change_changeAt_orig_;
-  set change_changeAt_orig_(DateTime? v);
+  DateTime get change_changeAt_orig_;
+  set change_changeAt_orig_(DateTime v);
 
   /// Latest change ID
   @override
@@ -159,11 +159,11 @@ abstract class BaseEntityState
     required String entityType,
     int? schemaVersion,
     required String change_domainId,
-    required String change_domainId_orig_,
+    String? change_domainId_orig_,
     required DateTime change_changeAt,
     DateTime? change_changeAt_orig_,
     required String change_cid,
-    required String change_cid_orig_,
+    String? change_cid_orig_,
     int? change_dataSchemaRev,
     DateTime? change_cloudAt,
     DateTime? change_cloudAt_orig_,
@@ -186,7 +186,13 @@ abstract class BaseEntityState
     required String data_parentId_cid_,
     required String data_parentId_changeBy_,
     DateTime? data_parentId_cloudAt_,
-  });
+  }) {
+    // set _orig_ fields if not already set
+    this.change_domainId_orig_ = change_domainId_orig_ ?? change_domainId;
+    this.change_changeAt_orig_ = change_changeAt_orig_ ?? change_changeAt;
+    this.change_cid_orig_ = change_cid_orig_ ?? change_cid;
+    this.change_cloudAt_orig_ = change_cloudAt_orig_ ?? change_cloudAt;
+  }
 
   // Abstract methods to be implemented by concrete subclasses
   Map<String, dynamic> toJson();

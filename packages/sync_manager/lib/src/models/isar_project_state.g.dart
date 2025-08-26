@@ -311,15 +311,11 @@ IsarProjectState _isarProjectStateDeserialize(
 ) {
   final object = IsarProjectState(
     change_changeAt: reader.readDateTime(offsets[0]),
-    change_changeAt_orig_: reader.readDateTimeOrNull(offsets[1]),
     change_changeBy: reader.readString(offsets[2]),
     change_cid: reader.readString(offsets[4]),
-    change_cid_orig_: reader.readString(offsets[5]),
     change_cloudAt: reader.readDateTimeOrNull(offsets[6]),
-    change_cloudAt_orig_: reader.readDateTimeOrNull(offsets[7]),
     change_dataSchemaRev: reader.readLongOrNull(offsets[8]),
     change_domainId: reader.readString(offsets[9]),
-    change_domainId_orig_: reader.readString(offsets[10]),
     data_deleted: reader.readBoolOrNull(offsets[11]),
     data_deleted_changeAt_: reader.readDateTimeOrNull(offsets[12]),
     data_deleted_changeBy_: reader.readStringOrNull(offsets[13]),
@@ -342,7 +338,11 @@ IsarProjectState _isarProjectStateDeserialize(
     entityType: reader.readStringOrNull(offsets[30]) ?? 'project',
     schemaVersion: reader.readLongOrNull(offsets[31]),
   );
+  object.change_changeAt_orig_ = reader.readDateTime(offsets[1]);
   object.change_changeBy_orig_ = reader.readString(offsets[3]);
+  object.change_cid_orig_ = reader.readString(offsets[5]);
+  object.change_cloudAt_orig_ = reader.readDateTimeOrNull(offsets[7]);
+  object.change_domainId_orig_ = reader.readString(offsets[10]);
   object.id = id;
   object.unknownJson = reader.readString(offsets[32]);
   return object;
@@ -358,7 +358,7 @@ P _isarProjectStateDeserializeProp<P>(
     case 0:
       return (reader.readDateTime(offset)) as P;
     case 1:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 2:
       return (reader.readString(offset)) as P;
     case 3:
@@ -678,25 +678,7 @@ extension IsarProjectStateQueryFilter
   }
 
   QueryBuilder<IsarProjectState, IsarProjectState, QAfterFilterCondition>
-      change_changeAt_orig_IsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'change_changeAt_orig_',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarProjectState, IsarProjectState, QAfterFilterCondition>
-      change_changeAt_orig_IsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'change_changeAt_orig_',
-      ));
-    });
-  }
-
-  QueryBuilder<IsarProjectState, IsarProjectState, QAfterFilterCondition>
-      change_changeAt_orig_EqualTo(DateTime? value) {
+      change_changeAt_orig_EqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'change_changeAt_orig_',
@@ -707,7 +689,7 @@ extension IsarProjectStateQueryFilter
 
   QueryBuilder<IsarProjectState, IsarProjectState, QAfterFilterCondition>
       change_changeAt_orig_GreaterThan(
-    DateTime? value, {
+    DateTime value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -721,7 +703,7 @@ extension IsarProjectStateQueryFilter
 
   QueryBuilder<IsarProjectState, IsarProjectState, QAfterFilterCondition>
       change_changeAt_orig_LessThan(
-    DateTime? value, {
+    DateTime value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -735,8 +717,8 @@ extension IsarProjectStateQueryFilter
 
   QueryBuilder<IsarProjectState, IsarProjectState, QAfterFilterCondition>
       change_changeAt_orig_Between(
-    DateTime? lower,
-    DateTime? upper, {
+    DateTime lower,
+    DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -5398,7 +5380,7 @@ extension IsarProjectStateQueryProperty
     });
   }
 
-  QueryBuilder<IsarProjectState, DateTime?, QQueryOperations>
+  QueryBuilder<IsarProjectState, DateTime, QQueryOperations>
       change_changeAt_orig_Property() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'change_changeAt_orig_');
@@ -5639,20 +5621,12 @@ IsarProjectState _$IsarProjectStateFromJson(Map<String, dynamic> json) =>
               $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
           change_domainId:
               $checkedConvert('change_domainId', (v) => v as String),
-          change_domainId_orig_:
-              $checkedConvert('change_domainId_orig_', (v) => v as String),
           change_changeAt: $checkedConvert(
               'change_changeAt', (v) => DateTime.parse(v as String)),
-          change_changeAt_orig_: $checkedConvert('change_changeAt_orig_',
-              (v) => v == null ? null : DateTime.parse(v as String)),
           change_cid: $checkedConvert('change_cid', (v) => v as String),
-          change_cid_orig_:
-              $checkedConvert('change_cid_orig_', (v) => v as String),
           change_dataSchemaRev: $checkedConvert(
               'change_dataSchemaRev', (v) => (v as num?)?.toInt()),
           change_cloudAt: $checkedConvert('change_cloudAt',
-              (v) => v == null ? null : DateTime.parse(v as String)),
-          change_cloudAt_orig_: $checkedConvert('change_cloudAt_orig_',
               (v) => v == null ? null : DateTime.parse(v as String)),
           change_changeBy:
               $checkedConvert('change_changeBy', (v) => v as String),
@@ -5692,6 +5666,16 @@ IsarProjectState _$IsarProjectStateFromJson(Map<String, dynamic> json) =>
         );
         $checkedConvert('id', (v) => val.id = (v as num).toInt());
         $checkedConvert('unknownJson', (v) => val.unknownJson = v as String);
+        $checkedConvert('change_domainId_orig_',
+            (v) => val.change_domainId_orig_ = v as String);
+        $checkedConvert('change_changeAt_orig_',
+            (v) => val.change_changeAt_orig_ = DateTime.parse(v as String));
+        $checkedConvert(
+            'change_cid_orig_', (v) => val.change_cid_orig_ = v as String);
+        $checkedConvert(
+            'change_cloudAt_orig_',
+            (v) => val.change_cloudAt_orig_ =
+                v == null ? null : DateTime.parse(v as String));
         $checkedConvert('change_changeBy_orig_',
             (v) => val.change_changeBy_orig_ = v as String);
         return val;
@@ -5708,8 +5692,7 @@ Map<String, dynamic> _$IsarProjectStateToJson(IsarProjectState instance) =>
       'change_domainId': instance.change_domainId,
       'change_domainId_orig_': instance.change_domainId_orig_,
       'change_changeAt': instance.change_changeAt.toIso8601String(),
-      'change_changeAt_orig_':
-          instance.change_changeAt_orig_?.toIso8601String(),
+      'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),
       'change_cid': instance.change_cid,
       'change_cid_orig_': instance.change_cid_orig_,
       'change_dataSchemaRev': instance.change_dataSchemaRev,
