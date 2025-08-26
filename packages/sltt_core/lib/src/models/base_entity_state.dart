@@ -2,8 +2,6 @@
 
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 
-import 'entity_type.dart';
-
 /// Base class for entity state storage with common metadata
 /// This provides the core state schema common across all entity types
 /// Backend-agnostic - no database-specific dependencies
@@ -19,7 +17,7 @@ abstract class BaseEntityState
 
   /// Immutable - entity type enum
   @override
-  EntityType entityType;
+  String entityType;
 
   /// Schema Version number for EntityState
   @override
@@ -166,7 +164,7 @@ abstract class BaseEntityState
 
 mixin CoreEntityMetaData {
   String get entityId;
-  EntityType get entityType;
+  String get entityType;
   int? get schemaVersion;
   Map<String, dynamic> get unknown;
 }

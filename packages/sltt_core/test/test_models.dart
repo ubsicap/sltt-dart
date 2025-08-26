@@ -3,7 +3,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/src/models/base_change_log_entry.dart';
 import 'package:sltt_core/src/models/base_entity_state.dart';
-import 'package:sltt_core/src/models/entity_type.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 
 part 'test_models.g.dart';

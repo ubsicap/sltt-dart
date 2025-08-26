@@ -7,7 +7,6 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
 
 /// 380KB (~400KB) Maximum payload size for DynamoDB/APIGateway (in bytes)
 final dynamodbPayloadLimit = 380000;

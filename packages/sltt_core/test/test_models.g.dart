@@ -86,8 +86,7 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
           data_nameLocal:
               $checkedConvert('data_nameLocal', (v) => v as String? ?? ''),
           entityId: $checkedConvert('entityId', (v) => v as String),
-          entityType: $checkedConvert(
-              'entityType', (v) => $enumDecode(_$EntityTypeEnumMap, v)),
+          entityType: $checkedConvert('entityType', (v) => v as String),
           schemaVersion:
               $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
           change_domainId:
@@ -153,7 +152,7 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
     <String, dynamic>{
       'entityId': instance.entityId,
-      'entityType': _$EntityTypeEnumMap[instance.entityType]!,
+      'entityType': instance.entityType,
       'schemaVersion': instance.schemaVersion,
       'unknownJson': instance.unknownJson,
       'change_domainId': instance.change_domainId,
@@ -192,23 +191,3 @@ Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
           instance.data_parentId_cloudAt_?.toIso8601String(),
       'data_nameLocal': instance.data_nameLocal,
     };
-
-const _$EntityTypeEnumMap = {
-  EntityType.unknown: 'unknown',
-  EntityType.project: 'project',
-  EntityType.team: 'team',
-  EntityType.plan: 'plan',
-  EntityType.stage: 'stage',
-  EntityType.task: 'task',
-  EntityType.member: 'member',
-  EntityType.message: 'message',
-  EntityType.portion: 'portion',
-  EntityType.passage: 'passage',
-  EntityType.reference: 'reference',
-  EntityType.document: 'document',
-  EntityType.video: 'video',
-  EntityType.patch: 'patch',
-  EntityType.gloss: 'gloss',
-  EntityType.note: 'note',
-  EntityType.comment: 'comment',
-};
