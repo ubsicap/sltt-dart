@@ -31,7 +31,7 @@ void main() {
         'description': 'A test project',
       };
 
-      final entry = ClientChangeLogEntry(
+      final entry = IsarChangeLogEntry(
         projectId: 'proj-123',
         entityType: EntityType.project,
         operation: 'create',

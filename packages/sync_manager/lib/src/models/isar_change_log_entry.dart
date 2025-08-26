@@ -2,14 +2,14 @@ import 'package:isar/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
 
-part 'client_change_log_entry.g.dart';
+part 'isar_change_log_entry.g.dart';
 
 // Register the ClientChangeLogEntry factory group for safe (de)serialization
-final _clientChangeLogEntryFactoryRegistration = (() {
+final _isarChangeLogEntryFactoryRegistration = (() {
   registerChangeLogEntryFactoryGroup(
     FactoryGroup<BaseChangeLogEntry>(
-      (json) => ClientChangeLogEntry.fromJson(json),
-      (entry) => (entry as ClientChangeLogEntry).toJson(),
+      (json) => IsarChangeLogEntry.fromJson(json),
+      (entry) => (entry as IsarChangeLogEntry).toJson(),
       (original) {
         // Build a safe JSON shape for recovery on deserialization errors
         // TODO: can we have a service do most of the mapping?
@@ -38,12 +38,12 @@ final _clientChangeLogEntryFactoryRegistration = (() {
 
 @Collection()
 @JsonSerializable(checked: true)
-class ClientChangeLogEntry extends BaseChangeLogEntry {
+class IsarChangeLogEntry extends BaseChangeLogEntry {
   // Isar id/seq
   @override
   Id seq = Isar.autoIncrement;
 
-  ClientChangeLogEntry({
+  IsarChangeLogEntry({
     required super.domainId,
     required super.entityType,
     required super.operation,
@@ -63,14 +63,14 @@ class ClientChangeLogEntry extends BaseChangeLogEntry {
   });
 
   // json_serializable with unknown-field preservation
-  factory ClientChangeLogEntry.fromJson(Map<String, dynamic> json) =>
+  factory IsarChangeLogEntry.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
-        _$ClientChangeLogEntryFromJson,
+        _$IsarChangeLogEntryFromJson,
         json,
-        _$ClientChangeLogEntryToJson,
+        _$IsarChangeLogEntryToJson,
       );
 
   @override
   Map<String, dynamic> toJson() =>
-      serializeWithUnknownFieldData(this, _$ClientChangeLogEntryToJson);
+      serializeWithUnknownFieldData(this, _$IsarChangeLogEntryToJson);
 }

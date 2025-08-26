@@ -30,7 +30,7 @@ void main() {
           // Convert the changes to ClientChangeLogEntry and apply them to state
           for (final changeMap in changeMaps) {
             try {
-              final change = ClientChangeLogEntry.fromJson(changeMap);
+              final change = IsarChangeLogEntry.fromJson(changeMap);
               await storage.applyChangelogToState(change);
             } catch (e) {
               print('Warning: Could not apply change to state: $e');

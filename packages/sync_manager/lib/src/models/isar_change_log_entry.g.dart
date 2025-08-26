@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'client_change_log_entry.dart';
+part of 'isar_change_log_entry.dart';
 
 // **************************************************************************
 // IsarCollectionGenerator
@@ -9,14 +9,14 @@ part of 'client_change_log_entry.dart';
 // coverage:ignore-file
 // ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
 
-extension GetClientChangeLogEntryCollection on Isar {
-  IsarCollection<ClientChangeLogEntry> get clientChangeLogEntrys =>
+extension GetIsarChangeLogEntryCollection on Isar {
+  IsarCollection<IsarChangeLogEntry> get isarChangeLogEntrys =>
       this.collection();
 }
 
-const ClientChangeLogEntrySchema = CollectionSchema(
-  name: r'ClientChangeLogEntry',
-  id: -1642374364194476373,
+const IsarChangeLogEntrySchema = CollectionSchema(
+  name: r'IsarChangeLogEntry',
+  id: 2453136887945526353,
   properties: {
     r'changeAt': PropertySchema(
       id: 0,
@@ -99,22 +99,22 @@ const ClientChangeLogEntrySchema = CollectionSchema(
       type: IsarType.string,
     )
   },
-  estimateSize: _clientChangeLogEntryEstimateSize,
-  serialize: _clientChangeLogEntrySerialize,
-  deserialize: _clientChangeLogEntryDeserialize,
-  deserializeProp: _clientChangeLogEntryDeserializeProp,
+  estimateSize: _isarChangeLogEntryEstimateSize,
+  serialize: _isarChangeLogEntrySerialize,
+  deserialize: _isarChangeLogEntryDeserialize,
+  deserializeProp: _isarChangeLogEntryDeserializeProp,
   idName: r'seq',
   indexes: {},
   links: {},
   embeddedSchemas: {},
-  getId: _clientChangeLogEntryGetId,
-  getLinks: _clientChangeLogEntryGetLinks,
-  attach: _clientChangeLogEntryAttach,
+  getId: _isarChangeLogEntryGetId,
+  getLinks: _isarChangeLogEntryGetLinks,
+  attach: _isarChangeLogEntryAttach,
   version: '3.1.0+1',
 );
 
-int _clientChangeLogEntryEstimateSize(
-  ClientChangeLogEntry object,
+int _isarChangeLogEntryEstimateSize(
+  IsarChangeLogEntry object,
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
@@ -133,8 +133,8 @@ int _clientChangeLogEntryEstimateSize(
   return bytesCount;
 }
 
-void _clientChangeLogEntrySerialize(
-  ClientChangeLogEntry object,
+void _isarChangeLogEntrySerialize(
+  IsarChangeLogEntry object,
   IsarWriter writer,
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
@@ -157,13 +157,13 @@ void _clientChangeLogEntrySerialize(
   writer.writeString(offsets[15], object.unknownJson);
 }
 
-ClientChangeLogEntry _clientChangeLogEntryDeserialize(
+IsarChangeLogEntry _isarChangeLogEntryDeserialize(
   Id id,
   IsarReader reader,
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  final object = ClientChangeLogEntry(
+  final object = IsarChangeLogEntry(
     changeAt: reader.readDateTime(offsets[0]),
     changeBy: reader.readString(offsets[1]),
     cid: reader.readString(offsets[2]),
@@ -185,7 +185,7 @@ ClientChangeLogEntry _clientChangeLogEntryDeserialize(
   return object;
 }
 
-P _clientChangeLogEntryDeserializeProp<P>(
+P _isarChangeLogEntryDeserializeProp<P>(
   IsarReader reader,
   int propertyId,
   int offset,
@@ -229,33 +229,32 @@ P _clientChangeLogEntryDeserializeProp<P>(
   }
 }
 
-Id _clientChangeLogEntryGetId(ClientChangeLogEntry object) {
+Id _isarChangeLogEntryGetId(IsarChangeLogEntry object) {
   return object.seq;
 }
 
-List<IsarLinkBase<dynamic>> _clientChangeLogEntryGetLinks(
-    ClientChangeLogEntry object) {
+List<IsarLinkBase<dynamic>> _isarChangeLogEntryGetLinks(
+    IsarChangeLogEntry object) {
   return [];
 }
 
-void _clientChangeLogEntryAttach(
-    IsarCollection<dynamic> col, Id id, ClientChangeLogEntry object) {
+void _isarChangeLogEntryAttach(
+    IsarCollection<dynamic> col, Id id, IsarChangeLogEntry object) {
   object.seq = id;
 }
 
-extension ClientChangeLogEntryQueryWhereSort
-    on QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QWhere> {
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterWhere>
-      anySeq() {
+extension IsarChangeLogEntryQueryWhereSort
+    on QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QWhere> {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterWhere> anySeq() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
     });
   }
 }
 
-extension ClientChangeLogEntryQueryWhere
-    on QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QWhereClause> {
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterWhereClause>
+extension IsarChangeLogEntryQueryWhere
+    on QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QWhereClause> {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterWhereClause>
       seqEqualTo(Id seq) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IdWhereClause.between(
@@ -265,7 +264,7 @@ extension ClientChangeLogEntryQueryWhere
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterWhereClause>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterWhereClause>
       seqNotEqualTo(Id seq) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
@@ -288,7 +287,7 @@ extension ClientChangeLogEntryQueryWhere
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterWhereClause>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterWhereClause>
       seqGreaterThan(Id seq, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
@@ -297,7 +296,7 @@ extension ClientChangeLogEntryQueryWhere
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterWhereClause>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterWhereClause>
       seqLessThan(Id seq, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
@@ -306,7 +305,7 @@ extension ClientChangeLogEntryQueryWhere
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterWhereClause>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterWhereClause>
       seqBetween(
     Id lowerSeq,
     Id upperSeq, {
@@ -324,10 +323,10 @@ extension ClientChangeLogEntryQueryWhere
   }
 }
 
-extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
-    ClientChangeLogEntry, QFilterCondition> {
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeAtEqualTo(DateTime value) {
+extension IsarChangeLogEntryQueryFilter
+    on QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QFilterCondition> {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'changeAt',
@@ -336,8 +335,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeAtGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeAtGreaterThan(
     DateTime value, {
     bool include = false,
   }) {
@@ -350,8 +349,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeAtLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeAtLessThan(
     DateTime value, {
     bool include = false,
   }) {
@@ -364,8 +363,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeAtBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeAtBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
@@ -382,8 +381,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeByEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeByEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -396,8 +395,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeByGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeByGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -412,8 +411,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeByLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeByLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -428,8 +427,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeByBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeByBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -448,8 +447,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeByStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeByStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -462,8 +461,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeByEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeByEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -476,8 +475,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       changeByContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -488,8 +486,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       changeByMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -500,8 +497,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeByIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeByIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'changeBy',
@@ -510,8 +507,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> changeByIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      changeByIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'changeBy',
@@ -520,8 +517,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cidEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cidEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -534,8 +531,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cidGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cidGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -550,8 +547,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cidLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cidLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -566,8 +563,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cidBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cidBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -586,8 +583,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cidStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cidStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -600,8 +597,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cidEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cidEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -614,8 +611,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       cidContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -626,8 +622,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       cidMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -638,8 +633,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cidIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cidIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'cid',
@@ -648,8 +643,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cidIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cidIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'cid',
@@ -658,8 +653,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cloudAtIsNull() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cloudAtIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
         property: r'cloudAt',
@@ -667,8 +662,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cloudAtIsNotNull() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cloudAtIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNotNull(
         property: r'cloudAt',
@@ -676,8 +671,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cloudAtEqualTo(DateTime? value) {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cloudAtEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'cloudAt',
@@ -686,8 +681,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cloudAtGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cloudAtGreaterThan(
     DateTime? value, {
     bool include = false,
   }) {
@@ -700,8 +695,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cloudAtLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cloudAtLessThan(
     DateTime? value, {
     bool include = false,
   }) {
@@ -714,8 +709,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> cloudAtBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      cloudAtBetween(
     DateTime? lower,
     DateTime? upper, {
     bool includeLower = true,
@@ -732,8 +727,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataJsonEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataJsonEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -746,8 +741,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataJsonGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataJsonGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -762,8 +757,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataJsonLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataJsonLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -778,8 +773,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataJsonBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataJsonBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -798,8 +793,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataJsonStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataJsonStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -812,8 +807,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataJsonEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataJsonEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -826,8 +821,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       dataJsonContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -838,8 +832,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       dataJsonMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -850,8 +843,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataJsonIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataJsonIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'dataJson',
@@ -860,8 +853,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataJsonIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataJsonIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'dataJson',
@@ -870,8 +863,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataSchemaRevIsNull() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataSchemaRevIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
         property: r'dataSchemaRev',
@@ -879,8 +872,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataSchemaRevIsNotNull() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataSchemaRevIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNotNull(
         property: r'dataSchemaRev',
@@ -888,8 +881,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataSchemaRevEqualTo(int? value) {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataSchemaRevEqualTo(int? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'dataSchemaRev',
@@ -898,8 +891,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataSchemaRevGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataSchemaRevGreaterThan(
     int? value, {
     bool include = false,
   }) {
@@ -912,8 +905,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataSchemaRevLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataSchemaRevLessThan(
     int? value, {
     bool include = false,
   }) {
@@ -926,8 +919,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> dataSchemaRevBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      dataSchemaRevBetween(
     int? lower,
     int? upper, {
     bool includeLower = true,
@@ -944,8 +937,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainIdEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainIdEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -958,8 +951,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainIdGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -974,8 +967,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainIdLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainIdLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -990,8 +983,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainIdBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1010,8 +1003,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainIdStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainIdStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1024,8 +1017,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainIdEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainIdEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1038,8 +1031,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       domainIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -1050,8 +1042,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       domainIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -1062,8 +1053,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainIdIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'domainId',
@@ -1072,8 +1063,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainIdIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'domainId',
@@ -1082,8 +1073,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainTypeEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainTypeEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1096,8 +1087,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainTypeGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainTypeGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1112,8 +1103,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainTypeLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainTypeLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1128,8 +1119,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainTypeBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainTypeBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1148,8 +1139,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainTypeStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainTypeStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1162,8 +1153,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainTypeEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainTypeEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1176,8 +1167,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       domainTypeContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -1188,8 +1178,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       domainTypeMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -1200,8 +1189,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainTypeIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainTypeIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'domainType',
@@ -1210,8 +1199,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> domainTypeIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      domainTypeIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'domainType',
@@ -1220,8 +1209,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityIdEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityIdEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1234,8 +1223,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityIdGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1250,8 +1239,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityIdLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityIdLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1266,8 +1255,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityIdBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1286,8 +1275,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityIdStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityIdStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1300,8 +1289,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityIdEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityIdEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1314,8 +1303,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       entityIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -1326,8 +1314,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       entityIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -1338,8 +1325,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityIdIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'entityId',
@@ -1348,8 +1335,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityIdIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'entityId',
@@ -1358,8 +1345,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityTypeEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityTypeEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1372,8 +1359,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityTypeGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityTypeGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1388,8 +1375,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityTypeLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityTypeLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1404,8 +1391,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityTypeBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityTypeBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1424,8 +1411,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityTypeStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityTypeStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1438,8 +1425,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityTypeEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityTypeEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1452,8 +1439,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       entityTypeContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -1464,8 +1450,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       entityTypeMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -1476,8 +1461,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityTypeIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityTypeIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'entityType',
@@ -1486,8 +1471,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> entityTypeIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      entityTypeIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'entityType',
@@ -1496,8 +1481,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1510,8 +1495,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1526,8 +1511,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1542,8 +1527,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1562,8 +1547,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1576,8 +1561,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1590,8 +1575,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       operationContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -1602,8 +1586,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       operationMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -1614,8 +1597,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'operation',
@@ -1624,8 +1607,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'operation',
@@ -1634,8 +1617,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationInfoJsonEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationInfoJsonEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1648,8 +1631,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationInfoJsonGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationInfoJsonGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1664,8 +1647,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationInfoJsonLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationInfoJsonLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1680,8 +1663,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationInfoJsonBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationInfoJsonBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1700,8 +1683,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationInfoJsonStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationInfoJsonStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1714,8 +1697,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationInfoJsonEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationInfoJsonEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1728,8 +1711,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       operationInfoJsonContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -1740,8 +1722,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       operationInfoJsonMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -1752,8 +1733,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationInfoJsonIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationInfoJsonIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'operationInfoJson',
@@ -1762,8 +1743,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> operationInfoJsonIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      operationInfoJsonIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'operationInfoJson',
@@ -1772,8 +1753,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> schemaVersionIsNull() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      schemaVersionIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
         property: r'schemaVersion',
@@ -1781,8 +1762,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> schemaVersionIsNotNull() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      schemaVersionIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNotNull(
         property: r'schemaVersion',
@@ -1790,8 +1771,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> schemaVersionEqualTo(int? value) {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      schemaVersionEqualTo(int? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'schemaVersion',
@@ -1800,8 +1781,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> schemaVersionGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      schemaVersionGreaterThan(
     int? value, {
     bool include = false,
   }) {
@@ -1814,8 +1795,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> schemaVersionLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      schemaVersionLessThan(
     int? value, {
     bool include = false,
   }) {
@@ -1828,8 +1809,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> schemaVersionBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      schemaVersionBetween(
     int? lower,
     int? upper, {
     bool includeLower = true,
@@ -1846,8 +1827,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> seqEqualTo(Id value) {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      seqEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'seq',
@@ -1856,8 +1837,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> seqGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      seqGreaterThan(
     Id value, {
     bool include = false,
   }) {
@@ -1870,8 +1851,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> seqLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      seqLessThan(
     Id value, {
     bool include = false,
   }) {
@@ -1884,8 +1865,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> seqBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      seqBetween(
     Id lower,
     Id upper, {
     bool includeLower = true,
@@ -1902,8 +1883,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> stateChangedEqualTo(bool value) {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      stateChangedEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'stateChanged',
@@ -1912,8 +1893,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> storageIdEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      storageIdEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1926,8 +1907,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> storageIdGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      storageIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1942,8 +1923,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> storageIdLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      storageIdLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1958,8 +1939,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> storageIdBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      storageIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1978,8 +1959,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> storageIdStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      storageIdStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1992,8 +1973,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> storageIdEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      storageIdEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -2006,8 +1987,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       storageIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -2018,8 +1998,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       storageIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -2030,8 +2009,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> storageIdIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      storageIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'storageId',
@@ -2040,8 +2019,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> storageIdIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      storageIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'storageId',
@@ -2050,8 +2029,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> unknownJsonEqualTo(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      unknownJsonEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -2064,8 +2043,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> unknownJsonGreaterThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      unknownJsonGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -2080,8 +2059,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> unknownJsonLessThan(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      unknownJsonLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -2096,8 +2075,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> unknownJsonBetween(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      unknownJsonBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -2116,8 +2095,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> unknownJsonStartsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      unknownJsonStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -2130,8 +2109,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> unknownJsonEndsWith(
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      unknownJsonEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -2144,8 +2123,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       unknownJsonContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
@@ -2156,8 +2134,7 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-          QAfterFilterCondition>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
       unknownJsonMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
@@ -2168,8 +2145,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> unknownJsonIsEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      unknownJsonIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'unknownJson',
@@ -2178,8 +2155,8 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry,
-      QAfterFilterCondition> unknownJsonIsNotEmpty() {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+      unknownJsonIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'unknownJson',
@@ -2189,232 +2166,232 @@ extension ClientChangeLogEntryQueryFilter on QueryBuilder<ClientChangeLogEntry,
   }
 }
 
-extension ClientChangeLogEntryQueryObject on QueryBuilder<ClientChangeLogEntry,
-    ClientChangeLogEntry, QFilterCondition> {}
+extension IsarChangeLogEntryQueryObject
+    on QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QFilterCondition> {}
 
-extension ClientChangeLogEntryQueryLinks on QueryBuilder<ClientChangeLogEntry,
-    ClientChangeLogEntry, QFilterCondition> {}
+extension IsarChangeLogEntryQueryLinks
+    on QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QFilterCondition> {}
 
-extension ClientChangeLogEntryQuerySortBy
-    on QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QSortBy> {
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+extension IsarChangeLogEntryQuerySortBy
+    on QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QSortBy> {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByChangeAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'changeAt', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByChangeAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'changeAt', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByChangeBy() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'changeBy', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByChangeByDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'changeBy', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByCid() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cid', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByCidDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cid', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByCloudAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cloudAt', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByCloudAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cloudAt', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByDataJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataJson', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByDataJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataJson', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByDataSchemaRev() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataSchemaRev', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByDataSchemaRevDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataSchemaRev', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByDomainId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'domainId', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByDomainIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'domainId', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByDomainType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'domainType', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByDomainTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'domainType', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByEntityId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityId', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByEntityIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityId', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByEntityType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityType', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByEntityTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityType', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByOperation() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operation', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByOperationDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operation', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByOperationInfoJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operationInfoJson', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByOperationInfoJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operationInfoJson', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortBySchemaVersion() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schemaVersion', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortBySchemaVersionDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schemaVersion', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByStateChanged() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'stateChanged', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByStateChangedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'stateChanged', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByStorageId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageId', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByStorageIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageId', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByUnknownJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       sortByUnknownJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.desc);
@@ -2422,240 +2399,240 @@ extension ClientChangeLogEntryQuerySortBy
   }
 }
 
-extension ClientChangeLogEntryQuerySortThenBy
-    on QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QSortThenBy> {
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+extension IsarChangeLogEntryQuerySortThenBy
+    on QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QSortThenBy> {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByChangeAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'changeAt', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByChangeAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'changeAt', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByChangeBy() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'changeBy', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByChangeByDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'changeBy', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByCid() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cid', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByCidDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cid', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByCloudAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cloudAt', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByCloudAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cloudAt', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByDataJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataJson', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByDataJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataJson', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByDataSchemaRev() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataSchemaRev', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByDataSchemaRevDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dataSchemaRev', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByDomainId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'domainId', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByDomainIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'domainId', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByDomainType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'domainType', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByDomainTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'domainType', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByEntityId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityId', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByEntityIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityId', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByEntityType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityType', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByEntityTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityType', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByOperation() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operation', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByOperationDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operation', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByOperationInfoJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operationInfoJson', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByOperationInfoJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operationInfoJson', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenBySchemaVersion() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schemaVersion', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenBySchemaVersionDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schemaVersion', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenBySeq() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'seq', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenBySeqDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'seq', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByStateChanged() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'stateChanged', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByStateChangedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'stateChanged', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByStorageId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageId', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByStorageIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageId', Sort.desc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByUnknownJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.asc);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QAfterSortBy>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
       thenByUnknownJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.desc);
@@ -2663,86 +2640,86 @@ extension ClientChangeLogEntryQuerySortThenBy
   }
 }
 
-extension ClientChangeLogEntryQueryWhereDistinct
-    on QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct> {
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+extension IsarChangeLogEntryQueryWhereDistinct
+    on QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct> {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByChangeAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'changeAt');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByChangeBy({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'changeBy', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
-      distinctByCid({bool caseSensitive = true}) {
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct> distinctByCid(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'cid', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByCloudAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'cloudAt');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByDataJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'dataJson', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByDataSchemaRev() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'dataSchemaRev');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByDomainId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'domainId', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByDomainType({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'domainType', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByEntityId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'entityId', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByEntityType({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'entityType', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByOperation({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'operation', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByOperationInfoJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'operationInfoJson',
@@ -2750,28 +2727,28 @@ extension ClientChangeLogEntryQueryWhereDistinct
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctBySchemaVersion() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'schemaVersion');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByStateChanged() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'stateChanged');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByStorageId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'storageId', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, ClientChangeLogEntry, QDistinct>
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
       distinctByUnknownJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'unknownJson', caseSensitive: caseSensitive);
@@ -2779,119 +2756,119 @@ extension ClientChangeLogEntryQueryWhereDistinct
   }
 }
 
-extension ClientChangeLogEntryQueryProperty on QueryBuilder<
-    ClientChangeLogEntry, ClientChangeLogEntry, QQueryProperty> {
-  QueryBuilder<ClientChangeLogEntry, int, QQueryOperations> seqProperty() {
+extension IsarChangeLogEntryQueryProperty
+    on QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QQueryProperty> {
+  QueryBuilder<IsarChangeLogEntry, int, QQueryOperations> seqProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'seq');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, DateTime, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, DateTime, QQueryOperations>
       changeAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'changeAt');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
       changeByProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'changeBy');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations> cidProperty() {
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations> cidProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'cid');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, DateTime?, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, DateTime?, QQueryOperations>
       cloudAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'cloudAt');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
       dataJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'dataJson');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, int?, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, int?, QQueryOperations>
       dataSchemaRevProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'dataSchemaRev');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
       domainIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'domainId');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
       domainTypeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'domainType');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
       entityIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'entityId');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
       entityTypeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'entityType');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
       operationProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'operation');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
       operationInfoJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'operationInfoJson');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, int?, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, int?, QQueryOperations>
       schemaVersionProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'schemaVersion');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, bool, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, bool, QQueryOperations>
       stateChangedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'stateChanged');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
       storageIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'storageId');
     });
   }
 
-  QueryBuilder<ClientChangeLogEntry, String, QQueryOperations>
+  QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
       unknownJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'unknownJson');
@@ -2903,13 +2880,12 @@ extension ClientChangeLogEntryQueryProperty on QueryBuilder<
 // JsonSerializableGenerator
 // **************************************************************************
 
-ClientChangeLogEntry _$ClientChangeLogEntryFromJson(
-        Map<String, dynamic> json) =>
+IsarChangeLogEntry _$IsarChangeLogEntryFromJson(Map<String, dynamic> json) =>
     $checkedCreate(
-      'ClientChangeLogEntry',
+      'IsarChangeLogEntry',
       json,
       ($checkedConvert) {
-        final val = ClientChangeLogEntry(
+        final val = IsarChangeLogEntry(
           domainId: $checkedConvert('domainId', (v) => v as String),
           entityType: $checkedConvert('entityType', (v) => v as String),
           operation: $checkedConvert('operation', (v) => v as String),
@@ -2940,8 +2916,7 @@ ClientChangeLogEntry _$ClientChangeLogEntryFromJson(
       },
     );
 
-Map<String, dynamic> _$ClientChangeLogEntryToJson(
-        ClientChangeLogEntry instance) =>
+Map<String, dynamic> _$IsarChangeLogEntryToJson(IsarChangeLogEntry instance) =>
     <String, dynamic>{
       'cid': instance.cid,
       'storageId': instance.storageId,

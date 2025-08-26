@@ -36,7 +36,7 @@ void main() {
         'priority': 'high',
       };
 
-      final initialChangeEntry = ClientChangeLogEntry(
+      final initialChangeEntry = IsarChangeLogEntry(
         projectId: 'proj-123',
         entityType: EntityType.project,
         operation: 'create',
