@@ -7,7 +7,7 @@ import 'package:sltt_core/src/models/factory_pair.dart';
 import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 
-part 'change_log_entry.g.dart';
+part 'client_change_log_entry.g.dart';
 
 // Register the ClientChangeLogEntry factory group for safe (de)serialization
 final _clientChangeLogEntryFactoryRegistration = (() {
