@@ -1,4 +1,5 @@
 import 'package:isar/isar.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 part 'isar_team_state.g.dart';
@@ -6,6 +7,7 @@ part 'isar_team_state.g.dart';
 /// Isar collection for team entity state storage
 /// Uses composition instead of inheritance to avoid Isar limitations
 @Collection()
+@JsonSerializable(includeIfNull: true, checked: true)
 class IsarTeamState {
   Id id = Isar.autoIncrement;
 
@@ -17,15 +19,25 @@ class IsarTeamState {
   @Enumerated(EnumType.name)
   EntityType entityType = EntityType.team;
 
-  /// Common entity state fields from BaseEntityState
-  String? rank;
-  bool deleted = false;
-  String parentId = '';
-  String projectId = '';
-  DateTime? changeAt;
-  String cid = '';
-  DateTime? cloudAt;
-  String changeBy = '';
+  /// Common entity state fields from BaseEntityState (use same names as
+  /// BaseEntityState so conversions and serialization line up)
+  String? data_rank;
+
+  /// Preserve unknown fields as compact JSON string (keeps parity with
+  /// other Isar state models and `deserializeWithUnknownFieldData`).
+  String unknownJson = '{}';
+  bool? data_deleted = false;
+  String data_parentId = '';
+  int? data_parentId_dataSchemaRev_;
+  DateTime data_parentId_changeAt_ = DateTime.fromMillisecondsSinceEpoch(0);
+  String data_parentId_cid_ = '';
+  String data_parentId_changeBy_ = '';
+  DateTime? data_parentId_cloudAt_;
+
+  DateTime? change_changeAt;
+  String change_cid = '';
+  DateTime? change_cloudAt;
+  String change_changeBy = '';
   String origProjectId = '';
   DateTime? origChangeAt;
   String origChangeBy = '';
@@ -33,18 +45,24 @@ class IsarTeamState {
   DateTime? origCloudAt;
 
   /// Change tracking for common fields
-  DateTime? rankChangeAt;
-  String rankCid = '';
-  String rankChangeBy = '';
-  DateTime? deletedChangeAt;
-  String deletedCid = '';
-  String deletedChangeBy = '';
-  DateTime? parentIdChangeAt;
-  String parentIdCid = '';
-  String parentIdChangeBy = '';
-  DateTime? projectIdChangeAt;
-  String projectIdCid = '';
-  String projectIdChangeBy = '';
+  DateTime? data_rank_changeAt_;
+  String? data_rank_cid_ = '';
+  String? data_rank_changeBy_ = '';
+  DateTime? data_rank_cloudAt_;
+
+  DateTime? data_deleted_changeAt_;
+  String? data_deleted_cid_ = '';
+  String? data_deleted_changeBy_ = '';
+  DateTime? data_deleted_cloudAt_;
+
+  DateTime? data_parentId_changeAt_;
+  String data_parentId_cid = '';
+  String data_parentId_changeBy = '';
+  DateTime? data_parentId_cloudAt = null;
+
+  DateTime? data_projectId_changeAt_;
+  String data_projectId_cid_ = '';
+  String data_projectId_changeBy_ = '';
 
   /// Team-specific fields with change tracking
   String name = '';
@@ -68,6 +86,13 @@ class IsarTeamState {
   String settingsChangeBy = '';
 
   IsarTeamState();
+
+  factory IsarTeamState.fromJson(Map<String, dynamic> json) =>
+      deserializeWithUnknownFieldData(
+        _$IsarTeamStateFromJson,
+        json,
+        _$IsarTeamStateToJson,
+      );
 
   /// Factory method to create IsarTeamState from BaseEntityState
   factory IsarTeamState.fromBaseState(BaseEntityState base) {
@@ -160,35 +185,35 @@ class IsarTeamState {
 
   /// Convert to BaseEntityState for backend-agnostic operations
   BaseEntityState toBaseState() {
-    final base = BaseEntityState()
-      ..id = id
-      ..entityId = entityId
-      ..entityType = entityType
-      ..rank = rank
-      ..deleted = deleted
-      ..parentId = parentId
-      ..projectId = projectId
-      ..changeAt = changeAt
-      ..cid = cid
-      ..cloudAt = cloudAt
-      ..changeBy = changeBy
-      ..origProjectId = origProjectId
-      ..origChangeAt = origChangeAt
-      ..origChangeBy = origChangeBy
-      ..origCid = origCid
-      ..origCloudAt = origCloudAt
-      ..rankChangeAt = rankChangeAt
-      ..rankCid = rankCid
-      ..rankChangeBy = rankChangeBy
-      ..deletedChangeAt = deletedChangeAt
-      ..deletedCid = deletedCid
-      ..deletedChangeBy = deletedChangeBy
-      ..parentIdChangeAt = parentIdChangeAt
-      ..parentIdCid = parentIdCid
-      ..parentIdChangeBy = parentIdChangeBy
-      ..projectIdChangeAt = projectIdChangeAt
-      ..projectIdCid = projectIdCid
-      ..projectIdChangeBy = projectIdChangeBy;
+    final base =
+        BaseEntityState(
+            entityId: entityId,
+            entityType: entityType.value,
+            change_domainId: projectId,
+            change_changeAt:
+                change_changeAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+            change_cid: change_cid,
+            data_parentId: data_parentId,
+            data_parentId_changeAt_:
+                data_parentId_changeAt_ ??
+                DateTime.fromMillisecondsSinceEpoch(0),
+            data_parentId_cid_: data_parentId_cid_,
+            data_parentId_changeBy_: data_parentId_changeBy_,
+          )
+          ..unknownJson = unknownJson
+          ..schemaVersion = null
+          ..change_cloudAt = change_cloudAt
+          ..change_changeBy = change_changeBy
+          ..change_dataSchemaRev = null
+          ..data_rank = data_rank
+          ..data_rank_changeAt_ = data_rank_changeAt_
+          ..data_rank_cid_ = data_rank_cid_
+          ..data_rank_changeBy_ = data_rank_changeBy_
+          ..data_deleted = data_deleted
+          ..data_deleted_changeAt_ = data_deleted_changeAt_
+          ..data_deleted_cid_ = data_deleted_cid_
+          ..data_deleted_changeBy_ = data_deleted_changeBy_
+          ..data_deleted_cloudAt_ = data_deleted_cloudAt_;
 
     return base;
   }
@@ -328,26 +353,6 @@ class IsarTeamState {
 
   /// Convert to JSON representation
   Map<String, dynamic> toJson() {
-    return {
-      'entityId': entityId,
-      'entityType': entityType.value,
-      'rank': rank,
-      'deleted': deleted,
-      'parentId': parentId,
-      'projectId': projectId,
-      'changeAt': changeAt?.toIso8601String(),
-      'cid': cid,
-      'cloudAt': cloudAt?.toIso8601String(),
-      'changeBy': changeBy,
-      'origProjectId': origProjectId,
-      'origChangeAt': origChangeAt?.toIso8601String(),
-      'origChangeBy': origChangeBy,
-      'origCid': origCid,
-      'origCloudAt': origCloudAt?.toIso8601String(),
-      'name': name,
-      'description': description,
-      'leadId': leadId,
-      'settings': settings,
-    };
+    return serializeWithUnknownFieldData(this, _$IsarTeamStateToJson);
   }
 }
