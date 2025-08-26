@@ -145,6 +145,15 @@ class IsarDocumentState extends BaseEntityState {
        data_parentId_changeBy_ = data_parentId_changeBy_,
        data_parentId_cloudAt_ = data_parentId_cloudAt_,
        // do not forward `super.*_orig_` parameters — avoid isar_generator mismatch
+       entityId = entityId,
+       entityType = entityType,
+       schemaVersion = schemaVersion,
+       change_domainId = change_domainId,
+       change_changeAt = change_changeAt,
+       change_cid = change_cid,
+       change_dataSchemaRev = change_dataSchemaRev,
+       change_cloudAt = change_cloudAt,
+       change_changeBy = change_changeBy,
        super();
 
   factory IsarDocumentState.fromJson(Map<String, dynamic> json) =>

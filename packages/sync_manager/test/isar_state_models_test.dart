@@ -1,0 +1,116 @@
+import 'dart:convert';
+
+import 'package:sync_manager/src/models/isar_document_state.dart';
+import 'package:sync_manager/src/models/isar_project_state.dart';
+import 'package:sync_manager/src/models/isar_team_state.dart';
+import 'package:test/test.dart';
+
+void main() {
+  test('IsarProjectState.fromJson preserves unknown fields', () {
+    final rawJson = {
+      'id': 1,
+      'entityId': 'proj-1',
+      'entityType': 'project',
+      'schemaVersion': 1,
+      'change_domainId': 'd1',
+      'change_changeAt': DateTime.now().toIso8601String(),
+      'change_cid': 'cid-p1',
+      'change_changeBy': 'u1',
+      'data_parentId': 'parent',
+      'data_parentId_dataSchemaRev_': 0,
+      'data_parentId_changeAt_': DateTime.now().toIso8601String(),
+      'data_parentId_cid_': 'cid-parent',
+      'data_parentId_changeBy_': 'u1',
+      // required orig_ fields set by generator; include minimal defaults
+      'change_domainId_orig_': 'd1',
+      'change_changeAt_orig_': DateTime.now().toIso8601String(),
+      'change_cid_orig_': 'cid-p1',
+      'change_changeBy_orig_': 'u1',
+      // add an unexpected field
+      'surprise': 'gotcha',
+    };
+
+    final p = IsarProjectState.fromJson(rawJson);
+    final unknown = jsonDecode(p.unknownJson) as Map<String, dynamic>;
+    expect(unknown['surprise'], equals('gotcha'));
+    expect(p.entityId, equals('proj-1'));
+  });
+
+  test('IsarTeamState.fromJson preserves unknown fields', () {
+    final rawJson = {
+      'id': 2,
+      'entityId': 'team-1',
+      'entityType': 'team',
+      'schemaVersion': 1,
+      'change_domainId': 'd1',
+      'change_changeAt': DateTime.now().toIso8601String(),
+      'change_cid': 'cid-t1',
+      'change_changeBy': 'u2',
+      'data_rank': '0',
+      'data_parentId': '',
+      'data_parentId_dataSchemaRev_': 0,
+      'data_parentId_changeAt_': DateTime.now().toIso8601String(),
+      'data_parentId_cid_': 'cid-p',
+      'data_parentId_changeBy_': 'u2',
+      // required orig_ fields
+      'change_domainId_orig_': 'd1',
+      'change_changeAt_orig_': DateTime.now().toIso8601String(),
+      'change_cid_orig_': 'cid-t1',
+      'change_changeBy_orig_': 'u2',
+      // required non-nullable team-specific fields
+      'name': 'Team Name',
+      'nameChangeAt': DateTime.now().toIso8601String(),
+      'nameCid': 'cid-name',
+      'nameChangeBy': 'u2',
+      'description': 'desc',
+      'descriptionChangeAt': DateTime.now().toIso8601String(),
+      'descriptionCid': 'cid-desc',
+      'descriptionChangeBy': 'u2',
+      'leadId': 'lead-1',
+      'leadIdChangeAt': DateTime.now().toIso8601String(),
+      'leadIdCid': 'cid-lead',
+      'leadIdChangeBy': 'u2',
+      'settings': '{}',
+      'settingsChangeAt': DateTime.now().toIso8601String(),
+      'settingsCid': 'cid-settings',
+      'settingsChangeBy': 'u2',
+      'surprise_team': 'wow',
+    };
+
+    final t = IsarTeamState.fromJson(rawJson);
+    final unknown = jsonDecode(t.unknownJson) as Map<String, dynamic>;
+    expect(unknown['surprise_team'], equals('wow'));
+    expect(t.entityId, equals('team-1'));
+  });
+
+  test('IsarDocumentState.fromJson preserves unknown fields', () {
+    final rawJson = {
+      'id': 3,
+      'entityId': 'doc-1',
+      'entityType': 'document',
+      'schemaVersion': 1,
+      'change_domainId': 'd1',
+      'change_changeAt': DateTime.now().toIso8601String(),
+      'change_cid': 'cid-d1',
+      'change_changeBy': 'u3',
+      'data_title': 'Title',
+      'data_contentLength': 123,
+      'data_parentId': '',
+      'data_parentId_dataSchemaRev_': 0,
+      'data_parentId_changeAt_': DateTime.now().toIso8601String(),
+      'data_parentId_cid_': 'cid-p',
+      'data_parentId_changeBy_': 'u3',
+      // required orig_ fields
+      'change_domainId_orig_': 'd1',
+      'change_changeAt_orig_': DateTime.now().toIso8601String(),
+      'change_cid_orig_': 'cid-d1',
+      'change_changeBy_orig_': 'u3',
+      'extra_doc': 'yep',
+    };
+
+    final d = IsarDocumentState.fromJson(rawJson);
+    final unknown = jsonDecode(d.unknownJson) as Map<String, dynamic>;
+    expect(unknown['extra_doc'], equals('yep'));
+    expect(d.entityId, equals('doc-1'));
+  });
+}
