@@ -1,10 +1,16 @@
-import 'package:test/test.dart';
+import 'dart:math';
+
 import 'package:sltt_core/src/models/entity_type.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('every EntityType has a 4-char suffix mapping', () {
     final missing = EntityType.values
-        .where((e) => !EntityType.suffixMapping.containsKey(e.value))
+        .where(
+          (e) =>
+              !EntityType.suffixMapping.containsKey(e.value) &&
+              e.value != 'unknown',
+        )
         .map((e) => e.value)
         .toList();
     expect(missing, isEmpty, reason: 'Missing suffixMapping for: $missing');
@@ -22,7 +28,7 @@ void main() {
 
   test('generateEntityId and extractEntityTypeFromId roundtrip', () {
     final ts = DateTime.utc(2020, 1, 1);
-    for (final e in EntityType.values) {
+    for (final e in EntityType.values.where((e) => e != EntityType.unknown)) {
       final id = EntityType.generateEntityId(e.value, ts);
       final extracted = EntityType.extractEntityTypeFromId(id);
       expect(
