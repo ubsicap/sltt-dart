@@ -21,7 +21,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   /// Current domain ID
   @override
-  String change_domainId;
+  late String change_domainId;
 
   /// Original (first) values for tracking entity creation
   @override
@@ -29,7 +29,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   /// Latest change timestamp
   @override
-  DateTime change_changeAt;
+  late DateTime change_changeAt;
 
   /// First UTC change timestamp
   @override
@@ -37,7 +37,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   /// Latest change ID
   @override
-  String change_cid;
+  late String change_cid;
 
   /// Original (first) change ID
   @override
@@ -57,7 +57,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   /// Latest change author
   @override
-  String change_changeBy;
+  late String change_changeBy;
 
   /// Original (first) change author
   @override
@@ -93,17 +93,17 @@ abstract class BaseIsarEntityState extends BaseEntityState {
   DateTime? data_deleted_cloudAt_;
 
   @override
-  String data_parentId;
+  late String data_parentId;
 
   @override
   /// parentId field conflict resolution
   int? data_parentId_dataSchemaRev_;
   @override
-  DateTime data_parentId_changeAt_;
+  late DateTime data_parentId_changeAt_;
   @override
-  String data_parentId_cid_;
+  late String data_parentId_cid_;
   @override
-  String data_parentId_changeBy_;
+  late String data_parentId_changeBy_;
   @override
   DateTime? data_parentId_cloudAt_;
 
@@ -112,23 +112,28 @@ abstract class BaseIsarEntityState extends BaseEntityState {
     required super.entityType,
     super.schemaVersion,
     required super.change_domainId,
+    super.change_domainId_orig_,
     required super.change_changeAt,
+    super.change_changeAt_orig_,
     required super.change_cid,
+    super.change_cid_orig_,
     super.change_dataSchemaRev,
     super.change_cloudAt,
+    super.change_cloudAt_orig_,
     required super.change_changeBy,
-    int? data_rank_dataSchemaRev_,
-    String? data_rank,
-    DateTime? data_rank_changeAt_,
-    String? data_rank_cid_,
-    String? data_rank_changeBy_,
-    DateTime? data_rank_cloudAt_,
-    bool? data_deleted,
-    int? data_deleted_dataSchemaRev_,
-    DateTime? data_deleted_changeAt_,
-    String? data_deleted_cid_,
-    String? data_deleted_changeBy_,
-    DateTime? data_deleted_cloudAt_,
+    super.change_changeBy_orig_,
+    super.data_rank_dataSchemaRev_,
+    super.data_rank,
+    super.data_rank_changeAt_,
+    super.data_rank_cid_,
+    super.data_rank_changeBy_,
+    super.data_rank_cloudAt_,
+    super.data_deleted,
+    super.data_deleted_dataSchemaRev_,
+    super.data_deleted_changeAt_,
+    super.data_deleted_cid_,
+    super.data_deleted_changeBy_,
+    super.data_deleted_cloudAt_,
     required super.data_parentId,
     required super.data_parentId_dataSchemaRev_,
     required super.data_parentId_changeAt_,
@@ -136,14 +141,20 @@ abstract class BaseIsarEntityState extends BaseEntityState {
     required super.data_parentId_changeBy_,
     super.data_parentId_cloudAt_,
   }) : entityId = entityId,
+       schemaVersion = schemaVersion,
        change_domainId = change_domainId,
+       change_domainId_orig_ = change_domainId_orig_ ?? change_domainId,
        change_changeAt = change_changeAt,
+       change_changeAt_orig_ = change_changeAt_orig_ ?? change_changeAt,
        change_cid = change_cid,
+       change_cid_orig_ = change_cid_orig_ ?? change_cid,
        change_dataSchemaRev = change_dataSchemaRev,
        change_cloudAt = change_cloudAt,
+       change_cloudAt_orig_ = change_cloudAt_orig_ ?? change_cloudAt,
        change_changeBy = change_changeBy,
-       data_rank_dataSchemaRev_ = data_rank_dataSchemaRev_,
+       change_changeBy_orig_ = change_changeBy_orig_ ?? change_changeBy,
        data_rank = data_rank,
+       data_rank_dataSchemaRev_ = data_rank_dataSchemaRev_,
        data_rank_changeAt_ = data_rank_changeAt_,
        data_rank_cid_ = data_rank_cid_,
        data_rank_changeBy_ = data_rank_changeBy_,
@@ -159,6 +170,5 @@ abstract class BaseIsarEntityState extends BaseEntityState {
        data_parentId_changeAt_ = data_parentId_changeAt_,
        data_parentId_cid_ = data_parentId_cid_,
        data_parentId_changeBy_ = data_parentId_changeBy_,
-       data_parentId_cloudAt_ = data_parentId_cloudAt_,
-       super();
+       data_parentId_cloudAt_ = data_parentId_cloudAt_;
 }
