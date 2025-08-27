@@ -102,7 +102,7 @@ class TestEntityState extends BaseEntityState {
   DateTime? data_rank_cloudAt_;
 
   @override
-  bool? data_deleted = false;
+  bool? data_deleted;
   @override
   int? data_deleted_dataSchemaRev_;
   @override
