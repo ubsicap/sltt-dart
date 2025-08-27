@@ -59,22 +59,7 @@ class InMemoryStorage implements BaseStorageService {
     final prior = (entityState?.toJson() ?? <String, dynamic>{});
     final merged = {...prior, ...stateUpdates}
       ..removeWhere((k, v) => v == null);
-    // Ensure required defaults for entity state
-    merged.putIfAbsent('entityId', () => newChange.entityId);
-    merged.putIfAbsent('entityType', () => newChange.entityType);
-    merged.putIfAbsent('change_domainId', () => newChange.domainId);
-    merged.putIfAbsent('change_domainId_orig_', () => newChange.domainId);
-    merged.putIfAbsent(
-      'change_changeAt',
-      () => newChange.changeAt.toIso8601String(),
-    );
-    merged.putIfAbsent(
-      'change_changeAt_orig_',
-      () => newChange.changeAt.toIso8601String(),
-    );
-    merged.putIfAbsent('change_cid', () => newChange.cid);
-    merged.putIfAbsent('change_cid_orig_', () => newChange.cid);
-    merged.putIfAbsent('change_changeBy', () => newChange.changeBy);
+    // TODO: where to check whether _orig_ values make sense?
 
     final newState = TestEntityState.fromJson(merged);
     _states[_key(

@@ -439,7 +439,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
 
         final existingFieldChangeAt = _toDateTime(
           existingStateJson['${entityFieldKey}_changeAt_'],
-          DateTime.fromMillisecondsSinceEpoch(0),
+          DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
         );
         if (changeLogEntry.changeAt.isAfter(existingFieldChangeAt)) {
           fieldUpdates[field] = value;
@@ -459,11 +459,13 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
       if (entityState == null) ...{
         'entityId': changeLogEntry.entityId,
         'entityType': changeLogEntry.entityType.toString().split('.').last,
-        'change_domainId_orig_': changeLogEntry.domainId,
-        'change_changeAt_orig_': changeLogEntry.changeAt.toIso8601String(),
-        'change_cid_orig_': changeLogEntry.cid,
-        'change_changeBy_orig_': changeLogEntry.changeBy,
         'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
+        // _orig_ empty/default field_x_orig_ should inherit field_x values
+        'change_domainId_orig_': '',
+        'change_cid_orig_': '',
+        'change_changeBy_orig_': '',
+        'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
+            .toString(),
       },
       // latest metadata
       if (isChangeNewerThanLatest && fieldUpdates.isNotEmpty) ...{

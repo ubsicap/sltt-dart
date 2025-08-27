@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 import 'test_models.dart';
@@ -61,9 +62,8 @@ void main() {
           'data_parentId_changeBy_': 'creator',
           // Note: using empty/default values to test that _orig_ fields get proper values
           'change_domainId_orig_': '',
-          'change_changeAt_orig_': DateTime.fromMillisecondsSinceEpoch(
-            0,
-          ).toUtc().toIso8601String(),
+          'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
+              .toIso8601String(),
           'change_cid_orig_': '',
           'change_changeBy_orig_': '',
           'surprise': 'new_entity',

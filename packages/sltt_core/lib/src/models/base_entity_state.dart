@@ -56,10 +56,12 @@ abstract class BaseEntityState
     return orig.isEmpty ? current : orig;
   }
 
+  static DateTime defaultOrigDateTime() {
+    return DateTime.fromMillisecondsSinceEpoch(0).toUtc();
+  }
+
   static DateTime normalizeOrigDateTime(DateTime orig, DateTime current) {
-    return orig.isAtSameMomentAs(DateTime.fromMillisecondsSinceEpoch(0))
-        ? current
-        : orig;
+    return orig.isAtSameMomentAs(defaultOrigDateTime()) ? current : orig;
   }
 
   static DateTime? normalizeOrigDateTimeNullable(
