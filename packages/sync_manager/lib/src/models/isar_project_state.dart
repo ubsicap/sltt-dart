@@ -28,7 +28,7 @@ class IsarProjectState extends BaseEntityState {
 
   /// Current project ID
   @override
-  String change_domainId = '';
+  String change_domainId;
 
   /// Original (first) values for tracking entity creation
   @override
@@ -36,7 +36,7 @@ class IsarProjectState extends BaseEntityState {
 
   /// Latest change timestamp
   @override
-  DateTime change_changeAt = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime change_changeAt;
 
   /// First UTC change timestamp
   @override
@@ -64,7 +64,7 @@ class IsarProjectState extends BaseEntityState {
 
   /// Latest change author
   @override
-  String change_changeBy = '';
+  String change_changeBy;
 
   /// Original (first) change author
   @override
@@ -85,7 +85,7 @@ class IsarProjectState extends BaseEntityState {
   DateTime? data_rank_cloudAt_;
 
   @override
-  bool? data_deleted = false;
+  bool? data_deleted;
 
   // deleted field conflict resolution
   @override
