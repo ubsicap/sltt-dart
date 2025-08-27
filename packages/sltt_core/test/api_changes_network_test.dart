@@ -724,4 +724,25 @@ void main() {
       });
     },
   );
+
+  // begin a group of tests for GET /api/projects/{projectId}/entities/{entityType}/state
+  group('GET /api/projects/{projectId}/entities/{entityType}/state', () {
+    test('returns 200 with empty items for no entities', () async {
+      final projectId = 'proj-empty';
+      final entityType = 'project';
+      final uri = baseUrl.replace(
+        path: '/api/projects/$projectId/entities/$entityType/state',
+        queryParameters: {'includeMetadata': 'true'},
+      );
+      final req = await HttpClient().getUrl(uri);
+      final res = await req.close();
+      expect(res.statusCode, 200);
+      final body = await res.transform(utf8.decoder).join();
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      expect(json['items'], isA<List>());
+      expect((json['items'] as List), isEmpty);
+      expect(json['nextCursor'], isNull);
+      expect(json['hasMore'], isFalse);
+    });
+  });
 }
