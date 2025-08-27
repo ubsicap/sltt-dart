@@ -11,7 +11,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
   /// Primary key - entityId with entity type abbreviation
   @override
   @Index(unique: true)
-  late String entityId;
+  String entityId;
 
   @override
   int? schemaVersion;
@@ -20,28 +20,15 @@ abstract class BaseIsarEntityState extends BaseEntityState {
   String unknownJson = '{}';
 
   /// Current domain ID
-  @override
-  late String change_domainId;
-
-  /// Original (first) values for tracking entity creation
-  @override
-  late String change_domainId_orig_;
+  String change_domainId;
 
   /// Latest change timestamp
   @override
-  late DateTime change_changeAt;
-
-  /// First UTC change timestamp
-  @override
-  late DateTime change_changeAt_orig_;
+  DateTime change_changeAt;
 
   /// Latest change ID
   @override
-  late String change_cid;
-
-  /// Original (first) change ID
-  @override
-  late String change_cid_orig_;
+  String change_cid;
 
   /// latest data schema revision (no need for _orig_)
   @override
@@ -51,17 +38,9 @@ abstract class BaseIsarEntityState extends BaseEntityState {
   @override
   DateTime? change_cloudAt;
 
-  /// First UTC cloud timestamp
-  @override
-  late DateTime? change_cloudAt_orig_;
-
   /// Latest change author
   @override
-  late String change_changeBy;
-
-  /// Original (first) change author
-  @override
-  late String change_changeBy_orig_;
+  String change_changeBy;
 
   @override
   String? data_rank;
@@ -93,35 +72,35 @@ abstract class BaseIsarEntityState extends BaseEntityState {
   DateTime? data_deleted_cloudAt_;
 
   @override
-  late String data_parentId;
+  String data_parentId;
 
   @override
   /// parentId field conflict resolution
   int? data_parentId_dataSchemaRev_;
   @override
-  late DateTime data_parentId_changeAt_;
+  DateTime data_parentId_changeAt_;
   @override
-  late String data_parentId_cid_;
+  String data_parentId_cid_;
   @override
-  late String data_parentId_changeBy_;
+  String data_parentId_changeBy_;
   @override
   DateTime? data_parentId_cloudAt_;
 
   BaseIsarEntityState({
-    required super.entityId,
+    required this.entityId,
     required super.entityType,
-    super.schemaVersion,
-    required super.change_domainId,
-    super.change_domainId_orig_,
-    required super.change_changeAt,
-    super.change_changeAt_orig_,
+    this.schemaVersion,
+    required this.change_domainId,
+    String? change_domainId_orig_,
+    required this.change_changeAt,
+    DateTime? change_changeAt_orig_,
     required super.change_cid,
-    super.change_cid_orig_,
+    String? change_cid_orig_,
     super.change_dataSchemaRev,
     super.change_cloudAt,
-    super.change_cloudAt_orig_,
+    DateTime? change_cloudAt_orig_,
     required super.change_changeBy,
-    super.change_changeBy_orig_,
+    String? change_changeBy_orig_,
     super.data_rank_dataSchemaRev_,
     super.data_rank,
     super.data_rank_changeAt_,
@@ -140,19 +119,10 @@ abstract class BaseIsarEntityState extends BaseEntityState {
     required super.data_parentId_cid_,
     required super.data_parentId_changeBy_,
     super.data_parentId_cloudAt_,
-  }) : entityId = entityId,
-       schemaVersion = schemaVersion,
-       change_domainId = change_domainId,
-       change_domainId_orig_ = change_domainId_orig_ ?? change_domainId,
-       change_changeAt = change_changeAt,
-       change_changeAt_orig_ = change_changeAt_orig_ ?? change_changeAt,
-       change_cid = change_cid,
-       change_cid_orig_ = change_cid_orig_ ?? change_cid,
+  }) : change_cid = change_cid,
        change_dataSchemaRev = change_dataSchemaRev,
        change_cloudAt = change_cloudAt,
-       change_cloudAt_orig_ = change_cloudAt_orig_ ?? change_cloudAt,
        change_changeBy = change_changeBy,
-       change_changeBy_orig_ = change_changeBy_orig_ ?? change_changeBy,
        data_rank = data_rank,
        data_rank_dataSchemaRev_ = data_rank_dataSchemaRev_,
        data_rank_changeAt_ = data_rank_changeAt_,
@@ -170,5 +140,13 @@ abstract class BaseIsarEntityState extends BaseEntityState {
        data_parentId_changeAt_ = data_parentId_changeAt_,
        data_parentId_cid_ = data_parentId_cid_,
        data_parentId_changeBy_ = data_parentId_changeBy_,
-       data_parentId_cloudAt_ = data_parentId_cloudAt_;
+       data_parentId_cloudAt_ = data_parentId_cloudAt_,
+       super(
+         entityId: entityId,
+         schemaVersion: schemaVersion,
+         change_domainId: change_domainId,
+         change_domainId_orig_: change_domainId_orig_ ?? change_domainId,
+         change_changeAt: change_changeAt,
+         change_changeAt_orig_: change_changeAt_orig_ ?? change_changeAt,
+       );
 }

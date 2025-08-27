@@ -12,23 +12,16 @@ abstract class BaseEntityState
         CoreEntityDataFields,
         CoreChangeLogEntryFields {
   // keep the public contract
-  @override
-  String get change_domainId;
-  @override
-  set change_domainId(String v);
 
   // make orig_ private backing field and public getter (non-virtual storage)
   final String _change_domainId_orig_;
-  @override
   String get change_domainId_orig_ => _change_domainId_orig_;
 
   // same for change_changeAt_orig_ and change_cid_orig_, etc.
   final DateTime _change_changeAt_orig_;
-  @override
   DateTime get change_changeAt_orig_ => _change_changeAt_orig_;
 
   final String _change_cid_orig_;
-  @override
   String get change_cid_orig_ => _change_cid_orig_;
 
   BaseEntityState({

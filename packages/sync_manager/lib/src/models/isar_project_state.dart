@@ -10,7 +10,7 @@ part 'isar_project_state.g.dart';
 
 /// Isar collection for project entity state storage
 @Collection()
-@JsonSerializable(includeIfNull: true, checked: true)
+@JsonSerializable()
 class IsarProjectState extends BaseIsarEntityState {
   @override
   String entityType = 'project';
@@ -34,11 +34,16 @@ class IsarProjectState extends BaseIsarEntityState {
     this.data_nameLocal_cloudAt_,
     super.schemaVersion,
     required super.change_domainId,
+    String? change_domainId_orig_,
     required super.change_changeAt,
+    DateTime? change_changeAt_orig_,
     required super.change_cid,
+    String? change_cid_orig_,
     super.change_dataSchemaRev,
     super.change_cloudAt,
+    DateTime? change_cloudAt_orig_,
     required super.change_changeBy,
+    String? change_changeBy_orig_,
     super.data_rank_dataSchemaRev_,
     super.data_rank,
     super.data_rank_changeAt_,
@@ -57,7 +62,13 @@ class IsarProjectState extends BaseIsarEntityState {
     required super.data_parentId_cid_,
     required super.data_parentId_changeBy_,
     super.data_parentId_cloudAt_,
-  }) : entityType = entityType;
+  }) : super(
+         change_domainId_orig_: change_domainId_orig_ ?? change_domainId,
+         change_changeAt_orig_: change_changeAt_orig_ ?? change_changeAt,
+         change_cid_orig_: change_cid_orig_ ?? change_cid,
+         change_cloudAt_orig_: change_cloudAt_orig_ ?? change_cloudAt,
+         change_changeBy_orig_: change_changeBy_orig_ ?? change_changeBy,
+       );
 
   factory IsarProjectState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
