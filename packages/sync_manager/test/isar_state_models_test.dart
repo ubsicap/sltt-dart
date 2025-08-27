@@ -113,4 +113,42 @@ void main() {
     expect(unknown['extra_doc'], equals('yep'));
     expect(d.entityId, equals('doc-1'));
   });
+
+  test(
+    'IsarProjectState initializes _orig_ fields from current values when missing',
+    () {
+      final rawJson = {
+        'id': 4,
+        'entityId': 'proj-new',
+        'entityType': 'project',
+        'schemaVersion': 1,
+        'change_domainId': 'd2',
+        'change_changeAt': '2024-01-01T10:00:00Z',
+        'change_cid': 'cid-new',
+        'change_changeBy': 'creator',
+        'data_parentId': 'parent',
+        'data_parentId_dataSchemaRev_': 0,
+        'data_parentId_changeAt_': '2024-01-01T10:00:00Z',
+        'data_parentId_cid_': 'cid-parent',
+        'data_parentId_changeBy_': 'creator',
+        // Note: deliberately omitting _orig_ fields to test initialization
+        'surprise': 'new_entity',
+      };
+
+      final p = IsarProjectState.fromJson(rawJson);
+
+      // Verify _orig_ fields are set from current values
+      expect(p.change_domainId_orig_, equals('d2'));
+      expect(
+        p.change_changeAt_orig_,
+        equals(DateTime.parse('2024-01-01T10:00:00Z')),
+      );
+      expect(p.change_cid_orig_, equals('cid-new'));
+      expect(p.change_changeBy_orig_, equals('creator'));
+
+      // Verify unknown fields still work
+      final unknown = jsonDecode(p.unknownJson) as Map<String, dynamic>;
+      expect(unknown['surprise'], equals('new_entity'));
+    },
+  );
 }
