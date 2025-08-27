@@ -77,6 +77,12 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   final outdatedBys = (updates['outdatedBys'] as List<String>? ?? <String>[]);
   final operation = (updates['operation'] as String? ?? 'update');
   final stateChanged = operation != 'noOp' && operation != 'outdated';
+  Map<String, dynamic> additionalWarnings = getAdditionalWarnings(
+    operation,
+    changeLogEntry,
+    entityState,
+    stateUpdates,
+  );
 
   // Build the full set of change-log entry updates callers can apply
   final shouldPreserveData = changeLogEntry.storageId != targetStorageId;
@@ -85,17 +91,59 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     'operationInfoJson': jsonEncode({
       'outdatedBys': outdatedBys,
       'noOpFields': noOpFields,
+      ...additionalWarnings,
     }),
     'stateChanged': stateChanged,
     'cloudAt': changeLogEntry.cloudAt,
-    if (!shouldPreserveData) 'data': changeDataUpdates,
   };
+  if (!shouldPreserveData) {
+    changeLogEntryUpdates['data'] = changeDataUpdates;
+  }
 
   return GetUpdateResults(
     isDuplicate: false,
     stateUpdates: stateUpdates,
     changeUpdates: changeLogEntryUpdates,
   );
+}
+
+/// TODO: finish this function and add tests
+/// additional warnings:
+/// 1) incoming operation does not match actual operation
+/// 2) incoming field_x_orig_ does not match existing state
+Map<String, dynamic> getAdditionalWarnings(
+  String operation,
+  BaseChangeLogEntry changeLogEntry,
+  BaseEntityState? entityState,
+  Map<String, dynamic> stateUpdates,
+) {
+  final additionalWarnings = <String, dynamic>{};
+  if (['create', 'update', 'delete'].contains(operation) &&
+      changeLogEntry.operation != operation) {
+    additionalWarnings['operation'] = changeLogEntry.operation;
+  }
+  if (entityState == null) {
+    if (stateUpdates['change_changeAt_orig_'] != null &&
+        stateUpdates['change_changeAt'] !=
+            stateUpdates['change_changeAt_orig_']) {
+      additionalWarnings['change_changeAt_orig_'] =
+          stateUpdates['change_changeAt_orig_'];
+      // fix stateUpdates
+      stateUpdates['change_changeAt_orig_'] = stateUpdates['change_changeAt'];
+    }
+    // TODO: do this for all _orig_ fields
+  } else {
+    // don't change any existing fieldx__orig_ fields!!!
+    if (stateUpdates['change_changeAt_orig_'] != null &&
+        entityState.change_changeAt_orig_ !=
+            stateUpdates['change_changeAt_orig_']) {
+      additionalWarnings['change_changeAt_orig_'] =
+          stateUpdates['change_changeAt_orig_'];
+      stateUpdates.remove('change_changeAt_orig_');
+    }
+    // TODO: do this for all _orig_ fields
+  }
+  return additionalWarnings;
 }
 
 /// Result type for getMaybeIsduplicateCid
