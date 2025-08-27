@@ -136,7 +136,27 @@ class InMemoryStorage implements BaseStorageService {
     String? cursor,
     int? limit,
     bool includeMetadata = false,
-  }) async => {'items': [], 'nextCursor': null, 'hasMore': false};
+  }) async {
+    final results = _states.entries
+        .where(
+          (e) =>
+              e.key.startsWith('$projectId|$entityType|') &&
+              (cursor == null ||
+                  e.key.compareTo('$projectId|$entityType|$cursor') > 0),
+        )
+        .take(limit ?? 100)
+        .map((e) => e.value.toJson())
+        .toList();
+    if (results.isEmpty) {
+      return {'items': [], 'nextCursor': null, 'hasMore': false};
+    } else {
+      return {
+        'items': results,
+        'nextCursor': results.last['entityId'] as String,
+        'hasMore': false,
+      };
+    }
+  }
 
   @override
   Future<void> markAsOutdated(
@@ -144,16 +164,6 @@ class InMemoryStorage implements BaseStorageService {
     int seq,
     int outdatedBy,
   ) async {}
-
-  @override
-  Future<CreateChangesResult> createChangesWithChangeDetection(
-    List<Map<String, dynamic>> changesData,
-  ) async {
-    return CreateChangesResult(
-      createdChanges: const [],
-      noOpChangeCids: const [],
-    );
-  }
 
   @override
   Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
@@ -727,7 +737,7 @@ void main() {
 
   // begin a group of tests for GET /api/projects/{projectId}/entities/{entityType}/state
   group('GET /api/projects/{projectId}/entities/{entityType}/state', () {
-    test('returns 200 with empty items for no entities', () async {
+    test('returns 200 with empty items for no project entities', () async {
       final projectId = 'proj-empty';
       final entityType = 'project';
       final uri = baseUrl.replace(
@@ -745,9 +755,9 @@ void main() {
       expect(json['hasMore'], isFalse);
     });
 
-    test('returns 200 with entities when present', () async {
+    test('returns 200 with project entities when present', () async {
       final projectId = 'proj-entities';
-      final entityType = 'task';
+      final entityType = 'project';
       // Seed two entities
       await seedChange(
         changePayload(

@@ -74,21 +74,6 @@ abstract class BaseStorageService {
     required Map<String, dynamic> stateUpdates,
   });
 
-  /// Create changes with field-level change detection and no-op tracking
-  ///
-  /// This method uses the pure analyzeChanges function to determine what should
-  /// be stored, then calls the appropriate storage methods.
-  Future<CreateChangesResult> createChangesWithChangeDetection(
-    List<Map<String, dynamic>> changesData,
-  ) async {
-    final createdChanges = <BaseChangeLogEntry>[];
-
-    return CreateChangesResult(
-      createdChanges: createdChanges,
-      noOpChangeCids: [],
-    );
-  }
-
   /// Get the current state of an entity for field-level comparison.
   ///
   /// Storage implementations should override this method to provide entity lookup.
