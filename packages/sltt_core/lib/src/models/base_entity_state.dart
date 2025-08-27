@@ -24,6 +24,12 @@ abstract class BaseEntityState
   final String _change_cid_orig_;
   String get change_cid_orig_ => _change_cid_orig_;
 
+  final DateTime? _change_cloudAt_orig_;
+  DateTime? get change_cloudAt_orig_ => _change_cloudAt_orig_;
+
+  final String _change_changeBy_orig_;
+  String get change_changeBy_orig_ => _change_changeBy_orig_;
+
   BaseEntityState({
     required String entityId,
     required String entityType,
@@ -59,7 +65,9 @@ abstract class BaseEntityState
     DateTime? data_parentId_cloudAt_,
   }) : _change_domainId_orig_ = change_domainId_orig_ ?? change_domainId,
        _change_changeAt_orig_ = change_changeAt_orig_ ?? change_changeAt,
-       _change_cid_orig_ = change_cid_orig_ ?? change_cid {
+       _change_cid_orig_ = change_cid_orig_ ?? change_cid,
+       _change_cloudAt_orig_ = change_cloudAt_orig_ ?? change_cloudAt,
+       _change_changeBy_orig_ = change_changeBy_orig_ ?? change_changeBy {
     // other non-virtual initialization as needed
   }
 
