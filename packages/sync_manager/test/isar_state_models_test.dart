@@ -157,4 +157,49 @@ void main() {
       expect(unknown['surprise'], equals('new_entity'));
     },
   );
+
+  test('IsarProjectState preserves non-empty _orig_ field values', () {
+    final rawJson = {
+      'id': 5,
+      'entityId': 'proj-updated',
+      'entityType': 'project',
+      'schemaVersion': 1,
+      'change_domainId': 'd3-current',
+      'change_changeAt': '2024-02-01T10:00:00Z',
+      'change_cid': 'cid-current',
+      'change_changeBy': 'updater',
+      'data_parentId': 'parent-current',
+      'data_parentId_dataSchemaRev_': 0,
+      'data_parentId_changeAt_': '2024-02-01T10:00:00Z',
+      'data_parentId_cid_': 'cid-parent-current',
+      'data_parentId_changeBy_': 'updater',
+      // Note: providing specific _orig_ values that should be preserved
+      'change_domainId_orig_': 'd3-original',
+      'change_changeAt_orig_': '2024-01-15T09:30:00Z',
+      'change_cid_orig_': 'cid-original',
+      'change_changeBy_orig_': 'creator',
+      'surprise': 'updated_entity',
+    };
+
+    final p = IsarProjectState.fromJson(rawJson);
+
+    // Verify _orig_ fields preserve their provided values (not current values)
+    expect(p.change_domainId_orig_, equals('d3-original'));
+    expect(
+      p.change_changeAt_orig_,
+      equals(DateTime.parse('2024-01-15T09:30:00Z')),
+    );
+    expect(p.change_cid_orig_, equals('cid-original'));
+    expect(p.change_changeBy_orig_, equals('creator'));
+
+    // Verify current values are different from _orig_ values
+    expect(p.change_domainId, equals('d3-current'));
+    expect(p.change_changeAt, equals(DateTime.parse('2024-02-01T10:00:00Z')));
+    expect(p.change_cid, equals('cid-current'));
+    expect(p.change_changeBy, equals('updater'));
+
+    // Verify unknown fields still work
+    final unknown = jsonDecode(p.unknownJson) as Map<String, dynamic>;
+    expect(unknown['surprise'], equals('updated_entity'));
+  });
 }
