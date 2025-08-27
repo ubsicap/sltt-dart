@@ -354,8 +354,10 @@ void main() {
               (resp['stateUpdates'] as List).first['state']
                   as Map<String, dynamic>;
           expect(cu['operation'], 'update');
-          expect(cu['operationInfo']['outdatedBys'], []);
-          expect(cu['operationInfo']['noOpFields'], []);
+          expect(
+            cu['operationInfoJson'],
+            equals(jsonEncode({'outdatedBys': [], 'noOpFields': []})),
+          );
           expect(cu['stateChanged'], isTrue);
           expect((cu['data'] as Map<String, dynamic>), {'rank': '2'});
           expect(su['data_rank'], '2');
@@ -506,7 +508,15 @@ void main() {
               (resp['changeUpdates'] as List).first['updates']
                   as Map<String, dynamic>;
           expect(cu['operation'], 'update');
-          expect(cu['operationInfo']['noOpFields'], contains('rank'));
+          expect(
+            cu['operationInfoJson'],
+            equals(
+              jsonEncode({
+                'outdatedBys': [],
+                'noOpFields': ['rank'],
+              }),
+            ),
+          );
           final data = (cu['data'] as Map<String, dynamic>);
           expect(data.keys.toSet(), {'parentId', 'nameLocal'});
           expect(data['parentId'], 'parent2');
@@ -570,8 +580,15 @@ void main() {
               (resp['changeUpdates'] as List).first['updates']
                   as Map<String, dynamic>;
           expect(cu['operation'], anyOf('update', 'outdated'));
-          expect(cu['operationInfo']['outdatedBys'], contains('rank'));
-          expect(cu['operationInfo']['noOpFields'], contains('nameLocal'));
+          expect(
+            cu['operationInfoJson'],
+            equals(
+              jsonEncode({
+                'outdatedBys': ['rank'],
+                'noOpFields': ['nameLocal'],
+              }),
+            ),
+          );
           expect(cu['data'], {'parentId': 'parent2'});
         },
       );
