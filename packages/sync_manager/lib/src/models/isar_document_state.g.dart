@@ -372,6 +372,8 @@ IsarDocumentState _isarDocumentStateDeserialize(
     data_rank_cloudAt_: reader.readDateTimeOrNull(offsets[28]),
     data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[29]),
     data_title: reader.readStringOrNull(offsets[30]),
+    data_title_changeAt_: reader.readDateTimeOrNull(offsets[31]),
+    data_title_cid_: reader.readStringOrNull(offsets[32]),
     entityId: reader.readString(offsets[33]),
     entityType: reader.readStringOrNull(offsets[34]) ?? 'document',
     schemaVersion: reader.readLongOrNull(offsets[35]),
@@ -381,8 +383,6 @@ IsarDocumentState _isarDocumentStateDeserialize(
   object.change_cid_orig_ = reader.readString(offsets[5]);
   object.change_cloudAt_orig_ = reader.readDateTimeOrNull(offsets[7]);
   object.change_domainId_orig_ = reader.readString(offsets[10]);
-  object.data_title_changeAt_ = reader.readDateTimeOrNull(offsets[31]);
-  object.data_title_cid_ = reader.readStringOrNull(offsets[32]);
   object.id = id;
   object.unknownJson = reader.readString(offsets[36]);
   return object;
@@ -6305,9 +6305,6 @@ IsarDocumentState _$IsarDocumentStateFromJson(Map<String, dynamic> json) =>
               (v) => v == null ? null : DateTime.parse(v as String)),
           change_changeBy:
               $checkedConvert('change_changeBy', (v) => v as String),
-          data_title: $checkedConvert('data_title', (v) => v as String?),
-          data_contentLength: $checkedConvert(
-              'data_contentLength', (v) => (v as num?)?.toInt()),
           data_rank_dataSchemaRev_: $checkedConvert(
               'data_rank_dataSchemaRev_', (v) => (v as num?)?.toInt()),
           data_rank: $checkedConvert('data_rank', (v) => v as String?),
@@ -6341,6 +6338,13 @@ IsarDocumentState _$IsarDocumentStateFromJson(Map<String, dynamic> json) =>
               $checkedConvert('data_parentId_changeBy_', (v) => v as String),
           data_parentId_cloudAt_: $checkedConvert('data_parentId_cloudAt_',
               (v) => v == null ? null : DateTime.parse(v as String)),
+          data_title: $checkedConvert('data_title', (v) => v as String?),
+          data_contentLength: $checkedConvert(
+              'data_contentLength', (v) => (v as num?)?.toInt()),
+          data_title_changeAt_: $checkedConvert('data_title_changeAt_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
+          data_title_cid_:
+              $checkedConvert('data_title_cid_', (v) => v as String?),
         );
         $checkedConvert('id', (v) => val.id = (v as num).toInt());
         $checkedConvert('unknownJson', (v) => val.unknownJson = v as String);
@@ -6356,12 +6360,6 @@ IsarDocumentState _$IsarDocumentStateFromJson(Map<String, dynamic> json) =>
                 v == null ? null : DateTime.parse(v as String));
         $checkedConvert('change_changeBy_orig_',
             (v) => val.change_changeBy_orig_ = v as String);
-        $checkedConvert(
-            'data_title_changeAt_',
-            (v) => val.data_title_changeAt_ =
-                v == null ? null : DateTime.parse(v as String));
-        $checkedConvert(
-            'data_title_cid_', (v) => val.data_title_cid_ = v as String?);
         return val;
       },
     );
@@ -6370,7 +6368,6 @@ Map<String, dynamic> _$IsarDocumentStateToJson(IsarDocumentState instance) =>
     <String, dynamic>{
       'id': instance.id,
       'entityId': instance.entityId,
-      'entityType': instance.entityType,
       'schemaVersion': instance.schemaVersion,
       'unknownJson': instance.unknownJson,
       'change_domainId': instance.change_domainId,
@@ -6390,10 +6387,6 @@ Map<String, dynamic> _$IsarDocumentStateToJson(IsarDocumentState instance) =>
       'data_rank_cid_': instance.data_rank_cid_,
       'data_rank_changeBy_': instance.data_rank_changeBy_,
       'data_rank_cloudAt_': instance.data_rank_cloudAt_?.toIso8601String(),
-      'data_title': instance.data_title,
-      'data_contentLength': instance.data_contentLength,
-      'data_title_changeAt_': instance.data_title_changeAt_?.toIso8601String(),
-      'data_title_cid_': instance.data_title_cid_,
       'data_deleted': instance.data_deleted,
       'data_deleted_dataSchemaRev_': instance.data_deleted_dataSchemaRev_,
       'data_deleted_changeAt_':
@@ -6410,4 +6403,9 @@ Map<String, dynamic> _$IsarDocumentStateToJson(IsarDocumentState instance) =>
       'data_parentId_changeBy_': instance.data_parentId_changeBy_,
       'data_parentId_cloudAt_':
           instance.data_parentId_cloudAt_?.toIso8601String(),
+      'entityType': instance.entityType,
+      'data_title': instance.data_title,
+      'data_contentLength': instance.data_contentLength,
+      'data_title_changeAt_': instance.data_title_changeAt_?.toIso8601String(),
+      'data_title_cid_': instance.data_title_cid_,
     };
