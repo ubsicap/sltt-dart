@@ -168,6 +168,7 @@ abstract class BaseEntityState
     DateTime? change_cloudAt,
     DateTime? change_cloudAt_orig_,
     required String change_changeBy,
+    String? change_changeBy_orig_,
     int? data_rank_dataSchemaRev_,
     String? data_rank,
     DateTime? data_rank_changeAt_,
@@ -192,6 +193,7 @@ abstract class BaseEntityState
     this.change_changeAt_orig_ = change_changeAt_orig_ ?? change_changeAt;
     this.change_cid_orig_ = change_cid_orig_ ?? change_cid;
     this.change_cloudAt_orig_ = change_cloudAt_orig_ ?? change_cloudAt;
+    this.change_changeBy_orig_ = change_changeBy_orig_ ?? change_changeBy;
   }
 
   // Abstract methods to be implemented by concrete subclasses
