@@ -21,7 +21,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   /// Current domain ID
   @override
-  String change_domainId = '';
+  String change_domainId;
 
   /// Original (first) values for tracking entity creation
   @override
@@ -29,7 +29,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   /// Latest change timestamp
   @override
-  DateTime change_changeAt = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime change_changeAt;
 
   /// First UTC change timestamp
   @override
@@ -37,7 +37,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   /// Latest change ID
   @override
-  String change_cid = '';
+  String change_cid;
 
   /// Original (first) change ID
   @override
@@ -57,7 +57,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   /// Latest change author
   @override
-  String change_changeBy = '';
+  String change_changeBy;
 
   /// Original (first) change author
   @override
@@ -78,32 +78,32 @@ abstract class BaseIsarEntityState extends BaseEntityState {
   DateTime? data_rank_cloudAt_;
 
   @override
-  bool? data_deleted = false;
+  bool? data_deleted;
 
   // deleted field conflict resolution
   @override
-  int? data_deleted_dataSchemaRev_ = 0;
+  int? data_deleted_dataSchemaRev_;
   @override
   DateTime? data_deleted_changeAt_;
   @override
-  String? data_deleted_cid_ = '';
+  String? data_deleted_cid_;
   @override
-  String? data_deleted_changeBy_ = '';
+  String? data_deleted_changeBy_;
   @override
   DateTime? data_deleted_cloudAt_;
 
   @override
-  String data_parentId = '';
+  String data_parentId;
 
   @override
   /// parentId field conflict resolution
   int? data_parentId_dataSchemaRev_;
   @override
-  DateTime data_parentId_changeAt_ = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime data_parentId_changeAt_;
   @override
-  String data_parentId_cid_ = '';
+  String data_parentId_cid_;
   @override
-  String data_parentId_changeBy_ = '';
+  String data_parentId_changeBy_;
   @override
   DateTime? data_parentId_cloudAt_;
 
