@@ -65,7 +65,6 @@ class TestEntityState extends BaseEntityState {
   int? schemaVersion;
   @override
   String unknownJson = '{}';
-  @override
   String change_domainId;
   @override
   late String change_domainId_orig_;
@@ -81,8 +80,6 @@ class TestEntityState extends BaseEntityState {
   int? change_dataSchemaRev;
   @override
   DateTime? change_cloudAt;
-  @override
-  late DateTime? change_cloudAt_orig_;
   @override
   String change_changeBy;
   @override
@@ -135,15 +132,15 @@ class TestEntityState extends BaseEntityState {
     required super.entityType,
     super.schemaVersion,
     required super.change_domainId,
-    super.change_domainId_orig_,
+    required super.change_domainId_orig_,
     required super.change_changeAt,
-    super.change_changeAt_orig_,
+    required super.change_changeAt_orig_,
     required super.change_cid,
-    super.change_cid_orig_,
+    required super.change_cid_orig_,
     super.change_dataSchemaRev,
     super.change_cloudAt,
-    super.change_cloudAt_orig_,
     required super.change_changeBy,
+    required super.change_changeBy_orig_,
     int? data_rank_dataSchemaRev_,
     String? data_rank,
     DateTime? data_rank_changeAt_,
@@ -166,15 +163,27 @@ class TestEntityState extends BaseEntityState {
        entityType = entityType,
        schemaVersion = schemaVersion,
        change_domainId = change_domainId,
-       change_domainId_orig_ = change_domainId_orig_ ?? change_domainId,
+       change_domainId_orig_ = BaseEntityState.normalizeOrigString(
+         change_domainId_orig_,
+         change_domainId,
+       ),
        change_changeAt = change_changeAt,
-       change_changeAt_orig_ = change_changeAt_orig_ ?? change_changeAt,
+       change_changeAt_orig_ = BaseEntityState.normalizeOrigDateTime(
+         change_changeAt_orig_,
+         change_changeAt,
+       ),
        change_cid = change_cid,
-       change_cid_orig_ = change_cid_orig_ ?? change_cid,
+       change_cid_orig_ = BaseEntityState.normalizeOrigString(
+         change_cid_orig_,
+         change_cid,
+       ),
        change_dataSchemaRev = change_dataSchemaRev,
        change_cloudAt = change_cloudAt,
-       change_cloudAt_orig_ = change_cloudAt_orig_ ?? change_cloudAt,
        change_changeBy = change_changeBy,
+       change_changeBy_orig_ = BaseEntityState.normalizeOrigString(
+         change_changeBy_orig_,
+         change_changeBy,
+       ),
        data_rank_dataSchemaRev_ = data_rank_dataSchemaRev_,
        data_rank = data_rank,
        data_rank_changeAt_ = data_rank_changeAt_,

@@ -253,11 +253,13 @@ void main() {
             'cid': original['cid'] ?? generateCid(now),
             'storageId': original['storageId'] ?? 'local',
             'changeBy': original['changeBy'] ?? 'tester',
-            'dataJson': original['dataJson'] ?? '{}',
+            'dataJson': JsonUtils.normalize(original['dataJson']),
             'operation': original['operation'] ?? 'update',
-            'operationInfoJson': original['operationInfoJson'] ?? '{}',
+            'operationInfoJson': JsonUtils.normalize(
+              original['operationInfoJson'],
+            ),
             'stateChanged': original['stateChanged'] ?? false,
-            'unknownJson': original['unknownJson'] ?? '{}',
+            'unknownJson': JsonUtils.normalize(original['unknownJson']),
           };
         },
       ),

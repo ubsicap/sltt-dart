@@ -17,6 +17,8 @@ void main() {
         'change_cid': 'c1',
         'change_cid_orig_': 'c1',
         'change_changeBy': 'u1',
+        'change_changeBy_orig_':
+            '', // Empty string inherits from change_changeBy
         'data_nameLocal': 'Test Task',
         'data_nameLocal_dataSchemaRev_': 1,
         'data_nameLocal_changeAt_': DateTime.now().toIso8601String(),
@@ -59,6 +61,8 @@ void main() {
         'change_cid': 'c1',
         'change_cid_orig_': 'c1',
         'change_changeBy': 'u1',
+        'change_changeBy_orig_':
+            '', // Empty string inherits from change_changeBy
         'data_nameLocal': 'Test Task',
         'data_nameLocal_dataSchemaRev_': 1,
         'data_nameLocal_changeAt_': DateTime.now().toIso8601String(),
@@ -100,6 +104,8 @@ void main() {
         'change_cid': 'c1',
         'change_cid_orig_': 'c1',
         'change_changeBy': 'u1',
+        'change_changeBy_orig_':
+            '', // Empty string inherits from change_changeBy
         'data_nameLocal': 'Test Task',
         'data_nameLocal_dataSchemaRev_': 1,
         'data_nameLocal_changeAt_': DateTime.now().toIso8601String(),

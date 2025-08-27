@@ -29,6 +29,17 @@ mixin HasUnknownField {
   }
 }
 
+/// Utility functions for JSON string normalization
+class JsonUtils {
+  /// Normalizes a JSON string to ensure it's never null or empty.
+  /// Returns '{}' for null or empty strings, otherwise returns the original string.
+  ///
+  /// Commonly used for dataJson, operationInfoJson, unknownJson fields.
+  static String normalize(String? json) {
+    return (json == null || json.isEmpty) ? '{}' : json;
+  }
+}
+
 /// baseToJson() should return all fields even with null values.
 T deserializeWithUnknownFieldData<T extends HasUnknownField>(
   T Function(Map<String, dynamic> json) fromJson,

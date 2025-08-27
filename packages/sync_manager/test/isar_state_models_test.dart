@@ -131,7 +131,13 @@ void main() {
         'data_parentId_changeAt_': '2024-01-01T10:00:00Z',
         'data_parentId_cid_': 'cid-parent',
         'data_parentId_changeBy_': 'creator',
-        // Note: deliberately omitting _orig_ fields to test initialization
+        // Note: using empty/default values to test that _orig_ fields get proper values
+        'change_domainId_orig_': '',
+        'change_changeAt_orig_': DateTime.fromMillisecondsSinceEpoch(
+          0,
+        ).toUtc().toIso8601String(),
+        'change_cid_orig_': '',
+        'change_changeBy_orig_': '',
         'surprise': 'new_entity',
       };
 

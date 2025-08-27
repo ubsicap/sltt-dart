@@ -25,11 +25,13 @@ final _isarChangeLogEntryFactoryRegistration = (() {
           'cid': original['cid'] ?? generateCid(now),
           'storageId': original['storageId'] ?? 'local',
           'changeBy': original['changeBy'] ?? 'client',
-          'dataJson': original['dataJson'] ?? '{}',
+          'dataJson': JsonUtils.normalize(original['dataJson']),
           'operation': original['operation'] ?? 'update',
-          'operationInfoJson': original['operationInfoJson'] ?? '{}',
+          'operationInfoJson': JsonUtils.normalize(
+            original['operationInfoJson'],
+          ),
           'stateChanged': original['stateChanged'] ?? false,
-          'unknownJson': original['unknownJson'] ?? '{}',
+          'unknownJson': JsonUtils.normalize(original['unknownJson']),
         };
       },
     ),

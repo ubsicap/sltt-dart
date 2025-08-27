@@ -12,9 +12,6 @@ part 'isar_team_state.g.dart';
 @Collection()
 @JsonSerializable(includeIfNull: true, checked: true)
 class IsarTeamState extends BaseIsarEntityState {
-  @override
-  String entityType = 'team';
-
   // Team-specific fields following _meta_ convention
   String? data_name;
   int? data_name_dataSchemaRev_;
@@ -24,15 +21,20 @@ class IsarTeamState extends BaseIsarEntityState {
   DateTime? data_name_cloudAt_;
 
   IsarTeamState({
-    required super.entityId,
     super.entityType = 'team',
+    required super.entityId,
+    required super.unknownJson,
     super.schemaVersion,
     required super.change_domainId,
+    required super.change_domainId_orig_,
     required super.change_changeAt,
+    required super.change_changeAt_orig_,
     required super.change_cid,
+    required super.change_cid_orig_,
     super.change_dataSchemaRev,
     super.change_cloudAt,
     required super.change_changeBy,
+    required super.change_changeBy_orig_,
     super.data_rank_dataSchemaRev_,
     super.data_rank,
     super.data_rank_changeAt_,
@@ -57,7 +59,7 @@ class IsarTeamState extends BaseIsarEntityState {
     this.data_name_cid_,
     this.data_name_changeBy_,
     this.data_name_cloudAt_,
-  }) : entityType = entityType;
+  });
 
   factory IsarTeamState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(

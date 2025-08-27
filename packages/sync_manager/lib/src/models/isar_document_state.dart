@@ -12,9 +12,6 @@ part 'isar_document_state.g.dart';
 @Collection()
 @JsonSerializable(includeIfNull: true, checked: true)
 class IsarDocumentState extends BaseIsarEntityState {
-  @override
-  String entityType = 'document';
-
   // Document-specific fields
   String? data_title;
   int? data_contentLength;
@@ -25,12 +22,17 @@ class IsarDocumentState extends BaseIsarEntityState {
     required super.entityId,
     super.entityType = 'document',
     super.schemaVersion,
+    required super.unknownJson,
     required super.change_domainId,
+    required super.change_domainId_orig_,
     required super.change_changeAt,
+    required super.change_changeAt_orig_,
     required super.change_cid,
+    required super.change_cid_orig_,
     super.change_dataSchemaRev,
     super.change_cloudAt,
     required super.change_changeBy,
+    required super.change_changeBy_orig_,
     super.data_rank_dataSchemaRev_,
     super.data_rank,
     super.data_rank_changeAt_,
@@ -53,7 +55,7 @@ class IsarDocumentState extends BaseIsarEntityState {
     this.data_contentLength,
     this.data_title_changeAt_,
     this.data_title_cid_,
-  }) : entityType = entityType;
+  });
 
   factory IsarDocumentState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(

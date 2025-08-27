@@ -463,7 +463,6 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
         'change_changeAt_orig_': changeLogEntry.changeAt.toIso8601String(),
         'change_cid_orig_': changeLogEntry.cid,
         'change_changeBy_orig_': changeLogEntry.changeBy,
-        'change_cloudAt_orig_': changeLogEntry.cloudAt?.toIso8601String(),
         'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
       },
       // latest metadata

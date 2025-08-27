@@ -11,91 +11,111 @@ abstract class BaseIsarEntityState extends BaseEntityState {
   /// Primary key - entityId with entity type abbreviation
   @override
   @Index(unique: true)
-  String entityId;
+  final String entityId;
 
   @override
-  int? schemaVersion;
+  final String entityType;
 
   @override
-  String unknownJson = '{}';
+  final int? schemaVersion;
+
+  @override
+  String unknownJson;
 
   /// Current domain ID
-  String change_domainId;
+  final String change_domainId;
 
   /// Latest change timestamp
   @override
-  DateTime change_changeAt;
+  final DateTime change_changeAt;
 
   /// Latest change ID
   @override
-  String change_cid;
+  final String change_cid;
 
   /// latest data schema revision (no need for _orig_)
   @override
-  int? change_dataSchemaRev;
+  final int? change_dataSchemaRev;
 
-  /// Latest cloud timestamp
+  /// Latest cloud timestamp (no need for _orig_)
   @override
-  DateTime? change_cloudAt;
+  final DateTime? change_cloudAt;
 
   /// Latest change author
   @override
-  String change_changeBy;
+  final String change_changeBy;
 
   @override
-  String? data_rank;
+  final DateTime change_changeAt_orig_;
 
   @override
-  int? data_rank_dataSchemaRev_;
+  final String change_changeBy_orig_;
+
   @override
-  DateTime? data_rank_changeAt_;
+  final String change_cid_orig_;
+
   @override
-  String? data_rank_cid_;
+  final String change_domainId_orig_;
+
   @override
-  String? data_rank_changeBy_;
+  final String? data_rank;
+
   @override
-  DateTime? data_rank_cloudAt_;
+  final int? data_rank_dataSchemaRev_;
+  @override
+  final DateTime? data_rank_changeAt_;
+  @override
+  final String? data_rank_cid_;
+  @override
+  final String? data_rank_changeBy_;
+  @override
+  final DateTime? data_rank_cloudAt_;
 
   @override
   bool? data_deleted;
 
   // deleted field conflict resolution
   @override
-  int? data_deleted_dataSchemaRev_;
+  final int? data_deleted_dataSchemaRev_;
   @override
-  DateTime? data_deleted_changeAt_;
+  final DateTime? data_deleted_changeAt_;
   @override
-  String? data_deleted_cid_;
+  final String? data_deleted_cid_;
   @override
-  String? data_deleted_changeBy_;
+  final String? data_deleted_changeBy_;
   @override
-  DateTime? data_deleted_cloudAt_;
+  final DateTime? data_deleted_cloudAt_;
 
   @override
-  String data_parentId;
+  final String data_parentId;
 
   @override
   /// parentId field conflict resolution
-  int? data_parentId_dataSchemaRev_;
+  final int? data_parentId_dataSchemaRev_;
   @override
-  DateTime data_parentId_changeAt_;
+  final DateTime data_parentId_changeAt_;
   @override
-  String data_parentId_cid_;
+  final String data_parentId_cid_;
   @override
-  String data_parentId_changeBy_;
+  final String data_parentId_changeBy_;
   @override
-  DateTime? data_parentId_cloudAt_;
+  final DateTime? data_parentId_cloudAt_;
 
   BaseIsarEntityState({
     required super.entityId,
     required super.entityType,
     super.schemaVersion,
+    required String unknownJson,
     required super.change_domainId,
+    required super.change_domainId_orig_,
     required super.change_changeAt,
+    required super.change_changeAt_orig_,
     required super.change_cid,
+    required super.change_cid_orig_,
     super.change_dataSchemaRev,
     super.change_cloudAt,
     required super.change_changeBy,
+    required super.change_changeBy_orig_,
     super.data_rank_dataSchemaRev_,
     super.data_rank,
     super.data_rank_changeAt_,
@@ -115,71 +135,31 @@ abstract class BaseIsarEntityState extends BaseEntityState {
     required super.data_parentId_changeBy_,
     super.data_parentId_cloudAt_,
   }) : entityId = entityId,
+       schemaVersion = schemaVersion,
+       entityType = entityType,
+       unknownJson = JsonUtils.normalize(unknownJson),
        change_domainId = change_domainId,
+       change_domainId_orig_ = BaseEntityState.normalizeOrigString(
+         change_domainId_orig_,
+         change_domainId,
+       ),
        change_changeAt = change_changeAt,
+       change_changeAt_orig_ = BaseEntityState.normalizeOrigDateTime(
+         change_changeAt_orig_,
+         change_changeAt,
+       ),
        change_cid = change_cid,
+       change_cid_orig_ = BaseEntityState.normalizeOrigString(
+         change_cid_orig_,
+         change_cid,
+       ),
        change_dataSchemaRev = change_dataSchemaRev,
        change_cloudAt = change_cloudAt,
        change_changeBy = change_changeBy,
-       data_rank = data_rank,
-       data_rank_dataSchemaRev_ = data_rank_dataSchemaRev_,
-       data_rank_changeAt_ = data_rank_changeAt_,
-       data_rank_cid_ = data_rank_cid_,
-       data_rank_changeBy_ = data_rank_changeBy_,
-       data_rank_cloudAt_ = data_rank_cloudAt_,
-       data_deleted = data_deleted,
-       data_deleted_dataSchemaRev_ = data_deleted_dataSchemaRev_,
-       data_deleted_changeAt_ = data_deleted_changeAt_,
-       data_deleted_cid_ = data_deleted_cid_,
-       data_deleted_changeBy_ = data_deleted_changeBy_,
-       data_deleted_cloudAt_ = data_deleted_cloudAt_,
-       data_parentId = data_parentId,
-       data_parentId_dataSchemaRev_ = data_parentId_dataSchemaRev_,
-       data_parentId_changeAt_ = data_parentId_changeAt_,
-       data_parentId_cid_ = data_parentId_cid_,
-       data_parentId_changeBy_ = data_parentId_changeBy_,
-       data_parentId_cloudAt_ = data_parentId_cloudAt_;
-
-  BaseIsarEntityState.withOrig({
-    required super.entityId,
-    required super.entityType,
-    super.schemaVersion,
-    required super.change_domainId,
-    super.change_domainId_orig_,
-    required super.change_changeAt,
-    super.change_changeAt_orig_,
-    required super.change_cid,
-    super.change_cid_orig_,
-    super.change_dataSchemaRev,
-    super.change_cloudAt,
-    super.change_cloudAt_orig_,
-    required super.change_changeBy,
-    super.change_changeBy_orig_,
-    super.data_rank_dataSchemaRev_,
-    super.data_rank,
-    super.data_rank_changeAt_,
-    super.data_rank_cid_,
-    super.data_rank_changeBy_,
-    super.data_rank_cloudAt_,
-    super.data_deleted,
-    super.data_deleted_dataSchemaRev_,
-    super.data_deleted_changeAt_,
-    super.data_deleted_cid_,
-    super.data_deleted_changeBy_,
-    super.data_deleted_cloudAt_,
-    required super.data_parentId,
-    required super.data_parentId_dataSchemaRev_,
-    required super.data_parentId_changeAt_,
-    required super.data_parentId_cid_,
-    required super.data_parentId_changeBy_,
-    super.data_parentId_cloudAt_,
-  }) : entityId = entityId,
-       change_domainId = change_domainId,
-       change_changeAt = change_changeAt,
-       change_cid = change_cid,
-       change_dataSchemaRev = change_dataSchemaRev,
-       change_cloudAt = change_cloudAt,
-       change_changeBy = change_changeBy,
+       change_changeBy_orig_ = BaseEntityState.normalizeOrigString(
+         change_changeBy_orig_,
+         change_changeBy,
+       ),
        data_rank = data_rank,
        data_rank_dataSchemaRev_ = data_rank_dataSchemaRev_,
        data_rank_changeAt_ = data_rank_changeAt_,

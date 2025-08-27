@@ -10,41 +10,24 @@ abstract class BaseEntityState
     implements
         CoreEntityMetaData,
         CoreEntityDataFields,
-        CoreChangeLogEntryFields {
+        CoreChangeLogEntryFields,
+        CoreChangeLogEntryOriginalFields {
   // keep the public contract
-
-  // make orig_ private backing field and public getter (non-virtual storage)
-  final String _change_domainId_orig_;
-  String get change_domainId_orig_ => _change_domainId_orig_;
-
-  // same for change_changeAt_orig_ and change_cid_orig_, etc.
-  final DateTime _change_changeAt_orig_;
-  DateTime get change_changeAt_orig_ => _change_changeAt_orig_;
-
-  final String _change_cid_orig_;
-  String get change_cid_orig_ => _change_cid_orig_;
-
-  final DateTime? _change_cloudAt_orig_;
-  DateTime? get change_cloudAt_orig_ => _change_cloudAt_orig_;
-
-  final String _change_changeBy_orig_;
-  String get change_changeBy_orig_ => _change_changeBy_orig_;
 
   BaseEntityState({
     required String entityId,
     required String entityType,
     int? schemaVersion,
     required String change_domainId,
-    String? change_domainId_orig_,
+    required String change_domainId_orig_,
     required DateTime change_changeAt,
-    DateTime? change_changeAt_orig_,
+    required DateTime change_changeAt_orig_,
     required String change_cid,
-    String? change_cid_orig_,
+    required String change_cid_orig_,
     int? change_dataSchemaRev,
     DateTime? change_cloudAt,
-    DateTime? change_cloudAt_orig_,
     required String change_changeBy,
-    String? change_changeBy_orig_,
+    required String change_changeBy_orig_,
     int? data_rank_dataSchemaRev_,
     String? data_rank,
     DateTime? data_rank_changeAt_,
@@ -63,16 +46,28 @@ abstract class BaseEntityState
     required String data_parentId_cid_,
     required String data_parentId_changeBy_,
     DateTime? data_parentId_cloudAt_,
-  }) : _change_domainId_orig_ = change_domainId_orig_ ?? change_domainId,
-       _change_changeAt_orig_ = change_changeAt_orig_ ?? change_changeAt,
-       _change_cid_orig_ = change_cid_orig_ ?? change_cid,
-       _change_cloudAt_orig_ = change_cloudAt_orig_ ?? change_cloudAt,
-       _change_changeBy_orig_ = change_changeBy_orig_ ?? change_changeBy {
-    // other non-virtual initialization as needed
-  }
+  });
 
   // Abstract methods to be implemented by concrete subclasses
   Map<String, dynamic> toJson();
+
+  // Static helper methods for _orig_ field initialization
+  static String normalizeOrigString(String orig, String current) {
+    return orig.isEmpty ? current : orig;
+  }
+
+  static DateTime normalizeOrigDateTime(DateTime orig, DateTime current) {
+    return orig.isAtSameMomentAs(DateTime.fromMillisecondsSinceEpoch(0))
+        ? current
+        : orig;
+  }
+
+  static DateTime? normalizeOrigDateTimeNullable(
+    DateTime? orig,
+    DateTime? current,
+  ) {
+    return orig ?? current;
+  }
 }
 
 mixin CoreEntityMetaData {
@@ -111,4 +106,13 @@ mixin CoreChangeLogEntryFields {
   String get change_cid;
   DateTime? get change_cloudAt;
   int? get change_dataSchemaRev;
+}
+
+mixin CoreChangeLogEntryOriginalFields {
+  String get change_domainId_orig_;
+  DateTime get change_changeAt_orig_;
+  String get change_cid_orig_;
+  // NOT needed: DateTime? get change_cloudAt_orig_;
+  String get change_changeBy_orig_;
+  // NOT needed: int? get change_dataSchemaRev_orig_;
 }
