@@ -82,7 +82,10 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   final shouldPreserveData = changeLogEntry.storageId != targetStorageId;
   final changeLogEntryUpdates = <String, dynamic>{
     'operation': operation,
-    'operationInfo': {'outdatedBys': outdatedBys, 'noOpFields': noOpFields},
+    'operationInfoJson': jsonEncode({
+      'outdatedBys': outdatedBys,
+      'noOpFields': noOpFields,
+    }),
     'stateChanged': stateChanged,
     'cloudAt': changeLogEntry.cloudAt,
     if (!shouldPreserveData) 'data': changeDataUpdates,

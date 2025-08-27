@@ -47,7 +47,8 @@ String generateCid([DateTime? timestamp]) {
   final timezonePart = '$offsetSign$offsetHours$offsetMinutes';
 
   // 4-character random part
-  final randomPart = generateRandomChars(4);
+  final rng = timestamp != null ? Random(timestamp.millisecond) : Random();
+  final randomPart = generateRandomChars(4, rng: rng);
 
   return '$datePart$timezonePart-$randomPart';
 }

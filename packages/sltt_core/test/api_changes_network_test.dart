@@ -393,10 +393,79 @@ void main() {
           final cu =
               (resp['changeUpdates'] as List).first['updates']
                   as Map<String, dynamic>;
-          expect(cu['operation'], 'noOp');
-          expect(cu['operationInfo']['noOpFields'], contains('rank'));
           // Data is omitted in changeUpdates when storageId != targetStorageId
           expect(cu['data'], isNull);
+          expect(
+            cu,
+            equals({
+              'operation': 'noOp',
+              'operationInfoJson': jsonEncode({
+                'outdatedBys': [],
+                'noOpFields': ['rank'],
+              }),
+              'stateChanged': false,
+              'cloudAt': null,
+            }),
+          );
+          expect(resp['stateUpdates'], [
+            {'cid': '2022-1231-180100-000_0000-7B2P', 'state': {}},
+          ]);
+          expect(
+            resp['unknowns'],
+            isEmpty,
+            reason: 'Unexpected unknowns found',
+          );
+          expect(
+            resp['storageType'],
+            'local',
+            reason: 'Unexpected storageType found',
+          );
+          expect(
+            resp['storageId'],
+            'local',
+            reason: 'Unexpected storageId found',
+          );
+          expect(resp['created'], isEmpty, reason: 'Unexpected created found');
+          expect(resp['updated'], isEmpty, reason: 'Unexpected updated found');
+          expect(resp['deleted'], isEmpty, reason: 'Unexpected deleted found');
+          expect(resp['noOps'], isEmpty, reason: 'Unexpected noOps found');
+          expect(resp['errors'], isEmpty, reason: 'Unexpected errors found');
+          expect(resp['clouded'], isEmpty, reason: 'Unexpected clouded found');
+          expect(resp['dups'], isEmpty, reason: 'Unexpected dups found');
+          expect(resp['info'], [
+            {
+              'cid': '2022-1231-180100-000_0000-7B2P',
+              'operation': 'noOp',
+              'info': {
+                'outdatedBys': [],
+                'noOpFields': ['rank'],
+              },
+            },
+          ], reason: 'Unexpected info found');
+          expect(
+            resp['changeUpdates'],
+            hasLength(1),
+            reason: 'Unexpected changeUpdates length found',
+          );
+          expect(
+            resp.keys,
+            containsAll([
+              'storageType',
+              'storageId',
+              'created',
+              'updated',
+              'deleted',
+              'noOps',
+              'errors',
+              'clouded',
+              'dups',
+              'info',
+              'changeUpdates',
+              'stateUpdates',
+              'unknowns',
+            ]),
+            reason: 'Unexpected key(s) found in: ${resp.keys}',
+          );
         },
       );
 
