@@ -744,5 +744,46 @@ void main() {
       expect(json['nextCursor'], isNull);
       expect(json['hasMore'], isFalse);
     });
+
+    test('returns 200 with entities when present', () async {
+      final projectId = 'proj-entities';
+      final entityType = 'task';
+      // Seed two entities
+      await seedChange(
+        changePayload(
+          projectId: projectId,
+          entityType: entityType,
+          entityId: 'entity-1',
+          changeAt: baseTime,
+          data: {'rank': '1', 'parentId': 'root', 'nameLocal': 'Task 1'},
+        ),
+      );
+      await seedChange(
+        changePayload(
+          projectId: projectId,
+          entityType: entityType,
+          entityId: 'entity-2',
+          changeAt: baseTime.add(const Duration(minutes: 1)),
+          data: {'rank': '2', 'parentId': 'root', 'nameLocal': 'Task 2'},
+        ),
+      );
+      final uri = baseUrl.replace(
+        path: '/api/projects/$projectId/entities/$entityType/state',
+        queryParameters: {'includeMetadata': 'true'},
+      );
+      final req = await HttpClient().getUrl(uri);
+      final res = await req.close();
+      expect(res.statusCode, 200);
+      final body = await res.transform(utf8.decoder).join();
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      expect(json['items'], isA<List>());
+      final items = json['items'] as List;
+      expect(items, hasLength(2));
+      final ids = items.map((e) => e['entityId']).toSet();
+      expect(ids, containsAll(['entity-1', 'entity-2']));
+      expect(json['nextCursor'], isNull);
+      expect(json['hasMore'], isFalse);
+    });
   });
+  // end group for GET /api/projects/{projectId}/entities/{entityType}/state
 }
