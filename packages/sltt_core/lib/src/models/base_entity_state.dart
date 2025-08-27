@@ -11,148 +11,25 @@ abstract class BaseEntityState
         CoreEntityMetaData,
         CoreEntityDataFields,
         CoreChangeLogEntryFields {
-  /// Primary key - entityId with entity type abbreviation
+  // keep the public contract
   @override
-  String get entityId;
-  set entityId(String v);
-
-  /// Immutable - entity type enum
-  @override
-  String get entityType;
-  set entityType(String v);
-
-  /// Schema Version number for EntityState
-  @override
-  int? get schemaVersion;
-  set schemaVersion(int? v);
-
-  /// Any fields not read from json are put here for future field migration.
-  /// Store unknown/data/operationInfo as compact JSON strings to remain
-  /// storage-agnostic; provide Map getters via the HasUnknownField mixin.
-  @override
-  String get unknownJson;
-  @override
-  set unknownJson(String v);
-
-  /// Current project ID
   String get change_domainId;
+  @override
   set change_domainId(String v);
 
-  /// Original (first) values for tracking entity creation
-  String get change_domainId_orig_;
-  set change_domainId_orig_(String v);
+  // make orig_ private backing field and public getter (non-virtual storage)
+  final String _change_domainId_orig_;
+  @override
+  String get change_domainId_orig_ => _change_domainId_orig_;
 
-  /// Latest change timestamp
+  // same for change_changeAt_orig_ and change_cid_orig_, etc.
+  final DateTime _change_changeAt_orig_;
   @override
-  DateTime get change_changeAt;
-  set change_changeAt(DateTime v);
+  DateTime get change_changeAt_orig_ => _change_changeAt_orig_;
 
-  /// First UTC change timestamp
-  DateTime get change_changeAt_orig_;
-  set change_changeAt_orig_(DateTime v);
-
-  /// Latest change ID
+  final String _change_cid_orig_;
   @override
-  String get change_cid;
-  set change_cid(String v);
-
-  /// Original (first) change ID
-  String get change_cid_orig_;
-  set change_cid_orig_(String v);
-
-  /// latest data schema revision (no need for _orig_)
-  @override
-  int? get change_dataSchemaRev;
-  set change_dataSchemaRev(int? v);
-
-  /// Latest cloud timestamp
-  @override
-  DateTime? get change_cloudAt;
-  set change_cloudAt(DateTime? v);
-
-  /// First UTC cloud timestamp
-  DateTime? get change_cloudAt_orig_;
-  set change_cloudAt_orig_(DateTime? v);
-
-  /// Latest change author
-  @override
-  String get change_changeBy;
-  set change_changeBy(String v);
-
-  /// Original (first) change author
-  String get change_changeBy_orig_;
-  set change_changeBy_orig_(String v);
-
-  /// --- Mutable fields with conflict resolution support ---
-
-  /// Change tracking fields for conflict resolution
-  /// Each mutable field has corresponding changeAt, cid, and changeBy fields
-  /// todo?: append _orig_? for debugging
-
-  /// rank - Used to sort in parent
-  @override
-  String? get data_rank;
-  set data_rank(String? v);
-
-  /// rank field conflict resolution
-  @override
-  int? get data_rank_dataSchemaRev_;
-  set data_rank_dataSchemaRev_(int? v);
-  @override
-  DateTime? get data_rank_changeAt_;
-  set data_rank_changeAt_(DateTime? v);
-  @override
-  String? get data_rank_cid_;
-  set data_rank_cid_(String? v);
-  @override
-  String? get data_rank_changeBy_;
-  set data_rank_changeBy_(String? v);
-  @override
-  DateTime? get data_rank_cloudAt_;
-  set data_rank_cloudAt_(DateTime? v);
-
-  /// Deletion status
-  @override
-  bool? get data_deleted;
-  set data_deleted(bool? v);
-
-  // deleted field conflict resolution
-  @override
-  int? get data_deleted_dataSchemaRev_;
-  set data_deleted_dataSchemaRev_(int? v);
-  @override
-  DateTime? get data_deleted_changeAt_;
-  set data_deleted_changeAt_(DateTime? v);
-  @override
-  String? get data_deleted_cid_;
-  set data_deleted_cid_(String? v);
-  @override
-  String? get data_deleted_changeBy_;
-  set data_deleted_changeBy_(String? v);
-  @override
-  DateTime? get data_deleted_cloudAt_;
-  set data_deleted_cloudAt_(DateTime? v);
-
-  @override
-  String get data_parentId;
-  set data_parentId(String v);
-
-  @override
-  /// parentId field conflict resolution
-  int? get data_parentId_dataSchemaRev_;
-  set data_parentId_dataSchemaRev_(int? v);
-  @override
-  DateTime get data_parentId_changeAt_;
-  set data_parentId_changeAt_(DateTime v);
-  @override
-  String get data_parentId_cid_;
-  set data_parentId_cid_(String v);
-  @override
-  String get data_parentId_changeBy_;
-  set data_parentId_changeBy_(String v);
-  @override
-  DateTime? get data_parentId_cloudAt_;
-  set data_parentId_cloudAt_(DateTime? v);
+  String get change_cid_orig_ => _change_cid_orig_;
 
   BaseEntityState({
     required String entityId,
@@ -187,13 +64,10 @@ abstract class BaseEntityState
     required String data_parentId_cid_,
     required String data_parentId_changeBy_,
     DateTime? data_parentId_cloudAt_,
-  }) {
-    // set _orig_ fields if not already set
-    this.change_domainId_orig_ = change_domainId_orig_ ?? change_domainId;
-    this.change_changeAt_orig_ = change_changeAt_orig_ ?? change_changeAt;
-    this.change_cid_orig_ = change_cid_orig_ ?? change_cid;
-    this.change_cloudAt_orig_ = change_cloudAt_orig_ ?? change_cloudAt;
-    this.change_changeBy_orig_ = change_changeBy_orig_ ?? change_changeBy;
+  }) : _change_domainId_orig_ = change_domainId_orig_ ?? change_domainId,
+       _change_changeAt_orig_ = change_changeAt_orig_ ?? change_changeAt,
+       _change_cid_orig_ = change_cid_orig_ ?? change_cid {
+    // other non-virtual initialization as needed
   }
 
   // Abstract methods to be implemented by concrete subclasses

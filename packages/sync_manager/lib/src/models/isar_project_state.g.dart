@@ -6630,6 +6630,18 @@ IsarProjectState _$IsarProjectStateFromJson(Map<String, dynamic> json) =>
           entityId: $checkedConvert('entityId', (v) => v as String),
           entityType:
               $checkedConvert('entityType', (v) => v as String? ?? 'project'),
+          data_nameLocal:
+              $checkedConvert('data_nameLocal', (v) => v as String?),
+          data_nameLocal_dataSchemaRev_: $checkedConvert(
+              'data_nameLocal_dataSchemaRev_', (v) => (v as num?)?.toInt()),
+          data_nameLocal_changeAt_: $checkedConvert('data_nameLocal_changeAt_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
+          data_nameLocal_cid_:
+              $checkedConvert('data_nameLocal_cid_', (v) => v as String?),
+          data_nameLocal_changeBy_:
+              $checkedConvert('data_nameLocal_changeBy_', (v) => v as String?),
+          data_nameLocal_cloudAt_: $checkedConvert('data_nameLocal_cloudAt_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
           schemaVersion:
               $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
           change_domainId:
@@ -6675,18 +6687,6 @@ IsarProjectState _$IsarProjectStateFromJson(Map<String, dynamic> json) =>
           data_parentId_changeBy_:
               $checkedConvert('data_parentId_changeBy_', (v) => v as String),
           data_parentId_cloudAt_: $checkedConvert('data_parentId_cloudAt_',
-              (v) => v == null ? null : DateTime.parse(v as String)),
-          data_nameLocal:
-              $checkedConvert('data_nameLocal', (v) => v as String?),
-          data_nameLocal_dataSchemaRev_: $checkedConvert(
-              'data_nameLocal_dataSchemaRev_', (v) => (v as num?)?.toInt()),
-          data_nameLocal_changeAt_: $checkedConvert('data_nameLocal_changeAt_',
-              (v) => v == null ? null : DateTime.parse(v as String)),
-          data_nameLocal_cid_:
-              $checkedConvert('data_nameLocal_cid_', (v) => v as String?),
-          data_nameLocal_changeBy_:
-              $checkedConvert('data_nameLocal_changeBy_', (v) => v as String?),
-          data_nameLocal_cloudAt_: $checkedConvert('data_nameLocal_cloudAt_',
               (v) => v == null ? null : DateTime.parse(v as String)),
         );
         $checkedConvert('id', (v) => val.id = (v as num).toInt());

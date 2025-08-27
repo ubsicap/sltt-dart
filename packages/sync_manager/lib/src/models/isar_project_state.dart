@@ -57,12 +57,6 @@ class IsarProjectState extends BaseIsarEntityState {
     required super.data_parentId_cid_,
     required super.data_parentId_changeBy_,
     super.data_parentId_cloudAt_,
-    this.data_nameLocal,
-    this.data_nameLocal_dataSchemaRev_,
-    this.data_nameLocal_changeAt_,
-    this.data_nameLocal_cid_,
-    this.data_nameLocal_changeBy_,
-    this.data_nameLocal_cloudAt_,
   }) : entityType = entityType;
 
   factory IsarProjectState.fromJson(Map<String, dynamic> json) =>
