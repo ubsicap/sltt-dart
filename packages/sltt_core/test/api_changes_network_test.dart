@@ -10,7 +10,7 @@ import 'package:test/test.dart';
 
 import 'test_models.dart';
 
-final knownResponseKeys = [
+final knownPostChangesResponseKeys = [
   'storageType',
   'storageId',
   'created',
@@ -467,7 +467,7 @@ void main() {
           );
           expect(
             resp.keys,
-            containsAll(knownResponseKeys),
+            containsAll(knownPostChangesResponseKeys),
             reason: 'Unexpected key(s) found in: ${resp.keys}',
           );
         },
