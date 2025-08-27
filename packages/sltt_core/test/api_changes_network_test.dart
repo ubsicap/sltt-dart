@@ -10,6 +10,22 @@ import 'package:test/test.dart';
 
 import 'test_models.dart';
 
+final knownResponseKeys = [
+  'storageType',
+  'storageId',
+  'created',
+  'updated',
+  'deleted',
+  'noOps',
+  'errors',
+  'clouded',
+  'dups',
+  'info',
+  'changeUpdates',
+  'stateUpdates',
+  'unknowns',
+];
+
 /// Minimal in-memory storage to exercise _handleCreateChanges
 class InMemoryStorage implements BaseStorageService {
   final String _storageId;
@@ -451,21 +467,7 @@ void main() {
           );
           expect(
             resp.keys,
-            containsAll([
-              'storageType',
-              'storageId',
-              'created',
-              'updated',
-              'deleted',
-              'noOps',
-              'errors',
-              'clouded',
-              'dups',
-              'info',
-              'changeUpdates',
-              'stateUpdates',
-              'unknowns',
-            ]),
+            containsAll(knownResponseKeys),
             reason: 'Unexpected key(s) found in: ${resp.keys}',
           );
         },
