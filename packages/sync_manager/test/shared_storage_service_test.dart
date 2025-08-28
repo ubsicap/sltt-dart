@@ -566,7 +566,7 @@ void main() {
 
         final result = await storage.updateChangeLogAndState(
           changeLogEntry: change2,
-          changeUpdates: {'seq': 2, 'stateChanged': true},
+          changeUpdates: {'stateChanged': true},
           entityState: currentState,
           stateUpdates: {
             'data_nameLocal': 'Updated Name',
