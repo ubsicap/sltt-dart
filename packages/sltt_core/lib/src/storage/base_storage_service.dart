@@ -35,7 +35,7 @@ class StorageServiceDefaults {
 /// This interface defines the contract that all storage services must implement,
 /// whether they use local Isar databases, DynamoDB, or other storage backends.
 abstract class BaseStorageService {
-  /// Generate a short (16 char), human-ish storage id: YYMMDDHHMM + 2 timezone + 1 random [A-Z] + 3 random [0-9A-Z]
+  /// Generate a short (16 char), human-ish storage id: YYMMDDHHMM + 2 timezone + 1 random [A-Z] + 2 random [0-9A-Z]
   static String generateShortStorageId() {
     final now = DateTime.now();
     String two(int v) => v.toString().padLeft(2, '0');
@@ -45,13 +45,13 @@ abstract class BaseStorageService {
     final hh = two(now.hour);
     final min = two(now.minute);
     final tzOffsetHours = now.timeZoneOffset.inHours;
-    final tzSign = tzOffsetHours.isNegative ? '-' : '+';
+    final tzSign = tzOffsetHours.isNegative ? '-' : '_';
     final prefix = '$yy$mm$dd$hh$min$tzSign${two(tzOffsetHours.abs())}';
     // start random characters with alphabet to visually separate from timestamp
     final medial = generateRandomChars(1, chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
     // end with 3 random alphanumeric characters
     final suffix = generateRandomChars(
-      3,
+      2,
       chars: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
     );
     final id = prefix + medial + suffix;

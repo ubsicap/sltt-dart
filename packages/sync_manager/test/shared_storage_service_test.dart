@@ -79,7 +79,11 @@ void main() {
       expect(storage.getStorageType(), equals('local'));
       final storageId = await storage.getStorageId();
       expect(storageId, isNotEmpty);
-      expect(storageId.length, equals(16)); // Short storage ID format
+      expect(
+        storageId.length,
+        equals(16),
+        reason: 'Short storage ID format: $storageId',
+      ); // Short storage ID format
     });
 
     test('creates and retrieves changes', () async {
