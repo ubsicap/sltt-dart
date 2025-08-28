@@ -184,8 +184,13 @@ class TestServer extends BaseRestApiServer {
 }
 
 void main() {
-  late HttpServer server;
+  HttpServer? server;
   late Uri baseUrl;
+  // If provided, tests will use this external base URL instead of starting
+  // their own in-memory TestServer. This allows other packages to start a
+  // real server (for example, a LocalStorageService-backed server) and
+  // run these network tests against it by setting the API_BASE_URL env var.
+  final externalApiBaseUrl = Platform.environment['API_BASE_URL'];
   // Use a fixed base time for deterministic field-level tests
   final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
@@ -276,16 +281,24 @@ void main() {
       ),
     );
 
-    final storage = InMemoryStorage(storageId: 'local');
-    final app = TestServer(serverName: 'core-it', storage: storage);
+    if (externalApiBaseUrl != null && externalApiBaseUrl.isNotEmpty) {
+      // Use externally provided server
+      baseUrl = Uri.parse(externalApiBaseUrl);
+      print('Using external API base URL from API_BASE_URL: $baseUrl');
+    } else {
+      final storage = InMemoryStorage(storageId: 'local');
+      final app = TestServer(serverName: 'core-it', storage: storage);
 
-    final handler = const Pipeline().addHandler(app.router().call);
-    server = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, 0);
-    baseUrl = Uri.parse('http://localhost:${server.port}');
+      final handler = const Pipeline().addHandler(app.router().call);
+      server = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, 0);
+      baseUrl = Uri.parse('http://localhost:${server!.port}');
+    }
   });
 
   tearDownAll(() async {
-    await server.close(force: true);
+    if (server != null) {
+      await server!.close(force: true);
+    }
   });
 
   test(
