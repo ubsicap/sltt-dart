@@ -73,3 +73,8 @@ packages/aws_backend/bootstrap
 **/vendor/pub-cache/**
 !**/vendor/pub-cache/README.md
 !**/vendor/pub-cache/scripts/**
+vendor/
+vendor/pub-cache/
+vendor/pub-cache/**
+!vendor/pub-cache/README.md
+!vendor/pub-cache/scripts/
