@@ -619,12 +619,21 @@ void main() {
           'entityId': entityId,
           'entityType': 'project',
           'change_domainId': projectId,
+          'change_domainId_orig_': '',
           'change_changeAt': baseTime.toIso8601String(),
+          'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
+              .toIso8601String(),
           'change_cid': change1.cid,
+          'change_cid_orig_': '',
           'change_changeBy': 'user1',
+          'change_changeBy_orig_': '',
           'data_nameLocal': 'Original Name',
           'data_rank': '1',
           'data_parentId': 'parent1',
+          'data_parentId_changeAt_': baseTime.toIso8601String(),
+          'data_parentId_cid_': change1.cid,
+          'data_parentId_changeBy_': 'user1',
+          'data_parentId_cloudAt_': null,
         },
       );
 
