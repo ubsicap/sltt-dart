@@ -70,6 +70,6 @@ packages/aws_backend/node_modules/.bin/components
 packages/aws_backend/bootstrap
 
 # Vendored pub cache: ignore contents but keep README and any helper scripts
-vendor/pub-cache/**
-!vendor/pub-cache/README.md
-!vendor/pub-cache/scripts/**
+**/vendor/pub-cache/**
+!**/vendor/pub-cache/README.md
+!**/vendor/pub-cache/scripts/**
