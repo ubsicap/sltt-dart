@@ -374,10 +374,10 @@ IsarDocumentState _isarDocumentStateDeserialize(
     data_title_cid_: reader.readStringOrNull(offsets[31]),
     entityId: reader.readString(offsets[32]),
     entityType: reader.readStringOrNull(offsets[33]) ?? 'document',
+    id: id,
     schemaVersion: reader.readLongOrNull(offsets[34]),
     unknownJson: reader.readString(offsets[35]),
   );
-  object.id = id;
   return object;
 }
 
@@ -6164,6 +6164,8 @@ IsarDocumentState _$IsarDocumentStateFromJson(Map<String, dynamic> json) =>
       json,
       ($checkedConvert) {
         final val = IsarDocumentState(
+          id: $checkedConvert(
+              'id', (v) => (v as num?)?.toInt() ?? Isar.autoIncrement),
           entityId: $checkedConvert('entityId', (v) => v as String),
           entityType:
               $checkedConvert('entityType', (v) => v as String? ?? 'document'),
@@ -6230,7 +6232,6 @@ IsarDocumentState _$IsarDocumentStateFromJson(Map<String, dynamic> json) =>
           data_title_cid_:
               $checkedConvert('data_title_cid_', (v) => v as String?),
         );
-        $checkedConvert('id', (v) => val.id = (v as num).toInt());
         return val;
       },
     );

@@ -394,10 +394,10 @@ IsarTeamState _isarTeamStateDeserialize(
     data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[33]),
     entityId: reader.readString(offsets[34]),
     entityType: reader.readStringOrNull(offsets[35]) ?? 'team',
+    id: id,
     schemaVersion: reader.readLongOrNull(offsets[36]),
     unknownJson: reader.readString(offsets[37]),
   );
-  object.id = id;
   return object;
 }
 
@@ -6478,6 +6478,8 @@ IsarTeamState _$IsarTeamStateFromJson(Map<String, dynamic> json) =>
       json,
       ($checkedConvert) {
         final val = IsarTeamState(
+          id: $checkedConvert(
+              'id', (v) => (v as num?)?.toInt() ?? Isar.autoIncrement),
           entityType:
               $checkedConvert('entityType', (v) => v as String? ?? 'team'),
           entityId: $checkedConvert('entityId', (v) => v as String),
@@ -6548,7 +6550,6 @@ IsarTeamState _$IsarTeamStateFromJson(Map<String, dynamic> json) =>
           data_name_cloudAt_: $checkedConvert('data_name_cloudAt_',
               (v) => v == null ? null : DateTime.parse(v as String)),
         );
-        $checkedConvert('id', (v) => val.id = (v as num).toInt());
         return val;
       },
     );

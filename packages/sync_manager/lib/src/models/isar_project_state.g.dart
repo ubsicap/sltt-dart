@@ -394,10 +394,10 @@ IsarProjectState _isarProjectStateDeserialize(
     data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[33]),
     entityId: reader.readString(offsets[34]),
     entityType: reader.readStringOrNull(offsets[35]) ?? 'project',
+    id: id,
     schemaVersion: reader.readLongOrNull(offsets[36]),
     unknownJson: reader.readString(offsets[37]),
   );
-  object.id = id;
   return object;
 }
 
@@ -6502,6 +6502,8 @@ IsarProjectState _$IsarProjectStateFromJson(Map<String, dynamic> json) =>
       json,
       ($checkedConvert) {
         final val = IsarProjectState(
+          id: $checkedConvert(
+              'id', (v) => (v as num?)?.toInt() ?? Isar.autoIncrement),
           entityType:
               $checkedConvert('entityType', (v) => v as String? ?? 'project'),
           entityId: $checkedConvert('entityId', (v) => v as String),
@@ -6573,7 +6575,6 @@ IsarProjectState _$IsarProjectStateFromJson(Map<String, dynamic> json) =>
           data_parentId_cloudAt_: $checkedConvert('data_parentId_cloudAt_',
               (v) => v == null ? null : DateTime.parse(v as String)),
         );
-        $checkedConvert('id', (v) => val.id = (v as num).toInt());
         return val;
       },
     );

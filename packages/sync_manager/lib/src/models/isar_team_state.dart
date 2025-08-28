@@ -21,6 +21,7 @@ class IsarTeamState extends BaseIsarEntityState {
   DateTime? data_name_cloudAt_;
 
   IsarTeamState({
+    super.id,
     super.entityType = 'team',
     required super.entityId,
     required super.unknownJson,

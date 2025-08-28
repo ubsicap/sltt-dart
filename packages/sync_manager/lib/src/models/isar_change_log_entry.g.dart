@@ -177,11 +177,11 @@ IsarChangeLogEntry _isarChangeLogEntryDeserialize(
     operation: reader.readString(offsets[10]),
     operationInfoJson: reader.readStringOrNull(offsets[11]) ?? '{}',
     schemaVersion: reader.readLongOrNull(offsets[12]),
+    seq: id,
     stateChanged: reader.readBool(offsets[13]),
     storageId: reader.readString(offsets[14]),
     unknownJson: reader.readStringOrNull(offsets[15]) ?? '{}',
   );
-  object.seq = id;
   return object;
 }
 
@@ -2886,6 +2886,8 @@ IsarChangeLogEntry _$IsarChangeLogEntryFromJson(Map<String, dynamic> json) =>
       json,
       ($checkedConvert) {
         final val = IsarChangeLogEntry(
+          seq: $checkedConvert(
+              'seq', (v) => (v as num?)?.toInt() ?? Isar.autoIncrement),
           domainId: $checkedConvert('domainId', (v) => v as String),
           entityType: $checkedConvert('entityType', (v) => v as String),
           operation: $checkedConvert('operation', (v) => v as String),
@@ -2911,7 +2913,6 @@ IsarChangeLogEntry _$IsarChangeLogEntryFromJson(Map<String, dynamic> json) =>
           schemaVersion:
               $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
         );
-        $checkedConvert('seq', (v) => val.seq = (v as num).toInt());
         return val;
       },
     );

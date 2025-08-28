@@ -47,6 +47,7 @@ class IsarChangeLogEntry extends BaseChangeLogEntry {
   Id seq = Isar.autoIncrement;
 
   IsarChangeLogEntry({
+    this.seq = Isar.autoIncrement,
     required super.domainId,
     required super.entityType,
     required super.operation,

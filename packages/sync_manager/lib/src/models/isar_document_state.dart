@@ -19,6 +19,7 @@ class IsarDocumentState extends BaseIsarEntityState {
   String? data_title_cid_;
 
   IsarDocumentState({
+    super.id,
     required super.entityId,
     super.entityType = 'document',
     super.schemaVersion,

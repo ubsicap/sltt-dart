@@ -21,6 +21,7 @@ class IsarProjectState extends BaseIsarEntityState {
   DateTime? data_nameLocal_cloudAt_;
 
   IsarProjectState({
+    super.id,
     super.entityType = 'project',
     required super.entityId,
     required super.unknownJson,

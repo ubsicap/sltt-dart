@@ -203,8 +203,17 @@ void main() {
           'change_changeAt': baseTime.toIso8601String(),
           'change_cid': change.cid,
           'change_changeBy': 'tester',
+          'change_domainId_orig_': '', // Empty string for string orig fields
+          'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
+              .toIso8601String(), // defaultOrigDateTime()
+          'change_cid_orig_': '', // Empty string for string orig fields
+          'change_changeBy_orig_': '', // Empty string for string orig fields
           'data_nameLocal': 'Test Project',
           'data_parentId': 'root',
+          'data_parentId_changeAt_': baseTime.toIso8601String(),
+          'data_parentId_cid_': change.cid,
+          'data_parentId_changeBy_': 'tester',
+          'unknownJson': '{}',
         },
       );
 
@@ -247,8 +256,17 @@ void main() {
           'change_changeAt': baseTime.toIso8601String(),
           'change_cid': change.cid,
           'change_changeBy': 'tester',
+          'change_domainId_orig_': '', // Empty string for string orig fields
+          'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
+              .toIso8601String(), // defaultOrigDateTime()
+          'change_cid_orig_': '', // Empty string for string orig fields
+          'change_changeBy_orig_': '', // Empty string for string orig fields
           'data_title': 'Test Document',
           'data_parentId': 'root',
+          'data_parentId_changeAt_': baseTime.toIso8601String(),
+          'data_parentId_cid_': change.cid,
+          'data_parentId_changeBy_': 'tester',
+          'unknownJson': '{}',
         },
       );
 
@@ -287,6 +305,10 @@ void main() {
           'change_changeAt': baseTime.toIso8601String(),
           'change_cid': change.cid,
           'change_changeBy': 'tester',
+          'change_domainId_orig_': '',
+          'change_changeAt_orig_': '1970-01-01T00:00:00.000Z',
+          'change_cid_orig_': '',
+          'change_changeBy_orig_': '',
           'name': 'Test Team',
           'nameChangeAt': baseTime.toIso8601String(),
           'nameCid': change.cid,
@@ -304,6 +326,9 @@ void main() {
           'settingsCid': change.cid,
           'settingsChangeBy': 'tester',
           'data_parentId': 'root',
+          'data_parentId_changeAt_': baseTime.toIso8601String(),
+          'data_parentId_cid_': change.cid,
+          'data_parentId_changeBy_': 'tester',
         },
       );
 
@@ -494,12 +519,22 @@ void main() {
             'change_changeAt': baseTime.toIso8601String(),
             'change_cid': change1.cid,
             'change_changeBy': 'user1',
+            'change_domainId_orig_': '',
+            'change_changeAt_orig_': '1970-01-01T00:00:00.000Z',
+            'change_cid_orig_': '',
+            'change_changeBy_orig_': '',
             'data_nameLocal': 'Original Name',
             'data_nameLocal_changeAt_': baseTime.toIso8601String(),
             'data_nameLocal_cid_': change1.cid,
+            'data_nameLocal_changeBy_': 'user1',
             'data_rank': '1',
             'data_rank_changeAt_': baseTime.toIso8601String(),
             'data_rank_cid_': change1.cid,
+            'data_rank_changeBy_': 'user1',
+            'data_parentId': 'root',
+            'data_parentId_changeAt_': baseTime.toIso8601String(),
+            'data_parentId_cid_': change1.cid,
+            'data_parentId_changeBy_': 'user1',
           },
         );
 
