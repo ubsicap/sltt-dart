@@ -509,7 +509,7 @@ void main() {
         );
 
         final change1 = IsarChangeLogEntry.fromJson(initialChange);
-        await storage.updateChangeLogAndState(
+        final result1 = await storage.updateChangeLogAndState(
           changeLogEntry: change1,
           changeUpdates: {'seq': 1, 'stateChanged': true},
           stateUpdates: {
@@ -538,6 +538,11 @@ void main() {
           },
         );
 
+        print(
+          '1 - Initial change result: ${result1.newChangeLogEntry.toJson()}',
+        );
+        print('1 - Initial state result: ${result1.newEntityState.toJson()}');
+
         // Apply a newer change to nameLocal
         final newerTime = baseTime.add(const Duration(minutes: 5));
         final newerChange = changePayload(
@@ -556,6 +561,9 @@ void main() {
           entityId,
         );
 
+        print('2 - Current state before update: ${currentState?.toJson()}');
+        print('2 - Current change result: ${change2.toJson()}');
+
         final result = await storage.updateChangeLogAndState(
           changeLogEntry: change2,
           changeUpdates: {'seq': 2, 'stateChanged': true},
@@ -566,6 +574,9 @@ void main() {
             'data_nameLocal_cid_': change2.cid,
           },
         );
+
+        print('3 - Update result: ${result.newChangeLogEntry.toJson()}');
+        print('3 - Update state result: ${result.newEntityState.toJson()}');
 
         expect(result.newChangeLogEntry.seq, equals(2));
 
