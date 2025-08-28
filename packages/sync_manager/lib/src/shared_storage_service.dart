@@ -92,18 +92,18 @@ class LocalStorageService extends BaseStorageService {
     final newChangeJson = {...changeLogEntry.toJson(), ...changeUpdates};
     final newChange = client.IsarChangeLogEntry.fromJson(newChangeJson);
 
+    // Convert to appropriate Isar state type based on entity type
+    final entityTypeEnum = EntityType.values.firstWhere(
+      (e) => e.value == changeLogEntry.entityType,
+      orElse: () => EntityType.unknown,
+    );
+
     // Create or update entity state
     BaseEntityState newEntityState;
     if (entityState != null) {
       // Merge state updates into existing state
       final mergedStateJson = {...entityState.toJson(), ...stateUpdates}
         ..removeWhere((k, v) => v == null);
-
-      // Convert to appropriate Isar state type based on entity type
-      final entityTypeEnum = EntityType.values.firstWhere(
-        (e) => e.value == changeLogEntry.entityType,
-        orElse: () => EntityType.document,
-      );
 
       switch (entityTypeEnum) {
         case EntityType.project:
@@ -116,16 +116,12 @@ class LocalStorageService extends BaseStorageService {
           newEntityState = IsarTeamState.fromJson(mergedStateJson);
           break;
         default:
-          // Fallback to document state
-          newEntityState = IsarDocumentState.fromJson(mergedStateJson);
+          throw UnimplementedError(
+            'Unknown entity type: ${changeLogEntry.entityType}',
+          );
       }
     } else {
       // Create new entity state from state updates
-      final entityTypeEnum = EntityType.values.firstWhere(
-        (e) => e.value == changeLogEntry.entityType,
-        orElse: () => EntityType.unknown,
-      );
-
       switch (entityTypeEnum) {
         case EntityType.project:
           newEntityState = IsarProjectState.fromJson(stateUpdates);
@@ -139,19 +135,15 @@ class LocalStorageService extends BaseStorageService {
         default:
           // Fallback to document state
           // TODO: safeJson with unknown?
-          throw UnimplementedError('Unknown entity type: $entityTypeEnum');
+          throw UnimplementedError(
+            'Unknown entity type: ${changeLogEntry.entityType}',
+          );
       }
     }
 
     // Save both change and state in a transaction
     await _isar.writeTxn(() async {
       await _isar.collection<client.IsarChangeLogEntry>().put(newChange);
-
-      // Save entity state to appropriate collection
-      final entityTypeEnum = EntityType.values.firstWhere(
-        (e) => e.value == changeLogEntry.entityType,
-        orElse: () => EntityType.document,
-      );
 
       switch (entityTypeEnum) {
         case EntityType.project:
@@ -528,7 +520,7 @@ class LocalStorageService extends BaseStorageService {
     try {
       entityTypeEnum = EntityType.values.firstWhere(
         (e) => e.value == entityType,
-        orElse: () => EntityType.document,
+        orElse: () => EntityType.unknown,
       );
     } catch (e) {
       return null;
