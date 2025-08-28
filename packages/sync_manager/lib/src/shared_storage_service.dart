@@ -99,11 +99,18 @@ class LocalStorageService extends BaseStorageService {
     );
 
     // Create or update entity state
-    BaseEntityState newEntityState;
+    late final BaseEntityState newEntityState;
     if (entityState != null) {
       // Merge state updates into existing state
+      print(
+        'updateChangeLogAndState - before merge - entityState id: ${entityState.toJson()['id']}',
+      );
       final mergedStateJson = {...entityState.toJson(), ...stateUpdates}
         ..removeWhere((k, v) => v == null);
+
+      print(
+        'updateChangeLogAndState - after merge - mergedStateJson id: ${mergedStateJson['id']}',
+      );
 
       switch (entityTypeEnum) {
         case EntityType.project:
@@ -141,9 +148,23 @@ class LocalStorageService extends BaseStorageService {
       }
     }
 
+    print(
+      'updateChangeLogAndState - before put - newChange seq: ${newChange.seq}',
+    );
+    print(
+      'updateChangeLogAndState - before put - newEntityState id: ${newEntityState.toJson()['id']}',
+    );
+    print(
+      'updateChangeLogAndState - before put - newEntityState entityId: ${newEntityState.entityId}',
+    );
+
     // Save both change and state in a transaction
     await _isar.writeTxn(() async {
       await _isar.collection<client.IsarChangeLogEntry>().put(newChange);
+
+      print(
+        'updateChangeLogAndState - after put - newChange id: ${newChange.seq}',
+      );
 
       switch (entityTypeEnum) {
         case EntityType.project:
@@ -162,6 +183,10 @@ class LocalStorageService extends BaseStorageService {
           // TODO: Add proper state storage for each type when models are available
           break;
       }
+
+      print(
+        'updateChangeLogAndState - after put - newEntityState id: ${newEntityState.toJson()['id']}',
+      );
     });
 
     return (

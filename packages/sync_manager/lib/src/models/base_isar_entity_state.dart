@@ -102,7 +102,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
   final DateTime? data_parentId_cloudAt_;
 
   BaseIsarEntityState({
-    Id id = Isar.autoIncrement,
+    this.id = Isar.autoIncrement,
     required super.entityId,
     required super.entityType,
     super.schemaVersion,
