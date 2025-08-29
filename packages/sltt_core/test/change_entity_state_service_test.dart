@@ -265,20 +265,18 @@ void main() {
           equals(newerTime.toIso8601String()),
         );
         // Validate change-log entry updates
-        expect(updates.changeUpdates['operation'], equals('update'));
         expect(
-          updates.changeUpdates['operationInfo']['outdatedBys'],
-          equals([]),
-        );
-        expect(
-          updates.changeUpdates['operationInfo']['noOpFields'],
-          equals([]),
-        );
-        expect(updates.changeUpdates['stateChanged'], isTrue);
-        expect(updates.changeUpdates['data'], equals({'rank': '2'}));
-        expect(
-          updates.changeUpdates['cloudAt'],
-          equals(changeLogEntry.cloudAt),
+          updates.changeUpdates,
+          equals({
+            'operation': 'update',
+            'operationInfoJson': jsonEncode({
+              'outdatedBys': [],
+              'noOpFields': [],
+            }),
+            'stateChanged': true,
+            'data': {'rank': '2'},
+            'cloudAt': changeLogEntry.cloudAt,
+          }),
         );
       });
 
@@ -307,12 +305,18 @@ void main() {
         );
 
         // Operation should be computed as noOp and report noOpFields; data subset is omitted
-        expect(updates.changeUpdates['operation'], equals('noOp'));
         expect(
-          updates.changeUpdates['operationInfo']['noOpFields'],
-          equals(['rank']),
+          updates.changeUpdates,
+          equals({
+            'operation': 'noOp',
+            'operationInfoJson': jsonEncode({
+              'outdatedBys': [],
+              'noOpFields': ['rank'],
+            }),
+            'stateChanged': false,
+            'cloudAt': changeLogEntry.cloudAt,
+          }),
         );
-        expect(updates.changeUpdates['data'], isNull);
       });
 
       test(
@@ -344,24 +348,41 @@ void main() {
             targetStorageId: 'local',
           );
 
-          expect(updates.changeUpdates['operation'], equals('update'));
-          // rank should be reported as no-op
           expect(
-            updates.changeUpdates['operationInfo']['noOpFields'],
-            contains('rank'),
+            updates.changeUpdates,
+            equals({
+              'operation': 'update',
+              'operationInfoJson': jsonEncode({
+                'outdatedBys': [],
+                'noOpFields': ['rank'],
+              }),
+              'stateChanged': true,
+              'data': {'parentId': 'parent2', 'nameLocal': 'New Name'},
+              'cloudAt': changeLogEntry.cloudAt,
+            }),
           );
+
           expect(
-            updates.changeUpdates['operationInfo']['outdatedBys'],
-            equals([]),
+            updates.stateUpdates,
+            equals({
+              'change_domainType': 'project',
+              'change_domainId': 'project1',
+              'change_changeAt': '2023-01-01T00:01:00.000Z',
+              'change_cid': 'cid6',
+              'change_changeBy': 'user2',
+              'change_cloudAt': null,
+              'data_parentId': 'parent2',
+              'data_nameLocal': 'New Name',
+              'data_parentId_changeAt_': '2023-01-01T00:01:00.000Z',
+              'data_nameLocal_changeAt_': '2023-01-01T00:01:00.000Z',
+              'data_parentId_cid_': 'cid6',
+              'data_nameLocal_cid_': 'cid6',
+              'data_parentId_changeBy_': 'user2',
+              'data_nameLocal_changeBy_': 'user2',
+              'data_parentId_cloudAt_': null,
+              'data_nameLocal_cloudAt_': null,
+            }),
           );
-          // data should only include the applied fields (parentId and nameLocal)
-          expect(
-            updates.changeUpdates['data'],
-            equals({'parentId': 'parent2', 'nameLocal': 'New Name'}),
-          );
-          // stateUpdates should reflect the same field changes
-          expect(updates.stateUpdates['data_parentId'], equals('parent2'));
-          expect(updates.stateUpdates['data_nameLocal'], equals('New Name'));
         },
       );
 
@@ -431,19 +452,18 @@ void main() {
 
         // rank should be outdated, nameLocal no-op, parentId should be applied
         expect(
-          updates.changeUpdates['operation'],
-          anyOf(equals('update'), equals('outdated')),
+          updates.changeUpdates,
+          equals({
+            'operation': 'outdated',
+            'operationInfoJson': jsonEncode({
+              'outdatedBys': ['rank'],
+              'noOpFields': ['nameLocal'],
+            }),
+            'stateChanged': false,
+            'cloudAt': null,
+            'data': {'parentId': 'parent2'},
+          }),
         );
-        expect(
-          updates.changeUpdates['operationInfo']['outdatedBys'],
-          contains('rank'),
-        );
-        expect(
-          updates.changeUpdates['operationInfo']['noOpFields'],
-          contains('nameLocal'),
-        );
-        // Only parentId should be present in output data
-        expect(updates.changeUpdates['data'], equals({'parentId': 'parent2'}));
       });
 
       test('should reject older changes', () {
@@ -471,22 +491,18 @@ void main() {
           targetStorageId: 'local',
         );
 
-        expect(updates.changeUpdates['operation'], equals('outdated'));
-        // Validate new change log entry fields for outdated result
         expect(
-          updates.changeUpdates['operationInfo']['outdatedBys'],
-          contains('rank'),
-        );
-        expect(
-          updates.changeUpdates['operationInfo']['noOpFields'],
-          equals([]),
-        );
-        expect(updates.changeUpdates['stateChanged'], isFalse);
-        // For outdated operations the produced data payload should be empty (no applied updates)
-        expect(updates.changeUpdates['data'], equals({}));
-        expect(
-          updates.changeUpdates['cloudAt'],
-          equals(changeLogEntry.cloudAt),
+          updates.changeUpdates,
+          equals({
+            'operation': 'outdated',
+            'operationInfoJson': jsonEncode({
+              'outdatedBys': ['rank'],
+              'noOpFields': [],
+            }),
+            'stateChanged': false,
+            'data': {},
+            'cloudAt': changeLogEntry.cloudAt,
+          }),
         );
       });
 
@@ -512,28 +528,48 @@ void main() {
           targetStorageId: 'local',
         );
 
-        expect(updates.changeUpdates['operation'], equals('create'));
+        expect(
+          updates.changeUpdates,
+          equals({
+            'operation': 'create',
+            'operationInfoJson': jsonEncode({
+              'outdatedBys': [],
+              'noOpFields': [],
+              'change_changeAt_orig_': '1970-01-01 00:00:00.000Z',
+            }),
+            'stateChanged': true,
+            'cloudAt': null,
+            'data': {'rank': '1', 'parentId': 'parent2'},
+          }),
+        );
         // stateUpdates should initialize entity fields appropriately
-        expect(updates.stateUpdates['entityId'], equals('entity2'));
-        expect(updates.stateUpdates['data_rank'], equals('1'));
-        expect(updates.stateUpdates['data_parentId'], equals('parent2'));
-        // Validate new change log entry fields
         expect(
-          updates.changeUpdates['operationInfo']['outdatedBys'],
-          equals([]),
-        );
-        expect(
-          updates.changeUpdates['operationInfo']['noOpFields'],
-          equals([]),
-        );
-        expect(updates.changeUpdates['stateChanged'], isTrue);
-        expect(
-          updates.changeUpdates['data'],
-          equals({'rank': '1', 'parentId': 'parent2'}),
-        );
-        expect(
-          updates.changeUpdates['cloudAt'],
-          equals(changeLogEntry.cloudAt),
+          updates.stateUpdates,
+          equals({
+            'entityId': 'entity2',
+            'entityType': 'task',
+            'change_dataSchemaRev': null,
+            'change_domainId_orig_': '',
+            'change_cid_orig_': '',
+            'change_changeBy_orig_': '',
+            'change_changeAt_orig_': '2023-01-01T00:01:00.000Z',
+            'change_domainType': 'project',
+            'change_domainId': 'project1',
+            'change_changeAt': '2023-01-01T00:01:00.000Z',
+            'change_cid': 'cid3',
+            'change_changeBy': 'user1',
+            'change_cloudAt': null,
+            'data_rank': '1',
+            'data_parentId': 'parent2',
+            'data_rank_changeAt_': '2023-01-01T00:01:00.000Z',
+            'data_parentId_changeAt_': '2023-01-01T00:01:00.000Z',
+            'data_rank_cid_': 'cid3',
+            'data_parentId_cid_': 'cid3',
+            'data_rank_changeBy_': 'user1',
+            'data_parentId_changeBy_': 'user1',
+            'data_rank_cloudAt_': null,
+            'data_parentId_cloudAt_': null,
+          }),
         );
       });
 
