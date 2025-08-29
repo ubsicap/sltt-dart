@@ -6,8 +6,6 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/testing/test_server_registry.dart'
-    show waitForExternalApiBaseUrl;
 import 'package:test/test.dart';
 
 import 'test_models.dart';
@@ -188,10 +186,11 @@ class TestServer extends BaseRestApiServer {
 void main() {
   HttpServer? server;
   late Uri baseUrl;
-  // If another test registers an external API base URL (via
-  // test_server_registry), prefer that. Otherwise fall back to the
-  // API_BASE_URL env var, and finally the in-memory TestServer.
-  final externalApiBaseUrlEnv = Platform.environment['API_BASE_URL'];
+  // If provided, tests will use this external base URL instead of starting
+  // their own in-memory TestServer. This allows other packages to start a
+  // real server (for example, a LocalStorageService-backed server) and
+  // run these network tests against it by setting the API_BASE_URL env var.
+  final externalApiBaseUrl = Platform.environment['API_BASE_URL'];
   // Use a fixed base time for deterministic field-level tests
   final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
@@ -282,17 +281,9 @@ void main() {
       ),
     );
 
-    // First try registry (gives other packages a chance to start server)
-    final registered = await waitForExternalApiBaseUrl(
-      const Duration(seconds: 3),
-    );
-    if (registered != null) {
-      baseUrl = registered;
-      print('Using external API base URL from registry: $baseUrl');
-    } else if (externalApiBaseUrlEnv != null &&
-        externalApiBaseUrlEnv.isNotEmpty) {
-      // Next try environment variable
-      baseUrl = Uri.parse(externalApiBaseUrlEnv);
+    if (externalApiBaseUrl != null && externalApiBaseUrl.isNotEmpty) {
+      // Use externally provided server
+      baseUrl = Uri.parse(externalApiBaseUrl);
       print('Using external API base URL from API_BASE_URL: $baseUrl');
     } else {
       final storage = InMemoryStorage(storageId: 'local');
