@@ -4,6 +4,8 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    - 'vendor/pub-cache/**'
+    - '**/vendor/pub-cache/**'
 
 linter:
   rules:
