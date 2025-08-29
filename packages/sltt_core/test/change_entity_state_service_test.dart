@@ -598,7 +598,6 @@ void main() {
           targetStorageId: 'local',
         );
 
-        expect(updates.changeUpdates['operation'], equals('create'));
         expect(updates.stateUpdates['data_parentId'], equals('parent3'));
         expect(
           updates.stateUpdates['data_nameLocal'],
@@ -606,21 +605,18 @@ void main() {
         );
         // Validate change log entry
         expect(
-          updates.changeUpdates['operationInfo']['outdatedBys'],
-          equals([]),
-        );
-        expect(
-          updates.changeUpdates['operationInfo']['noOpFields'],
-          equals([]),
-        );
-        expect(updates.changeUpdates['stateChanged'], isTrue);
-        expect(
-          updates.changeUpdates['data'],
-          equals({'nameLocal': 'Localized Name', 'parentId': 'parent3'}),
-        );
-        expect(
-          updates.changeUpdates['cloudAt'],
-          equals(changeLogEntry.cloudAt),
+          updates.changeUpdates,
+          equals({
+            'operation': 'create',
+            'operationInfoJson': jsonEncode({
+              'outdatedBys': [],
+              'noOpFields': [],
+              'change_changeAt_orig_': '1970-01-01 00:00:00.000Z',
+            }),
+            'stateChanged': true,
+            'data': {'nameLocal': 'Localized Name', 'parentId': 'parent3'},
+            'cloudAt': null,
+          }),
         );
       });
 
@@ -647,22 +643,18 @@ void main() {
           targetStorageId: 'local',
         );
 
-        expect(updates.changeUpdates['operation'], equals('delete'));
-        expect(updates.stateUpdates['data_deleted'], equals(true));
-        // Validate change log entry for delete
         expect(
-          updates.changeUpdates['operationInfo']['outdatedBys'],
-          equals([]),
-        );
-        expect(
-          updates.changeUpdates['operationInfo']['noOpFields'],
-          equals([]),
-        );
-        expect(updates.changeUpdates['stateChanged'], isTrue);
-        expect(updates.changeUpdates['data'], equals({'deleted': true}));
-        expect(
-          updates.changeUpdates['cloudAt'],
-          equals(changeLogEntry.cloudAt),
+          updates.changeUpdates,
+          equals({
+            'operation': 'delete',
+            'operationInfoJson': jsonEncode({
+              'outdatedBys': [],
+              'noOpFields': [],
+            }),
+            'stateChanged': true,
+            'data': {'deleted': true},
+            'cloudAt': changeLogEntry.cloudAt,
+          }),
         );
       });
 
