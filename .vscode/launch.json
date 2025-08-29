@@ -61,6 +61,34 @@
             "request": "attach",
             "cwd": "${workspaceFolder}",
         },
+        {
+            "name": "Run Dart Tests (with Isar setup)",
+            "type": "dart",
+            "request": "launch",
+            "program": "test/",
+            "preLaunchTask": "Setup Test Environment",
+            "env": {
+                "LD_LIBRARY_PATH": "/tmp/dart_test_libs"
+            },
+            "args": [
+                "--reporter",
+                "compact",
+                "--concurrency",
+                "1"
+            ],
+            "console": "terminal"
+        },
+        {
+            "name": "Debug Current Dart Test (with Isar setup)",
+            "type": "dart",
+            "request": "launch",
+            "program": "${file}",
+            "preLaunchTask": "Setup Test Environment",
+            "env": {
+                "LD_LIBRARY_PATH": "/tmp/dart_test_libs"
+            },
+            "console": "terminal"
+        },
     ],
     "inputs": [
         {

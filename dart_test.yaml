@@ -1,0 +1,16 @@
+# Dart test configuration for SLTT project
+# Note: Use ./quick_test.sh for automatic Isar library setup
+
+# Default test configuration
+reporter: "compact"
+concurrency: 1
+fail_fast: true
+
+# Test patterns and configuration
+paths:
+  - test/
+  - packages/*/test/
+
+# Additional settings
+timeout: "30s"
+verbose_trace: false

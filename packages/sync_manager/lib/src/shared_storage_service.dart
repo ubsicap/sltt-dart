@@ -4,11 +4,37 @@ import 'dart:io';
 import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
+import 'isar_entity_state_storage_group.dart';
 import 'models/isar_change_log_entry.dart' as client;
 import 'models/isar_document_state.dart';
 import 'models/isar_project_state.dart';
+import 'models/isar_task_state.dart';
 import 'models/isar_team_state.dart';
 import 'models/sync_state.dart';
+import 'register_entity_states.dart';
+
+/// Service function to create the correct Isar*State from JSON
+///
+/// This function first tries to use registered storage groups from the
+/// IsarEntityStateStorageGroup system. If no storage group is found,
+/// it falls back to hardcoded types for backwards compatibility.
+///
+/// To add a new entity type:
+/// 1. Create your IsarXxxState class
+/// 2. Register it using registerIsarEntityStateStorageGroup()
+/// 3. The registration will automatically handle fromJson and put operations
+BaseEntityState createIsarEntityStateFromJson(
+  EntityType entityTypeEnum,
+  Map<String, dynamic> json,
+  String originalTypeString,
+) {
+  final storageGroup = getEntityStateStorageGroup(entityTypeEnum);
+  if (storageGroup != null) {
+    return storageGroup.fromJson(json);
+  }
+
+  throw UnimplementedError('Unknown entity type: $originalTypeString');
+}
 
 class LocalStorageService extends BaseStorageService {
   final String _databaseName;
@@ -19,6 +45,46 @@ class LocalStorageService extends BaseStorageService {
   late String _storageId;
 
   LocalStorageService(this._databaseName, this._logPrefix);
+
+  @override
+  Future<void> initialize() async {
+    if (_initialized) return;
+
+    // Create local directory for database
+    final dir = Directory('./isar_db');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+
+    // Register all entity state storage groups first (before opening Isar)
+    // We need to create a temporary Isar instance for the registration
+    final tempSchemas = [
+      client.IsarChangeLogEntrySchema,
+      SyncStateSchema,
+      IsarDocumentStateSchema,
+      IsarProjectStateSchema,
+      IsarTeamStateSchema,
+      IsarTaskStateSchema,
+    ];
+
+    // Initialize Isar with all schemas
+    _isar = await Isar.open(
+      tempSchemas,
+      directory: dir.path,
+      name: _databaseName,
+    );
+
+    // Now register the storage groups with the initialized Isar instance
+    registerAllIsarEntityStateStorageGroups(_isar);
+
+    _initialized = true;
+    print(
+      '[$_logPrefix] Isar database initialized at: ${dir.path}/$_databaseName.isar',
+    );
+
+    // Ensure storage ID is set
+    _storageId = await ensureStorageId();
+  }
 
   /// Helper method to convert IsarChangeLogEntry to BaseChangeLogEntry
   BaseChangeLogEntry _convertToChangeLogEntry(
@@ -34,38 +100,6 @@ class LocalStorageService extends BaseStorageService {
     List<client.IsarChangeLogEntry> clientEntries,
   ) {
     return clientEntries.map(_convertToChangeLogEntry).toList();
-  }
-
-  @override
-  Future<void> initialize() async {
-    if (_initialized) return;
-
-    // Create local directory for database
-    final dir = Directory('./isar_db');
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-
-    // Initialize Isar with the specified database name
-    _isar = await Isar.open(
-      [
-        client.IsarChangeLogEntrySchema,
-        SyncStateSchema,
-        IsarDocumentStateSchema,
-        IsarProjectStateSchema,
-        IsarTeamStateSchema,
-      ],
-      directory: dir.path,
-      name: _databaseName,
-    );
-
-    _initialized = true;
-    print(
-      '[$_logPrefix] Isar database initialized at: ${dir.path}/$_databaseName.isar',
-    );
-
-    // Ensure storage ID is set
-    _storageId = await ensureStorageId();
   }
 
   @override
@@ -112,40 +146,18 @@ class LocalStorageService extends BaseStorageService {
         'updateChangeLogAndState - after merge - mergedStateJson id: ${mergedStateJson['id']}',
       );
 
-      switch (entityTypeEnum) {
-        case EntityType.project:
-          newEntityState = IsarProjectState.fromJson(mergedStateJson);
-          break;
-        case EntityType.document:
-          newEntityState = IsarDocumentState.fromJson(mergedStateJson);
-          break;
-        case EntityType.team:
-          newEntityState = IsarTeamState.fromJson(mergedStateJson);
-          break;
-        default:
-          throw UnimplementedError(
-            'Unknown entity type: ${changeLogEntry.entityType}',
-          );
-      }
+      newEntityState = createIsarEntityStateFromJson(
+        entityTypeEnum,
+        mergedStateJson,
+        changeLogEntry.entityType,
+      );
     } else {
       // Create new entity state from state updates
-      switch (entityTypeEnum) {
-        case EntityType.project:
-          newEntityState = IsarProjectState.fromJson(stateUpdates);
-          break;
-        case EntityType.document:
-          newEntityState = IsarDocumentState.fromJson(stateUpdates);
-          break;
-        case EntityType.team:
-          newEntityState = IsarTeamState.fromJson(stateUpdates);
-          break;
-        default:
-          // Fallback to document state
-          // TODO: safeJson with unknown?
-          throw UnimplementedError(
-            'Unknown entity type: ${changeLogEntry.entityType}',
-          );
-      }
+      newEntityState = createIsarEntityStateFromJson(
+        entityTypeEnum,
+        stateUpdates,
+        changeLogEntry.entityType,
+      );
     }
 
     print(
@@ -166,22 +178,14 @@ class LocalStorageService extends BaseStorageService {
         'updateChangeLogAndState - after put - newChange id: ${newChange.seq}',
       );
 
-      switch (entityTypeEnum) {
-        case EntityType.project:
-          await _isar.isarProjectStates.put(newEntityState as IsarProjectState);
-          break;
-        case EntityType.document:
-          await _isar.isarDocumentStates.put(
-            newEntityState as IsarDocumentState,
-          );
-          break;
-        case EntityType.team:
-          await _isar.isarTeamStates.put(newEntityState as IsarTeamState);
-          break;
-        default:
-          // Handle all other entity types (plan, stage, unknown, etc.)
-          // TODO: Add proper state storage for each type when models are available
-          break;
+      // Try to use registered storage group first
+      final storageGroup = getEntityStateStorageGroup(entityTypeEnum);
+      if (storageGroup != null) {
+        await storageGroup.put(newEntityState);
+      } else {
+        throw UnimplementedError(
+          'No storage group registered for entity type: ${changeLogEntry.entityType}',
+        );
       }
 
       print(
