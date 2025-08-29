@@ -258,7 +258,22 @@ void main() {
         );
 
         // Entity state should update via stateUpdates
-        expect(updates.stateUpdates['data_rank'], equals('2'));
+        expect(
+          updates.stateUpdates,
+          equals({
+            'change_domainType': 'project',
+            'change_domainId': 'project1',
+            'change_changeAt': newerTime.toIso8601String(),
+            'change_cid': 'cid2',
+            'change_changeBy': 'user2',
+            'change_cloudAt': null,
+            'data_rank': '2',
+            'data_rank_changeAt_': newerTime.toIso8601String(),
+            'data_rank_cid_': 'cid2',
+            'data_rank_changeBy_': 'user2',
+            'data_rank_cloudAt_': null,
+          }),
+        );
         // Latest metadata should be updated since change is newer
         expect(
           updates.stateUpdates['change_changeAt'],
