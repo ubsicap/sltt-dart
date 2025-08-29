@@ -1000,119 +1000,101 @@ abstract class BaseRestApiServer {
         // final changeLogEntryFactory = deserializeChangeLogEntryUsingRegistry;
         // final entityStateFactory = deserializeEntityStateSafely;
         // Use enhanced change detection method
-        try {
-          final result = getUpdatesForChangeLogEntryAndEntityState(
-            changeLogEntry,
-            entityState,
-            targetStorageId: targetStorageId,
-          );
-          // return error if targetStorageId is same as changeLogEntry.storageId and total state update payload is greater than dynamodb payload limits (assume state record is greater than change record)
-          // on cloud storage, dynamodb will return its own error
-          if (targetStorageId == changeLogEntry.storageId) {
-            final mergedState = {
-              if (entityState != null) ...entityState.toJson(),
-              ...result.stateUpdates,
-            };
-            final entityStateRecordSize = utf8
-                .encode(jsonEncode(mergedState))
-                .lengthInBytes;
-            if (entityStateRecordSize > dynamodbPayloadLimit) {
-              return _errorResponse(
-                'Change[$i] cid($cid) exceeds payload limits ($dynamodbPayloadLimit bytes)',
-                400,
-              );
-            }
+        final result = getUpdatesForChangeLogEntryAndEntityState(
+          changeLogEntry,
+          entityState,
+          targetStorageId: targetStorageId,
+        );
+        // return error if targetStorageId is same as changeLogEntry.storageId and total state update payload is greater than dynamodb payload limits (assume state record is greater than change record)
+        // on cloud storage, dynamodb will return its own error
+        if (targetStorageId == changeLogEntry.storageId) {
+          final mergedState = {
+            if (entityState != null) ...entityState.toJson(),
+            ...result.stateUpdates,
+          };
+          final entityStateRecordSize = utf8
+              .encode(jsonEncode(mergedState))
+              .lengthInBytes;
+          if (entityStateRecordSize > dynamodbPayloadLimit) {
+            return _errorResponse(
+              'Change[$i] cid($cid) exceeds payload limits ($dynamodbPayloadLimit bytes)',
+              400,
+            );
           }
-          final updateResults = await storage.updateChangeLogAndState(
-            changeLogEntry: changeLogEntry,
-            changeUpdates: result.changeUpdates,
-            entityState: entityState,
-            stateUpdates: result.stateUpdates,
-          );
-          final newOperation = updateResults.newChangeLogEntry.operation;
-          if (newOperation == 'create') {
-            resultsSummary['created'].add(updateResults.newChangeLogEntry.cid);
-          } else if (newOperation == 'update') {
-            resultsSummary['updated'].add(updateResults.newChangeLogEntry.cid);
-          } else if (newOperation == 'delete') {
-            resultsSummary['deleted'].add(updateResults.newChangeLogEntry.cid);
-          } else if (newOperation == 'no-op') {
-            resultsSummary['noOps'].add(updateResults.newChangeLogEntry.cid);
-          } else if (result.isDuplicate) {
-            if (result.stateUpdates.isNotEmpty) {
-              resultsSummary['clouded'].add(changeLogEntry.cid);
-            } else {
-              resultsSummary['dups'].add(changeLogEntry.cid);
-            }
-          } else if (updateResults.newChangeLogEntry.operation == 'error') {
-            resultsSummary['errors'].add({
-              'cid': updateResults.newChangeLogEntry.cid,
-              'info': updateResults.newChangeLogEntry.getOperationInfo(),
-            });
+        }
+        final updateResults = await storage.updateChangeLogAndState(
+          changeLogEntry: changeLogEntry,
+          changeUpdates: result.changeUpdates,
+          entityState: entityState,
+          stateUpdates: result.stateUpdates,
+        );
+        final newOperation = updateResults.newChangeLogEntry.operation;
+        if (newOperation == 'create') {
+          resultsSummary['created'].add(updateResults.newChangeLogEntry.cid);
+        } else if (newOperation == 'update') {
+          resultsSummary['updated'].add(updateResults.newChangeLogEntry.cid);
+        } else if (newOperation == 'delete') {
+          resultsSummary['deleted'].add(updateResults.newChangeLogEntry.cid);
+        } else if (newOperation == 'no-op') {
+          resultsSummary['noOps'].add(updateResults.newChangeLogEntry.cid);
+        } else if (result.isDuplicate) {
+          if (result.stateUpdates.isNotEmpty) {
+            resultsSummary['clouded'].add(changeLogEntry.cid);
+          } else {
+            resultsSummary['dups'].add(changeLogEntry.cid);
           }
-          // TODO: summarize unknown fields?
-          if (updateResults.newChangeLogEntry.getUnknown().isNotEmpty) {
-            resultsSummary['unknowns'].add({
-              'cid': updateResults.newChangeLogEntry.cid,
-              'unknown': updateResults.newChangeLogEntry.getUnknown(),
-            });
-          }
-          if (updateResults.newChangeLogEntry.operation != 'error' &&
-              updateResults.newChangeLogEntry.getOperationInfo().isNotEmpty) {
-            resultsSummary['info'].add({
-              'cid': updateResults.newChangeLogEntry.cid,
-              'operation': updateResults.newChangeLogEntry.operation,
-              'info': updateResults.newChangeLogEntry.getOperationInfo(),
-            });
-          }
-          if (request.url.queryParameters['changeUpdates'] == 'true') {
-            resultsSummary['changeUpdates'].add({
-              'cid': updateResults.newChangeLogEntry.cid,
-              'updates': result.changeUpdates,
-            });
-          }
-          if (request.url.queryParameters['stateUpdates'] == 'true') {
-            // Only add state updates if explicitly requested
-            resultsSummary['stateUpdates'].add({
-              'cid': updateResults.newChangeLogEntry.cid,
-              'state': result.stateUpdates,
-            });
-          }
-        } catch (e) {
-          // TODO: do something reasonable
-          return _errorResponse(
-            'Change[$i] cid($cid) processing failed: $e',
-            400,
-          );
+        } else if (updateResults.newChangeLogEntry.operation == 'error') {
+          resultsSummary['errors'].add({
+            'cid': updateResults.newChangeLogEntry.cid,
+            'info': updateResults.newChangeLogEntry.getOperationInfo(),
+          });
+        }
+        // TODO: summarize unknown fields?
+        if (updateResults.newChangeLogEntry.getUnknown().isNotEmpty) {
+          resultsSummary['unknowns'].add({
+            'cid': updateResults.newChangeLogEntry.cid,
+            'unknown': updateResults.newChangeLogEntry.getUnknown(),
+          });
+        }
+        if (updateResults.newChangeLogEntry.operation != 'error' &&
+            updateResults.newChangeLogEntry.getOperationInfo().isNotEmpty) {
+          resultsSummary['info'].add({
+            'cid': updateResults.newChangeLogEntry.cid,
+            'operation': updateResults.newChangeLogEntry.operation,
+            'info': updateResults.newChangeLogEntry.getOperationInfo(),
+          });
+        }
+        if (request.url.queryParameters['changeUpdates'] == 'true') {
+          resultsSummary['changeUpdates'].add({
+            'cid': updateResults.newChangeLogEntry.cid,
+            'updates': result.changeUpdates,
+          });
+        }
+        if (request.url.queryParameters['stateUpdates'] == 'true') {
+          // Only add state updates if explicitly requested
+          resultsSummary['stateUpdates'].add({
+            'cid': updateResults.newChangeLogEntry.cid,
+            'state': result.stateUpdates,
+          });
         }
       }
 
-      try {
-        print(
-          'About to call createChangesWithChangeDetection with ${changesToCreate.length} changes',
-        );
+      print('Response: ${jsonEncode(resultsSummary)}');
 
-        print(
-          'Change detection result: created=${resultsSummary['created'].length}, noOps=${resultsSummary['noOps'].length}',
-        );
-
-        print('Response: ${jsonEncode(resultsSummary)}');
-
-        return Response.ok(
-          jsonEncode(resultsSummary),
-          headers: {'Content-Type': 'application/json'},
-        );
-      } on ArgumentError catch (e) {
-        print('ArgumentError in _handleCreateChanges: $e');
-        print('Stack trace: ${StackTrace.current}');
-        return _errorResponse('Validation error: $e', 400, StackTrace.current);
-      } catch (e, stackTrace) {
-        print('Unexpected error in _handleCreateChanges: $e');
-        print('Stack trace: $stackTrace');
-        return _errorResponse('Failed to create changes: $e', 500, stackTrace);
-      }
-    } catch (e) {
-      return _errorResponse('Failed to create changes: $e', 500);
+      return Response.ok(
+        jsonEncode(resultsSummary),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on ArgumentError catch (e) {
+      return _errorResponse('$e', 400);
+    } catch (e, stackTrace) {
+      print('Error creating changes: $e');
+      print('Stack trace: $stackTrace');
+      return _errorResponse(
+        'Failed to create changes: ${e.toString()}',
+        500,
+        stackTrace,
+      );
     }
   }
 
