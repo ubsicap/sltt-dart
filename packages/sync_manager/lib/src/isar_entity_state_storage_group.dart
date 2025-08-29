@@ -7,6 +7,8 @@ import 'package:sltt_core/sltt_core.dart';
 /// - fromJson: Factory function to create instances from JSON
 /// - put: Function to store instances in Isar database
 /// - schema: Optional Isar schema for automatic registration during initialization
+/// - collection: Function to get the collection from Isar
+/// - findByDomainAndEntity: Function to find entity by domain ID and entity ID
 ///
 /// Example usage:
 /// ```dart
@@ -16,6 +18,13 @@ import 'package:sltt_core/sltt_core.dart';
 ///     fromJson: IsarTaskState.fromJson,
 ///     put: (state) async => await isar.isarTaskStates.put(state),
 ///     schema: IsarTaskStateSchema,
+///     collection: (isar) => isar.isarTaskStates,
+///     findByDomainAndEntity: (isar, projectId, entityId) =>
+///       isar.isarTaskStates.filter()
+///         .change_domainIdEqualTo(projectId)
+///         .and()
+///         .entityIdEqualTo(entityId)
+///         .findFirst(),
 ///   ),
 /// );
 /// ```
@@ -24,11 +33,16 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   final T Function(Map<String, dynamic>) fromJson;
   final Future<void> Function(BaseEntityState) put;
   final CollectionSchema<T>? schema;
+  final dynamic Function(Isar) collection;
+  final Future<T?> Function(Isar, String, String) findByDomainAndEntity;
+
   IsarEntityStateStorageGroup({
     required this.entityType,
     required this.fromJson,
     required this.put,
     this.schema,
+    required this.collection,
+    required this.findByDomainAndEntity,
   });
 }
 

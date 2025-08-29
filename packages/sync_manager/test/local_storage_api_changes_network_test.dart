@@ -26,6 +26,26 @@ class TestServer extends BaseRestApiServer {
 void main() {
   HttpServer? server;
   Uri? baseUrl;
+  LocalStorageService? storage;
+  const testDbName = 'test_local_api_changes';
+
+  Future<void> cleanupTestDatabase() async {
+    try {
+      // Clean up any existing test database files
+      final dir = Directory('./isar_db');
+      if (await dir.exists()) {
+        final files = await dir.list().toList();
+        for (final file in files) {
+          if (file.path.contains(testDbName)) {
+            await file.delete();
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore cleanup errors - they're not critical
+      print('Warning: Could not clean up test database: $e');
+    }
+  }
 
   Future<Uri> resolveBaseUrl() async {
     if (baseUrl != null) return baseUrl!;
@@ -34,10 +54,14 @@ void main() {
       baseUrl = Uri.parse(externalApiBaseUrl);
       return baseUrl!;
     }
-    // Fallback: start LocalStorageService for this test file
-    final storage = LocalStorageService('test_local', 'TestLocalStorage');
-    await storage.initialize();
-    final app = TestServer(serverName: 'sync-manager-it', storage: storage);
+
+    // Clean up any existing test database first
+    await cleanupTestDatabase();
+
+    // Create LocalStorageService with a consistent test database name
+    storage = LocalStorageService(testDbName, 'TestLocalStorage');
+    await storage!.initialize();
+    final app = TestServer(serverName: 'sync-manager-it', storage: storage!);
     final handler = const Pipeline().addHandler(app.router().call);
     server = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, 0);
     baseUrl = Uri.parse('http://localhost:${server!.port}');
@@ -53,6 +77,11 @@ void main() {
     if (server != null) {
       await server!.close(force: true);
     }
+    if (storage != null) {
+      await storage!.close();
+    }
+    // Clean up test database after tests complete
+    await cleanupTestDatabase();
   });
 
   group('Run All Tests (LocalStorageService)', () {

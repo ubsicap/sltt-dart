@@ -424,6 +424,9 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
       });
     }
   } else {
+    print(
+      'getDataAndStateUpdatesOrOutdatedBys - entityState is null for ${changeLogEntry.entityId}',
+    );
     isChangeNewerThanLatest = true;
     // No entity state, treat all as updates
     fieldUpdates.addAll(fieldChanges);

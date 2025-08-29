@@ -997,6 +997,11 @@ abstract class BaseRestApiServer {
           changeLogEntry.entityType.toString(),
           changeLogEntry.entityId,
         );
+
+        print(
+          'after getCurrentEntityState - entityState: ${const JsonEncoder.withIndent('  ').convert(entityState?.toJson())}',
+        );
+
         // final changeLogEntryFactory = deserializeChangeLogEntryUsingRegistry;
         // final entityStateFactory = deserializeEntityStateSafely;
         // Use enhanced change detection method
@@ -1079,7 +1084,9 @@ abstract class BaseRestApiServer {
         }
       }
 
-      print('Response: ${jsonEncode(resultsSummary)}');
+      print(
+        'Response: ${const JsonEncoder.withIndent('  ').convert(resultsSummary)}',
+      );
 
       return Response.ok(
         jsonEncode(resultsSummary),

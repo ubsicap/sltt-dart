@@ -555,31 +555,13 @@ class LocalStorageService extends BaseStorageService {
       return null;
     }
 
-    switch (entityTypeEnum) {
-      case EntityType.project:
-        return await _isar.isarProjectStates
-            .filter()
-            .change_domainIdEqualTo(projectId)
-            .and()
-            .entityIdEqualTo(entityId)
-            .findFirst();
-      case EntityType.document:
-        return await _isar.isarDocumentStates
-            .filter()
-            .change_domainIdEqualTo(projectId)
-            .and()
-            .entityIdEqualTo(entityId)
-            .findFirst();
-      case EntityType.team:
-        return await _isar.isarTeamStates
-            .filter()
-            .change_domainIdEqualTo(projectId)
-            .and()
-            .entityIdEqualTo(entityId)
-            .findFirst();
-      default:
-        return null;
+    final storageGroup = getEntityStateStorageGroup(entityTypeEnum);
+    if (storageGroup == null) {
+      throw Exception('Storage group not found: $entityTypeEnum');
     }
+
+    // Use the type-safe finder function instead of dynamic collection access
+    return await storageGroup.findByDomainAndEntity(_isar, projectId, entityId);
   }
 
   /// Hook method for subclasses to optionally add cloud timestamp.
