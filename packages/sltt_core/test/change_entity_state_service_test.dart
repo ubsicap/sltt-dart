@@ -684,28 +684,34 @@ void main() {
             targetStorageId: 'local',
           );
 
-          expect(updates.changeUpdates['operation'], equals('update'));
-          expect(updates.stateUpdates['data_rank'], equals('2'));
-          // Latest metadata should be updated
           expect(
-            updates.stateUpdates['change_changeAt'],
-            equals(newerTime.toIso8601String()),
+            updates.changeUpdates,
+            equals({
+              'operation': 'update',
+              'operationInfoJson': jsonEncode({
+                'outdatedBys': [],
+                'noOpFields': [],
+              }),
+              'stateChanged': true,
+              'data': {'rank': '2'},
+              'cloudAt': null,
+            }),
           );
-          expect(updates.stateUpdates['change_cid'], equals('new-cid'));
-          // Validate change log entry
           expect(
-            updates.changeUpdates['operationInfo']['outdatedBys'],
-            equals([]),
-          );
-          expect(
-            updates.changeUpdates['operationInfo']['noOpFields'],
-            equals([]),
-          );
-          expect(updates.changeUpdates['stateChanged'], isTrue);
-          expect(updates.changeUpdates['data'], equals({'rank': '2'}));
-          expect(
-            updates.changeUpdates['cloudAt'],
-            equals(changeLogEntry.cloudAt),
+            updates.stateUpdates,
+            equals({
+              'change_domainType': 'project',
+              'change_domainId': 'project1',
+              'change_changeAt': '2023-01-01T00:05:00.000Z',
+              'change_cid': 'new-cid',
+              'change_changeBy': 'user2',
+              'change_cloudAt': null,
+              'data_rank': '2',
+              'data_rank_changeAt_': '2023-01-01T00:05:00.000Z',
+              'data_rank_cid_': 'new-cid',
+              'data_rank_changeBy_': 'user2',
+              'data_rank_cloudAt_': null,
+            }),
           );
         },
       );
@@ -773,22 +779,20 @@ void main() {
             targetStorageId: 'local',
           );
 
-          expect(updates.changeUpdates['operation'], equals('outdated'));
-          // Validate change log entry fields for outdated
           expect(
-            updates.changeUpdates['operationInfo']['outdatedBys'],
-            contains('rank'),
+            updates.changeUpdates,
+            equals({
+              'operation': 'outdated',
+              'operationInfoJson': jsonEncode({
+                'outdatedBys': ['rank'],
+                'noOpFields': [],
+              }),
+              'stateChanged': false,
+              'data': {},
+              'cloudAt': changeLogEntry.cloudAt,
+            }),
           );
-          expect(
-            updates.changeUpdates['operationInfo']['noOpFields'],
-            equals([]),
-          );
-          expect(updates.changeUpdates['stateChanged'], isFalse);
-          expect(updates.changeUpdates['data'], equals({}));
-          expect(
-            updates.changeUpdates['cloudAt'],
-            equals(changeLogEntry.cloudAt),
-          );
+          expect(updates.stateUpdates, equals({}));
         },
       );
 
@@ -855,25 +859,31 @@ void main() {
             targetStorageId: 'local',
           );
 
-          expect(updates.changeUpdates['operation'], equals('update'));
-          expect(updates.stateUpdates['data_rank'], equals('2'));
+          expect(
+            updates.changeUpdates,
+            equals({
+              'operation': 'update',
+              'operationInfoJson': jsonEncode({
+                'outdatedBys': [],
+                'noOpFields': [],
+              }),
+              'stateChanged': true,
+              'data': {'rank': '2'},
+              'cloudAt': changeLogEntry.cloudAt,
+            }),
+          );
           // Latest metadata should NOT be updated to reflect this change
           expect(updates.stateUpdates.containsKey('change_changeAt'), isFalse);
           expect(updates.stateUpdates.containsKey('change_cid'), isFalse);
-          // Validate change log entry fields for field-level update
           expect(
-            updates.changeUpdates['operationInfo']['outdatedBys'],
-            equals([]),
-          );
-          expect(
-            updates.changeUpdates['operationInfo']['noOpFields'],
-            equals([]),
-          );
-          expect(updates.changeUpdates['stateChanged'], isTrue);
-          expect(updates.changeUpdates['data'], equals({'rank': '2'}));
-          expect(
-            updates.changeUpdates['cloudAt'],
-            equals(changeLogEntry.cloudAt),
+            updates.stateUpdates,
+            equals({
+              'data_rank': '2',
+              'data_rank_changeAt_': newerFieldTime.toIso8601String(),
+              'data_rank_cid_': 'mid-cid',
+              'data_rank_changeBy_': 'user2',
+              'data_rank_cloudAt_': null,
+            }),
           );
         },
       );
