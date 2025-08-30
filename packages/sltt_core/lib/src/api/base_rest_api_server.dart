@@ -131,7 +131,10 @@ abstract class BaseRestApiServer {
           'format': 'ISO8601',
           'description': 'When change was made',
         },
-        'data': {'type': 'object', 'description': 'Change data payload'},
+        'dataJson': jsonEncode({
+          'type': 'object',
+          'description': 'Change data payload',
+        }),
         'cid': {
           'type': 'string',
           'description':
@@ -257,10 +260,10 @@ abstract class BaseRestApiServer {
                   'description': 'Operation type (create, update, delete)',
                   'default': 'create',
                 },
-                'data': {
+                'dataJson': jsonEncode({
                   'type': 'object',
                   'description': 'Change data payload',
-                },
+                }),
                 'changeAt': {
                   'type': 'string',
                   'format': 'ISO8601',

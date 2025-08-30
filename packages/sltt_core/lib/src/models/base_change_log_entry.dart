@@ -75,6 +75,11 @@ abstract class BaseChangeLogEntry
     dataJson = jsonEncode(m);
   }
 
+  /// Set the entire data map and persist as JSON.
+  void setDataMap(Map<String, dynamic> data) {
+    dataJson = jsonEncode(data);
+  }
+
   /// Return parsed operationInfo map.
   Map<String, dynamic> getOperationInfo() {
     if (operationInfoJson.isEmpty) return <String, dynamic>{};
@@ -89,6 +94,16 @@ abstract class BaseChangeLogEntry
     final m = getOperationInfo();
     m[k] = v;
     operationInfoJson = jsonEncode(m);
+  }
+
+  /// Set the entire operationInfo map and persist as JSON.
+  void setOperationInfoMap(Map<String, dynamic> operationInfo) {
+    operationInfoJson = jsonEncode(operationInfo);
+  }
+
+  /// Set the entire unknown map and persist as JSON.
+  void setUnknownMap(Map<String, dynamic> unknown) {
+    unknownJson = jsonEncode(unknown);
   }
 
   // Primary constructor: work directly with JSON-string payload fields

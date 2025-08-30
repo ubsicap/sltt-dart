@@ -80,6 +80,7 @@ mixin CoreEntityMetaData {
 }
 
 mixin CoreEntityDataFields {
+  /// Padded string value for rank (e.g., '00001', '00002').
   String? get data_rank;
   int? get data_rank_dataSchemaRev_;
   DateTime? get data_rank_changeAt_;

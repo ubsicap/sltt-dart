@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:sltt_core/src/models/base_change_log_entry.dart';
 import 'package:sltt_core/src/models/base_entity_state.dart';
+import 'package:sltt_core/src/utils/json_utils.dart';
 
 class LastWriteWinsResult {
   /// may or may not be the same as the incoming changeLogEntryToWrite
@@ -97,9 +98,9 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     'cloudAt': changeLogEntry.cloudAt,
   };
   if (!shouldPreserveData) {
-    changeLogEntryUpdates['data'] = changeDataUpdates;
+    changeLogEntryUpdates['dataJson'] = jsonEncode(changeDataUpdates);
   } else {
-    changeLogEntryUpdates['data'] = changeLogEntry.getData();
+    changeLogEntryUpdates['dataJson'] = changeLogEntry.dataJson;
   }
 
   return GetUpdateResults(
@@ -308,18 +309,6 @@ String calculateOperation(
 
   // Otherwise, we assume it's an update operation
   return 'update';
-}
-
-String stableStringify(dynamic value) {
-  if (value is Map) {
-    final sortedKeys = value.keys.toList()..sort();
-    final sortedMap = {for (var k in sortedKeys) k: stableStringify(value[k])};
-    return jsonEncode(sortedMap);
-  } else if (value is List) {
-    return jsonEncode(value.map(stableStringify).toList());
-  } else {
-    return jsonEncode(value);
-  }
 }
 
 class GetFieldChangesOrNoOpResult {

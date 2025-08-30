@@ -49,7 +49,10 @@ Future<void> main() async {
         'entityType': 'document',
         'operation': 'create',
         'entityId': 'doc-123',
-        'data': {'title': 'Test Document', 'content': 'Hello World'},
+        'dataJson': jsonEncode({
+          'title': 'Test Document',
+          'content': 'Hello World',
+        }),
       },
     ];
 

@@ -48,6 +48,28 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
     await postSingleChange(change);
   }
 
+  Future<Map<String, dynamic>> getProjectChanges(
+    String projectId, {
+    int? cursor,
+    int? limit,
+  }) async {
+    final baseUrl = await resolveBaseUrl();
+    final queryParams = <String, String>{};
+    if (cursor != null) queryParams['cursor'] = cursor.toString();
+    if (limit != null) queryParams['limit'] = limit.toString();
+
+    final uri = baseUrl.replace(
+      path: '/api/projects/${Uri.encodeComponent(projectId)}/changes',
+      queryParameters: queryParams.isEmpty ? null : queryParams,
+    );
+
+    final req = await HttpClient().getUrl(uri);
+    final res = await req.close();
+    expect(res.statusCode, 200);
+    final body = await res.transform(utf8.decoder).join();
+    return jsonDecode(body) as Map<String, dynamic>;
+  }
+
   Map<String, dynamic> changePayload({
     required String projectId,
     required String entityType,
@@ -133,6 +155,162 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
     },
   );
 
+  group('GET /api/projects/<projectId>/changes', () {
+    test('returns empty list for project with no changes', () async {
+      final resp = await getProjectChanges('empty-project');
+
+      expect(resp['changes'], isA<List>());
+      expect((resp['changes'] as List), isEmpty);
+      expect(resp['count'], 0);
+      expect(resp['timestamp'], isNotNull);
+      expect(resp.containsKey('cursor'), isFalse);
+    });
+
+    test('returns changes for project with seeded data', () async {
+      final projectId = 'test-get-changes';
+
+      // Seed some changes
+      await seedChange(
+        changePayload(
+          projectId: projectId,
+          entityType: 'task',
+          entityId: 'task-1',
+          changeAt: baseTime,
+          data: {'nameLocal': 'First Task'},
+        ),
+      );
+
+      await seedChange(
+        changePayload(
+          projectId: projectId,
+          entityType: 'task',
+          entityId: 'task-2',
+          changeAt: baseTime.add(const Duration(minutes: 1)),
+          data: {'nameLocal': 'Second Task'},
+        ),
+      );
+
+      final resp = await getProjectChanges(projectId);
+
+      expect(resp['changes'], isA<List>());
+      final changes = resp['changes'] as List;
+      expect(changes.length, 2);
+      expect(resp['count'], 2);
+      expect(resp['timestamp'], isNotNull);
+    });
+
+    test('respects limit parameter', () async {
+      final projectId = 'test-limit';
+
+      // Seed 3 changes
+      for (int i = 1; i <= 3; i++) {
+        await seedChange(
+          changePayload(
+            projectId: projectId,
+            entityType: 'task',
+            entityId: 'task-$i',
+            changeAt: baseTime.add(Duration(minutes: i)),
+            data: {'nameLocal': 'Task $i'},
+          ),
+        );
+      }
+
+      final resp = await getProjectChanges(projectId, limit: 2);
+
+      expect(resp['changes'], isA<List>());
+      final changes = resp['changes'] as List;
+      expect(changes.length, 2);
+      expect(resp['count'], 2);
+      expect(resp.containsKey('cursor'), isTrue);
+    });
+
+    test('supports cursor-based pagination', () async {
+      final projectId = 'test-pagination';
+
+      // Seed multiple changes
+      for (int i = 1; i <= 5; i++) {
+        await seedChange(
+          changePayload(
+            projectId: projectId,
+            entityType: 'task',
+            entityId: 'task-$i',
+            changeAt: baseTime.add(Duration(minutes: i)),
+            data: {'nameLocal': 'Task $i'},
+          ),
+        );
+      }
+
+      // Get first page
+      final firstPage = await getProjectChanges(projectId, limit: 2);
+      expect((firstPage['changes'] as List).length, 2);
+      expect(firstPage.containsKey('cursor'), isTrue);
+
+      final cursor = firstPage['cursor'] as int;
+
+      // Get second page using cursor
+      final secondPage = await getProjectChanges(
+        projectId,
+        cursor: cursor,
+        limit: 2,
+      );
+      expect((secondPage['changes'] as List).length, 2);
+
+      // Verify no overlap between pages
+      final firstPageSeqs = (firstPage['changes'] as List)
+          .map((c) => c['seq'] as int)
+          .toSet();
+      final secondPageSeqs = (secondPage['changes'] as List)
+          .map((c) => c['seq'] as int)
+          .toSet();
+      expect(firstPageSeqs.intersection(secondPageSeqs), isEmpty);
+    });
+
+    test('handles URL-encoded project IDs correctly', () async {
+      final projectId = 'test@project.com';
+
+      await seedChange(
+        changePayload(
+          projectId: projectId,
+          entityType: 'project',
+          entityId: 'proj-1',
+          changeAt: baseTime,
+          data: {'nameLocal': 'Encoded Project'},
+        ),
+      );
+
+      final resp = await getProjectChanges(projectId);
+
+      expect(resp['changes'], isA<List>());
+      final changes = resp['changes'] as List;
+      expect(changes.length, 1);
+      expect(changes.first['domainId'], projectId);
+    });
+
+    test('returns 400 for invalid limit values', () async {
+      final baseUrl = await resolveBaseUrl();
+      final uri = baseUrl.replace(
+        path: '/api/projects/test/changes',
+        queryParameters: {'limit': 'invalid'},
+      );
+
+      final req = await HttpClient().getUrl(uri);
+      final res = await req.close();
+      expect(res.statusCode, 400);
+    });
+
+    test('returns 400 for invalid cursor values', () async {
+      final baseUrl = await resolveBaseUrl();
+      final uri = baseUrl.replace(
+        path: '/api/projects/test/changes',
+        queryParameters: {'cursor': 'invalid'},
+      );
+
+      final req = await HttpClient().getUrl(uri);
+      final res = await req.close();
+      expect(res.statusCode, 400);
+    });
+  });
+
   group(
     'POST /api/changes semantics (like getUpdatesForChangeLogEntryAndEntityState)',
     () {
@@ -173,7 +351,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
             equals(jsonEncode({'outdatedBys': [], 'noOpFields': []})),
           );
           expect(cu['stateChanged'], isTrue);
-          expect((cu['data'] as Map<String, dynamic>), {'rank': '2'});
+          expect((cu['dataJson']), jsonEncode({'rank': '2'}));
           expect(su['data_rank'], '2');
           expect(su['data_rank_changeAt_'], newer.toUtc().toIso8601String());
         },

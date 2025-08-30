@@ -6,6 +6,79 @@ import 'package:test/test.dart';
 import 'test_models.dart';
 
 void main() {
+  group('Serialization/Deserialization', () {
+    test('TestChangeLogEntry serializes and deserializes correctly', () {
+      final entry = TestChangeLogEntry(
+        entityId: 'e1',
+        entityType: 'task',
+        domainId: 'd1',
+        domainType: 'project',
+        changeAt: DateTime.parse('2023-01-01T00:00:00Z'),
+        cid: 'c1',
+        storageId: 'local',
+        changeBy: 'user1',
+        dataJson: '{"foo":"bar"}',
+        operation: 'update',
+        operationInfoJson: '{"op":1}',
+        stateChanged: true,
+        unknownJson: '{"extra":42}',
+        dataSchemaRev: 1,
+        cloudAt: DateTime.parse('2023-01-01T01:00:00Z'),
+        schemaVersion: 2,
+        seq: 99,
+      );
+      final json = entry.toJson();
+      final fromJson = TestChangeLogEntry.fromJson(json);
+      expect(fromJson.entityId, entry.entityId);
+      expect(fromJson.dataJson, entry.dataJson);
+      expect(fromJson.unknownJson, entry.unknownJson);
+      expect(fromJson.seq, entry.seq);
+    });
+
+    test('TestEntityState serializes and deserializes correctly', () {
+      final state = TestEntityState(
+        data_nameLocal: 'TaskName',
+        entityId: 'e2',
+        entityType: 'task',
+        schemaVersion: 1,
+        change_domainId: 'd2',
+        change_domainId_orig_: 'd2',
+        change_changeAt: DateTime.parse('2023-01-02T00:00:00Z'),
+        change_changeAt_orig_: DateTime.parse('2023-01-02T00:00:00Z'),
+        change_cid: 'c2',
+        change_cid_orig_: 'c2',
+        change_dataSchemaRev: 2,
+        change_cloudAt: DateTime.parse('2023-01-02T01:00:00Z'),
+        change_changeBy: 'user2',
+        change_changeBy_orig_: 'user2',
+        data_rank: 'r1',
+        data_rank_dataSchemaRev_: 3,
+        data_rank_changeAt_: DateTime.parse('2023-01-02T02:00:00Z'),
+        data_rank_cid_: 'c2',
+        data_rank_changeBy_: 'user2',
+        data_rank_cloudAt_: DateTime.parse('2023-01-02T03:00:00Z'),
+        data_deleted: false,
+        data_deleted_dataSchemaRev_: 4,
+        data_deleted_changeAt_: DateTime.parse('2023-01-02T04:00:00Z'),
+        data_deleted_cid_: 'c2',
+        data_deleted_changeBy_: 'user2',
+        data_deleted_cloudAt_: DateTime.parse('2023-01-02T05:00:00Z'),
+        data_parentId: 'p1',
+        data_parentId_dataSchemaRev_: 5,
+        data_parentId_changeAt_: DateTime.parse('2023-01-02T06:00:00Z'),
+        data_parentId_cid_: 'c2',
+        data_parentId_changeBy_: 'user2',
+        data_parentId_cloudAt_: DateTime.parse('2023-01-02T07:00:00Z'),
+      );
+      final json = state.toJson();
+      final fromJson = TestEntityState.fromJson(json);
+      expect(fromJson.entityId, state.entityId);
+      expect(fromJson.data_nameLocal, state.data_nameLocal);
+      expect(fromJson.data_rank, state.data_rank);
+      expect(fromJson.data_parentId, state.data_parentId);
+      expect(fromJson.data_deleted, state.data_deleted);
+    });
+  });
   group('ChangeEntityStateService', () {
     late DateTime baseTime;
     late TestEntityState entityState;
@@ -289,7 +362,7 @@ void main() {
               'noOpFields': [],
             }),
             'stateChanged': true,
-            'data': {'rank': '2'},
+            'dataJson': jsonEncode({'rank': '2'}),
             'cloudAt': changeLogEntry.cloudAt,
           }),
         );
@@ -372,7 +445,10 @@ void main() {
                 'noOpFields': ['rank'],
               }),
               'stateChanged': true,
-              'data': {'parentId': 'parent2', 'nameLocal': 'New Name'},
+              'dataJson': jsonEncode({
+                'parentId': 'parent2',
+                'nameLocal': 'New Name',
+              }),
               'cloudAt': changeLogEntry.cloudAt,
             }),
           );
@@ -476,7 +552,7 @@ void main() {
             }),
             'stateChanged': false,
             'cloudAt': null,
-            'data': {'parentId': 'parent2'},
+            'dataJson': jsonEncode({'parentId': 'parent2'}),
           }),
         );
       });
@@ -515,7 +591,7 @@ void main() {
               'noOpFields': [],
             }),
             'stateChanged': false,
-            'data': {},
+            'dataJson': jsonEncode({}),
             'cloudAt': changeLogEntry.cloudAt,
           }),
         );
@@ -554,7 +630,7 @@ void main() {
             }),
             'stateChanged': true,
             'cloudAt': null,
-            'data': {'rank': '1', 'parentId': 'parent2'},
+            'dataJson': jsonEncode({'rank': '1', 'parentId': 'parent2'}),
           }),
         );
         // stateUpdates should initialize entity fields appropriately
@@ -629,7 +705,10 @@ void main() {
               'change_changeAt_orig_': '1970-01-01 00:00:00.000Z',
             }),
             'stateChanged': true,
-            'data': {'nameLocal': 'Localized Name', 'parentId': 'parent3'},
+            'dataJson': jsonEncode({
+              'nameLocal': 'Localized Name',
+              'parentId': 'parent3',
+            }),
             'cloudAt': null,
           }),
         );
@@ -667,7 +746,7 @@ void main() {
               'noOpFields': [],
             }),
             'stateChanged': true,
-            'data': {'deleted': true},
+            'dataJson': jsonEncode({'deleted': true}),
             'cloudAt': changeLogEntry.cloudAt,
           }),
         );
@@ -708,7 +787,7 @@ void main() {
                 'noOpFields': [],
               }),
               'stateChanged': true,
-              'data': {'rank': '2'},
+              'dataJson': jsonEncode({'rank': '2'}),
               'cloudAt': null,
             }),
           );
@@ -803,7 +882,7 @@ void main() {
                 'noOpFields': [],
               }),
               'stateChanged': false,
-              'data': {},
+              'dataJson': jsonEncode({}),
               'cloudAt': changeLogEntry.cloudAt,
             }),
           );
@@ -883,7 +962,7 @@ void main() {
                 'noOpFields': [],
               }),
               'stateChanged': true,
-              'data': {'rank': '2'},
+              'dataJson': jsonEncode({'rank': '2'}),
               'cloudAt': changeLogEntry.cloudAt,
             }),
           );
