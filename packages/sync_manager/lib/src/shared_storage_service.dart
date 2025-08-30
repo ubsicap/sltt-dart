@@ -545,13 +545,16 @@ class LocalStorageService extends BaseStorageService {
     String entityId,
   ) async {
     // Convert entityType string to EntityType enum
-    EntityType entityTypeEnum;
-    try {
-      entityTypeEnum = EntityType.values.firstWhere(
-        (e) => e.value == entityType,
-        orElse: () => EntityType.unknown,
-      );
-    } catch (e) {
+    // Map the incoming entityType string to the enum. `firstWhere` with
+    // `orElse` will return `EntityType.unknown` when no match is found and
+    // will not throw, so an explicit try/catch is unnecessary.
+    final entityTypeEnum = EntityType.values.firstWhere(
+      (e) => e.value == entityType,
+      orElse: () => EntityType.unknown,
+    );
+
+    if (entityTypeEnum == EntityType.unknown) {
+      print('getCurrentEntityState - Unknown entity type: "$entityType"');
       return null;
     }
 
