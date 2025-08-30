@@ -86,12 +86,13 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
         !adjustedData.containsKey('parentId')) {
       adjustedData['parentId'] = 'root';
     }
+    final namespacedEntityId = '$projectId-$entityId';
     return {
       'projectId': projectId,
       'domainId': projectId,
       'domainType': 'project',
       'entityType': entityType,
-      'entityId': entityId,
+      'entityId': namespacedEntityId,
       'changeBy': 'tester',
       'changeAt': changeAt.toUtc().toIso8601String(),
       'cid': generateCid(changeAt),
