@@ -972,6 +972,7 @@ abstract class BaseRestApiServer {
         );
         final cid = changeLogEntry.cid;
 
+        // TODO: also need sourceStorageId, not just from data
         if (changeLogEntry.storageId == targetStorageId) {
           // treat these changes as atomic since they originated on the same system
           // so exit early on any errors
