@@ -4,6 +4,8 @@ import '../test_models.dart';
 
 class InMemoryStorage implements BaseStorageService {
   final String _storageId;
+  final List<TestChangeLogEntry> _changes = [];
+  int _nextSeq = 1;
   final Map<String, TestEntityState> _states = {};
 
   InMemoryStorage({String? storageId}) : _storageId = storageId ?? 'local';
@@ -43,7 +45,15 @@ class InMemoryStorage implements BaseStorageService {
     required Map<String, dynamic> stateUpdates,
   }) async {
     final newChangeJson = {...changeLogEntry.toJson(), ...changeUpdates};
+    // Ensure a sequence number exists and is monotonic for in-memory storage
+    if (newChangeJson['seq'] == null ||
+        (newChangeJson['seq'] is int && newChangeJson['seq'] == 0)) {
+      newChangeJson['seq'] = _nextSeq++;
+    }
     final newChange = TestChangeLogEntry.fromJson(newChangeJson);
+
+    // persist change for subsequent queries
+    _changes.add(newChange);
 
     final prior = (entityState?.toJson() ?? <String, dynamic>{});
     final merged = {...prior, ...stateUpdates}
@@ -64,33 +74,67 @@ class InMemoryStorage implements BaseStorageService {
   Future<BaseChangeLogEntry> createChange(
     Map<String, dynamic> changeData,
   ) async {
-    return TestChangeLogEntry.fromJson(changeData);
+    final data = Map<String, dynamic>.from(changeData);
+    if (data['seq'] == null || (data['seq'] is int && data['seq'] == 0)) {
+      data['seq'] = _nextSeq++;
+    }
+    final change = TestChangeLogEntry.fromJson(data);
+    _changes.add(change);
+    return change;
   }
 
   @override
-  Future<BaseChangeLogEntry?> getChange(String projectId, int seq) async =>
-      null;
+  Future<BaseChangeLogEntry?> getChange(String projectId, int seq) async {
+    for (final c in _changes) {
+      if (c.seq == seq && c.domainId == projectId) return c;
+    }
+    return null;
+  }
 
   @override
   Future<List<BaseChangeLogEntry>> getChangesWithCursor({
     required String projectId,
     int? cursor,
     int? limit,
-  }) async => <BaseChangeLogEntry>[];
+  }) async {
+    final effectiveLimit = limit ?? 100;
+
+    final filtered = _changes.where((c) => c.domainId == projectId).toList()
+      ..sort((a, b) => a.seq.compareTo(b.seq));
+
+    final startIndex = cursor == null
+        ? 0
+        : filtered.indexWhere((c) => c.seq > cursor);
+    if (startIndex < 0) {
+      return <BaseChangeLogEntry>[];
+    }
+
+    final endIndex = (startIndex + effectiveLimit).clamp(0, filtered.length);
+    return filtered.sublist(startIndex, endIndex);
+  }
 
   @override
   Future<List<BaseChangeLogEntry>> getChangesSince(
     String projectId,
     int seq,
-  ) async => <BaseChangeLogEntry>[];
+  ) async {
+    return getChangesWithCursor(projectId: projectId, cursor: seq);
+  }
 
   @override
-  Future<Map<String, dynamic>> getChangeStats(String projectId) async => {
-    'total': 0,
-    'creates': 0,
-    'updates': 0,
-    'deletes': 0,
-  };
+  Future<Map<String, dynamic>> getChangeStats(String projectId) async {
+    final proj = _changes.where((c) => c.domainId == projectId).toList();
+    final total = proj.length;
+    final creates = proj.where((c) => c.operation == 'create').length;
+    final updates = proj.where((c) => c.operation == 'update').length;
+    final deletes = proj.where((c) => c.operation == 'delete').length;
+    return {
+      'total': total,
+      'creates': creates,
+      'updates': updates,
+      'deletes': deletes,
+    };
+  }
 
   @override
   Future<Map<String, int>> getEntityTypeStats(String projectId) async =>
