@@ -6,10 +6,7 @@ import 'package:sltt_core/sltt_core.dart';
 
 import 'isar_entity_state_storage_group.dart';
 import 'models/isar_change_log_entry.dart' as client;
-import 'models/isar_document_state.dart';
-import 'models/isar_project_state.dart';
-import 'models/isar_task_state.dart';
-import 'models/isar_team_state.dart';
+// entity state models are imported in register_entity_states.dart now
 import 'models/sync_state.dart';
 import 'register_entity_states.dart';
 
@@ -56,23 +53,15 @@ class LocalStorageService extends BaseStorageService {
       await dir.create(recursive: true);
     }
 
-    // Register all entity state storage groups first (before opening Isar)
-    // We need to create a temporary Isar instance for the registration
-    final tempSchemas = [
+    // Initialize Isar with change log + sync state + registered entity schemas
+    final schemas = <CollectionSchema>[
       client.IsarChangeLogEntrySchema,
       SyncStateSchema,
-      IsarDocumentStateSchema,
-      IsarProjectStateSchema,
-      IsarTeamStateSchema,
-      IsarTaskStateSchema,
+      ...entityStateSchemas,
     ];
 
     // Initialize Isar with all schemas
-    _isar = await Isar.open(
-      tempSchemas,
-      directory: dir.path,
-      name: _databaseName,
-    );
+    _isar = await Isar.open(schemas, directory: dir.path, name: _databaseName);
 
     // Now register the storage groups with the initialized Isar instance
     registerAllIsarEntityStateStorageGroups(_isar);

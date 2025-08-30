@@ -32,7 +32,7 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   final EntityType entityType;
   final T Function(Map<String, dynamic>) fromJson;
   final Future<void> Function(BaseEntityState) put;
-  final CollectionSchema<T>? schema;
+  // schema removed - declare schema list separately in register_entity_states
   final dynamic Function(Isar) collection;
   final Future<T?> Function(Isar, String, String) findByDomainAndEntity;
 
@@ -40,7 +40,7 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
     required this.entityType,
     required this.fromJson,
     required this.put,
-    this.schema,
+    // schema removed
     required this.collection,
     required this.findByDomainAndEntity,
   });
@@ -63,10 +63,8 @@ IsarEntityStateStorageGroup? getEntityStateStorageGroup(EntityType entityType) {
 
 /// Get all registered schemas for Isar initialization
 List<CollectionSchema> getAllRegisteredSchemas() {
-  return _storageGroups.values
-      .where((group) => group.schema != null)
-      .map((group) => group.schema!)
-      .toList();
+  // Schemas are defined explicitly in register_entity_states.dart
+  return <CollectionSchema>[];
 }
 
 /// Get all registered entity types

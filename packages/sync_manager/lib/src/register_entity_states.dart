@@ -7,6 +7,16 @@ import 'models/isar_project_state.dart';
 import 'models/isar_task_state.dart';
 import 'models/isar_team_state.dart';
 
+/// Schemas required by Isar initialization. Kept separate from registration
+/// so calling code can open Isar with all necessary schemas before
+/// registering storage groups.
+final List<CollectionSchema> entityStateSchemas = [
+  IsarProjectStateSchema,
+  IsarDocumentStateSchema,
+  IsarTeamStateSchema,
+  IsarTaskStateSchema,
+];
+
 /// Register all Isar entity state storage groups
 void registerAllIsarEntityStateStorageGroups(Isar isar) {
   registerIsarEntityStateStorageGroup(
@@ -15,7 +25,6 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
       fromJson: IsarProjectState.fromJson,
       put: (state) async =>
           await isar.isarProjectStates.put(state as IsarProjectState),
-      schema: IsarProjectStateSchema,
       collection: (Isar db) => db.isarProjectStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarProjectStates
@@ -32,7 +41,6 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
       fromJson: IsarDocumentState.fromJson,
       put: (state) async =>
           await isar.isarDocumentStates.put(state as IsarDocumentState),
-      schema: IsarDocumentStateSchema,
       collection: (Isar db) => db.isarDocumentStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarDocumentStates
@@ -49,7 +57,6 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
       fromJson: IsarTeamState.fromJson,
       put: (state) async =>
           await isar.isarTeamStates.put(state as IsarTeamState),
-      schema: IsarTeamStateSchema,
       collection: (Isar db) => db.isarTeamStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarTeamStates
@@ -66,7 +73,6 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
       fromJson: IsarTaskState.fromJson,
       put: (state) async =>
           await isar.isarTaskStates.put(state as IsarTaskState),
-      schema: IsarTaskStateSchema,
       collection: (Isar db) => db.isarTaskStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarTaskStates
