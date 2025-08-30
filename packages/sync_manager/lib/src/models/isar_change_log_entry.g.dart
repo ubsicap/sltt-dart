@@ -104,7 +104,21 @@ const IsarChangeLogEntrySchema = CollectionSchema(
   deserialize: _isarChangeLogEntryDeserialize,
   deserializeProp: _isarChangeLogEntryDeserializeProp,
   idName: r'seq',
-  indexes: {},
+  indexes: {
+    r'cid': IndexSchema(
+      id: 2203098626925536187,
+      name: r'cid',
+      unique: true,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'cid',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
   links: {},
   embeddedSchemas: {},
   getId: _isarChangeLogEntryGetId,
@@ -243,6 +257,61 @@ void _isarChangeLogEntryAttach(
   object.seq = id;
 }
 
+extension IsarChangeLogEntryByIndex on IsarCollection<IsarChangeLogEntry> {
+  Future<IsarChangeLogEntry?> getByCid(String cid) {
+    return getByIndex(r'cid', [cid]);
+  }
+
+  IsarChangeLogEntry? getByCidSync(String cid) {
+    return getByIndexSync(r'cid', [cid]);
+  }
+
+  Future<bool> deleteByCid(String cid) {
+    return deleteByIndex(r'cid', [cid]);
+  }
+
+  bool deleteByCidSync(String cid) {
+    return deleteByIndexSync(r'cid', [cid]);
+  }
+
+  Future<List<IsarChangeLogEntry?>> getAllByCid(List<String> cidValues) {
+    final values = cidValues.map((e) => [e]).toList();
+    return getAllByIndex(r'cid', values);
+  }
+
+  List<IsarChangeLogEntry?> getAllByCidSync(List<String> cidValues) {
+    final values = cidValues.map((e) => [e]).toList();
+    return getAllByIndexSync(r'cid', values);
+  }
+
+  Future<int> deleteAllByCid(List<String> cidValues) {
+    final values = cidValues.map((e) => [e]).toList();
+    return deleteAllByIndex(r'cid', values);
+  }
+
+  int deleteAllByCidSync(List<String> cidValues) {
+    final values = cidValues.map((e) => [e]).toList();
+    return deleteAllByIndexSync(r'cid', values);
+  }
+
+  Future<Id> putByCid(IsarChangeLogEntry object) {
+    return putByIndex(r'cid', object);
+  }
+
+  Id putByCidSync(IsarChangeLogEntry object, {bool saveLinks = true}) {
+    return putByIndexSync(r'cid', object, saveLinks: saveLinks);
+  }
+
+  Future<List<Id>> putAllByCid(List<IsarChangeLogEntry> objects) {
+    return putAllByIndex(r'cid', objects);
+  }
+
+  List<Id> putAllByCidSync(List<IsarChangeLogEntry> objects,
+      {bool saveLinks = true}) {
+    return putAllByIndexSync(r'cid', objects, saveLinks: saveLinks);
+  }
+}
+
 extension IsarChangeLogEntryQueryWhereSort
     on QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QWhere> {
   QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterWhere> anySeq() {
@@ -319,6 +388,51 @@ extension IsarChangeLogEntryQueryWhere
         upper: upperSeq,
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterWhereClause>
+      cidEqualTo(String cid) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'cid',
+        value: [cid],
+      ));
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterWhereClause>
+      cidNotEqualTo(String cid) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'cid',
+              lower: [],
+              upper: [cid],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'cid',
+              lower: [cid],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'cid',
+              lower: [cid],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'cid',
+              lower: [],
+              upper: [cid],
+              includeUpper: false,
+            ));
+      }
     });
   }
 }
@@ -2886,6 +3000,7 @@ IsarChangeLogEntry _$IsarChangeLogEntryFromJson(Map<String, dynamic> json) =>
       json,
       ($checkedConvert) {
         final val = IsarChangeLogEntry(
+          cid: $checkedConvert('cid', (v) => v as String),
           seq: $checkedConvert(
               'seq', (v) => (v as num?)?.toInt() ?? Isar.autoIncrement),
           domainId: $checkedConvert('domainId', (v) => v as String),
@@ -2900,7 +3015,6 @@ IsarChangeLogEntry _$IsarChangeLogEntryFromJson(Map<String, dynamic> json) =>
               (v) => _$JsonConverterFromJson<String, DateTime>(
                   v, const UtcDateTimeConverter().fromJson)),
           changeBy: $checkedConvert('changeBy', (v) => v as String),
-          cid: $checkedConvert('cid', (v) => v as String),
           storageId: $checkedConvert('storageId', (v) => v as String),
           domainType: $checkedConvert('domainType', (v) => v as String),
           stateChanged: $checkedConvert('stateChanged', (v) => v as bool),
@@ -2919,7 +3033,6 @@ IsarChangeLogEntry _$IsarChangeLogEntryFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$IsarChangeLogEntryToJson(IsarChangeLogEntry instance) =>
     <String, dynamic>{
-      'cid': instance.cid,
       'storageId': instance.storageId,
       'domainType': instance.domainType,
       'domainId': instance.domainId,
@@ -2937,6 +3050,7 @@ Map<String, dynamic> _$IsarChangeLogEntryToJson(IsarChangeLogEntry instance) =>
       'schemaVersion': instance.schemaVersion,
       'unknownJson': instance.unknownJson,
       'seq': instance.seq,
+      'cid': instance.cid,
     };
 
 Value? _$JsonConverterFromJson<Json, Value>(

@@ -87,6 +87,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
       adjustedData['parentId'] = 'root';
     }
     final namespacedEntityId = '$projectId-$entityId';
+    final namespacedCid = '$projectId-${generateCid(changeAt)}';
     return {
       'projectId': projectId,
       'domainId': projectId,
@@ -95,7 +96,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
       'entityId': namespacedEntityId,
       'changeBy': 'tester',
       'changeAt': changeAt.toUtc().toIso8601String(),
-      'cid': generateCid(changeAt),
+      'cid': namespacedCid,
       'storageId': storageId,
       'operation': operation,
       'operationInfoJson': '{}',

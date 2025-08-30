@@ -14,18 +14,21 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
   @override
   final int seq;
 
+  @override
+  String cid;
+
   // Forwarding implementations to satisfy HasUnknownField contract.
   // No explicit overrides needed here; the base mixin and class provide
   // the JSON-string fields and helper methods. Keeping Map getters above
   // gives test code convenient access.
 
   TestChangeLogEntry({
+    required this.cid,
     required super.entityId,
     required super.entityType,
     required super.domainId,
     required super.domainType,
     required super.changeAt,
-    required super.cid,
     super.storageId = 'local',
     required super.changeBy,
     required super.dataJson,

@@ -51,7 +51,12 @@ class IsarChangeLogEntry extends BaseChangeLogEntry {
   @override
   Id seq = Isar.autoIncrement;
 
+  @override
+  @Index(unique: true)
+  String cid;
+
   IsarChangeLogEntry({
+    required this.cid,
     this.seq = Isar.autoIncrement,
     required super.domainId,
     required super.entityType,
@@ -61,7 +66,6 @@ class IsarChangeLogEntry extends BaseChangeLogEntry {
     required super.dataJson,
     super.cloudAt,
     required super.changeBy,
-    required super.cid,
     required super.storageId,
     required super.domainType,
     required super.stateChanged,

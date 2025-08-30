@@ -13,7 +13,8 @@ abstract class BaseChangeLogEntry
         StorageResponsibilities,
         HasUnknownField {
   @override
-  String cid;
+  String get cid;
+  set cid(String value);
 
   @override
   String storageId;
@@ -121,7 +122,6 @@ abstract class BaseChangeLogEntry
     this.dataSchemaRev,
     this.cloudAt,
     required this.changeBy,
-    required this.cid,
     this.schemaVersion,
     this.unknownJson = '{}',
   });
@@ -158,7 +158,6 @@ abstract class BaseChangeLogEntry
          dataSchemaRev: dataSchemaRev,
          cloudAt: cloudAt,
          changeBy: changeBy,
-         cid: cid,
          schemaVersion: schemaVersion,
          unknownJson: jsonEncode(unknown),
        );
