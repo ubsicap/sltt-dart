@@ -1002,7 +1002,7 @@ abstract class BaseRestApiServer {
         );
 
         print(
-          'after getCurrentEntityState - entityState: ${const JsonEncoder.withIndent('  ').convert(entityState?.toJson())}',
+          'after getCurrentEntityState - entityState: ${const JsonEncoder.withIndent('  ').convert(entityState?.toJson() ?? {'entityId': changeLogEntry.entityId, 'entityType': changeLogEntry.entityType, 'domainId': changeLogEntry.domainId, 'unknown': changeLogEntry.getUnknown()})}',
         );
 
         // final changeLogEntryFactory = deserializeChangeLogEntryUsingRegistry;
