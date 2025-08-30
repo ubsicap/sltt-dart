@@ -98,6 +98,8 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   };
   if (!shouldPreserveData) {
     changeLogEntryUpdates['data'] = changeDataUpdates;
+  } else {
+    changeLogEntryUpdates['data'] = changeLogEntry.getData();
   }
 
   return GetUpdateResults(
