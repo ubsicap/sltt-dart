@@ -403,6 +403,7 @@ void main() {
             }),
             'stateChanged': false,
             'cloudAt': changeLogEntry.cloudAt,
+            'dataJson': jsonEncode({'rank': entityState.data_rank}),
           }),
         );
       });
