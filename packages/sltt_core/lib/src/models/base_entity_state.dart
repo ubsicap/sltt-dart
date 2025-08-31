@@ -132,16 +132,24 @@ abstract class BaseEntityState
   Map<String, dynamic> toJson();
 
   // Static helper methods for _orig_ field initialization
-  static String normalizeOrigString(String orig, String current) {
-    return orig.isEmpty ? current : orig;
+  static String normalizeOrigString(String? orig, String current) {
+    if (orig == null) {
+      return current;
+    }
+    return orig.isEmpty == true ? current : orig;
   }
 
   static DateTime defaultOrigDateTime() {
     return DateTime.fromMillisecondsSinceEpoch(0).toUtc();
   }
 
-  static DateTime normalizeOrigDateTime(DateTime orig, DateTime current) {
-    return orig.isAtSameMomentAs(defaultOrigDateTime()) ? current : orig;
+  static DateTime normalizeOrigDateTime(DateTime? orig, DateTime current) {
+    if (orig == null) {
+      return current;
+    }
+    return orig.isAtSameMomentAs(defaultOrigDateTime()) == true
+        ? current
+        : orig;
   }
 
   static DateTime? normalizeOrigDateTimeNullable(
