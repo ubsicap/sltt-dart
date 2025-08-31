@@ -14,39 +14,119 @@ abstract class BaseEntityState
         CoreChangeLogEntryOriginalFields {
   // keep the public contract
 
+  @override
+  final String entityType;
+
+  @override
+  String unknownJson;
+  @override
+  final int? schemaVersion;
+  final String change_domainId;
+  @override
+  final String change_domainId_orig_;
+  @override
+  final DateTime change_changeAt;
+  @override
+  final DateTime change_changeAt_orig_;
+  @override
+  final String change_cid;
+  @override
+  final String change_cid_orig_;
+  @override
+  final int? change_dataSchemaRev;
+  @override
+  final DateTime? change_cloudAt;
+  @override
+  final String change_changeBy;
+  @override
+  final String change_changeBy_orig_;
+  @override
+  final String? data_rank;
+  @override
+  final int? data_rank_dataSchemaRev_;
+  @override
+  final DateTime? data_rank_changeAt_;
+  @override
+  final String? data_rank_cid_;
+  @override
+  final String? data_rank_changeBy_;
+  @override
+  final DateTime? data_rank_cloudAt_;
+  @override
+  final bool? data_deleted;
+  @override
+  final int? data_deleted_dataSchemaRev_;
+  @override
+  final DateTime? data_deleted_changeAt_;
+  @override
+  final String? data_deleted_cid_;
+  @override
+  final String? data_deleted_changeBy_;
+  @override
+  final DateTime? data_deleted_cloudAt_;
+  @override
+  final String data_parentId;
+  @override
+  final int? data_parentId_dataSchemaRev_;
+  @override
+  final DateTime data_parentId_changeAt_;
+  @override
+  final String data_parentId_cid_;
+  @override
+  final String data_parentId_changeBy_;
+  @override
+  final DateTime? data_parentId_cloudAt_;
+
   BaseEntityState({
     required String entityId,
-    required String entityType,
-    int? schemaVersion,
-    required String change_domainId,
+    required this.entityType,
+    this.schemaVersion,
+    required String unknownJson,
+    required this.change_domainId,
     required String change_domainId_orig_,
-    required DateTime change_changeAt,
+    required this.change_changeAt,
     required DateTime change_changeAt_orig_,
-    required String change_cid,
+    required this.change_cid,
     required String change_cid_orig_,
-    int? change_dataSchemaRev,
-    DateTime? change_cloudAt,
-    required String change_changeBy,
+    this.change_dataSchemaRev,
+    this.change_cloudAt,
+    required this.change_changeBy,
     required String change_changeBy_orig_,
-    int? data_rank_dataSchemaRev_,
-    String? data_rank,
-    DateTime? data_rank_changeAt_,
-    String? data_rank_cid_,
-    String? data_rank_changeBy_,
-    DateTime? data_rank_cloudAt_,
-    bool? data_deleted,
-    int? data_deleted_dataSchemaRev_,
-    DateTime? data_deleted_changeAt_,
-    String? data_deleted_cid_,
-    String? data_deleted_changeBy_,
-    DateTime? data_deleted_cloudAt_,
-    required String data_parentId,
-    int? data_parentId_dataSchemaRev_,
-    required DateTime data_parentId_changeAt_,
-    required String data_parentId_cid_,
-    required String data_parentId_changeBy_,
-    DateTime? data_parentId_cloudAt_,
-  });
+    this.data_rank_dataSchemaRev_,
+    this.data_rank,
+    this.data_rank_changeAt_,
+    this.data_rank_cid_,
+    this.data_rank_changeBy_,
+    this.data_rank_cloudAt_,
+    this.data_deleted,
+    this.data_deleted_dataSchemaRev_,
+    this.data_deleted_changeAt_,
+    this.data_deleted_cid_,
+    this.data_deleted_changeBy_,
+    this.data_deleted_cloudAt_,
+    required this.data_parentId,
+    this.data_parentId_dataSchemaRev_,
+    required this.data_parentId_changeAt_,
+    required this.data_parentId_cid_,
+    required this.data_parentId_changeBy_,
+    this.data_parentId_cloudAt_,
+  }) : unknownJson = JsonUtils.normalize(unknownJson),
+       change_domainId_orig_ = BaseEntityState.normalizeOrigString(
+         change_domainId_orig_,
+         change_domainId,
+       ),
+       change_changeAt_orig_ = BaseEntityState.normalizeOrigDateTime(
+         change_changeAt_orig_,
+         change_changeAt,
+       ),
+       change_cid_orig_ = BaseEntityState.normalizeOrigString(
+         change_cid_orig_,
+         change_cid,
+       ),
+       change_changeBy_orig_ = BaseEntityState.normalizeOrigString(
+         change_changeBy_orig_,
+         change_changeBy,
+       );
 
   // Abstract methods to be implemented by concrete subclasses
   Map<String, dynamic> toJson();

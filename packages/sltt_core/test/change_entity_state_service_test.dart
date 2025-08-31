@@ -69,6 +69,7 @@ void main() {
         data_parentId_cid_: 'c2',
         data_parentId_changeBy_: 'user2',
         data_parentId_cloudAt_: DateTime.parse('2023-01-02T07:00:00Z'),
+        unknownJson: '',
       );
       final json = state.toJson();
       final fromJson = TestEntityState.fromJson(json);

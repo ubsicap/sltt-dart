@@ -52,6 +52,7 @@ void main() {
         data_parentId_cid_: 'cid',
         data_parentId_changeBy_: 'user',
         data_parentId_cloudAt_: DateTime.now().toUtc(),
+        unknownJson: '',
       );
       state.setUnknown('baz', 'qux');
       final json = state.toJson();
