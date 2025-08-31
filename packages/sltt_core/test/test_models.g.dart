@@ -92,14 +92,14 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
           change_domainId:
               $checkedConvert('change_domainId', (v) => v as String),
           change_domainId_orig_:
-              $checkedConvert('change_domainId_orig_', (v) => v as String),
+              $checkedConvert('change_domainId_orig_', (v) => v as String?),
           change_changeAt: $checkedConvert(
               'change_changeAt', (v) => DateTime.parse(v as String)),
-          change_changeAt_orig_: $checkedConvert(
-              'change_changeAt_orig_', (v) => DateTime.parse(v as String)),
+          change_changeAt_orig_: $checkedConvert('change_changeAt_orig_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
           change_cid: $checkedConvert('change_cid', (v) => v as String),
           change_cid_orig_:
-              $checkedConvert('change_cid_orig_', (v) => v as String),
+              $checkedConvert('change_cid_orig_', (v) => v as String?),
           change_dataSchemaRev: $checkedConvert(
               'change_dataSchemaRev', (v) => (v as num?)?.toInt()),
           change_cloudAt: $checkedConvert('change_cloudAt',
@@ -107,7 +107,7 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
           change_changeBy:
               $checkedConvert('change_changeBy', (v) => v as String),
           change_changeBy_orig_:
-              $checkedConvert('change_changeBy_orig_', (v) => v as String),
+              $checkedConvert('change_changeBy_orig_', (v) => v as String?),
           data_rank_dataSchemaRev_: $checkedConvert(
               'data_rank_dataSchemaRev_', (v) => (v as num?)?.toInt()),
           data_rank: $checkedConvert('data_rank', (v) => v as String?),
