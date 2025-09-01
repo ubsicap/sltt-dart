@@ -153,7 +153,7 @@ Map<String, dynamic> getAdditionalWarnings(
     // and remove them from stateUpdates.
     // no need to check equality, since stateUpdates should
     // only contain values if they are different
-    for (final key in stateUpdates.keys) {
+    for (final key in {...stateUpdates}.keys) {
       if (key.endsWith('_orig_')) {
         additionalWarnings[key] = stateUpdates[key];
         stateUpdates.remove(key);

@@ -117,6 +117,139 @@ void main() {
       };
       entityState = TestEntityState.fromJson(esJson);
     });
+    group('getAdditionalWarnings', () {
+      late DateTime baseTime;
+      late TestEntityState entityState;
+
+      setUp(() {
+        baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+        entityState = TestEntityState.fromJson({
+          'entityId': 'e1',
+          'entityType': 'task',
+          'data_parentId': 'parent1',
+          'data_parentId_changeAt_': baseTime.toIso8601String(),
+          'data_parentId_cid_': 'cid1',
+          'data_parentId_changeBy_': 'u1',
+          'data_nameLocal': 'Task 1',
+          'data_nameLocal_changeAt_': baseTime.toIso8601String(),
+          'data_nameLocal_cid_': 'cid1',
+          'data_nameLocal_changeBy_': 'u1',
+          'change_domainId': 'project1',
+          'change_domainId_orig_': 'project1',
+          'change_changeAt': baseTime.toIso8601String(),
+          'change_changeAt_orig_': baseTime.toIso8601String(),
+          'change_cid': 'cid1',
+          'change_cid_orig_': 'cid1',
+          'change_changeBy': 'u1',
+          'change_changeBy_orig_': 'u1',
+          'unknownJson': '{}',
+        });
+      });
+
+      test('reports operation mismatch when incoming operation differs', () {
+        final entry = TestChangeLogEntry(
+          entityId: 'e1',
+          entityType: 'task',
+          domainId: 'd1',
+          domainType: 'project',
+          changeAt: baseTime,
+          cid: 'c1',
+          storageId: 'local',
+          changeBy: 'user1',
+          dataJson: jsonEncode({'data_nameLocal': 'Task 1'}),
+          operation: 'update',
+          operationInfoJson: jsonEncode({}),
+          stateChanged: true,
+          unknownJson: jsonEncode({}),
+        );
+
+        final warnings = getAdditionalWarnings(
+          'create',
+          entry,
+          entityState,
+          <String, dynamic>{},
+        );
+
+        expect(warnings.containsKey('operation'), isTrue);
+        expect(warnings['operation'], equals('update'));
+      });
+
+      test(
+        'captures non-default _orig_ values for new entities and copies field value',
+        () {
+          final entry = TestChangeLogEntry(
+            entityId: 'e2',
+            entityType: 'task',
+            domainId: 'd2',
+            domainType: 'project',
+            changeAt: baseTime,
+            cid: 'c2',
+            storageId: 'local',
+            changeBy: 'user2',
+            dataJson: jsonEncode({'data_nameLocal': 'Task 2'}),
+            operation: 'create',
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            unknownJson: jsonEncode({}),
+          );
+
+          final stateUpdates = <String, dynamic>{
+            'change_domainId_orig_': 'orig-domain',
+            'change_domainId': 'domain2',
+          };
+
+          final warnings = getAdditionalWarnings(
+            'create',
+            entry,
+            null,
+            stateUpdates,
+          );
+
+          expect(warnings.containsKey('change_domainId_orig_'), isTrue);
+          expect(warnings['change_domainId_orig_'], equals('orig-domain'));
+          // the _orig_ entry should be replaced with the actual field value
+          expect(stateUpdates['change_domainId_orig_'], equals('domain2'));
+        },
+      );
+
+      test(
+        'moves _orig_ fields to warnings when an existing entityState is present',
+        () {
+          final stateUpdates = <String, dynamic>{
+            'data_rank_orig_': 'old-rank',
+            'data_rank': '9',
+          };
+
+          final warnings = getAdditionalWarnings(
+            'update',
+            TestChangeLogEntry(
+              entityId: 'e1',
+              entityType: 'task',
+              domainId: 'd1',
+              domainType: 'project',
+              changeAt: baseTime,
+              cid: 'c1',
+              storageId: 'local',
+              changeBy: 'user1',
+              dataJson: jsonEncode({
+                'data_nameLocal': 'Task 1',
+                'data_rank': '9',
+              }),
+              operation: 'update',
+              operationInfoJson: jsonEncode({}),
+              stateChanged: true,
+              unknownJson: jsonEncode({}),
+            ),
+            entityState,
+            stateUpdates,
+          );
+
+          expect(warnings.containsKey('data_rank_orig_'), isTrue);
+          expect(warnings['data_rank_orig_'], equals('old-rank'));
+          expect(stateUpdates.containsKey('data_rank_orig_'), isFalse);
+        },
+      );
+    });
 
     group('getMaybeIsDuplicateCidResult', () {
       test('should return true for duplicate CID', () {
