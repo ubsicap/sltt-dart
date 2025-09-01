@@ -92,7 +92,7 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     'operationInfoJson': jsonEncode({
       'outdatedBys': outdatedBys,
       'noOpFields': noOpFields,
-      ...additionalWarnings,
+      if (additionalWarnings.isNotEmpty) ...{'warnings': additionalWarnings},
     }),
     'stateChanged': stateChanged,
     'cloudAt': changeLogEntry.cloudAt,
@@ -126,26 +126,39 @@ Map<String, dynamic> getAdditionalWarnings(
     additionalWarnings['operation'] = changeLogEntry.operation;
   }
   if (entityState == null) {
-    if (stateUpdates['change_changeAt_orig_'] != null &&
-        stateUpdates['change_changeAt'] !=
-            stateUpdates['change_changeAt_orig_']) {
-      // Also? BaseEntityState.defaultOrigDateTime().toIso8601String() != stateUpdates['change_changeAt_orig_']
-      additionalWarnings['change_changeAt_orig_'] =
-          stateUpdates['change_changeAt_orig_'];
-      // fix stateUpdates
-      stateUpdates['change_changeAt_orig_'] = stateUpdates['change_changeAt'];
+    // for new entities, fieldx_orig_ fields should always be equal to the corresponding fieldx value
+    for (final key in stateUpdates.keys) {
+      if (key.endsWith('_orig_')) {
+        final fieldX = key.substring(0, key.length - '_orig_'.length);
+        final fieldXValue = stateUpdates[fieldX];
+        // TODO: endsWith('At') is fragile, need a better way to determine
+        // date fields
+        if (fieldXValue != null &&
+            fieldXValue != stateUpdates[key] &&
+            ((!fieldX.endsWith('At') && !stateUpdates[key].isEmpty) ||
+                (fieldX.endsWith('At') &&
+                    stateUpdates[key] !=
+                        BaseEntityState.defaultOrigDateTime()
+                            .toIso8601String()))) {
+          // only capture non-default as warning
+          additionalWarnings[key] = stateUpdates[key];
+        }
+        stateUpdates[key] = fieldXValue;
+      }
     }
-    // TODO: do this for all _orig_ fields
   } else {
     // don't change any existing fieldx__orig_ fields!!!
-    if (stateUpdates['change_changeAt_orig_'] != null &&
-        entityState.change_changeAt_orig_ !=
-            stateUpdates['change_changeAt_orig_']) {
-      additionalWarnings['change_changeAt_orig_'] =
-          stateUpdates['change_changeAt_orig_'];
-      stateUpdates.remove('change_changeAt_orig_');
+    // look for any fieldx_orig_ fields in stateUpdates
+    // add them to additionalWarnings
+    // and remove them from stateUpdates.
+    // no need to check equality, since stateUpdates should
+    // only contain values if they are different
+    for (final key in stateUpdates.keys) {
+      if (key.endsWith('_orig_')) {
+        additionalWarnings[key] = stateUpdates[key];
+        stateUpdates.remove(key);
+      }
     }
-    // TODO: do this for all _orig_ fields
   }
   return additionalWarnings;
 }
@@ -435,7 +448,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
         'change_cid_orig_': '',
         'change_changeBy_orig_': '',
         'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
-            .toString(),
+            .toIso8601String(),
       },
       // latest metadata
       if (isChangeNewerThanLatest && fieldUpdates.isNotEmpty) ...{

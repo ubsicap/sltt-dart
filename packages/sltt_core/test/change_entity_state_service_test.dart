@@ -628,7 +628,6 @@ void main() {
             'operationInfoJson': jsonEncode({
               'outdatedBys': [],
               'noOpFields': [],
-              'change_changeAt_orig_': '1970-01-01 00:00:00.000Z',
             }),
             'stateChanged': true,
             'cloudAt': null,
@@ -642,9 +641,9 @@ void main() {
             'entityId': 'entity2',
             'entityType': 'task',
             'change_dataSchemaRev': null,
-            'change_domainId_orig_': '',
-            'change_cid_orig_': '',
-            'change_changeBy_orig_': '',
+            'change_domainId_orig_': 'project1',
+            'change_cid_orig_': 'cid3',
+            'change_changeBy_orig_': 'user1',
             'change_changeAt_orig_': '2023-01-01T00:01:00.000Z',
             'change_domainType': 'project',
             'change_domainId': 'project1',
@@ -704,7 +703,6 @@ void main() {
             'operationInfoJson': jsonEncode({
               'outdatedBys': [],
               'noOpFields': [],
-              'change_changeAt_orig_': '1970-01-01 00:00:00.000Z',
             }),
             'stateChanged': true,
             'dataJson': jsonEncode({
