@@ -26,10 +26,12 @@ class SyncState {
   final int seq;
 
   /// Local datetime when this sync state was created
-  final DateTime createdAt;
+  /// expect to always be set, either by default or from deserialization
+  final DateTime? createdAt;
 
   /// Local datetime when this sync state was last updated
-  final DateTime updatedAt;
+  /// expect to always be set, either by default or from deserialization
+  final DateTime? updatedAt;
 
   SyncState({
     this.id = Isar.autoIncrement,

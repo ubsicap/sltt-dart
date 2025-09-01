@@ -14,5 +14,7 @@ class CursorSyncState extends SyncState {
     required super.cid,
     required super.changeAt,
     required super.seq,
+    super.createdAt,
+    super.updatedAt,
   });
 }

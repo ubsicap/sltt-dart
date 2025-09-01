@@ -117,11 +117,13 @@ CursorSyncState _cursorSyncStateDeserialize(
   final object = CursorSyncState(
     changeAt: reader.readDateTime(offsets[0]),
     cid: reader.readString(offsets[1]),
+    createdAt: reader.readDateTimeOrNull(offsets[2]),
     domainId: reader.readString(offsets[3]),
     domainType: reader.readString(offsets[4]),
     seq: reader.readLong(offsets[5]),
     storageId: reader.readString(offsets[6]),
     storageType: reader.readString(offsets[7]),
+    updatedAt: reader.readDateTimeOrNull(offsets[8]),
   );
   object.id = id;
   return object;
@@ -139,7 +141,7 @@ P _cursorSyncStateDeserializeProp<P>(
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
@@ -151,7 +153,7 @@ P _cursorSyncStateDeserializeProp<P>(
     case 7:
       return (reader.readString(offset)) as P;
     case 8:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -445,7 +447,25 @@ extension CursorSyncStateQueryFilter
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-      createdAtEqualTo(DateTime value) {
+      createdAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'createdAt',
+      ));
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
+      createdAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'createdAt',
+      ));
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
+      createdAtEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'createdAt',
@@ -456,7 +476,7 @@ extension CursorSyncStateQueryFilter
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
       createdAtGreaterThan(
-    DateTime value, {
+    DateTime? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -470,7 +490,7 @@ extension CursorSyncStateQueryFilter
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
       createdAtLessThan(
-    DateTime value, {
+    DateTime? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -484,8 +504,8 @@ extension CursorSyncStateQueryFilter
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
       createdAtBetween(
-    DateTime lower,
-    DateTime upper, {
+    DateTime? lower,
+    DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -1157,7 +1177,25 @@ extension CursorSyncStateQueryFilter
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-      updatedAtEqualTo(DateTime value) {
+      updatedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'updatedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
+      updatedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'updatedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
+      updatedAtEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'updatedAt',
@@ -1168,7 +1206,7 @@ extension CursorSyncStateQueryFilter
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
       updatedAtGreaterThan(
-    DateTime value, {
+    DateTime? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1182,7 +1220,7 @@ extension CursorSyncStateQueryFilter
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
       updatedAtLessThan(
-    DateTime value, {
+    DateTime? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1196,8 +1234,8 @@ extension CursorSyncStateQueryFilter
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
       updatedAtBetween(
-    DateTime lower,
-    DateTime upper, {
+    DateTime? lower,
+    DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -1566,7 +1604,7 @@ extension CursorSyncStateQueryProperty
     });
   }
 
-  QueryBuilder<CursorSyncState, DateTime, QQueryOperations>
+  QueryBuilder<CursorSyncState, DateTime?, QQueryOperations>
       createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdAt');
@@ -1604,7 +1642,7 @@ extension CursorSyncStateQueryProperty
     });
   }
 
-  QueryBuilder<CursorSyncState, DateTime, QQueryOperations>
+  QueryBuilder<CursorSyncState, DateTime?, QQueryOperations>
       updatedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'updatedAt');
