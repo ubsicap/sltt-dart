@@ -30,18 +30,24 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
     Map<String, dynamic> change,
   ) async {
     final baseUrl = await resolveBaseUrl();
-    final uri = baseUrl.replace(
-      path: '/api/changes',
-      queryParameters: {'changeUpdates': 'true', 'stateUpdates': 'true'},
-    );
+    final uri = baseUrl.replace(path: '/api/changes');
+
+    final body = {
+      'changes': [change],
+      // Tests simulate a local offline client by default
+      'srcStorageType': 'local',
+      'srcStorageId': change['storageId'] ?? 'local',
+      'includeChangeUpdates': true,
+      'includeStateUpdates': true,
+    };
 
     final req = await HttpClient().postUrl(uri);
     req.headers.contentType = ContentType.json;
-    req.write(jsonEncode([change]));
+    req.write(jsonEncode(body));
     final res = await req.close();
     expect(res.statusCode, 200);
-    final body = await res.transform(utf8.decoder).join();
-    return jsonDecode(body) as Map<String, dynamic>;
+    final respBodyStr = await res.transform(utf8.decoder).join();
+    return jsonDecode(respBodyStr) as Map<String, dynamic>;
   }
 
   Future<void> seedChange(Map<String, dynamic> change) async {
@@ -109,13 +115,10 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
   // ---- The tests (copied from original file) ----
 
   test(
-    'POST /api/changes?changeUpdates=true&stateUpdates=true returns summaries',
+    'POST /api/changes with includeChangeUpdates/includeStateUpdates returns summaries',
     () async {
       final baseUrl = await resolveBaseUrl();
-      final uri = baseUrl.replace(
-        path: '/api/changes',
-        queryParameters: {'changeUpdates': 'true', 'stateUpdates': 'true'},
-      );
+      final uri = baseUrl.replace(path: '/api/changes');
       final now = DateTime.now().toUtc();
       final payload = [
         {
@@ -139,14 +142,22 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
         },
       ];
 
+      final body = {
+        'changes': payload,
+        'srcStorageType': 'local',
+        'srcStorageId': 'local',
+        'includeChangeUpdates': true,
+        'includeStateUpdates': true,
+      };
+
       final req = await HttpClient().postUrl(uri);
       req.headers.contentType = ContentType.json;
-      req.write(jsonEncode(payload));
+      req.write(jsonEncode(body));
       final res = await req.close();
 
       expect(res.statusCode, 200);
-      final body = await res.transform(utf8.decoder).join();
-      final json = jsonDecode(body) as Map<String, dynamic>;
+      final respBodyStr = await res.transform(utf8.decoder).join();
+      final json = jsonDecode(respBodyStr) as Map<String, dynamic>;
 
       expect(json['storageType'], isNotEmpty);
       expect(json['storageId'], isNotEmpty);

@@ -238,64 +238,54 @@ abstract class BaseRestApiServer {
           'description':
               'Create new changes (array format) with field-level change detection',
           'requestBody': {
-            'type': 'array',
-            'items': {
-              'type': 'object',
-              'required': ['domainId', 'entityType', 'entityId'],
-              'properties': {
-                'domainId': {
-                  'type': 'string',
-                  'description': 'Domain identifier (e.g. projectId)',
-                },
-                'entityType': {
-                  'type': 'string',
-                  'description': 'Type of entity being changed',
-                },
-                'entityId': {
-                  'type': 'string',
-                  'description': 'Unique identifier for the entity',
-                },
-                'operation': {
-                  'type': 'string',
-                  'description': 'Operation type (create, update, delete)',
-                  'default': 'create',
-                },
-                'dataJson': jsonEncode({
+            'type': 'object',
+            'required': ['changes', 'srcStorageType', 'srcStorageId'],
+            'properties': {
+              'changes': {
+                'type': 'array',
+                'items': {
                   'type': 'object',
-                  'description': 'Change data payload',
-                }),
-                'changeAt': {
-                  'type': 'string',
-                  'format': 'ISO8601',
-                  'description':
-                      'When change was made (optional, defaults to current time)',
+                  'required': ['domainId', 'entityType', 'entityId'],
+                  'properties': {
+                    'domainId': {'type': 'string'},
+                    'entityType': {'type': 'string'},
+                    'entityId': {'type': 'string'},
+                    'operation': {'type': 'string', 'default': 'create'},
+                    'dataJson': {
+                      'type': 'string',
+                      'description': 'Change data payload (JSON string)',
+                    },
+                    'changeAt': {'type': 'string', 'format': 'ISO8601'},
+                    'cid': {'type': 'string'},
+                  },
                 },
-                'cid': {
-                  'type': 'string',
-                  'description':
-                      'Change ID (optional, auto-generated if not provided)',
-                },
+              },
+              'srcStorageType': {
+                'type': 'string',
+                'description':
+                    "Source client storage type; use 'none' for non-offline-first clients",
+                'default': 'none',
+              },
+              'srcStorageId': {
+                'type': 'string',
+                'description':
+                    'Source client storageId (empty string by default)',
+                'default': '',
+              },
+              'includeChangeUpdates': {
+                'type': 'boolean',
+                'description':
+                    'If true, include per-change `changeUpdates` details in the response',
+                'default': false,
+              },
+              'includeStateUpdates': {
+                'type': 'boolean',
+                'description':
+                    'If true, include per-change `stateUpdates` details in the response',
+                'default': false,
               },
             },
           },
-          'parameters': [
-            {
-              'name': 'changeUpdates',
-              'in': 'query',
-              'type': 'boolean',
-              'required': false,
-              'description':
-                  'If true, include per-change `changeUpdates` details in the response',
-            },
-            {
-              'name': 'stateUpdates',
-              'in': 'query',
-              'type': 'boolean',
-              'required': false,
-              'description':
-                  'If true, include per-change `stateUpdates` details in the response',
-            },
-          ],
           'response': {
             'type': 'object',
             'properties': {
@@ -391,7 +381,7 @@ abstract class BaseRestApiServer {
                   },
                 },
                 'description':
-                    'Per-change computed changeUpdate objects (included when ?changeUpdates=true)',
+                    'Per-change computed changeUpdate objects (included when includeChangeUpdates=true)',
               },
               'stateUpdates': {
                 'type': 'array',
@@ -403,7 +393,7 @@ abstract class BaseRestApiServer {
                   },
                 },
                 'description':
-                    'Per-change computed state update objects (included when ?stateUpdates=true)',
+                    'Per-change computed state update objects (included when includeStateUpdates=true)',
               },
               'timestamp': {
                 'type': 'string',
@@ -921,7 +911,7 @@ abstract class BaseRestApiServer {
     try {
       final bodyJson = await request.readAsString();
 
-      // Handle JSON parsing errors
+      // Parse JSON body
       late final dynamic body;
       try {
         body = jsonDecode(bodyJson);
@@ -929,17 +919,43 @@ abstract class BaseRestApiServer {
         return _errorResponse('Invalid JSON format: ${e.message}', 400);
       }
 
-      if (body is! List) {
-        return _errorResponse('Request body must be an array of changes', 400);
-      }
-
-      // Safely cast to List<Map<String, dynamic>>
+      // Support either legacy array body or new object wrapper
       late final List<Map<String, dynamic>> changesToCreate;
-      try {
-        changesToCreate = body.cast<Map<String, dynamic>>();
-      } on TypeError {
+      String srcStorageType = 'none';
+      String srcStorageId = '';
+      bool includeChangeUpdates = false;
+      bool includeStateUpdates = false;
+
+      if (body is List) {
+        try {
+          changesToCreate = body.cast<Map<String, dynamic>>();
+        } on TypeError {
+          return _errorResponse(
+            'Invalid change format: each item must be an object',
+            400,
+          );
+        }
+      } else if (body is Map<String, dynamic>) {
+        final changesField = body['changes'];
+        if (changesField is! List) {
+          return _errorResponse('`changes` must be an array', 400);
+        }
+        try {
+          changesToCreate = List<Map<String, dynamic>>.from(changesField);
+        } on TypeError {
+          return _errorResponse(
+            'Invalid change objects in `changes` array',
+            400,
+          );
+        }
+
+        srcStorageType = (body['srcStorageType'] as String?)?.trim() ?? 'none';
+        srcStorageId = (body['srcStorageId'] as String?) ?? '';
+        includeChangeUpdates = (body['includeChangeUpdates'] as bool?) ?? false;
+        includeStateUpdates = (body['includeStateUpdates'] as bool?) ?? false;
+      } else {
         return _errorResponse(
-          'Invalid change format: each item must be an object',
+          'Request body must be an array or an object with `changes`',
           400,
         );
       }
@@ -947,6 +963,7 @@ abstract class BaseRestApiServer {
       if (changesToCreate.isEmpty) {
         return _errorResponse('No changes provided', 400);
       }
+
       final targetStorageId = await storage.getStorageId();
       final resultsSummary = <String, dynamic>{
         'storageType': storage.getStorageType(),
@@ -973,7 +990,25 @@ abstract class BaseRestApiServer {
         );
         final cid = changeLogEntry.cid;
 
-        // TODO: also need sourceStorageId, not just from data
+        // Determine effective source storage id per request wrapper rules
+        String effectiveSrcStorageId;
+        if (srcStorageType == 'none') {
+          // treat as non-offline-first client -> diff data mode
+          effectiveSrcStorageId = targetStorageId;
+        } else {
+          effectiveSrcStorageId = srcStorageId.isNotEmpty
+              ? srcStorageId
+              : changeLogEntry.storageId;
+        }
+
+        // Override deserialized storageId so downstream logic (getUpdates...) uses our chosen mode
+        try {
+          changeLogEntry.storageId = effectiveSrcStorageId;
+        } catch (_) {
+          // ignore if not writable
+        }
+
+        // Basic validation of operation states when originating from same storage
         if (changeLogEntry.storageId == targetStorageId) {
           // treat these changes as atomic since they originated on the same system
           // so exit early on any errors
@@ -984,7 +1019,6 @@ abstract class BaseRestApiServer {
             );
           }
           if (changeLogEntry.operation == 'hold') {
-            // how could this ever happen on the same storage??
             return _errorResponse(
               'Change[$i] cid($cid) deserialization resulted in `hold`: ${changeLogEntry.getOperationInfo()}',
               400,
@@ -992,11 +1026,10 @@ abstract class BaseRestApiServer {
           }
         } else {
           // treat these as a batch from a remote or LAN storage.
-          // Preserve unknown entities for future processing
-          // Q. Should we also preserve errors locally or only in the cloud?
           if (changeLogEntry.operation == 'error') {}
           if (changeLogEntry.operation == 'hold') {}
         }
+
         final entityState = await storage.getCurrentEntityState(
           changeLogEntry.domainId,
           changeLogEntry.entityType.toString(),
@@ -1007,8 +1040,6 @@ abstract class BaseRestApiServer {
           'after getCurrentEntityState - entityState: ${const JsonEncoder.withIndent('  ').convert(entityState?.toJson() ?? {'entityId': changeLogEntry.entityId, 'entityType': changeLogEntry.entityType, 'domainId': changeLogEntry.domainId, 'unknown': changeLogEntry.getUnknown()})}',
         );
 
-        // final changeLogEntryFactory = deserializeChangeLogEntryUsingRegistry;
-        // final entityStateFactory = deserializeEntityStateSafely;
         // Use enhanced change detection method
         final result = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
@@ -1074,13 +1105,13 @@ abstract class BaseRestApiServer {
             'info': updateResults.newChangeLogEntry.getOperationInfo(),
           });
         }
-        if (request.url.queryParameters['changeUpdates'] == 'true') {
+        if (includeChangeUpdates) {
           resultsSummary['changeUpdates'].add({
             'cid': updateResults.newChangeLogEntry.cid,
             'updates': result.changeUpdates,
           });
         }
-        if (request.url.queryParameters['stateUpdates'] == 'true') {
+        if (includeStateUpdates) {
           // Only add state updates if explicitly requested
           resultsSummary['stateUpdates'].add({
             'cid': updateResults.newChangeLogEntry.cid,
