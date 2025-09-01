@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/models/cursor_sync_state.dart';
+import 'package:sync_manager/src/models/self_sync_state.dart';
 
 import 'isar_entity_state_storage_group.dart';
 import 'models/isar_change_log_entry.dart' as client;
-// entity state models are imported in register_entity_states.dart now
-import 'models/sync_state.dart';
 import 'register_entity_states.dart';
 
 /// Service function to create the correct Isar*State from JSON
@@ -55,8 +55,9 @@ class LocalStorageService extends BaseStorageService {
 
     // Initialize Isar with change log + sync state + registered entity schemas
     final schemas = <CollectionSchema>[
+      SelfSyncStateSchema,
+      CursorSyncStateSchema,
       client.IsarChangeLogEntrySchema,
-      SyncStateSchema,
       ...entityStateSchemas,
     ];
 
@@ -99,9 +100,43 @@ class LocalStorageService extends BaseStorageService {
 
   @override
   Future<String> ensureStorageId() async {
-    // Generate a unique storage ID based on database name and timestamp
-    _storageId = BaseStorageService.generateShortStorageId();
-    return _storageId;
+    // Try to find an existing SelfSyncState with the reserved root domainId.
+    // If present, reuse its storageId. Otherwise create and persist a new one.
+    try {
+      final existing = await _isar.selfSyncStates
+          .filter()
+          .domainIdEqualTo('root')
+          .findFirst();
+
+      if (existing != null && existing.storageId.isNotEmpty) {
+        _storageId = existing.storageId;
+        return _storageId;
+      }
+
+      // Not found -> create a new canonical storage id and persist a SelfSyncState
+      final newId = BaseStorageService.generateShortStorageId();
+      final now = DateTime.now().toUtc();
+      final self = SelfSyncState(
+        domainId: 'root',
+        domainType: 'root',
+        storageId: newId,
+        storageType: 'local',
+        cid: newId,
+        changeAt: now,
+        seq: 0,
+      );
+
+      await _isar.writeTxn(() async {
+        await _isar.selfSyncStates.put(self);
+      });
+
+      _storageId = newId;
+      return _storageId;
+    } catch (e) {
+      // Fallback: if anything goes wrong, still generate an id but don't persist
+      _storageId = BaseStorageService.generateShortStorageId();
+      return _storageId;
+    }
   }
 
   @override
