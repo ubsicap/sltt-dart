@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
+import 'package:sync_manager/src/models/self_sync_state.dart';
 import 'package:sync_manager/src/shared_storage_service.dart';
 import 'package:test/test.dart';
 
@@ -761,6 +764,81 @@ void main() {
       final retrieved = await storage.getChange(projectId, change.seq);
       expect(retrieved, isNotNull);
       expect(retrieved!.entityId, equals(entityId));
+    });
+  });
+
+  group('SelfSyncState and CursorSyncState persistence', () {
+    test(
+      'ensureStorageId creates SelfSyncState and persists across reopen',
+      () async {
+        final id1 = await storage.ensureStorageId();
+        expect(id1, isNotEmpty);
+
+        // Close storage and open Isar directly to verify the SelfSyncState was persisted
+        await storage.close();
+
+        final dir = Directory('./isar_db');
+        final isar = await Isar.open(
+          [SelfSyncStateSchema, CursorSyncStateSchema],
+          directory: dir.path,
+          name: testDbName,
+        );
+
+        final existing = await isar.selfSyncStates
+            .filter()
+            .domainIdEqualTo('root')
+            .findFirst();
+
+        expect(existing, isNotNull);
+        expect(existing!.storageId, equals(id1));
+
+        await isar.close();
+
+        // Re-initialize storage so tearDown can close it normally
+        storage = LocalStorageService(testDbName, 'Test');
+        await storage.initialize();
+      },
+    );
+
+    test('can create and retrieve CursorSyncState directly in Isar', () async {
+      final now = DateTime.now().toUtc();
+      final cursor = CursorSyncState(
+        domainId: 'cursor-domain',
+        domainType: 'cursor',
+        storageId: 'local',
+        storageType: 'local',
+        cid: 'cid-1',
+        changeAt: now,
+        seq: 1,
+      );
+
+      // Close storage before opening raw Isar to avoid conflicts
+      await storage.close();
+
+      final dir = Directory('./isar_db');
+      final isar = await Isar.open(
+        [SelfSyncStateSchema, CursorSyncStateSchema],
+        directory: dir.path,
+        name: testDbName,
+      );
+
+      await isar.writeTxn(() async {
+        await isar.cursorSyncStates.put(cursor);
+      });
+
+      final found = await isar.cursorSyncStates
+          .filter()
+          .domainIdEqualTo('cursor-domain')
+          .findFirst();
+
+      expect(found, isNotNull);
+      expect(found!.domainId, equals('cursor-domain'));
+
+      await isar.close();
+
+      // Re-initialize storage so tearDown can close it normally
+      storage = LocalStorageService(testDbName, 'Test');
+      await storage.initialize();
     });
   });
 }
