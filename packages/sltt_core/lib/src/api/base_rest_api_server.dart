@@ -919,24 +919,24 @@ abstract class BaseRestApiServer {
   /// Create new changes
   Future<Response> _handleCreateChanges(Request request) async {
     try {
-      final body = await request.readAsString();
+      final bodyJson = await request.readAsString();
 
       // Handle JSON parsing errors
-      late final dynamic data;
+      late final dynamic body;
       try {
-        data = jsonDecode(body);
+        body = jsonDecode(bodyJson);
       } on FormatException catch (e) {
         return _errorResponse('Invalid JSON format: ${e.message}', 400);
       }
 
-      if (data is! List) {
+      if (body is! List) {
         return _errorResponse('Request body must be an array of changes', 400);
       }
 
       // Safely cast to List<Map<String, dynamic>>
       late final List<Map<String, dynamic>> changesToCreate;
       try {
-        changesToCreate = data.cast<Map<String, dynamic>>();
+        changesToCreate = body.cast<Map<String, dynamic>>();
       } on TypeError {
         return _errorResponse(
           'Invalid change format: each item must be an object',
@@ -962,6 +962,7 @@ abstract class BaseRestApiServer {
         'unknowns': [],
         'info': [],
         'errors': [],
+        'unprocessed': [], // TODO: changes that couldn't be processed
       };
 
       // Validate all changes first
