@@ -58,7 +58,7 @@
                 "panel": "shared"
             }
         },
-                {
+        {
             "label": "Generate Code (Sync Manager)",
             "type": "shell",
             "command": "dart run build_runner build --delete-conflicting-outputs",
@@ -171,7 +171,12 @@
             "label": "dart-format-current-file",
             "type": "shell",
             "command": "dart",
-            "args": ["format", "--line-length", "80", "${file}"],
+            "args": [
+                "format",
+                "--line-length",
+                "80",
+                "${file}"
+            ],
             "group": "build",
             "presentation": {
                 "echo": false,
@@ -182,6 +187,55 @@
                 "clear": false
             },
             "problemMatcher": []
+        },
+        {
+            "label": "(PUB_CACHE) Core - Generate Code",
+            "type": "shell",
+            "command": "dart pub get --offline && dart run build_runner build --delete-conflicting-outputs",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/sltt_core",
+                "env": {
+                    "PUB_CACHE": "${workspaceFolder}/packages/sltt_core/vendor/pub-cache"
+                }
+            },
+            "group": "build"
+        },
+        {
+            "label": "(PUB_CACHE) Core - Run Tests",
+            "type": "shell",
+            "command": "dart pub get --offline && dart test",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/sltt_core",
+                "env": {
+                    "PUB_CACHE": "${workspaceFolder}/packages/sltt_core/vendor/pub-cache"
+                }
+            },
+            "group": "test"
+        },
+        {
+            "label": "(PUB_CACHE) Sync Manager - Generate Code",
+            "type": "shell",
+            "command": "dart pub get --offline && dart run build_runner build --delete-conflicting-outputs",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/sync_manager",
+                "env": {
+                    "PUB_CACHE": "${workspaceFolder}/packages/sync_manager/vendor/pub-cache"
+                }
+            },
+            "group": "build"
+        },
+        {
+            "label": "(PUB_CACHE) Sync Manager - Run Tests",
+            "type": "shell",
+            "command": "dart pub get --offline && dart test",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/sync_manager",
+                "env": {
+                    "PUB_CACHE": "${workspaceFolder}/packages/sync_manager/vendor/pub-cache",
+                    "LD_LIBRARY_PATH": "/tmp/dart_test_libs"
+                }
+            },
+            "group": "test"
         },
         {
             "label": "Run Tests with Setup",
@@ -199,18 +253,22 @@
             "label": "Run Integration Tests",
             "type": "shell",
             "command": "./test.sh",
-            "args": ["test/integration_test.dart"],
+            "args": [
+                "test/integration_test.dart"
+            ],
             "group": "test",
-        }
-        ,
+        },
         {
             "label": "Debug AWS Backend (Dev)",
             "type": "shell",
             "command": "./run_debug_server.sh",
             "args": [
-                "--aws-profile", "sltt-dart-dev",
-                "--stage", "dev",
-                "--port", "8080"
+                "--aws-profile",
+                "sltt-dart-dev",
+                "--stage",
+                "dev",
+                "--port",
+                "8080"
             ],
             "group": "test",
             "options": {
@@ -228,9 +286,12 @@
             "type": "shell",
             "command": "./packages/aws_backend/run_debug_server.sh",
             "args": [
-                "--aws-profile", "sltt-dart-prd",
-                "--stage", "prod",
-                "--port", "8080"
+                "--aws-profile",
+                "sltt-dart-prd",
+                "--stage",
+                "prod",
+                "--port",
+                "8080"
             ],
             "group": "test",
             "options": {
