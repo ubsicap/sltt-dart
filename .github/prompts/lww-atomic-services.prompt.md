@@ -1,10 +1,13 @@
-PROMPT:
+PROMPT1: remove support for `none` in `srcStorageType`. Always expect `cloud` or `local` and always expect `srcStorageId` to be from the service where first change log entries were gotten (even if empty list)
+
+PROMPT2:
+
 add to POST api requestBody, api/help docs, processChanges api and related tests, to increase declarative context:
-- required String storageMode: `save` or `sync` where sync is for transferring already stored change log entries between storages, and `save` is for changes that have not yet been stored.
+- `required String storageMode`: expect value to be `save` or `sync` where `sync` is for transferring already stored change log entries between storages, and `save` is for changes that have not yet been stored.
 - during `sync` we expect all incoming change log entries to have non-empty storageIds, else return error. during sync, change log entry data is preserved independent of current state.
 - during `save` we expect all incoming change log entries to have empty storageIds, else return error.  during save, change log entry data is a diff compared to current state.
 - use this mode instead of comparing targetStorageId to change.storageId. In sync mode, a storage may receive back a change it once stored, probably should result in outdatedBy, noOp or dup. Print a warning if it results in change of state since this is unexpected and may be worth investigating.
-- use `sync` in tests that expect data preservation and `save` in tests that expect diffs.
+- use `sync` mode in tests that expect data preservation and `save` in tests that expect diffs.
 
 Possible external API changes:
 `POST /api/changes/save` (to reduce boilerplate for change log entries)
