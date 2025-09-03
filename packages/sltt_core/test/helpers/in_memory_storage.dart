@@ -3,12 +3,15 @@ import 'package:sltt_core/sltt_core.dart';
 import '../test_models.dart';
 
 class InMemoryStorage implements BaseStorageService {
-  final String _storageId;
+  /// cloud, local
+  final String storageType;
+  final String storageId;
   final List<TestChangeLogEntry> _changes = [];
   int _nextSeq = 1;
   final Map<String, TestEntityState> _states = {};
 
-  InMemoryStorage({String? storageId}) : _storageId = storageId ?? 'local';
+  InMemoryStorage({required this.storageType, String? storageId})
+    : storageId = storageId ?? BaseStorageService.generateShortStorageId();
 
   String _key(String projectId, String entityType, String entityId) =>
       '$projectId|$entityType|$entityId';
@@ -20,13 +23,13 @@ class InMemoryStorage implements BaseStorageService {
   Future<void> close() async {}
 
   @override
-  String getStorageType() => _storageId == 'local' ? 'local' : 'cloud';
+  String getStorageType() => storageType;
 
   @override
-  Future<String> getStorageId() async => _storageId;
+  Future<String> getStorageId() async => storageId;
 
   @override
-  Future<String> ensureStorageId() async => _storageId;
+  Future<String> ensureStorageId() async => storageId;
 
   @override
   Future<BaseEntityState?> getCurrentEntityState(

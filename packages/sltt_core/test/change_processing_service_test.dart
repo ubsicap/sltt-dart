@@ -40,7 +40,7 @@ void main() {
     });
 
     setUp(() {
-      storage = InMemoryStorage();
+      storage = InMemoryStorage(storageType: 'local');
     });
 
     tearDown(() async {

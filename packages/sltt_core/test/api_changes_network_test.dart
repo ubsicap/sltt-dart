@@ -33,7 +33,7 @@ void main() {
       return baseUrl!;
     }
     // Fallback: start in-memory server for this test file
-    final storage = InMemoryStorage(storageId: 'local');
+    final storage = InMemoryStorage(storageType: 'local');
     final app = TestServer(serverName: 'core-it', storage: storage);
     final handler = const Pipeline().addHandler(app.router().call);
     server = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, 0);
