@@ -184,4 +184,8 @@ mixin StorageResponsibilities {
   String get operationInfoJson;
   bool get stateChanged;
   DateTime? get cloudAt;
+
+  /// The ID of the storage used to save this change log entry.
+  /// Expected to be empty string in `save` mode, but in `sync` mode it may be populated from BaseChangeLogEntry.generateShortStorageId()
+  String get storageId;
 }

@@ -4,6 +4,22 @@ import 'package:sltt_core/sltt_core.dart';
 
 /// Result of processing changes through the change processing service
 class ChangeProcessingResult {
+  /// resultsSummary fields:
+  /// TODO: should we use a serializable ResultsSummary class for typesafety?
+  /// - storageType: The type of storage used (e.g., local, remote)
+  /// - storageId: The ID of the storage instance
+  /// - stateUpdates: A list of state updates applied
+  /// - changeUpdates: A list of change updates applied
+  /// - created: A list of created entity IDs
+  /// - updated: A list of updated entity IDs
+  /// - deleted: A list of deleted entity IDs
+  /// - noOps: A list of no-op entity IDs
+  /// - clouded: A list of clouded entity IDs
+  /// - dups: A list of duplicate entity IDs
+  /// - unknowns: A list of unknown entity IDs
+  /// - info: A list of informational messages
+  /// - errors: A list of error messages
+  /// - unprocessed: A list of unprocessed entity IDs
   final Map<String, dynamic>? resultsSummary;
   final String? errorMessage;
   final int? errorCode;
