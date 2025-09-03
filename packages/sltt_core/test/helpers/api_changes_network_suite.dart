@@ -376,4 +376,212 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
       // expand with the rest if desired.
     },
   );
+
+  group('POST /api/changes srcStorageType/srcStorageId combinations', () {
+    late String serverStorageId;
+
+    setUpAll(() async {
+      // Discover the server's storage ID by posting a dummy change
+      final dummyResponse = await postSingleChange(
+        changePayload(
+          projectId: 'discover-storage-id',
+          entityType: 'project',
+          entityId: 'dummy',
+          changeAt: baseTime,
+          data: {'nameLocal': 'Dummy'},
+        ),
+      );
+      serverStorageId = dummyResponse['storageId'] as String;
+    });
+
+    test('srcStorageType: none, srcStorageId: empty string', () async {
+      final baseUrl = await resolveBaseUrl();
+      final uri = baseUrl.replace(path: '/api/changes');
+      final payload = [
+        changePayload(
+          projectId: 'test-src-none-empty',
+          entityType: 'project',
+          entityId: 'entity-1',
+          changeAt: baseTime,
+          data: {'nameLocal': 'Test Entity'},
+        ),
+      ];
+
+      final body = {
+        'changes': payload,
+        'srcStorageType': 'none',
+        'srcStorageId': '',
+        'includeChangeUpdates': true,
+        'includeStateUpdates': true,
+      };
+
+      final req = await HttpClient().postUrl(uri);
+      req.headers.contentType = ContentType.json;
+      req.write(jsonEncode(body));
+      final res = await req.close();
+
+      expect(res.statusCode, 200);
+      final respBodyStr = await res.transform(utf8.decoder).join();
+      final json = jsonDecode(respBodyStr) as Map<String, dynamic>;
+
+      expect(json['storageType'], isNotEmpty);
+      expect(json['storageId'], equals(serverStorageId));
+      expect(json['changeUpdates'], isA<List>());
+      expect(json['stateUpdates'], isA<List>());
+    });
+
+    test(
+      'srcStorageType: local, srcStorageId: matches server storage id',
+      () async {
+        final baseUrl = await resolveBaseUrl();
+        final uri = baseUrl.replace(path: '/api/changes');
+        final payload = [
+          changePayload(
+            projectId: 'test-src-local-match',
+            entityType: 'project',
+            entityId: 'entity-1',
+            changeAt: baseTime,
+            data: {'nameLocal': 'Test Entity'},
+          ),
+        ];
+
+        final body = {
+          'changes': payload,
+          'srcStorageType': 'local',
+          'srcStorageId': serverStorageId, // Same as server
+          'includeChangeUpdates': true,
+          'includeStateUpdates': true,
+        };
+
+        final req = await HttpClient().postUrl(uri);
+        req.headers.contentType = ContentType.json;
+        req.write(jsonEncode(body));
+        final res = await req.close();
+
+        expect(res.statusCode, 200);
+        final respBodyStr = await res.transform(utf8.decoder).join();
+        final json = jsonDecode(respBodyStr) as Map<String, dynamic>;
+
+        expect(json['storageType'], isNotEmpty);
+        expect(json['storageId'], equals(serverStorageId));
+        expect(json['changeUpdates'], isA<List>());
+        expect(json['stateUpdates'], isA<List>());
+      },
+    );
+
+    test(
+      'srcStorageType: local, srcStorageId: different from server',
+      () async {
+        final baseUrl = await resolveBaseUrl();
+        final uri = baseUrl.replace(path: '/api/changes');
+        final payload = [
+          changePayload(
+            projectId: 'test-src-local-diff',
+            entityType: 'project',
+            entityId: 'entity-1',
+            changeAt: baseTime,
+            data: {'nameLocal': 'Test Entity'},
+          ),
+        ];
+
+        final body = {
+          'changes': payload,
+          'srcStorageType': 'local',
+          'srcStorageId': 'different-storage-id', // Different from server
+          'includeChangeUpdates': true,
+          'includeStateUpdates': true,
+        };
+
+        final req = await HttpClient().postUrl(uri);
+        req.headers.contentType = ContentType.json;
+        req.write(jsonEncode(body));
+        final res = await req.close();
+
+        expect(res.statusCode, 200);
+        final respBodyStr = await res.transform(utf8.decoder).join();
+        final json = jsonDecode(respBodyStr) as Map<String, dynamic>;
+
+        expect(json['storageType'], isNotEmpty);
+        expect(json['storageId'], equals(serverStorageId));
+        expect(json['changeUpdates'], isA<List>());
+        expect(json['stateUpdates'], isA<List>());
+      },
+    );
+
+    test('srcStorageType: cloud, srcStorageId: cloud', () async {
+      final baseUrl = await resolveBaseUrl();
+      final uri = baseUrl.replace(path: '/api/changes');
+      final payload = [
+        changePayload(
+          projectId: 'test-src-cloud',
+          entityType: 'project',
+          entityId: 'entity-1',
+          changeAt: baseTime,
+          data: {'nameLocal': 'Test Entity'},
+        ),
+      ];
+
+      final body = {
+        'changes': payload,
+        'srcStorageType': 'cloud',
+        'srcStorageId': 'cloud',
+        'includeChangeUpdates': true,
+        'includeStateUpdates': true,
+      };
+
+      final req = await HttpClient().postUrl(uri);
+      req.headers.contentType = ContentType.json;
+      req.write(jsonEncode(body));
+      final res = await req.close();
+
+      expect(res.statusCode, 200);
+      final respBodyStr = await res.transform(utf8.decoder).join();
+      final json = jsonDecode(respBodyStr) as Map<String, dynamic>;
+
+      expect(json['storageType'], isNotEmpty);
+      expect(json['storageId'], equals(serverStorageId));
+      expect(json['changeUpdates'], isA<List>());
+      expect(json['stateUpdates'], isA<List>());
+    });
+
+    test(
+      'srcStorageType: local, srcStorageId: empty (uses change storageId)',
+      () async {
+        final baseUrl = await resolveBaseUrl();
+        final uri = baseUrl.replace(path: '/api/changes');
+        final payload = [
+          changePayload(
+            projectId: 'test-src-local-empty',
+            entityType: 'project',
+            entityId: 'entity-1',
+            changeAt: baseTime,
+            storageId: 'change-storage-id', // This should be used
+            data: {'nameLocal': 'Test Entity'},
+          ),
+        ];
+
+        final body = {
+          'changes': payload,
+          'srcStorageType': 'local',
+          'srcStorageId': '', // Empty, should use change.storageId
+          'includeChangeUpdates': true,
+          'includeStateUpdates': true,
+        };
+
+        final req = await HttpClient().postUrl(uri);
+        req.headers.contentType = ContentType.json;
+        req.write(jsonEncode(body));
+        final res = await req.close();
+
+        expect(res.statusCode, 200);
+        final respBodyStr = await res.transform(utf8.decoder).join();
+        final json = jsonDecode(respBodyStr) as Map<String, dynamic>;
+
+        expect(json['storageType'], isNotEmpty);
+        expect(json['storageId'], equals(serverStorageId));
+        expect(json['changeUpdates'], isA<List>());
+        expect(json['stateUpdates'], isA<List>());
+      },
+    );
+  });
 }

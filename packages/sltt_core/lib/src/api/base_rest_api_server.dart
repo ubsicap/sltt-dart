@@ -7,9 +7,7 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
-
-/// 380KB (~400KB) Maximum payload size for DynamoDB/APIGateway (in bytes)
-final dynamodbPayloadLimit = 380000;
+import 'package:sltt_core/src/services/change_processing_service.dart';
 
 /// Base REST API server that provides common functionality for all storage types.
 ///
@@ -954,168 +952,30 @@ abstract class BaseRestApiServer {
         return _errorResponse('No changes provided', 400);
       }
 
-      final targetStorageId = await storage.getStorageId();
-      final resultsSummary = <String, dynamic>{
-        'storageType': storage.getStorageType(),
-        'storageId': targetStorageId,
-        'stateUpdates': [],
-        'changeUpdates': [],
-        'created': [],
-        'updated': [],
-        'deleted': [],
-        'noOps': [],
-        'clouded': [], // duplicates from the cloud
-        'dups': [],
-        'unknowns': [],
-        'info': [],
-        'errors': [],
-        'unprocessed': [], // TODO: changes that couldn't be processed
-      };
+      // Use the change processing service
+      final result = await ChangeProcessingService.processChanges(
+        changesToCreate: changesToCreate,
+        storage: storage,
+        srcStorageType: srcStorageType,
+        srcStorageId: srcStorageId,
+        includeChangeUpdates: includeChangeUpdates,
+        includeStateUpdates: includeStateUpdates,
+      );
 
-      // Validate all changes first
-      for (int i = 0; i < changesToCreate.length; i++) {
-        final changeData = changesToCreate[i];
-        final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
-          changeData,
+      if (result.isError) {
+        return _errorResponse(
+          result.errorMessage!,
+          result.errorCode!,
+          result.stackTrace,
         );
-        final cid = changeLogEntry.cid;
-
-        // Determine effective source storage id per request wrapper rules
-        String effectiveSrcStorageId;
-        if (srcStorageType == 'none') {
-          // treat as non-offline-first client -> diff data mode
-          effectiveSrcStorageId = targetStorageId;
-        } else {
-          effectiveSrcStorageId = srcStorageId.isNotEmpty
-              ? srcStorageId
-              : changeLogEntry.storageId;
-        }
-
-        // Override deserialized storageId so downstream logic (getUpdates...) uses our chosen mode
-        try {
-          changeLogEntry.storageId = effectiveSrcStorageId;
-        } catch (_) {
-          // ignore if not writable
-        }
-
-        // Basic validation of operation states when originating from same storage
-        if (changeLogEntry.storageId == targetStorageId) {
-          // treat these changes as atomic since they originated on the same system
-          // so exit early on any errors
-          if (changeLogEntry.operation == 'error') {
-            return _errorResponse(
-              'Change[$i] cid($cid) deserialization encountered error: ${changeLogEntry.getOperationInfo()}',
-              400,
-            );
-          }
-          if (changeLogEntry.operation == 'hold') {
-            return _errorResponse(
-              'Change[$i] cid($cid) deserialization resulted in `hold`: ${changeLogEntry.getOperationInfo()}',
-              400,
-            );
-          }
-        } else {
-          // treat these as a batch from a remote or LAN storage.
-          if (changeLogEntry.operation == 'error') {}
-          if (changeLogEntry.operation == 'hold') {}
-        }
-
-        final entityState = await storage.getCurrentEntityState(
-          changeLogEntry.domainId,
-          changeLogEntry.entityType.toString(),
-          changeLogEntry.entityId,
-        );
-
-        print(
-          'after getCurrentEntityState - entityState: ${const JsonEncoder.withIndent('  ').convert(entityState?.toJson() ?? {'entityId': changeLogEntry.entityId, 'entityType': changeLogEntry.entityType, 'domainId': changeLogEntry.domainId, 'unknown': changeLogEntry.getUnknown()})}',
-        );
-
-        // Use enhanced change detection method
-        final result = getUpdatesForChangeLogEntryAndEntityState(
-          changeLogEntry,
-          entityState,
-          targetStorageId: targetStorageId,
-        );
-        // return error if targetStorageId is same as changeLogEntry.storageId and total state update payload is greater than dynamodb payload limits (assume state record is greater than change record)
-        // on cloud storage, dynamodb will return its own error
-        if (targetStorageId == changeLogEntry.storageId) {
-          final mergedState = {
-            if (entityState != null) ...entityState.toJson(),
-            ...result.stateUpdates,
-          };
-          final entityStateRecordSize = utf8
-              .encode(jsonEncode(mergedState))
-              .lengthInBytes;
-          if (entityStateRecordSize > dynamodbPayloadLimit) {
-            return _errorResponse(
-              'Change[$i] cid($cid) exceeds payload limits ($dynamodbPayloadLimit bytes)',
-              400,
-            );
-          }
-        }
-        final updateResults = await storage.updateChangeLogAndState(
-          changeLogEntry: changeLogEntry,
-          changeUpdates: result.changeUpdates,
-          entityState: entityState,
-          stateUpdates: result.stateUpdates,
-        );
-        final newOperation = updateResults.newChangeLogEntry.operation;
-        if (newOperation == 'create') {
-          resultsSummary['created'].add(updateResults.newChangeLogEntry.cid);
-        } else if (newOperation == 'update') {
-          resultsSummary['updated'].add(updateResults.newChangeLogEntry.cid);
-        } else if (newOperation == 'delete') {
-          resultsSummary['deleted'].add(updateResults.newChangeLogEntry.cid);
-        } else if (newOperation == 'no-op') {
-          resultsSummary['noOps'].add(updateResults.newChangeLogEntry.cid);
-        } else if (result.isDuplicate) {
-          if (result.stateUpdates.isNotEmpty) {
-            resultsSummary['clouded'].add(changeLogEntry.cid);
-          } else {
-            resultsSummary['dups'].add(changeLogEntry.cid);
-          }
-        } else if (updateResults.newChangeLogEntry.operation == 'error') {
-          resultsSummary['errors'].add({
-            'cid': updateResults.newChangeLogEntry.cid,
-            'info': updateResults.newChangeLogEntry.getOperationInfo(),
-          });
-        }
-        // TODO: summarize unknown fields?
-        if (updateResults.newChangeLogEntry.getUnknown().isNotEmpty) {
-          resultsSummary['unknowns'].add({
-            'cid': updateResults.newChangeLogEntry.cid,
-            'unknown': updateResults.newChangeLogEntry.getUnknown(),
-          });
-        }
-        if (updateResults.newChangeLogEntry.operation != 'error' &&
-            updateResults.newChangeLogEntry.getOperationInfo().isNotEmpty) {
-          resultsSummary['info'].add({
-            'cid': updateResults.newChangeLogEntry.cid,
-            'operation': updateResults.newChangeLogEntry.operation,
-            'info': updateResults.newChangeLogEntry.getOperationInfo(),
-          });
-        }
-        if (includeChangeUpdates) {
-          resultsSummary['changeUpdates'].add({
-            'cid': updateResults.newChangeLogEntry.cid,
-            'updates': result.changeUpdates,
-          });
-        }
-        if (includeStateUpdates) {
-          // Only add state updates if explicitly requested
-          resultsSummary['stateUpdates'].add({
-            'cid': updateResults.newChangeLogEntry.cid,
-            'state': result.stateUpdates,
-          });
-        }
       }
 
       print(
-        'Response: ${const JsonEncoder.withIndent('  ').convert(resultsSummary)}',
+        'Response: ${const JsonEncoder.withIndent('  ').convert(result.resultsSummary)}',
       );
 
       return Response.ok(
-        jsonEncode(resultsSummary),
+        jsonEncode(result.resultsSummary),
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {
