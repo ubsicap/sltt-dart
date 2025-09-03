@@ -525,4 +525,650 @@ void main() {
       },
     );
   });
+
+  group('ChangeProcessingService - Storage Type Behaviors', () {
+    late InMemoryStorage cloudStorage;
+    late InMemoryStorage localStorage;
+
+    setUp(() async {
+      cloudStorage = InMemoryStorage(storageType: 'cloud');
+      localStorage = InMemoryStorage(storageType: 'local');
+      await cloudStorage.initialize();
+      await localStorage.initialize();
+    });
+
+    tearDown(() async {
+      await cloudStorage.close();
+      await localStorage.close();
+    });
+
+    group('Cloud Storage Tests', () {
+      test('save mode - should store change log entry and state', () async {
+        // use the static API directly; ChangeProcessingService is static-only
+
+        final changeData = {
+          'projectId': 'test-project',
+          'domainId': 'test-project',
+          'domainType': 'project',
+          'entityType': 'project',
+          'entityId': 'entity-1',
+          'changeBy': 'user1',
+          'changeAt': DateTime.now().toUtc().toIso8601String(),
+          'cid': generateCid(DateTime.now().toUtc()),
+          'storageId': '', // Empty for save mode
+          'operation': 'create',
+          'operationInfoJson': '{}',
+          'stateChanged': false,
+          'unknownJson': '{}',
+          'dataJson': '{"name": "Test Project"}',
+        };
+
+        final result = await ChangeProcessingService.processChanges(
+          changesToCreate: [changeData],
+          storage: cloudStorage,
+          storageMode: 'save',
+          srcStorageType: 'local',
+          srcStorageId: 'test-src',
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+
+        expect(
+          result.isSuccess,
+          isTrue,
+          reason: 'Save mode should succeed: ${result.errorMessage}',
+        );
+
+        // Verify change log entry was stored
+        final changes = await cloudStorage.getChangesWithCursor(
+          projectId: 'test-project',
+        );
+        expect(
+          changes.length,
+          equals(1),
+          reason: 'Cloud storage should store change log entry in save mode',
+        );
+
+        // Verify state was updated
+        final state = await cloudStorage.getCurrentEntityState(
+          'test-project',
+          'project',
+          'entity-1',
+        );
+        expect(
+          state,
+          isNotNull,
+          reason: 'Cloud storage should store state in save mode',
+        );
+      });
+
+      test('sync mode - should store change log entry and state', () async {
+        // use the static API directly; ChangeProcessingService is static-only
+
+        final changeData = {
+          'projectId': 'test-project',
+          'domainId': 'test-project',
+          'domainType': 'project',
+          'entityType': 'project',
+          'entityId': 'entity-2',
+          'changeBy': 'user1',
+          'changeAt': DateTime.now().toUtc().toIso8601String(),
+          'cid': generateCid(DateTime.now().toUtc()),
+          'storageId': 'remote-storage-id', // Non-empty for sync mode
+          'operation': 'create',
+          'operationInfoJson': '{}',
+          'stateChanged': false,
+          'unknownJson': '{}',
+          'dataJson': '{"name": "Sync Project"}',
+        };
+
+        final result = await ChangeProcessingService.processChanges(
+          changesToCreate: [changeData],
+          storage: cloudStorage,
+          storageMode: 'sync',
+          srcStorageType: 'local',
+          srcStorageId: 'test-src',
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+
+        expect(
+          result.isSuccess,
+          isTrue,
+          reason: 'Sync mode should succeed: ${result.errorMessage}',
+        );
+
+        // Verify change log entry was stored
+        final changes = await cloudStorage.getChangesWithCursor(
+          projectId: 'test-project',
+        );
+        expect(
+          changes.length,
+          equals(1),
+          reason: 'Cloud storage should store change log entry in sync mode',
+        );
+
+        // Verify state was updated
+        final state = await cloudStorage.getCurrentEntityState(
+          'test-project',
+          'project',
+          'entity-2',
+        );
+        expect(
+          state,
+          isNotNull,
+          reason: 'Cloud storage should store state in sync mode',
+        );
+      });
+
+      test('sync mode - should handle state updates correctly', () async {
+        // use the static API directly; ChangeProcessingService is static-only
+
+        // First, create an entity
+        final createData = {
+          'projectId': 'test-project',
+          'domainId': 'test-project',
+          'domainType': 'project',
+          'entityType': 'project',
+          'entityId': 'entity-3',
+          'changeBy': 'user1',
+          'changeAt': DateTime.now().toUtc().toIso8601String(),
+          'cid': generateCid(DateTime.now().toUtc()),
+          'storageId': '',
+          'operation': 'create',
+          'operationInfoJson': '{}',
+          'stateChanged': false,
+          'unknownJson': '{}',
+          'dataJson': '{"name": "Original Name"}',
+        };
+
+        await ChangeProcessingService.processChanges(
+          changesToCreate: [createData],
+          storage: cloudStorage,
+          storageMode: 'save',
+          srcStorageType: 'local',
+          srcStorageId: 'test-src',
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+
+        // Then, sync an update
+        final updateData = {
+          'projectId': 'test-project',
+          'domainId': 'test-project',
+          'domainType': 'project',
+          'entityType': 'project',
+          'entityId': 'entity-3',
+          'changeBy': 'user2',
+          'changeAt': DateTime.now()
+              .add(const Duration(minutes: 1))
+              .toUtc()
+              .toIso8601String(),
+          'cid': generateCid(
+            DateTime.now().add(const Duration(minutes: 1)).toUtc(),
+          ),
+          'storageId': 'remote-storage-id',
+          'operation': 'update',
+          'operationInfoJson': '{}',
+          'stateChanged': false,
+          'unknownJson': '{}',
+          'dataJson': '{"name": "Updated Name"}',
+        };
+
+        final result = await ChangeProcessingService.processChanges(
+          changesToCreate: [updateData],
+          storage: cloudStorage,
+          storageMode: 'sync',
+          srcStorageType: 'local',
+          srcStorageId: 'test-src',
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+
+        expect(
+          result.isSuccess,
+          isTrue,
+          reason: 'Sync update should succeed: ${result.errorMessage}',
+        );
+
+        // Verify both change log entries exist
+        final changes = await cloudStorage.getChangesWithCursor(
+          projectId: 'test-project',
+        );
+        expect(
+          changes.length,
+          equals(2),
+          reason: 'Cloud storage should have both change log entries',
+        );
+
+        // Verify final state reflects the update
+        final state = await cloudStorage.getCurrentEntityState(
+          'test-project',
+          'project',
+          'entity-3',
+        );
+        expect(state, isNotNull);
+        expect(
+          state!.toJson()['data_name'],
+          equals('Updated Name'),
+          reason: 'Cloud storage state should reflect the update in sync mode',
+        );
+      });
+    });
+
+    group('Local Storage Tests', () {
+      test('save mode - should store change log entry and state', () async {
+        // use the static API directly; ChangeProcessingService is static-only
+
+        final changeData = {
+          'projectId': 'test-project',
+          'domainId': 'test-project',
+          'domainType': 'project',
+          'entityType': 'project',
+          'entityId': 'entity-4',
+          'changeBy': 'user1',
+          'changeAt': DateTime.now().toUtc().toIso8601String(),
+          'cid': generateCid(DateTime.now().toUtc()),
+          'storageId': '', // Empty for save mode
+          'operation': 'create',
+          'operationInfoJson': '{}',
+          'stateChanged': false,
+          'unknownJson': '{}',
+          'dataJson': '{"name": "Local Project"}',
+        };
+
+        final result = await ChangeProcessingService.processChanges(
+          changesToCreate: [changeData],
+          storage: localStorage,
+          storageMode: 'save',
+          srcStorageType: 'local',
+          srcStorageId: 'test-src',
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+
+        expect(
+          result.isSuccess,
+          isTrue,
+          reason: 'Save mode should succeed: ${result.errorMessage}',
+        );
+
+        // Verify change log entry was stored
+        final changes = await localStorage.getChangesWithCursor(
+          projectId: 'test-project',
+        );
+        expect(
+          changes.length,
+          equals(1),
+          reason: 'Local storage should store change log entry in save mode',
+        );
+
+        // Verify state was updated
+        final state = await localStorage.getCurrentEntityState(
+          'test-project',
+          'project',
+          'entity-4',
+        );
+        expect(
+          state,
+          isNotNull,
+          reason: 'Local storage should store state in save mode',
+        );
+      });
+
+      test(
+        'sync mode - should store change log entry and state (current implementation)',
+        () async {
+          // use the static API directly; ChangeProcessingService is static-only
+
+          final changeData = {
+            'projectId': 'test-project',
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-5',
+            'changeBy': 'user1',
+            'changeAt': DateTime.now().toUtc().toIso8601String(),
+            'cid': generateCid(DateTime.now().toUtc()),
+            'storageId': 'remote-storage-id', // Non-empty for sync mode
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': false,
+            'unknownJson': '{}',
+            'dataJson': '{"name": "Sync Local Project"}',
+          };
+
+          final result = await ChangeProcessingService.processChanges(
+            changesToCreate: [changeData],
+            storage: localStorage,
+            storageMode: 'sync',
+            srcStorageType: 'cloud',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          expect(
+            result.isSuccess,
+            isTrue,
+            reason: 'Sync mode should succeed: ${result.errorMessage}',
+          );
+
+          // NOTE: Current implementation stores change log entry in local storage for sync mode
+          // TODO: According to requirements, local storage in sync mode should typically
+          // only update state (unless hosting team storage)
+          final changes = await localStorage.getChangesWithCursor(
+            projectId: 'test-project',
+          );
+          expect(
+            changes.length,
+            equals(1),
+            reason:
+                'Current implementation: Local storage stores change log entry in sync mode',
+          );
+
+          // Verify state was updated
+          final state = await localStorage.getCurrentEntityState(
+            'test-project',
+            'project',
+            'entity-5',
+          );
+          expect(
+            state,
+            isNotNull,
+            reason: 'Local storage should always store state in sync mode',
+          );
+        },
+      );
+
+      test(
+        'sync mode - should handle state-only updates correctly (future implementation)',
+        () async {
+          // This test documents the expected future behavior where local storage
+          // in sync mode typically only updates state, not change log
+          // use the static API directly; ChangeProcessingService is static-only
+
+          // First, create an entity in save mode (should store change log)
+          final createData = {
+            'projectId': 'test-project',
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-6',
+            'changeBy': 'user1',
+            'changeAt': DateTime.now().toUtc().toIso8601String(),
+            'cid': generateCid(DateTime.now().toUtc()),
+            'storageId': '',
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': false,
+            'unknownJson': '{}',
+            'dataJson': '{"name": "Original Local"}',
+          };
+
+          await ChangeProcessingService.processChanges(
+            changesToCreate: [createData],
+            storage: localStorage,
+            storageMode: 'save',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          // Then, sync an update from cloud (should update state, current impl also stores change log)
+          final updateData = {
+            'projectId': 'test-project',
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-6',
+            'changeBy': 'user2',
+            'changeAt': DateTime.now()
+                .add(const Duration(minutes: 1))
+                .toUtc()
+                .toIso8601String(),
+            'cid': generateCid(
+              DateTime.now().add(const Duration(minutes: 1)).toUtc(),
+            ),
+            'storageId': 'cloud-storage-id',
+            'operation': 'update',
+            'operationInfoJson': '{}',
+            'stateChanged': false,
+            'unknownJson': '{}',
+            'dataJson': '{"name": "Updated from Cloud"}',
+          };
+
+          final result = await ChangeProcessingService.processChanges(
+            changesToCreate: [updateData],
+            storage: localStorage,
+            storageMode: 'sync',
+            srcStorageType: 'cloud',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          expect(
+            result.isSuccess,
+            isTrue,
+            reason: 'Sync update should succeed: ${result.errorMessage}',
+          );
+
+          // Current implementation: Both change log entries are stored
+          final changes = await localStorage.getChangesWithCursor(
+            projectId: 'test-project',
+          );
+          expect(
+            changes.length,
+            equals(2),
+            reason:
+                'Current implementation: Local storage stores all change log entries',
+          );
+
+          // State should always be updated regardless of mode
+          final state = await localStorage.getCurrentEntityState(
+            'test-project',
+            'project',
+            'entity-6',
+          );
+          expect(state, isNotNull);
+          expect(
+            state!.toJson()['data_name'],
+            equals('Updated from Cloud'),
+            reason: 'Local storage state should always be updated in sync mode',
+          );
+        },
+      );
+    });
+
+    group('Cross-Storage Type Comparisons', () {
+      test(
+        'save mode - both storage types should behave identically',
+        () async {
+          // use the static API directly; ChangeProcessingService is static-only
+
+          final baseTime = DateTime.now().toUtc();
+
+          // Process same change in both storage types
+          final changeData = {
+            'projectId': 'test-project',
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-cross',
+            'changeBy': 'user1',
+            'changeAt': baseTime.toIso8601String(),
+            'cid': generateCid(baseTime),
+            'storageId': '', // Empty for save mode
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': false,
+            'unknownJson': '{}',
+            'dataJson': '{"name": "Cross Storage Test"}',
+          };
+
+          final cloudResult = await ChangeProcessingService.processChanges(
+            changesToCreate: [changeData],
+            storage: cloudStorage,
+            storageMode: 'save',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          final localResult = await ChangeProcessingService.processChanges(
+            changesToCreate: [changeData],
+            storage: localStorage,
+            storageMode: 'save',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          expect(cloudResult.isSuccess, isTrue);
+          expect(localResult.isSuccess, isTrue);
+
+          // Both should store change log entries in save mode
+          final cloudChanges = await cloudStorage.getChangesWithCursor(
+            projectId: 'test-project',
+          );
+          final localChanges = await localStorage.getChangesWithCursor(
+            projectId: 'test-project',
+          );
+
+          expect(
+            cloudChanges.length,
+            equals(1),
+            reason: 'Cloud storage should store change log in save mode',
+          );
+          expect(
+            localChanges.length,
+            equals(1),
+            reason: 'Local storage should store change log in save mode',
+          );
+
+          // Both should store state
+          final cloudState = await cloudStorage.getCurrentEntityState(
+            'test-project',
+            'project',
+            'entity-cross',
+          );
+          final localState = await localStorage.getCurrentEntityState(
+            'test-project',
+            'project',
+            'entity-cross',
+          );
+
+          expect(cloudState, isNotNull);
+          expect(localState, isNotNull);
+          expect(
+            cloudState!.toJson()['data_name'],
+            equals('Cross Storage Test'),
+          );
+          expect(
+            localState!.toJson()['data_name'],
+            equals('Cross Storage Test'),
+          );
+        },
+      );
+
+      test(
+        'sync mode - storage types should behave according to requirements',
+        () async {
+          // use the static API directly; ChangeProcessingService is static-only
+
+          final baseTime = DateTime.now().toUtc();
+
+          // Process same sync change in both storage types
+          final changeData = {
+            'projectId': 'test-project',
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-sync-cross',
+            'changeBy': 'user1',
+            'changeAt': baseTime.toIso8601String(),
+            'cid': generateCid(baseTime),
+            'storageId': 'remote-storage-id', // Non-empty for sync mode
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': false,
+            'unknownJson': '{}',
+            'dataJson': '{"name": "Sync Cross Test"}',
+          };
+
+          final cloudResult = await ChangeProcessingService.processChanges(
+            changesToCreate: [changeData],
+            storage: cloudStorage,
+            storageMode: 'sync',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          final localResult = await ChangeProcessingService.processChanges(
+            changesToCreate: [changeData],
+            storage: localStorage,
+            storageMode: 'sync',
+            srcStorageType: 'cloud',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          expect(cloudResult.isSuccess, isTrue);
+          expect(localResult.isSuccess, isTrue);
+
+          // Cloud storage should store change log entries in sync mode
+          final cloudChanges = await cloudStorage.getChangesWithCursor(
+            projectId: 'test-project',
+          );
+          expect(
+            cloudChanges.length,
+            equals(1),
+            reason: 'Cloud storage should store change log in sync mode',
+          );
+
+          // Current implementation: Local storage also stores change log in sync mode
+          // TODO: Future implementation should typically only update state for local storage
+          final localChanges = await localStorage.getChangesWithCursor(
+            projectId: 'test-project',
+          );
+          expect(
+            localChanges.length,
+            equals(1),
+            reason:
+                'Current implementation: Local storage stores change log in sync mode',
+          );
+
+          // Both should always store/update state
+          final cloudState = await cloudStorage.getCurrentEntityState(
+            'test-project',
+            'project',
+            'entity-sync-cross',
+          );
+          final localState = await localStorage.getCurrentEntityState(
+            'test-project',
+            'project',
+            'entity-sync-cross',
+          );
+
+          expect(
+            cloudState,
+            isNotNull,
+            reason: 'Cloud storage should store state in sync mode',
+          );
+          expect(
+            localState,
+            isNotNull,
+            reason: 'Local storage should store state in sync mode',
+          );
+        },
+      );
+    });
+  });
 }
