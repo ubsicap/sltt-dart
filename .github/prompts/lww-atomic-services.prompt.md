@@ -18,15 +18,18 @@ Possible external API changes:
   - use SelfSyncState to help client know final cid and seq for changelogs
 
 Next step:
-- in `sync` mode, updateChangeLogAndState() should
+- in `sync` mode, updateChangeLogAndState() implementations should
    - for `cloud` storage type, typically result in storing a new change log entry and updated state if applicable
    - for `local` storage type, typically only update state if applicable. if hosting local team storage (future feature), then it will also store the change log entry (with cloudAt or not) and update state if applicable.
    - update `SelfSyncState` to track own latest change log entry
 - in `save` mode, updateChangeLogAndState() should
   - for cloud and local storage type, typically result in change log and state updates if applicable.
 
-Other edge cases:
-- cloud storage type should return error if unknownJson is not empty or incoming schemaVersion is greater than it has knowledge of
+Next step:
+   - update `SelfSyncState` to track own latest change log entry
+
+Next step:
+- cloud storage type should return error if unknownJson is not empty or incoming schemaVersion is greater than it has knowledge of in its model
 
 NEW TODOs:
 for cloud storage type
