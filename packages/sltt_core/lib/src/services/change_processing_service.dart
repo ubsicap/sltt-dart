@@ -145,21 +145,6 @@ class ChangeProcessingService {
             changeData,
           );
 
-          // Determine effective source storage id per request wrapper rules
-          final effectiveSrcStorageId = _determineEffectiveSourceStorageId(
-            srcStorageType: srcStorageType,
-            srcStorageId: srcStorageId,
-            changeLogEntry: changeLogEntry,
-            targetStorageId: targetStorageId,
-          );
-
-          // Override deserialized storageId so downstream logic uses our chosen mode
-          try {
-            changeLogEntry.storageId = effectiveSrcStorageId;
-          } catch (_) {
-            // ignore if not writable
-          }
-
           // Basic validation of operation states based on storage mode
           final validationResult = _validateChangeOperation(
             changeLogEntry: changeLogEntry,
@@ -182,7 +167,7 @@ class ChangeProcessingService {
           final result = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
             entityState,
-            targetStorageId: targetStorageId,
+            storageMode: storageMode,
           );
 
           // Check payload size limits for save operations (sync operations preserve data)

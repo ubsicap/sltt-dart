@@ -37,7 +37,7 @@ class GetUpdateResults {
 GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   BaseChangeLogEntry changeLogEntry,
   BaseEntityState? entityState, {
-  required String targetStorageId,
+  required String storageMode,
 }) {
   // Duplicate CID detection
   final duplicateCheck = getMaybeIsDuplicateCidResult(
@@ -86,7 +86,11 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   );
 
   // Build the full set of change-log entry updates callers can apply
-  final shouldPreserveData = changeLogEntry.storageId != targetStorageId;
+  // Decide whether to preserve incoming change data in the change-log entry.
+  // In "sync" mode we generally preserve the incoming data when it originated
+  // from another storage (non-empty storageId). In "save" mode the incoming
+  // change represents a local save, so we do not preserve the incoming data.
+  final shouldPreserveData = storageMode == 'sync';
   final changeLogEntryUpdates = <String, dynamic>{
     'operation': operation,
     'operationInfoJson': jsonEncode({
