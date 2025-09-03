@@ -237,7 +237,12 @@ abstract class BaseRestApiServer {
               'Create new changes (array format) with field-level change detection',
           'requestBody': {
             'type': 'object',
-            'required': ['changes', 'srcStorageType', 'srcStorageId'],
+            'required': [
+              'changes',
+              'srcStorageType',
+              'srcStorageId',
+              'storageMode',
+            ],
             'properties': {
               'changes': {
                 'type': 'array',
@@ -268,6 +273,11 @@ abstract class BaseRestApiServer {
                 'required': true,
                 'type': 'string',
                 'description': 'Source client storageId (required, non-empty)',
+              },
+              'storageMode': {
+                'type': 'string',
+                'description':
+                    'Storage mode: "save" for new changes (empty storageId), "sync" for transferring stored changes (non-empty storageId)',
               },
               'includeChangeUpdates': {
                 'type': 'boolean',
@@ -919,6 +929,7 @@ abstract class BaseRestApiServer {
       late final List<Map<String, dynamic>> changesToCreate;
       String srcStorageType;
       String srcStorageId;
+      String storageMode;
       bool includeChangeUpdates = false;
       bool includeStateUpdates = false;
 
@@ -938,6 +949,7 @@ abstract class BaseRestApiServer {
 
         srcStorageType = (body['srcStorageType'] as String?)?.trim() ?? '';
         srcStorageId = (body['srcStorageId'] as String?)?.trim() ?? '';
+        storageMode = (body['storageMode'] as String?)?.trim() ?? '';
         includeChangeUpdates = (body['includeChangeUpdates'] as bool?) ?? false;
         includeStateUpdates = (body['includeStateUpdates'] as bool?) ?? false;
       } else {
@@ -963,12 +975,18 @@ abstract class BaseRestApiServer {
         );
       }
 
+      // Validate storageMode (must be 'save' or 'sync')
+      if (!(storageMode == 'save' || storageMode == 'sync')) {
+        return _errorResponse('storageMode must be "save" or "sync"', 400);
+      }
+
       // Use the change processing service
       final result = await ChangeProcessingService.processChanges(
         changesToCreate: changesToCreate,
         storage: storage,
         srcStorageType: srcStorageType,
         srcStorageId: srcStorageId,
+        storageMode: storageMode,
         includeChangeUpdates: includeChangeUpdates,
         includeStateUpdates: includeStateUpdates,
       );

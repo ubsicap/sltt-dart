@@ -55,6 +55,7 @@ void main() {
         storage: storage,
         srcStorageType: 'local',
         srcStorageId: 'local-client',
+        storageMode: 'save',
         includeChangeUpdates: false,
         includeStateUpdates: false,
       );
@@ -77,7 +78,7 @@ void main() {
         'changeBy': 'tester',
         'changeAt': baseTime.toUtc().toIso8601String(),
         'cid': generateCid(baseTime),
-        'storageId': 'local',
+        'storageId': '', // Empty for save mode
         'operation': 'create',
         'operationInfoJson': '{}',
         'stateChanged': true,
@@ -90,11 +91,17 @@ void main() {
         storage: storage,
         srcStorageType: 'local',
         srcStorageId: 'local',
+        storageMode: 'save',
         includeChangeUpdates: false,
         includeStateUpdates: false,
       );
 
-      expect(result.isSuccess, isTrue);
+      expect(
+        result.isSuccess,
+        isTrue,
+        reason:
+            'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
+      );
 
       final summary = result.resultsSummary!;
       expect(summary['storageType'], isNotEmpty);
@@ -116,7 +123,7 @@ void main() {
         'changeBy': 'tester',
         'changeAt': baseTime.toUtc().toIso8601String(),
         'cid': generateCid(baseTime),
-        'storageId': 'local',
+        'storageId': '', // Empty for save mode
         'operation': 'create',
         'operationInfoJson': '{}',
         'stateChanged': true,
@@ -129,11 +136,17 @@ void main() {
         storage: storage,
         srcStorageType: 'local',
         srcStorageId: 'local',
+        storageMode: 'save',
         includeChangeUpdates: true,
         includeStateUpdates: false,
       );
 
-      expect(result.isSuccess, isTrue);
+      expect(
+        result.isSuccess,
+        isTrue,
+        reason:
+            'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
+      );
 
       final summary = result.resultsSummary!;
       print('Summary keys: ${summary.keys}');
@@ -173,7 +186,7 @@ void main() {
         'changeBy': 'tester',
         'changeAt': baseTime.toUtc().toIso8601String(),
         'cid': generateCid(baseTime),
-        'storageId': 'local',
+        'storageId': '', // Empty for save mode
         'operation': 'create',
         'operationInfoJson': '{}',
         'stateChanged': true,
@@ -186,11 +199,17 @@ void main() {
         storage: storage,
         srcStorageType: 'local',
         srcStorageId: 'local',
+        storageMode: 'save',
         includeChangeUpdates: false,
         includeStateUpdates: true,
       );
 
-      expect(result.isSuccess, isTrue);
+      expect(
+        result.isSuccess,
+        isTrue,
+        reason:
+            'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
+      );
 
       final summary = result.resultsSummary!;
       expect(summary['stateUpdates'], isA<List>());
@@ -223,7 +242,7 @@ void main() {
           'changeBy': 'tester',
           'changeAt': baseTime.toUtc().toIso8601String(),
           'cid': generateCid(baseTime),
-          'storageId': 'local',
+          'storageId': '', // Empty for save mode
           'operation': 'create',
           'operationInfoJson': '{}',
           'stateChanged': true,
@@ -242,7 +261,7 @@ void main() {
               .toUtc()
               .toIso8601String(),
           'cid': generateCid(baseTime.add(const Duration(minutes: 1))),
-          'storageId': 'local',
+          'storageId': '', // Empty for save mode
           'operation': 'create',
           'operationInfoJson': '{}',
           'stateChanged': true,
@@ -256,11 +275,17 @@ void main() {
         storage: storage,
         srcStorageType: 'local',
         srcStorageId: 'local',
+        storageMode: 'save',
         includeChangeUpdates: true,
         includeStateUpdates: true,
       );
 
-      expect(result.isSuccess, isTrue);
+      expect(
+        result.isSuccess,
+        isTrue,
+        reason:
+            'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
+      );
 
       final summary = result.resultsSummary!;
       expect(summary['changeUpdates'], isA<List>());
@@ -330,7 +355,7 @@ void main() {
             entityType: 'project',
             entityId: 'entity-1',
             changeAt: now,
-            storageId: 'local',
+            storageId: '', // Empty for save mode
             operation: 'update',
             data: {'nameLocal': 'Core API Net Test', 'parentId': 'root'},
           ),
@@ -341,11 +366,17 @@ void main() {
           storage: svcStorage,
           srcStorageType: 'local',
           srcStorageId: 'local',
+          storageMode: 'save',
           includeChangeUpdates: true,
           includeStateUpdates: true,
         );
 
-        expect(result.isSuccess, isTrue);
+        expect(
+          result.isSuccess,
+          isTrue,
+          reason:
+              'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
+        );
         final summary = result.resultsSummary!;
         expect(summary['storageType'], isNotEmpty);
         expect(summary['storageId'], isNotEmpty);
@@ -356,73 +387,84 @@ void main() {
       },
     );
 
-    test(
-      'handles field-level conflict resolution (newer change wins)',
-      () async {
-        await svcStorage.initialize();
-        final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+    test('handles field-level conflict resolution (newer change wins)', () async {
+      await svcStorage.initialize();
+      final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
-        final project = 'proj-fl';
-        final entity = 'entity-fl-1';
+      final project = 'proj-fl';
+      final entity = 'entity-fl-1';
 
-        // seed initial change
-        final seed = changePayload(
-          projectId: project,
-          entityType: 'task',
-          entityId: entity,
-          changeAt: baseTime,
-          data: {'rank': '1', 'nameLocal': 'Test Task'},
-        );
+      // seed initial change
+      final seed = changePayload(
+        projectId: project,
+        entityType: 'task',
+        entityId: entity,
+        changeAt: baseTime,
+        storageId: '', // Empty for save mode
+        data: {'rank': '1', 'nameLocal': 'Test Task'},
+      );
 
-        final seedRes = await ChangeProcessingService.processChanges(
-          changesToCreate: [seed],
-          storage: svcStorage,
-          srcStorageType: 'local',
-          srcStorageId: 'local',
-          includeChangeUpdates: false,
-          includeStateUpdates: false,
-        );
-        expect(seedRes.isSuccess, isTrue);
+      final seedRes = await ChangeProcessingService.processChanges(
+        changesToCreate: [seed],
+        storage: svcStorage,
+        srcStorageType: 'local',
+        srcStorageId: 'local',
+        storageMode: 'save',
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(
+        seedRes.isSuccess,
+        isTrue,
+        reason:
+            'Seed processChanges failed: ${seedRes.errorMessage ?? "Unknown error"}',
+      );
 
-        final newer = baseTime.add(const Duration(minutes: 5));
-        final resp = await ChangeProcessingService.processChanges(
-          changesToCreate: [
-            changePayload(
-              projectId: project,
-              entityType: 'task',
-              entityId: entity,
-              changeAt: newer,
-              data: {'rank': '2'},
-              addDefaultParentId: false,
-            ),
-          ],
-          storage: svcStorage,
-          srcStorageType: 'local',
-          srcStorageId: 'local',
-          includeChangeUpdates: true,
-          includeStateUpdates: true,
-        );
+      final newer = baseTime.add(const Duration(minutes: 5));
+      final resp = await ChangeProcessingService.processChanges(
+        changesToCreate: [
+          changePayload(
+            projectId: project,
+            entityType: 'task',
+            entityId: entity,
+            changeAt: newer,
+            storageId: '', // Empty for save mode
+            data: {'rank': '2'},
+            addDefaultParentId: false,
+          ),
+        ],
+        storage: svcStorage,
+        srcStorageType: 'local',
+        srcStorageId: 'local',
+        storageMode: 'save',
+        includeChangeUpdates: true,
+        includeStateUpdates: true,
+      );
 
-        expect(resp.isSuccess, isTrue);
-        final summary = resp.resultsSummary!;
-        final cu =
-            (summary['changeUpdates'] as List).first['updates']
-                as Map<String, dynamic>;
-        final su =
-            (summary['stateUpdates'] as List).first['state']
-                as Map<String, dynamic>;
+      expect(
+        resp.isSuccess,
+        isTrue,
+        reason:
+            'processChanges failed: ${resp.errorMessage ?? "Unknown error"}',
+      );
+      final summary = resp.resultsSummary!;
+      final cu =
+          (summary['changeUpdates'] as List).first['updates']
+              as Map<String, dynamic>;
+      final su =
+          (summary['stateUpdates'] as List).first['state']
+              as Map<String, dynamic>;
 
-        expect(cu['operation'], 'update');
-        expect(
-          cu['operationInfoJson'],
-          equals(jsonEncode({'outdatedBys': [], 'noOpFields': []})),
-        );
-        expect(cu['stateChanged'], isTrue);
-        expect(cu['dataJson'], jsonEncode({'rank': '2'}));
-        expect(su['data_rank'], '2');
-        expect(su['data_rank_changeAt_'], newer.toUtc().toIso8601String());
-      },
-    );
+      expect(cu['operation'], 'update');
+      expect(
+        cu['operationInfoJson'],
+        equals(jsonEncode({'outdatedBys': [], 'noOpFields': []})),
+      );
+      expect(cu['stateChanged'], isTrue);
+      expect(cu['dataJson'], jsonEncode({'rank': '2'}));
+      expect(su['data_rank'], '2');
+      expect(su['data_rank_changeAt_'], newer.toUtc().toIso8601String());
+    });
 
     test(
       'POST srcStorageType/srcStorageId combinations behave as expected',
@@ -438,16 +480,23 @@ void main() {
           entityType: 'project',
           entityId: 'entity-1',
           changeAt: baseTime,
+          storageId: '', // Empty for save mode
         );
         final r2 = await ChangeProcessingService.processChanges(
           changesToCreate: [p2],
           storage: svcStorage,
           srcStorageType: 'local',
           srcStorageId: serverStorageId,
+          storageMode: 'save',
           includeChangeUpdates: true,
           includeStateUpdates: true,
         );
-        expect(r2.isSuccess, isTrue);
+        expect(
+          r2.isSuccess,
+          isTrue,
+          reason:
+              'r2 processChanges failed: ${r2.errorMessage ?? "Unknown error"}',
+        );
         expect(r2.resultsSummary!['storageId'], equals(serverStorageId));
 
         // cloud src (srcStorageId provided as cloud identifier)
@@ -462,10 +511,16 @@ void main() {
           storage: svcStorage,
           srcStorageType: 'cloud',
           srcStorageId: 'cloud',
+          storageMode: 'sync',
           includeChangeUpdates: true,
           includeStateUpdates: true,
         );
-        expect(r3.isSuccess, isTrue);
+        expect(
+          r3.isSuccess,
+          isTrue,
+          reason:
+              'r3 processChanges failed: ${r3.errorMessage ?? "Unknown error"}',
+        );
         expect(r3.resultsSummary!['storageId'], equals(serverStorageId));
       },
     );

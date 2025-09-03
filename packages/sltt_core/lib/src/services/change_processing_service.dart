@@ -47,6 +47,7 @@ class ChangeProcessingService {
     required BaseStorageService storage,
     required String srcStorageType,
     required String srcStorageId,
+    required String storageMode,
     required bool includeChangeUpdates,
     required bool includeStateUpdates,
   }) async {
@@ -70,6 +71,49 @@ class ChangeProcessingService {
       if (srcStorageId.trim().isEmpty) {
         return const ChangeProcessingResult(
           errorMessage: 'srcStorageId is required and must be non-empty',
+          errorCode: 400,
+        );
+      }
+
+      // Validate storageMode
+      if (!(storageMode == 'save' || storageMode == 'sync')) {
+        return ChangeProcessingResult(
+          errorMessage:
+              'Invalid storageMode: $storageMode. Expected "save" or "sync".',
+          errorCode: 400,
+        );
+      }
+
+      // Validate all storageIds before processing any changes
+      final invalidStorageIds = <int>[];
+      for (int i = 0; i < changesToCreate.length; i++) {
+        final changeData = changesToCreate[i];
+        try {
+          final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
+            changeData,
+          );
+
+          // Validate storageId based on storageMode
+          if (storageMode == 'sync') {
+            if (changeLogEntry.storageId.trim().isEmpty) {
+              invalidStorageIds.add(i);
+            }
+          } else if (storageMode == 'save') {
+            if (changeLogEntry.storageId.trim().isNotEmpty) {
+              invalidStorageIds.add(i);
+            }
+          }
+        } catch (e) {
+          // If we can't deserialize, we'll catch this in the main loop
+          continue;
+        }
+      }
+
+      if (invalidStorageIds.isNotEmpty) {
+        final expectedState = storageMode == 'sync' ? 'non-empty' : 'empty';
+        return ChangeProcessingResult(
+          errorMessage:
+              'Changes [${invalidStorageIds.join(', ')}] in $storageMode mode must have $expectedState storageId',
           errorCode: 400,
         );
       }
@@ -116,10 +160,10 @@ class ChangeProcessingService {
             // ignore if not writable
           }
 
-          // Basic validation of operation states when originating from same storage
+          // Basic validation of operation states based on storage mode
           final validationResult = _validateChangeOperation(
             changeLogEntry: changeLogEntry,
-            targetStorageId: targetStorageId,
+            storageMode: storageMode,
             changeIndex: i,
           );
 
@@ -141,9 +185,9 @@ class ChangeProcessingService {
             targetStorageId: targetStorageId,
           );
 
-          // Check payload size limits for same-storage operations
+          // Check payload size limits for save operations (sync operations preserve data)
           final payloadCheckResult = _checkPayloadLimits(
-            targetStorageId: targetStorageId,
+            storageMode: storageMode,
             changeLogEntry: changeLogEntry,
             entityState: entityState,
             stateUpdates: result.stateUpdates,
@@ -161,6 +205,18 @@ class ChangeProcessingService {
             entityState: entityState,
             stateUpdates: result.stateUpdates,
           );
+
+          // In sync mode, warn if we get unexpected state changes
+          if (storageMode == 'sync' &&
+              updateResults.newChangeLogEntry.operation != 'no-op' &&
+              !result.isDuplicate &&
+              result.stateUpdates.isNotEmpty) {
+            print(
+              'WARNING: Sync mode resulted in state change for CID ${changeLogEntry.cid}. '
+              'Operation: ${updateResults.newChangeLogEntry.operation}. '
+              'This may indicate a data inconsistency worth investigating.',
+            );
+          }
 
           // Categorize the result
           _categorizeChangeResult(
@@ -208,14 +264,14 @@ class ChangeProcessingService {
   /// Validate change operation states
   static ChangeProcessingResult? _validateChangeOperation({
     required BaseChangeLogEntry changeLogEntry,
-    required String targetStorageId,
+    required String storageMode,
     required int changeIndex,
   }) {
     final cid = changeLogEntry.cid;
 
-    // Basic validation of operation states when originating from same storage
-    if (changeLogEntry.storageId == targetStorageId) {
-      // treat these changes as atomic since they originated on the same system
+    // Basic validation of operation states based on storage mode
+    if (storageMode == 'save') {
+      // In save mode, treat changes as atomic since they're new data
       // so exit early on any errors
       if (changeLogEntry.operation == 'error') {
         return ChangeProcessingResult(
@@ -231,8 +287,8 @@ class ChangeProcessingService {
           errorCode: 400,
         );
       }
-    } else {
-      // treat these as a batch from a remote or LAN storage.
+    } else if (storageMode == 'sync') {
+      // In sync mode, treat these as a batch from a remote storage.
       // For now, just log but don't fail - these will be handled individually
       if (changeLogEntry.operation == 'error') {}
       if (changeLogEntry.operation == 'hold') {}
@@ -243,7 +299,7 @@ class ChangeProcessingService {
 
   /// Check payload size limits for DynamoDB compatibility
   static ChangeProcessingResult? _checkPayloadLimits({
-    required String targetStorageId,
+    required String storageMode,
     required BaseChangeLogEntry changeLogEntry,
     required BaseEntityState? entityState,
     required Map<String, dynamic> stateUpdates,
@@ -251,9 +307,8 @@ class ChangeProcessingService {
   }) {
     final cid = changeLogEntry.cid;
 
-    // return error if targetStorageId is same as changeLogEntry.storageId and
-    // total state update payload is greater than dynamodb payload limits
-    if (targetStorageId == changeLogEntry.storageId) {
+    // Return error if in save mode and total state update payload is greater than dynamodb payload limits
+    if (storageMode == 'save') {
       final mergedState = {
         if (entityState != null) ...entityState.toJson(),
         ...stateUpdates,
@@ -269,6 +324,7 @@ class ChangeProcessingService {
         );
       }
     }
+    // In sync mode, we preserve data as-is, so payload limits are less critical
 
     return null; // No payload limit error
   }

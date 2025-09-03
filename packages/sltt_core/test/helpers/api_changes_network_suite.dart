@@ -22,6 +22,15 @@ final knownPostChangesResponseKeys = [
 
 /// Register the full suite of API change network tests, using the provided
 /// async resolver to obtain the server base URL at runtime.
+///
+/// final body = {
+//   'changes': payload,
+//   'srcStorageType': 'local',
+//   'srcStorageId': serverStorageId,
+//   'storageMode': 'save',
+//   'includeChangeUpdates': true,
+//   'includeStateUpdates': true,
+// };
 void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
   // Use a fixed base time for deterministic field-level tests
   final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
@@ -32,11 +41,17 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(path: '/api/changes');
 
+    // For save mode, clear the storageId from the change object
+    final adjustedChange = Map<String, dynamic>.from(change);
+    final originalStorageId = adjustedChange['storageId'] ?? 'local';
+    adjustedChange['storageId'] = ''; // Empty for save mode
+
     final body = {
-      'changes': [change],
+      'changes': [adjustedChange],
       // Tests simulate a local offline client by default
       'srcStorageType': 'local',
-      'srcStorageId': change['storageId'] ?? 'local',
+      'srcStorageId': originalStorageId,
+      'storageMode': 'save',
       'includeChangeUpdates': true,
       'includeStateUpdates': true,
     };
@@ -130,7 +145,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
           'changeBy': 'tester',
           'changeAt': now.toIso8601String(),
           'cid': generateCid(now),
-          'storageId': 'local',
+          'storageId': '', // Empty for save mode
           'operation': 'update',
           'operationInfoJson': '{}',
           'stateChanged': false,
@@ -146,6 +161,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
         'changes': payload,
         'srcStorageType': 'local',
         'srcStorageId': 'local',
+        'storageMode': 'save',
         'includeChangeUpdates': true,
         'includeStateUpdates': true,
       };
@@ -405,6 +421,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
             entityType: 'project',
             entityId: 'entity-1',
             changeAt: baseTime,
+            storageId: '', // Empty for save mode
             data: {'nameLocal': 'Test Entity'},
           ),
         ];
@@ -413,6 +430,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
           'changes': payload,
           'srcStorageType': 'local',
           'srcStorageId': serverStorageId, // Same as server
+          'storageMode': 'save',
           'includeChangeUpdates': true,
           'includeStateUpdates': true,
         };
@@ -444,6 +462,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
             entityType: 'project',
             entityId: 'entity-1',
             changeAt: baseTime,
+            storageId: '', // Empty for save mode
             data: {'nameLocal': 'Test Entity'},
           ),
         ];
@@ -452,6 +471,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
           'changes': payload,
           'srcStorageType': 'local',
           'srcStorageId': 'different-storage-id', // Different from server
+          'storageMode': 'save',
           'includeChangeUpdates': true,
           'includeStateUpdates': true,
         };
@@ -489,6 +509,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
         'changes': payload,
         'srcStorageType': 'cloud',
         'srcStorageId': 'cloud',
+        'storageMode': 'sync',
         'includeChangeUpdates': true,
         'includeStateUpdates': true,
       };
