@@ -6,7 +6,7 @@ import 'helpers/in_memory_storage.dart';
 import 'test_models.dart';
 
 void main() {
-  group('ChangeProcessingService', () {
+  group('ChangeProcessingService - basic tests', () {
     late InMemoryStorage storage;
 
     setUpAll(() {
