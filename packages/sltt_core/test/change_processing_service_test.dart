@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sltt_core/src/services/change_processing_service.dart';
 import 'package:test/test.dart';
@@ -268,5 +270,223 @@ void main() {
       expect(summary['created'], isA<List>());
       expect((summary['created'] as List).length, equals(2));
     });
+  });
+
+  group('ChangeProcessingService - api_changes_network_tests', () {
+    late InMemoryStorage svcStorage;
+
+    setUp(() {
+      svcStorage = InMemoryStorage(storageType: 'local');
+    });
+
+    tearDown(() async {
+      await svcStorage.close();
+    });
+
+    Map<String, dynamic> changePayload({
+      required String projectId,
+      required String entityType,
+      required String entityId,
+      required DateTime changeAt,
+      String storageId = 'local',
+      Map<String, dynamic> data = const <String, dynamic>{},
+      String operation = 'update',
+      bool addDefaultParentId = true,
+    }) {
+      final adjustedData = Map<String, dynamic>.from(data);
+      if (addDefaultParentId &&
+          operation != 'delete' &&
+          !adjustedData.containsKey('parentId')) {
+        adjustedData['parentId'] = 'root';
+      }
+      final namespacedEntityId = '$projectId-$entityId';
+      final namespacedCid = '$projectId-${generateCid(changeAt)}';
+      return {
+        'projectId': projectId,
+        'domainId': projectId,
+        'domainType': 'project',
+        'entityType': entityType,
+        'entityId': namespacedEntityId,
+        'changeBy': 'tester',
+        'changeAt': changeAt.toUtc().toIso8601String(),
+        'cid': namespacedCid,
+        'storageId': storageId,
+        'operation': operation,
+        'operationInfoJson': '{}',
+        'stateChanged': false,
+        'unknownJson': '{}',
+        'dataJson': jsonEncode(adjustedData),
+      };
+    }
+
+    test(
+      'POST /api/changes with includeChangeUpdates/includeStateUpdates returns summaries',
+      () async {
+        await svcStorage.initialize();
+        final now = DateTime.now().toUtc();
+        final payload = [
+          changePayload(
+            projectId: 'proj-1',
+            entityType: 'project',
+            entityId: 'entity-1',
+            changeAt: now,
+            storageId: 'local',
+            operation: 'update',
+            data: {'nameLocal': 'Core API Net Test', 'parentId': 'root'},
+          ),
+        ];
+
+        final result = await ChangeProcessingService.processChanges(
+          changesToCreate: payload,
+          storage: svcStorage,
+          srcStorageType: 'local',
+          srcStorageId: 'local',
+          includeChangeUpdates: true,
+          includeStateUpdates: true,
+        );
+
+        expect(result.isSuccess, isTrue);
+        final summary = result.resultsSummary!;
+        expect(summary['storageType'], isNotEmpty);
+        expect(summary['storageId'], isNotEmpty);
+        expect(summary['changeUpdates'], isA<List>());
+        expect(summary['stateUpdates'], isA<List>());
+        expect((summary['changeUpdates'] as List).first, contains('cid'));
+        expect((summary['stateUpdates'] as List).first, contains('cid'));
+      },
+    );
+
+    test(
+      'handles field-level conflict resolution (newer change wins)',
+      () async {
+        await svcStorage.initialize();
+        final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+
+        final project = 'proj-fl';
+        final entity = 'entity-fl-1';
+
+        // seed initial change
+        final seed = changePayload(
+          projectId: project,
+          entityType: 'task',
+          entityId: entity,
+          changeAt: baseTime,
+          data: {'rank': '1', 'nameLocal': 'Test Task'},
+        );
+
+        final seedRes = await ChangeProcessingService.processChanges(
+          changesToCreate: [seed],
+          storage: svcStorage,
+          srcStorageType: 'local',
+          srcStorageId: 'local',
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(seedRes.isSuccess, isTrue);
+
+        final newer = baseTime.add(const Duration(minutes: 5));
+        final resp = await ChangeProcessingService.processChanges(
+          changesToCreate: [
+            changePayload(
+              projectId: project,
+              entityType: 'task',
+              entityId: entity,
+              changeAt: newer,
+              data: {'rank': '2'},
+              addDefaultParentId: false,
+            ),
+          ],
+          storage: svcStorage,
+          srcStorageType: 'local',
+          srcStorageId: 'local',
+          includeChangeUpdates: true,
+          includeStateUpdates: true,
+        );
+
+        expect(resp.isSuccess, isTrue);
+        final summary = resp.resultsSummary!;
+        final cu =
+            (summary['changeUpdates'] as List).first['updates']
+                as Map<String, dynamic>;
+        final su =
+            (summary['stateUpdates'] as List).first['state']
+                as Map<String, dynamic>;
+
+        expect(cu['operation'], 'update');
+        expect(
+          cu['operationInfoJson'],
+          equals(jsonEncode({'outdatedBys': [], 'noOpFields': []})),
+        );
+        expect(cu['stateChanged'], isTrue);
+        expect(cu['dataJson'], jsonEncode({'rank': '2'}));
+        expect(su['data_rank'], '2');
+        expect(su['data_rank_changeAt_'], newer.toUtc().toIso8601String());
+      },
+    );
+
+    test(
+      'POST srcStorageType/srcStorageId combinations behave as expected',
+      () async {
+        await svcStorage.initialize();
+        final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+
+        final serverStorageId = await svcStorage.getStorageId();
+
+        // none + empty string -> should use server storageId
+        final p1 = changePayload(
+          projectId: 'test-src-none-empty',
+          entityType: 'project',
+          entityId: 'entity-1',
+          changeAt: baseTime,
+        );
+        final r1 = await ChangeProcessingService.processChanges(
+          changesToCreate: [p1],
+          storage: svcStorage,
+          srcStorageType: 'none',
+          srcStorageId: '',
+          includeChangeUpdates: true,
+          includeStateUpdates: true,
+        );
+        expect(r1.isSuccess, isTrue);
+        final s1 = r1.resultsSummary!;
+        expect(s1['storageId'], equals(serverStorageId));
+
+        // local + matching serverStorageId
+        final p2 = changePayload(
+          projectId: 'test-src-local-match',
+          entityType: 'project',
+          entityId: 'entity-1',
+          changeAt: baseTime,
+        );
+        final r2 = await ChangeProcessingService.processChanges(
+          changesToCreate: [p2],
+          storage: svcStorage,
+          srcStorageType: 'local',
+          srcStorageId: serverStorageId,
+          includeChangeUpdates: true,
+          includeStateUpdates: true,
+        );
+        expect(r2.isSuccess, isTrue);
+        expect(r2.resultsSummary!['storageId'], equals(serverStorageId));
+
+        // cloud src
+        final p3 = changePayload(
+          projectId: 'test-src-cloud',
+          entityType: 'project',
+          entityId: 'entity-1',
+          changeAt: baseTime,
+        );
+        final r3 = await ChangeProcessingService.processChanges(
+          changesToCreate: [p3],
+          storage: svcStorage,
+          srcStorageType: 'cloud',
+          srcStorageId: 'cloud',
+          includeChangeUpdates: true,
+          includeStateUpdates: true,
+        );
+        expect(r3.isSuccess, isTrue);
+        expect(r3.resultsSummary!['storageId'], equals(serverStorageId));
+      },
+    );
   });
 }
