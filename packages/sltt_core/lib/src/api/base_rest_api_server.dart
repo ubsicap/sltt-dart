@@ -926,16 +926,7 @@ abstract class BaseRestApiServer {
       bool includeChangeUpdates = false;
       bool includeStateUpdates = false;
 
-      if (body is List) {
-        try {
-          changesToCreate = body.cast<Map<String, dynamic>>();
-        } on TypeError {
-          return _errorResponse(
-            'Invalid change format: each item must be an object',
-            400,
-          );
-        }
-      } else if (body is Map<String, dynamic>) {
+      if (body is Map<String, dynamic>) {
         final changesField = body['changes'];
         if (changesField is! List) {
           return _errorResponse('`changes` must be an array', 400);
@@ -955,7 +946,7 @@ abstract class BaseRestApiServer {
         includeStateUpdates = (body['includeStateUpdates'] as bool?) ?? false;
       } else {
         return _errorResponse(
-          'Request body must be an array or an object with `changes`',
+          'Request body must be an object with `changes`',
           400,
         );
       }
