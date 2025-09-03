@@ -919,7 +919,6 @@ abstract class BaseRestApiServer {
         return _errorResponse('Invalid JSON format: ${e.message}', 400);
       }
 
-      // Support either legacy array body or new object wrapper
       late final List<Map<String, dynamic>> changesToCreate;
       String srcStorageType = 'none';
       String srcStorageId = '';
