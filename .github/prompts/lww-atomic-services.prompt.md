@@ -1,3 +1,29 @@
+PROMPT:
+add to POST api requestBody, api/help docs, processChanges api and related tests, to increase declarative context:
+- required String storageMode: `save` or `sync` where sync is for transferring already stored change log entries between storages, and `save` is for changes that have not yet been stored.
+- during `sync` we expect all incoming change log entries to have non-empty storageIds, else return error. during sync, change log entry data is preserved independent of current state.
+- during `save` we expect all incoming change log entries to have empty storageIds, else return error.  during save, change log entry data is a diff compared to current state.
+- use this mode instead of comparing targetStorageId to change.storageId. In sync mode, a storage may receive back a change it once stored, probably should result in outdatedBy, noOp or dup. Print a warning if it results in change of state since this is unexpected and may be worth investigating.
+- use `sync` in tests that expect data preservation and `save` in tests that expect diffs.
+
+Possible external API changes:
+`POST /api/changes/save` (to reduce boilerplate for change log entries)
+`POST /api/changes/sync`
+`POST /api/state/sync` (to make full state transfer more efficient, bypassing change log entry processing)
+  - how to make this resumable? Could CursorSyncState be used for this, even though EntityState uses `Id`? Probably `entityId` as a cursor works well enough.
+    - Maybe we need CursorSyncChanges vs. CursorSyncState?
+  - use SelfSyncState to help client know final cid and seq for changelogs
+
+Next step:
+- in `sync` mode, updateChangeLogAndState() should
+   - for `cloud` storage type, typically result in storing a new change log entry and updated state if applicable
+   - for `local` storage type, typically only update state if applicable. if hosting local team storage (future feature), then it will also store the change log entry (with cloudAt or not) and update state if applicable.
+   - update `SelfSyncState` to track own latest change log entry
+- in `save` mode, updateChangeLogAndState() should
+  - for cloud and local storage type, typically result in change log and state updates if applicable.
+
+Other edge cases:
+- cloud storage type should return error if unknownJson is not empty or incoming schemaVersion is greater than it has knowledge of
 
 NEW TODOs:
 for cloud storage type
