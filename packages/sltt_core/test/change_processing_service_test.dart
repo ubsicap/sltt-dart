@@ -558,9 +558,9 @@ void main() {
           'storageId': '', // Empty for save mode
           'operation': 'create',
           'operationInfoJson': '{}',
-          'stateChanged': false,
+          'stateChanged': true,
           'unknownJson': '{}',
-          'dataJson': '{"name": "Test Project"}',
+          'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
         };
 
         final result = await ChangeProcessingService.processChanges(
@@ -617,9 +617,9 @@ void main() {
           'storageId': 'remote-storage-id', // Non-empty for sync mode
           'operation': 'create',
           'operationInfoJson': '{}',
-          'stateChanged': false,
+          'stateChanged': true,
           'unknownJson': '{}',
-          'dataJson': '{"name": "Sync Project"}',
+          'dataJson': '{"nameLocal": "Sync Project", "parentId": "root"}',
         };
 
         final result = await ChangeProcessingService.processChanges(
@@ -677,9 +677,9 @@ void main() {
           'storageId': '',
           'operation': 'create',
           'operationInfoJson': '{}',
-          'stateChanged': false,
+          'stateChanged': true,
           'unknownJson': '{}',
-          'dataJson': '{"name": "Original Name"}',
+          'dataJson': '{"nameLocal": "Original Name", "parentId": "root"}',
         };
 
         await ChangeProcessingService.processChanges(
@@ -710,9 +710,9 @@ void main() {
           'storageId': 'remote-storage-id',
           'operation': 'update',
           'operationInfoJson': '{}',
-          'stateChanged': false,
+          'stateChanged': true,
           'unknownJson': '{}',
-          'dataJson': '{"name": "Updated Name"}',
+          'dataJson': '{"nameLocal": "Updated Name", "parentId": "root"}',
         };
 
         final result = await ChangeProcessingService.processChanges(
@@ -749,7 +749,7 @@ void main() {
         );
         expect(state, isNotNull);
         expect(
-          state!.toJson()['data_name'],
+          state!.toJson()['data_nameLocal'],
           equals('Updated Name'),
           reason: 'Cloud storage state should reflect the update in sync mode',
         );
@@ -772,9 +772,9 @@ void main() {
           'storageId': '', // Empty for save mode
           'operation': 'create',
           'operationInfoJson': '{}',
-          'stateChanged': false,
+          'stateChanged': true,
           'unknownJson': '{}',
-          'dataJson': '{"name": "Local Project"}',
+          'dataJson': '{"nameLocal": "Local Project", "parentId": "root"}',
         };
 
         final result = await ChangeProcessingService.processChanges(
@@ -833,9 +833,10 @@ void main() {
             'storageId': 'remote-storage-id', // Non-empty for sync mode
             'operation': 'create',
             'operationInfoJson': '{}',
-            'stateChanged': false,
+            'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"name": "Sync Local Project"}',
+            'dataJson':
+                '{"nameLocal": "Sync Local Project", "parentId": "root"}',
           };
 
           final result = await ChangeProcessingService.processChanges(
@@ -901,9 +902,9 @@ void main() {
             'storageId': '',
             'operation': 'create',
             'operationInfoJson': '{}',
-            'stateChanged': false,
+            'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"name": "Original Local"}',
+            'dataJson': '{"nameLocal": "Original Local", "parentId": "root"}',
           };
 
           await ChangeProcessingService.processChanges(
@@ -934,9 +935,10 @@ void main() {
             'storageId': 'cloud-storage-id',
             'operation': 'update',
             'operationInfoJson': '{}',
-            'stateChanged': false,
+            'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"name": "Updated from Cloud"}',
+            'dataJson':
+                '{"nameLocal": "Updated from Cloud", "parentId": "root"}',
           };
 
           final result = await ChangeProcessingService.processChanges(
@@ -974,7 +976,7 @@ void main() {
           );
           expect(state, isNotNull);
           expect(
-            state!.toJson()['data_name'],
+            state!.toJson()['data_nameLocal'],
             equals('Updated from Cloud'),
             reason: 'Local storage state should always be updated in sync mode',
           );
@@ -1003,9 +1005,10 @@ void main() {
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
-            'stateChanged': false,
+            'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"name": "Cross Storage Test"}',
+            'dataJson':
+                '{"nameLocal": "Cross Storage Test", "parentId": "root"}',
           };
 
           final cloudResult = await ChangeProcessingService.processChanges(
@@ -1065,11 +1068,11 @@ void main() {
           expect(cloudState, isNotNull);
           expect(localState, isNotNull);
           expect(
-            cloudState!.toJson()['data_name'],
+            cloudState!.toJson()['data_nameLocal'],
             equals('Cross Storage Test'),
           );
           expect(
-            localState!.toJson()['data_name'],
+            localState!.toJson()['data_nameLocal'],
             equals('Cross Storage Test'),
           );
         },
@@ -1095,9 +1098,9 @@ void main() {
             'storageId': 'remote-storage-id', // Non-empty for sync mode
             'operation': 'create',
             'operationInfoJson': '{}',
-            'stateChanged': false,
+            'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"name": "Sync Cross Test"}',
+            'dataJson': '{"nameLocal": "Sync Cross Test", "parentId": "root"}',
           };
 
           final cloudResult = await ChangeProcessingService.processChanges(

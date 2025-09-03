@@ -62,13 +62,32 @@ class InMemoryStorage implements BaseStorageService {
     final merged = {...prior, ...stateUpdates}
       ..removeWhere((k, v) => v == null);
 
-    final newState = TestEntityState.fromJson(merged);
-    _states[_key(
-          newChange.domainId,
-          newChange.entityType,
-          newChange.entityId,
-        )] =
-        newState;
+    // Debug: log merged state payload before constructing TestEntityState
+    TestEntityState? newState;
+    try {
+      // Ensure required test-state fields are present to avoid JSON deserialization errors
+      if (!merged.containsKey('data_nameLocal')) {
+        merged['data_nameLocal'] = '';
+      }
+      print(
+        'DEBUG: InMemoryStorage merged state for CID ${newChange.cid}: $merged',
+      );
+      newState = TestEntityState.fromJson(merged);
+      _states[_key(
+            newChange.domainId,
+            newChange.entityType,
+            newChange.entityId,
+          )] =
+          newState;
+    } catch (e, st) {
+      // Surface parsing errors for diagnostics
+      print(
+        'ERROR: Failed to construct TestEntityState from merged payload: $e',
+      );
+      print('ERROR: merged payload: $merged');
+      print(st);
+      rethrow;
+    }
 
     return (newChangeLogEntry: newChange, newEntityState: newState);
   }

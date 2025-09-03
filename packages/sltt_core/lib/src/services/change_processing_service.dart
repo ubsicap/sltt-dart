@@ -199,9 +199,23 @@ class ChangeProcessingService {
           }
 
           // Update storage with the change and state
+          // Debug: log computed stateUpdates for diagnosis
+          print(
+            'DEBUG: computed stateUpdates for CID ${changeLogEntry.cid}: ${result.stateUpdates}',
+          );
+
+          // Ensure changeUpdates reflect the storage's identity in save mode
+          final outgoingChangeUpdates = <String, dynamic>{
+            ...result.changeUpdates,
+          };
+          if (storageMode == 'save') {
+            // In save mode the persisted change should indicate the storage that saved it
+            outgoingChangeUpdates['storageId'] = targetStorageId;
+          }
+
           final updateResults = await storage.updateChangeLogAndState(
             changeLogEntry: changeLogEntry,
-            changeUpdates: result.changeUpdates,
+            changeUpdates: outgoingChangeUpdates,
             entityState: entityState,
             stateUpdates: result.stateUpdates,
           );
