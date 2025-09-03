@@ -1,3 +1,35 @@
+
+NEW TODOs:
+for cloud storage type
+get changes request can use cid instead of seq
+- because database should store by seq internally and can look cid to get seq
+- however for local team storage host, cid may not be sufficient??
+  - host may have turned off hosting and thus no longer has its list
+  - when a client needs to serialize its state back into change log entries,
+     do we need to store a cloud seq as well as cid? Or will consumers just accept all the changes, including the sync_state which has a cloud seq
+
+storageId as db responsibility
+- transitions from '' to uuid as it's getting stored
+- once change log entry has `storageId` then client should preserve its data
+- if `storageId` is empty then we signal that it's a new change
+    - if we determine the cid for cle with empty storageId has already been stored, then treat as a dup? treat as an error? compare actual data first?
+
+- search for targetStorageId and adjust to use `storageId`
+
+- probably should refactor POST changes logic for unit unit tests outside of request/response handling, then we can test different storage permutations  more easily.
+
+- if storageType is cloud
+  - always store change log entry with state
+- FUTURE TODO: if sync with server that is hosting team local storage
+  - always store change log entry with state, even those with cloudAt
+- if storageType is local
+  - don't store cloud entries in change log, just store to state
+  - store all non-cloud entries in change log until they are clouded
+
+
+
+
+-------------
 TODO:
 - add `noOp` and `outdated` to `operation` type enum
 - add `noOpFields` string list to change log entry
