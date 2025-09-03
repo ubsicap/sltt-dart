@@ -58,6 +58,22 @@ class ChangeProcessingService {
         );
       }
 
+      // Validate srcStorageType and srcStorageId: we no longer support 'none'.
+      if (!(srcStorageType == 'local' || srcStorageType == 'cloud')) {
+        return ChangeProcessingResult(
+          errorMessage:
+              'Invalid srcStorageType: $srcStorageType. Expected "local" or "cloud".',
+          errorCode: 400,
+        );
+      }
+
+      if (srcStorageId.trim().isEmpty) {
+        return const ChangeProcessingResult(
+          errorMessage: 'srcStorageId is required and must be non-empty',
+          errorCode: 400,
+        );
+      }
+
       final targetStorageId = await storage.getStorageId();
       final resultsSummary = <String, dynamic>{
         'storageType': storage.getStorageType(),
@@ -182,12 +198,11 @@ class ChangeProcessingService {
     required BaseChangeLogEntry changeLogEntry,
     required String targetStorageId,
   }) {
-    if (srcStorageType == 'none') {
-      // treat as non-offline-first client -> diff data mode
-      return targetStorageId;
-    } else {
-      return srcStorageId.isNotEmpty ? srcStorageId : changeLogEntry.storageId;
-    }
+    // We expect srcStorageType to be either 'local' or 'cloud' and
+    // srcStorageId to be non-empty (validated by caller). Prefer the
+    // provided srcStorageId; fall back to the change entry's storageId only
+    // in the unlikely case it's different.
+    return srcStorageId.isNotEmpty ? srcStorageId : changeLogEntry.storageId;
   }
 
   /// Validate change operation states

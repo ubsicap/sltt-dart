@@ -53,8 +53,8 @@ void main() {
       final result = await ChangeProcessingService.processChanges(
         changesToCreate: [],
         storage: storage,
-        srcStorageType: 'none',
-        srcStorageId: '',
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
         includeChangeUpdates: false,
         includeStateUpdates: false,
       );
@@ -432,25 +432,6 @@ void main() {
 
         final serverStorageId = await svcStorage.getStorageId();
 
-        // none + empty string -> should use server storageId
-        final p1 = changePayload(
-          projectId: 'test-src-none-empty',
-          entityType: 'project',
-          entityId: 'entity-1',
-          changeAt: baseTime,
-        );
-        final r1 = await ChangeProcessingService.processChanges(
-          changesToCreate: [p1],
-          storage: svcStorage,
-          srcStorageType: 'none',
-          srcStorageId: '',
-          includeChangeUpdates: true,
-          includeStateUpdates: true,
-        );
-        expect(r1.isSuccess, isTrue);
-        final s1 = r1.resultsSummary!;
-        expect(s1['storageId'], equals(serverStorageId));
-
         // local + matching serverStorageId
         final p2 = changePayload(
           projectId: 'test-src-local-match',
@@ -469,7 +450,7 @@ void main() {
         expect(r2.isSuccess, isTrue);
         expect(r2.resultsSummary!['storageId'], equals(serverStorageId));
 
-        // cloud src
+        // cloud src (srcStorageId provided as cloud identifier)
         final p3 = changePayload(
           projectId: 'test-src-cloud',
           entityType: 'project',

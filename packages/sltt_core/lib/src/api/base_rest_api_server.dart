@@ -259,16 +259,15 @@ abstract class BaseRestApiServer {
                 },
               },
               'srcStorageType': {
+                'required': true,
                 'type': 'string',
                 'description':
-                    "Source client storage type; use 'none' for non-offline-first clients",
-                'default': 'none',
+                    "Source client storage type; must be 'local' or 'cloud'",
               },
               'srcStorageId': {
+                'required': true,
                 'type': 'string',
-                'description':
-                    'Source client storageId (empty string by default)',
-                'default': '',
+                'description': 'Source client storageId (required, non-empty)',
               },
               'includeChangeUpdates': {
                 'type': 'boolean',
@@ -918,8 +917,8 @@ abstract class BaseRestApiServer {
       }
 
       late final List<Map<String, dynamic>> changesToCreate;
-      String srcStorageType = 'none';
-      String srcStorageId = '';
+      String srcStorageType;
+      String srcStorageId;
       bool includeChangeUpdates = false;
       bool includeStateUpdates = false;
 
@@ -937,8 +936,8 @@ abstract class BaseRestApiServer {
           );
         }
 
-        srcStorageType = (body['srcStorageType'] as String?)?.trim() ?? 'none';
-        srcStorageId = (body['srcStorageId'] as String?) ?? '';
+        srcStorageType = (body['srcStorageType'] as String?)?.trim() ?? '';
+        srcStorageId = (body['srcStorageId'] as String?)?.trim() ?? '';
         includeChangeUpdates = (body['includeChangeUpdates'] as bool?) ?? false;
         includeStateUpdates = (body['includeStateUpdates'] as bool?) ?? false;
       } else {
@@ -950,6 +949,18 @@ abstract class BaseRestApiServer {
 
       if (changesToCreate.isEmpty) {
         return _errorResponse('No changes provided', 400);
+      }
+
+      // Validate srcStorageType/srcStorageId (must be 'local' or 'cloud' and non-empty)
+      if (!(srcStorageType == 'local' || srcStorageType == 'cloud')) {
+        return _errorResponse('srcStorageType must be "local" or "cloud"', 400);
+      }
+
+      if (srcStorageId.isEmpty) {
+        return _errorResponse(
+          'srcStorageId is required and must be non-empty',
+          400,
+        );
       }
 
       // Use the change processing service
