@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sync_manager/src/shared_storage_service.dart';
+import 'package:sync_manager/src/isar_storage_service.dart';
 
 class LocalTestServer extends BaseRestApiServer {
   LocalTestServer({required super.serverName, required super.storage});

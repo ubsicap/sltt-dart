@@ -5,9 +5,9 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart'
     show isarChangeLogEntryFactoryRegistration;
-import 'package:sync_manager/src/shared_storage_service.dart';
 import 'package:test/test.dart';
 
 import '../../sltt_core/test/helpers/api_changes_network_suite.dart'
