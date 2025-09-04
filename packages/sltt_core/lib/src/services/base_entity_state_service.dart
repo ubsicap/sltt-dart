@@ -1,6 +1,6 @@
 import 'package:sltt_core/src/models/base_entity_state.dart';
 import 'package:sltt_core/src/models/entity_type.dart';
-import 'package:sltt_core/src/models/factory_pair.dart';
+import 'package:sltt_core/src/models/serializable_group.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 
 final Map<EntityType, SerializableGroup<BaseEntityState>>

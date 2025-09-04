@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import '../models/base_change_log_entry.dart';
 import '../models/entity_type.dart';
-import '../models/factory_pair.dart';
+import '../models/serializable_group.dart';
 import 'json_serialization_service.dart';
 
 /// Helper used when parsing potentially unknown entityType strings
