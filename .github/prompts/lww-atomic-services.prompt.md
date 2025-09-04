@@ -26,7 +26,7 @@ Next step:
   - for cloud and local storage type, typically result in change log and state updates if applicable.
 
 Next step:
-- handle
+- handle domainId in _handleGetChanges rather than just projectId?
 
 Next step:
    - update `SelfSyncState` to track own latest change log entry
