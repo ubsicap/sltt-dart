@@ -1,13 +1,13 @@
 # Recreate Dart Server with Isar Database
 
-**Objective:**  
+**Objective:**
 Convert the existing Dart REST API server from JSON file storage to use Isar database for proper persistence, performance, and transactional integrity.
 
 ---
 
 ## Current Implementation Status
 
-The server currently uses a simple JSON file (`./data/documents.json`) for persistence via `LocalStorageService`. This works but lacks:
+The server currently uses a simple JSON file (`./data/documents.json`) for persistence via `IsarStorageService`. This works but lacks:
 - Database transactions
 - Indexing and query performance
 - Concurrent access safety
@@ -16,7 +16,7 @@ The server currently uses a simple JSON file (`./data/documents.json`) for persi
 ## Requirements
 
 ### 1. **Replace JSON Storage with Isar**
-   - Convert `LocalStorageService` to use Isar database
+   - Convert `IsarStorageService` to use Isar database
    - Maintain all existing API functionality
    - Ensure data persists between server restarts
    - Handle Isar native library setup for pure Dart server environment
@@ -61,27 +61,27 @@ The server currently uses a simple JSON file (`./data/documents.json`) for persi
    ```
 
 2. **Install Isar Native Library** (Required for pure Dart)
-   
+
    Choose your platform:
-   
+
    **Linux (x64):**
    ```bash
    curl -L https://github.com/isar/isar/releases/download/3.1.0%2B1/libisar_linux_x64.so -o bin/libisar.so
    chmod +x bin/libisar.so
    ```
-   
+
    **macOS (x64):**
    ```bash
    curl -L https://github.com/isar/isar/releases/download/3.1.0%2B1/libisar_macos_x64.dylib -o bin/libisar.dylib
    chmod +x bin/libisar.dylib
    ```
-   
+
    **macOS (ARM64):**
    ```bash
    curl -L https://github.com/isar/isar/releases/download/3.1.0%2B1/libisar_macos_arm64.dylib -o bin/libisar.dylib
    chmod +x bin/libisar.dylib
    ```
-   
+
    **Windows (x64):**
    ```powershell
    curl -L https://github.com/isar/isar/releases/download/3.1.0%2B1/isar_windows_x64.dll -o bin/isar.dll
@@ -129,10 +129,10 @@ bin/
 ## Specific Implementation Details
 
 
-### Isar-based LocalStorageService Interface
+### Isar-based IsarStorageService Interface
 ```dart
-class LocalStorageService {
-  static LocalStorageService get instance;
+class IsarStorageService {
+  static IsarStorageService get instance;
   Future<void> initialize();
   Future<Document> createDocument(Document document);
   Future<Document?> getDocument(String uuid);
@@ -196,7 +196,7 @@ class Document with BaseEntityMixin {
 
 1. **Updated pubspec.yaml** with correct Isar dependencies for Dart server
 2. **Isar-compatible models** with proper annotations and code generation
-3. **LocalStorageService implementation** using Isar with all existing methods
+3. **IsarStorageService implementation** using Isar with all existing methods
 4. **Working build process** that generates Isar schemas successfully
 5. **Functional server** that starts without native library errors
 6. **Data persistence** that survives server restarts

@@ -297,7 +297,7 @@ lib/core/
 │   ├── multi_server_launcher.dart       # Server management utility
 │   └── server_ports.dart                # Port configuration constants
 ├── storage/
-│   └── shared_storage_service.dart      # Unified storage services
+│   └── isar_storage_service.dart      # Unified storage services
 └── sync/
     └── sync_manager.dart                 # Sync orchestration
 
@@ -401,7 +401,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 1. Create your entity class extending `BaseEntity`
 2. Add appropriate Isar annotations
-3. Register the schema in `LocalStorageService`
+3. Register the schema in `IsarStorageService`
 4. Run code generation
 5. Add API endpoints in `RestApiServer`
 

@@ -1,6 +1,6 @@
 import 'package:sltt_core/sltt_core.dart';
 
-import 'shared_storage_service.dart.todo';
+import 'isar_storage_service.dart.todo';
 
 enum StorageType { outsyncs, cloudStorage }
 

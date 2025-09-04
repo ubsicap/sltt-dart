@@ -33,7 +33,7 @@ BaseEntityState createIsarEntityStateFromJson(
   throw UnimplementedError('Unknown entity type: $originalTypeString');
 }
 
-class LocalStorageService extends BaseStorageService {
+class IsarStorageService extends BaseStorageService {
   final String _databaseName;
   final String _logPrefix;
 
@@ -41,7 +41,7 @@ class LocalStorageService extends BaseStorageService {
   bool _initialized = false;
   late String _storageId;
 
-  LocalStorageService(this._databaseName, this._logPrefix);
+  IsarStorageService(this._databaseName, this._logPrefix);
 
   @override
   Future<void> initialize() async {
@@ -839,7 +839,7 @@ class LocalStorageService extends BaseStorageService {
 }
 
 // Singleton wrappers for each storage type
-class OutsyncsStorageService extends LocalStorageService {
+class OutsyncsStorageService extends IsarStorageService {
   static OutsyncsStorageService? _instance;
   static OutsyncsStorageService get instance =>
       _instance ??= OutsyncsStorageService._();
@@ -847,7 +847,7 @@ class OutsyncsStorageService extends LocalStorageService {
   OutsyncsStorageService._() : super('outsyncs', 'OutsyncsStorage');
 }
 
-class CloudStorageService extends LocalStorageService {
+class CloudStorageService extends IsarStorageService {
   static CloudStorageService? _instance;
   static CloudStorageService get instance =>
       _instance ??= CloudStorageService._();

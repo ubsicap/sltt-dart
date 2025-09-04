@@ -26,7 +26,7 @@ class TestServer extends BaseRestApiServer {
 void main() {
   HttpServer? server;
   Uri? baseUrl;
-  LocalStorageService? storage;
+  IsarStorageService? storage;
   const testDbName = 'test_local_api_changes';
 
   Future<void> cleanupTestDatabase() async {
@@ -58,8 +58,8 @@ void main() {
     // Clean up any existing test database first
     await cleanupTestDatabase();
 
-    // Create LocalStorageService with a consistent test database name
-    storage = LocalStorageService(testDbName, 'TestLocalStorage');
+    // Create IsarStorageService with a consistent test database name
+    storage = IsarStorageService(testDbName, 'TestLocalStorage');
     await storage!.initialize();
     final app = TestServer(serverName: 'sync-manager-it', storage: storage!);
     final handler = const Pipeline().addHandler(app.router().call);
@@ -84,7 +84,7 @@ void main() {
     await cleanupTestDatabase();
   });
 
-  group('Run All Tests (LocalStorageService)', () {
+  group('Run All Tests (IsarStorageService)', () {
     runApiChangesNetworkTests(resolveBaseUrl);
   });
 }
