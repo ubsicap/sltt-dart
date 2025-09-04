@@ -87,14 +87,19 @@ void main() {
   // Create the test suite instance
   final testSuite = ApiChangesNetworkTestSuite(resolveBaseUrl);
 
-  // Get individual test groups for flexible execution
-  final testGroups = testSuite.getTestGroups();
+  // Option 1: Run all tests automatically (recommended for full coverage)
+  // testSuite.runAllTestsWithPrefix('API Changes Network Tests (IsarStorageService)');
+
+  // Option 2: Run specific groups with automatic test discovery
+  final availableGroups = testSuite.getTestGroupNames();
+  print('Available test groups: $availableGroups'); // Helpful for debugging
 
   // Execute each test group individually with proper naming
   group(
     'API Changes Network Tests - POST /api/changes (IsarStorageService)',
     () {
-      testGroups['POST /api/changes']!.forEach((testName, testFunction) {
+      final tests = testSuite.getTestsForGroup('POST /api/changes');
+      tests.forEach((testName, testFunction) {
         test(testName, testFunction);
       });
     },
@@ -103,10 +108,10 @@ void main() {
   group(
     'API Changes Network Tests - GET /api/projects/<projectId>/changes (IsarStorageService)',
     () {
-      testGroups['GET /api/projects/<projectId>/changes']!.forEach((
-        testName,
-        testFunction,
-      ) {
+      final tests = testSuite.getTestsForGroup(
+        'GET /api/projects/<projectId>/changes',
+      );
+      tests.forEach((testName, testFunction) {
         test(testName, testFunction);
       });
     },
@@ -115,10 +120,8 @@ void main() {
   group(
     'API Changes Network Tests - POST /api/changes semantics (IsarStorageService)',
     () {
-      testGroups['POST /api/changes semantics']!.forEach((
-        testName,
-        testFunction,
-      ) {
+      final tests = testSuite.getTestsForGroup('POST /api/changes semantics');
+      tests.forEach((testName, testFunction) {
         test(testName, testFunction);
       });
     },
@@ -127,10 +130,12 @@ void main() {
   group(
     'API Changes Network Tests - POST /api/changes srcStorageType/srcStorageId combinations (IsarStorageService)',
     () {
-      testGroups['POST /api/changes srcStorageType/srcStorageId combinations']!
-          .forEach((testName, testFunction) {
-            test(testName, testFunction);
-          });
+      final tests = testSuite.getTestsForGroup(
+        'POST /api/changes srcStorageType/srcStorageId combinations',
+      );
+      tests.forEach((testName, testFunction) {
+        test(testName, testFunction);
+      });
     },
   );
 }

@@ -4,22 +4,6 @@ import 'dart:io';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
-final knownPostChangesResponseKeys = [
-  'storageType',
-  'storageId',
-  'created',
-  'updated',
-  'deleted',
-  'noOps',
-  'errors',
-  'clouded',
-  'dups',
-  'info',
-  'changeUpdates',
-  'stateUpdates',
-  'unknowns',
-];
-
 /// Test suite configuration for API change network tests
 class ApiChangesNetworkTestSuite {
   final Future<Uri> Function() resolveBaseUrl;
@@ -155,6 +139,17 @@ class ApiChangesNetworkTestSuite {
     };
   }
 
+  /// Get list of available test group names for easier maintenance
+  List<String> getTestGroupNames() {
+    return getTestGroups().keys.toList();
+  }
+
+  /// Get tests for a specific group
+  Map<String, Future<void> Function()> getTestsForGroup(String groupName) {
+    final testGroups = getTestGroups();
+    return testGroups[groupName] ?? {};
+  }
+
   /// Run all tests (backward compatibility)
   void runAllTests() {
     final testGroups = getTestGroups();
@@ -164,6 +159,25 @@ class ApiChangesNetworkTestSuite {
       final tests = groupEntry.value;
 
       group(groupName, () {
+        for (final testEntry in tests.entries) {
+          final testName = testEntry.key;
+          final testFunction = testEntry.value;
+
+          test(testName, testFunction);
+        }
+      });
+    }
+  }
+
+  /// Run all tests with custom group naming (for different storage backends)
+  void runAllTestsWithPrefix(String prefix) {
+    final testGroups = getTestGroups();
+
+    for (final groupEntry in testGroups.entries) {
+      final groupName = groupEntry.key;
+      final tests = groupEntry.value;
+
+      group('$prefix - $groupName', () {
         for (final testEntry in tests.entries) {
           final testName = testEntry.key;
           final testFunction = testEntry.value;
