@@ -92,17 +92,45 @@ void main() {
 
   // Execute each test group individually with proper naming
   group(
-    'API Changes Network Tests - Basic Operations (IsarStorageService)',
+    'API Changes Network Tests - POST /api/changes (IsarStorageService)',
     () {
-      testGroups['Basic Operations']!.forEach((testName, testFunction) {
+      testGroups['POST /api/changes']!.forEach((testName, testFunction) {
         test(testName, testFunction);
       });
     },
   );
 
-  group('API Changes Network Tests - Error Handling (IsarStorageService)', () {
-    testGroups['Error Handling']!.forEach((testName, testFunction) {
-      test(testName, testFunction);
-    });
-  });
+  group(
+    'API Changes Network Tests - GET /api/projects/<projectId>/changes (IsarStorageService)',
+    () {
+      testGroups['GET /api/projects/<projectId>/changes']!.forEach((
+        testName,
+        testFunction,
+      ) {
+        test(testName, testFunction);
+      });
+    },
+  );
+
+  group(
+    'API Changes Network Tests - POST /api/changes semantics (IsarStorageService)',
+    () {
+      testGroups['POST /api/changes semantics']!.forEach((
+        testName,
+        testFunction,
+      ) {
+        test(testName, testFunction);
+      });
+    },
+  );
+
+  group(
+    'API Changes Network Tests - POST /api/changes srcStorageType/srcStorageId combinations (IsarStorageService)',
+    () {
+      testGroups['POST /api/changes srcStorageType/srcStorageId combinations']!
+          .forEach((testName, testFunction) {
+            test(testName, testFunction);
+          });
+    },
+  );
 }
