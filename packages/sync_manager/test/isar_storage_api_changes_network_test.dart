@@ -11,7 +11,7 @@ import 'package:sync_manager/src/models/isar_change_log_entry.dart'
 import 'package:test/test.dart';
 
 import '../../sltt_core/test/helpers/api_changes_network_suite.dart'
-    show runApiChangesNetworkTests;
+    show ApiChangesNetworkTestSuite;
 
 class TestServer extends BaseRestApiServer {
   TestServer({required super.serverName, required super.storage});
@@ -84,7 +84,25 @@ void main() {
     await cleanupTestDatabase();
   });
 
-  group('Run All Tests (IsarStorageService)', () {
-    runApiChangesNetworkTests(resolveBaseUrl);
+  // Create the test suite instance
+  final testSuite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+
+  // Get individual test groups for flexible execution
+  final testGroups = testSuite.getTestGroups();
+
+  // Execute each test group individually with proper naming
+  group(
+    'API Changes Network Tests - Basic Operations (IsarStorageService)',
+    () {
+      testGroups['Basic Operations']!.forEach((testName, testFunction) {
+        test(testName, testFunction);
+      });
+    },
+  );
+
+  group('API Changes Network Tests - Error Handling (IsarStorageService)', () {
+    testGroups['Error Handling']!.forEach((testName, testFunction) {
+      test(testName, testFunction);
+    });
   });
 }

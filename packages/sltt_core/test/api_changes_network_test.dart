@@ -7,7 +7,7 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
-import 'helpers/api_changes_network_suite.dart' show runApiChangesNetworkTests;
+import 'helpers/api_changes_network_suite.dart';
 import 'helpers/in_memory_storage.dart';
 import 'test_models.dart';
 
@@ -80,7 +80,111 @@ void main() {
     }
   });
 
-  group('Run All Tests', () {
-    runApiChangesNetworkTests(resolveBaseUrl);
+  group('API Changes Network Tests (Individual Test Groups)', () {
+    // Run individual test groups with proper naming
+    group('POST /api/changes', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> postTests;
+
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        postTests = testGroups['POST /api/changes']!;
+      });
+
+      test(
+        'with includeChangeUpdates/includeStateUpdates returns summaries',
+        () async {
+          await postTests['with includeChangeUpdates/includeStateUpdates returns summaries']!();
+        },
+      );
+    });
+
+    group('GET /api/projects/<projectId>/changes', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> getTests;
+
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        getTests = testGroups['GET /api/projects/<projectId>/changes']!;
+      });
+
+      test('returns empty list for project with no changes', () async {
+        await getTests['returns empty list for project with no changes']!();
+      });
+
+      test('returns changes for project with seeded data', () async {
+        await getTests['returns changes for project with seeded data']!();
+      });
+
+      test('respects limit parameter', () async {
+        await getTests['respects limit parameter']!();
+      });
+
+      test('supports cursor-based pagination', () async {
+        await getTests['supports cursor-based pagination']!();
+      });
+
+      test('handles URL-encoded project IDs correctly', () async {
+        await getTests['handles URL-encoded project IDs correctly']!();
+      });
+
+      test('returns 400 for invalid limit values', () async {
+        await getTests['returns 400 for invalid limit values']!();
+      });
+
+      test('returns 400 for invalid cursor values', () async {
+        await getTests['returns 400 for invalid cursor values']!();
+      });
+    });
+
+    group('POST /api/changes semantics', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> semanticsTests;
+
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        semanticsTests = testGroups['POST /api/changes semantics']!;
+      });
+
+      test(
+        'handles field-level conflict resolution (newer change wins)',
+        () async {
+          await semanticsTests['handles field-level conflict resolution (newer change wins)']!();
+        },
+      );
+    });
+
+    group('POST /api/changes srcStorageType/srcStorageId combinations', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> combinationsTests;
+
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        combinationsTests =
+            testGroups['POST /api/changes srcStorageType/srcStorageId combinations']!;
+      });
+
+      test(
+        'srcStorageType: local, srcStorageId: matches server storage id',
+        () async {
+          await combinationsTests['srcStorageType: local, srcStorageId: matches server storage id']!();
+        },
+      );
+
+      test(
+        'srcStorageType: local, srcStorageId: different from server',
+        () async {
+          await combinationsTests['srcStorageType: local, srcStorageId: different from server']!();
+        },
+      );
+
+      test('srcStorageType: cloud, srcStorageId: cloud', () async {
+        await combinationsTests['srcStorageType: cloud, srcStorageId: cloud']!();
+      });
+    });
   });
 }
