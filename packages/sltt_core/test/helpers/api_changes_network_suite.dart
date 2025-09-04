@@ -92,7 +92,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
   }
 
   Map<String, dynamic> changePayload({
-    required String projectId,
+    required String domainId,
     required String entityType,
     required String entityId,
     required DateTime changeAt,
@@ -107,11 +107,10 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
         !adjustedData.containsKey('parentId')) {
       adjustedData['parentId'] = 'root';
     }
-    final namespacedEntityId = '$projectId-$entityId';
-    final namespacedCid = '$projectId-${generateCid(changeAt)}';
+    final namespacedEntityId = '$domainId-$entityId';
+    final namespacedCid = '$domainId-${generateCid(changeAt)}';
     return {
-      'projectId': projectId,
-      'domainId': projectId,
+      'domainId': domainId,
       'domainType': 'project',
       'entityType': entityType,
       'entityId': namespacedEntityId,
@@ -137,7 +136,6 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
       final now = DateTime.now().toUtc();
       final payload = [
         {
-          'projectId': 'proj-1',
           'domainId': 'proj-1',
           'domainType': 'project',
           'entityType': 'project',
@@ -201,7 +199,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
       // Seed some changes
       await seedChange(
         changePayload(
-          projectId: projectId,
+          domainId: projectId,
           entityType: 'task',
           entityId: 'task-1',
           changeAt: baseTime,
@@ -211,7 +209,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
 
       await seedChange(
         changePayload(
-          projectId: projectId,
+          domainId: projectId,
           entityType: 'task',
           entityId: 'task-2',
           changeAt: baseTime.add(const Duration(minutes: 1)),
@@ -235,7 +233,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
       for (int i = 1; i <= 3; i++) {
         await seedChange(
           changePayload(
-            projectId: projectId,
+            domainId: projectId,
             entityType: 'task',
             entityId: 'task-$i',
             changeAt: baseTime.add(Duration(minutes: i)),
@@ -260,7 +258,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
       for (int i = 1; i <= 5; i++) {
         await seedChange(
           changePayload(
-            projectId: projectId,
+            domainId: projectId,
             entityType: 'task',
             entityId: 'task-$i',
             changeAt: baseTime.add(Duration(minutes: i)),
@@ -299,7 +297,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
 
       await seedChange(
         changePayload(
-          projectId: projectId,
+          domainId: projectId,
           entityType: 'project',
           entityId: 'proj-1',
           changeAt: baseTime,
@@ -350,7 +348,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
           final entity = 'entity-fl-1';
           await seedChange(
             changePayload(
-              projectId: project,
+              domainId: project,
               entityType: 'task',
               entityId: entity,
               changeAt: baseTime,
@@ -360,7 +358,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
           final newer = baseTime.add(const Duration(minutes: 5));
           final resp = await postSingleChange(
             changePayload(
-              projectId: project,
+              domainId: project,
               entityType: 'task',
               entityId: entity,
               changeAt: newer,
@@ -400,7 +398,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
       // Discover the server's storage ID by posting a dummy change
       final dummyResponse = await postSingleChange(
         changePayload(
-          projectId: 'discover-storage-id',
+          domainId: 'discover-storage-id',
           entityType: 'project',
           entityId: 'dummy',
           changeAt: baseTime,
@@ -417,7 +415,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
         final uri = baseUrl.replace(path: '/api/changes');
         final payload = [
           changePayload(
-            projectId: 'test-src-local-match',
+            domainId: 'test-src-local-match',
             entityType: 'project',
             entityId: 'entity-1',
             changeAt: baseTime,
@@ -458,7 +456,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
         final uri = baseUrl.replace(path: '/api/changes');
         final payload = [
           changePayload(
-            projectId: 'test-src-local-diff',
+            domainId: 'test-src-local-diff',
             entityType: 'project',
             entityId: 'entity-1',
             changeAt: baseTime,
@@ -497,7 +495,7 @@ void runApiChangesNetworkTests(Future<Uri> Function() resolveBaseUrl) {
       final uri = baseUrl.replace(path: '/api/changes');
       final payload = [
         changePayload(
-          projectId: 'test-src-cloud',
+          domainId: 'test-src-cloud',
           entityType: 'project',
           entityId: 'entity-1',
           changeAt: baseTime,
