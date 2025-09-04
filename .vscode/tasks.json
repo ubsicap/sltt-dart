@@ -82,6 +82,15 @@
             },
             "group": "build"
         },
+                {
+            "label": "Clean Build (Sync Manager)",
+            "type": "shell",
+            "command": "dart run build_runner clean",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/sync_manager"
+            },
+            "group": "build"
+        },
         {
             "label": "Analyze (All)",
             "type": "shell",
