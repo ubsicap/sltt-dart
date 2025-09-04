@@ -1314,7 +1314,6 @@ void main() {
             );
 
             // Current implementation: Local storage also stores change log in sync mode
-            // TODO: Future implementation should typically only update state for local storage
             final localChanges = await localStorage.getChangesWithCursor(
               domainId: 'test-project',
             );
