@@ -461,7 +461,7 @@ void main() {
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
           entityState,
-          targetStorageId: 'local',
+          storageMode: 'save',
         );
 
         // Entity state should update via stateUpdates
@@ -523,7 +523,7 @@ void main() {
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
           entityState,
-          targetStorageId: 'cloud',
+          storageMode: 'sync',
         );
 
         // Operation should be computed as noOp and report noOpFields; data subset is omitted
@@ -568,7 +568,7 @@ void main() {
           final updates = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
             entityState,
-            targetStorageId: 'local',
+            storageMode: 'save',
           );
 
           expect(
@@ -673,7 +673,7 @@ void main() {
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
           entityStateMixed,
-          targetStorageId: 'local',
+          storageMode: 'save',
         );
 
         // rank should be outdated, nameLocal no-op, parentId should be applied
@@ -714,7 +714,7 @@ void main() {
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
           entityState,
-          targetStorageId: 'local',
+          storageMode: 'save',
         );
 
         expect(
@@ -751,7 +751,7 @@ void main() {
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
           null, // No existing entity state
-          targetStorageId: 'local',
+          storageMode: 'save',
         );
 
         expect(
@@ -820,7 +820,7 @@ void main() {
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
           null,
-          targetStorageId: 'local',
+          storageMode: 'save',
         );
 
         expect(updates.stateUpdates['data_parentId'], equals('parent3'));
@@ -867,7 +867,7 @@ void main() {
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
           entityState,
-          targetStorageId: 'local',
+          storageMode: 'save',
         );
 
         expect(
@@ -908,7 +908,7 @@ void main() {
           final updates = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
             entityState, // Uses baseTime as latest change
-            targetStorageId: 'local',
+            storageMode: 'save',
           );
 
           expect(
@@ -1003,7 +1003,7 @@ void main() {
           final updates = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
             entityStateWithNewerField,
-            targetStorageId: 'local',
+            storageMode: 'save',
           );
 
           expect(
@@ -1083,7 +1083,7 @@ void main() {
           final updates = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
             entityStateWithOlderField,
-            targetStorageId: 'local',
+            storageMode: 'save',
           );
 
           expect(

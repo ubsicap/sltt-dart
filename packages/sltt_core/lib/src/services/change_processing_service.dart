@@ -246,20 +246,6 @@ class ChangeProcessingService {
     }
   }
 
-  /// Determine the effective source storage ID based on request parameters
-  static String _determineEffectiveSourceStorageId({
-    required String srcStorageType,
-    required String srcStorageId,
-    required BaseChangeLogEntry changeLogEntry,
-    required String targetStorageId,
-  }) {
-    // We expect srcStorageType to be either 'local' or 'cloud' and
-    // srcStorageId to be non-empty (validated by caller). Prefer the
-    // provided srcStorageId; fall back to the change entry's storageId only
-    // in the unlikely case it's different.
-    return srcStorageId.isNotEmpty ? srcStorageId : changeLogEntry.storageId;
-  }
-
   /// Validate change operation states
   static ChangeProcessingResult? _validateChangeOperation({
     required BaseChangeLogEntry changeLogEntry,
