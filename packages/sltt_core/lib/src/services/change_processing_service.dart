@@ -209,13 +209,18 @@ class ChangeProcessingService {
 
           // In sync mode, warn if we get unexpected state changes
           if (storageMode == 'sync' &&
+              targetStorageId == changeLogEntry.storageId &&
               updateResults.newChangeLogEntry.operation != 'no-op' &&
               !result.isDuplicate &&
               result.stateUpdates.isNotEmpty) {
             print(
               'WARNING: Sync mode resulted in state change for CID ${changeLogEntry.cid}. '
               'Operation: ${updateResults.newChangeLogEntry.operation}. '
-              'This may indicate a data inconsistency worth investigating.',
+              'This may indicate a data inconsistency worth investigating.'
+              'ChangeLogEntry: $changeLogEntry'
+              'Previous state: $entityState'
+              'New state: ${updateResults.newEntityState}.'
+              'State updates: ${result.stateUpdates}',
             );
           }
 
