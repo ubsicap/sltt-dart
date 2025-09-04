@@ -121,6 +121,17 @@ void main() {
       expect(obj.a, 'foo');
       expect(obj.unknownJson, equals('{"b":"bar","c":"cVal"}'));
     });
+
+    test('SchemaVersion1.toJson() roundTrip - ignoring unknownJson', () {
+      final json = {'a': 'foo', 'b': 'bar', 'c': 'cVal'};
+      final obj = SchemaVersion1.fromJson(json);
+      expect(obj.a, 'foo');
+      expect(obj.unknownJson, equals('{"b":"bar","c":"cVal"}'));
+      final out = obj.toJson();
+      final withoutUnknownJson = Map<String, dynamic>.from(out)
+        ..remove('unknownJson');
+      expect(withoutUnknownJson, json);
+    });
   });
 }
 
