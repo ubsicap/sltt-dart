@@ -793,7 +793,9 @@ void main() {
           expect(result.errorCode, equals(400));
           expect(
             result.errorMessage,
-            contains('contains unknown fields in ($storageType) storage with save mode'),
+            contains(
+              'contains unknown fields in ($storageType) storage with save mode',
+            ),
           );
           expect(result.errorMessage, contains('unknownField'));
         });

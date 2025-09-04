@@ -286,7 +286,7 @@ class ChangeProcessingService {
           .toSet();
       return ChangeProcessingResult(
         errorMessage:
-            'Change[$changeIndex] cid($cid) contains unknown fields in ($storageType) storage with save mode. Unknown fields: $unknownJson, known fields: [$knownFields]',
+            'Change[$changeIndex] cid($cid) contains unknown fields in ($storageType) storage with save mode.\nUnknown fields: $unknownJson \nKnown fields: [$knownFields]',
         errorCode: 400,
       );
     }
