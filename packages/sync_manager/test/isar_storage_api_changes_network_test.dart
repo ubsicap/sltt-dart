@@ -94,104 +94,167 @@ void main() {
   final availableGroups = testSuite.getTestGroupNames();
   print('Available test groups: $availableGroups'); // Helpful for debugging
 
-  // Execute each test group individually with proper naming
-  group(
-    'API Changes Network Tests - POST /api/changes (IsarStorageService)',
-    () {
-      final tests = testSuite.getTestsForGroup('POST /api/changes');
-      tests.forEach((testName, testFunction) {
-        test(testName, testFunction);
-      });
-    },
-  );
+  group('API Changes Network Tests (Individual Test Groups)', () {
+    // Run individual test groups with proper naming
+    group('POST /api/changes', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> postTests;
 
-  group(
-    'API Changes Network Tests - GET /api/projects/<projectId>/changes (IsarStorageService)',
-    () {
-      final tests = testSuite.getTestsForGroup(
-        'GET /api/projects/<projectId>/changes',
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        postTests = testGroups['POST /api/changes']!;
+      });
+
+      test(
+        'with includeChangeUpdates/includeStateUpdates returns summaries',
+        () async {
+          await postTests['with includeChangeUpdates/includeStateUpdates returns summaries']!();
+        },
       );
-      tests.forEach((testName, testFunction) {
-        test(testName, testFunction);
-      });
-    },
-  );
+    });
 
-  group(
-    'API Changes Network Tests - POST /api/changes semantics (IsarStorageService)',
-    () {
-      final tests = testSuite.getTestsForGroup('POST /api/changes semantics');
-      tests.forEach((testName, testFunction) {
-        test(testName, testFunction);
-      });
-    },
-  );
+    group('GET /api/projects/<projectId>/changes', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> getTests;
 
-  group(
-    'API Changes Network Tests - POST /api/changes srcStorageType/srcStorageId combinations (IsarStorageService)',
-    () {
-      final tests = testSuite.getTestsForGroup(
-        'POST /api/changes srcStorageType/srcStorageId combinations',
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        getTests = testGroups['GET /api/projects/<projectId>/changes']!;
+      });
+
+      test('returns empty list for project with no changes', () async {
+        await getTests['returns empty list for project with no changes']!();
+      });
+
+      test('returns changes for project with seeded data', () async {
+        await getTests['returns changes for project with seeded data']!();
+      });
+
+      test('respects limit parameter', () async {
+        await getTests['respects limit parameter']!();
+      });
+
+      test('supports cursor-based pagination', () async {
+        await getTests['supports cursor-based pagination']!();
+      });
+
+      test('handles URL-encoded project IDs correctly', () async {
+        await getTests['handles URL-encoded project IDs correctly']!();
+      });
+
+      test('returns 400 for invalid limit values', () async {
+        await getTests['returns 400 for invalid limit values']!();
+      });
+
+      test('returns 400 for invalid cursor values', () async {
+        await getTests['returns 400 for invalid cursor values']!();
+      });
+    });
+
+    group('POST /api/changes semantics', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> semanticsTests;
+
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        semanticsTests = testGroups['POST /api/changes semantics']!;
+      });
+
+      test(
+        'handles field-level conflict resolution (newer change wins)',
+        () async {
+          await semanticsTests['handles field-level conflict resolution (newer change wins)']!();
+        },
       );
-      tests.forEach((testName, testFunction) {
-        test(testName, testFunction);
+    });
+
+    group('POST /api/changes srcStorageType/srcStorageId combinations', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> combinationsTests;
+
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        combinationsTests =
+            testGroups['POST /api/changes srcStorageType/srcStorageId combinations']!;
       });
-    },
-  );
 
-  // Verification test to ensure all suite tests are being run
-  test('verifies all suite tests are being run (IsarStorageService)', () async {
-    final suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
-    final allSuiteTests = suite.getTestGroups();
+      test(
+        'srcStorageType: local, srcStorageId: matches server storage id',
+        () async {
+          await combinationsTests['srcStorageType: local, srcStorageId: matches server storage id']!();
+        },
+      );
 
-    // Flatten all test names from the suite
-    final suiteTestNames = <String>{};
-    for (final groupEntry in allSuiteTests.entries) {
-      for (final testName in groupEntry.value.keys) {
-        suiteTestNames.add(testName);
+      test(
+        'srcStorageType: local, srcStorageId: different from server',
+        () async {
+          await combinationsTests['srcStorageType: local, srcStorageId: different from server']!();
+        },
+      );
+
+      test('srcStorageType: cloud, srcStorageId: cloud', () async {
+        await combinationsTests['srcStorageType: cloud, srcStorageId: cloud']!();
+      });
+    });
+
+    // Verification test to ensure all suite tests are being run
+    test('verifies all suite tests are being run (IsarStorageService)', () async {
+      final suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+      final allSuiteTests = suite.getTestGroups();
+
+      // Flatten all test names from the suite
+      final suiteTestNames = <String>{};
+      for (final groupEntry in allSuiteTests.entries) {
+        for (final testName in groupEntry.value.keys) {
+          suiteTestNames.add(testName);
+        }
       }
-    }
 
-    // List of all test names that this file actually runs
-    // This should match the suiteTestNames set
-    final actuallyRunTestNames = {
-      'with includeChangeUpdates/includeStateUpdates returns summaries',
-      'returns empty list for project with no changes',
-      'returns changes for project with seeded data',
-      'respects limit parameter',
-      'supports cursor-based pagination',
-      'handles URL-encoded project IDs correctly',
-      'returns 400 for invalid limit values',
-      'returns 400 for invalid cursor values',
-      'handles field-level conflict resolution (newer change wins)',
-      'srcStorageType: local, srcStorageId: matches server storage id',
-      'srcStorageType: local, srcStorageId: different from server',
-      'srcStorageType: cloud, srcStorageId: cloud',
-    };
+      // List of all test names that this file actually runs
+      // This should match the suiteTestNames set
+      final actuallyRunTestNames = {
+        'with includeChangeUpdates/includeStateUpdates returns summaries',
+        'returns empty list for project with no changes',
+        'returns changes for project with seeded data',
+        'respects limit parameter',
+        'supports cursor-based pagination',
+        'handles URL-encoded project IDs correctly',
+        'returns 400 for invalid limit values',
+        'returns 400 for invalid cursor values',
+        'handles field-level conflict resolution (newer change wins)',
+        'srcStorageType: local, srcStorageId: matches server storage id',
+        'srcStorageType: local, srcStorageId: different from server',
+        'srcStorageType: cloud, srcStorageId: cloud',
+      };
 
-    // Check that we have the same number of tests
-    expect(
-      actuallyRunTestNames.length,
-      equals(suiteTestNames.length),
-      reason:
-          'Number of tests in file (${actuallyRunTestNames.length}) '
-          'does not match suite (${suiteTestNames.length})',
-    );
+      // Check that we have the same number of tests
+      expect(
+        actuallyRunTestNames.length,
+        equals(suiteTestNames.length),
+        reason:
+            'Number of tests in file (${actuallyRunTestNames.length}) '
+            'does not match suite (${suiteTestNames.length})',
+      );
 
-    // Sort both sets for consistent comparison
-    final sortedSuiteTests = suiteTestNames.toList()..sort();
-    final sortedRunTests = actuallyRunTestNames.toList()..sort();
+      // Sort both sets for consistent comparison
+      final sortedSuiteTests = suiteTestNames.toList()..sort();
+      final sortedRunTests = actuallyRunTestNames.toList()..sort();
 
-    // Check that the test lists match exactly
-    expect(
-      sortedRunTests,
-      equals(sortedSuiteTests),
-      reason:
-          'Test names in file do not match suite tests.\n'
-          'Suite tests: $sortedSuiteTests\n'
-          'File tests: $sortedRunTests\n'
-          'Missing from file: ${suiteTestNames.difference(actuallyRunTestNames)}\n'
-          'Extra in file: ${actuallyRunTestNames.difference(suiteTestNames)}',
-    );
+      // Check that the test lists match exactly
+      expect(
+        sortedRunTests,
+        equals(sortedSuiteTests),
+        reason:
+            'Test names in file do not match suite tests.\n'
+            'Suite tests: $sortedSuiteTests\n'
+            'File tests: $sortedRunTests\n'
+            'Missing from file: ${suiteTestNames.difference(actuallyRunTestNames)}\n'
+            'Extra in file: ${actuallyRunTestNames.difference(suiteTestNames)}',
+      );
+    });
   });
 }
