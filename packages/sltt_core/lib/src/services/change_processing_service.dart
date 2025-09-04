@@ -1,26 +1,11 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sltt_core/src/models/change_processing_summary.dart';
 
 /// Result of processing changes through the change processing service
 class ChangeProcessingResult {
-  /// resultsSummary fields:
-  /// TODO: should we use a serializable ResultsSummary class for typesafety?
-  /// - storageType: The type of storage used (e.g., local, remote)
-  /// - storageId: The ID of the storage instance
-  /// - stateUpdates: A list of state updates applied
-  /// - changeUpdates: A list of change updates applied
-  /// - created: A list of created entity IDs
-  /// - updated: A list of updated entity IDs
-  /// - deleted: A list of deleted entity IDs
-  /// - noOps: A list of no-op entity IDs
-  /// - clouded: A list of clouded entity IDs
-  /// - dups: A list of duplicate entity IDs
-  /// - unknowns: A list of unknown entity IDs
-  /// - info: A list of informational messages
-  /// - errors: A list of error messages
-  /// - unprocessed: A list of unprocessed entity IDs
-  final Map<String, dynamic>? resultsSummary;
+  final ChangeProcessingSummary? resultsSummary;
   final String? errorMessage;
   final int? errorCode;
   final StackTrace? stackTrace;
@@ -120,22 +105,22 @@ class ChangeProcessingService {
 
       final targetStorageType = storage.getStorageType();
       final targetStorageId = await storage.getStorageId();
-      final resultsSummary = <String, dynamic>{
-        'storageType': targetStorageType,
-        'storageId': targetStorageId,
-        'stateUpdates': <Map<String, dynamic>>[],
-        'changeUpdates': <Map<String, dynamic>>[],
-        'created': <String>[],
-        'updated': <String>[],
-        'deleted': <String>[],
-        'noOps': <String>[],
-        'clouded': <String>[], // duplicates from the cloud
-        'dups': <String>[],
-        'unknowns': <Map<String, dynamic>>[],
-        'info': <Map<String, dynamic>>[],
-        'errors': <Map<String, dynamic>>[],
-        'unprocessed': <String>[], // TODO: changes that couldn't be processed
-      };
+      final resultsSummary = ChangeProcessingSummary(
+        storageType: targetStorageType,
+        storageId: targetStorageId,
+        stateUpdates: [],
+        changeUpdates: [],
+        created: [],
+        updated: [],
+        deleted: [],
+        noOps: [],
+        clouded: [], // duplicates from the cloud
+        dups: [],
+        unknowns: [],
+        info: [],
+        errors: [],
+        unprocessed: [], // TODO: changes that couldn't be processed
+      );
 
       // Process all changes
       for (int i = 0; i < changesToCreate.length; i++) {
@@ -151,7 +136,7 @@ class ChangeProcessingService {
           );
 
           // Validate that unknownJson is empty when required
-          final unknownValidationResult = _validateUnknownJson(
+          final unknownValidationResult = validateUnknownJson(
             changeLogEntry: changeLogEntry,
             storageType: targetStorageType,
             storageMode: storageMode,
@@ -245,7 +230,7 @@ class ChangeProcessingService {
           );
         } catch (e, stackTrace) {
           // Handle individual change processing errors
-          resultsSummary['errors'].add({
+          resultsSummary.errors.add({
             'changeIndex': i,
             'error': e.toString(),
             'stackTrace': stackTrace.toString(),
@@ -264,7 +249,7 @@ class ChangeProcessingService {
   }
 
   /// Validate that unknownJson is empty when required
-  static ChangeProcessingResult? _validateUnknownJson({
+  static ChangeProcessingResult? validateUnknownJson({
     required BaseChangeLogEntry changeLogEntry,
     required String storageType,
     required String storageMode,
@@ -274,7 +259,7 @@ class ChangeProcessingService {
     final unknownJson = changeLogEntry.unknownJson;
 
     print(
-      'DEBUG: _validateUnknownJson - storageType=$storageType, storageMode=$storageMode, unknownJson=$unknownJson, cid=$cid',
+      'DEBUG: validateUnknownJson - storageType=$storageType, storageMode=$storageMode, unknownJson=$unknownJson, cid=$cid',
     );
 
     // Return error if unknownJson is present when storageMode is 'save'
@@ -364,7 +349,7 @@ class ChangeProcessingService {
 
   /// Categorize the change result into appropriate response buckets
   static void _categorizeChangeResult({
-    required Map<String, dynamic> resultsSummary,
+    required ChangeProcessingSummary resultsSummary,
     required UpdateChangeLogAndStateResult updateResults,
     required GetUpdateResults result,
     required BaseChangeLogEntry changeLogEntry,
@@ -374,21 +359,21 @@ class ChangeProcessingService {
     final newOperation = updateResults.newChangeLogEntry.operation;
 
     if (newOperation == 'create') {
-      resultsSummary['created'].add(updateResults.newChangeLogEntry.cid);
+      resultsSummary.created.add(updateResults.newChangeLogEntry.cid);
     } else if (newOperation == 'update') {
-      resultsSummary['updated'].add(updateResults.newChangeLogEntry.cid);
+      resultsSummary.updated.add(updateResults.newChangeLogEntry.cid);
     } else if (newOperation == 'delete') {
-      resultsSummary['deleted'].add(updateResults.newChangeLogEntry.cid);
+      resultsSummary.deleted.add(updateResults.newChangeLogEntry.cid);
     } else if (newOperation == 'no-op') {
-      resultsSummary['noOps'].add(updateResults.newChangeLogEntry.cid);
+      resultsSummary.noOps.add(updateResults.newChangeLogEntry.cid);
     } else if (result.isDuplicate) {
       if (result.stateUpdates.isNotEmpty) {
-        resultsSummary['clouded'].add(changeLogEntry.cid);
+        resultsSummary.clouded.add(changeLogEntry.cid);
       } else {
-        resultsSummary['dups'].add(changeLogEntry.cid);
+        resultsSummary.dups.add(changeLogEntry.cid);
       }
     } else if (updateResults.newChangeLogEntry.operation == 'error') {
-      resultsSummary['errors'].add({
+      resultsSummary.errors.add({
         'cid': updateResults.newChangeLogEntry.cid,
         'info': updateResults.newChangeLogEntry.getOperationInfo(),
       });
@@ -396,7 +381,7 @@ class ChangeProcessingService {
 
     // Add unknown fields if present
     if (updateResults.newChangeLogEntry.getUnknown().isNotEmpty) {
-      resultsSummary['unknowns'].add({
+      resultsSummary.unknowns.add({
         'cid': updateResults.newChangeLogEntry.cid,
         'unknown': updateResults.newChangeLogEntry.getUnknown(),
       });
@@ -405,7 +390,7 @@ class ChangeProcessingService {
     // Add operation info if present and not an error
     if (updateResults.newChangeLogEntry.operation != 'error' &&
         updateResults.newChangeLogEntry.getOperationInfo().isNotEmpty) {
-      resultsSummary['info'].add({
+      resultsSummary.info.add({
         'cid': updateResults.newChangeLogEntry.cid,
         'operation': updateResults.newChangeLogEntry.operation,
         'info': updateResults.newChangeLogEntry.getOperationInfo(),
@@ -414,14 +399,14 @@ class ChangeProcessingService {
 
     // Add detailed updates if requested
     if (includeChangeUpdates) {
-      resultsSummary['changeUpdates'].add({
+      resultsSummary.changeUpdates.add({
         'cid': updateResults.newChangeLogEntry.cid,
         'updates': result.changeUpdates,
       });
     }
 
     if (includeStateUpdates) {
-      resultsSummary['stateUpdates'].add({
+      resultsSummary.stateUpdates.add({
         'cid': updateResults.newChangeLogEntry.cid,
         'state': result.stateUpdates,
       });

@@ -105,10 +105,10 @@ void main() {
         );
 
         final summary = result.resultsSummary!;
-        expect(summary['storageType'], isNotEmpty);
-        expect(summary['storageId'], equals(await storage.getStorageId()));
-        expect(summary['created'], isA<List>());
-        expect((summary['created'] as List).length, equals(1));
+        expect(summary.storageType, isNotEmpty);
+        expect(summary.storageId, equals(await storage.getStorageId()));
+        expect(summary.created, isA<List>());
+        expect(summary.created.length, equals(1));
       });
 
       test('includes changeUpdates when requested', () async {
@@ -149,28 +149,30 @@ void main() {
         );
 
         final summary = result.resultsSummary!;
-        print('Summary keys: ${summary.keys}');
-        print('changeUpdates: ${summary['changeUpdates']}');
-        print('stateUpdates: ${summary['stateUpdates']}');
-        print('created: ${summary['created']}');
-        print('updated: ${summary['updated']}');
-        print('errors: ${summary['errors']}');
-        print('unprocessed: ${summary['unprocessed']}');
+        print(
+          'Summary: storageType=${summary.storageType}, storageId=${summary.storageId}',
+        );
+        print('changeUpdates: ${summary.changeUpdates}');
+        print('stateUpdates: ${summary.stateUpdates}');
+        print('created: ${summary.created}');
+        print('updated: ${summary.updated}');
+        print('errors: ${summary.errors}');
+        print('unprocessed: ${summary.unprocessed}');
 
-        expect(summary['changeUpdates'], isA<List>());
-        expect((summary['changeUpdates'] as List).isNotEmpty, isTrue);
+        expect(summary.changeUpdates, isA<List>());
+        expect(summary.changeUpdates.isNotEmpty, isTrue);
         expect(
-          (summary['changeUpdates'] as List).first,
+          summary.changeUpdates.first,
           containsPair('cid', isNotNull),
         );
         expect(
-          (summary['changeUpdates'] as List).first,
+          summary.changeUpdates.first,
           containsPair('updates', isNotNull),
         );
 
         // When includeStateUpdates is false, stateUpdates should be empty
-        expect(summary['stateUpdates'], isA<List>());
-        expect((summary['stateUpdates'] as List).isEmpty, isTrue);
+        expect(summary.stateUpdates, isA<List>());
+        expect(summary.stateUpdates.isEmpty, isTrue);
       });
 
       test('includes stateUpdates when requested', () async {
@@ -211,20 +213,20 @@ void main() {
         );
 
         final summary = result.resultsSummary!;
-        expect(summary['stateUpdates'], isA<List>());
-        expect((summary['stateUpdates'] as List).isNotEmpty, isTrue);
+        expect(summary.stateUpdates, isA<List>());
+        expect(summary.stateUpdates.isNotEmpty, isTrue);
         expect(
-          (summary['stateUpdates'] as List).first,
+          summary.stateUpdates.first,
           containsPair('cid', isNotNull),
         );
         expect(
-          (summary['stateUpdates'] as List).first,
+          summary.stateUpdates.first,
           containsPair('state', isNotNull),
         );
 
         // When includeChangeUpdates is false, changeUpdates should be empty
-        expect(summary['changeUpdates'], isA<List>());
-        expect((summary['changeUpdates'] as List).isEmpty, isTrue);
+        expect(summary.changeUpdates, isA<List>());
+        expect(summary.changeUpdates.isEmpty, isTrue);
       });
 
       test('processes multiple changes correctly', () async {
@@ -285,12 +287,12 @@ void main() {
         );
 
         final summary = result.resultsSummary!;
-        expect(summary['changeUpdates'], isA<List>());
-        expect((summary['changeUpdates'] as List).length, equals(2));
-        expect(summary['stateUpdates'], isA<List>());
-        expect((summary['stateUpdates'] as List).length, equals(2));
-        expect(summary['created'], isA<List>());
-        expect((summary['created'] as List).length, equals(2));
+        expect(summary.changeUpdates, isA<List>());
+        expect(summary.changeUpdates.length, equals(2));
+        expect(summary.stateUpdates, isA<List>());
+        expect(summary.stateUpdates.length, equals(2));
+        expect(summary.created, isA<List>());
+        expect(summary.created.length, equals(2));
       });
     });
 
@@ -374,12 +376,12 @@ void main() {
                 'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
           );
           final summary = result.resultsSummary!;
-          expect(summary['storageType'], isNotEmpty);
-          expect(summary['storageId'], isNotEmpty);
-          expect(summary['changeUpdates'], isA<List>());
-          expect(summary['stateUpdates'], isA<List>());
-          expect((summary['changeUpdates'] as List).first, contains('cid'));
-          expect((summary['stateUpdates'] as List).first, contains('cid'));
+          expect(summary.storageType, isNotEmpty);
+          expect(summary.storageId, isNotEmpty);
+          expect(summary.changeUpdates, isA<List>());
+          expect(summary.stateUpdates, isA<List>());
+          expect(summary.changeUpdates.first, contains('cid'));
+          expect(summary.stateUpdates.first, contains('cid'));
         },
       );
 
@@ -447,10 +449,10 @@ void main() {
           );
           final summary = resp.resultsSummary!;
           final cu =
-              (summary['changeUpdates'] as List).first['updates']
+              summary.changeUpdates.first['updates']
                   as Map<String, dynamic>;
           final su =
-              (summary['stateUpdates'] as List).first['state']
+              summary.stateUpdates.first['state']
                   as Map<String, dynamic>;
 
           expect(cu['operation'], 'update');
@@ -496,7 +498,7 @@ void main() {
             reason:
                 'r2 processChanges failed: ${r2.errorMessage ?? "Unknown error"}',
           );
-          expect(r2.resultsSummary!['storageId'], equals(serverStorageId));
+          expect(r2.resultsSummary!.storageId, equals(serverStorageId));
 
           // cloud src (srcStorageId provided as cloud identifier)
           final p3 = changePayload(
@@ -520,7 +522,7 @@ void main() {
             reason:
                 'r3 processChanges failed: ${r3.errorMessage ?? "Unknown error"}',
           );
-          expect(r3.resultsSummary!['storageId'], equals(serverStorageId));
+          expect(r3.resultsSummary!.storageId, equals(serverStorageId));
         },
       );
     });
@@ -1348,6 +1350,177 @@ void main() {
             );
           },
         );
+      });
+    });
+
+    group('- validateUnknownJson method tests', () {
+      late TestChangeLogEntry testChangeLogEntry;
+
+      setUp(() {
+        testChangeLogEntry = TestChangeLogEntry(
+          cid: 'test-cid-123',
+          entityId: 'test-entity',
+          entityType: 'project',
+          domainId: 'test-domain',
+          domainType: 'project',
+          changeAt: DateTime.now().toUtc(),
+          changeBy: 'test-user',
+          dataJson: '{"nameLocal": "Test", "parentId": "root"}',
+          operation: 'create',
+          stateChanged: true,
+          unknownJson: '{}',
+        );
+      });
+
+      test('should return null when unknownJson is empty in save mode', () {
+        final result = ChangeProcessingService.validateUnknownJson(
+          changeLogEntry: testChangeLogEntry,
+          storageType: 'cloud',
+          storageMode: 'save',
+          changeIndex: 0,
+        );
+
+        expect(result, isNull);
+      });
+
+      test('should return null when unknownJson is empty in sync mode', () {
+        final result = ChangeProcessingService.validateUnknownJson(
+          changeLogEntry: testChangeLogEntry,
+          storageType: 'cloud',
+          storageMode: 'sync',
+          changeIndex: 0,
+        );
+
+        expect(result, isNull);
+      });
+
+      test(
+        'should return error when unknownJson is not empty in save mode for cloud storage',
+        () {
+          final changeWithUnknown = TestChangeLogEntry(
+            cid: 'test-cid-456',
+            entityId: 'test-entity',
+            entityType: 'project',
+            domainId: 'test-domain',
+            domainType: 'project',
+            changeAt: DateTime.now().toUtc(),
+            changeBy: 'test-user',
+            dataJson: '{"nameLocal": "Test", "parentId": "root"}',
+            operation: 'create',
+            stateChanged: true,
+            unknownJson: '{"unknownField": "should be rejected"}',
+          );
+
+          final result = ChangeProcessingService.validateUnknownJson(
+            changeLogEntry: changeWithUnknown,
+            storageType: 'cloud',
+            storageMode: 'save',
+            changeIndex: 1,
+          );
+
+          expect(result, isNotNull);
+          expect(result!.isError, isTrue);
+          expect(result.errorCode, equals(400));
+          expect(
+            result.errorMessage,
+            contains(
+              'Change[1] cid(test-cid-456) contains unknown fields in (cloud) storage with save mode',
+            ),
+          );
+          expect(result.errorMessage, contains('unknownField'));
+        },
+      );
+
+      test(
+        'should return error when unknownJson is not empty in save mode for local storage',
+        () {
+          final changeWithUnknown = TestChangeLogEntry(
+            cid: 'test-cid-789',
+            entityId: 'test-entity',
+            entityType: 'project',
+            domainId: 'test-domain',
+            domainType: 'project',
+            changeAt: DateTime.now().toUtc(),
+            changeBy: 'test-user',
+            dataJson: '{"nameLocal": "Test", "parentId": "root"}',
+            operation: 'create',
+            stateChanged: true,
+            unknownJson: '{"unknownField": "should be rejected"}',
+          );
+
+          final result = ChangeProcessingService.validateUnknownJson(
+            changeLogEntry: changeWithUnknown,
+            storageType: 'local',
+            storageMode: 'save',
+            changeIndex: 2,
+          );
+
+          expect(result, isNotNull);
+          expect(result!.isError, isTrue);
+          expect(result.errorCode, equals(400));
+          expect(
+            result.errorMessage,
+            contains(
+              'Change[2] cid(test-cid-789) contains unknown fields in (local) storage with save mode',
+            ),
+          );
+          expect(result.errorMessage, contains('unknownField'));
+        },
+      );
+
+      test('should return null when unknownJson is not empty in sync mode', () {
+        final changeWithUnknown = TestChangeLogEntry(
+          cid: 'test-cid-999',
+          entityId: 'test-entity',
+          entityType: 'project',
+          domainId: 'test-domain',
+          domainType: 'project',
+          changeAt: DateTime.now().toUtc(),
+          changeBy: 'test-user',
+          dataJson: '{"nameLocal": "Test", "parentId": "root"}',
+          operation: 'create',
+          stateChanged: true,
+          unknownJson: '{"unknownField": "allowed in sync mode"}',
+        );
+
+        final result = ChangeProcessingService.validateUnknownJson(
+          changeLogEntry: changeWithUnknown,
+          storageType: 'cloud',
+          storageMode: 'sync',
+          changeIndex: 3,
+        );
+
+        expect(result, isNull);
+      });
+
+      test('should include known fields in error message', () {
+        final changeWithUnknown = TestChangeLogEntry(
+          cid: 'test-cid-known-fields',
+          entityId: 'test-entity',
+          entityType: 'project',
+          domainId: 'test-domain',
+          domainType: 'project',
+          changeAt: DateTime.now().toUtc(),
+          changeBy: 'test-user',
+          dataJson: '{"nameLocal": "Test", "parentId": "root"}',
+          operation: 'create',
+          stateChanged: true,
+          unknownJson: '{"unknownField1": "value1", "unknownField2": "value2"}',
+        );
+
+        final result = ChangeProcessingService.validateUnknownJson(
+          changeLogEntry: changeWithUnknown,
+          storageType: 'cloud',
+          storageMode: 'save',
+          changeIndex: 4,
+        );
+
+        expect(result, isNotNull);
+        expect(result!.isError, isTrue);
+        expect(result.errorMessage, contains('Known fields:'));
+        expect(result.errorMessage, contains('cid'));
+        expect(result.errorMessage, contains('entityId'));
+        expect(result.errorMessage, contains('changeBy'));
       });
     });
   });
