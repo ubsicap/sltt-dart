@@ -771,6 +771,7 @@ void main() {
             'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
           };
 
+          final storageType = cloudStorage.getStorageType();
           final result = await ChangeProcessingService.processChanges(
             changesToCreate: [changeData],
             storage: cloudStorage,
@@ -792,7 +793,7 @@ void main() {
           expect(result.errorCode, equals(400));
           expect(
             result.errorMessage,
-            contains('contains unknown fields in cloud storage with save mode'),
+            contains('contains unknown fields in ($storageType) storage with save mode'),
           );
           expect(result.errorMessage, contains('unknownField'));
         });
@@ -816,6 +817,7 @@ void main() {
             'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
           };
 
+          final storageType = cloudStorage.getStorageType();
           final result = await ChangeProcessingService.processChanges(
             changesToCreate: [changeData],
             storage: cloudStorage,
@@ -837,7 +839,7 @@ void main() {
           expect(result.errorCode, equals(400));
           expect(
             result.errorMessage,
-            contains('contains unknown fields in cloud storage with save mode'),
+            contains('contains unknown fields in ($storageType) storage'),
           );
           expect(result.errorMessage, contains('unknownField'));
         });
@@ -967,105 +969,196 @@ void main() {
           },
         );
 
-        test(
-          'sync mode - should handle state-only updates correctly (future implementation)',
-          () async {
-            // This test documents the expected future behavior where local storage
-            // in sync mode typically only updates state, not change log
+        test('save mode - should reject changes with unknownJson - 1', () async {
+          // Test that local storage in save mode rejects changes with unknownJson
 
-            // First, create an entity in save mode (should store change log)
-            final createData = {
-              'domainId': 'test-project',
-              'domainType': 'project',
-              'entityType': 'project',
-              'entityId': 'entity-6',
-              'changeBy': 'user1',
-              'changeAt': DateTime.now().toUtc().toIso8601String(),
-              'cid': generateCid(DateTime.now().toUtc()),
-              'storageId': '',
-              'operation': 'create',
-              'operationInfoJson': '{}',
-              'stateChanged': true,
-              'unknownJson': '{}',
-              'dataJson': '{"nameLocal": "Original Local", "parentId": "root"}',
-            };
+          final changeData = {
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-unknown',
+            'changeBy': 'user1',
+            'changeAt': DateTime.now().toUtc().toIso8601String(),
+            'cid': generateCid(DateTime.now().toUtc()),
+            'storageId': '', // Empty for save mode
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': true,
+            'unknownField':
+                'should be rejected', // This should become unknownJson during deserialization
+            'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
+          };
+          final storageType = localStorage.getStorageType();
+          final result = await ChangeProcessingService.processChanges(
+            changesToCreate: [changeData],
+            storage: localStorage,
+            storageMode: 'save',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
 
-            await ChangeProcessingService.processChanges(
-              changesToCreate: [createData],
-              storage: localStorage,
-              storageMode: 'save',
-              srcStorageType: 'local',
-              srcStorageId: 'test-src',
-              includeChangeUpdates: false,
-              includeStateUpdates: false,
-            );
+          print(
+            'Test result: isError=${result.isError}, errorMessage=${result.errorMessage}',
+          );
+          print('Storage type: $storageType');
+          print('Results summary: ${result.resultsSummary}');
 
-            // Then, sync an update from cloud (should update state, current impl also stores change log)
-            final updateData = {
-              'domainId': 'test-project',
-              'domainType': 'project',
-              'entityType': 'project',
-              'entityId': 'entity-6',
-              'changeBy': 'user2',
-              'changeAt': DateTime.now()
-                  .add(const Duration(minutes: 1))
-                  .toUtc()
-                  .toIso8601String(),
-              'cid': generateCid(
-                DateTime.now().add(const Duration(minutes: 1)).toUtc(),
-              ),
-              'storageId': 'cloud-storage-id',
-              'operation': 'update',
-              'operationInfoJson': '{}',
-              'stateChanged': true,
-              'unknownJson': '{}',
-              'dataJson':
-                  '{"nameLocal": "Updated from Cloud", "parentId": "root"}',
-            };
+          // The validation should either return an error result or add errors to the summary
+          expect(result.isError, isTrue);
+          expect(result.errorCode, equals(400));
+          expect(
+            result.errorMessage,
+            contains('contains unknown fields in ($storageType) storage'),
+          );
+          expect(result.errorMessage, contains('unknownField'));
+        });
 
-            final result = await ChangeProcessingService.processChanges(
-              changesToCreate: [updateData],
-              storage: localStorage,
-              storageMode: 'sync',
-              srcStorageType: 'cloud',
-              srcStorageId: 'test-src',
-              includeChangeUpdates: false,
-              includeStateUpdates: false,
-            );
+        test('save mode - should reject changes with unknownJson - 2', () async {
+          // Test that local storage in save mode rejects changes with unknownJson
 
-            expect(
-              result.isSuccess,
-              isTrue,
-              reason: 'Sync update should succeed: ${result.errorMessage}',
-            );
+          final changeData = {
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-unknown',
+            'changeBy': 'user1',
+            'changeAt': DateTime.now().toUtc().toIso8601String(),
+            'cid': generateCid(DateTime.now().toUtc()),
+            'storageId': '', // Empty for save mode
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': true,
+            'unknownJson': '{"unknownField": "should be rejected"}',
+            'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
+          };
 
-            // Current implementation: Both change log entries are stored
-            final changes = await localStorage.getChangesWithCursor(
-              domainId: 'test-project',
-            );
-            expect(
-              changes.length,
-              equals(2),
-              reason:
-                  'Current implementation: Local storage stores all change log entries',
-            );
+          final storageType = localStorage.getStorageType();
+          final result = await ChangeProcessingService.processChanges(
+            changesToCreate: [changeData],
+            storage: localStorage,
+            storageMode: 'save',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
 
-            // State should always be updated regardless of mode
-            final state = await localStorage.getCurrentEntityState(
-              'test-project',
-              'project',
-              'entity-6',
-            );
-            expect(state, isNotNull);
-            expect(
-              state!.toJson()['data_nameLocal'],
-              equals('Updated from Cloud'),
-              reason:
-                  'Local storage state should always be updated in sync mode',
-            );
-          },
-        );
+          print(
+            'Test result: isError=${result.isError}, errorMessage=${result.errorMessage}',
+          );
+          print('Storage type: $storageType');
+          print('Results summary: ${result.resultsSummary}');
+
+          // The validation should either return an error result or add errors to the summary
+          expect(result.isError, isTrue);
+          expect(result.errorCode, equals(400));
+          expect(
+            result.errorMessage,
+            contains('contains unknown fields in ($storageType) storage'),
+          );
+          expect(result.errorMessage, contains('unknownField'));
+        });
       });
+
+      test(
+        'sync mode - should handle state-only updates correctly (future implementation)',
+        () async {
+          // This test documents the expected future behavior where local storage
+          // in sync mode typically only updates state, not change log
+
+          // First, create an entity in save mode (should store change log)
+          final createData = {
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-6',
+            'changeBy': 'user1',
+            'changeAt': DateTime.now().toUtc().toIso8601String(),
+            'cid': generateCid(DateTime.now().toUtc()),
+            'storageId': '',
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': true,
+            'unknownJson': '{}',
+            'dataJson': '{"nameLocal": "Original Local", "parentId": "root"}',
+          };
+
+          await ChangeProcessingService.processChanges(
+            changesToCreate: [createData],
+            storage: localStorage,
+            storageMode: 'save',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          // Then, sync an update from cloud (should update state, current impl also stores change log)
+          final updateData = {
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-6',
+            'changeBy': 'user2',
+            'changeAt': DateTime.now()
+                .add(const Duration(minutes: 1))
+                .toUtc()
+                .toIso8601String(),
+            'cid': generateCid(
+              DateTime.now().add(const Duration(minutes: 1)).toUtc(),
+            ),
+            'storageId': 'cloud-storage-id',
+            'operation': 'update',
+            'operationInfoJson': '{}',
+            'stateChanged': true,
+            'unknownJson': '{}',
+            'dataJson':
+                '{"nameLocal": "Updated from Cloud", "parentId": "root"}',
+          };
+
+          final result = await ChangeProcessingService.processChanges(
+            changesToCreate: [updateData],
+            storage: localStorage,
+            storageMode: 'sync',
+            srcStorageType: 'cloud',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          expect(
+            result.isSuccess,
+            isTrue,
+            reason: 'Sync update should succeed: ${result.errorMessage}',
+          );
+
+          // Current implementation: Both change log entries are stored
+          final changes = await localStorage.getChangesWithCursor(
+            domainId: 'test-project',
+          );
+          expect(
+            changes.length,
+            equals(2),
+            reason:
+                'Current implementation: Local storage stores all change log entries',
+          );
+
+          // State should always be updated regardless of mode
+          final state = await localStorage.getCurrentEntityState(
+            'test-project',
+            'project',
+            'entity-6',
+          );
+          expect(state, isNotNull);
+          expect(
+            state!.toJson()['data_nameLocal'],
+            equals('Updated from Cloud'),
+            reason: 'Local storage state should always be updated in sync mode',
+          );
+        },
+      );
 
       group('Cross-Storage Type Comparisons', () {
         test(

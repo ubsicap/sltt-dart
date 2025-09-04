@@ -118,9 +118,10 @@ class ChangeProcessingService {
         );
       }
 
+      final targetStorageType = storage.getStorageType();
       final targetStorageId = await storage.getStorageId();
       final resultsSummary = <String, dynamic>{
-        'storageType': storage.getStorageType(),
+        'storageType': targetStorageType,
         'storageId': targetStorageId,
         'stateUpdates': <Map<String, dynamic>>[],
         'changeUpdates': <Map<String, dynamic>>[],
@@ -152,7 +153,7 @@ class ChangeProcessingService {
           // Validate that unknownJson is empty when required
           final unknownValidationResult = _validateUnknownJson(
             changeLogEntry: changeLogEntry,
-            storageType: storage.getStorageType(),
+            storageType: targetStorageType,
             storageMode: storageMode,
             changeIndex: i,
           );
@@ -270,19 +271,22 @@ class ChangeProcessingService {
     required int changeIndex,
   }) {
     final cid = changeLogEntry.cid;
-    final unknownJson = changeLogEntry.getUnknown();
+    final unknownJson = changeLogEntry.unknownJson;
 
     print(
       'DEBUG: _validateUnknownJson - storageType=$storageType, storageMode=$storageMode, unknownJson=$unknownJson, cid=$cid',
     );
 
-    // Return error if unknownJson is present when storageType is 'cloud' and storageMode is 'save'
-    if (storageType == 'cloud' &&
-        storageMode == 'save' &&
-        unknownJson.isNotEmpty) {
+    // Return error if unknownJson is present when storageMode is 'save'
+    if (storageMode == 'save' && unknownJson != '{}') {
+      final knownFields = changeLogEntry
+          .toJsonBase()
+          .entries
+          .map((e) => e.key)
+          .toSet();
       return ChangeProcessingResult(
         errorMessage:
-            'Change[$changeIndex] cid($cid) contains unknown fields in cloud storage with save mode. Unknown fields: $unknownJson',
+            'Change[$changeIndex] cid($cid) contains unknown fields in ($storageType) storage with save mode. Unknown fields: $unknownJson, known fields: [$knownFields]',
         errorCode: 400,
       );
     }
