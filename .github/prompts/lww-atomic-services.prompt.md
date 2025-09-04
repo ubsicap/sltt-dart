@@ -31,6 +31,21 @@ Next step:
 Next step:
 - cloud storage type should return error if unknownJson is not empty or incoming schemaVersion is greater than it has knowledge of in its model
 
+
+How to support required field using default:
+```
+@JsonSerializable()
+class SchemaVersion1 with HasUnknownField {
+  final String a;
+  @override
+  String unknownJson;
+
+  Map<String, dynamic> get unknown => getUnknown();
+
+  SchemaVersion1({required this.a, this.unknownJson = '{}'});
+```
+
+
 NEW TODOs:
 for cloud storage type
 get changes request can use cid instead of seq
