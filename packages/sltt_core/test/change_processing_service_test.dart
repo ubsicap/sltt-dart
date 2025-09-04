@@ -18,6 +18,7 @@ void main() {
           (json) => TestChangeLogEntry.fromJson(json),
           (json) => TestChangeLogEntry.fromJsonBase(json),
           (entry) => (entry as TestChangeLogEntry).toJson(),
+          (entry) => (entry as TestChangeLogEntry).toJsonBase(),
           (original) {
             // Produce a safe shape for TestChangeLogEntry
             final now = HlcTimestampGenerator.generate();

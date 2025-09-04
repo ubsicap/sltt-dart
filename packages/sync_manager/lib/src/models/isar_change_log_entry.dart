@@ -17,6 +17,7 @@ final _isarChangeLogEntryFactoryRegistration = (() {
       (json) => IsarChangeLogEntry.fromJson(json),
       (json) => IsarChangeLogEntry.fromJsonBase(json),
       (entry) => (entry as IsarChangeLogEntry).toJson(),
+      (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
       (original) {
         // Build a safe JSON shape for recovery on deserialization errors
         // TODO: can we have a service do most of the mapping?

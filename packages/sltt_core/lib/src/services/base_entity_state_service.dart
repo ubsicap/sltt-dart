@@ -3,7 +3,8 @@ import 'package:sltt_core/src/models/entity_type.dart';
 import 'package:sltt_core/src/models/factory_pair.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 
-final Map<EntityType, SerializableGroup<BaseEntityState>> _entityStateFactories = {};
+final Map<EntityType, SerializableGroup<BaseEntityState>>
+_entityStateFactories = {};
 
 /// Register a factory pair for a specific [entityType] to deserialize
 /// `BaseEntityState` subclasses.
@@ -11,11 +12,13 @@ void registerEntityStateFactory(
   EntityType entityType,
   BaseEntityState Function(Map<String, dynamic>) fromJson,
   BaseEntityState Function(Map<String, dynamic>) fromJsonBase,
+  Map<String, dynamic> Function(BaseEntityState) toJson,
   Map<String, dynamic> Function(BaseEntityState) toJsonBase,
 ) {
   _entityStateFactories[entityType] = SerializableGroup(
     fromJson,
     fromJsonBase,
+    toJson,
     toJsonBase,
     (json) {
       throw Exception('No safe JSON conversion implemented for $entityType');
