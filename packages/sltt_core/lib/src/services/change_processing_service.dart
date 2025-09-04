@@ -148,7 +148,7 @@ class ChangeProcessingService {
           // Validate that unknownJson is empty when required
           final unknownValidationResult = _validateUnknownJson(
             changeLogEntry: changeLogEntry,
-            storageType: storage.getStorageType(),
+            storageType: targetStorageId,
             storageMode: storageMode,
             changeIndex: i,
           );
