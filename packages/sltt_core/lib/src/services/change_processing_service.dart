@@ -145,6 +145,18 @@ class ChangeProcessingService {
             changeData,
           );
 
+          // Validate that unknownJson is empty when required
+          final unknownValidationResult = _validateUnknownJson(
+            changeLogEntry: changeLogEntry,
+            storageType: storage.getStorageType(),
+            storageMode: storageMode,
+            changeIndex: i,
+          );
+
+          if (unknownValidationResult != null) {
+            return unknownValidationResult;
+          }
+
           // Basic validation of operation states based on storage mode
           final validationResult = _validateChangeOperation(
             changeLogEntry: changeLogEntry,
@@ -244,6 +256,30 @@ class ChangeProcessingService {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  /// Validate that unknownJson is empty when required
+  static ChangeProcessingResult? _validateUnknownJson({
+    required BaseChangeLogEntry changeLogEntry,
+    required String storageType,
+    required String storageMode,
+    required int changeIndex,
+  }) {
+    final cid = changeLogEntry.cid;
+    final unknownJson = changeLogEntry.getUnknown();
+
+    // Return error if unknownJson is present when storageType is 'cloud' and storageMode is 'save'
+    if (storageType == 'cloud' &&
+        storageMode == 'save' &&
+        unknownJson.isNotEmpty) {
+      return ChangeProcessingResult(
+        errorMessage:
+            'Change[$changeIndex] cid($cid) contains unknown fields in cloud storage with save mode. Unknown fields: $unknownJson',
+        errorCode: 400,
+      );
+    }
+
+    return null; // No validation error
   }
 
   /// Validate change operation states
