@@ -14,8 +14,9 @@ void main() {
     setUpAll(() {
       // Register change-log entry factory group for tests
       registerChangeLogEntryFactoryGroup(
-        FactoryGroup<BaseChangeLogEntry>(
+        SerializableGroup<BaseChangeLogEntry>(
           (json) => TestChangeLogEntry.fromJson(json),
+          (json) => TestChangeLogEntry.fromJsonBase(json),
           (entry) => (entry as TestChangeLogEntry).toJson(),
           (original) {
             // Produce a safe shape for TestChangeLogEntry
@@ -23,8 +24,7 @@ void main() {
             return {
               'entityId': original['entityId'] ?? 'e-test',
               'entityType': original['entityType'] ?? 'project',
-              'domainId':
-                  original['domainId'] ?? original['projectId'] ?? 'p-test',
+              'domainId': original['domainId'] ?? 'p-test',
               'domainType': original['domainType'] ?? 'project',
               'changeAt': original['changeAt'] ?? now.toIso8601String(),
               'cid': original['cid'] ?? generateCid(now),
@@ -71,7 +71,6 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final changeData = {
-          'projectId': 'test-project',
           'domainId': 'test-project',
           'domainType': 'project',
           'entityType': 'task',
@@ -116,7 +115,6 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final changeData = {
-          'projectId': 'test-project',
           'domainId': 'test-project',
           'domainType': 'project',
           'entityType': 'task',
@@ -179,7 +177,6 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final changeData = {
-          'projectId': 'test-project',
           'domainId': 'test-project',
           'domainType': 'project',
           'entityType': 'task',
@@ -235,7 +232,6 @@ void main() {
 
         final changesData = [
           {
-            'projectId': 'test-project',
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'task',
@@ -251,7 +247,6 @@ void main() {
             'dataJson': '{"nameLocal": "Task 1", "parentId": "root"}',
           },
           {
-            'projectId': 'test-project',
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'task',
@@ -310,7 +305,7 @@ void main() {
       });
 
       Map<String, dynamic> changePayload({
-        required String projectId,
+        required String domainId,
         required String entityType,
         required String entityId,
         required DateTime changeAt,
@@ -325,11 +320,10 @@ void main() {
             !adjustedData.containsKey('parentId')) {
           adjustedData['parentId'] = 'root';
         }
-        final namespacedEntityId = '$projectId-$entityId';
-        final namespacedCid = '$projectId-${generateCid(changeAt)}';
+        final namespacedEntityId = '$domainId-$entityId';
+        final namespacedCid = '$domainId-${generateCid(changeAt)}';
         return {
-          'projectId': projectId,
-          'domainId': projectId,
+          'domainId': domainId,
           'domainType': 'project',
           'entityType': entityType,
           'entityId': namespacedEntityId,
@@ -352,7 +346,7 @@ void main() {
           final now = DateTime.now().toUtc();
           final payload = [
             changePayload(
-              projectId: 'proj-1',
+              domainId: 'proj-1',
               entityType: 'project',
               entityId: 'entity-1',
               changeAt: now,
@@ -399,7 +393,7 @@ void main() {
 
           // seed initial change
           final seed = changePayload(
-            projectId: project,
+            domainId: project,
             entityType: 'task',
             entityId: entity,
             changeAt: baseTime,
@@ -427,7 +421,7 @@ void main() {
           final resp = await ChangeProcessingService.processChanges(
             changesToCreate: [
               changePayload(
-                projectId: project,
+                domainId: project,
                 entityType: 'task',
                 entityId: entity,
                 changeAt: newer,
@@ -480,7 +474,7 @@ void main() {
 
           // local + matching serverStorageId
           final p2 = changePayload(
-            projectId: 'test-src-local-match',
+            domainId: 'test-src-local-match',
             entityType: 'project',
             entityId: 'entity-1',
             changeAt: baseTime,
@@ -505,7 +499,7 @@ void main() {
 
           // cloud src (srcStorageId provided as cloud identifier)
           final p3 = changePayload(
-            projectId: 'test-src-cloud',
+            domainId: 'test-src-cloud',
             entityType: 'project',
             entityId: 'entity-1',
             changeAt: baseTime,
@@ -551,7 +545,6 @@ void main() {
           // use the static API directly; ChangeProcessingService is static-only
 
           final changeData = {
-            'projectId': 'test-project',
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
@@ -585,7 +578,7 @@ void main() {
 
           // Verify change log entry was stored
           final changes = await cloudStorage.getChangesWithCursor(
-            projectId: 'test-project',
+            domainId: 'test-project',
           );
           expect(
             changes.length,
@@ -610,7 +603,6 @@ void main() {
           // use the static API directly; ChangeProcessingService is static-only
 
           final changeData = {
-            'projectId': 'test-project',
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
@@ -644,7 +636,7 @@ void main() {
 
           // Verify change log entry was stored
           final changes = await cloudStorage.getChangesWithCursor(
-            projectId: 'test-project',
+            domainId: 'test-project',
           );
           expect(
             changes.length,
@@ -670,7 +662,6 @@ void main() {
 
           // First, create an entity
           final createData = {
-            'projectId': 'test-project',
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
@@ -698,7 +689,6 @@ void main() {
 
           // Then, sync an update
           final updateData = {
-            'projectId': 'test-project',
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
@@ -737,7 +727,7 @@ void main() {
 
           // Verify both change log entries exist
           final changes = await cloudStorage.getChangesWithCursor(
-            projectId: 'test-project',
+            domainId: 'test-project',
           );
           expect(
             changes.length,
@@ -764,7 +754,6 @@ void main() {
           // Test that cloud storage in save mode rejects changes with unknownJson
 
           final changeData = {
-            'projectId': 'test-project',
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
@@ -824,7 +813,6 @@ void main() {
           // use the static API directly; ChangeProcessingService is static-only
 
           final changeData = {
-            'projectId': 'test-project',
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
@@ -858,7 +846,7 @@ void main() {
 
           // Verify change log entry was stored
           final changes = await localStorage.getChangesWithCursor(
-            projectId: 'test-project',
+            domainId: 'test-project',
           );
           expect(
             changes.length,
@@ -885,7 +873,6 @@ void main() {
             // use the static API directly; ChangeProcessingService is static-only
 
             final changeData = {
-              'projectId': 'test-project',
               'domainId': 'test-project',
               'domainType': 'project',
               'entityType': 'project',
@@ -922,7 +909,7 @@ void main() {
             // TODO: According to requirements, local storage in sync mode should typically
             // only update state (unless hosting team storage)
             final changes = await localStorage.getChangesWithCursor(
-              projectId: 'test-project',
+              domainId: 'test-project',
             );
             expect(
               changes.length,
@@ -950,11 +937,9 @@ void main() {
           () async {
             // This test documents the expected future behavior where local storage
             // in sync mode typically only updates state, not change log
-            // use the static API directly; ChangeProcessingService is static-only
 
             // First, create an entity in save mode (should store change log)
             final createData = {
-              'projectId': 'test-project',
               'domainId': 'test-project',
               'domainType': 'project',
               'entityType': 'project',
@@ -982,7 +967,6 @@ void main() {
 
             // Then, sync an update from cloud (should update state, current impl also stores change log)
             final updateData = {
-              'projectId': 'test-project',
               'domainId': 'test-project',
               'domainType': 'project',
               'entityType': 'project',
@@ -1022,7 +1006,7 @@ void main() {
 
             // Current implementation: Both change log entries are stored
             final changes = await localStorage.getChangesWithCursor(
-              projectId: 'test-project',
+              domainId: 'test-project',
             );
             expect(
               changes.length,
@@ -1058,7 +1042,6 @@ void main() {
 
             // Process same change in both storage types
             final changeData = {
-              'projectId': 'test-project',
               'domainId': 'test-project',
               'domainType': 'project',
               'entityType': 'project',
@@ -1100,10 +1083,10 @@ void main() {
 
             // Both should store change log entries in save mode
             final cloudChanges = await cloudStorage.getChangesWithCursor(
-              projectId: 'test-project',
+              domainId: 'test-project',
             );
             final localChanges = await localStorage.getChangesWithCursor(
-              projectId: 'test-project',
+              domainId: 'test-project',
             );
 
             expect(
@@ -1151,7 +1134,6 @@ void main() {
 
             // Process same sync change in both storage types
             final changeData = {
-              'projectId': 'test-project',
               'domainId': 'test-project',
               'domainType': 'project',
               'entityType': 'project',
@@ -1193,7 +1175,7 @@ void main() {
 
             // Cloud storage should store change log entries in sync mode
             final cloudChanges = await cloudStorage.getChangesWithCursor(
-              projectId: 'test-project',
+              domainId: 'test-project',
             );
             expect(
               cloudChanges.length,
@@ -1204,7 +1186,7 @@ void main() {
             // Current implementation: Local storage also stores change log in sync mode
             // TODO: Future implementation should typically only update state for local storage
             final localChanges = await localStorage.getChangesWithCursor(
-              projectId: 'test-project',
+              domainId: 'test-project',
             );
             expect(
               localChanges.length,

@@ -23,9 +23,9 @@ void main() {
     };
 
     final result = deserializeChangeLogEntrySafely<TestChangeLogEntry>(
-      fromJson: (m) => TestChangeLogEntry.fromJson(m),
+      fromJsonBase: (m) => TestChangeLogEntry.fromJsonBase(m),
       json: rawJson,
-      baseToJson: (v) => v.toJson(),
+      toJsonBase: (v) => v.toJsonBase(),
       toSafeJson: (orig) => {
         // default safe shape the concrete model can parse
         ...orig,
@@ -86,9 +86,9 @@ void main() {
     }
 
     final result = deserializeChangeLogEntrySafely<TestChangeLogEntry>(
-      fromJson: (m) => throwingFactory<TestChangeLogEntry>(m),
+      fromJsonBase: (m) => throwingFactory<TestChangeLogEntry>(m),
       json: rawJson,
-      baseToJson: (v) => v.toJson(),
+      toJsonBase: (v) => v.toJsonBase(),
       toSafeJson: (orig) => {
         ...orig,
         'entityType': 'unknown',

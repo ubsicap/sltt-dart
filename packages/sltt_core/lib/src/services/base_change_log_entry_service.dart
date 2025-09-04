@@ -25,13 +25,13 @@ _EntityTypeOrRaw _parseEntityType(dynamic raw) {
 // --- Factory registration helpers -----------------------------------------
 // Single factory group used for change-log entry deserialization and
 // for producing a safe JSON shape on recovery.
-FactoryGroup<BaseChangeLogEntry>? _changeLogEntryFactoryGroup;
+SerializableGroup<BaseChangeLogEntry>? _changeLogEntryFactoryGroup;
 
 /// Register a single factory group for change-log entries. The group's
 /// `toSafeJson` will be used during recovery to produce a JSON shape that
 /// is safe to deserialize for the concrete change-log entry type.
 void registerChangeLogEntryFactoryGroup(
-  FactoryGroup<BaseChangeLogEntry> group,
+  SerializableGroup<BaseChangeLogEntry> group,
 ) {
   _changeLogEntryFactoryGroup = group;
 }
@@ -48,9 +48,9 @@ BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
   }
   // Reuse existing safe deserialization helper which will attempt recovery
   return deserializeChangeLogEntrySafely<BaseChangeLogEntry>(
-    fromJson: group.fromJson,
+    fromJsonBase: group.fromJsonBase,
     json: json,
-    baseToJson: group.toBaseJson,
+    toJsonBase: group.toJsonBase,
     toSafeJson: group.toSafeJson,
   );
 }
@@ -60,9 +60,9 @@ BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
 /// operation='hold', entityType=EntityType.unknown and
 /// operationInfo capturing the unparsable value.
 T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
-  required T Function(Map<String, dynamic>) fromJson,
+  required T Function(Map<String, dynamic>) fromJsonBase,
   required Map<String, dynamic> json,
-  required Map<String, dynamic> Function(T) baseToJson,
+  required Map<String, dynamic> Function(T) toJsonBase,
   required Map<String, dynamic> Function(Map<String, dynamic>) toSafeJson,
 }) {
   late final Map<String, dynamic> json2;
@@ -82,7 +82,7 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
     json2 = json;
   }
   try {
-    return deserializeWithUnknownFieldData(fromJson, json2, baseToJson);
+    return deserializeWithUnknownFieldData(fromJsonBase, json2, toJsonBase);
   } catch (e, st) {
     // Delegate recovery JSON construction to the shared helper
     final recovery = _createSafeJsonFromDeserializationError(
@@ -91,7 +91,7 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
       originalJson: json,
       toSafeJson: toSafeJson,
     );
-    return deserializeWithUnknownFieldData(fromJson, recovery, baseToJson);
+    return deserializeWithUnknownFieldData(fromJsonBase, recovery, toJsonBase);
   }
 }
 

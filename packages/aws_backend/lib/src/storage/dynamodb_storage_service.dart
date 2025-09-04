@@ -173,7 +173,7 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<ChangeLogEntry?> getChange(String requestProjectId, int seq) async {
+  Future<ChangeLogEntry?> getChange(String domainId, int seq) async {
     if (!_initialized) await initialize();
 
     // Query GSI1 to find the change by sequence number
@@ -182,7 +182,7 @@ class DynamoDBStorageService extends BaseStorageService {
       'IndexName': 'GSI1',
       'KeyConditionExpression': 'gsi1pk = :gsi1pk AND gsi1sk = :gsi1sk',
       'ExpressionAttributeValues': {
-        ':gsi1pk': {'S': 'PROJECT_ID#$requestProjectId'},
+        ':gsi1pk': {'S': 'PROJECT_ID#$domainId'},
         ':gsi1sk': {'S': 'SEQ#${seq.toString().padLeft(10, '0')}'},
       },
       'Limit': 1,
@@ -209,7 +209,7 @@ class DynamoDBStorageService extends BaseStorageService {
 
   @override
   Future<List<ChangeLogEntry>> getChangesWithCursor({
-    required String projectId,
+    required String domainId,
     int? cursor,
     int? limit,
   }) async {
@@ -220,18 +220,18 @@ class DynamoDBStorageService extends BaseStorageService {
       'IndexName': 'GSI1',
       'KeyConditionExpression': 'gsi1pk = :gsi1pk',
       'ExpressionAttributeValues': {
-        ':gsi1pk': {'S': 'PROJECT_ID#$projectId'},
+        ':gsi1pk': {'S': 'PROJECT_ID#$domainId'},
       },
       'ScanIndexForward': true, // Sort by gsi1sk (SEQ) ascending
     };
 
     if (cursor != null) {
       queryRequest['ExclusiveStartKey'] = {
-        'gsi1pk': {'S': 'PROJECT_ID#$projectId'},
+        'gsi1pk': {'S': 'PROJECT_ID#$domainId'},
         'gsi1sk': {'S': 'SEQ#${cursor.toString().padLeft(10, '0')}'},
         // Need to include the primary key attributes as well
         'pk': {
-          'S': 'PROJECT_ID#$projectId#ENTITY_ID#placeholder',
+          'S': 'PROJECT_ID#$domainId#ENTITY_ID#placeholder',
         }, // This will be ignored in the actual query
         'sk': {
           'S': 'CID#placeholder',
@@ -263,10 +263,7 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<List<ChangeLogEntry>> getChangesSince(
-    String requestProjectId,
-    int seq,
-  ) async {
+  Future<List<ChangeLogEntry>> getChangesSince(String domainId, int seq) async {
     if (!_initialized) await initialize();
 
     final queryRequest = {
@@ -274,7 +271,7 @@ class DynamoDBStorageService extends BaseStorageService {
       'IndexName': 'GSI1',
       'KeyConditionExpression': 'gsi1pk = :gsi1pk AND gsi1sk > :gsi1sk',
       'ExpressionAttributeValues': {
-        ':gsi1pk': {'S': 'PROJECT_ID#$requestProjectId'},
+        ':gsi1pk': {'S': 'PROJECT_ID#$domainId'},
         ':gsi1sk': {'S': 'SEQ#${seq.toString().padLeft(10, '0')}'},
       },
       'ScanIndexForward': true, // Sort by gsi1sk (SEQ) ascending
@@ -300,7 +297,7 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getChangeStats(String requestProjectId) async {
+  Future<Map<String, dynamic>> getChangeStats(String domainId) async {
     if (!_initialized) await initialize();
 
     // Get total count of changes for this project using GSI1
@@ -309,7 +306,7 @@ class DynamoDBStorageService extends BaseStorageService {
       'IndexName': 'GSI1',
       'KeyConditionExpression': 'gsi1pk = :gsi1pk',
       'ExpressionAttributeValues': {
-        ':gsi1pk': {'S': 'PROJECT_ID#$requestProjectId'},
+        ':gsi1pk': {'S': 'PROJECT_ID#$domainId'},
       },
       'Select': 'COUNT',
     };
@@ -328,7 +325,7 @@ class DynamoDBStorageService extends BaseStorageService {
 
   @override
   Future<BaseEntityState?> getCurrentEntityState(
-    String projectId,
+    String domainId,
     String entityType,
     String entityId,
   ) async {
@@ -337,7 +334,7 @@ class DynamoDBStorageService extends BaseStorageService {
     try {
       // Query the entity state table using the same pattern as getEntityStates()
       // This looks up the current entity state, not the change log
-      final pk = 'PROJECT_ID#$projectId#ENTITY_TYPE#$entityType';
+      final pk = 'PROJECT_ID#$domainId#ENTITY_TYPE#$entityType';
       final queryRequest = {
         'TableName': tableName,
         'KeyConditionExpression': 'pk = :pk AND sk = :sk',
@@ -363,7 +360,7 @@ class DynamoDBStorageService extends BaseStorageService {
         print('getCurrentEntityState query failed: ${response.statusCode}');
         print('Response body: ${response.body}');
         throw ArgumentError(
-          'Failed to query current entity state for $entityType:$entityId in project $projectId: ${response.body}',
+          'Failed to query current entity state for $entityType:$entityId in project $domainId: ${response.body}',
         );
       }
 
@@ -404,9 +401,7 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getEntityTypeStats(
-    String requestProjectId,
-  ) async {
+  Future<Map<String, dynamic>> getEntityTypeStats(String domainId) async {
     if (!_initialized) await initialize();
 
     // For DynamoDB, we use Query on GSI1 instead of Scan for better performance
@@ -416,7 +411,7 @@ class DynamoDBStorageService extends BaseStorageService {
       'IndexName': 'GSI1',
       'KeyConditionExpression': 'gsi1pk = :gsi1pk',
       'ExpressionAttributeValues': {
-        ':gsi1pk': {'S': 'PROJECT_ID#$requestProjectId'},
+        ':gsi1pk': {'S': 'PROJECT_ID#$domainId'},
       },
     };
 
@@ -764,7 +759,7 @@ class DynamoDBStorageService extends BaseStorageService {
 
   @override
   Future<Map<String, dynamic>> getEntityStates({
-    required String projectId,
+    required String domainId,
     required String entityType,
     String? cursor,
     int? limit,
@@ -780,7 +775,7 @@ class DynamoDBStorageService extends BaseStorageService {
 
     try {
       final actualLimit = limit ?? 100;
-      final pk = 'PROJECT_ID#$projectId#ENTITY_TYPE#$entityType';
+      final pk = 'PROJECT_ID#$domainId#ENTITY_TYPE#$entityType';
 
       final queryInput = {
         'TableName': tableName,

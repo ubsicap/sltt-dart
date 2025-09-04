@@ -138,7 +138,7 @@ void main() {
 
       // Get changes with limit
       final changes = await storage.getChangesWithCursor(
-        projectId: projectId,
+        domainId: projectId,
         limit: 3,
       );
       expect(changes.length, equals(3));
@@ -468,7 +468,7 @@ void main() {
   group('LocalStorageService Entity States API', () {
     test('returns empty result for non-existent project entities', () async {
       final result = await storage.getEntityStates(
-        projectId: 'non-existent',
+        domainId: 'non-existent',
         entityType: 'project',
         includeMetadata: true,
       );
@@ -482,7 +482,7 @@ void main() {
     test('handles stubbed entity states method', () async {
       // The current implementation is stubbed to return empty results
       final result = await storage.getEntityStates(
-        projectId: 'test-project',
+        domainId: 'test-project',
         entityType: 'project',
         includeMetadata: true,
       );

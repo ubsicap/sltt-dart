@@ -19,14 +19,14 @@ class StorageServiceDefaults {
   /// Default implementation for getting changes not outdated
   static Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
     Future<List<BaseChangeLogEntry>> Function({
-      required String projectId,
+      required String domainId,
       int? cursor,
       int? limit,
     })
     getChangesWithCursor,
-    String projectId,
+    String domainId,
   ) async {
-    return getChangesWithCursor(projectId: projectId);
+    return getChangesWithCursor(domainId: domainId);
   }
 }
 
@@ -83,29 +83,29 @@ abstract class BaseStorageService {
   /// Returns the most recent change entry for the specified entity, or null if
   /// the entity doesn't exist.
   Future<BaseEntityState?> getCurrentEntityState(
-    String projectId,
+    String domainId,
     String entityType,
     String entityId,
   );
 
   /// Get a specific change by sequence number
-  Future<BaseChangeLogEntry?> getChange(String projectId, int seq);
+  Future<BaseChangeLogEntry?> getChange(String domainId, int seq);
 
   /// Get changes with cursor-based pagination
   Future<List<BaseChangeLogEntry>> getChangesWithCursor({
-    required String projectId,
+    required String domainId,
     int? cursor,
     int? limit,
   });
 
   /// Get all changes since a specific sequence number
-  Future<List<BaseChangeLogEntry>> getChangesSince(String projectId, int seq);
+  Future<List<BaseChangeLogEntry>> getChangesSince(String domainId, int seq);
 
   /// Get statistics about change operations
-  Future<Map<String, dynamic>> getChangeStats(String projectId);
+  Future<Map<String, dynamic>> getChangeStats(String domainId);
 
   /// Get statistics about entity types
-  Future<Map<String, dynamic>> getEntityTypeStats(String projectId);
+  Future<Map<String, dynamic>> getEntityTypeStats(String domainId);
 
   /// Get all projects (based on changes with entityType 'project')
   Future<List<String>> getAllProjects();
@@ -114,7 +114,7 @@ abstract class BaseStorageService {
   ///
   /// Subclasses can use StorageServiceDefaults.getEntityStates() for a default implementation that throws UnsupportedError
   Future<Map<String, dynamic>> getEntityStates({
-    required String projectId,
+    required String domainId,
     required String entityType,
     String? cursor,
     int? limit,
@@ -129,7 +129,7 @@ abstract class BaseStorageService {
     String projectId,
   ) async {
     // Default implementation - override in local storage services
-    return getChangesWithCursor(projectId: projectId);
+    return getChangesWithCursor(domainId: projectId);
   }
 
   String getStorageType();

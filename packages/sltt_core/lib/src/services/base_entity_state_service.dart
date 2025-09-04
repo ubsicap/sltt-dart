@@ -3,16 +3,24 @@ import 'package:sltt_core/src/models/entity_type.dart';
 import 'package:sltt_core/src/models/factory_pair.dart';
 import 'package:sltt_core/src/services/json_serialization_service.dart';
 
-final Map<EntityType, FactoryPair<BaseEntityState>> _entityStateFactories = {};
+final Map<EntityType, SerializableGroup<BaseEntityState>> _entityStateFactories = {};
 
 /// Register a factory pair for a specific [entityType] to deserialize
 /// `BaseEntityState` subclasses.
 void registerEntityStateFactory(
   EntityType entityType,
   BaseEntityState Function(Map<String, dynamic>) fromJson,
-  Map<String, dynamic> Function(BaseEntityState) toBaseJson,
+  BaseEntityState Function(Map<String, dynamic>) fromJsonBase,
+  Map<String, dynamic> Function(BaseEntityState) toJsonBase,
 ) {
-  _entityStateFactories[entityType] = FactoryPair(fromJson, toBaseJson);
+  _entityStateFactories[entityType] = SerializableGroup(
+    fromJson,
+    fromJsonBase,
+    toJsonBase,
+    (json) {
+      throw Exception('No safe JSON conversion implemented for $entityType');
+    },
+  );
 }
 
 /// Deserialize the provided [json] into the registered `BaseEntityState`
@@ -27,9 +35,9 @@ BaseEntityState deserializeEntityStateSafely(Map<String, dynamic> json) {
   }
   try {
     return deserializeWithUnknownFieldData(
-      pair.fromJson,
+      pair.fromJsonBase,
       json,
-      pair.toBaseJson,
+      pair.toJsonBase,
     );
   } catch (e) {
     // Entity-state specific deserialization errors are not recovered here.

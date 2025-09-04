@@ -246,12 +246,12 @@ class LocalStorageService extends BaseStorageService {
   }
 
   @override
-  Future<BaseChangeLogEntry?> getChange(String projectId, int seq) async {
+  Future<BaseChangeLogEntry?> getChange(String domainId, int seq) async {
     final change = await _isar.isarChangeLogEntrys
         .where()
         .seqEqualTo(seq)
         .filter()
-        .domainIdEqualTo(projectId)
+        .domainIdEqualTo(domainId)
         .findFirst();
     return change != null ? _convertToChangeLogEntry(change) : null;
   }
@@ -336,26 +336,26 @@ class LocalStorageService extends BaseStorageService {
 
   // Statistics operations
   @override
-  Future<Map<String, dynamic>> getChangeStats(String projectId) async {
+  Future<Map<String, dynamic>> getChangeStats(String domainId) async {
     final total = await _isar.isarChangeLogEntrys
         .filter()
-        .domainIdEqualTo(projectId)
+        .domainIdEqualTo(domainId)
         .count();
     final creates = await _isar.isarChangeLogEntrys
         .filter()
-        .domainIdEqualTo(projectId)
+        .domainIdEqualTo(domainId)
         .and()
         .operationEqualTo('create')
         .count();
     final updates = await _isar.isarChangeLogEntrys
         .filter()
-        .domainIdEqualTo(projectId)
+        .domainIdEqualTo(domainId)
         .and()
         .operationEqualTo('update')
         .count();
     final deletes = await _isar.isarChangeLogEntrys
         .filter()
-        .domainIdEqualTo(projectId)
+        .domainIdEqualTo(domainId)
         .and()
         .operationEqualTo('delete')
         .count();
@@ -369,10 +369,10 @@ class LocalStorageService extends BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getEntityTypeStats(String projectId) async {
+  Future<Map<String, dynamic>> getEntityTypeStats(String domainId) async {
     final allEntries = await _isar.isarChangeLogEntrys
         .filter()
-        .domainIdEqualTo(projectId)
+        .domainIdEqualTo(domainId)
         .findAll();
     final stats = <String, int>{};
 
@@ -423,7 +423,7 @@ class LocalStorageService extends BaseStorageService {
   // Cursor-based pagination and filtering
   @override
   Future<List<BaseChangeLogEntry>> getChangesWithCursor({
-    required String projectId,
+    required String domainId,
     int? cursor,
     int? limit,
   }) async {
@@ -431,7 +431,7 @@ class LocalStorageService extends BaseStorageService {
         .where()
         .seqGreaterThan(cursor ?? 0)
         .filter()
-        .domainIdEqualTo(projectId);
+        .domainIdEqualTo(domainId);
 
     var results = await query.findAll();
 
@@ -518,14 +518,14 @@ class LocalStorageService extends BaseStorageService {
   // Get changes since a specific sequence number (for syncing)
   @override
   Future<List<BaseChangeLogEntry>> getChangesSince(
-    String projectId,
+    String domainId,
     int seq,
   ) async {
     final results = await _isar.isarChangeLogEntrys
         .where()
         .seqGreaterThan(seq)
         .filter()
-        .domainIdEqualTo(projectId)
+        .domainIdEqualTo(domainId)
         .findAll();
 
     // Sort by seq in ascending order
@@ -564,7 +564,7 @@ class LocalStorageService extends BaseStorageService {
   /// Get the current state of an entity for field-level comparison
   @override
   Future<BaseEntityState?> getCurrentEntityState(
-    String projectId,
+    String domainId,
     String entityType,
     String entityId,
   ) async {
@@ -588,7 +588,7 @@ class LocalStorageService extends BaseStorageService {
     }
 
     // Use the type-safe finder function instead of dynamic collection access
-    return await storageGroup.findByDomainAndEntity(_isar, projectId, entityId);
+    return await storageGroup.findByDomainAndEntity(_isar, domainId, entityId);
   }
 
   /// Hook method for subclasses to optionally add cloud timestamp.
@@ -780,7 +780,7 @@ class LocalStorageService extends BaseStorageService {
 
   @override
   Future<Map<String, dynamic>> getEntityStates({
-    required String projectId,
+    required String domainId,
     required String entityType,
     String? cursor,
     int? limit,

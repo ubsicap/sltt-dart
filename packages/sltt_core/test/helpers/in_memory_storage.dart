@@ -33,11 +33,11 @@ class InMemoryStorage implements BaseStorageService {
 
   @override
   Future<BaseEntityState?> getCurrentEntityState(
-    String projectId,
+    String domainId,
     String entityType,
     String entityId,
   ) async {
-    return _states[_key(projectId, entityType, entityId)];
+    return _states[_key(domainId, entityType, entityId)];
   }
 
   @override
@@ -106,22 +106,22 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<BaseChangeLogEntry?> getChange(String projectId, int seq) async {
+  Future<BaseChangeLogEntry?> getChange(String domainId, int seq) async {
     for (final c in _changes) {
-      if (c.seq == seq && c.domainId == projectId) return c;
+      if (c.seq == seq && c.domainId == domainId) return c;
     }
     return null;
   }
 
   @override
   Future<List<BaseChangeLogEntry>> getChangesWithCursor({
-    required String projectId,
+    required String domainId,
     int? cursor,
     int? limit,
   }) async {
     final effectiveLimit = limit ?? 100;
 
-    final filtered = _changes.where((c) => c.domainId == projectId).toList()
+    final filtered = _changes.where((c) => c.domainId == domainId).toList()
       ..sort((a, b) => a.seq.compareTo(b.seq));
 
     final startIndex = cursor == null
@@ -137,15 +137,15 @@ class InMemoryStorage implements BaseStorageService {
 
   @override
   Future<List<BaseChangeLogEntry>> getChangesSince(
-    String projectId,
+    String domainId,
     int seq,
   ) async {
-    return getChangesWithCursor(projectId: projectId, cursor: seq);
+    return getChangesWithCursor(domainId: domainId, cursor: seq);
   }
 
   @override
-  Future<Map<String, dynamic>> getChangeStats(String projectId) async {
-    final proj = _changes.where((c) => c.domainId == projectId).toList();
+  Future<Map<String, dynamic>> getChangeStats(String domainId) async {
+    final proj = _changes.where((c) => c.domainId == domainId).toList();
     final total = proj.length;
     final creates = proj.where((c) => c.operation == 'create').length;
     final updates = proj.where((c) => c.operation == 'update').length;
@@ -159,7 +159,7 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, int>> getEntityTypeStats(String projectId) async =>
+  Future<Map<String, int>> getEntityTypeStats(String domainId) async =>
       <String, int>{};
 
   @override
@@ -168,7 +168,7 @@ class InMemoryStorage implements BaseStorageService {
 
   @override
   Future<Map<String, dynamic>> getEntityStates({
-    required String projectId,
+    required String domainId,
     required String entityType,
     String? cursor,
     int? limit,
@@ -177,9 +177,9 @@ class InMemoryStorage implements BaseStorageService {
     final results = _states.entries
         .where(
           (e) =>
-              e.key.startsWith('$projectId|$entityType|') &&
+              e.key.startsWith('$domainId|$entityType|') &&
               (cursor == null ||
-                  e.key.compareTo('$projectId|$entityType|$cursor') > 0),
+                  e.key.compareTo('$domainId|$entityType|$cursor') > 0),
         )
         .take(limit ?? 100)
         .map((e) => e.value.toJson())
@@ -204,5 +204,5 @@ class InMemoryStorage implements BaseStorageService {
   @override
   Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
     String projectId,
-  ) async => getChangesWithCursor(projectId: projectId);
+  ) async => getChangesWithCursor(domainId: projectId);
 }

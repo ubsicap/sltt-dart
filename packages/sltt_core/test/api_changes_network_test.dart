@@ -44,8 +44,9 @@ void main() {
   setUpAll(() async {
     // Register change-log entry factory group for tests
     registerChangeLogEntryFactoryGroup(
-      FactoryGroup<BaseChangeLogEntry>(
+      SerializableGroup<BaseChangeLogEntry>(
         (json) => TestChangeLogEntry.fromJson(json),
+        (json) => TestChangeLogEntry.fromJsonBase(json),
         (entry) => (entry as TestChangeLogEntry).toJson(),
         (original) {
           // Produce a safe shape for TestChangeLogEntry
@@ -53,8 +54,7 @@ void main() {
           return {
             'entityId': original['entityId'] ?? 'e-test',
             'entityType': original['entityType'] ?? 'project',
-            'domainId':
-                original['domainId'] ?? original['projectId'] ?? 'p-test',
+            'domainId': original['domainId'] ?? 'p-test',
             'domainType': original['domainType'] ?? 'project',
             'changeAt': original['changeAt'] ?? now.toIso8601String(),
             'cid': original['cid'] ?? generateCid(now),

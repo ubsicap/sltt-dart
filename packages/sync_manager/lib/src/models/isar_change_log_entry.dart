@@ -13,8 +13,9 @@ bool get isarChangeLogEntryFactoryRegistration =>
 // ignore: unused_element
 final _isarChangeLogEntryFactoryRegistration = (() {
   registerChangeLogEntryFactoryGroup(
-    FactoryGroup<BaseChangeLogEntry>(
+    SerializableGroup<BaseChangeLogEntry>(
       (json) => IsarChangeLogEntry.fromJson(json),
+      (json) => IsarChangeLogEntry.fromJsonBase(json),
       (entry) => (entry as IsarChangeLogEntry).toJson(),
       (original) {
         // Build a safe JSON shape for recovery on deserialization errors
@@ -23,8 +24,7 @@ final _isarChangeLogEntryFactoryRegistration = (() {
         return {
           'entityId': original['entityId'] ?? 'e-client',
           'entityType': original['entityType'] ?? 'unknown',
-          'domainId':
-              original['domainId'] ?? original['projectId'] ?? 'p-client',
+          'domainId': original['domainId'] ?? 'p-client',
           'domainType': original['domainType'] ?? 'project',
           'changeAt': original['changeAt'] ?? now.toIso8601String(),
           'cid': original['cid'] ?? generateCid(now),
@@ -83,7 +83,13 @@ class IsarChangeLogEntry extends BaseChangeLogEntry {
         _$IsarChangeLogEntryToJson,
       );
 
+  factory IsarChangeLogEntry.fromJsonBase(Map<String, dynamic> json) =>
+      _$IsarChangeLogEntryFromJson(json);
+
   @override
   Map<String, dynamic> toJson() =>
       serializeWithUnknownFieldData(this, _$IsarChangeLogEntryToJson);
+
+  @override
+  Map<String, dynamic> toJsonBase() => _$IsarChangeLogEntryToJson(this);
 }

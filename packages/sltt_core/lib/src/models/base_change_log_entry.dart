@@ -165,6 +165,7 @@ abstract class BaseChangeLogEntry
 
 mixin Serializable {
   Map<String, dynamic> toJson();
+  Map<String, dynamic> toJsonBase();
 }
 
 mixin ImmutableFields {

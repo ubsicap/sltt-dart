@@ -49,9 +49,15 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
         _$TestChangeLogEntryToJson,
       );
 
+  factory TestChangeLogEntry.fromJsonBase(Map<String, dynamic> json) =>
+      _$TestChangeLogEntryFromJson(json);
+
   @override
   Map<String, dynamic> toJson() =>
       serializeWithUnknownFieldData(this, _$TestChangeLogEntryToJson);
+
+  @override
+  Map<String, dynamic> toJsonBase() => _$TestChangeLogEntryToJson(this);
 }
 
 /// Concrete implementation of BaseEntityState for testing

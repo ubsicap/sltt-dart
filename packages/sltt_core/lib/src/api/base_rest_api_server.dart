@@ -841,7 +841,7 @@ abstract class BaseRestApiServer {
       }
 
       final changes = await storage.getChangesWithCursor(
-        projectId: projectId,
+        domainId: projectId,
         cursor: cursor,
         limit: limit,
       );
@@ -856,7 +856,7 @@ abstract class BaseRestApiServer {
       if (changes.isNotEmpty && (limit == null || changes.length == limit)) {
         final lastChangeId = changes.last.seq;
         final moreChanges = await storage.getChangesWithCursor(
-          projectId: projectId,
+          domainId: projectId,
           cursor: lastChangeId,
           limit: 1,
         );
@@ -1166,7 +1166,7 @@ abstract class BaseRestApiServer {
 
       // Get entity state data
       final stateData = await storage.getEntityStates(
-        projectId: projectId,
+        domainId: projectId,
         entityType: decodedEntityType,
         cursor: cursor,
         limit: limit,

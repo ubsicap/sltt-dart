@@ -76,12 +76,12 @@ Future<void> main() async {
     // Test 2: Get changes with cursor
     print('🔍 Testing change retrieval with cursor...');
     final allChanges = await storage.getChangesWithCursor(
-      projectId: demoProjectId,
+      domainId: demoProjectId,
     );
     print('   Retrieved ${allChanges.length} changes total');
 
     final limitedChanges = await storage.getChangesWithCursor(
-      projectId: demoProjectId,
+      domainId: demoProjectId,
       limit: 2,
     );
     print('   Retrieved ${limitedChanges.length} changes with limit=2');
@@ -89,7 +89,7 @@ Future<void> main() async {
     if (limitedChanges.isNotEmpty) {
       final cursor = limitedChanges.last.seq;
       final remainingChanges = await storage.getChangesWithCursor(
-        projectId: demoProjectId,
+        domainId: demoProjectId,
         cursor: cursor,
       );
       print(
