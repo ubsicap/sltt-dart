@@ -186,5 +186,60 @@ void main() {
         await combinationsTests['srcStorageType: cloud, srcStorageId: cloud']!();
       });
     });
+
+    test('verifies all suite tests are being run', () async {
+      final suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+      final allSuiteTests = suite.getTestGroups();
+
+      // Flatten all test names from the suite
+      final suiteTestNames = <String>{};
+      for (final groupEntry in allSuiteTests.entries) {
+        for (final testName in groupEntry.value.keys) {
+          suiteTestNames.add(testName);
+        }
+      }
+
+      // List of all test names that this file actually runs
+      // This should match the suiteTestNames set
+      final actuallyRunTestNames = {
+        'with includeChangeUpdates/includeStateUpdates returns summaries',
+        'returns empty list for project with no changes',
+        'returns changes for project with seeded data',
+        'respects limit parameter',
+        'supports cursor-based pagination',
+        'handles URL-encoded project IDs correctly',
+        'returns 400 for invalid limit values',
+        'returns 400 for invalid cursor values',
+        'handles field-level conflict resolution (newer change wins)',
+        'srcStorageType: local, srcStorageId: matches server storage id',
+        'srcStorageType: local, srcStorageId: different from server',
+        'srcStorageType: cloud, srcStorageId: cloud',
+      };
+
+      // Check that we have the same number of tests
+      expect(
+        actuallyRunTestNames.length,
+        equals(suiteTestNames.length),
+        reason:
+            'Number of tests in file (${actuallyRunTestNames.length}) '
+            'does not match suite (${suiteTestNames.length})',
+      );
+
+      // Sort both sets for consistent comparison
+      final sortedSuiteTests = suiteTestNames.toList()..sort();
+      final sortedRunTests = actuallyRunTestNames.toList()..sort();
+
+      // Check that the test lists match exactly
+      expect(
+        sortedRunTests,
+        equals(sortedSuiteTests),
+        reason:
+            'Test names in file do not match suite tests.\n'
+            'Suite tests: $sortedSuiteTests\n'
+            'File tests: $sortedRunTests\n'
+            'Missing from file: ${suiteTestNames.difference(actuallyRunTestNames)}\n'
+            'Extra in file: ${actuallyRunTestNames.difference(suiteTestNames)}',
+      );
+    });
   });
 }
