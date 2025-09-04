@@ -7,9 +7,16 @@ part of 'json_serialization_service_test.dart';
 // **************************************************************************
 
 SchemaVersion1 _$SchemaVersion1FromJson(Map<String, dynamic> json) =>
-    SchemaVersion1(
-      a: json['a'] as String,
-      unknownJson: json['unknownJson'] as String? ?? '{}',
+    $checkedCreate(
+      'SchemaVersion1',
+      json,
+      ($checkedConvert) {
+        final val = SchemaVersion1(
+          a: $checkedConvert('a', (v) => v as String),
+          unknownJson: $checkedConvert('unknownJson', (v) => v as String),
+        );
+        return val;
+      },
     );
 
 Map<String, dynamic> _$SchemaVersion1ToJson(SchemaVersion1 instance) =>
@@ -19,10 +26,17 @@ Map<String, dynamic> _$SchemaVersion1ToJson(SchemaVersion1 instance) =>
     };
 
 SchemaVersion2 _$SchemaVersion2FromJson(Map<String, dynamic> json) =>
-    SchemaVersion2(
-      a: json['a'] as String,
-      b: json['b'] as String?,
-      unknownJson: json['unknownJson'] as String? ?? '{}',
+    $checkedCreate(
+      'SchemaVersion2',
+      json,
+      ($checkedConvert) {
+        final val = SchemaVersion2(
+          a: $checkedConvert('a', (v) => v as String),
+          b: $checkedConvert('b', (v) => v as String?),
+          unknownJson: $checkedConvert('unknownJson', (v) => v as String),
+        );
+        return val;
+      },
     );
 
 Map<String, dynamic> _$SchemaVersion2ToJson(SchemaVersion2 instance) =>

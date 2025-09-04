@@ -57,25 +57,19 @@ void main() {
 
   group('SchemaVersion', () {
     test('SchemaVersion2 toJson() works as expected', () {
-      final obj = SchemaVersion2(a: 'foo', b: 'bar');
+      final obj = SchemaVersion2(a: 'foo', b: 'bar', unknownJson: '{}');
       final json = obj.toJson();
-      expect(json, containsPair('a', 'foo'));
-      expect(json, containsPair('b', 'bar'));
-      expect(json, containsPair('unknownJson', '{}'));
-      expect(json.length, 3);
+      expect(json, {'a': 'foo', 'b': 'bar', 'unknownJson': '{}'});
     });
 
-    test('SchemaVersion2 toJson() with optional fields as expected', () {
-      final obj = SchemaVersion2(a: 'foo');
+    test('SchemaVersion2 toJson() with removed optional fields', () {
+      final obj = SchemaVersion2(a: 'foo', unknownJson: '{}');
       final json = obj.toJson();
-      expect(json, containsPair('a', 'foo'));
-      expect(json, containsPair('b', null));
-      expect(json, containsPair('unknownJson', '{}'));
-      expect(json.length, 3);
+      expect(json, {'a': 'foo', 'unknownJson': '{}'});
     });
 
     test('SchemaVersion2.fromJson() works for its own json', () {
-      final json = {'a': 'foo', 'b': 'bar'};
+      final json = {'a': 'foo', 'b': 'bar', 'unknownJson': '{}'};
       final obj = SchemaVersion2.fromJson(json);
       expect(obj.a, 'foo');
       expect(obj.b, 'bar');
@@ -101,17 +95,11 @@ void main() {
     });
 
     test(
-      'SchemaVersion1.toJson() adds unknown to keys and keeps unknownJson',
+      'SchemaVersion1.toJson() adds unknown to keys and resets unknownJson',
       () {
-        // Review: an alternative way would be to empty unknownJson during toJson()
-        // another alternative would be to not add unknown keys to the output,
-        // just keep in unknownJson until fromJson() is called
         final obj = SchemaVersion1(a: 'foo', unknownJson: '{"b": "bar"}');
         final json = obj.toJson();
-        expect(json, containsPair('a', 'foo'));
-        expect(json, containsPair('b', 'bar'));
-        expect(json, containsPair('unknownJson', '{"b": "bar"}'));
-        expect(json.length, 3);
+        expect(json, {'a': 'foo', 'b': 'bar', 'unknownJson': '{}'});
       },
     );
 
@@ -120,22 +108,22 @@ void main() {
       final obj = SchemaVersion1.fromJson(json);
       expect(obj.a, 'foo');
       expect(obj.unknownJson, equals('{"b":"bar","c":"cVal"}'));
+      expect(obj.getUnknown(), {'b': 'bar', 'c': 'cVal'});
     });
 
-    test('SchemaVersion1.toJson() roundTrip - ignoring unknownJson', () {
-      final json = {'a': 'foo', 'b': 'bar', 'c': 'cVal'};
+    test('SchemaVersion1.toJson() roundTrip - resetting unknownJson', () {
+      final json = {'a': 'foo', 'b': 'bar', 'c': 'cVal', 'unknownJson': '{}'};
       final obj = SchemaVersion1.fromJson(json);
       expect(obj.a, 'foo');
       expect(obj.unknownJson, equals('{"b":"bar","c":"cVal"}'));
+      expect(obj.getUnknown(), {'b': 'bar', 'c': 'cVal'});
       final out = obj.toJson();
-      final withoutUnknownJson = Map<String, dynamic>.from(out)
-        ..remove('unknownJson');
-      expect(withoutUnknownJson, json);
+      expect(out, json);
     });
   });
 }
 
-@JsonSerializable()
+@JsonSerializable(includeIfNull: true, checked: true)
 class SchemaVersion1 with HasUnknownField {
   final String a;
   @override
@@ -143,7 +131,8 @@ class SchemaVersion1 with HasUnknownField {
 
   Map<String, dynamic> get unknown => getUnknown();
 
-  SchemaVersion1({required this.a, this.unknownJson = '{}'});
+  // alternative:   SchemaVersion1({required this.a, this.unknownJson = '{}'});
+  SchemaVersion1({required this.a, required this.unknownJson});
 
   factory SchemaVersion1.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData<SchemaVersion1>(
@@ -159,14 +148,14 @@ class SchemaVersion1 with HasUnknownField {
       );
 }
 
-@JsonSerializable(includeIfNull: true)
+@JsonSerializable(includeIfNull: true, checked: true)
 class SchemaVersion2 with HasUnknownField {
   final String a;
   final String? b;
   @override
   String unknownJson;
 
-  SchemaVersion2({required this.a, this.b, this.unknownJson = '{}'});
+  SchemaVersion2({required this.a, this.b, required this.unknownJson});
 
   factory SchemaVersion2.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData<SchemaVersion2>(

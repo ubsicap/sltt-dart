@@ -46,7 +46,9 @@ T deserializeWithUnknownFieldData<T extends HasUnknownField>(
   Map<String, dynamic> json,
   Map<String, dynamic> Function(T value) toJsonBase,
 ) {
-  final Map<String, dynamic> prevUnknown = jsonDecode(json['unknownJson'] ?? '{}');
+  final Map<String, dynamic> prevUnknown = jsonDecode(
+    json['unknownJson'] ?? '{}',
+  );
   // Give fromJson an empty `unknown` map to satisfy generated constructors
   final entry = fromJsonBase({'unknownJson': '{}', ...prevUnknown, ...json});
   // Use the generated/base toJson to get only known fields (no unknown merge)
@@ -75,7 +77,14 @@ Map<String, dynamic> serializeWithUnknownFieldData<T extends HasUnknownField>(
   final unknown = (entry.unknownJson.isEmpty)
       ? <String, dynamic>{}
       : (jsonDecode(entry.unknownJson) as Map<String, dynamic>);
-  return {...json, ...unknown};
+  // since all the unknownJson fields will become keys
+  // we should be able to safely reset the original unknownJson
+  final unknownJsonReset = {'unknownJson': '{}'};
+
+  final finalJson = {...json, ...unknown, ...unknownJsonReset};
+  // remove any null fields
+  finalJson.removeWhere((k, v) => v == null);
+  return finalJson;
 }
 
 // (no extension helpers required; mixin provides default implementations)
