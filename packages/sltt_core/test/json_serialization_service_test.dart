@@ -84,20 +84,33 @@ void main() {
     });
 
     test('SchemaVersion1.fromJson() puts unknown fields in .unknown', () {
-      final json = {'a': 'foo', 'b': 'bar'};
+      final json = {'a': 'foo', 'b': 'bar', 'unknownJson': '{}'};
       final obj = SchemaVersion1.fromJson(json);
       expect(obj.a, 'foo');
       expect(obj.unknownJson, equals('{"b":"bar"}'));
       expect(obj.getUnknown(), equals({'b': 'bar'}));
     });
 
-    test('SchemaVersion1.toJson() keeps unknownJson', () {
-      final obj = SchemaVersion1(a: 'foo', unknownJson: '{"b": "bar"}');
-      final json = obj.toJson();
-      expect(json, containsPair('a', 'foo'));
-      expect(json, containsPair('b', 'bar'));
-      expect(json, containsPair('unknownJson', '{"b": "bar"}'));
-      expect(json.length, 3);
+    test(
+      'SchemaVersion1.toJson() adds unknown to keys and keeps unknownJson',
+      () {
+        // Review: an alternative way would be to empty unknownJson during toJson()
+        // another alternative would be to not add unknown keys to the output,
+        // just keep in unknownJson until fromJson() is called
+        final obj = SchemaVersion1(a: 'foo', unknownJson: '{"b": "bar"}');
+        final json = obj.toJson();
+        expect(json, containsPair('a', 'foo'));
+        expect(json, containsPair('b', 'bar'));
+        expect(json, containsPair('unknownJson', '{"b": "bar"}'));
+        expect(json.length, 3);
+      },
+    );
+
+    test('SchemaVersion1.toJson() merges unknownJson with unknown field', () {
+      final json = {'a': 'foo', 'unknownJson': '{"b": "bar"}', 'c': 'cVal'};
+      final obj = SchemaVersion1.fromJson(json);
+      expect(obj.a, 'foo');
+      expect(obj.unknownJson, equals('{"b":"bar","c":"cVal"}'));
     });
   });
 }

@@ -42,28 +42,35 @@ class JsonUtils {
 
 /// baseToJson() should return all fields even with null values.
 T deserializeWithUnknownFieldData<T extends HasUnknownField>(
-  T Function(Map<String, dynamic> json) fromJson,
+  T Function(Map<String, dynamic> json) fromJsonBase,
   Map<String, dynamic> json,
-  Map<String, dynamic> Function(T value) baseToJson,
+  Map<String, dynamic> Function(T value) toJsonBase,
 ) {
-  final prevUnknown = jsonDecode(json['unknownJson'] ?? '{}');
+  final Map<String, dynamic> prevUnknown = jsonDecode(json['unknownJson'] ?? '{}');
   // Give fromJson an empty `unknown` map to satisfy generated constructors
-  final entry = fromJson({'unknownJson': '{}', ...prevUnknown, ...json});
+  final entry = fromJsonBase({'unknownJson': '{}', ...prevUnknown, ...json});
   // Use the generated/base toJson to get only known fields (no unknown merge)
-  final knownFields = baseToJson(entry).keys.toSet();
+  final knownFields = toJsonBase(entry).keys.toSet();
   final unknownFields = Map<String, dynamic>.fromEntries(
     json.entries.where((e) => !knownFields.contains(e.key)),
   );
+
+  /// final unknownJson is a merge of prevUnknown and unknownFields
+  /// but remove any knownFields from prevUnknown
+  final unknownJson = jsonEncode({
+    ...prevUnknown..removeWhere((k, v) => knownFields.contains(k)),
+    ...unknownFields,
+  });
   // Store unknown fields as a compact JSON string on the implementation
-  entry.unknownJson = jsonEncode(unknownFields);
+  entry.unknownJson = unknownJson;
   return entry;
 }
 
 Map<String, dynamic> serializeWithUnknownFieldData<T extends HasUnknownField>(
   T entry,
-  Map<String, dynamic> Function(T value) baseToJson,
+  Map<String, dynamic> Function(T value) toJsonBase,
 ) {
-  final json = baseToJson(entry);
+  final json = toJsonBase(entry);
   // Merge in unknown fields decoded from the stored JSON string
   final unknown = (entry.unknownJson.isEmpty)
       ? <String, dynamic>{}
