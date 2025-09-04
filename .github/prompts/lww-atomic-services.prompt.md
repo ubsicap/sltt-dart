@@ -31,6 +31,14 @@ Next step:
 Next step:
    - update `SelfSyncState` to track own latest change log entry
 
+   possible prompts:
+    1) move SyncState and SelfSyncState to sltt_core models, but remove `id = Isar.autoIncrement`.
+    2) in syncManager models implement `IsarSelfSyncState` and add `sssId = Isar.autoIncrement`
+    3) in syncManager `CursorSyncState` extend SyncState but add `cssId = Isar.autoIncrement`
+    4) add async updateSelfSyncState(SelfSyncState syncState) to BaseStorageService
+    5) update BaseStorageService `updateChangeLogAndState` to take async callback updateSelfSyncState(SelfSyncState syncState) to make it an explicit to handle, just use storage.updateSelfSyncState(syncState) where storage is given. Otherwise implement something for tests to check
+    6)
+
 Next step:
    - add serializable class for resultsSummary
 
