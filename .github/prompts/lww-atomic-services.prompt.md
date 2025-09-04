@@ -28,6 +28,9 @@ Next step:
 Next step:
    - update `SelfSyncState` to track own latest change log entry
 
+Next step:
+   - add serializable class for resultsSummary
+
 Next step:??
 - cloud storage type should return error if unknownJson is not empty or incoming schemaVersion is greater than it has knowledge of in its model
 
