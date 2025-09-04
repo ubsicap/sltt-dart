@@ -31,6 +31,10 @@ Next step:
 Next step:
    - add serializable class for resultsSummary
 
+Next step:
+    - break api_changes_network_suite.dart into exportable tests
+    - have clients import and run those in their own test with the same names
+
 Next step:??
 - cloud storage type should return error if unknownJson is not empty or incoming schemaVersion is greater than it has knowledge of in its model
 
