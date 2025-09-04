@@ -145,10 +145,14 @@ class ChangeProcessingService {
             changeData,
           );
 
+          print(
+            'DEBUG: Deserialized changeLogEntry: cid=${changeLogEntry.cid}, unknownJson=${changeLogEntry.getUnknown()}',
+          );
+
           // Validate that unknownJson is empty when required
           final unknownValidationResult = _validateUnknownJson(
             changeLogEntry: changeLogEntry,
-            storageType: targetStorageId,
+            storageType: storage.getStorageType(),
             storageMode: storageMode,
             changeIndex: i,
           );
@@ -267,6 +271,10 @@ class ChangeProcessingService {
   }) {
     final cid = changeLogEntry.cid;
     final unknownJson = changeLogEntry.getUnknown();
+
+    print(
+      'DEBUG: _validateUnknownJson - storageType=$storageType, storageMode=$storageMode, unknownJson=$unknownJson, cid=$cid',
+    );
 
     // Return error if unknownJson is present when storageType is 'cloud' and storageMode is 'save'
     if (storageType == 'cloud' &&
