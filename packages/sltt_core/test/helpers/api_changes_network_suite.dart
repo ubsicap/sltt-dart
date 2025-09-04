@@ -122,24 +122,35 @@ class ApiChangesNetworkTestSuite {
   Map<String, Map<String, Future<void> Function()>> getTestGroups() {
     return {
       'POST /api/changes': {
-        'with includeChangeUpdates/includeStateUpdates returns summaries': () => _testPostChangesWithSummaries(),
+        'with includeChangeUpdates/includeStateUpdates returns summaries': () =>
+            _testPostChangesWithSummaries(),
       },
       'GET /api/projects/<projectId>/changes': {
-        'returns empty list for project with no changes': () => _testGetProjectChangesEmpty(),
-        'returns changes for project with seeded data': () => _testGetProjectChangesWithData(),
+        'returns empty list for project with no changes': () =>
+            _testGetProjectChangesEmpty(),
+        'returns changes for project with seeded data': () =>
+            _testGetProjectChangesWithData(),
         'respects limit parameter': () => _testGetProjectChangesWithLimit(),
-        'supports cursor-based pagination': () => _testGetProjectChangesWithPagination(),
-        'handles URL-encoded project IDs correctly': () => _testGetProjectChangesUrlEncoded(),
-        'returns 400 for invalid limit values': () => _testGetProjectChangesInvalidLimit(),
-        'returns 400 for invalid cursor values': () => _testGetProjectChangesInvalidCursor(),
+        'supports cursor-based pagination': () =>
+            _testGetProjectChangesWithPagination(),
+        'handles URL-encoded project IDs correctly': () =>
+            _testGetProjectChangesUrlEncoded(),
+        'returns 400 for invalid limit values': () =>
+            _testGetProjectChangesInvalidLimit(),
+        'returns 400 for invalid cursor values': () =>
+            _testGetProjectChangesInvalidCursor(),
       },
       'POST /api/changes semantics': {
-        'handles field-level conflict resolution (newer change wins)': () => _testPostChangesFieldLevelConflict(),
+        'handles field-level conflict resolution (newer change wins)': () =>
+            _testPostChangesFieldLevelConflict(),
       },
       'POST /api/changes srcStorageType/srcStorageId combinations': {
-        'srcStorageType: local, srcStorageId: matches server storage id': () => _testPostChangesLocalMatchingStorageId(),
-        'srcStorageType: local, srcStorageId: different from server': () => _testPostChangesLocalDifferentStorageId(),
-        'srcStorageType: cloud, srcStorageId: cloud': () => _testPostChangesCloudStorage(),
+        'srcStorageType: local, srcStorageId: matches server storage id': () =>
+            _testPostChangesLocalMatchingStorageId(),
+        'srcStorageType: local, srcStorageId: different from server': () =>
+            _testPostChangesLocalDifferentStorageId(),
+        'srcStorageType: cloud, srcStorageId: cloud': () =>
+            _testPostChangesCloudStorage(),
       },
     };
   }
@@ -432,6 +443,9 @@ class ApiChangesNetworkTestSuite {
       ),
     ];
 
+    // Clear storageId for save mode
+    payload[0]['storageId'] = '';
+
     final body = {
       'changes': payload,
       'srcStorageType': 'local',
@@ -481,6 +495,9 @@ class ApiChangesNetworkTestSuite {
         data: {'nameLocal': 'Test Entity'},
       ),
     ];
+
+    // Clear storageId for save mode
+    payload[0]['storageId'] = '';
 
     final body = {
       'changes': payload,
