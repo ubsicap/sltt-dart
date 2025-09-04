@@ -26,6 +26,9 @@ Next step:
   - for cloud and local storage type, typically result in change log and state updates if applicable.
 
 Next step:
+- handle
+
+Next step:
    - update `SelfSyncState` to track own latest change log entry
 
 Next step:
@@ -34,6 +37,10 @@ Next step:
 Next step:
     - break api_changes_network_suite.dart into exportable tests
     - have clients import and run those in their own test with the same names
+
+Next step:
+    - change `/api/projects/{projectId}/changes` to take `cursorType` `cid` or `seq`
+    - change `/api/projects/{projectId}/changes/{seq}` to `/api/projects/{projectId}/changes/{cid}`
 
 Next step:??
 - cloud storage type should return error if unknownJson is not empty or incoming schemaVersion is greater than it has knowledge of in its model
