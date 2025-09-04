@@ -751,7 +751,7 @@ void main() {
           );
         });
 
-        test('save mode - should reject changes with unknownJson', () async {
+        test('save mode - should reject changes with unknownJson - 1', () async {
           // Test that cloud storage in save mode rejects changes with unknownJson
 
           final changeData = {
@@ -788,24 +788,58 @@ void main() {
           print('Results summary: ${result.resultsSummary}');
 
           // The validation should either return an error result or add errors to the summary
-          if (result.isError) {
-            expect(result.errorCode, equals(400));
-            expect(
-              result.errorMessage,
-              contains(
-                'contains unknown fields in cloud storage with save mode',
-              ),
-            );
-            expect(result.errorMessage, contains('unknownField'));
-          } else {
-            // Check if errors are in the results summary
-            final summary = result.resultsSummary!;
-            expect(summary['errors'], isA<List>());
-            expect((summary['errors'] as List).isNotEmpty, isTrue);
-            final error =
-                (summary['errors'] as List).first as Map<String, dynamic>;
-            expect(error['error'], contains('unknown fields'));
-          }
+          expect(result.isError, isTrue);
+          expect(result.errorCode, equals(400));
+          expect(
+            result.errorMessage,
+            contains('contains unknown fields in cloud storage with save mode'),
+          );
+          expect(result.errorMessage, contains('unknownField'));
+        });
+
+        test('save mode - should reject changes with unknownJson - 2', () async {
+          // Test that cloud storage in save mode rejects changes with unknownJson
+
+          final changeData = {
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-unknown',
+            'changeBy': 'user1',
+            'changeAt': DateTime.now().toUtc().toIso8601String(),
+            'cid': generateCid(DateTime.now().toUtc()),
+            'storageId': '', // Empty for save mode
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': true,
+            'unknownJson': '{"unknownField": "should be rejected"}',
+            'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
+          };
+
+          final result = await ChangeProcessingService.processChanges(
+            changesToCreate: [changeData],
+            storage: cloudStorage,
+            storageMode: 'save',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          print(
+            'Test result: isError=${result.isError}, errorMessage=${result.errorMessage}',
+          );
+          print('Storage type: ${cloudStorage.getStorageType()}');
+          print('Results summary: ${result.resultsSummary}');
+
+          // The validation should either return an error result or add errors to the summary
+          expect(result.isError, isTrue);
+          expect(result.errorCode, equals(400));
+          expect(
+            result.errorMessage,
+            contains('contains unknown fields in cloud storage with save mode'),
+          );
+          expect(result.errorMessage, contains('unknownField'));
         });
       });
 
