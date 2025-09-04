@@ -807,6 +807,7 @@ abstract class BaseRestApiServer {
   /// Get changes with optional pagination
   Future<Response> _handleGetChanges(Request request) async {
     try {
+      // TODO: generalize this for `domainId` instead of just `projectId`
       final projectId = _extractProjectId(request);
       if (projectId == null || projectId.isEmpty) {
         return _errorResponse('Project ID is required', 400);
