@@ -74,6 +74,15 @@ void main() {
       expect(obj.getUnknown(), isEmpty);
     });
 
+    test('SchemaVersion2.fromJson() upgrades SchemaVersion1 unknownJson', () {
+      final json = {'a': 'foo', 'unknownJson': '{"b": "bar"}'};
+      final obj = SchemaVersion2.fromJson(json);
+      expect(obj.a, 'foo');
+      expect(obj.b, 'bar');
+      expect(obj.unknownJson, '{}');
+      expect(obj.getUnknown(), isEmpty);
+    });
+
     test('SchemaVersion1.fromJson() puts unknown fields in .unknown', () {
       final json = {'a': 'foo', 'b': 'bar'};
       final obj = SchemaVersion1.fromJson(json);
@@ -82,7 +91,7 @@ void main() {
       expect(obj.getUnknown(), equals({'b': 'bar'}));
     });
 
-    test('SchemaVersion1.toJson() merges unknown fields', () {
+    test('SchemaVersion1.toJson() keeps unknownJson', () {
       final obj = SchemaVersion1(a: 'foo', unknownJson: '{"b": "bar"}');
       final json = obj.toJson();
       expect(json, containsPair('a', 'foo'));

@@ -46,8 +46,9 @@ T deserializeWithUnknownFieldData<T extends HasUnknownField>(
   Map<String, dynamic> json,
   Map<String, dynamic> Function(T value) baseToJson,
 ) {
+  final prevUnknown = jsonDecode(json['unknownJson'] ?? '{}');
   // Give fromJson an empty `unknown` map to satisfy generated constructors
-  final entry = fromJson({'unknownJson': '{}', ...json});
+  final entry = fromJson({'unknownJson': '{}', ...prevUnknown, ...json});
   // Use the generated/base toJson to get only known fields (no unknown merge)
   final knownFields = baseToJson(entry).keys.toSet();
   final unknownFields = Map<String, dynamic>.fromEntries(
