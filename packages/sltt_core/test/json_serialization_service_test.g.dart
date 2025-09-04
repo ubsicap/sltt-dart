@@ -21,7 +21,7 @@ Map<String, dynamic> _$SchemaVersion1ToJson(SchemaVersion1 instance) =>
 SchemaVersion2 _$SchemaVersion2FromJson(Map<String, dynamic> json) =>
     SchemaVersion2(
       a: json['a'] as String,
-      b: json['b'] as String,
+      b: json['b'] as String?,
       unknownJson: json['unknownJson'] as String? ?? '{}',
     );
 

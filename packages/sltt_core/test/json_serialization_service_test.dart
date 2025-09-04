@@ -65,6 +65,15 @@ void main() {
       expect(json.length, 3);
     });
 
+    test('SchemaVersion2 toJson() with optional fields as expected', () {
+      final obj = SchemaVersion2(a: 'foo');
+      final json = obj.toJson();
+      expect(json, containsPair('a', 'foo'));
+      expect(json, containsPair('b', null));
+      expect(json, containsPair('unknownJson', '{}'));
+      expect(json.length, 3);
+    });
+
     test('SchemaVersion2.fromJson() works for its own json', () {
       final json = {'a': 'foo', 'b': 'bar'};
       final obj = SchemaVersion2.fromJson(json);
@@ -139,14 +148,14 @@ class SchemaVersion1 with HasUnknownField {
       );
 }
 
-@JsonSerializable()
+@JsonSerializable(includeIfNull: true)
 class SchemaVersion2 with HasUnknownField {
   final String a;
-  final String b;
+  final String? b;
   @override
   String unknownJson;
 
-  SchemaVersion2({required this.a, required this.b, this.unknownJson = '{}'});
+  SchemaVersion2({required this.a, this.b, this.unknownJson = '{}'});
 
   factory SchemaVersion2.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData<SchemaVersion2>(
