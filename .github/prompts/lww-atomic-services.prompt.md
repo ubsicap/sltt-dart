@@ -35,9 +35,23 @@ Next step:
     1) move SyncState and SelfSyncState to sltt_core models, but remove `id = Isar.autoIncrement`.
     2) in syncManager models implement `IsarSelfSyncState` and add `sssId = Isar.autoIncrement`
     3) in syncManager `CursorSyncState` extend SyncState but add `cssId = Isar.autoIncrement`
-    4) add async updateSelfSyncState(SelfSyncState syncState) to BaseStorageService
-    5) update BaseStorageService `updateChangeLogAndState` to take async callback updateSelfSyncState(SelfSyncState syncState) to make it an explicit to handle, just use storage.updateSelfSyncState(syncState) where storage is given. Otherwise implement something for tests to check
-    6)
+    4) add async `updateSelfSyncState(SelfSyncState syncState)` to BaseStorageService
+    5) in `storage.updateChangeLogAndState()` call `storage.updateSelfSyncState(syncState)` after returning from `updateChangeLogAndState()` and add syncState to results?
+        - whether or not we create a change log entry:
+        - for each (domainType+)`domainId` (e.g. project)
+        - keep track of latest cid, seq, storageId, etc...
+        -
+        - for sync:
+            - earlier: validate that srcStorageId does not equal targetStorageId?
+            - for each srcStorageId + (domainType) + domainId (composite?)
+            - keep track of CursorSyncState
+                - storageId = srcStorageId
+                  seq <-- this is maxSeq/lastSeq
+        - for sync and save mode track selfSyncState:
+           - for each (domainType) + domainId + entityType
+           - do we need separate tracking for outsync seqs?
+              - true. outsyncs can be computed
+            - updateSelfSyncState(syncState) to track cid, seq,
 
 Next step:
    - add serializable class for resultsSummary
