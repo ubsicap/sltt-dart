@@ -9,7 +9,11 @@ void main() {
     test('fails generation when field not Isar compatible (enforced)',
         () async {
       const source = r'''// test input
+        library bad_data_lib;
+        import 'package:json_annotation/json_annotation.dart';
+        import 'package:sltt_core/sltt_core.dart';
         import 'package:syncable_entity_state_data/syncable_entity_state_data.dart';
+  // standalone generation; no part directives.
 
         class CustomType { final int x; const CustomType(this.x); }
 
@@ -35,7 +39,7 @@ void main() {
         'syncable_entity_state_data|lib/bad_data.dart': source,
       };
 
-      final builder = syncableEntityStateDataBuilder(BuilderOptions(const {}));
+      final builder = syncableEntityStateDataBuilder(const BuilderOptions({}));
       final reader = await PackageAssetReader.currentIsolate();
       await expectLater(
         () => testBuilder(

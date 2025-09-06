@@ -1,15 +1,19 @@
 import 'package:build/build.dart';
 import 'package:build_test/build_test.dart';
-import 'package:test/test.dart';
 import 'package:syncable_entity_state_data/src/generator.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('generates *EntityState for annotated data class', () async {
     const src = r'''
+      library task_data_lib;
+      import 'package:json_annotation/json_annotation.dart';
+      import 'package:sltt_core/sltt_core.dart';
       import 'package:syncable_entity_state_data/syncable_entity_state_data.dart';
+  // generated entity_state file will be standalone; no part directives here.
 
       @SyncableEntityStateData(entityTypeOverride: 'task')
-      class TaskData implements CoreSyncableEntityDataFields {
+  class TaskData implements CoreSyncableEntityDataFields {
         @override
         final String parentId;
         @override
@@ -22,7 +26,7 @@ void main() {
           required this.nameLocal,
           this.rank,
           this.deleted,
-        });
+  });
       }
     ''';
 
@@ -30,7 +34,7 @@ void main() {
       'syncable_entity_state_data|lib/task_data.dart': src,
     };
 
-    final builder = syncableEntityStateDataBuilder(BuilderOptions(const {}));
+    final builder = syncableEntityStateDataBuilder(const BuilderOptions({}));
     final reader = await PackageAssetReader.currentIsolate();
     final outputs = await testBuilder(
       builder,
@@ -42,8 +46,10 @@ void main() {
     final generated =
         outputs['syncable_entity_state_data|lib/task_data.entity_state.dart'];
     expect(generated, isNotNull);
-    expect(generated,
-        contains('class TaskDataEntityState extends BaseEntityState'));
+    expect(
+      generated,
+      contains('class TaskDataEntityState extends BaseEntityState'),
+    );
     expect(generated, contains("entityType: entityType ?? 'task'"));
     expect(generated, contains('fromJsonBase'));
     expect(generated, contains('toJsonBase'));

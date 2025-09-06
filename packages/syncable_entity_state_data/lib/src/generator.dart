@@ -60,10 +60,9 @@ class SyncableEntityStateDataGenerator
     final buffer = StringBuffer();
     buffer.writeln('// GENERATED CODE - DO NOT MODIFY BY HAND');
     buffer.writeln('// ignore_for_file: non_constant_identifier_names');
-    final sourcePart = buildStep.inputId.pathSegments.last;
-    final jsonPart = sourcePart.replaceAll('.dart', '.g.dart');
-    buffer.writeln("part of '$sourcePart';");
-    buffer.writeln("part '$jsonPart';");
+    // original source file name not needed for standalone output
+    // Standalone generated file (not a part); imports must be present in source using file to access class.
+    // Users can optionally export this file. Keeping it standalone avoids part/part-of coordination in tests.
     buffer.writeln();
     buffer.writeln(
       '@JsonSerializable(includeIfNull: $includeIfNull, explicitToJson: true)',
