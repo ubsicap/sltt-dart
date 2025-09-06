@@ -1,0 +1,14 @@
+targets:
+  $default:
+    builders:
+      syncable_entity_state_data|syncable_entity_state_data_builder:
+        enabled: true
+
+builders:
+  syncable_entity_state_data_builder:
+    import: "package:syncable_entity_state_data/src/generator.dart"
+    builder_factories: ["syncableEntityStateDataBuilder"]
+    build_extensions: {".dart": [".entity_state.dart"]}
+    auto_apply: dependents
+    build_to: source
+    applies_builders: ["source_gen|combining_builder"]
