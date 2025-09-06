@@ -1,6 +1,6 @@
 import 'package:syncable_entity_state_data/syncable_entity_state_data.dart';
 
-@SyncableEntityStateData(entityTypeOverride: 'task')
+@SyncableEntityStateData(entityType: 'task')
 class TaskData implements CoreSyncableEntityDataFields {
   @override
   final String parentId;

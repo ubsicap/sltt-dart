@@ -24,7 +24,8 @@
 /// Used to mark a data class for which an `*EntityState` companion
 /// should be generated.
 class SyncableEntityStateData {
-  final String? entityTypeOverride;
+  /// Required canonical entityType string used for all generated states.
+  final String entityType;
 
   /// If true (default) treat data fields as required when generating toJsonSafe().
   final bool jsonRequired;
@@ -35,7 +36,7 @@ class SyncableEntityStateData {
   /// If true (default) validate data field types against a conservative Isar-compatible set.
   final bool enforceIsarCompatibility;
   const SyncableEntityStateData({
-    this.entityTypeOverride,
+    required this.entityType,
     this.jsonRequired = true,
     this.includeIfNull = true,
     this.enforceIsarCompatibility = true,

@@ -46,39 +46,6 @@ TaskDataEntityState _$TaskDataEntityStateFromJson(Map<String, dynamic> json) =>
       data_deleted_cloudAt_: json['data_deleted_cloudAt_'] == null
           ? null
           : DateTime.parse(json['data_deleted_cloudAt_'] as String),
-      data_parentId: json['data_parentId'] as String,
-      data_parentId_dataSchemaRev_:
-          (json['data_parentId_dataSchemaRev_'] as num?)?.toInt(),
-      data_parentId_changeAt_: json['data_parentId_changeAt_'] == null
-          ? null
-          : DateTime.parse(json['data_parentId_changeAt_'] as String),
-      data_parentId_cid_: json['data_parentId_cid_'] as String?,
-      data_parentId_changeBy_: json['data_parentId_changeBy_'] as String?,
-      data_parentId_cloudAt_: json['data_parentId_cloudAt_'] == null
-          ? null
-          : DateTime.parse(json['data_parentId_cloudAt_'] as String),
-      data_deleted: json['data_deleted'] as bool?,
-      data_deleted_dataSchemaRev_:
-          (json['data_deleted_dataSchemaRev_'] as num?)?.toInt(),
-      data_deleted_changeAt_: json['data_deleted_changeAt_'] == null
-          ? null
-          : DateTime.parse(json['data_deleted_changeAt_'] as String),
-      data_deleted_cid_: json['data_deleted_cid_'] as String?,
-      data_deleted_changeBy_: json['data_deleted_changeBy_'] as String?,
-      data_deleted_cloudAt_: json['data_deleted_cloudAt_'] == null
-          ? null
-          : DateTime.parse(json['data_deleted_cloudAt_'] as String),
-      data_rank: json['data_rank'] as String?,
-      data_rank_dataSchemaRev_:
-          (json['data_rank_dataSchemaRev_'] as num?)?.toInt(),
-      data_rank_changeAt_: json['data_rank_changeAt_'] == null
-          ? null
-          : DateTime.parse(json['data_rank_changeAt_'] as String),
-      data_rank_cid_: json['data_rank_cid_'] as String?,
-      data_rank_changeBy_: json['data_rank_changeBy_'] as String?,
-      data_rank_cloudAt_: json['data_rank_cloudAt_'] == null
-          ? null
-          : DateTime.parse(json['data_rank_cloudAt_'] as String),
       data_nameLocal: json['data_nameLocal'] as String,
       data_nameLocal_dataSchemaRev_:
           (json['data_nameLocal_dataSchemaRev_'] as num?)?.toInt(),
@@ -103,15 +70,12 @@ Map<String, dynamic> _$TaskDataEntityStateToJson(
       'change_dataSchemaRev': instance.change_dataSchemaRev,
       'change_cloudAt': instance.change_cloudAt?.toIso8601String(),
       'change_changeBy': instance.change_changeBy,
-      'entityId': instance.entityId,
-      'data_parentId': instance.data_parentId,
-      'data_parentId_dataSchemaRev_': instance.data_parentId_dataSchemaRev_,
-      'data_parentId_changeAt_':
-          instance.data_parentId_changeAt_?.toIso8601String(),
-      'data_parentId_cid_': instance.data_parentId_cid_,
-      'data_parentId_changeBy_': instance.data_parentId_changeBy_,
-      'data_parentId_cloudAt_':
-          instance.data_parentId_cloudAt_?.toIso8601String(),
+      'data_rank': instance.data_rank,
+      'data_rank_dataSchemaRev_': instance.data_rank_dataSchemaRev_,
+      'data_rank_changeAt_': instance.data_rank_changeAt_?.toIso8601String(),
+      'data_rank_cid_': instance.data_rank_cid_,
+      'data_rank_changeBy_': instance.data_rank_changeBy_,
+      'data_rank_cloudAt_': instance.data_rank_cloudAt_?.toIso8601String(),
       'data_deleted': instance.data_deleted,
       'data_deleted_dataSchemaRev_': instance.data_deleted_dataSchemaRev_,
       'data_deleted_changeAt_':
@@ -120,12 +84,12 @@ Map<String, dynamic> _$TaskDataEntityStateToJson(
       'data_deleted_changeBy_': instance.data_deleted_changeBy_,
       'data_deleted_cloudAt_':
           instance.data_deleted_cloudAt_?.toIso8601String(),
-      'data_rank': instance.data_rank,
-      'data_rank_dataSchemaRev_': instance.data_rank_dataSchemaRev_,
-      'data_rank_changeAt_': instance.data_rank_changeAt_?.toIso8601String(),
-      'data_rank_cid_': instance.data_rank_cid_,
-      'data_rank_changeBy_': instance.data_rank_changeBy_,
-      'data_rank_cloudAt_': instance.data_rank_cloudAt_?.toIso8601String(),
+      'data_parentId': instance.data_parentId,
+      'data_parentId_changeAt_':
+          instance.data_parentId_changeAt_.toIso8601String(),
+      'data_parentId_cid_': instance.data_parentId_cid_,
+      'data_parentId_changeBy_': instance.data_parentId_changeBy_,
+      'entityId': instance.entityId,
       'data_nameLocal': instance.data_nameLocal,
       'data_nameLocal_dataSchemaRev_': instance.data_nameLocal_dataSchemaRev_,
       'data_nameLocal_changeAt_':

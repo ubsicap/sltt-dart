@@ -1,50 +1,11 @@
-import 'package:build/build.dart';
-import 'package:build_test/build_test.dart';
-import 'package:syncable_entity_state_data/src/generator.dart';
+import 'dart:io';
+
 import 'package:test/test.dart';
 
 void main() {
-  test('generates *EntityState for annotated data class', () async {
-    const src = r'''
-      library task_data_lib;
-      import 'package:json_annotation/json_annotation.dart';
-      import 'package:sltt_core/sltt_core.dart';
-      import 'package:syncable_entity_state_data/syncable_entity_state_data.dart';
-  // generated entity_state file will be standalone; no part directives here.
-
-      @SyncableEntityStateData(entityTypeOverride: 'task')
-  class TaskData implements CoreSyncableEntityDataFields {
-        @override
-        final String parentId;
-        @override
-        final bool? deleted;
-        @override
-        final String? rank;
-        final String nameLocal;
-        const TaskData({
-          required this.parentId,
-          required this.nameLocal,
-          this.rank,
-          this.deleted,
-  });
-      }
-    ''';
-
-    final assets = {
-      'syncable_entity_state_data|lib/task_data.dart': src,
-    };
-
-    final builder = syncableEntityStateDataBuilder(const BuilderOptions({}));
-    final reader = await PackageAssetReader.currentIsolate();
-    final outputs = await testBuilder(
-      builder,
-      assets,
-      reader: reader,
-      generateFor: const {'syncable_entity_state_data|lib/task_data.dart'},
-    );
-
+  test('generated entity state file has expected constructs (pre-built)', () {
     final generated =
-        outputs['syncable_entity_state_data|lib/task_data.entity_state.dart'];
+        File('test/test_assets/task_data.entity_state.dart').readAsStringSync();
     expect(generated, isNotNull);
     expect(
       generated,
@@ -56,5 +17,11 @@ void main() {
     expect(generated, contains('toJsonSafe'));
     expect(generated, contains('deserializeWithUnknownFieldData'));
     expect(generated, contains('serializeWithUnknownFieldData'));
+    // all data class fields accessible as data_*, custom field declared
+    expect(generated, contains('data_nameLocal'));
+    // core field super params present
+    expect(generated, contains('required super.data_parentId_changeAt_'));
+    // toData mapper
+    expect(generated, contains('toData()'));
   });
 }

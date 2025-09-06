@@ -24,21 +24,22 @@ class SyncableEntityStateDataGenerator
 
     final className = element.name;
     final entityStateClassName = '${className}EntityState';
-    final entityTypeOverride =
-        annotation.peek('entityTypeOverride')?.stringValue;
+    final entityTypeValue = annotation.read('entityType').stringValue;
     final jsonRequired = annotation.peek('jsonRequired')?.boolValue ?? true;
     final includeIfNull = annotation.peek('includeIfNull')?.boolValue ?? true;
     final enforceIsar =
         annotation.peek('enforceIsarCompatibility')?.boolValue ?? true;
 
     // Determine entityType: override or infer from class name (strip 'Data' suffix if present)
-    final inferredEntityType = _inferEntityType(className);
-    final entityTypeValue = entityTypeOverride ?? inferredEntityType;
+    // entityTypeValue already provided explicitly via annotation
 
     // Collect data fields (instance, non-static, public)
-    final dataFields = element.fields.where(
+    final allFields = element.fields.where(
       (f) => !f.isStatic && !f.isSynthetic && f.isPublic,
     );
+    // Core fields already provided by BaseEntityState; don't generate duplicates.
+    const coreFieldNames = {'parentId', 'deleted', 'rank'};
+    final dataFields = allFields.where((f) => !coreFieldNames.contains(f.name));
 
     // Optionally enforce Isar compatibility
     final incompatible = <String, String>{};
@@ -69,6 +70,11 @@ class SyncableEntityStateDataGenerator
     final gPartName = '$baseName.entity_state.g.dart';
     buffer
       ..writeln('library $libraryName;')
+      // Import the original source file so the original data class symbol
+      // (e.g. TaskData) is in scope for the toData() mapper and any type
+      // references. This keeps the generated library standalone while still
+      // enabling the round-trip mapping.
+      ..writeln("import '$sourceFileName';")
       ..writeln()
       ..writeln("import 'package:json_annotation/json_annotation.dart';")
       ..writeln("import 'package:sltt_core/sltt_core.dart';")
@@ -145,10 +151,9 @@ class SyncableEntityStateDataGenerator
     buffer.writeln('    change_changeAt_orig_: change_changeAt,');
     buffer.writeln('    change_cid_orig_: change_cid,');
     buffer.writeln('    change_changeBy_orig_: change_changeBy,');
-    buffer.writeln(
-      '    data_parentId_dataSchemaRev_: data_parentId_dataSchemaRev_,',
-    );
-    buffer.writeln('    data_parentId_cloudAt_: data_parentId_cloudAt_,');
+    // Pass nulls for optional parentId meta values (instance fields not available yet)
+    buffer.writeln('    data_parentId_dataSchemaRev_: null,');
+    buffer.writeln('    data_parentId_cloudAt_: null,');
     buffer.writeln('  );');
 
     // Base (json_serializable) helpers
@@ -162,7 +167,7 @@ class SyncableEntityStateDataGenerator
     // toJsonSafe ensures required fields present building on domain toJson()
     buffer.writeln('  Map<String, dynamic> toJsonSafe() {');
     buffer.writeln('    final j = toJson();');
-    for (final field in dataFields) {
+    for (final field in allFields) {
       final name = field.name;
       // Provide basic defaults based on type
       final typeStr = field.type.getDisplayString(withNullability: true);
@@ -192,15 +197,32 @@ class SyncableEntityStateDataGenerator
 
     buffer.writeln('}');
 
-    return _formatter.format(buffer.toString());
-  }
-
-  String _inferEntityType(String className) {
-    if (className.endsWith('Data') && className.length > 4) {
-      return className.substring(0, className.length - 4).toLowerCase();
+    // Add toData() mapper after class to return the original data class instance
+    buffer.writeln();
+    buffer.writeln('// Mapper back to the original data class');
+    buffer.writeln(
+      '$className _${entityStateClassName}ToData($entityStateClassName s) => $className(',
+    );
+    for (final field in allFields) {
+      final originalName = field.name;
+      if (coreFieldNames.contains(originalName)) {
+        // Map to base class field naming (data_<core>)
+        buffer.writeln('  $originalName: s.data_$originalName,');
+      } else {
+        buffer.writeln('  $originalName: s.data_$originalName,');
+      }
     }
-    // Fallback: lowercase full name
-    return className.toLowerCase();
+    buffer.writeln(');');
+
+    buffer.writeln(
+      'extension ${entityStateClassName}DataExt on $entityStateClassName {',
+    );
+    buffer.writeln(
+      '  $className toData() => _${entityStateClassName}ToData(this);',
+    );
+    buffer.writeln('}');
+
+    return _formatter.format(buffer.toString());
   }
 }
 
