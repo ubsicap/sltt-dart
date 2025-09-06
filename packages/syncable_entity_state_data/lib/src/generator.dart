@@ -61,9 +61,20 @@ class SyncableEntityStateDataGenerator
     buffer.writeln('// GENERATED CODE - DO NOT MODIFY BY HAND');
     buffer.writeln('// ignore_for_file: non_constant_identifier_names');
     // original source file name not needed for standalone output
-    // Standalone generated file (not a part); imports must be present in source using file to access class.
-    // Users can optionally export this file. Keeping it standalone avoids part/part-of coordination in tests.
-    buffer.writeln();
+    // Standalone generated file with its own library so json_serializable can generate *_entity_state.g.dart.
+    final sourceFileName =
+        buildStep.inputId.pathSegments.last; // e.g. task_data.dart
+    final baseName = sourceFileName.replaceAll('.dart', ''); // task_data
+    final libraryName = '${baseName}_entity_state';
+    final gPartName = '$baseName.entity_state.g.dart';
+    buffer
+      ..writeln('library $libraryName;')
+      ..writeln()
+      ..writeln("import 'package:json_annotation/json_annotation.dart';")
+      ..writeln("import 'package:sltt_core/sltt_core.dart';")
+      ..writeln()
+      ..writeln("part '$gPartName';")
+      ..writeln();
     buffer.writeln(
       '@JsonSerializable(includeIfNull: $includeIfNull, explicitToJson: true)',
     );
