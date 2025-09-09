@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
 
+import 'isar_storage_service.dart';
 import 'models/isar_change_log_entry.dart' as client;
-import 'isar_storage_service.dart.todo';
 
 class SyncManager {
   static SyncManager? _instance;
