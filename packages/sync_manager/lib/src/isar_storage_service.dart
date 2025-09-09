@@ -457,12 +457,9 @@ class IsarStorageService extends BaseStorageService {
     return _convertToChangeLogEntries(results);
   }
 
-  // COMMENTED OUT - getChangesForSync needs collection fix
-  /*
   /// Get changes for syncing - excludes outdated changes.
   ///
-  /// Returns only changes that haven't been marked as outdated,
-  /// which prevents syncing obsolete change log entries.
+  /// Returns only changes that haven't been cloud-synced yet.
   Future<List<Map<String, dynamic>>> getChangesForSync({
     int? cursor,
     int? limit,
@@ -471,7 +468,7 @@ class IsarStorageService extends BaseStorageService {
     var results = await query
         .seqGreaterThan(cursor ?? 0)
         .filter()
-        .outdatedByIsNull()
+        .cloudAtIsNotNull()
         .findAll();
 
     if (limit != null && results.length > limit) {
@@ -479,7 +476,6 @@ class IsarStorageService extends BaseStorageService {
     }
     return results.map((e) => e.toJson()).toList();
   }
-  */
 
   // COMMENTED OUT - markAsOutdated needs collection fix (this is the duplicate)
   /*
