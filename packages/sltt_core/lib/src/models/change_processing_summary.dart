@@ -2,6 +2,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'change_processing_summary.g.dart';
 
+/// TODO separate into SaveChangesSummary and SyncChangesSummary?
 /// Summary of results from processing changes through the change processing service
 @JsonSerializable()
 class ChangeProcessingSummary {
@@ -43,6 +44,15 @@ class ChangeProcessingSummary {
 
   /// A list of error messages
   List<Map<String, dynamic>> errors;
+
+  List<String> get processed => {
+    ...created,
+    ...updated,
+    ...deleted,
+    ...noOps,
+    ...clouded,
+    ...dups,
+  }.toList();
 
   /// A list of unprocessed entity IDs
   List<String> unprocessed;

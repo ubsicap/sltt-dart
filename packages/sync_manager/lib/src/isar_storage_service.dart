@@ -316,23 +316,19 @@ class IsarStorageService extends BaseStorageService {
   Future<int> getChangeCount() async {
     return await _isar.isarChangeLogEntrys.count();
   }
+  */
 
   /// Delete multiple changes by sequence numbers.
   ///
   /// Used for cleanup after successful outsync operations.
   /// Returns the number of changes actually deleted.
-  Future<int> deleteChanges(List<int> seqs) async {
+  Future<int> deleteChanges(List<String> cids) async {
     int deletedCount = 0;
     await _isar.writeTxn(() async {
-      for (final seq in seqs) {
-        if (await _isar.isarChangeLogEntrys.delete(seq)) {
-          deletedCount++;
-        }
-      }
+      deletedCount = await _isar.isarChangeLogEntrys.deleteAllByCid(cids);
     });
     return deletedCount;
   }
-  */
 
   // Statistics operations
   @override
@@ -460,7 +456,7 @@ class IsarStorageService extends BaseStorageService {
   /// Get changes for syncing - excludes outdated changes.
   ///
   /// Returns only changes that haven't been cloud-synced yet.
-  Future<List<Map<String, dynamic>>> getChangesForSync({
+  Future<List<client.IsarChangeLogEntry>> getChangesForSync({
     int? cursor,
     int? limit,
   }) async {
@@ -474,7 +470,7 @@ class IsarStorageService extends BaseStorageService {
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
     }
-    return results.map((e) => e.toJson()).toList();
+    return results;
   }
 
   // COMMENTED OUT - markAsOutdated needs collection fix (this is the duplicate)

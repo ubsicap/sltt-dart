@@ -7,7 +7,6 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/services/change_processing_service.dart';
 
 /// Base REST API server that provides common functionality for all storage types.
 ///
@@ -73,6 +72,7 @@ abstract class BaseRestApiServer {
       '/api/stats',
       _handleGetGlobalStats,
     ); // Global stats across all projects
+    // TODO: /api/changes/sync vs. /api/changes/save
     router.post('/api/changes', _handleCreateChanges);
     router.get('/api/domains', _handleGetDomainsAndTheirCollections);
     router.get('/api/domains/<domainType>/entities', _handleGetEntities);

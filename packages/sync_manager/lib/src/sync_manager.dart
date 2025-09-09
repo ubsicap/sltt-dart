@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'isar_storage_service.dart';
-import 'models/isar_change_log_entry.dart' as client;
 
 class SyncManager {
   static SyncManager? _instance;
@@ -48,117 +47,77 @@ class SyncManager {
       print('[SyncManager] Starting outsync to cloud...');
 
       // Get changes for sync (excludes outdated changes)
-      final changes = await _outsyncsStorage.getChangesForSync();
+      final changesToSync = await _outsyncsStorage.getChangesForSync();
 
-      if (changes.isEmpty) {
+      if (changesToSync.isEmpty) {
         print('[SyncManager] No changes to outsync');
         return OutsyncResult(
           success: true,
-          syncedChanges: [],
+          changeSummary: null,
           deletedLocalChanges: [],
-          seqMap: {},
           message: 'No changes to sync',
         );
       }
 
-      print('[SyncManager] Found ${changes.length} changes to outsync');
-
-      // Create a mapping from CID to local sequence number for later deletion
-      final cidToLocalSeq = <String, int>{};
-      for (final change in changes) {
-        final cid = change['cid'] as String?;
-        final seq = change['seq'] as int?;
-        if (cid != null && seq != null) {
-          cidToLocalSeq[cid] = seq;
-        }
-      }
-
-      // Apply outsynced changes to state (Step 4: changelog_to_state integration)
-      // For outsyncs: changes get incorporated into state but stay in outsyncs until posted to cloud
-      await _applyChangesToState(changes, 'outsyncs');
+      print('[SyncManager] Found ${changesToSync.length} changes to outsync');
 
       // Send changes to cloud storage
       final response = await _dio.post(
         '$_cloudStorageUrl/api/changes',
-        data: changes,
+        data: changesToSync.map((c) => c.toJson()).toList(),
       );
 
       if (response.statusCode == 200) {
-        final responseData = response.data as Map<String, dynamic>;
-        final success = responseData['success'] as bool;
-        final createdCount = responseData['created'] as int;
-        final seqMap = Map<String, int>.from(responseData['seqMap'] ?? {});
+        final summary = ChangeProcessingSummary.fromJson(response.data);
+        final cidsSynced = summary.processed;
 
-        if (success) {
+        if (cidsSynced.isNotEmpty) {
           // Immediately delete the outsynced changes to clean up local storage
           print(
-            '[SyncManager] Successfully outsynced $createdCount changes to cloud',
+            '[SyncManager] Successfully outsynced ${cidsSynced.length} changes to cloud',
           );
           print(
             '[SyncManager] Deleting outsynced changes from local storage...',
           );
 
-          // Convert CID-based seqMap to local sequence numbers for deletion
-          final seqsToDelete = <int>[];
-          for (final cid in seqMap.keys) {
-            final localSeq = cidToLocalSeq[cid];
-            if (localSeq != null) {
-              seqsToDelete.add(localSeq);
-            } else {
-              print(
-                '[SyncManager] Warning: Could not find local sequence for CID: $cid',
-              );
-            }
-          }
-
-          if (seqsToDelete.isNotEmpty) {
-            final deletedCount = await _outsyncsStorage.deleteChanges(
-              seqsToDelete,
-            );
-            print(
-              '[SyncManager] Deleted $deletedCount outsynced changes from local storage',
-            );
-          }
+          final deletedCount = await _outsyncsStorage.deleteChanges(cidsSynced);
+          print(
+            '[SyncManager] Deleted $deletedCount outsynced changes from local storage',
+          );
 
           return OutsyncResult(
             success: true,
-            syncedChanges: [], // No longer return full payload
-            deletedLocalChanges: seqsToDelete,
-            seqMap: seqMap,
-            message: 'Successfully outsynced $createdCount changes',
+            message: 'Successfully outsynced ${cidsSynced.length} changes',
+            changeSummary: summary,
+            deletedLocalChanges: cidsSynced,
           );
         } else {
           // Handle partial failure
-          final failedAtIndex = responseData['failedAtIndex'] as int?;
-          final error = responseData['error'] as String?;
-          final stackTrace = responseData['stackTrace'] as String?;
 
-          print(
-            '[SyncManager] Partial outsync failed at index $failedAtIndex: $error',
-          );
-          print('[SyncManager] Stack trace: $stackTrace');
+          print('[SyncManager] Partial outsync nothing processed');
 
           return OutsyncResult(
             success: false,
-            syncedChanges: [],
+            message: 'Partial nothing processed',
+            changeSummary: summary,
             deletedLocalChanges: [],
-            seqMap: seqMap,
-            message: 'Partial outsync failed at index $failedAtIndex: $error',
-            error: error,
-            errorStackTrace: stackTrace,
+            error: 'Partial nothing processed',
+            errorStackTrace: null,
           );
         }
       } else {
-        throw Exception('Outsync failed with status: ${response.statusCode}');
+        final errorBody = response.data;
+        throw Exception(
+          'Outsync failed with status: ${response.statusCode}, body: $errorBody',
+        );
       }
     } catch (e, stackTrace) {
       print('[SyncManager] Outsync failed: $e');
       print('[SyncManager] Stack trace: $stackTrace');
       return OutsyncResult(
         success: false,
-        syncedChanges: [],
+        changeSummary: null,
         deletedLocalChanges: [],
-        seqMap: {},
         message: 'Outsync failed: $e',
         error: e.toString(), // Capture original error
         errorStackTrace: stackTrace
@@ -313,7 +272,7 @@ class SyncManager {
     // Use the already computed deleted local sequences from outsync result
     final finalOutsyncResult = OutsyncResult(
       success: outsyncResult.success,
-      syncedChanges: outsyncResult.syncedChanges,
+      changeUpdates: outsyncResult.changeUpdates,
       deletedLocalChanges: outsyncResult.deletedLocalChanges,
       seqMap: outsyncResult.seqMap,
       message: outsyncResult.message,
@@ -361,37 +320,6 @@ class SyncManager {
     }
   }
 
-  /// Applies changelog entries to state storage (Step 4: changelog_to_state integration)
-  Future<void> _applyChangesToState(
-    List<Map<String, dynamic>> changes,
-    String source,
-  ) async {
-    print(
-      '[SyncManager] Applying ${changes.length} $source changes to state...',
-    );
-
-    int appliedCount = 0;
-    for (final changeMap in changes) {
-      try {
-        // Convert Map to IsarChangeLogEntry
-        final change = client.IsarChangeLogEntry.fromJson(changeMap);
-
-        // Apply the change to the appropriate state collection
-        await _cloudStorage.applyChangelogToState(change);
-        appliedCount++;
-      } catch (e) {
-        print(
-          '[SyncManager] Failed to apply change ${changeMap['seq']} to state: $e',
-        );
-        // Continue processing other changes
-      }
-    }
-
-    print(
-      '[SyncManager] Applied $appliedCount/${changes.length} $source changes to state',
-    );
-  }
-
   /// Clear all sync states (useful for testing)
   Future<void> clearAllSyncStates() async {
     await _cloudStorage.clearAllSyncStates();
@@ -409,18 +337,16 @@ class SyncManager {
 // Result classes
 class OutsyncResult {
   final bool success;
-  final List<Map<String, dynamic>> syncedChanges;
-  final List<int> deletedLocalChanges;
-  final Map<String, int> seqMap; // Maps CID to cloud sequence number
+  ChangeProcessingSummary? changeSummary;
+  final List<String> deletedLocalChanges;
   final String message;
   final String? error; // Optional error for debugging
   final String? errorStackTrace;
 
   OutsyncResult({
     required this.success,
-    required this.syncedChanges,
+    required this.changeSummary,
     required this.deletedLocalChanges,
-    required this.seqMap,
     required this.message,
     this.error,
     this.errorStackTrace,
@@ -428,9 +354,7 @@ class OutsyncResult {
 
   Map<String, dynamic> toJson() => {
     'success': success,
-    'syncedChanges': syncedChanges,
-    'deletedLocalChanges': deletedLocalChanges,
-    'seqMap': seqMap,
+    'changeSummary': changeSummary.toJson(),
     'message': message,
   };
 }

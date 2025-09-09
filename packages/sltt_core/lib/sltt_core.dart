@@ -2,12 +2,14 @@
 export 'src/api/base_rest_api_server.dart';
 export 'src/models/base_change_log_entry.dart';
 export 'src/models/base_entity_state.dart';
+export 'src/models/change_processing_summary.dart';
 export 'src/models/entity_type.dart';
 export 'src/models/enums.dart';
 export 'src/models/serializable_group.dart';
 export 'src/server/server_urls.dart';
 export 'src/services/base_change_log_entry_service.dart';
 export 'src/services/change_entity_state_service.dart';
+export 'src/services/change_processing_service.dart';
 export 'src/services/date_time_service.dart';
 export 'src/services/json_serialization_service.dart';
 export 'src/services/uid_service.dart';
