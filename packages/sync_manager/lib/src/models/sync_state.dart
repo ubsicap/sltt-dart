@@ -1,12 +1,7 @@
-import 'package:isar/isar.dart';
-
 /// Tracks the last sync state for each domain.
 /// This collection does not inherit from BaseEntityState as it's purely
 /// for sync tracking and doesn't represent domain entity data.
-class SyncState {
-  /// Unique identifier for this sync state entry
-  Id id = Isar.autoIncrement;
-
+abstract class SyncState {
   /// Domain ID (primary key for sync tracking)
   final String domainId;
 
@@ -34,7 +29,6 @@ class SyncState {
   final DateTime? updatedAt;
 
   SyncState({
-    this.id = Isar.autoIncrement,
     required this.domainId,
     required this.domainType,
     required this.storageId,

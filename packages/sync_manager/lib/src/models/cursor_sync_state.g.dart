@@ -120,12 +120,12 @@ CursorSyncState _cursorSyncStateDeserialize(
     createdAt: reader.readDateTimeOrNull(offsets[2]),
     domainId: reader.readString(offsets[3]),
     domainType: reader.readString(offsets[4]),
+    id: id,
     seq: reader.readLong(offsets[5]),
     storageId: reader.readString(offsets[6]),
     storageType: reader.readString(offsets[7]),
     updatedAt: reader.readDateTimeOrNull(offsets[8]),
   );
-  object.id = id;
   return object;
 }
 
@@ -168,9 +168,7 @@ List<IsarLinkBase<dynamic>> _cursorSyncStateGetLinks(CursorSyncState object) {
 }
 
 void _cursorSyncStateAttach(
-    IsarCollection<dynamic> col, Id id, CursorSyncState object) {
-  object.id = id;
-}
+    IsarCollection<dynamic> col, Id id, CursorSyncState object) {}
 
 extension CursorSyncStateQueryWhereSort
     on QueryBuilder<CursorSyncState, CursorSyncState, QWhere> {

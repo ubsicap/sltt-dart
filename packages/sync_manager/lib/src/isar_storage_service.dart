@@ -626,7 +626,7 @@ class IsarStorageService extends BaseStorageService {
   }
 
   /// Get sync state for a specific project
-  Future<CursorSyncState?> getSyncState(String domainId) async {
+  Future<CursorSyncState?> getCursorSyncState(String domainId) async {
     return await _isar
         .collection<CursorSyncState>()
         .filter()
@@ -642,18 +642,65 @@ class IsarStorageService extends BaseStorageService {
     // For now, just stub this out
   }
 
-  /*
   /// Create or update sync state for a project
-  Future<SyncState> upsertSyncState(
-    String projectId, {
-    String? changeLogId,
-    DateTime? lastChangeAt,
-    int? lastSeq,
+  Future<CursorSyncState> upsertCursorSyncState({
+    required String domainType,
+    required String domainId,
+    required String srcStorageType,
+    required String srcStorageId,
+    required int seq,
+    required String cid,
+    required DateTime changeAt,
   }) async {
-    // TODO: Fix when implementing sync state management
-    throw UnimplementedError('Sync state management needs to be implemented');
+    CursorSyncState updatedCursorState;
+    final existing = await getCursorSyncState(domainId);
+    if (existing != null) {
+      /*
+          required super.domainId,
+          required super.domainType,
+          required super.storageId,
+          required super.storageType,
+          required super.cid,
+          required super.changeAt,
+          required super.seq,
+          super.createdAt,
+          super.updatedAt,
+      */
+      // Update existing
+      updatedCursorState = CursorSyncState(
+        id: existing.id,
+        domainId: existing.domainId,
+        domainType: existing.domainType,
+        storageId: srcStorageId,
+        storageType: srcStorageType,
+        cid: cid,
+        changeAt: changeAt,
+        seq: seq,
+        createdAt: existing.createdAt,
+        updatedAt: DateTime.now().toUtc(),
+      );
+    } else {
+      // Create new
+      final now = DateTime.now().toUtc();
+      updatedCursorState = CursorSyncState(
+        domainId: domainId,
+        domainType: domainType,
+        storageId: srcStorageId,
+        storageType: srcStorageType,
+        cid: cid,
+        changeAt: changeAt,
+        seq: seq,
+        createdAt: now,
+        updatedAt: now,
+      );
+    }
+    await _isar.writeTxn(() async {
+      await _isar.cursorSyncStates.put(updatedCursorState);
+    });
+    return updatedCursorState;
   }
 
+  /*
   /// Get all sync states
   Future<List<SyncState>> getAllSyncStates() async {
     return await _isar.syncStates.where().findAll();
@@ -664,13 +711,16 @@ class IsarStorageService extends BaseStorageService {
     // TODO: Implement when fixing sync state management
     return false;
   }
+  */
 
   /// Clear all sync states (useful for testing)
-  Future<void> clearAllSyncStates() async {
+  Future<void> clearAllCursorSyncStates() async {
     await _isar.writeTxn(() async {
-      await _isar.syncStates.clear();
+      await _isar.cursorSyncStates.clear();
     });
   }
+
+  /*
 
   // State management methods for IsarProjectState
   Future<void> saveProjectState(IsarProjectState projectState) async {

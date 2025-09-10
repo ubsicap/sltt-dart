@@ -126,6 +126,8 @@ class SyncManager {
 
   // Downsync changes from cloud storage to downsyncs
   Future<DownsyncResult> downsyncFromCloud() async {
+    ProjectCursorChanges projectCursorChanges = {};
+    StorageSummaries storageSummaries = {};
     try {
       print('[SyncManager] Starting downsync from cloud...');
 
@@ -148,26 +150,31 @@ class SyncManager {
         print('[SyncManager] No projects found in cloud to downsync');
         return DownsyncResult(
           success: true,
-          newChanges: [],
+          projectCursorChanges: {},
+          storageSummaries: {},
           message: 'No projects found in cloud to downsync',
         );
       }
-
-      final allNewChanges = <Map<String, dynamic>>[];
 
       // For each project, downsync its changes with cursor-based pagination
       for (final projectId in projects) {
         print('[SyncManager] Downsyncing project: $projectId');
 
         // Get the last sync state for this specific project
-        final syncState = await _outsyncsStorage.getSyncState(projectId);
+        final syncState = await _outsyncsStorage.getCursorSyncState(projectId);
         int lastSeq = syncState?.seq ?? 0;
+        String cid = syncState?.cid ?? '';
+        DateTime changeAt =
+            syncState?.changeAt ??
+            DateTime.fromMillisecondsSinceEpoch(0).toUtc();
         print('[SyncManager] Starting from seq: $lastSeq');
 
         String? cursor = lastSeq.toString();
         int totalChangesForProject = 0;
         int highestSeqForProject =
             lastSeq; // Track highest sequence for this project
+        String srcStorageId = 'unknown';
+        String srcStorageType = 'cloud';
 
         // Continue fetching with cursor until no more changes
         do {
@@ -177,13 +184,23 @@ class SyncManager {
 
           final response = await _dio.get(url);
 
+          srcStorageId = responseData['storageId'] ?? 'unknown';
+          srcStorageType = responseData['storageType'] ?? 'cloud';
+
           if (response.statusCode == 200) {
             // TODO Deserialize response data
             final responseData = response.data as Map<String, dynamic>;
-            final srcStorageId =
-                responseData['storageId'] as String? ?? 'cloud';
             final changesBatch = responseData['changes'] as List<dynamic>;
             final nextCursor = responseData['cursor'] as int?;
+            /*
+               final responseData = <String, dynamic>{
+                'storageId': storageId,
+                'storageType': storageType,
+                'changes': changes.map((c) => c.toJson()).toList(),
+                'count': changes.length,
+                'timestamp': DateTime.now().toIso8601String(),
+              };
+            */
 
             if (changesBatch.isEmpty) {
               print('[SyncManager] No more changes for project $projectId');
@@ -195,25 +212,31 @@ class SyncManager {
                 .cast<Map<String, dynamic>>()
                 .toList();
 
+            projectCursorChanges['$projectId/$cursor'] = incomingChanges;
+
             // Apply changes directly to state storage
             final results = await ChangeProcessingService.processChanges(
               storageMode: 'sync',
               changes: incomingChanges,
-              srcStorageType: 'cloud',
+              srcStorageType: srcStorageType,
               srcStorageId: srcStorageId,
               storage: _outsyncsStorage,
               includeChangeUpdates: true,
               includeStateUpdates: true,
             );
 
-            allNewChanges.addAll(incomingChanges);
+            storageSummaries['$projectId/$cursor'] = results.resultsSummary;
             totalChangesForProject += incomingChanges.length;
 
             // Track the highest sequence number for this project
+            // TODO: shouldn't last seq always be at the end of the batch?
+            // if it's not sorted properly, should we report as an error?
             for (final change in incomingChanges) {
               final seq = change['seq'] as int;
               if (seq > highestSeqForProject) {
                 highestSeqForProject = seq;
+                cid = change['cid'] as String? ?? '';
+                changeAt = DateTime.parse(change['changeAt'] as String);
               }
             }
 
@@ -237,10 +260,14 @@ class SyncManager {
 
         // Update sync state for this project if we processed any changes
         if (totalChangesForProject > 0) {
-          await _outsyncsStorage.upsertSyncState(
-            projectId,
-            lastSeq: highestSeqForProject,
-            lastChangeAt: DateTime.now().toUtc(),
+          await _outsyncsStorage.upsertCursorSyncState(
+            domainType: 'project',
+            domainId: projectId,
+            srcStorageType: srcStorageType,
+            srcStorageId: srcStorageId,
+            seq: highestSeqForProject,
+            cid: cid,
+            changeAt: changeAt,
           );
           print(
             '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
@@ -248,21 +275,27 @@ class SyncManager {
         }
       }
 
+      final totalDownloadedCount = projectCursorChanges.values
+          .expand((changes) => changes)
+          .length;
+
       print(
-        '[SyncManager] Downsync completed. Total changes: ${allNewChanges.length}',
+        '[SyncManager] Downsync completed. Total changes: $totalDownloadedCount',
       );
 
       return DownsyncResult(
         success: true,
-        newChanges: allNewChanges,
+        projectCursorChanges: projectCursorChanges,
+        storageSummaries: storageSummaries,
         message:
-            'Successfully downsynced ${allNewChanges.length} changes from ${projects.length} projects',
+            'Successfully downsynced $totalDownloadedCount changes from ${projects.length} projects',
       );
     } catch (e) {
       print('[SyncManager] Downsync failed: $e');
       return DownsyncResult(
         success: false,
-        newChanges: [],
+        projectCursorChanges: projectCursorChanges,
+        storageSummaries: storageSummaries,
         message: 'Downsync failed: $e',
       );
     }
@@ -298,7 +331,7 @@ class SyncManager {
   // Check sync status and statistics
   Future<SyncStatus> getSyncStatus() async {
     try {
-      final outsyncsCount = await _outsyncsStorage.getChangeCount();
+      final outsyncsCount = 0; // await _outsyncsStorage.getChangeCount();
 
       // Try to get cloud storage stats
       int cloudCount = 0;
@@ -330,7 +363,7 @@ class SyncManager {
 
   /// Clear all sync states (useful for testing)
   Future<void> clearAllSyncStates() async {
-    await _outsyncsStorage.clearAllSyncStates();
+    await _outsyncsStorage.clearAllCursorSyncStates();
   }
 
   Future<void> close() async {
@@ -362,26 +395,36 @@ class OutsyncResult {
 
   Map<String, dynamic> toJson() => {
     'success': success,
-    'changeSummary': changeSummary.toJson(),
+    'changeSummary': changeSummary?.toJson(),
     'message': message,
   };
 }
 
+typedef ProjectCursorChanges = Map<String, List<Map<String, dynamic>>>;
+typedef StorageSummaries = Map<String, ChangeProcessingSummary?>;
+
 class DownsyncResult {
   final bool success;
-  final List<Map<String, dynamic>> newChanges;
   final String message;
+
+  /// list of each batch of changes downloaded per cursor request (keyed by $projectId/$cursor)
+  final ProjectCursorChanges projectCursorChanges;
+
+  /// list of processing summaries per cursor request (keyed by $projectId/$cursor)
+  final StorageSummaries storageSummaries;
 
   DownsyncResult({
     required this.success,
-    required this.newChanges,
     required this.message,
+    required this.projectCursorChanges,
+    required this.storageSummaries,
   });
 
   Map<String, dynamic> toJson() => {
     'success': success,
-    'newChanges': newChanges,
     'message': message,
+    'projectCursorChanges': projectCursorChanges,
+    'storageSummaries': storageSummaries,
   };
 }
 

@@ -68,7 +68,21 @@ const SelfSyncStateSchema = CollectionSchema(
   deserialize: _selfSyncStateDeserialize,
   deserializeProp: _selfSyncStateDeserializeProp,
   idName: r'id',
-  indexes: {},
+  indexes: {
+    r'domainId': IndexSchema(
+      id: -9138809277110658179,
+      name: r'domainId',
+      unique: true,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'domainId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
   links: {},
   embeddedSchemas: {},
   getId: _selfSyncStateGetId,
@@ -120,12 +134,12 @@ SelfSyncState _selfSyncStateDeserialize(
     createdAt: reader.readDateTimeOrNull(offsets[2]),
     domainId: reader.readString(offsets[3]),
     domainType: reader.readString(offsets[4]),
+    id: id,
     seq: reader.readLong(offsets[5]),
     storageId: reader.readString(offsets[6]),
     storageType: reader.readString(offsets[7]),
     updatedAt: reader.readDateTimeOrNull(offsets[8]),
   );
-  object.id = id;
   return object;
 }
 
@@ -168,8 +182,61 @@ List<IsarLinkBase<dynamic>> _selfSyncStateGetLinks(SelfSyncState object) {
 }
 
 void _selfSyncStateAttach(
-    IsarCollection<dynamic> col, Id id, SelfSyncState object) {
-  object.id = id;
+    IsarCollection<dynamic> col, Id id, SelfSyncState object) {}
+
+extension SelfSyncStateByIndex on IsarCollection<SelfSyncState> {
+  Future<SelfSyncState?> getByDomainId(String domainId) {
+    return getByIndex(r'domainId', [domainId]);
+  }
+
+  SelfSyncState? getByDomainIdSync(String domainId) {
+    return getByIndexSync(r'domainId', [domainId]);
+  }
+
+  Future<bool> deleteByDomainId(String domainId) {
+    return deleteByIndex(r'domainId', [domainId]);
+  }
+
+  bool deleteByDomainIdSync(String domainId) {
+    return deleteByIndexSync(r'domainId', [domainId]);
+  }
+
+  Future<List<SelfSyncState?>> getAllByDomainId(List<String> domainIdValues) {
+    final values = domainIdValues.map((e) => [e]).toList();
+    return getAllByIndex(r'domainId', values);
+  }
+
+  List<SelfSyncState?> getAllByDomainIdSync(List<String> domainIdValues) {
+    final values = domainIdValues.map((e) => [e]).toList();
+    return getAllByIndexSync(r'domainId', values);
+  }
+
+  Future<int> deleteAllByDomainId(List<String> domainIdValues) {
+    final values = domainIdValues.map((e) => [e]).toList();
+    return deleteAllByIndex(r'domainId', values);
+  }
+
+  int deleteAllByDomainIdSync(List<String> domainIdValues) {
+    final values = domainIdValues.map((e) => [e]).toList();
+    return deleteAllByIndexSync(r'domainId', values);
+  }
+
+  Future<Id> putByDomainId(SelfSyncState object) {
+    return putByIndex(r'domainId', object);
+  }
+
+  Id putByDomainIdSync(SelfSyncState object, {bool saveLinks = true}) {
+    return putByIndexSync(r'domainId', object, saveLinks: saveLinks);
+  }
+
+  Future<List<Id>> putAllByDomainId(List<SelfSyncState> objects) {
+    return putAllByIndex(r'domainId', objects);
+  }
+
+  List<Id> putAllByDomainIdSync(List<SelfSyncState> objects,
+      {bool saveLinks = true}) {
+    return putAllByIndexSync(r'domainId', objects, saveLinks: saveLinks);
+  }
 }
 
 extension SelfSyncStateQueryWhereSort
@@ -249,6 +316,51 @@ extension SelfSyncStateQueryWhere
         upper: upperId,
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<SelfSyncState, SelfSyncState, QAfterWhereClause> domainIdEqualTo(
+      String domainId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'domainId',
+        value: [domainId],
+      ));
+    });
+  }
+
+  QueryBuilder<SelfSyncState, SelfSyncState, QAfterWhereClause>
+      domainIdNotEqualTo(String domainId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'domainId',
+              lower: [],
+              upper: [domainId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'domainId',
+              lower: [domainId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'domainId',
+              lower: [domainId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'domainId',
+              lower: [],
+              upper: [domainId],
+              includeUpper: false,
+            ));
+      }
     });
   }
 }
