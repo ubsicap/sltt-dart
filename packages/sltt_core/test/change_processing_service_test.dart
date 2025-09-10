@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/services/change_processing_service.dart';
 import 'package:test/test.dart';
 
 import 'helpers/in_memory_storage.dart';
@@ -53,11 +52,11 @@ void main() {
 
       test('returns error for empty changes list', () async {
         final result = await ChangeProcessingService.processChanges(
-          changesToCreate: [],
-          storage: storage,
+          storageMode: 'save',
+          changes: [],
           srcStorageType: 'local',
           srcStorageId: 'local-client',
-          storageMode: 'save',
+          storage: storage,
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -88,11 +87,11 @@ void main() {
         };
 
         final result = await ChangeProcessingService.processChanges(
-          changesToCreate: [changeData],
-          storage: storage,
+          storageMode: 'save',
+          changes: [changeData],
           srcStorageType: 'local',
           srcStorageId: 'local',
-          storageMode: 'save',
+          storage: storage,
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -132,11 +131,11 @@ void main() {
         };
 
         final result = await ChangeProcessingService.processChanges(
-          changesToCreate: [changeData],
-          storage: storage,
+          storageMode: 'save',
+          changes: [changeData],
           srcStorageType: 'local',
           srcStorageId: 'local',
-          storageMode: 'save',
+          storage: storage,
           includeChangeUpdates: true,
           includeStateUpdates: false,
         );
@@ -161,14 +160,8 @@ void main() {
 
         expect(summary.changeUpdates, isA<List>());
         expect(summary.changeUpdates.isNotEmpty, isTrue);
-        expect(
-          summary.changeUpdates.first,
-          containsPair('cid', isNotNull),
-        );
-        expect(
-          summary.changeUpdates.first,
-          containsPair('updates', isNotNull),
-        );
+        expect(summary.changeUpdates.first, containsPair('cid', isNotNull));
+        expect(summary.changeUpdates.first, containsPair('updates', isNotNull));
 
         // When includeStateUpdates is false, stateUpdates should be empty
         expect(summary.stateUpdates, isA<List>());
@@ -196,11 +189,11 @@ void main() {
         };
 
         final result = await ChangeProcessingService.processChanges(
-          changesToCreate: [changeData],
-          storage: storage,
+          storageMode: 'save',
+          changes: [changeData],
           srcStorageType: 'local',
           srcStorageId: 'local',
-          storageMode: 'save',
+          storage: storage,
           includeChangeUpdates: false,
           includeStateUpdates: true,
         );
@@ -215,14 +208,8 @@ void main() {
         final summary = result.resultsSummary!;
         expect(summary.stateUpdates, isA<List>());
         expect(summary.stateUpdates.isNotEmpty, isTrue);
-        expect(
-          summary.stateUpdates.first,
-          containsPair('cid', isNotNull),
-        );
-        expect(
-          summary.stateUpdates.first,
-          containsPair('state', isNotNull),
-        );
+        expect(summary.stateUpdates.first, containsPair('cid', isNotNull));
+        expect(summary.stateUpdates.first, containsPair('state', isNotNull));
 
         // When includeChangeUpdates is false, changeUpdates should be empty
         expect(summary.changeUpdates, isA<List>());
@@ -270,11 +257,11 @@ void main() {
         ];
 
         final result = await ChangeProcessingService.processChanges(
-          changesToCreate: changesData,
-          storage: storage,
+          storageMode: 'save',
+          changes: changesData,
           srcStorageType: 'local',
           srcStorageId: 'local',
-          storageMode: 'save',
+          storage: storage,
           includeChangeUpdates: true,
           includeStateUpdates: true,
         );
@@ -360,7 +347,7 @@ void main() {
           ];
 
           final result = await ChangeProcessingService.processChanges(
-            changesToCreate: payload,
+            changes: payload,
             storage: svcStorage,
             srcStorageType: 'local',
             srcStorageId: 'local',
@@ -405,7 +392,7 @@ void main() {
           );
 
           final seedRes = await ChangeProcessingService.processChanges(
-            changesToCreate: [seed],
+            changes: [seed],
             storage: svcStorage,
             srcStorageType: 'local',
             srcStorageId: 'local',
@@ -422,7 +409,7 @@ void main() {
 
           final newer = baseTime.add(const Duration(minutes: 5));
           final resp = await ChangeProcessingService.processChanges(
-            changesToCreate: [
+            changes: [
               changePayload(
                 domainId: project,
                 entityType: 'task',
@@ -449,11 +436,9 @@ void main() {
           );
           final summary = resp.resultsSummary!;
           final cu =
-              summary.changeUpdates.first['updates']
-                  as Map<String, dynamic>;
+              summary.changeUpdates.first['updates'] as Map<String, dynamic>;
           final su =
-              summary.stateUpdates.first['state']
-                  as Map<String, dynamic>;
+              summary.stateUpdates.first['state'] as Map<String, dynamic>;
 
           expect(cu['operation'], 'update');
           expect(
@@ -484,7 +469,7 @@ void main() {
             storageId: '', // Empty for save mode
           );
           final r2 = await ChangeProcessingService.processChanges(
-            changesToCreate: [p2],
+            changes: [p2],
             storage: svcStorage,
             srcStorageType: 'local',
             srcStorageId: serverStorageId,
@@ -508,7 +493,7 @@ void main() {
             changeAt: baseTime,
           );
           final r3 = await ChangeProcessingService.processChanges(
-            changesToCreate: [p3],
+            changes: [p3],
             storage: svcStorage,
             srcStorageType: 'cloud',
             srcStorageId: 'cloud',
@@ -564,7 +549,7 @@ void main() {
           };
 
           final result = await ChangeProcessingService.processChanges(
-            changesToCreate: [changeData],
+            changes: [changeData],
             storage: cloudStorage,
             storageMode: 'save',
             srcStorageType: 'local',
@@ -622,7 +607,7 @@ void main() {
           };
 
           final result = await ChangeProcessingService.processChanges(
-            changesToCreate: [changeData],
+            changes: [changeData],
             storage: cloudStorage,
             storageMode: 'sync',
             srcStorageType: 'local',
@@ -681,7 +666,7 @@ void main() {
           };
 
           await ChangeProcessingService.processChanges(
-            changesToCreate: [createData],
+            changes: [createData],
             storage: cloudStorage,
             storageMode: 'save',
             srcStorageType: 'local',
@@ -713,7 +698,7 @@ void main() {
           };
 
           final result = await ChangeProcessingService.processChanges(
-            changesToCreate: [updateData],
+            changes: [updateData],
             storage: cloudStorage,
             storageMode: 'sync',
             srcStorageType: 'local',
@@ -775,7 +760,7 @@ void main() {
 
           final storageType = cloudStorage.getStorageType();
           final result = await ChangeProcessingService.processChanges(
-            changesToCreate: [changeData],
+            changes: [changeData],
             storage: cloudStorage,
             storageMode: 'save',
             srcStorageType: 'local',
@@ -823,7 +808,7 @@ void main() {
 
           final storageType = cloudStorage.getStorageType();
           final result = await ChangeProcessingService.processChanges(
-            changesToCreate: [changeData],
+            changes: [changeData],
             storage: cloudStorage,
             storageMode: 'save',
             srcStorageType: 'local',
@@ -870,7 +855,7 @@ void main() {
           };
 
           final result = await ChangeProcessingService.processChanges(
-            changesToCreate: [changeData],
+            changes: [changeData],
             storage: localStorage,
             storageMode: 'save',
             srcStorageType: 'local',
@@ -931,7 +916,7 @@ void main() {
             };
 
             final result = await ChangeProcessingService.processChanges(
-              changesToCreate: [changeData],
+              changes: [changeData],
               storage: localStorage,
               storageMode: 'sync',
               srcStorageType: 'cloud',
@@ -994,7 +979,7 @@ void main() {
           };
           final storageType = localStorage.getStorageType();
           final result = await ChangeProcessingService.processChanges(
-            changesToCreate: [changeData],
+            changes: [changeData],
             storage: localStorage,
             storageMode: 'save',
             srcStorageType: 'local',
@@ -1040,7 +1025,7 @@ void main() {
 
           final storageType = localStorage.getStorageType();
           final result = await ChangeProcessingService.processChanges(
-            changesToCreate: [changeData],
+            changes: [changeData],
             storage: localStorage,
             storageMode: 'save',
             srcStorageType: 'local',
@@ -1090,7 +1075,7 @@ void main() {
           };
 
           await ChangeProcessingService.processChanges(
-            changesToCreate: [createData],
+            changes: [createData],
             storage: localStorage,
             storageMode: 'save',
             srcStorageType: 'local',
@@ -1123,7 +1108,7 @@ void main() {
           };
 
           final result = await ChangeProcessingService.processChanges(
-            changesToCreate: [updateData],
+            changes: [updateData],
             storage: localStorage,
             storageMode: 'sync',
             srcStorageType: 'cloud',
@@ -1191,7 +1176,7 @@ void main() {
             };
 
             final cloudResult = await ChangeProcessingService.processChanges(
-              changesToCreate: [changeData],
+              changes: [changeData],
               storage: cloudStorage,
               storageMode: 'save',
               srcStorageType: 'local',
@@ -1201,7 +1186,7 @@ void main() {
             );
 
             final localResult = await ChangeProcessingService.processChanges(
-              changesToCreate: [changeData],
+              changes: [changeData],
               storage: localStorage,
               storageMode: 'save',
               srcStorageType: 'local',
@@ -1283,7 +1268,7 @@ void main() {
             };
 
             final cloudResult = await ChangeProcessingService.processChanges(
-              changesToCreate: [changeData],
+              changes: [changeData],
               storage: cloudStorage,
               storageMode: 'sync',
               srcStorageType: 'local',
@@ -1293,7 +1278,7 @@ void main() {
             );
 
             final localResult = await ChangeProcessingService.processChanges(
-              changesToCreate: [changeData],
+              changes: [changeData],
               storage: localStorage,
               storageMode: 'sync',
               srcStorageType: 'cloud',

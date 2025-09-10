@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/models/change_processing_summary.dart';
 
 /// Result of processing changes through the change processing service
 class ChangeProcessingResult {
@@ -28,16 +27,27 @@ class ChangeProcessingService {
 
   /// Process a list of changes and return a summary of results
   static Future<ChangeProcessingResult> processChanges({
-    required List<Map<String, dynamic>> changesToCreate,
-    required BaseStorageService storage,
+    /// `save` or `sync`
+    required String storageMode,
+
+    /// changes to `save` or `sync`
+    required List<Map<String, dynamic>> changes,
+
+    /// `local` or `cloud`
     required String srcStorageType,
     required String srcStorageId,
-    required String storageMode,
+
+    /// destination storage service
+    required BaseStorageService storage,
+
+    /// include detailed change updates in the response
     required bool includeChangeUpdates,
+
+    /// include detailed state updates in the response
     required bool includeStateUpdates,
   }) async {
     try {
-      if (changesToCreate.isEmpty) {
+      if (changes.isEmpty) {
         return const ChangeProcessingResult(
           errorMessage: 'No changes provided',
           errorCode: 400,
@@ -71,8 +81,8 @@ class ChangeProcessingService {
 
       // Validate all storageIds before processing any changes
       final invalidStorageIds = <int>[];
-      for (int i = 0; i < changesToCreate.length; i++) {
-        final changeData = changesToCreate[i];
+      for (int i = 0; i < changes.length; i++) {
+        final changeData = changes[i];
         try {
           final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
             changeData,
@@ -123,8 +133,8 @@ class ChangeProcessingService {
       );
 
       // Process all changes
-      for (int i = 0; i < changesToCreate.length; i++) {
-        final changeData = changesToCreate[i];
+      for (int i = 0; i < changes.length; i++) {
+        final changeData = changes[i];
 
         try {
           final changeLogEntry = deserializeChangeLogEntryUsingRegistry(

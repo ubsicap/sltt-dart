@@ -161,7 +161,7 @@ class SyncManager {
 
         // Get the last sync state for this specific project
         final syncState = await _outsyncsStorage.getSyncState(projectId);
-        int lastSeq = syncState?.lastSeq ?? 0;
+        int lastSeq = syncState?.seq ?? 0;
         print('[SyncManager] Starting from seq: $lastSeq');
 
         String? cursor = lastSeq.toString();
@@ -180,7 +180,8 @@ class SyncManager {
           if (response.statusCode == 200) {
             // TODO Deserialize response data
             final responseData = response.data as Map<String, dynamic>;
-            final srcStorageId = responseData['storageId'] as String? ?? 'cloud';
+            final srcStorageId =
+                responseData['storageId'] as String? ?? 'cloud';
             final changesBatch = responseData['changes'] as List<dynamic>;
             final nextCursor = responseData['cursor'] as int?;
 
@@ -190,18 +191,26 @@ class SyncManager {
             }
 
             // Apply changes directly to state storage without storing in downsyncs
-            final newChanges = changesBatch
+            final incomingChanges = changesBatch
                 .cast<Map<String, dynamic>>()
                 .toList();
 
             // Apply changes directly to state storage
-            await ChangeProcessingService.processChanges(changesToCreate: changesToCreate, storage: _outsyncsStorage, srcStorageType: 'cloud', srcStorageId: srcStorageId, storageMode: storageMode, includeChangeUpdates: includeChangeUpdates, includeStateUpdates: includeStateUpdates)
+            final results = await ChangeProcessingService.processChanges(
+              storageMode: 'sync',
+              changes: incomingChanges,
+              srcStorageType: 'cloud',
+              srcStorageId: srcStorageId,
+              storage: _outsyncsStorage,
+              includeChangeUpdates: true,
+              includeStateUpdates: true,
+            );
 
-            allNewChanges.addAll(newChanges);
-            totalChangesForProject += newChanges.length;
+            allNewChanges.addAll(incomingChanges);
+            totalChangesForProject += incomingChanges.length;
 
             // Track the highest sequence number for this project
-            for (final change in newChanges) {
+            for (final change in incomingChanges) {
               final seq = change['seq'] as int;
               if (seq > highestSeqForProject) {
                 highestSeqForProject = seq;
@@ -209,7 +218,7 @@ class SyncManager {
             }
 
             print(
-              '[SyncManager] Applied ${newChanges.length} changes for project $projectId (batch)',
+              '[SyncManager] Applied ${incomingChanges.length} changes for project $projectId (batch)',
             );
 
             // Update cursor for next iteration
@@ -272,9 +281,8 @@ class SyncManager {
     // Use the already computed deleted local sequences from outsync result
     final finalOutsyncResult = OutsyncResult(
       success: outsyncResult.success,
-      changeUpdates: outsyncResult.changeUpdates,
+      changeSummary: outsyncResult.changeSummary,
       deletedLocalChanges: outsyncResult.deletedLocalChanges,
-      seqMap: outsyncResult.seqMap,
       message: outsyncResult.message,
       error: outsyncResult.error,
       errorStackTrace: outsyncResult.errorStackTrace,

@@ -931,7 +931,7 @@ abstract class BaseRestApiServer {
         return _errorResponse('Invalid JSON format: ${e.message}', 400);
       }
 
-      late final List<Map<String, dynamic>> changesToCreate;
+      late final List<Map<String, dynamic>> changes;
       String srcStorageType;
       String srcStorageId;
       String storageMode;
@@ -944,7 +944,7 @@ abstract class BaseRestApiServer {
           return _errorResponse('`changes` must be an array', 400);
         }
         try {
-          changesToCreate = List<Map<String, dynamic>>.from(changesField);
+          changes = List<Map<String, dynamic>>.from(changesField);
         } on TypeError {
           return _errorResponse(
             'Invalid change objects in `changes` array',
@@ -964,7 +964,7 @@ abstract class BaseRestApiServer {
         );
       }
 
-      if (changesToCreate.isEmpty) {
+      if (changes.isEmpty) {
         return _errorResponse('No changes provided', 400);
       }
 
@@ -987,11 +987,11 @@ abstract class BaseRestApiServer {
 
       // Use the change processing service
       final result = await ChangeProcessingService.processChanges(
-        changesToCreate: changesToCreate,
-        storage: storage,
+        storageMode: storageMode,
+        changes: changes,
         srcStorageType: srcStorageType,
         srcStorageId: srcStorageId,
-        storageMode: storageMode,
+        storage: storage,
         includeChangeUpdates: includeChangeUpdates,
         includeStateUpdates: includeStateUpdates,
       );

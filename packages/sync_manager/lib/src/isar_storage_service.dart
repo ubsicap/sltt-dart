@@ -625,17 +625,14 @@ class IsarStorageService extends BaseStorageService {
     return projectIds.toList()..sort();
   }
 
-  // STUBBED/COMMENTED OUT METHODS THAT NEED TO BE FIXED LATER
-  /*
   /// Get sync state for a specific project
-  Future<SyncState?> getSyncState(String projectId) async {
+  Future<CursorSyncState?> getSyncState(String domainId) async {
     return await _isar
-        .collection<SyncState>()
+        .collection<CursorSyncState>()
         .filter()
-        .change_domainIdEqualTo(projectId)
+        .domainIdEqualTo(domainId)
         .findFirst();
   }
-  */
 
   // STUBBED METHODS THAT NEED TO BE PROPERLY IMPLEMENTED LATER
 
