@@ -7,6 +7,7 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'domain_types.dart';
 
 /// Base REST API server that provides common functionality for all storage types.
 ///
@@ -623,9 +624,13 @@ abstract class BaseRestApiServer {
                     'collections': {
                       'type': 'array',
                       'items': {
-                        'type': 'string',
-                        'description': 'Collection name',
+                        'type': 'object',
+                        'additionalProperties': {'type': 'string'},
+                        'minProperties': 1,
+                        'maxProperties': 1,
                       },
+                      'description':
+                          'Array of single-key mappings e.g. [{ "project": "projects" }]',
                     },
                   },
                 },
@@ -750,12 +755,8 @@ abstract class BaseRestApiServer {
 
   Future<Response> _handleGetDomainsAndTheirCollections(Request request) async {
     try {
-      final domainTypes = ['project']; // todo: 'user', 'team'
-      final collections = [
-        {
-          'project': ['projects'],
-        },
-      ];
+      final domainTypes = getAllDomainTypes();
+      final collections = getCollectionsList();
 
       final response = {'domains': domainTypes, 'collections': collections};
 
