@@ -12,7 +12,6 @@ class SyncManager {
   final Dio _dio = Dio();
   final OutsyncsStorageService _outsyncsStorage =
       OutsyncsStorageService.instance;
-  final CloudStorageService _cloudStorage = CloudStorageService.instance;
 
   // API endpoints - defaults to AWS dev cloud, can be overridden for testing
   String _cloudStorageUrl = kCloudDevUrl;
@@ -29,7 +28,6 @@ class SyncManager {
     if (_initialized) return;
 
     await _outsyncsStorage.initialize();
-    await _cloudStorage.initialize();
 
     _dio.options.headers['Content-Type'] = 'application/json';
     _dio.options.connectTimeout = const Duration(seconds: 10);
@@ -162,7 +160,7 @@ class SyncManager {
         print('[SyncManager] Downsyncing project: $projectId');
 
         // Get the last sync state for this specific project
-        final syncState = await _cloudStorage.getSyncState(projectId);
+        final syncState = await _outsyncsStorage.getSyncState(projectId);
         int lastSeq = syncState?.lastSeq ?? 0;
         print('[SyncManager] Starting from seq: $lastSeq');
 
@@ -180,7 +178,9 @@ class SyncManager {
           final response = await _dio.get(url);
 
           if (response.statusCode == 200) {
+            // TODO Deserialize response data
             final responseData = response.data as Map<String, dynamic>;
+            final srcStorageId = responseData['storageId'] as String? ?? 'cloud';
             final changesBatch = responseData['changes'] as List<dynamic>;
             final nextCursor = responseData['cursor'] as int?;
 
@@ -195,7 +195,7 @@ class SyncManager {
                 .toList();
 
             // Apply changes directly to state storage
-            await _applyChangesToState(newChanges, 'cloud downsyncs');
+            await ChangeProcessingService.processChanges(changesToCreate: changesToCreate, storage: _outsyncsStorage, srcStorageType: 'cloud', srcStorageId: srcStorageId, storageMode: storageMode, includeChangeUpdates: includeChangeUpdates, includeStateUpdates: includeStateUpdates)
 
             allNewChanges.addAll(newChanges);
             totalChangesForProject += newChanges.length;
@@ -228,7 +228,7 @@ class SyncManager {
 
         // Update sync state for this project if we processed any changes
         if (totalChangesForProject > 0) {
-          await _cloudStorage.upsertSyncState(
+          await _outsyncsStorage.upsertSyncState(
             projectId,
             lastSeq: highestSeqForProject,
             lastChangeAt: DateTime.now().toUtc(),
@@ -322,7 +322,7 @@ class SyncManager {
 
   /// Clear all sync states (useful for testing)
   Future<void> clearAllSyncStates() async {
-    await _cloudStorage.clearAllSyncStates();
+    await _outsyncsStorage.clearAllSyncStates();
   }
 
   Future<void> close() async {

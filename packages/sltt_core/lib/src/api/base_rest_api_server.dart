@@ -847,7 +847,11 @@ abstract class BaseRestApiServer {
         limit: limit,
       );
 
+      final storageId = await storage.getStorageId();
+      final storageType = storage.getStorageType();
       final responseData = <String, dynamic>{
+        'storageId': storageId,
+        'storageType': storageType,
         'changes': changes.map((c) => c.toJson()).toList(),
         'count': changes.length,
         'timestamp': DateTime.now().toIso8601String(),
