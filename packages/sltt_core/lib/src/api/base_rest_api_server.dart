@@ -8,8 +8,6 @@ import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 
-import 'domain_types.dart';
-
 /// Base REST API server that provides common functionality for all storage types.
 ///
 /// This eliminates code duplication between different server implementations
