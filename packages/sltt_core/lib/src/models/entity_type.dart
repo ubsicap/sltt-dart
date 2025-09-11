@@ -1,26 +1,46 @@
 import '../services/uid_service.dart';
 
+// Top-level constants for entity type string values. Use these wherever a
+// stable string literal for an entity type is needed to avoid duplication.
+const String kEntityTypeUnknown = 'unknown';
+const String kEntityTypeProject = 'project';
+const String kEntityTypeTeam = 'team';
+const String kEntityTypePlan = 'plan';
+const String kEntityTypeStage = 'stage';
+const String kEntityTypeTask = 'task';
+const String kEntityTypeMember = 'member';
+const String kEntityTypeMessage = 'message';
+const String kEntityTypePortion = 'portion';
+const String kEntityTypePassage = 'passage';
+const String kEntityTypeReference = 'reference';
+const String kEntityTypeDocument = 'document';
+const String kEntityTypeVideo = 'video';
+const String kEntityTypePatch = 'patch';
+const String kEntityTypeGloss = 'gloss';
+const String kEntityTypeNote = 'note';
+const String kEntityTypeComment = 'comment';
+
 /// Enumeration of all supported entity types in the SLTT system.
 /// Each entity type will eventually have its own schema and collections.
 enum EntityType {
   /// Unknown value for forward compatibility when clients send newer entity types
-  unknown('unknown'),
-  project('project'),
-  team('team'),
-  plan('plan'),
-  stage('stage'),
-  task('task'),
-  member('member'),
-  message('message'),
-  portion('portion'),
-  passage('passage'),
-  reference('reference'),
-  document('document'),
-  video('video'),
-  patch('patch'),
-  gloss('gloss'),
-  note('note'),
-  comment('comment');
+  unknown(kEntityTypeUnknown),
+  project(kEntityTypeProject),
+  team(kEntityTypeTeam),
+  plan(kEntityTypePlan),
+  stage(kEntityTypeStage),
+  task(kEntityTypeTask),
+  member(kEntityTypeMember),
+  message(kEntityTypeMessage),
+  portion(kEntityTypePortion),
+  passage(kEntityTypePassage),
+  reference(kEntityTypeReference),
+  document(kEntityTypeDocument),
+  video(kEntityTypeVideo),
+  patch(kEntityTypePatch),
+  gloss(kEntityTypeGloss),
+  note(kEntityTypeNote),
+  comment(kEntityTypeComment);
 
   const EntityType(this.value);
 
@@ -30,22 +50,22 @@ enum EntityType {
   /// Entity type suffix mapping for consistent entity ID generation
   /// Uses most representative 4 characters, padding with Z where needed
   static const Map<String, String> suffixMapping = {
-    'project': 'proj',
-    'team': 'team',
-    'plan': 'plan',
-    'stage': 'stag',
-    'task': 'task',
-    'member': 'memb',
-    'message': 'mesg',
-    'portion': 'port',
-    'passage': 'psgZ',
-    'reference': 'refZ',
-    'document': 'docu',
-    'video': 'vidZ',
-    'patch': 'ptch',
-    'gloss': 'glos',
-    'note': 'note',
-    'comment': 'cmnt',
+    kEntityTypeProject: 'proj',
+    kEntityTypeTeam: 'team',
+    kEntityTypePlan: 'plan',
+    kEntityTypeStage: 'stag',
+    kEntityTypeTask: 'task',
+    kEntityTypeMember: 'memb',
+    kEntityTypeMessage: 'mesg',
+    kEntityTypePortion: 'port',
+    kEntityTypePassage: 'psgZ',
+    kEntityTypeReference: 'refZ',
+    kEntityTypeDocument: 'docu',
+    kEntityTypeVideo: 'vidZ',
+    kEntityTypePatch: 'ptch',
+    kEntityTypeGloss: 'glos',
+    kEntityTypeNote: 'note',
+    kEntityTypeComment: 'cmnt',
   };
 
   /// Get the 4-character suffix for this entity type
