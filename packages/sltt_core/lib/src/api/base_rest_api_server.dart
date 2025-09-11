@@ -755,7 +755,10 @@ abstract class BaseRestApiServer {
   Future<Response> _handleGetDomainsAndTheirCollections(Request request) async {
     try {
       final domainTypes = getAllDomainTypes();
-      final collections = getCollectionsList();
+      final collections = domainTypes
+          .map((d) => getCollectionByDomain(d))
+          .whereType<String>()
+          .toList();
 
       final response = {'domains': domainTypes, 'collections': collections};
 
