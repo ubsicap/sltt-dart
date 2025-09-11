@@ -82,7 +82,7 @@
             },
             "group": "build"
         },
-                {
+        {
             "label": "Clean Build (Sync Manager)",
             "type": "shell",
             "command": "dart run build_runner clean",
