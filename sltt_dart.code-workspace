@@ -1,22 +1,31 @@
 {
   "folders": [
     {
-      "name": "sltt_dart (root)",
       "path": "."
     },
     {
-      "name": "sltt_core",
-      "path": "./packages/sltt_core"
+      "path": "packages/sltt_core"
     },
     {
-      "name": "sync_manager_demo",
-      "path": "./examples/sync_manager_demo"
+      "path": "packages/syncable_entity_state_data"
+    },
+    {
+      "path": "packages/sync_manager"
     }
   ],
   "settings": {
-    "dart.lineLength": 120,
-    "editor.rulers": [120],
-    "dart.showTodos": false,
+    "editor.tabSize": 2,
+    "editor.useTabStops": false,
+    "dart.automaticCommentSlashes": "tripleSlash",
+    "dart.documentation": "full",
+    "terminal.integrated.env.linux": {
+      "LD_LIBRARY_PATH": "/tmp/dart_test_libs"
+    },
+    "dart.lineLength": 80,
+    "dart.showTodos": true,
+    "editor.rulers": [
+      80
+    ],
     "dart.debugExternalPackageLibraries": true,
     "dart.debugSdkLibraries": false,
     "dart.analysisExcludedFolders": [
