@@ -1,5 +1,6 @@
 // Export all public APIs
 export 'src/api/base_rest_api_server.dart';
+export 'src/api/domain_types.dart';
 export 'src/models/base_change_log_entry.dart';
 export 'src/models/base_entity_state.dart';
 export 'src/models/change_processing_summary.dart';
