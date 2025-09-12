@@ -61,6 +61,11 @@ IsarEntityStateStorageGroup? getEntityStateStorageGroup(EntityType entityType) {
   return _storageGroups[entityType];
 }
 
+/// Return all registered entity state storage groups as a list.
+List<IsarEntityStateStorageGroup> getAllRegisteredEntityStateStorageGroups() {
+  return _storageGroups.values.toList(growable: false);
+}
+
 /// Get all registered schemas for Isar initialization
 List<CollectionSchema> getAllRegisteredSchemas() {
   // Schemas are defined explicitly in register_entity_states.dart
