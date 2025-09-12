@@ -38,6 +38,6 @@ abstract class SyncState {
     required this.seq,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now(),
+  }) : createdAt = createdAt ?? updatedAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 }

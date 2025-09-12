@@ -177,23 +177,28 @@ const IsarDocumentStateSchema = CollectionSchema(
       name: r'data_title_cid_',
       type: IsarType.string,
     ),
-    r'entityId': PropertySchema(
+    r'domainType': PropertySchema(
       id: 32,
+      name: r'domainType',
+      type: IsarType.string,
+    ),
+    r'entityId': PropertySchema(
+      id: 33,
       name: r'entityId',
       type: IsarType.string,
     ),
     r'entityType': PropertySchema(
-      id: 33,
+      id: 34,
       name: r'entityType',
       type: IsarType.string,
     ),
     r'schemaVersion': PropertySchema(
-      id: 34,
+      id: 35,
       name: r'schemaVersion',
       type: IsarType.long,
     ),
     r'unknownJson': PropertySchema(
-      id: 35,
+      id: 36,
       name: r'unknownJson',
       type: IsarType.string,
     )
@@ -283,6 +288,7 @@ int _isarDocumentStateEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.domainType.length * 3;
   bytesCount += 3 + object.entityId.length * 3;
   bytesCount += 3 + object.entityType.length * 3;
   bytesCount += 3 + object.unknownJson.length * 3;
@@ -327,10 +333,11 @@ void _isarDocumentStateSerialize(
   writer.writeString(offsets[29], object.data_title);
   writer.writeDateTime(offsets[30], object.data_title_changeAt_);
   writer.writeString(offsets[31], object.data_title_cid_);
-  writer.writeString(offsets[32], object.entityId);
-  writer.writeString(offsets[33], object.entityType);
-  writer.writeLong(offsets[34], object.schemaVersion);
-  writer.writeString(offsets[35], object.unknownJson);
+  writer.writeString(offsets[32], object.domainType);
+  writer.writeString(offsets[33], object.entityId);
+  writer.writeString(offsets[34], object.entityType);
+  writer.writeLong(offsets[35], object.schemaVersion);
+  writer.writeString(offsets[36], object.unknownJson);
 }
 
 IsarDocumentState _isarDocumentStateDeserialize(
@@ -372,11 +379,11 @@ IsarDocumentState _isarDocumentStateDeserialize(
     data_title: reader.readStringOrNull(offsets[29]),
     data_title_changeAt_: reader.readDateTimeOrNull(offsets[30]),
     data_title_cid_: reader.readStringOrNull(offsets[31]),
-    entityId: reader.readString(offsets[32]),
-    entityType: reader.readStringOrNull(offsets[33]) ?? 'document',
+    entityId: reader.readString(offsets[33]),
+    entityType: reader.readStringOrNull(offsets[34]) ?? 'document',
     id: id,
-    schemaVersion: reader.readLongOrNull(offsets[34]),
-    unknownJson: reader.readString(offsets[35]),
+    schemaVersion: reader.readLongOrNull(offsets[35]),
+    unknownJson: reader.readString(offsets[36]),
   );
   return object;
 }
@@ -455,10 +462,12 @@ P _isarDocumentStateDeserializeProp<P>(
     case 32:
       return (reader.readString(offset)) as P;
     case 33:
-      return (reader.readStringOrNull(offset) ?? 'document') as P;
+      return (reader.readString(offset)) as P;
     case 34:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset) ?? 'document') as P;
     case 35:
+      return (reader.readLongOrNull(offset)) as P;
+    case 36:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -4055,6 +4064,142 @@ extension IsarDocumentStateQueryFilter
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+      domainTypeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'domainType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+      domainTypeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'domainType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+      domainTypeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'domainType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+      domainTypeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'domainType',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+      domainTypeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'domainType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+      domainTypeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'domainType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+      domainTypeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'domainType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+      domainTypeMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'domainType',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+      domainTypeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'domainType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+      domainTypeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'domainType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
       entityIdEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -5050,6 +5195,20 @@ extension IsarDocumentStateQuerySortBy
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+      sortByDomainType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'domainType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+      sortByDomainTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'domainType', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
       sortByEntityId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityId', Sort.asc);
@@ -5557,6 +5716,20 @@ extension IsarDocumentStateQuerySortThenBy
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+      thenByDomainType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'domainType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+      thenByDomainTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'domainType', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
       thenByEntityId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityId', Sort.asc);
@@ -5866,6 +6039,13 @@ extension IsarDocumentStateQueryWhereDistinct
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QDistinct>
+      distinctByDomainType({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'domainType', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QDistinct>
       distinctByEntityId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'entityId', caseSensitive: caseSensitive);
@@ -6123,6 +6303,13 @@ extension IsarDocumentStateQueryProperty
       data_title_cid_Property() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'data_title_cid_');
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, String, QQueryOperations>
+      domainTypeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'domainType');
     });
   }
 

@@ -2,17 +2,13 @@ import 'package:isar/isar.dart';
 
 import 'sync_state.dart';
 
-part 'self_sync_state.g.dart';
+part 'isar_entity_type_state.g.dart';
 
 /// Track latest sync state per entity type for a given domain
 @collection
 class IsarEntityTypeSyncState extends SyncState {
   final Id id;
-  @Index(
-    unique: true,
-    replace: true,
-    composite: [CompositeIndex('domainId'), CompositeIndex('entityType')],
-  )
+  @Index(unique: true, replace: true, composite: [CompositeIndex('domainId')])
   final String entityType;
   // some basic entityType statistics
   int created = Isar.autoIncrement;

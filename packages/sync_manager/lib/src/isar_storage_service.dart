@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
-import 'package:sync_manager/src/models/self_sync_state.dart';
+import 'package:sync_manager/src/models/isar_entity_type_state.dart';
+import 'package:sync_manager/src/models/isar_storage_state.dart';
 
 import 'isar_entity_state_storage_group.dart';
 import 'models/isar_change_log_entry.dart' as client;
@@ -55,7 +56,8 @@ class IsarStorageService extends BaseStorageService {
 
     // Initialize Isar with change log + sync state + registered entity schemas
     final schemas = <CollectionSchema>[
-      SelfSyncStateSchema,
+      IsarStorageStateSchema,
+      IsarEntityTypeSyncStateSchema,
       CursorSyncStateSchema,
       client.IsarChangeLogEntrySchema,
       ...entityStateSchemas,
@@ -103,9 +105,9 @@ class IsarStorageService extends BaseStorageService {
     // Try to find an existing SelfSyncState with the reserved root domainId.
     // If present, reuse its storageId. Otherwise create and persist a new one.
     try {
-      final existing = await _isar.selfSyncStates
+      final existing = await _isar.isarStorageStates
           .filter()
-          .domainIdEqualTo('root')
+          .storageTypeEqualTo('local')
           .findFirst();
 
       if (existing != null && existing.storageId.isNotEmpty) {
@@ -116,20 +118,15 @@ class IsarStorageService extends BaseStorageService {
       // Not found -> create a new canonical storage id and persist a SelfSyncState
       final newId = BaseStorageService.generateShortStorageId();
       final now = DateTime.now().toUtc();
-      const kSelfStorage = 'self-storage';
-      final self = IsarEntityTypeSyncState(
-        domainType: 'storage',
-        domainId: kSelfStorage,
-        entityType: 'storage',
+      final storageState = IsarStorageState(
         storageId: newId,
         storageType: 'local',
-        cid: newId,
-        changeAt: now,
-        seq: 0,
+        createdAt: now,
+        updatedAt: now,
       );
 
       await _isar.writeTxn(() async {
-        await _isar.selfSyncStates.put(self);
+        await _isar.isarStorageStates.put(storageState);
       });
 
       _storageId = newId;
