@@ -434,7 +434,7 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<void> markAsOutdated(String projectId, int seq, int outdatedBy) async {
+  Future<void> markAsOutdated(String domainId, int seq, int outdatedBy) async {
     // For DynamoDB with new schema, we need to first find the item by sequence number
     if (!_initialized) await initialize();
 
@@ -444,7 +444,7 @@ class DynamoDBStorageService extends BaseStorageService {
       'IndexName': 'GSI1',
       'KeyConditionExpression': 'gsi1pk = :gsi1pk AND gsi1sk = :gsi1sk',
       'ExpressionAttributeValues': {
-        ':gsi1pk': {'S': 'PROJECT_ID#$projectId'},
+  ':gsi1pk': {'S': 'PROJECT_ID#$domainId'},
         ':gsi1sk': {'S': 'SEQ#${seq.toString().padLeft(10, '0')}'},
       },
       'Limit': 1,
@@ -463,7 +463,7 @@ class DynamoDBStorageService extends BaseStorageService {
 
     if (items == null || items.isEmpty) {
       throw Exception(
-        'Change with sequence $seq not found in project $projectId',
+  'Change with sequence $seq not found in project $domainId',
       );
     }
 

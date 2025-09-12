@@ -23,14 +23,29 @@ abstract class BaseRestApiServer {
   /// Storage type description for API documentation
   String get storageTypeDescription;
 
-  /// Extract and URL decode projectId from request parameters
-  String? _extractProjectId(Request request) {
-    final projectIdRaw = request.params['projectId'];
-    if (projectIdRaw == null || projectIdRaw.isEmpty) {
-      return null;
+  /// Extract and URL decode `domainId` from request parameters.
+  ///
+  /// For backwards compatibility this will also accept the legacy
+  /// `projectId` path parameter (used by routes like `/api/projects/<projectId>/...`).
+  /// Callers should prefer using `domainId` in new routes; this compatibility
+  /// behavior is intentionally localized here so we can remove it later once
+  /// all callers and tests move to the new domain-scoped routes.
+  String? _extractDomainId(Request request) {
+    // Prefer the canonical `domainId` path parameter.
+    final domainIdRaw = request.params['domainId'];
+    if (domainIdRaw != null && domainIdRaw.isNotEmpty) {
+      return Uri.decodeComponent(domainIdRaw);
     }
-    // URL decode the project ID to handle special characters like spaces, @, /, etc.
-    return Uri.decodeComponent(projectIdRaw);
+
+    // Fall back to the legacy `projectId` path parameter if present. This
+    // keeps existing tests and clients working until the codebase is fully
+    // migrated to domain-scoped routes.
+    final projectIdRaw = request.params['projectId'];
+    if (projectIdRaw != null && projectIdRaw.isNotEmpty) {
+      return Uri.decodeComponent(projectIdRaw);
+    }
+
+    return null;
   }
 
   /// Additional server-specific endpoints (override if needed)
@@ -76,12 +91,26 @@ abstract class BaseRestApiServer {
     router.post('/api/changes', _handleCreateChanges);
     router.get('/api/domains', _handleGetDomainsAndTheirCollections);
     router.get('/api/domains/<domainType>/entities', _handleGetEntities);
+    // Legacy project-scoped endpoints (kept for compatibility)
     router.get('/api/projects', _handleGetProjects); // List all projects
     router.get('/api/projects/<projectId>/changes', _handleGetChanges);
     router.get('/api/projects/<projectId>/changes/<seq>', _handleGetChange);
     router.get('/api/projects/<projectId>/stats', _handleGetStats);
     router.get(
       '/api/projects/<projectId>/entities/<entityType>/state',
+      _handleGetEntityState,
+    );
+
+    // Generalized domain-scoped endpoints
+    router.get('/api/<domainCollection>', _handleGetDomainIds);
+    router.get('/api/<domainCollection>/<domainId>/changes', _handleGetChanges);
+    router.get(
+      '/api/<domainCollection>/<domainId>/changes/<seq>',
+      _handleGetChange,
+    );
+    router.get('/api/<domainCollection>/<domainId>/stats', _handleGetStats);
+    router.get(
+      '/api/<domainCollection>/<domainId>/entities/<entityType>/state',
       _handleGetEntityState,
     );
 
@@ -221,6 +250,7 @@ abstract class BaseRestApiServer {
                 'type': 'array',
                 'description':
                     'List of available API endpoints with documentation',
+                'items': {'type': 'object'},
               },
               'timestamp': {
                 'type': 'string',
@@ -407,6 +437,100 @@ abstract class BaseRestApiServer {
                 'format': 'ISO8601',
                 'description': 'When the response was generated',
               },
+            },
+          },
+        },
+        // Generalized domain-scoped endpoints
+        {
+          'method': 'GET',
+          'path': '/api/{domainCollection}',
+          'description':
+              'List domain IDs for the given collection (e.g., projects)',
+          'response': {
+            'type': 'object',
+            'properties': {
+              'items': {
+                'type': 'array',
+                'items': {'type': 'string'},
+              },
+              'count': {'type': 'integer'},
+              'timestamp': {'type': 'string', 'format': 'ISO8601'},
+            },
+          },
+        },
+        {
+          'method': 'GET',
+          'path': '/api/{domainCollection}/{domainId}/changes',
+          'description': 'Get changes for a domain with optional pagination',
+          'parameters': [
+            {'name': 'domainCollection', 'type': 'string', 'required': true},
+            {'name': 'domainId', 'type': 'string', 'required': true},
+            {'name': 'cursor', 'type': 'integer', 'required': false},
+            {'name': 'limit', 'type': 'integer', 'required': false},
+          ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'changes': {'type': 'array', 'items': changeObjectSchema},
+              'count': {'type': 'integer'},
+              'cursor': {'type': 'integer'},
+              'timestamp': {'type': 'string', 'format': 'ISO8601'},
+            },
+          },
+        },
+        {
+          'method': 'GET',
+          'path': '/api/{domainCollection}/{domainId}/changes/{seq}',
+          'description': 'Get specific change by sequence number for a domain',
+          'parameters': [
+            {'name': 'domainCollection', 'type': 'string', 'required': true},
+            {'name': 'domainId', 'type': 'string', 'required': true},
+            {'name': 'seq', 'type': 'integer', 'required': true},
+          ],
+          'response': changeObjectSchema,
+        },
+        {
+          'method': 'GET',
+          'path':
+              '/api/{domainCollection}/{domainId}/entities/{entityType}/state',
+          'description':
+              'Get paginated entity states for a domain and entity type',
+          'parameters': [
+            {'name': 'domainCollection', 'type': 'string', 'required': true},
+            {'name': 'domainId', 'type': 'string', 'required': true},
+            {'name': 'entityType', 'type': 'string', 'required': true},
+            {'name': 'cursor', 'type': 'string', 'required': false},
+            {'name': 'limit', 'type': 'integer', 'required': false},
+            {'name': 'includeMetadata', 'type': 'boolean', 'required': false},
+          ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'items': {
+                'type': 'array',
+                'items': {'type': 'object'},
+              },
+              'hasMore': {'type': 'boolean'},
+              'nextCursor': {'type': 'string'},
+            },
+          },
+        },
+        {
+          'method': 'GET',
+          'path': '/api/{domainCollection}/{domainId}/stats',
+          'description':
+              'Get statistics about changes and entity types for a domain',
+          'parameters': [
+            {'name': 'domainCollection', 'type': 'string', 'required': true},
+            {'name': 'domainId', 'type': 'string', 'required': true},
+          ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'changeStats': {'type': 'object'},
+              'entityTypeStats': {'type': 'object'},
+              'timestamp': {'type': 'string', 'format': 'ISO8601'},
+              'storageType': {'type': 'string'},
             },
           },
         },
@@ -752,6 +876,30 @@ abstract class BaseRestApiServer {
     );
   }
 
+  /// List domain IDs for a collection (currently aliases to projects list)
+  Future<Response> _handleGetDomainIds(Request request) async {
+    try {
+      // For now, ignore collection and return projects
+      final items = await storage.getAllProjects();
+      return Response.ok(
+        jsonEncode({
+          'items': items,
+          'count': items.length,
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, stackTrace) {
+      print('Error getting domain IDs: $e');
+      print('Stack trace: $stackTrace');
+      return _errorResponse(
+        'Failed to get domain IDs: ${e.toString()}',
+        500,
+        stackTrace,
+      );
+    }
+  }
+
   Future<Response> _handleGetDomainsAndTheirCollections(Request request) async {
     try {
       final domainTypes = getAllDomainTypes();
@@ -811,9 +959,9 @@ abstract class BaseRestApiServer {
   Future<Response> _handleGetChanges(Request request) async {
     try {
       // TODO: generalize this for `domainId` instead of just `projectId`
-      final projectId = _extractProjectId(request);
+      final projectId = _extractDomainId(request);
       if (projectId == null || projectId.isEmpty) {
-        return _errorResponse('Project ID is required', 400);
+        return _errorResponse('Domain ID is required', 400);
       }
 
       final cursorParam = request.url.queryParameters['cursor'];
@@ -888,9 +1036,9 @@ abstract class BaseRestApiServer {
   /// Get specific change by sequence number
   Future<Response> _handleGetChange(Request request) async {
     try {
-      final projectId = _extractProjectId(request);
+      final projectId = _extractDomainId(request);
       if (projectId == null || projectId.isEmpty) {
-        return _errorResponse('Project ID is required', 400);
+        return _errorResponse('Domain ID is required', 400);
       }
 
       final seq = request.params['seq'];
@@ -1031,9 +1179,9 @@ abstract class BaseRestApiServer {
   /// Get statistics
   Future<Response> _handleGetStats(Request request) async {
     try {
-      final projectId = _extractProjectId(request);
+      final projectId = _extractDomainId(request);
       if (projectId == null || projectId.isEmpty) {
-        return _errorResponse('Project ID is required', 400);
+        return _errorResponse('Domain ID is required', 400);
       }
 
       final changeStats = await storage.getChangeStats(projectId);
@@ -1134,9 +1282,9 @@ abstract class BaseRestApiServer {
   /// Get entity state with pagination and optional metadata
   Future<Response> _handleGetEntityState(Request request) async {
     try {
-      final projectId = _extractProjectId(request);
+      final projectId = _extractDomainId(request);
       if (projectId == null || projectId.isEmpty) {
-        return _errorResponse('Project ID is required', 400);
+        return _errorResponse('Domain ID is required', 400);
       }
 
       final entityType = request.params['entityType'];

@@ -8,8 +8,13 @@ import 'package:test/test.dart';
 class ApiChangesNetworkTestSuite {
   final Future<Uri> Function() resolveBaseUrl;
   final DateTime baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+  // Generalized domain collection (defaults to 'projects')
+  final String domainCollection;
 
-  ApiChangesNetworkTestSuite(this.resolveBaseUrl);
+  ApiChangesNetworkTestSuite(
+    this.resolveBaseUrl, {
+    this.domainCollection = 'projects',
+  });
 
   Future<Map<String, dynamic>> postSingleChange(
     Map<String, dynamic> change,
@@ -56,7 +61,8 @@ class ApiChangesNetworkTestSuite {
     if (limit != null) queryParams['limit'] = limit.toString();
 
     final uri = baseUrl.replace(
-      path: '/api/projects/${Uri.encodeComponent(projectId)}/changes',
+      // Generalized domain path
+      path: '/api/$domainCollection/${Uri.encodeComponent(projectId)}/changes',
       queryParameters: queryParams.isEmpty ? null : queryParams,
     );
 
@@ -110,6 +116,22 @@ class ApiChangesNetworkTestSuite {
             _testPostChangesWithSummaries(),
       },
       'GET /api/projects/<projectId>/changes': {
+        'returns empty list for project with no changes': () =>
+            _testGetProjectChangesEmpty(),
+        'returns changes for project with seeded data': () =>
+            _testGetProjectChangesWithData(),
+        'respects limit parameter': () => _testGetProjectChangesWithLimit(),
+        'supports cursor-based pagination': () =>
+            _testGetProjectChangesWithPagination(),
+        'handles URL-encoded project IDs correctly': () =>
+            _testGetProjectChangesUrlEncoded(),
+        'returns 400 for invalid limit values': () =>
+            _testGetProjectChangesInvalidLimit(),
+        'returns 400 for invalid cursor values': () =>
+            _testGetProjectChangesInvalidCursor(),
+      },
+      // Alias using generalized path label
+      'GET /api/{domainCollection}/{domainId}/changes': {
         'returns empty list for project with no changes': () =>
             _testGetProjectChangesEmpty(),
         'returns changes for project with seeded data': () =>

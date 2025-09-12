@@ -122,14 +122,14 @@ abstract class BaseStorageService {
   });
 
   /// Mark a change as outdated by another change
-  Future<void> markAsOutdated(String projectId, int seq, int outdatedBy);
+  Future<void> markAsOutdated(String domainId, int seq, int outdatedBy);
 
   /// Get changes that are not outdated (for local storage services)
   Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
-    String projectId,
+    String domainId,
   ) async {
     // Default implementation - override in local storage services
-    return getChangesWithCursor(domainId: projectId);
+    return getChangesWithCursor(domainId: domainId);
   }
 
   String getStorageType();

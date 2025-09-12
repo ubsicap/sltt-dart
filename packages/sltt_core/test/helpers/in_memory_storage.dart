@@ -195,14 +195,10 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<void> markAsOutdated(
-    String projectId,
-    int seq,
-    int outdatedBy,
-  ) async {}
+  Future<void> markAsOutdated(String domainId, int seq, int outdatedBy) async {}
 
   @override
   Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
-    String projectId,
-  ) async => getChangesWithCursor(domainId: projectId);
+    String domainId,
+  ) async => getChangesWithCursor(domainId: domainId);
 }
