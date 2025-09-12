@@ -16,6 +16,8 @@ abstract class BaseEntityState
 
   @override
   final String entityType;
+  @override
+  final String domainType;
 
   @override
   String unknownJson;
@@ -80,6 +82,7 @@ abstract class BaseEntityState
   BaseEntityState({
     required String entityId,
     required this.entityType,
+    required this.domainType,
     this.schemaVersion,
     required String unknownJson,
     required this.change_domainId,
@@ -163,6 +166,7 @@ abstract class BaseEntityState
 mixin CoreEntityMetaData {
   String get entityId;
   String get entityType;
+  String get domainType;
   int? get schemaVersion;
   String? get unknownJson;
 }

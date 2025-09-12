@@ -141,6 +141,7 @@ class IsarStorageService extends BaseStorageService {
 
   @override
   Future<UpdateChangeLogAndStateResult> updateChangeLogAndState({
+    required String domainType,
     required BaseChangeLogEntry changeLogEntry,
     required Map<String, dynamic> changeUpdates,
     BaseEntityState? entityState,
@@ -227,9 +228,10 @@ class IsarStorageService extends BaseStorageService {
   ///
   /// Returns the created change log entry with auto-generated sequence number.
   @override
-  Future<BaseChangeLogEntry> createChange(
-    Map<String, dynamic> changeData,
-  ) async {
+  Future<BaseChangeLogEntry> createChange({
+    required String domainType,
+    required Map<String, dynamic> changeData,
+  }) async {
     print('changeData: ${jsonEncode(changeData)}');
     final change = client.IsarChangeLogEntry.fromJson(changeData);
 
@@ -246,12 +248,18 @@ class IsarStorageService extends BaseStorageService {
   }
 
   @override
-  Future<BaseChangeLogEntry?> getChange(String domainId, int seq) async {
+  Future<BaseChangeLogEntry?> getChange({
+    required String domainType,
+    required String domainId,
+    required String cid,
+  }) async {
     final change = await _isar.isarChangeLogEntrys
         .where()
-        .seqEqualTo(seq)
+        .cidEqualTo(cid)
         .filter()
         .domainIdEqualTo(domainId)
+        .and()
+        .domainTypeEqualTo(domainType)
         .findFirst();
     return change != null ? _convertToChangeLogEntry(change) : null;
   }
@@ -332,14 +340,22 @@ class IsarStorageService extends BaseStorageService {
 
   // Statistics operations
   @override
-  Future<Map<String, dynamic>> getChangeStats(String domainId) async {
+  @override
+  Future<Map<String, dynamic>> getChangeStats({
+    required String domainType,
+    required String domainId,
+  }) async {
     final total = await _isar.isarChangeLogEntrys
         .filter()
         .domainIdEqualTo(domainId)
+        .and()
+        .domainTypeEqualTo(domainType)
         .count();
     final creates = await _isar.isarChangeLogEntrys
         .filter()
         .domainIdEqualTo(domainId)
+        .and()
+        .domainTypeEqualTo(domainType)
         .and()
         .operationEqualTo('create')
         .count();
@@ -347,11 +363,15 @@ class IsarStorageService extends BaseStorageService {
         .filter()
         .domainIdEqualTo(domainId)
         .and()
+        .domainTypeEqualTo(domainType)
+        .and()
         .operationEqualTo('update')
         .count();
     final deletes = await _isar.isarChangeLogEntrys
         .filter()
         .domainIdEqualTo(domainId)
+        .and()
+        .domainTypeEqualTo(domainType)
         .and()
         .operationEqualTo('delete')
         .count();
@@ -365,10 +385,15 @@ class IsarStorageService extends BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getEntityTypeStats(String domainId) async {
+  Future<Map<String, dynamic>> getEntityTypeStats({
+    required String domainType,
+    required String domainId,
+  }) async {
     final allEntries = await _isar.isarChangeLogEntrys
         .filter()
         .domainIdEqualTo(domainId)
+        .and()
+        .domainTypeEqualTo(domainType)
         .findAll();
     final stats = <String, int>{};
 
@@ -419,6 +444,7 @@ class IsarStorageService extends BaseStorageService {
   // Cursor-based pagination and filtering
   @override
   Future<List<BaseChangeLogEntry>> getChangesWithCursor({
+    required String domainType,
     required String domainId,
     int? cursor,
     int? limit,
@@ -427,7 +453,9 @@ class IsarStorageService extends BaseStorageService {
         .where()
         .seqGreaterThan(cursor ?? 0)
         .filter()
-        .domainIdEqualTo(domainId);
+        .domainIdEqualTo(domainId)
+        .and()
+        .domainTypeEqualTo(domainType);
 
     var results = await query.findAll();
 
@@ -441,7 +469,6 @@ class IsarStorageService extends BaseStorageService {
   ///
   /// Returns only changes that haven't been marked as outdated,
   /// which prevents syncing obsolete change log entries.
-  @override
   Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
     String projectId,
   ) async {
@@ -508,7 +535,6 @@ class IsarStorageService extends BaseStorageService {
   */
 
   // Get changes since a specific sequence number (for syncing)
-  @override
   Future<List<BaseChangeLogEntry>> getChangesSince(
     String domainId,
     int seq,
@@ -555,11 +581,12 @@ class IsarStorageService extends BaseStorageService {
 
   /// Get the current state of an entity for field-level comparison
   @override
-  Future<BaseEntityState?> getCurrentEntityState(
-    String domainId,
-    String entityType,
-    String entityId,
-  ) async {
+  Future<BaseEntityState?> getCurrentEntityState({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+  }) async {
     // Convert entityType string to EntityType enum
     // Map the incoming entityType string to the enum. `firstWhere` with
     // `orElse` will return `EntityType.unknown` when no match is found and
@@ -583,13 +610,32 @@ class IsarStorageService extends BaseStorageService {
     return await storageGroup.findByDomainAndEntity(_isar, domainId, entityId);
   }
 
+  @override
+  Future<Map<String, dynamic>> getEntityState({
+    required String domainType,
+    required String domainId,
+    required String entityId,
+    bool includeMetadata = false,
+  }) async {
+    // Search all registered storage groups for the entity
+    final entityTypes = getAllRegisteredEntityTypes();
+    for (final et in entityTypes) {
+      final group = getEntityStateStorageGroup(et);
+      if (group == null) continue;
+      final state = await group.findByDomainAndEntity(
+        _isar,
+        domainId,
+        entityId,
+      );
+      if (state != null) return state.toJson();
+    }
+    return <String, dynamic>{};
+  }
+
   /// Hook method for subclasses to optionally add cloud timestamp.
   /// Override this in CloudStorageService to return DateTime.now().
   DateTime? maybeCreateCloudAt() => null;
 
-  // STUBBED/COMMENTED OUT HELPER METHODS THAT NEED TO BE FIXED LATER
-
-  /*
   /// Delete all changes - useful for testing cleanup
   Future<int> deleteAllChanges() async {
     final allChanges = await _isar.isarChangeLogEntrys.where().findAll();
@@ -607,22 +653,24 @@ class IsarStorageService extends BaseStorageService {
 
     return deletedCount;
   }
-  */
 
-  /// Get all unique project IDs from all changes
+  /// Get all unique project IDs across all entityStates
   @override
   Future<List<String>> getAllDomainIds({required String domainType}) async {
-    final allChanges = await _isar.isarChangeLogEntrys.where().findAll();
+    final allChanges = await _isar.isarChangeLogEntrys
+        .filter()
+        .domainTypeEqualTo(domainType)
+        .findAll();
 
-    // Extract unique project IDs
-    final projectIds = <String>{};
+    // Extract unique domain IDs
+    final domainIds = <String>{};
     for (final change in allChanges) {
       if (change.domainId.isNotEmpty) {
-        projectIds.add(change.domainId);
+        domainIds.add(change.domainId);
       }
     }
 
-    return projectIds.toList()..sort();
+    return domainIds.toList()..sort();
   }
 
   /// Get sync state for a specific project
@@ -636,7 +684,6 @@ class IsarStorageService extends BaseStorageService {
 
   // STUBBED METHODS THAT NEED TO BE PROPERLY IMPLEMENTED LATER
 
-  @override
   Future<void> markAsOutdated(String projectId, int seq, int outdatedBy) async {
     // TODO: Implement when fixing Isar queries
     // For now, just stub this out
@@ -819,6 +866,7 @@ class IsarStorageService extends BaseStorageService {
 
   @override
   Future<Map<String, dynamic>> getEntityStates({
+    required String domainType,
     required String domainId,
     required String entityType,
     String? cursor,
@@ -897,9 +945,10 @@ class CloudStorageService extends IsarStorageService {
   DateTime? maybeCreateCloudAt() => DateTime.now().toUtc();
 
   @override
-  Future<BaseChangeLogEntry> createChange(
-    Map<String, dynamic> changeData,
-  ) async {
+  Future<BaseChangeLogEntry> createChange({
+    required String domainType,
+    required Map<String, dynamic> changeData,
+  }) async {
     print('changeData: ${jsonEncode(changeData)}');
 
     // For cloud storage, always force sequence auto-generation by removing seq
