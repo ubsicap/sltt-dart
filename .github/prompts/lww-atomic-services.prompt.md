@@ -33,7 +33,7 @@ Next step:
 
    possible prompts:
     1) move SyncState and SelfSyncState to sltt_core models, but remove `id = Isar.autoIncrement`.
-    2) in syncManager models implement `IsarSelfEntityTypeSyncState` and add `sssId = Isar.autoIncrement`
+    2) in syncManager models implement `IsarEntityTypeSyncState` and add `sssId = Isar.autoIncrement`
     3) in syncManager `CursorSyncState` extend SyncState but add `cssId = Isar.autoIncrement`
     4) add async `updateSelfSyncState(SelfSyncState syncState)` to BaseStorageService
     5) in `storage.updateChangeLogAndState()` call `storage.updateSelfSyncState(syncState)` after returning from `updateChangeLogAndState()` and add syncState to results?

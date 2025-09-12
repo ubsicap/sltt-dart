@@ -117,7 +117,7 @@ class IsarStorageService extends BaseStorageService {
       final newId = BaseStorageService.generateShortStorageId();
       final now = DateTime.now().toUtc();
       const kSelfStorage = 'self-storage';
-      final self = IsarSelfEntityTypeSyncState(
+      final self = IsarEntityTypeSyncState(
         domainType: 'storage',
         domainId: kSelfStorage,
         entityType: 'storage',

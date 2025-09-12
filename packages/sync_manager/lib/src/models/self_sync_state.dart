@@ -6,7 +6,7 @@ part 'self_sync_state.g.dart';
 
 /// Track latest sync state per entity type for a given domain
 @collection
-class IsarSelfEntityTypeSyncState extends SyncState {
+class IsarEntityTypeSyncState extends SyncState {
   final Id id;
   @Index(
     unique: true,
@@ -19,7 +19,7 @@ class IsarSelfEntityTypeSyncState extends SyncState {
   int updated = Isar.autoIncrement;
   int deleted = Isar.autoIncrement;
 
-  IsarSelfEntityTypeSyncState({
+  IsarEntityTypeSyncState({
     this.id = Isar.autoIncrement,
     required this.entityType,
     required super.domainId,
