@@ -83,15 +83,42 @@ class InMemoryStorage implements BaseStorageService {
       if (!merged.containsKey('entityType')) {
         merged['entityType'] = newChange.entityType;
       }
+      // Ensure presence of fields expected by TestEntityState.fromJson
+      merged['unknownJson'] = merged['unknownJson'] ?? '{}';
+      merged['change_domainId'] =
+          merged['change_domainId'] ?? newChange.domainId;
+      merged['change_domainId_orig_'] =
+          merged['change_domainId_orig_'] ?? newChange.domainId;
+      merged['change_changeAt'] =
+          merged['change_changeAt'] ?? newChange.changeAt.toIso8601String();
+      merged['change_changeAt_orig_'] =
+          merged['change_changeAt_orig_'] ??
+          newChange.changeAt.toIso8601String();
+      merged['change_cid'] = merged['change_cid'] ?? newChange.cid;
+      merged['change_cid_orig_'] = merged['change_cid_orig_'] ?? newChange.cid;
+      merged['change_changeBy'] =
+          merged['change_changeBy'] ?? newChange.changeBy;
+      merged['change_changeBy_orig_'] =
+          merged['change_changeBy_orig_'] ?? newChange.changeBy;
+      merged['data_parentId'] = merged['data_parentId'] ?? '';
+      merged['data_parentId_changeAt_'] =
+          merged['data_parentId_changeAt_'] ??
+          newChange.changeAt.toIso8601String();
+      merged['data_parentId_cid_'] =
+          merged['data_parentId_cid_'] ?? newChange.cid;
+      merged['data_parentId_changeBy_'] =
+          merged['data_parentId_changeBy_'] ?? newChange.changeBy;
       print(
         'DEBUG: InMemoryStorage merged state for CID ${newChange.cid}: $merged',
       );
       newState = TestEntityState.fromJson(merged);
       final states = _statesByDomainType.putIfAbsent(domainType, () => {});
+      // Use the entityId from the serialized state (newState.entityId)
+      // because TestEntityState may include a namespaced id (e.g. 'seed-project-task-1')
       states[_key(
             newChange.domainId,
             newChange.entityType,
-            newChange.entityId,
+            newState.entityId,
           )] =
           newState;
     } catch (e, st) {
