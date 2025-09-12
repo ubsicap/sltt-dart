@@ -20,8 +20,9 @@ class IsarDocumentState extends BaseIsarEntityState {
 
   IsarDocumentState({
     super.id,
-    required super.entityId,
     super.entityType = 'document',
+    required super.domainType,
+    required super.entityId,
     super.schemaVersion,
     required super.unknownJson,
     required super.change_domainId,

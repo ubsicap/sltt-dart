@@ -23,6 +23,7 @@ class IsarTaskState extends BaseIsarEntityState {
   IsarTaskState({
     super.id,
     super.entityType = 'task',
+    required super.domainType,
     required super.entityId,
     required super.unknownJson,
     required this.data_nameLocal,

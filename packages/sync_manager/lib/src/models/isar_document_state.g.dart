@@ -379,6 +379,7 @@ IsarDocumentState _isarDocumentStateDeserialize(
     data_title: reader.readStringOrNull(offsets[29]),
     data_title_changeAt_: reader.readDateTimeOrNull(offsets[30]),
     data_title_cid_: reader.readStringOrNull(offsets[31]),
+    domainType: reader.readString(offsets[32]),
     entityId: reader.readString(offsets[33]),
     entityType: reader.readStringOrNull(offsets[34]) ?? 'document',
     id: id,
@@ -6353,9 +6354,10 @@ IsarDocumentState _$IsarDocumentStateFromJson(Map<String, dynamic> json) =>
         final val = IsarDocumentState(
           id: $checkedConvert(
               'id', (v) => (v as num?)?.toInt() ?? Isar.autoIncrement),
-          entityId: $checkedConvert('entityId', (v) => v as String),
           entityType:
               $checkedConvert('entityType', (v) => v as String? ?? 'document'),
+          domainType: $checkedConvert('domainType', (v) => v as String),
+          entityId: $checkedConvert('entityId', (v) => v as String),
           schemaVersion:
               $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
           unknownJson: $checkedConvert('unknownJson', (v) => v as String),
@@ -6426,6 +6428,7 @@ IsarDocumentState _$IsarDocumentStateFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$IsarDocumentStateToJson(IsarDocumentState instance) =>
     <String, dynamic>{
       'entityType': instance.entityType,
+      'domainType': instance.domainType,
       'unknownJson': instance.unknownJson,
       'schemaVersion': instance.schemaVersion,
       'change_domainId': instance.change_domainId,

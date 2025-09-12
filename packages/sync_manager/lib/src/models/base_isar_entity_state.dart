@@ -15,6 +15,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   BaseIsarEntityState({
     this.id = Isar.autoIncrement,
+    required super.domainType,
     required super.entityId,
     required super.entityType,
     super.schemaVersion,

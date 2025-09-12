@@ -23,6 +23,7 @@ class IsarProjectState extends BaseIsarEntityState {
   IsarProjectState({
     super.id,
     super.entityType = 'project',
+    required super.domainType,
     required super.entityId,
     required super.unknownJson,
     this.data_nameLocal,

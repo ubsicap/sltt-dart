@@ -23,6 +23,7 @@ class IsarTeamState extends BaseIsarEntityState {
   IsarTeamState({
     super.id,
     super.entityType = 'team',
+    required super.domainType,
     required super.entityId,
     required super.unknownJson,
     super.schemaVersion,
