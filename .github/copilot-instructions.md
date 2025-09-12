@@ -1,59 +1,51 @@
 # GitHub Copilot Instructions
 
+
 ## Important Testing Requirements
 
 ### Isar Database Dependencies
 
-This project uses Isar database which requires native library dependencies. When running tests or working with the sync_manager package:
+This project uses Isar database which requires native library dependencies. When running tests or working with the `sync_manager` package:
 
-**ALWAYS use the provided test setup scripts** instead of running `dart test` directly:
+1. Source the provided setup script to make the native Isar library available to the Dart VM in your current shell session.
 
 ```bash
-# ✅ CORRECT - Use test.sh for proper Isar library setup
-./test.sh
+# Source once to export LD_LIBRARY_PATH (Linux/macOS) or set up environment in your shell
+source ./setup_test_env.sh
 
-# ✅ CORRECT - Run tests for specific package
-./test.sh packages/sync_manager
+# Then run tests directly
+dart test
+```
 
-# ✅ CORRECT - Run specific test file
-./test.sh packages/sync_manager test/sync_manager_test.dart
+On Windows, use the PowerShell setup script instead:
 
-# ✅ CORRECT - Use VS Code tasks that include setup
-# Ctrl+Shift+P → "Tasks: Run Task" → "Run Tests with Setup"
-# Ctrl+Shift+P → "Tasks: Run Task" → "Run Integration Tests"
+```powershell
+# Run in PowerShell once to set up the environment for the current session
+.\setup_test_env.ps1
 
-# ❌ INCORRECT - Don't run dart test directly (will fail with libisar.so errors)
+# Then run tests (PowerShell)
 dart test
 ```
 
 ### Why This is Required
 
-- The sync_manager package uses Isar database with native bindings
-- Tests require `libisar.so` library to be available via `LD_LIBRARY_PATH`
-- The `test.sh` script automatically:
-  1. Copies `libisar.so` to `/tmp/dart_test_libs/`
-  2. Sets `LD_LIBRARY_PATH=/tmp/dart_test_libs`
-  3. Runs tests with proper environment
+- The `sync_manager` package uses Isar database with native bindings
+- Tests require the Isar native library (e.g., `libisar.so` or `isar.dll`) to be discoverable by the test processes
+- The `setup_test_env.*` scripts copy the native library into a known location and set the appropriate environment variable(s) so `dart test` can find them
 
 ### Available Test Commands
 
 ```bash
-# Run all tests with setup
-./test.sh
+# Run all tests after sourcing the setup script
+source ./setup_test_env.sh && dart test
 
-# Run tests for specific package
-./test.sh packages/sync_manager
+# Run tests for a specific package
+source ./setup_test_env.sh && dart test packages/sync_manager
 
-# Run specific test file
-./test.sh packages/sync_manager test/sync_manager_test.dart
+# Run a specific test file
+source ./setup_test_env.sh && dart test packages/sync_manager/test/sync_manager_test.dart
 
-# Run integration tests
-./test.sh test/integration_test.dart
-
-# Use VS Code tasks (recommended in IDE)
-# - "Run Tests with Setup"
-# - "Run Integration Tests"
-# - "Setup Test Environment"
+# Use VS Code tasks that include setup (some tasks in .vscode/tasks.json run the setup script)
 ```
 
 ### Package Structure
@@ -69,12 +61,12 @@ If you see this error:
 Failed to load dynamic library 'libisar.so': libisar.so: cannot open shared object file
 ```
 
-**Solution**: Use `./test.sh` instead of `dart test` directly.
+**Solution**: Source `./setup_test_env.sh` (or run the PowerShell setup on Windows) before running `dart test`.
 
 ### Development Workflow
 
 1. Make code changes
-2. Run tests: `./test.sh`
+2. Run tests: `source ./setup_test_env.sh && dart test`
 3. For continuous testing in IDE: Use VS Code tasks
 4. For CI/CD: Ensure scripts use proper environment setup
 

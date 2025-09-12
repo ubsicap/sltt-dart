@@ -1,6 +1,6 @@
-# Running Tests Without ./test.sh
+# Running Tests
 
-This document describes various ways to run tests without having to use `./test.sh` every time.
+This document describes various ways to run tests and ensure the Isar native library is available for `dart test`.
 
 ## Option 1: VS Code Test Runner (Recommended)
 
@@ -14,19 +14,22 @@ Both configurations automatically:
 - Set the `LD_LIBRARY_PATH` environment variable
 - Use compact reporter and single concurrency
 
-## Option 2: Quick Test Script
+## Command line testing
 
-Use the new `quick_test.sh` script for command line testing:
+If you prefer the command line, source the setup script then run `dart test`.
 
 ```bash
+# Source once to set LD_LIBRARY_PATH in your current shell
+source ./setup_test_env.sh
+
 # Run all tests
-./quick_test.sh
+dart test
 
-# Run specific test file
-./quick_test.sh test/my_test.dart
+# Run a specific test file
+dart test test/my_test.dart
 
-# Run tests with specific name pattern
-./quick_test.sh -n "my test name"
+# Run tests that match a name pattern
+dart test -n "my test name"
 ```
 
 ## Option 3: Manual Setup + dart test
@@ -69,8 +72,6 @@ Sourcing is recommended when you plan to run multiple `dart test` commands durin
 ## Option 4: dart_test.yaml Configuration
 
 The project includes a `dart_test.yaml` file that:
-- Sets `LD_LIBRARY_PATH` automatically
-- Configures default test settings (compact reporter, concurrency 1, fail-fast)
 
 However, you still need to run `./setup_test_env.sh` once to copy the Isar library.
 

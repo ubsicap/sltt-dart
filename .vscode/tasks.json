@@ -247,25 +247,36 @@
             "group": "test"
         },
         {
-            "label": "Run Tests with Setup",
+            "label": "Run Tests (manual LD_LIBRARY_PATH)",
             "type": "shell",
-            "command": "./test.sh",
+            "command": "bash",
+            "args": [
+                "-lc",
+                "source ./setup_test_env.sh && dart test"
+            ],
             "group": "test",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
                 "focus": false,
-                "panel": "shared",
+                "panel": "shared"
             }
         },
         {
-            "label": "Run Integration Tests",
+            "label": "Run Integration Tests (manual LD_LIBRARY_PATH)",
             "type": "shell",
-            "command": "./test.sh",
+            "command": "bash",
             "args": [
-                "test/integration_test.dart"
+                "-lc",
+                "source ./setup_test_env.sh && dart test test/integration_test.dart"
             ],
             "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
         },
         {
             "label": "Debug AWS Backend (Dev)",

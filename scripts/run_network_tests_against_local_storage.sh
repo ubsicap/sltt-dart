@@ -19,6 +19,8 @@ sleep 1
 
 export API_BASE_URL="http://localhost:$PORT"
 echo "Running network tests in sltt_core with API_BASE_URL=$API_BASE_URL"
-./test.sh packages/sltt_core
+# Ensure Isar native library is available, then run package tests
+source ./setup_test_env.sh
+dart test packages/sltt_core
 
 echo "Network tests finished"

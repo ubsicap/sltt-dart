@@ -1,5 +1,5 @@
 # Dart test configuration for SLTT project
-# Note: Use ./quick_test.sh for automatic Isar library setup
+# Note: Source `./setup_test_env.sh` once to make the Isar native library available before running `dart test`
 
 # Default test configuration
 reporter: "compact"

@@ -41,31 +41,41 @@ A comprehensive mono-repo for offline-first sync systems including core librarie
 The project includes comprehensive tests for all components. Due to Isar database requirements, tests need the native `libisar.so` library to be available.
 
 #### Quick Test Runner (Recommended)
+Use the sourceable setup script to make the Isar native library available to the test runner and export `LD_LIBRARY_PATH` in your shell.
+
 ```bash
-# Auto-setup environment and run all tests
-./test.sh
+# Copy Isar native library to the test runtime location and export
+# LD_LIBRARY_PATH into your current shell (recommended when running multiple tests)
+source ./setup_test_env.sh
+
+# Run tests normally
+dart test
 
 # Run specific test files
-./test.sh test/integration_test.dart
+dart test test/integration_test.dart
 ```
 
 #### Manual Test Setup
 ```bash
-# 1. Set up test environment (copies Isar library)
-./setup_test_env.sh
+# Source the setup script once to copy the Isar native library and export
+# LD_LIBRARY_PATH into your current shell session (recommended):
+source ./setup_test_env.sh
 
-# 2. Run tests with proper environment
-LD_LIBRARY_PATH=/tmp/dart_test_libs dart test
+# Confirm environment
+echo "$LD_LIBRARY_PATH"
+ls -la /tmp/dart_test_libs/libisar.so
 
-# 3. Or use the custom test runner
-LD_LIBRARY_PATH=/tmp/dart_test_libs dart run run_tests.dart
+# Run tests normally
+dart test
+
+# Or run a single test file
+dart test test/my_test.dart
 ```
 
 #### VS Code Integration
 Use **Ctrl+Shift+P** → **Tasks: Run Task** and select:
-- **"Run Tests with Setup"** - Runs all tests with automatic environment setup
-- **"Run Integration Tests"** - Runs only integration tests
-- **"Setup Test Environment"** - Sets up Isar library for manual testing
+- **"Setup Test Environment"** - Source/copy the Isar native library and print instructions to export `LD_LIBRARY_PATH`.
+- Run `dart test` from the terminal (with `LD_LIBRARY_PATH` exported) or use the integrated test runner.
 
 #### Available Test Suites
 - **Basic Tests** - Core functionality and unit tests

@@ -27,6 +27,7 @@ sltt_dart/
 
 ## Development Workflow
 
+
 ### Making Changes to Core Package
 
 1. **Work in `packages/sltt_core/`**
@@ -36,7 +37,7 @@ sltt_dart/
    ```
 3. **Test your changes**:
    ```bash
-   ./test.sh
+   source ./setup_test_env.sh && dart test packages/sltt_core
    ```
 
 ### Adding New Features
@@ -49,11 +50,11 @@ sltt_dart/
 ### Running Tests
 
 ```bash
-# Run all tests
-./test.sh
+# Run all tests (after sourcing environment)
+source ./setup_test_env.sh && dart test
 
-# Or individual tests
-./test.sh packages/sync_manager test/sync_manager_test.dart -p vm --plain-name 'outdated changes are not synced'
+# Run an individual package test
+source ./setup_test_env.sh && dart test packages/sync_manager test/sync_manager_test.dart -p vm --plain-name 'outdated changes are not synced'
 ```
 
 ### Debugging
@@ -104,7 +105,17 @@ sltt_dart/
 2. **Make Changes**: Follow development workflow above
 3. **Build Models**: Run `dart run build_runner build --delete-conflicting-outputs`
 4. **Lint and Format**: Run `dart analyze` (and `dart fix --apply`) and `dart format`
-3. **Test Thoroughly**: `./test.sh`
+3. **Test Thoroughly**: Use the sourceable setup script and run `dart test`.
+
+Example:
+
+```bash
+# Source once to export LD_LIBRARY_PATH into your shell session
+source ./setup_test_env.sh
+
+# Run tests
+dart test
+```
 4. **Format Code**: Ensure code is formatted with `dart format`
 4. **Update Documentation**: Update READMEs if needed
 5. **Submit PR**: Include description of changes and testing done
