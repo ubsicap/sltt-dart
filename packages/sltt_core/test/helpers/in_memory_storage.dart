@@ -6,7 +6,7 @@ class InMemoryStorage implements BaseStorageService {
   /// cloud, local
   final String storageType;
   final String storageId;
-  final List<TestChangeLogEntry> _changes = [];
+  final Map<String, List<TestChangeLogEntry>> _changesByDomainType = {};
   int _nextSeq = 1;
   final Map<String, Map<String, TestEntityState>> _statesByDomainType = {};
 
@@ -47,6 +47,7 @@ class InMemoryStorage implements BaseStorageService {
 
   @override
   Future<UpdateChangeLogAndStateResult> updateChangeLogAndState({
+    required String domainType,
     required BaseChangeLogEntry changeLogEntry,
     required Map<String, dynamic> changeUpdates,
     BaseEntityState? entityState,
@@ -60,8 +61,9 @@ class InMemoryStorage implements BaseStorageService {
     }
     final newChange = TestChangeLogEntry.fromJson(newChangeJson);
 
+    final changes = _changesByDomainType.putIfAbsent(domainType, () => []);
     // persist change for subsequent queries
-    _changes.add(newChange);
+    changes.add(newChange);
 
     final prior = (entityState?.toJson() ?? <String, dynamic>{});
     final merged = {...prior, ...stateUpdates}
@@ -78,7 +80,8 @@ class InMemoryStorage implements BaseStorageService {
         'DEBUG: InMemoryStorage merged state for CID ${newChange.cid}: $merged',
       );
       newState = TestEntityState.fromJson(merged);
-      _states[_key(
+      final states = _statesByDomainType.putIfAbsent(domainType, () => {});
+      states[_key(
             newChange.domainId,
             newChange.entityType,
             newChange.entityId,
@@ -98,15 +101,17 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<BaseChangeLogEntry> createChange(
-    Map<String, dynamic> changeData,
-  ) async {
+  Future<BaseChangeLogEntry> createChange({
+    required domainType,
+    required Map<String, dynamic> changeData,
+  }) async {
     final data = Map<String, dynamic>.from(changeData);
     if (data['seq'] == null || (data['seq'] is int && data['seq'] == 0)) {
       data['seq'] = _nextSeq++;
     }
     final change = TestChangeLogEntry.fromJson(data);
-    _changes.add(change);
+    final changes = _changesByDomainType.putIfAbsent(domainType, () => []);
+    changes.add(change);
     return change;
   }
 
@@ -147,16 +152,12 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<List<BaseChangeLogEntry>> getChangesSince(
-    String domainId,
-    int seq,
-  ) async {
-    return getChangesWithCursor(domainId: domainId, cursor: seq);
-  }
-
-  @override
-  Future<Map<String, dynamic>> getChangeStats(String domainId) async {
-    final proj = _changes.where((c) => c.domainId == domainId).toList();
+  Future<Map<String, dynamic>> getChangeStats({
+    required String domainType,
+    required String domainId,
+  }) async {
+    final changes = _changesByDomainType[domainType] ?? [];
+    final proj = changes.where((c) => c.domainId == domainId).toList();
     final total = proj.length;
     final creates = proj.where((c) => c.operation == 'create').length;
     final updates = proj.where((c) => c.operation == 'update').length;
@@ -170,22 +171,30 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, int>> getEntityTypeStats(String domainId) async =>
-      <String, int>{};
+  Future<Map<String, int>> getEntityTypeStats({
+    required String domainType,
+    String? domainId,
+  }) async => <String, int>{};
 
   @override
   Future<List<String>> getAllDomainIds({required String domainType}) async =>
-      _states.keys.map((k) => k.split('|').first).toSet().toList();
+      _statesByDomainType[domainType]?.keys
+          .map((k) => k.split('|').first)
+          .toSet()
+          .toList() ??
+      [];
 
   @override
   Future<Map<String, dynamic>> getEntityStates({
+    required String domainType,
     required String domainId,
     required String entityType,
     String? cursor,
     int? limit,
     bool includeMetadata = false,
   }) async {
-    final results = _states.entries
+    final states = _statesByDomainType[domainType] ?? {};
+    final results = states.entries
         .where(
           (e) =>
               e.key.startsWith('$domainId|$entityType|') &&
@@ -206,10 +215,13 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<void> markAsOutdated(String domainId, int seq, int outdatedBy) async {}
-
-  @override
-  Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
-    String domainId,
-  ) async => getChangesWithCursor(domainId: domainId);
+  Future<Map<String, dynamic>> getEntityState({
+    required String domainType,
+    required String domainId,
+    required String entityId,
+    bool includeMetadata = false,
+  }) {
+    // TODO: implement getEntityState
+    throw UnimplementedError();
+  }
 }

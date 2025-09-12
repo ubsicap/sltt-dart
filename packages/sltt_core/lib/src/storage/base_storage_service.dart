@@ -108,9 +108,6 @@ abstract class BaseStorageService {
     int? limit,
   });
 
-  /// Get all changes since a specific sequence number
-  Future<List<BaseChangeLogEntry>> getChangesSince(String domainId, int seq);
-
   /// Get statistics about change operations
   Future<Map<String, dynamic>> getChangeStats({
     required String domainType,
