@@ -181,7 +181,13 @@ class ChangeProcessingService {
             print(
               'DEBUG: entityState for CID ${changeLogEntry.cid}: ${entityState?.toJson()}',
             );
-          } catch (e) {}
+          } catch (e, st) {
+            // Log failure to serialize entity state for debug purposes
+            print(
+              'DEBUG: failed to serialize entityState for CID ${changeLogEntry.cid}: $e',
+            );
+            print(st);
+          }
 
           // Use enhanced change detection method
           final result = getUpdatesForChangeLogEntryAndEntityState(
@@ -195,7 +201,13 @@ class ChangeProcessingService {
             print(
               'DEBUG: getUpdates result for CID ${changeLogEntry.cid}: isDuplicate=${result.isDuplicate} changeUpdates=${result.changeUpdates} stateUpdates=${result.stateUpdates}',
             );
-          } catch (e) {}
+          } catch (e, st) {
+            // Log debug printing failures
+            print(
+              'DEBUG: failed to print getUpdates result for CID ${changeLogEntry.cid}: $e',
+            );
+            print(st);
+          }
 
           // Check payload size limits for save operations (sync operations preserve data)
           final payloadCheckResult = _checkPayloadLimits(
@@ -448,8 +460,10 @@ class ChangeProcessingService {
       print(
         'DEBUG: _categorizeChangeResult includeChangeUpdates=$includeChangeUpdates includeStateUpdates=$includeStateUpdates cid=${updateResults.newChangeLogEntry.cid} changeUpdatesPresent=${result.changeUpdates.isNotEmpty} stateUpdatesPresent=${result.stateUpdates.isNotEmpty}',
       );
-    } catch (e) {
-      // ignore any debug logging errors
+    } catch (e, st) {
+      // Log failures of debug logging to avoid silent ignores
+      print('DEBUG: _categorizeChangeResult debug print failed: $e');
+      print(st);
     }
   }
 }

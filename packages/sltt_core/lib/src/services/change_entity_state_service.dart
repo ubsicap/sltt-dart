@@ -361,8 +361,10 @@ GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
         print(
           'DEBUG: comparing field "$field": existing=$existingVal (${existingVal.runtimeType}), existing_str=${stableStringify(existingVal)} incoming=$value (${value.runtimeType}), incoming_str=${stableStringify(value)}',
         );
-      } catch (e) {
+      } catch (e, st) {
+        // Log any unexpected errors during debug printing to avoid silent failures
         print('DEBUG: comparing field "$field": error printing values: $e');
+        print(st);
       }
       final entityFieldKey =
           'data_$field'; // Change log has 'rank', entity has 'data_rank'
@@ -458,9 +460,19 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
     if (entityState != null) {
       try {
         print('DEBUG: existingEntityState=${entityState.toJson()}');
-      } catch (e) {}
+      } catch (e, st) {
+        // If entityState serialization fails, log stack for diagnosis
+        print('DEBUG: failed to serialize existingEntityState: $e');
+        print(st);
+      }
     }
-  } catch (e) {}
+  } catch (e, st) {
+    // Log any unexpected errors during debug printing
+    print(
+      'DEBUG: getDataAndStateUpdatesOrOutdatedBys - debug print failed: $e',
+    );
+    print(st);
+  }
 
   return {
     'stateUpdates': {

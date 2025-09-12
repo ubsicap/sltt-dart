@@ -6,7 +6,7 @@ import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
-import 'package:sync_manager/src/models/isar_entity_type_state.dart';
+import 'package:sync_manager/src/models/isar_storage_state.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -100,7 +100,10 @@ void main() {
       );
 
       // Create change
-      final createdChange = await storage.createChange(changeData);
+      final createdChange = await storage.createChange(
+        domainType: 'project',
+        changeData: changeData,
+      );
       expect(createdChange.seq, greaterThan(0));
       expect(createdChange.domainId, equals(projectId));
       expect(createdChange.entityType, equals('project'));
@@ -108,8 +111,9 @@ void main() {
 
       // Retrieve change by sequence number
       final retrievedChange = await storage.getChange(
-        projectId,
-        createdChange.seq,
+        domainType: 'project',
+        domainId: projectId,
+        cid: createdChange.cid,
       );
       expect(retrievedChange, isNotNull);
       expect(retrievedChange!.seq, equals(createdChange.seq));
@@ -117,7 +121,11 @@ void main() {
     });
 
     test('returns null for non-existent change', () async {
-      final result = await storage.getChange('non-existent-project', 999);
+      final result = await storage.getChange(
+        domainType: 'project',
+        domainId: 'non-existent-project',
+        cid: 'non-existent-cid',
+      );
       expect(result, isNull);
     });
 
@@ -133,11 +141,15 @@ void main() {
           changeAt: baseTime.add(Duration(minutes: i)),
           data: {'nameLocal': 'Project $i', 'parentId': 'root'},
         );
-        await storage.createChange(changeData);
+        await storage.createChange(
+          domainType: 'project',
+          changeData: changeData,
+        );
       }
 
       // Get changes with limit
       final changes = await storage.getChangesWithCursor(
+        domainType: 'project',
         domainId: projectId,
         limit: 3,
       );
@@ -162,7 +174,10 @@ void main() {
           changeAt: baseTime.add(Duration(minutes: i)),
           data: {'nameLocal': 'Project $i', 'parentId': 'root'},
         );
-        final change = await storage.createChange(changeData);
+        final change = await storage.createChange(
+          domainType: 'project',
+          changeData: changeData,
+        );
         changes.add(change);
       }
 
@@ -197,6 +212,7 @@ void main() {
       // Use updateChangeLogAndState to create both change and state
       final change = IsarChangeLogEntry.fromJson(changeData);
       final result = await storage.updateChangeLogAndState(
+        domainType: 'project',
         changeLogEntry: change,
         changeUpdates: {'seq': 1, 'stateChanged': true},
         stateUpdates: {
@@ -225,9 +241,10 @@ void main() {
 
       // Retrieve the entity state
       final entityState = await storage.getCurrentEntityState(
-        projectId,
-        'project',
-        entityId,
+        domainType: 'project',
+        domainId: projectId,
+        entityType: 'project',
+        entityId: entityId,
       );
 
       expect(entityState, isNotNull);
@@ -250,6 +267,7 @@ void main() {
 
       final change = IsarChangeLogEntry.fromJson(changeData);
       await storage.updateChangeLogAndState(
+        domainType: 'project',
         changeLogEntry: change,
         changeUpdates: {'seq': 1, 'stateChanged': true},
         stateUpdates: {
@@ -274,9 +292,10 @@ void main() {
       );
 
       final entityState = await storage.getCurrentEntityState(
-        projectId,
-        'document',
-        entityId,
+        domainType: 'project',
+        domainId: projectId,
+        entityType: 'document',
+        entityId: entityId,
       );
 
       expect(entityState, isNotNull);
@@ -299,6 +318,7 @@ void main() {
 
       final change = IsarChangeLogEntry.fromJson(changeData);
       await storage.updateChangeLogAndState(
+        domainType: 'project',
         changeLogEntry: change,
         changeUpdates: {'seq': 1, 'stateChanged': true},
         stateUpdates: {
@@ -336,9 +356,10 @@ void main() {
       );
 
       final entityState = await storage.getCurrentEntityState(
-        projectId,
-        'team',
-        entityId,
+        domainType: 'project',
+        domainId: projectId,
+        entityType: 'team',
+        entityId: entityId,
       );
 
       expect(entityState, isNotNull);
@@ -348,18 +369,20 @@ void main() {
 
     test('returns null for non-existent entity state', () async {
       final result = await storage.getCurrentEntityState(
-        'non-existent-project',
-        'project',
-        'non-existent-entity',
+        domainType: 'project',
+        domainId: 'non-existent-project',
+        entityType: 'project',
+        entityId: 'non-existent-entity',
       );
       expect(result, isNull);
     });
 
     test('handles unknown entity type gracefully', () async {
       final result = await storage.getCurrentEntityState(
-        'test-project',
-        'unknown',
-        'test-entity',
+        domainType: 'project',
+        domainId: 'test-project',
+        entityType: 'unknown',
+        entityId: 'test-entity',
       );
       expect(result, isNull);
     });
@@ -371,7 +394,8 @@ void main() {
 
       // Create changes with different operations
       await storage.createChange(
-        changePayload(
+        domainType: 'project',
+        changeData: changePayload(
           projectId: projectId,
           entityType: 'project',
           entityId: 'entity-1',
@@ -381,7 +405,8 @@ void main() {
       );
 
       await storage.createChange(
-        changePayload(
+        domainType: 'project',
+        changeData: changePayload(
           projectId: projectId,
           entityType: 'project',
           entityId: 'entity-2',
@@ -391,7 +416,8 @@ void main() {
       );
 
       await storage.createChange(
-        changePayload(
+        domainType: 'project',
+        changeData: changePayload(
           projectId: projectId,
           entityType: 'project',
           entityId: 'entity-3',
@@ -400,7 +426,10 @@ void main() {
         ),
       );
 
-      final stats = await storage.getChangeStats(projectId);
+      final stats = await storage.getChangeStats(
+        domainType: 'project',
+        domainId: projectId,
+      );
       expect(stats['total'], greaterThanOrEqualTo(3));
       expect(stats['creates'], greaterThanOrEqualTo(1));
       expect(stats['updates'], greaterThanOrEqualTo(1));
@@ -412,7 +441,8 @@ void main() {
 
       // Create changes for different entity types
       await storage.createChange(
-        changePayload(
+        domainType: 'project',
+        changeData: changePayload(
           projectId: projectId,
           entityType: 'project',
           entityId: 'proj-1',
@@ -421,7 +451,8 @@ void main() {
       );
 
       await storage.createChange(
-        changePayload(
+        domainType: 'project',
+        changeData: changePayload(
           projectId: projectId,
           entityType: 'document',
           entityId: 'doc-1',
@@ -430,7 +461,8 @@ void main() {
       );
 
       await storage.createChange(
-        changePayload(
+        domainType: 'project',
+        changeData: changePayload(
           projectId: projectId,
           entityType: 'document',
           entityId: 'doc-2',
@@ -438,7 +470,10 @@ void main() {
         ),
       );
 
-      final stats = await storage.getEntityTypeStats(projectId);
+      final stats = await storage.getEntityTypeStats(
+        domainType: 'project',
+        domainId: projectId,
+      );
       expect(stats['project'], greaterThanOrEqualTo(1));
       expect(stats['document'], greaterThanOrEqualTo(2));
     });
@@ -449,7 +484,8 @@ void main() {
       // Create changes for different projects
       for (int i = 0; i < projects.length; i++) {
         await storage.createChange(
-          changePayload(
+          domainType: 'project',
+          changeData: changePayload(
             projectId: projects[i],
             entityType: 'project',
             entityId: 'entity-$i',
@@ -470,6 +506,7 @@ void main() {
   group('IsarStorageService Entity States API', () {
     test('returns empty result for non-existent project entities', () async {
       final result = await storage.getEntityStates(
+        domainType: kDomainProject,
         domainId: 'non-existent',
         entityType: 'project',
         includeMetadata: true,
@@ -484,6 +521,7 @@ void main() {
     test('handles stubbed entity states method', () async {
       // The current implementation is stubbed to return empty results
       final result = await storage.getEntityStates(
+        domainType: kDomainProject,
         domainId: 'test-project',
         entityType: 'project',
         includeMetadata: true,
@@ -515,6 +553,7 @@ void main() {
 
         final change1 = IsarChangeLogEntry.fromJson(initialChange);
         final result1 = await storage.updateChangeLogAndState(
+          domainType: 'project',
           changeLogEntry: change1,
           changeUpdates: {'seq': 1, 'stateChanged': true},
           stateUpdates: {
@@ -561,15 +600,17 @@ void main() {
 
         final change2 = IsarChangeLogEntry.fromJson(newerChange);
         final currentState = await storage.getCurrentEntityState(
-          projectId,
-          'project',
-          entityId,
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'project',
+          entityId: entityId,
         );
 
         print('2 - Current state before update: ${currentState?.toJson()}');
         print('2 - Current change result: ${change2.toJson()}');
 
         final result = await storage.updateChangeLogAndState(
+          domainType: 'project',
           changeLogEntry: change2,
           changeUpdates: {'stateChanged': true},
           entityState: currentState,
@@ -587,9 +628,10 @@ void main() {
 
         // Verify the state was updated with newer change
         final finalState = await storage.getCurrentEntityState(
-          projectId,
-          'project',
-          entityId,
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'project',
+          entityId: entityId,
         );
         expect(finalState, isNotNull);
 
@@ -618,6 +660,7 @@ void main() {
 
       final change1 = IsarChangeLogEntry.fromJson(initialChange);
       await storage.updateChangeLogAndState(
+        domainType: kDomainProject,
         changeLogEntry: change1,
         changeUpdates: {'seq': 1, 'stateChanged': true},
         stateUpdates: {
@@ -654,12 +697,14 @@ void main() {
 
       final change2 = IsarChangeLogEntry.fromJson(updateChange);
       final currentState = await storage.getCurrentEntityState(
-        projectId,
-        'project',
-        entityId,
+        domainType: kDomainProject,
+        domainId: projectId,
+        entityType: kEntityTypeProject,
+        entityId: entityId,
       );
 
       await storage.updateChangeLogAndState(
+        domainType: 'project',
         changeLogEntry: change2,
         changeUpdates: {'seq': 2, 'stateChanged': true},
         entityState: currentState,
@@ -668,9 +713,10 @@ void main() {
 
       // Verify the entity still exists and can be retrieved
       final finalState = await storage.getCurrentEntityState(
-        projectId,
-        'project',
-        entityId,
+        domainType: kDomainProject,
+        domainId: projectId,
+        entityType: kEntityTypeProject,
+        entityId: entityId,
       );
       expect(finalState, isNotNull);
       expect(finalState!.entityId, equals(entityId));
@@ -699,7 +745,10 @@ void main() {
         operation: 'create',
       );
 
-      final change = await storage.createChange(changeData);
+      final change = await storage.createChange(
+        domainType: 'project',
+        changeData: changeData,
+      );
       expect(change.seq, greaterThan(0));
       expect(change.domainId, equals(projectId));
       expect(change.entityId, equals(entityId));
@@ -711,7 +760,8 @@ void main() {
 
       // First create the entity
       await storage.createChange(
-        changePayload(
+        domainType: 'project',
+        changeData: changePayload(
           projectId: projectId,
           entityType: 'project',
           entityId: entityId,
@@ -723,7 +773,8 @@ void main() {
 
       // Then delete it
       final deleteChange = await storage.createChange(
-        changePayload(
+        domainType: 'project',
+        changeData: changePayload(
           projectId: projectId,
           entityType: 'project',
           entityId: entityId,
@@ -759,11 +810,18 @@ void main() {
         operation: 'create',
       );
 
-      final change = await storage.createChange(changeData);
+      final change = await storage.createChange(
+        domainType: 'project',
+        changeData: changeData,
+      );
       expect(change.seq, greaterThan(0));
 
       // Retrieve and verify the data was stored correctly
-      final retrieved = await storage.getChange(projectId, change.seq);
+      final retrieved = await storage.getChange(
+        domainType: 'project',
+        domainId: projectId,
+        cid: change.cid,
+      );
       expect(retrieved, isNotNull);
       expect(retrieved!.entityId, equals(entityId));
     });
@@ -781,14 +839,14 @@ void main() {
 
         final dir = Directory('./isar_db');
         final isar = await Isar.open(
-          [SelfSyncStateSchema, CursorSyncStateSchema],
+          [IsarStorageStateSchema, CursorSyncStateSchema],
           directory: dir.path,
           name: testDbName,
         );
 
-        final existing = await isar.selfSyncStates
+        final existing = await isar.isarStorageStates
             .filter()
-            .domainIdEqualTo('root')
+            .storageTypeEqualTo('local')
             .findFirst();
 
         expect(existing, isNotNull);
@@ -819,7 +877,7 @@ void main() {
 
       final dir = Directory('./isar_db');
       final isar = await Isar.open(
-        [SelfSyncStateSchema, CursorSyncStateSchema],
+        [IsarStorageStateSchema, CursorSyncStateSchema],
         directory: dir.path,
         name: testDbName,
       );
