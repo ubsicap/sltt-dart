@@ -4,16 +4,24 @@ import 'sync_state.dart';
 
 part 'self_sync_state.g.dart';
 
+/// Track latest sync state per entity type for a given domain
 @collection
-class SelfSyncState extends SyncState {
+class IsarSelfEntityTypeSyncState extends SyncState {
   final Id id;
+  @Index(
+    unique: true,
+    replace: true,
+    composite: [CompositeIndex('domainId'), CompositeIndex('entityType')],
+  )
+  final String entityType;
+  // some basic entityType statistics
+  int created = Isar.autoIncrement;
+  int updated = Isar.autoIncrement;
+  int deleted = Isar.autoIncrement;
 
-  @override
-  @Index(unique: true)
-  String get domainId => super.domainId;
-
-  SelfSyncState({
+  IsarSelfEntityTypeSyncState({
     this.id = Isar.autoIncrement,
+    required this.entityType,
     required super.domainId,
     required super.domainType,
     required super.storageId,

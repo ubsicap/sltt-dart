@@ -116,9 +116,11 @@ class IsarStorageService extends BaseStorageService {
       // Not found -> create a new canonical storage id and persist a SelfSyncState
       final newId = BaseStorageService.generateShortStorageId();
       final now = DateTime.now().toUtc();
-      final self = SelfSyncState(
-        domainId: 'root',
-        domainType: 'root',
+      const kSelfStorage = 'self-storage';
+      final self = IsarSelfEntityTypeSyncState(
+        domainType: 'storage',
+        domainId: kSelfStorage,
+        entityType: 'storage',
         storageId: newId,
         storageType: 'local',
         cid: newId,
