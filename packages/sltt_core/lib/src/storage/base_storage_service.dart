@@ -65,9 +65,13 @@ abstract class BaseStorageService {
   Future<void> close();
 
   /// Create a new change entry
-  Future<BaseChangeLogEntry> createChange(Map<String, dynamic> changeData);
+  Future<BaseChangeLogEntry> createChange({
+    required String domainType,
+    required Map<String, dynamic> changeData,
+  });
 
   Future<UpdateChangeLogAndStateResult> updateChangeLogAndState({
+    required String domainType,
     required BaseChangeLogEntry changeLogEntry,
     required Map<String, dynamic> changeUpdates,
     BaseEntityState? entityState,
@@ -82,17 +86,23 @@ abstract class BaseStorageService {
   ///
   /// Returns the most recent change entry for the specified entity, or null if
   /// the entity doesn't exist.
-  Future<BaseEntityState?> getCurrentEntityState(
-    String domainId,
-    String entityType,
-    String entityId,
-  );
+  Future<BaseEntityState?> getCurrentEntityState({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+  });
 
   /// Get a specific change by sequence number
-  Future<BaseChangeLogEntry?> getChange(String domainId, int seq);
+  Future<BaseChangeLogEntry?> getChange({
+    required String domainType,
+    required String domainId,
+    required String cid,
+  });
 
   /// Get changes with cursor-based pagination
   Future<List<BaseChangeLogEntry>> getChangesWithCursor({
+    required String domainType,
     required String domainId,
     int? cursor,
     int? limit,
@@ -102,18 +112,25 @@ abstract class BaseStorageService {
   Future<List<BaseChangeLogEntry>> getChangesSince(String domainId, int seq);
 
   /// Get statistics about change operations
-  Future<Map<String, dynamic>> getChangeStats(String domainId);
+  Future<Map<String, dynamic>> getChangeStats({
+    required String domainType,
+    required String domainId,
+  });
 
   /// Get statistics about entity types
-  Future<Map<String, dynamic>> getEntityTypeStats(String domainId);
+  Future<Map<String, dynamic>> getEntityTypeStats({
+    required String domainType,
+    required String domainId,
+  });
 
-  /// Get all projects (based on changes with entityType 'project')
-  Future<List<String>> getAllProjects();
+  /// Get all domainIds (for a given domain collection, e.g. 'projects')
+  Future<List<String>> getAllDomainIds({required String domainType});
 
   /// Get entity state data for a specific entity type and project
   ///
   /// Subclasses can use StorageServiceDefaults.getEntityStates() for a default implementation that throws UnsupportedError
   Future<Map<String, dynamic>> getEntityStates({
+    required String domainType,
     required String domainId,
     required String entityType,
     String? cursor,
@@ -121,16 +138,12 @@ abstract class BaseStorageService {
     bool includeMetadata = false,
   });
 
-  /// Mark a change as outdated by another change
-  Future<void> markAsOutdated(String domainId, int seq, int outdatedBy);
-
-  /// Get changes that are not outdated (for local storage services)
-  Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
-    String domainId,
-  ) async {
-    // Default implementation - override in local storage services
-    return getChangesWithCursor(domainId: domainId);
-  }
+  Future<Map<String, dynamic>> getEntityState({
+    required String domainType,
+    required String domainId,
+    required String entityId,
+    bool includeMetadata = false,
+  });
 
   String getStorageType();
 

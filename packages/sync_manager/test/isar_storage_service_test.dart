@@ -458,7 +458,9 @@ void main() {
         );
       }
 
-      final allProjects = await storage.getAllProjects();
+      final allProjects = await storage.getAllDomainIds(
+        domainType: kDomainProject,
+      );
       for (final project in projects) {
         expect(allProjects, contains(project));
       }

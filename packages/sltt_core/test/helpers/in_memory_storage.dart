@@ -8,7 +8,7 @@ class InMemoryStorage implements BaseStorageService {
   final String storageId;
   final List<TestChangeLogEntry> _changes = [];
   int _nextSeq = 1;
-  final Map<String, TestEntityState> _states = {};
+  final Map<String, Map<String, TestEntityState>> _statesByDomainType = {};
 
   InMemoryStorage({required this.storageType, String? storageId})
     : storageId = storageId ?? BaseStorageService.generateShortStorageId();
@@ -32,12 +32,17 @@ class InMemoryStorage implements BaseStorageService {
   Future<String> ensureStorageId() async => storageId;
 
   @override
-  Future<BaseEntityState?> getCurrentEntityState(
-    String domainId,
-    String entityType,
-    String entityId,
-  ) async {
-    return _states[_key(domainId, entityType, entityId)];
+  Future<BaseEntityState?> getCurrentEntityState({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+  }) async {
+    return _statesByDomainType[domainType]?[_key(
+      domainId,
+      entityType,
+      entityId,
+    )];
   }
 
   @override
@@ -106,15 +111,21 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<BaseChangeLogEntry?> getChange(String domainId, int seq) async {
+  Future<BaseChangeLogEntry?> getChange({
+    required String domainType,
+    required String domainId,
+    required String cid,
+  }) async {
     for (final c in _changes) {
-      if (c.seq == seq && c.domainId == domainId) return c;
+      if (c.cid == cid && c.domainId == domainId && c.domainType == domainType)
+        return c;
     }
     return null;
   }
 
   @override
   Future<List<BaseChangeLogEntry>> getChangesWithCursor({
+    required String domainType,
     required String domainId,
     int? cursor,
     int? limit,
@@ -163,7 +174,7 @@ class InMemoryStorage implements BaseStorageService {
       <String, int>{};
 
   @override
-  Future<List<String>> getAllProjects() async =>
+  Future<List<String>> getAllDomainIds({required String domainType}) async =>
       _states.keys.map((k) => k.split('|').first).toSet().toList();
 
   @override

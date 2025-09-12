@@ -234,7 +234,7 @@ GET /api/help                     # Get comprehensive API documentation
 #### Change Management
 ```
 GET  /api/changes                  # Get all changes (with optional query parameters)
-GET  /api/changes/{seq}           # Get specific change by sequence number
+GET  /api/changes/{cid}           # Get specific change by change ID
 POST /api/changes                 # Create new changes (array format)
 ```
 

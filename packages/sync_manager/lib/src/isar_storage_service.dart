@@ -611,7 +611,7 @@ class IsarStorageService extends BaseStorageService {
 
   /// Get all unique project IDs from all changes
   @override
-  Future<List<String>> getAllProjects() async {
+  Future<List<String>> getAllDomainIds({required String domainType}) async {
     final allChanges = await _isar.isarChangeLogEntrys.where().findAll();
 
     // Extract unique project IDs

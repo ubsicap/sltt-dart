@@ -48,6 +48,28 @@ abstract class BaseRestApiServer {
     return null;
   }
 
+  /// Validate `domainCollection` path parameter and map it to a domain type.
+  ///
+  /// Returns a map with keys `{ 'error': String? , 'domainType': String? }`.
+  /// - On success: `{ 'error': null, 'domainType': <domainType> }`.
+  /// - On failure: `{ 'error': '<message>', 'domainType': null }`.
+  Map<String, dynamic> _resolveDomainCollection(Request request) {
+    final domainCollection = request.params['domainCollection'];
+    if (domainCollection == null || domainCollection.isEmpty) {
+      return {'error': 'Domain collection is required', 'domainType': null};
+    }
+
+    final domainType = getDomainByCollection(domainCollection);
+    if (domainType == null) {
+      return {
+        'error': 'Unknown domain collection: $domainCollection',
+        'domainType': null,
+      };
+    }
+
+    return {'error': null, 'domainType': domainType};
+  }
+
   /// Additional server-specific endpoints (override if needed)
   void addCustomRoutes(Router router) {
     // Default: no custom routes
@@ -91,26 +113,23 @@ abstract class BaseRestApiServer {
     router.post('/api/changes', _handleCreateChanges);
     router.get('/api/domains', _handleGetDomainsAndTheirCollections);
     router.get('/api/domains/<domainType>/entities', _handleGetEntities);
-    // Legacy project-scoped endpoints (kept for compatibility)
-    router.get('/api/projects', _handleGetProjects); // List all projects
-    router.get('/api/projects/<projectId>/changes', _handleGetChanges);
-    router.get('/api/projects/<projectId>/changes/<seq>', _handleGetChange);
-    router.get('/api/projects/<projectId>/stats', _handleGetStats);
-    router.get(
-      '/api/projects/<projectId>/entities/<entityType>/state',
-      _handleGetEntityState,
-    );
-
-    // Generalized domain-scoped endpoints
     router.get('/api/<domainCollection>', _handleGetDomainIds);
+
+    /// Generalized domain-scoped endpoints
+    /// Example: /api/projects/{projectId}/changes
     router.get('/api/<domainCollection>/<domainId>/changes', _handleGetChanges);
     router.get(
-      '/api/<domainCollection>/<domainId>/changes/<seq>',
+      '/api/<domainCollection>/<domainId>/changes/<cid>',
       _handleGetChange,
     );
     router.get('/api/<domainCollection>/<domainId>/stats', _handleGetStats);
     router.get(
-      '/api/<domainCollection>/<domainId>/entities/<entityType>/state',
+      '/api/state/<domainCollection>/<domainId>/<entityCollection>',
+      _handleGetEntityStates,
+    );
+
+    router.get(
+      '/api/state/<domainCollection>/<domainId>/<entityCollection>/<entityId>',
       _handleGetEntityState,
     );
 
@@ -480,19 +499,18 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/{domainCollection}/{domainId}/changes/{seq}',
-          'description': 'Get specific change by sequence number for a domain',
+          'path': '/api/{domainCollection}/{domainId}/changes/{cid}',
+          'description': 'Get specific change by change ID for a domain',
           'parameters': [
             {'name': 'domainCollection', 'type': 'string', 'required': true},
             {'name': 'domainId', 'type': 'string', 'required': true},
-            {'name': 'seq', 'type': 'integer', 'required': true},
+            {'name': 'cid', 'type': 'string', 'required': true},
           ],
           'response': changeObjectSchema,
         },
         {
           'method': 'GET',
-          'path':
-              '/api/{domainCollection}/{domainId}/entities/{entityType}/state',
+          'path': '/api/state/{domainCollection}/{domainId}/{entityCollection}',
           'description':
               'Get paginated entity states for a domain and entity type',
           'parameters': [
@@ -789,83 +807,6 @@ abstract class BaseRestApiServer {
             },
           },
         },
-        {
-          'method': 'GET',
-          'path': '/api/projects/{projectId}/entities/{entityType}/state',
-          'description':
-              'Get entity state data with pagination and optional metadata',
-          'parameters': [
-            {
-              'name': 'projectId',
-              'type': 'string',
-              'required': true,
-              'description': 'Project identifier',
-            },
-            {
-              'name': 'entityType',
-              'type': 'string',
-              'required': true,
-              'description': 'Entity type (e.g., document, project, team)',
-            },
-            {
-              'name': 'cursor',
-              'type': 'string',
-              'required': false,
-              'description':
-                  'Pagination cursor (last entityId from previous page)',
-            },
-            {
-              'name': 'limit',
-              'type': 'integer',
-              'required': false,
-              'description':
-                  'Maximum number of items to return (1-1000, default: 100)',
-            },
-            {
-              'name': 'field_metadata',
-              'type': 'boolean',
-              'required': false,
-              'description':
-                  'Include conflict resolution metadata (default: false)',
-            },
-          ],
-          'response': {
-            'type': 'object',
-            'properties': {
-              'projectId': {
-                'type': 'string',
-                'description': 'The project identifier',
-              },
-              'entityType': {
-                'type': 'string',
-                'description': 'The entity type',
-              },
-              'items': {
-                'type': 'array',
-                'items': {'type': 'object'},
-                'description': 'List of entity state objects',
-              },
-              'cursor': {
-                'type': 'string',
-                'description': 'Next pagination cursor (null if no more data)',
-              },
-              'hasMore': {
-                'type': 'boolean',
-                'description': 'Whether there are more items available',
-              },
-              'fieldMetadata': {
-                'type': 'boolean',
-                'description':
-                    'Whether field metadata is included in the response',
-              },
-              'timestamp': {
-                'type': 'string',
-                'format': 'ISO8601',
-                'description': 'When the response was generated',
-              },
-            },
-          },
-        },
       ],
       'timestamp': DateTime.now().toIso8601String(),
     };
@@ -879,8 +820,14 @@ abstract class BaseRestApiServer {
   /// List domain IDs for a collection (currently aliases to projects list)
   Future<Response> _handleGetDomainIds(Request request) async {
     try {
-      // For now, ignore collection and return projects
-      final items = await storage.getAllProjects();
+      final resolved = _resolveDomainCollection(request);
+      if (resolved['error'] != null) {
+        return _errorResponse(resolved['error'] as String, 400);
+      }
+      final domainType = resolved['domainType'] as String;
+
+      // For now, return domain ids for the requested domainType
+      final items = await storage.getAllDomainIds(domainType: domainType);
       return Response.ok(
         jsonEncode({
           'items': items,
@@ -927,40 +874,16 @@ abstract class BaseRestApiServer {
     }
   }
 
-  /// Get all project IDs
-  Future<Response> _handleGetProjects(Request request) async {
-    try {
-      final projects = await storage.getAllProjects();
-
-      final response = {
-        'projects': projects,
-        'count': projects.length,
-        'timestamp': DateTime.now().toIso8601String(),
-      };
-
-      return Response.ok(
-        jsonEncode(response),
-        headers: {'Content-Type': 'application/json'},
-      );
-    } on ArgumentError catch (e) {
-      return _errorResponse('$e', 400);
-    } catch (e, stackTrace) {
-      print('Error getting projects: $e');
-      print('Stack trace: $stackTrace');
-      return _errorResponse(
-        'Failed to get projects: ${e.toString()}',
-        500,
-        stackTrace,
-      );
-    }
-  }
-
   /// Get changes with optional pagination
   Future<Response> _handleGetChanges(Request request) async {
     try {
-      // TODO: generalize this for `domainId` instead of just `projectId`
-      final projectId = _extractDomainId(request);
-      if (projectId == null || projectId.isEmpty) {
+      final resolved = _resolveDomainCollection(request);
+      if (resolved['error'] != null) {
+        return _errorResponse(resolved['error'] as String, 400);
+      }
+      final domainType = resolved['domainType'] as String;
+      final domainId = _extractDomainId(request);
+      if (domainId == null || domainId.isEmpty) {
         return _errorResponse('Domain ID is required', 400);
       }
 
@@ -993,7 +916,8 @@ abstract class BaseRestApiServer {
       }
 
       final changes = await storage.getChangesWithCursor(
-        domainId: projectId,
+        domainType: domainType,
+        domainId: domainId,
         cursor: cursor,
         limit: limit,
       );
@@ -1012,7 +936,8 @@ abstract class BaseRestApiServer {
       if (changes.isNotEmpty && (limit == null || changes.length == limit)) {
         final lastChangeId = changes.last.seq;
         final moreChanges = await storage.getChangesWithCursor(
-          domainId: projectId,
+          domainType: domainType,
+          domainId: domainId,
           cursor: lastChangeId,
           limit: 1,
         );
@@ -1036,22 +961,28 @@ abstract class BaseRestApiServer {
   /// Get specific change by sequence number
   Future<Response> _handleGetChange(Request request) async {
     try {
-      final projectId = _extractDomainId(request);
-      if (projectId == null || projectId.isEmpty) {
+      final resolved = _resolveDomainCollection(request);
+      if (resolved['error'] != null) {
+        return _errorResponse(resolved['error'] as String, 400);
+      }
+
+      final domainType = resolved['domainType'] as String;
+
+      final domainId = _extractDomainId(request);
+      if (domainId == null || domainId.isEmpty) {
         return _errorResponse('Domain ID is required', 400);
       }
 
-      final seq = request.params['seq'];
-      if (seq == null || seq.isEmpty) {
-        return _errorResponse('Sequence number is required', 400);
+      final cid = request.params['cid'];
+      if (cid == null || cid.isEmpty) {
+        return _errorResponse('Change ID is required', 400);
       }
 
-      final changeSeq = int.tryParse(seq);
-      if (changeSeq == null) {
-        return _errorResponse('Invalid change seq format: "$seq"', 400);
-      }
-
-      final change = await storage.getChange(projectId, changeSeq);
+      final change = await storage.getChange(
+        domainType: domainType,
+        domainId: domainId,
+        cid: cid,
+      );
       if (change == null) {
         return _errorResponse('Change not found', 404);
       }
@@ -1179,17 +1110,29 @@ abstract class BaseRestApiServer {
   /// Get statistics
   Future<Response> _handleGetStats(Request request) async {
     try {
-      final projectId = _extractDomainId(request);
-      if (projectId == null || projectId.isEmpty) {
+      final resolved = _resolveDomainCollection(request);
+      if (resolved['error'] != null) {
+        return _errorResponse(resolved['error'] as String, 400);
+      }
+      final domainType = resolved['domainType'] as String;
+
+      final domainId = _extractDomainId(request);
+      if (domainId == null || domainId.isEmpty) {
         return _errorResponse('Domain ID is required', 400);
       }
 
-      final changeStats = await storage.getChangeStats(projectId);
-      final entityTypeStats = await storage.getEntityTypeStats(projectId);
+      final changeStats = await storage.getChangeStats(
+        domainType: domainType,
+        domainId: domainId,
+      );
+      final entityTypeStats = await storage.getEntityTypeStats(
+        domainType: domainType,
+        domainId: domainId,
+      );
 
       return Response.ok(
         jsonEncode({
-          'projectId': projectId,
+          'projectId': domainId,
           'changeStats': changeStats,
           'entityTypeStats': entityTypeStats,
           'timestamp': DateTime.now().toIso8601String(),
@@ -1207,17 +1150,28 @@ abstract class BaseRestApiServer {
   /// Get global statistics across all projects
   Future<Response> _handleGetGlobalStats(Request request) async {
     try {
+      final resolved = _resolveDomainCollection(request);
+      if (resolved['error'] != null) {
+        return _errorResponse(resolved['error'] as String, 400);
+      }
+      final domainType = resolved['domainType'] as String;
       // Get all projects first
-      final projects = await storage.getAllProjects();
+      final domainIds = await storage.getAllDomainIds(domainType: domainType);
 
       // Aggregate stats across all projects
       int totalChanges = 0;
       final Map<String, int> entityTypeTotals = {};
 
-      for (final projectId in projects) {
+      for (final domainId in domainIds) {
         try {
-          final changeStats = await storage.getChangeStats(projectId);
-          final entityTypeStats = await storage.getEntityTypeStats(projectId);
+          final changeStats = await storage.getChangeStats(
+            domainType: domainType,
+            domainId: domainId,
+          );
+          final entityTypeStats = await storage.getEntityTypeStats(
+            domainType: domainType,
+            domainId: domainId,
+          );
 
           totalChanges += (changeStats['total'] as int? ?? 0);
 
@@ -1230,7 +1184,7 @@ abstract class BaseRestApiServer {
           }
         } catch (e) {
           // Skip individual project errors but continue aggregating
-          print('Warning: Failed to get stats for project $projectId: $e');
+          print('Warning: Failed to get stats for project $domainId: $e');
         }
       }
 
@@ -1238,7 +1192,7 @@ abstract class BaseRestApiServer {
         jsonEncode({
           'changeStats': {
             'total': totalChanges,
-            'projectCount': projects.length,
+            'projectCount': domainIds.length,
           },
           'entityTypeStats': entityTypeTotals,
           'timestamp': DateTime.now().toIso8601String(),
@@ -1280,8 +1234,13 @@ abstract class BaseRestApiServer {
   }
 
   /// Get entity state with pagination and optional metadata
-  Future<Response> _handleGetEntityState(Request request) async {
+  Future<Response> _handleGetEntityStates(Request request) async {
     try {
+      final resolved = _resolveDomainCollection(request);
+      if (resolved['error'] != null) {
+        return _errorResponse(resolved['error'] as String, 400);
+      }
+      final domainType = resolved['domainType'] as String;
       final projectId = _extractDomainId(request);
       if (projectId == null || projectId.isEmpty) {
         return _errorResponse('Domain ID is required', 400);
@@ -1322,6 +1281,7 @@ abstract class BaseRestApiServer {
 
       // Get entity state data
       final stateData = await storage.getEntityStates(
+        domainType: domainType,
         domainId: projectId,
         entityType: decodedEntityType,
         cursor: cursor,
@@ -1337,6 +1297,53 @@ abstract class BaseRestApiServer {
           'cursor': stateData['nextCursor'],
           'hasMore': stateData['hasMore'],
           'fieldMetadata': includeFieldMetadata,
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on ArgumentError catch (e) {
+      return _errorResponse('$e', 400);
+    } catch (e) {
+      return _errorResponse('Failed to fetch entity state: $e', 500);
+    }
+  }
+
+  /// Get entity state
+  Future<Response> _handleGetEntityState(Request request) async {
+    try {
+      final resolved = _resolveDomainCollection(request);
+      if (resolved['error'] != null) {
+        return _errorResponse(resolved['error'] as String, 400);
+      }
+      final domainType = resolved['domainType'] as String;
+      final projectId = _extractDomainId(request);
+      if (projectId == null || projectId.isEmpty) {
+        return _errorResponse('Domain ID is required', 400);
+      }
+
+      final entityType = request.params['entityType'];
+      if (entityType == null || entityType.isEmpty) {
+        return _errorResponse('Entity type is required', 400);
+      }
+
+      final entityId = request.params['entityId'];
+      if (entityId == null || entityId.isEmpty) {
+        return _errorResponse('Entity ID is required', 400);
+      }
+
+      // Get entity state data
+      final stateData = await storage.getEntityState(
+        domainType: domainType,
+        domainId: projectId,
+        entityId: entityId,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'projectId': projectId,
+          'entityType': entityType,
+          'entityId': entityId,
+          'state': stateData,
           'timestamp': DateTime.now().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},

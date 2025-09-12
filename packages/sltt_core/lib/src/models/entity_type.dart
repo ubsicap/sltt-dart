@@ -4,21 +4,115 @@ import '../services/uid_service.dart';
 // stable string literal for an entity type is needed to avoid duplication.
 const String kEntityTypeUnknown = 'unknown';
 const String kEntityTypeProject = 'project';
+const String kEntityTypeProjectCollection = 'projects';
 const String kEntityTypeTeam = 'team';
+const String kEntityTypeTeamCollection = 'teams';
 const String kEntityTypePlan = 'plan';
+const String kEntityTypePlanCollection = 'plans';
 const String kEntityTypeStage = 'stage';
+const String kEntityTypeStageCollection = 'stages';
 const String kEntityTypeTask = 'task';
+const String kEntityTypeTaskCollection = 'tasks';
 const String kEntityTypeMember = 'member';
+const String kEntityTypeMemberCollection = 'members';
 const String kEntityTypeMessage = 'message';
+const String kEntityTypeMessageCollection = 'messages';
 const String kEntityTypePortion = 'portion';
+const String kEntityTypePortionCollection = 'portions';
 const String kEntityTypePassage = 'passage';
+const String kEntityTypePassageCollection = 'passages';
 const String kEntityTypeReference = 'reference';
+const String kEntityTypeReferenceCollection = 'references';
 const String kEntityTypeDocument = 'document';
+const String kEntityTypeDocumentCollection = 'documents';
 const String kEntityTypeVideo = 'video';
+const String kEntityTypeVideoCollection = 'videos';
 const String kEntityTypePatch = 'patch';
+const String kEntityTypePatchCollection = 'patches';
 const String kEntityTypeGloss = 'gloss';
+const String kEntityTypeGlossCollection = 'glosses';
 const String kEntityTypeNote = 'note';
+const String kEntityTypeNoteCollection = 'notes';
 const String kEntityTypeComment = 'comment';
+const String kEntityTypeCommentCollection = 'comments';
+
+String? getCollectionByEntity(String entityType) {
+  switch (entityType) {
+    case kEntityTypeProject:
+      return kEntityTypeProjectCollection;
+    case kEntityTypeTeam:
+      return kEntityTypeTeamCollection;
+    case kEntityTypePlan:
+      return kEntityTypePlanCollection;
+    case kEntityTypeStage:
+      return kEntityTypeStageCollection;
+    case kEntityTypeTask:
+      return kEntityTypeTaskCollection;
+    case kEntityTypeMember:
+      return kEntityTypeMemberCollection;
+    case kEntityTypeMessage:
+      return kEntityTypeMessageCollection;
+    case kEntityTypePortion:
+      return kEntityTypePortionCollection;
+    case kEntityTypePassage:
+      return kEntityTypePassageCollection;
+    case kEntityTypeReference:
+      return kEntityTypeReferenceCollection;
+    case kEntityTypeDocument:
+      return kEntityTypeDocumentCollection;
+    case kEntityTypeVideo:
+      return kEntityTypeVideoCollection;
+    case kEntityTypePatch:
+      return kEntityTypePatchCollection;
+    case kEntityTypeGloss:
+      return kEntityTypeGlossCollection;
+    case kEntityTypeNote:
+      return kEntityTypeNoteCollection;
+    case kEntityTypeComment:
+      return kEntityTypeCommentCollection;
+    default:
+      return null;
+  }
+}
+
+String? getEntityByCollection(String collectionName) {
+  switch (collectionName) {
+    case kEntityTypeProjectCollection:
+      return kEntityTypeProject;
+    case kEntityTypeTeamCollection:
+      return kEntityTypeTeam;
+    case kEntityTypePlanCollection:
+      return kEntityTypePlan;
+    case kEntityTypeStageCollection:
+      return kEntityTypeStage;
+    case kEntityTypeTaskCollection:
+      return kEntityTypeTask;
+    case kEntityTypeMemberCollection:
+      return kEntityTypeMember;
+    case kEntityTypeMessageCollection:
+      return kEntityTypeMessage;
+    case kEntityTypePortionCollection:
+      return kEntityTypePortion;
+    case kEntityTypePassageCollection:
+      return kEntityTypePassage;
+    case kEntityTypeReferenceCollection:
+      return kEntityTypeReference;
+    case kEntityTypeDocumentCollection:
+      return kEntityTypeDocument;
+    case kEntityTypeVideoCollection:
+      return kEntityTypeVideo;
+    case kEntityTypePatchCollection:
+      return kEntityTypePatch;
+    case kEntityTypeGlossCollection:
+      return kEntityTypeGloss;
+    case kEntityTypeNoteCollection:
+      return kEntityTypeNote;
+    case kEntityTypeCommentCollection:
+      return kEntityTypeComment;
+    default:
+      return null;
+  }
+}
 
 /// Enumeration of all supported entity types in the SLTT system.
 /// Each entity type will eventually have its own schema and collections.

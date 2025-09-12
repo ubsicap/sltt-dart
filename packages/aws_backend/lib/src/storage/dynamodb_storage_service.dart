@@ -717,7 +717,7 @@ class DynamoDBStorageService extends BaseStorageService {
 
   /// Get all unique project IDs from the table
   @override
-  Future<List<String>> getAllProjects() async {
+  Future<List<String>> getAllDomainIds() async {
     await initialize();
 
     // Use a scan operation with a filter for entityType = 'project'
