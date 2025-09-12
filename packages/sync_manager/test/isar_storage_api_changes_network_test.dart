@@ -126,14 +126,15 @@ void main() {
       );
     });
 
-    group('GET /api/projects/<projectId>/changes', () {
+    group('GET /api/changes/{domainCollection}/{domainId}', () {
       late ApiChangesNetworkTestSuite suite;
       late Map<String, Future<void> Function()> getTests;
 
       setUp(() async {
         suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
         final testGroups = suite.getTestGroups();
-        getTests = testGroups['GET /api/projects/<projectId>/changes']!;
+        getTests =
+            testGroups['GET /api/changes/{domainCollection}/{domainId}']!;
       });
 
       test('returns empty list for project with no changes', () async {

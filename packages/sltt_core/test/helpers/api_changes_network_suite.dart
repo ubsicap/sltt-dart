@@ -102,8 +102,8 @@ class ApiChangesNetworkTestSuite {
     if (limit != null) queryParams['limit'] = limit.toString();
 
     final uri = baseUrl.replace(
-      // Generalized domain path
-      path: '/api/$domainCollection/${Uri.encodeComponent(projectId)}/changes',
+      // New changes path
+      path: '/api/changes/$domainCollection/${Uri.encodeComponent(projectId)}',
       queryParameters: queryParams.isEmpty ? null : queryParams,
     );
 
@@ -171,8 +171,8 @@ class ApiChangesNetworkTestSuite {
         'returns 400 for invalid cursor values': () =>
             _testGetProjectChangesInvalidCursor(),
       },
-      // Alias using generalized path label
-      'GET /api/{domainCollection}/{domainId}/changes': {
+      // Alias using generalized path label (updated path)
+      'GET /api/changes/{domainCollection}/{domainId}': {
         'returns empty list for project with no changes': () =>
             _testGetProjectChangesEmpty(),
         'returns changes for project with seeded data': () =>
@@ -424,7 +424,7 @@ class ApiChangesNetworkTestSuite {
   Future<void> _testGetProjectChangesInvalidLimit() async {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(
-      path: '/api/projects/test/changes',
+      path: '/api/changes/projects/test',
       queryParameters: {'limit': 'invalid'},
     );
 
@@ -436,7 +436,7 @@ class ApiChangesNetworkTestSuite {
   Future<void> _testGetProjectChangesInvalidCursor() async {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(
-      path: '/api/projects/test/changes',
+      path: '/api/changes/projects/test',
       queryParameters: {'cursor': 'invalid'},
     );
 

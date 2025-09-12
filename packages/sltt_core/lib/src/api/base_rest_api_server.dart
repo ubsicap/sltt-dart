@@ -141,13 +141,15 @@ abstract class BaseRestApiServer {
     router.get('/api/<domainCollection>', _handleGetDomainIds);
 
     /// Generalized domain-scoped endpoints
-    /// Example: /api/projects/{projectId}/changes
-    router.get('/api/<domainCollection>/<domainId>/changes', _handleGetChanges);
+    /// Example: /api/changes/projects/{projectId}
+    // New routes: move changes under /api/changes/<domainCollection>/<domainId>
+    router.get('/api/changes/<domainCollection>/<domainId>', _handleGetChanges);
     router.get(
-      '/api/<domainCollection>/<domainId>/changes/<cid>',
+      '/api/changes/<domainCollection>/<domainId>/<cid>',
       _handleGetChange,
     );
-    router.get('/api/<domainCollection>/<domainId>/stats', _handleGetStats);
+    // Move stats under /api/stats/<domainCollection>/<domainId>
+    router.get('/api/stats/<domainCollection>/<domainId>/', _handleGetStats);
     router.get(
       '/api/state/<domainCollection>/<domainId>/<entityCollection>',
       _handleGetEntityStates,
@@ -504,7 +506,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/{domainCollection}/{domainId}/changes',
+          'path': '/api/changes/{domainCollection}/{domainId}',
           'description': 'Get changes for a domain with optional pagination',
           'parameters': [
             {'name': 'domainCollection', 'type': 'string', 'required': true},
@@ -524,7 +526,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/{domainCollection}/{domainId}/changes/{cid}',
+          'path': '/api/changes/{domainCollection}/{domainId}/{cid}',
           'description': 'Get specific change by change ID for a domain',
           'parameters': [
             {'name': 'domainCollection', 'type': 'string', 'required': true},
@@ -560,7 +562,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/{domainCollection}/{domainId}/stats',
+          'path': '/api/stats/{domainCollection}/{domainId}/',
           'description':
               'Get statistics about changes and entity types for a domain',
           'parameters': [
