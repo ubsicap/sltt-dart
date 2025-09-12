@@ -10,6 +10,7 @@ void main() {
       final badJson = <String, dynamic>{
         'entityId': 'e1',
         'entityType': 'task',
+        'domainType': 'project',
         'change_domainId': 'p1',
         'change_domainId_orig_': 'p1',
         'change_changeAt': DateTime.now().toIso8601String(),
@@ -54,6 +55,7 @@ void main() {
       final badJson = <String, dynamic>{
         'entityId': 'e1',
         'entityType': 'task',
+        'domainType': 'project',
         'change_domainId': 'p1',
         'change_domainId_orig_': 'p1',
         'change_changeAt': DateTime.now().toIso8601String(),
@@ -97,6 +99,7 @@ void main() {
       final badJson = <String, dynamic>{
         'entityId': 'e1',
         'entityType': 'task',
+        'domainType': 'project',
         'change_domainId': 'p1',
         'change_domainId_orig_': 'p1',
         'change_changeAt': DateTime.now().toIso8601String(),

@@ -166,6 +166,11 @@ class IsarStorageService extends BaseStorageService {
       final mergedStateJson = {...entityState.toJson(), ...stateUpdates}
         ..removeWhere((k, v) => v == null);
 
+      // Ensure required top-level metadata fields are present for Isar model
+      // generation/validation (BaseEntityState requires 'domainType' and 'entityType').
+      mergedStateJson['domainType'] = domainType;
+      mergedStateJson['entityType'] = changeLogEntry.entityType;
+
       print(
         'updateChangeLogAndState - after merge - mergedStateJson id: ${mergedStateJson['id']}',
       );
@@ -177,9 +182,14 @@ class IsarStorageService extends BaseStorageService {
       );
     } else {
       // Create new entity state from state updates
+      // Make a shallow copy and ensure required metadata fields exist
+      final stateJson = Map<String, dynamic>.from(stateUpdates);
+      stateJson['domainType'] = domainType;
+      stateJson['entityType'] = changeLogEntry.entityType;
+
       newEntityState = createIsarEntityStateFromJson(
         entityTypeEnum,
-        stateUpdates,
+        stateJson,
         changeLogEntry.entityType,
       );
     }

@@ -76,6 +76,13 @@ class InMemoryStorage implements BaseStorageService {
       if (!merged.containsKey('data_nameLocal')) {
         merged['data_nameLocal'] = '';
       }
+      // Make sure domainType and entityType are present for test deserializers
+      if (!merged.containsKey('domainType')) {
+        merged['domainType'] = domainType;
+      }
+      if (!merged.containsKey('entityType')) {
+        merged['entityType'] = newChange.entityType;
+      }
       print(
         'DEBUG: InMemoryStorage merged state for CID ${newChange.cid}: $merged',
       );
@@ -102,7 +109,7 @@ class InMemoryStorage implements BaseStorageService {
 
   @override
   Future<BaseChangeLogEntry> createChange({
-    required domainType,
+    required String domainType,
     required Map<String, dynamic> changeData,
   }) async {
     final data = Map<String, dynamic>.from(changeData);
@@ -121,9 +128,10 @@ class InMemoryStorage implements BaseStorageService {
     required String domainId,
     required String cid,
   }) async {
-    for (final c in _changes) {
-      if (c.cid == cid && c.domainId == domainId && c.domainType == domainType)
-        return c;
+    final changes =
+        _changesByDomainType[domainType] ?? const <TestChangeLogEntry>[];
+    for (final c in changes) {
+      if (c.cid == cid && c.domainId == domainId) return c;
     }
     return null;
   }
@@ -137,7 +145,9 @@ class InMemoryStorage implements BaseStorageService {
   }) async {
     final effectiveLimit = limit ?? 100;
 
-    final filtered = _changes.where((c) => c.domainId == domainId).toList()
+    final source =
+        _changesByDomainType[domainType] ?? const <TestChangeLogEntry>[];
+    final filtered = source.where((c) => c.domainId == domainId).toList()
       ..sort((a, b) => a.seq.compareTo(b.seq));
 
     final startIndex = cursor == null
@@ -220,8 +230,19 @@ class InMemoryStorage implements BaseStorageService {
     required String domainId,
     required String entityId,
     bool includeMetadata = false,
-  }) {
-    // TODO: implement getEntityState
-    throw UnimplementedError();
+  }) async {
+    // Scan states map for the specific entity within the domain
+    final states =
+        _statesByDomainType[domainType] ?? const <String, TestEntityState>{};
+    final prefix = '$domainId|';
+    for (final entry in states.entries) {
+      if (entry.key.startsWith(prefix)) {
+        final parts = entry.key.split('|');
+        if (parts.length == 3 && parts[2] == entityId) {
+          return entry.value.toJson();
+        }
+      }
+    }
+    return <String, dynamic>{};
   }
 }

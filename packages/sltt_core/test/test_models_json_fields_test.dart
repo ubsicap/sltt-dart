@@ -35,6 +35,7 @@ void main() {
         data_nameLocal: 'name',
         entityId: 'eid',
         entityType: 'project',
+        domainType: 'dType',
         schemaVersion: 1,
         change_domainId: 'did',
         change_domainId_orig_: 'did',

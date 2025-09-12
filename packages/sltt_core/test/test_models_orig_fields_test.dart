@@ -11,6 +11,7 @@ void main() {
       final rawJson = {
         'entityId': 'test-1',
         'entityType': 'task',
+        'domainType': 'project',
         'change_domainId': 'd1',
         'change_changeAt': DateTime.now().toIso8601String(),
         'change_cid': 'cid-t1',
@@ -46,6 +47,7 @@ void main() {
         final rawJson = {
           'entityId': 'test-new',
           'entityType': 'task',
+          'domainType': 'project',
           'change_domainId': 'd2',
           'change_changeAt': '2024-01-01T10:00:00Z',
           'change_cid': 'cid-new',
@@ -90,6 +92,7 @@ void main() {
       final rawJson = {
         'entityId': 'test-updated',
         'entityType': 'task',
+        'domainType': 'project',
         'change_domainId': 'd3-current',
         'change_changeAt': '2024-02-01T10:00:00Z',
         'change_cid': 'cid-current',

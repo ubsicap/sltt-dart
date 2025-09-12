@@ -86,6 +86,7 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
           data_nameLocal: $checkedConvert('data_nameLocal', (v) => v as String),
           entityId: $checkedConvert('entityId', (v) => v as String),
           entityType: $checkedConvert('entityType', (v) => v as String),
+          domainType: $checkedConvert('domainType', (v) => v as String),
           schemaVersion:
               $checkedConvert('schemaVersion', (v) => (v as num?)?.toInt()),
           unknownJson: $checkedConvert('unknownJson', (v) => v as String),
@@ -149,6 +150,7 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
     <String, dynamic>{
       'entityType': instance.entityType,
+      'domainType': instance.domainType,
       'unknownJson': instance.unknownJson,
       'schemaVersion': instance.schemaVersion,
       'change_domainId': instance.change_domainId,

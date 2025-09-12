@@ -170,10 +170,18 @@ class ChangeProcessingService {
 
           // Get current entity state
           final entityState = await storage.getCurrentEntityState(
-            changeLogEntry.domainId,
-            changeLogEntry.entityType.toString(),
-            changeLogEntry.entityId,
+            domainType: changeLogEntry.domainType,
+            domainId: changeLogEntry.domainId,
+            entityType: changeLogEntry.entityType.toString(),
+            entityId: changeLogEntry.entityId,
           );
+
+          // Debug: log the current entity state for diagnosis
+          try {
+            print(
+              'DEBUG: entityState for CID ${changeLogEntry.cid}: ${entityState?.toJson()}',
+            );
+          } catch (e) {}
 
           // Use enhanced change detection method
           final result = getUpdatesForChangeLogEntryAndEntityState(
@@ -181,6 +189,13 @@ class ChangeProcessingService {
             entityState,
             storageMode: storageMode,
           );
+
+          // Debug: log detailed result info
+          try {
+            print(
+              'DEBUG: getUpdates result for CID ${changeLogEntry.cid}: isDuplicate=${result.isDuplicate} changeUpdates=${result.changeUpdates} stateUpdates=${result.stateUpdates}',
+            );
+          } catch (e) {}
 
           // Check payload size limits for save operations (sync operations preserve data)
           final payloadCheckResult = _checkPayloadLimits(
@@ -211,6 +226,7 @@ class ChangeProcessingService {
           }
 
           final updateResults = await storage.updateChangeLogAndState(
+            domainType: changeLogEntry.domainType,
             changeLogEntry: changeLogEntry,
             changeUpdates: outgoingChangeUpdates,
             entityState: entityState,
@@ -425,6 +441,15 @@ class ChangeProcessingService {
         'cid': updateResults.newChangeLogEntry.cid,
         'state': result.stateUpdates,
       });
+    }
+
+    // Debugging aid: log when tests produce unexpected empty updates
+    try {
+      print(
+        'DEBUG: _categorizeChangeResult includeChangeUpdates=$includeChangeUpdates includeStateUpdates=$includeStateUpdates cid=${updateResults.newChangeLogEntry.cid} changeUpdatesPresent=${result.changeUpdates.isNotEmpty} stateUpdatesPresent=${result.stateUpdates.isNotEmpty}',
+      );
+    } catch (e) {
+      // ignore any debug logging errors
     }
   }
 }

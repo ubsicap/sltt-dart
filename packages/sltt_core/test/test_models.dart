@@ -40,7 +40,7 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
     super.cloudAt,
     super.schemaVersion,
     this.seq = 0,
-  }) : super();
+  });
 
   factory TestChangeLogEntry.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
@@ -72,6 +72,7 @@ class TestEntityState extends BaseEntityState {
     required this.data_nameLocal,
     required this.entityId,
     required super.entityType,
+    required super.domainType,
     super.schemaVersion,
     required super.unknownJson,
     required super.change_domainId,

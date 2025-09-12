@@ -40,6 +40,7 @@ void main() {
         data_nameLocal: 'TaskName',
         entityId: 'e2',
         entityType: 'task',
+        domainType: 'project',
         schemaVersion: 1,
         change_domainId: 'd2',
         change_domainId_orig_: 'd2',
@@ -89,6 +90,7 @@ void main() {
       final esJson = <String, dynamic>{
         'entityId': 'entity1',
         'entityType': 'task',
+        'domainType': 'project',
         'change_domainId': 'project1',
         'change_domainId_orig_': 'project1',
         'change_changeAt': baseTime.toIso8601String(),
@@ -126,6 +128,7 @@ void main() {
         entityState = TestEntityState.fromJson({
           'entityId': 'e1',
           'entityType': 'task',
+          'domainType': 'project',
           'data_parentId': 'parent1',
           'data_parentId_changeAt_': baseTime.toIso8601String(),
           'data_parentId_cid_': 'cid1',
@@ -621,6 +624,7 @@ void main() {
         final entityStateMixed = TestEntityState.fromJson({
           'entityId': 'entity1',
           'entityType': 'task',
+          'domainType': 'project',
           'change_domainId': 'project1',
           'change_domainId_orig_': 'project1',
           'change_changeAt': baseTime.toIso8601String(),
@@ -955,6 +959,7 @@ void main() {
           final entityStateWithNewerField = TestEntityState.fromJson({
             'entityId': 'entity1',
             'entityType': 'task',
+            'domainType': 'project',
             'change_domainId': 'project1',
             'change_domainId_orig_': 'project1',
             'change_changeAt': baseTime
@@ -1037,6 +1042,7 @@ void main() {
           final entityStateWithOlderField = TestEntityState.fromJson({
             'entityId': 'entity1',
             'entityType': 'task',
+            'domainType': 'project',
             'change_domainId': 'project1',
             'change_domainId_orig_': 'project1',
             'change_changeAt': baseTime

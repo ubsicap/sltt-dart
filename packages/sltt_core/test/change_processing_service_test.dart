@@ -566,6 +566,7 @@ void main() {
 
           // Verify change log entry was stored
           final changes = await cloudStorage.getChangesWithCursor(
+            domainType: 'project',
             domainId: 'test-project',
           );
           expect(
@@ -576,9 +577,10 @@ void main() {
 
           // Verify state was updated
           final state = await cloudStorage.getCurrentEntityState(
-            'test-project',
-            'project',
-            'entity-1',
+            domainType: 'project',
+            domainId: 'test-project',
+            entityType: 'project',
+            entityId: 'entity-1',
           );
           expect(
             state,
@@ -624,6 +626,7 @@ void main() {
 
           // Verify change log entry was stored
           final changes = await cloudStorage.getChangesWithCursor(
+            domainType: 'project',
             domainId: 'test-project',
           );
           expect(
@@ -634,9 +637,10 @@ void main() {
 
           // Verify state was updated
           final state = await cloudStorage.getCurrentEntityState(
-            'test-project',
-            'project',
-            'entity-2',
+            domainType: 'project',
+            domainId: 'test-project',
+            entityType: 'project',
+            entityId: 'entity-2',
           );
           expect(
             state,
@@ -715,6 +719,7 @@ void main() {
 
           // Verify both change log entries exist
           final changes = await cloudStorage.getChangesWithCursor(
+            domainType: 'project',
             domainId: 'test-project',
           );
           expect(
@@ -725,9 +730,10 @@ void main() {
 
           // Verify final state reflects the update
           final state = await cloudStorage.getCurrentEntityState(
-            'test-project',
-            'project',
-            'entity-3',
+            domainType: 'project',
+            domainId: 'test-project',
+            entityType: 'project',
+            entityId: 'entity-3',
           );
           expect(state, isNotNull);
           expect(
@@ -872,6 +878,7 @@ void main() {
 
           // Verify change log entry was stored
           final changes = await localStorage.getChangesWithCursor(
+            domainType: 'project',
             domainId: 'test-project',
           );
           expect(
@@ -882,9 +889,10 @@ void main() {
 
           // Verify state was updated
           final state = await localStorage.getCurrentEntityState(
-            'test-project',
-            'project',
-            'entity-4',
+            domainType: 'project',
+            domainId: 'test-project',
+            entityType: 'project',
+            entityId: 'entity-4',
           );
           expect(
             state,
@@ -935,6 +943,7 @@ void main() {
             // TODO: According to requirements, local storage in sync mode should typically
             // only update state (unless hosting team storage)
             final changes = await localStorage.getChangesWithCursor(
+              domainType: 'project',
               domainId: 'test-project',
             );
             expect(
@@ -946,9 +955,10 @@ void main() {
 
             // Verify state was updated
             final state = await localStorage.getCurrentEntityState(
-              'test-project',
-              'project',
-              'entity-5',
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'project',
+              entityId: 'entity-5',
             );
             expect(
               state,
@@ -1125,6 +1135,7 @@ void main() {
 
           // Current implementation: Both change log entries are stored
           final changes = await localStorage.getChangesWithCursor(
+            domainType: 'project',
             domainId: 'test-project',
           );
           expect(
@@ -1136,9 +1147,10 @@ void main() {
 
           // State should always be updated regardless of mode
           final state = await localStorage.getCurrentEntityState(
-            'test-project',
-            'project',
-            'entity-6',
+            domainType: 'project',
+            domainId: 'test-project',
+            entityType: 'project',
+            entityId: 'entity-6',
           );
           expect(state, isNotNull);
           expect(
@@ -1200,9 +1212,11 @@ void main() {
 
             // Both should store change log entries in save mode
             final cloudChanges = await cloudStorage.getChangesWithCursor(
+              domainType: 'project',
               domainId: 'test-project',
             );
             final localChanges = await localStorage.getChangesWithCursor(
+              domainType: 'project',
               domainId: 'test-project',
             );
 
@@ -1219,14 +1233,16 @@ void main() {
 
             // Both should store state
             final cloudState = await cloudStorage.getCurrentEntityState(
-              'test-project',
-              'project',
-              'entity-cross',
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'project',
+              entityId: 'entity-cross',
             );
             final localState = await localStorage.getCurrentEntityState(
-              'test-project',
-              'project',
-              'entity-cross',
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'project',
+              entityId: 'entity-cross',
             );
 
             expect(cloudState, isNotNull);
@@ -1292,6 +1308,7 @@ void main() {
 
             // Cloud storage should store change log entries in sync mode
             final cloudChanges = await cloudStorage.getChangesWithCursor(
+              domainType: 'project',
               domainId: 'test-project',
             );
             expect(
@@ -1302,6 +1319,7 @@ void main() {
 
             // Current implementation: Local storage also stores change log in sync mode
             final localChanges = await localStorage.getChangesWithCursor(
+              domainType: 'project',
               domainId: 'test-project',
             );
             expect(
@@ -1313,14 +1331,16 @@ void main() {
 
             // Both should always store/update state
             final cloudState = await cloudStorage.getCurrentEntityState(
-              'test-project',
-              'project',
-              'entity-sync-cross',
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'project',
+              entityId: 'entity-sync-cross',
             );
             final localState = await localStorage.getCurrentEntityState(
-              'test-project',
-              'project',
-              'entity-sync-cross',
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'project',
+              entityId: 'entity-sync-cross',
             );
 
             expect(

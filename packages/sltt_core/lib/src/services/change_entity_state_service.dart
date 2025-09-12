@@ -355,6 +355,15 @@ GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
     final existingData = entityState.toJson();
 
     incomingData.forEach((field, value) {
+      // Debug: log comparison to aid diagnosing noOp/update classification
+      try {
+        final existingVal = existingData['data_$field'];
+        print(
+          'DEBUG: comparing field "$field": existing=$existingVal (${existingVal.runtimeType}), existing_str=${stableStringify(existingVal)} incoming=$value (${value.runtimeType}), incoming_str=${stableStringify(value)}',
+        );
+      } catch (e) {
+        print('DEBUG: comparing field "$field": error printing values: $e');
+      }
       final entityFieldKey =
           'data_$field'; // Change log has 'rank', entity has 'data_rank'
       if (stableStringify(existingData[entityFieldKey]) !=
@@ -440,6 +449,18 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
     // No entity state, treat all as updates
     fieldUpdates.addAll(fieldChanges);
   }
+
+  // Debug: log detailed decision info
+  try {
+    print(
+      'DEBUG: getDataAndStateUpdatesOrOutdatedBys - cid=${changeLogEntry.cid} entityId=${changeLogEntry.entityId} fieldChanges=$fieldChanges noOpFields=$noOpFields outdatedBys=$outdatedBys isChangeNewerThanLatest=$isChangeNewerThanLatest',
+    );
+    if (entityState != null) {
+      try {
+        print('DEBUG: existingEntityState=${entityState.toJson()}');
+      } catch (e) {}
+    }
+  } catch (e) {}
 
   return {
     'stateUpdates': {

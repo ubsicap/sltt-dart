@@ -75,6 +75,31 @@ abstract class BaseRestApiServer {
     // Default: no custom routes
   }
 
+  /// Validate `entityCollection` path parameter and map it to an entity type.
+  ///
+  /// Returns a map with keys `{ 'error': String? , 'entityType': String? }`.
+  /// - On success: `{ 'error': null, 'entityType': <entityType> }`.
+  /// - On failure: `{ 'error': '<message>', 'entityType': null }`.
+  Map<String, dynamic> _resolveEntityCollection(Request request) {
+    final entityCollection = request.params['entityCollection'];
+    if (entityCollection == null || entityCollection.isEmpty) {
+      return {'error': 'Entity collection is required', 'entityType': null};
+    }
+
+    // Use the central mapper from entity_type.dart which provides
+    // `getEntityByCollection` to convert a collection name (e.g. 'projects')
+    // to the canonical entity type string (e.g. 'project').
+    final entityType = getEntityByCollection(entityCollection);
+    if (entityType == null) {
+      return {
+        'error': 'Unknown entity collection: $entityCollection',
+        'entityType': null,
+      };
+    }
+
+    return {'error': null, 'entityType': entityType};
+  }
+
   /// Start the server on the specified port
   Future<void> start({required int port}) async {
     if (_server != null) {
@@ -1246,13 +1271,12 @@ abstract class BaseRestApiServer {
         return _errorResponse('Domain ID is required', 400);
       }
 
-      final entityType = request.params['entityType'];
-      if (entityType == null || entityType.isEmpty) {
-        return _errorResponse('Entity type is required', 400);
+      // Resolve entityCollection -> entityType
+      final resolvedEntity = _resolveEntityCollection(request);
+      if (resolvedEntity['error'] != null) {
+        return _errorResponse(resolvedEntity['error'] as String, 400);
       }
-
-      // URL decode the entity type to handle special characters
-      final decodedEntityType = Uri.decodeComponent(entityType);
+      final decodedEntityType = resolvedEntity['entityType'] as String;
 
       // Parse query parameters
       final queryParams = request.url.queryParameters;
@@ -1321,10 +1345,12 @@ abstract class BaseRestApiServer {
         return _errorResponse('Domain ID is required', 400);
       }
 
-      final entityType = request.params['entityType'];
-      if (entityType == null || entityType.isEmpty) {
-        return _errorResponse('Entity type is required', 400);
+      // Resolve entityCollection -> entityType (route uses <entityCollection>)
+      final resolvedEntity = _resolveEntityCollection(request);
+      if (resolvedEntity['error'] != null) {
+        return _errorResponse(resolvedEntity['error'] as String, 400);
       }
+      final entityType = resolvedEntity['entityType'] as String;
 
       final entityId = request.params['entityId'];
       if (entityId == null || entityId.isEmpty) {

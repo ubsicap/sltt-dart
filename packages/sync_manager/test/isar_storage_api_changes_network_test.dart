@@ -1,4 +1,5 @@
 @Tags(['network'])
+import 'dart:async';
 import 'dart:io';
 
 import 'package:shelf/shelf.dart';
@@ -26,6 +27,7 @@ class TestServer extends BaseRestApiServer {
 void main() {
   HttpServer? server;
   Uri? baseUrl;
+  Completer<Uri>? baseUrlCompleter;
   IsarStorageService? storage;
   const testDbName = 'test_local_api_changes';
 
@@ -48,7 +50,13 @@ void main() {
   }
 
   Future<Uri> resolveBaseUrl() async {
+    // Use a completer to serialize initialization and avoid double-starting
+    // the server if multiple tests call resolveBaseUrl concurrently.
+    // If a previous init is in progress, await its completion.
+    // This also ensures the Isar DB is initialized exactly once per test run.
+    if (baseUrlCompleter != null) return baseUrlCompleter!.future;
     if (baseUrl != null) return baseUrl!;
+    baseUrlCompleter = Completer<Uri>();
     final externalApiBaseUrl = Platform.environment['API_BASE_URL'];
     if (externalApiBaseUrl != null && externalApiBaseUrl.isNotEmpty) {
       baseUrl = Uri.parse(externalApiBaseUrl);
@@ -65,7 +73,11 @@ void main() {
     final handler = const Pipeline().addHandler(app.router().call);
     server = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, 0);
     baseUrl = Uri.parse('http://localhost:${server!.port}');
-    return baseUrl!;
+    // Complete the completer so any concurrent callers can proceed
+    baseUrlCompleter!.complete(baseUrl);
+    final result = baseUrl!;
+    baseUrlCompleter = null;
+    return result;
   }
 
   setUpAll(() async {
