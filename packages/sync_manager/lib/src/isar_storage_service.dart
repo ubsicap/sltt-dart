@@ -437,12 +437,14 @@ class IsarStorageService extends BaseStorageService {
     required String domainType,
     required String domainId,
   }) async {
+    // TODO: use _isar.isarEntityTypeStates to add up all entityType op counts
     final total = await _isar.isarChangeLogEntrys
         .filter()
         .domainIdEqualTo(domainId)
         .and()
         .domainTypeEqualTo(domainType)
         .count();
+    // TODO: use _isar.isarEntityTypeStates for op counts
     final creates = await _isar.isarChangeLogEntrys
         .filter()
         .domainIdEqualTo(domainId)
