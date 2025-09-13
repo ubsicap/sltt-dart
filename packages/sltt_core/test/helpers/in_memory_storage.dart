@@ -135,21 +135,6 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<BaseChangeLogEntry> createChange({
-    required String domainType,
-    required Map<String, dynamic> changeData,
-  }) async {
-    final data = Map<String, dynamic>.from(changeData);
-    if (data['seq'] == null || (data['seq'] is int && data['seq'] == 0)) {
-      data['seq'] = _nextSeq++;
-    }
-    final change = TestChangeLogEntry.fromJson(data);
-    final changes = _changesByDomainType.putIfAbsent(domainType, () => []);
-    changes.add(change);
-    return change;
-  }
-
-  @override
   Future<BaseChangeLogEntry?> getChange({
     required String domainType,
     required String domainId,

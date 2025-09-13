@@ -64,12 +64,6 @@ abstract class BaseStorageService {
   /// Close and cleanup the storage service
   Future<void> close();
 
-  /// Create a new change entry
-  Future<BaseChangeLogEntry> createChange({
-    required String domainType,
-    required Map<String, dynamic> changeData,
-  });
-
   Future<UpdateChangeLogAndStateResult> updateChangeLogAndState({
     required String domainType,
     required BaseChangeLogEntry changeLogEntry,
