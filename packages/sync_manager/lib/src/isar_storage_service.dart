@@ -228,12 +228,11 @@ class IsarStorageService extends BaseStorageService {
       // Upsert entity-type sync state counters (created/updated/deleted)
       try {
         final existing = await _isar.isarEntityTypeSyncStates
-            .filter()
-            .entityTypeEqualTo(changeLogEntry.entityType)
-            .and()
-            .domainIdEqualTo(newChange.domainId)
-            .and()
-            .domainTypeEqualTo(domainType)
+            .where()
+            .entityTypeDomainIdEqualTo(
+              changeLogEntry.entityType,
+              newChange.domainId,
+            )
             .findFirst();
 
         final op = newChange.operation;
@@ -255,7 +254,7 @@ class IsarStorageService extends BaseStorageService {
             createdAt: existing.createdAt,
             updatedAt: DateTime.now(),
           );
-          await _isar.isarEntityTypeSyncStates.put(newEt);
+          await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
         } else {
           final newEt = IsarEntityTypeSyncState(
             entityType: changeLogEntry.entityType,
@@ -270,7 +269,7 @@ class IsarStorageService extends BaseStorageService {
             updated: newChange.operation == 'update' ? Isar.autoIncrement : 0,
             deleted: newChange.operation == 'delete' ? Isar.autoIncrement : 0,
           );
-          await _isar.isarEntityTypeSyncStates.put(newEt);
+          await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
         }
       } catch (e) {
         print(
