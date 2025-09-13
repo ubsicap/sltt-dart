@@ -162,7 +162,9 @@ IsarEntityTypeSyncState _isarEntityTypeSyncStateDeserialize(
   final object = IsarEntityTypeSyncState(
     changeAt: reader.readDateTime(offsets[0]),
     cid: reader.readString(offsets[1]),
+    created: reader.readLongOrNull(offsets[2]) ?? 0,
     createdAt: reader.readDateTimeOrNull(offsets[3]),
+    deleted: reader.readLongOrNull(offsets[4]) ?? 0,
     domainId: reader.readString(offsets[5]),
     domainType: reader.readString(offsets[6]),
     entityType: reader.readString(offsets[7]),
@@ -170,11 +172,9 @@ IsarEntityTypeSyncState _isarEntityTypeSyncStateDeserialize(
     seq: reader.readLong(offsets[8]),
     storageId: reader.readString(offsets[9]),
     storageType: reader.readString(offsets[10]),
+    updated: reader.readLongOrNull(offsets[11]) ?? 0,
     updatedAt: reader.readDateTimeOrNull(offsets[12]),
   );
-  object.created = reader.readLong(offsets[2]);
-  object.deleted = reader.readLong(offsets[4]);
-  object.updated = reader.readLong(offsets[11]);
   return object;
 }
 
@@ -190,11 +190,11 @@ P _isarEntityTypeSyncStateDeserializeProp<P>(
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readLong(offset)) as P;
+      return (reader.readLongOrNull(offset) ?? 0) as P;
     case 3:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
-      return (reader.readLong(offset)) as P;
+      return (reader.readLongOrNull(offset) ?? 0) as P;
     case 5:
       return (reader.readString(offset)) as P;
     case 6:
@@ -208,7 +208,7 @@ P _isarEntityTypeSyncStateDeserializeProp<P>(
     case 10:
       return (reader.readString(offset)) as P;
     case 11:
-      return (reader.readLong(offset)) as P;
+      return (reader.readLongOrNull(offset) ?? 0) as P;
     case 12:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:

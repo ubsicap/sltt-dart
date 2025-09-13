@@ -225,6 +225,58 @@ class IsarStorageService extends BaseStorageService {
       print(
         'updateChangeLogAndState - after put - newEntityState id: ${newEntityState.toJson()['id']}',
       );
+      // Upsert entity-type sync state counters (created/updated/deleted)
+      try {
+        final existing = await _isar.isarEntityTypeSyncStates
+            .filter()
+            .entityTypeEqualTo(changeLogEntry.entityType)
+            .and()
+            .domainIdEqualTo(newChange.domainId)
+            .and()
+            .domainTypeEqualTo(domainType)
+            .findFirst();
+
+        final op = newChange.operation;
+        if (existing != null) {
+          // Build a replacement instance preserving the same id
+          final newEt = IsarEntityTypeSyncState(
+            id: existing.id,
+            entityType: existing.entityType,
+            domainId: existing.domainId,
+            domainType: existing.domainType,
+            storageId: _storageId,
+            storageType: getStorageType(),
+            cid: newChange.cid,
+            changeAt: newChange.changeAt,
+            seq: newChange.seq,
+            created: op == 'create' ? Isar.autoIncrement : existing.created,
+            updated: op == 'update' ? Isar.autoIncrement : existing.updated,
+            deleted: op == 'delete' ? Isar.autoIncrement : existing.deleted,
+            createdAt: existing.createdAt,
+            updatedAt: DateTime.now(),
+          );
+          await _isar.isarEntityTypeSyncStates.put(newEt);
+        } else {
+          final newEt = IsarEntityTypeSyncState(
+            entityType: changeLogEntry.entityType,
+            domainId: newChange.domainId,
+            domainType: domainType,
+            storageId: _storageId,
+            storageType: getStorageType(),
+            cid: newChange.cid,
+            changeAt: newChange.changeAt,
+            seq: newChange.seq,
+            created: newChange.operation == 'create' ? Isar.autoIncrement : 0,
+            updated: newChange.operation == 'update' ? Isar.autoIncrement : 0,
+            deleted: newChange.operation == 'delete' ? Isar.autoIncrement : 0,
+          );
+          await _isar.isarEntityTypeSyncStates.put(newEt);
+        }
+      } catch (e) {
+        print(
+          '[$_logPrefix] Warning: failed to upsert entity-type sync state: $e',
+        );
+      }
     });
 
     return (
@@ -233,27 +285,59 @@ class IsarStorageService extends BaseStorageService {
     );
   }
 
-  /// Create a new change log entry in the storage.
-  ///
-  /// Returns the created change log entry with auto-generated sequence number.
+  // createChange intentionally unsupported in IsarStorageService; callers
+  // should use updateChangeLogAndState which handles both change and state
+  // updates atomically. Provide a stub to satisfy the BaseStorageService
+  // abstract contract.
   @override
   Future<BaseChangeLogEntry> createChange({
     required String domainType,
     required Map<String, dynamic> changeData,
   }) async {
-    print('changeData: ${jsonEncode(changeData)}');
-    final change = client.IsarChangeLogEntry.fromJson(changeData);
+    // Minimal compatibility wrapper: construct an IsarChangeLogEntry from the
+    // provided changeData and call updateChangeLogAndState to persist both
+    // change and (optional) entity state. This keeps existing tests working
+    // which call createChange directly.
 
-    // Set cloudAt if this is a cloud storage service
-    change.cloudAt ??= maybeCreateCloudAt();
+    // We accept any fields present in `changeData` and pass them through to
+    // the IsarChangeLogEntry.fromJson constructor. No local extraction is
+    // required here; callers must provide sufficient fields.
 
-    print('change: ${jsonEncode(change)}');
-    await _isar.writeTxn(() async {
-      await _isar.collection<client.IsarChangeLogEntry>().put(change);
-    });
+    // Build a change log entry JSON payload. Keep any extra fields present in
+    // changeData so downstream code can use them.
+    final entryJson = <String, dynamic>{...changeData};
 
-    // Return as base BaseChangeLogEntry
-    return _convertToChangeLogEntry(change);
+    // If changeAt is a String, try to parse; otherwise allow DateTime.
+    if (entryJson['changeAt'] is String) {
+      entryJson['changeAt'] = DateTime.parse(entryJson['changeAt'] as String);
+    }
+
+    final changeEntry = client.IsarChangeLogEntry.fromJson(entryJson);
+
+    // Prepare minimal stateUpdates map if a state snapshot is present in
+    // changeData under the key 'state' or 'entityState'. Otherwise leave
+    // empty.
+    final stateUpdates = <String, dynamic>{};
+    if (changeData.containsKey('state') && changeData['state'] is Map) {
+      stateUpdates.addAll(
+        Map<String, dynamic>.from(changeData['state'] as Map),
+      );
+    } else if (changeData.containsKey('entityState') &&
+        changeData['entityState'] is Map) {
+      stateUpdates.addAll(
+        Map<String, dynamic>.from(changeData['entityState'] as Map),
+      );
+    }
+
+    final result = await updateChangeLogAndState(
+      domainType: domainType,
+      changeLogEntry: changeEntry,
+      changeUpdates: {},
+      entityState: null,
+      stateUpdates: stateUpdates,
+    );
+
+    return result.newChangeLogEntry;
   }
 
   @override

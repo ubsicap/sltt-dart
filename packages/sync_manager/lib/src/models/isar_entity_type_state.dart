@@ -11,9 +11,9 @@ class IsarEntityTypeSyncState extends SyncState {
   @Index(unique: true, replace: true, composite: [CompositeIndex('domainId')])
   final String entityType;
   // some basic entityType statistics
-  int created = Isar.autoIncrement;
-  int updated = Isar.autoIncrement;
-  int deleted = Isar.autoIncrement;
+  int created = 0;
+  int updated = 0;
+  int deleted = 0;
 
   IsarEntityTypeSyncState({
     this.id = Isar.autoIncrement,
@@ -25,6 +25,15 @@ class IsarEntityTypeSyncState extends SyncState {
     required super.cid,
     required super.changeAt,
     required super.seq,
+
+    /// pass Isar.autoIncrement whenever we need to bump a crud operation value
+    this.created = 0,
+
+    /// pass `Isar.autoIncrement` whenever we need to bump a CRUD operation value
+    this.updated = 0,
+
+    /// pass `Isar.autoIncrement` whenever we need to bump a CRUD operation value
+    this.deleted = 0,
     super.createdAt,
     super.updatedAt,
   });
