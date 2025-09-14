@@ -284,6 +284,7 @@ class IsarStorageService extends BaseStorageService {
     );
   }
 
+  /// AGENT: do not fix this. it's deprecated. Use ChangeProcessingService.processChanges
   Future<BaseChangeLogEntry> createChange({
     required String domainType,
     required Map<String, dynamic> changeData,
@@ -297,7 +298,9 @@ class IsarStorageService extends BaseStorageService {
 
     // return _convertToChangeLogEntry(newChange);
 
-    throw UnimplementedError('deprecated');
+    throw UnimplementedError(
+      'deprecated. Use ChangeProcessingService.processChanges',
+    );
   }
 
   @override
