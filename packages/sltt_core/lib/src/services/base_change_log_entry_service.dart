@@ -44,7 +44,7 @@ BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
 ) {
   final group = _changeLogEntryFactoryGroup;
   if (group == null) {
-    throw Exception('No registered change log entry factory group');
+    throw Exception('No registered change log entry SerializableGroup');
   }
   // Reuse existing safe deserialization helper which will attempt recovery
   return deserializeChangeLogEntrySafely<BaseChangeLogEntry>(

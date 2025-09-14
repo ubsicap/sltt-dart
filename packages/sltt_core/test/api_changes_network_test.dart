@@ -45,11 +45,11 @@ void main() {
     // Register change-log entry factory group for tests
     registerChangeLogEntryFactoryGroup(
       SerializableGroup<BaseChangeLogEntry>(
-        (json) => TestChangeLogEntry.fromJson(json),
-        (json) => TestChangeLogEntry.fromJsonBase(json),
-        (entry) => (entry as TestChangeLogEntry).toJson(),
-        (entry) => (entry as TestChangeLogEntry).toJsonBase(),
-        (original) {
+        fromJson: TestChangeLogEntry.fromJson,
+        fromJsonBase: TestChangeLogEntry.fromJsonBase,
+        toJson: (entry) => (entry as TestChangeLogEntry).toJson(),
+        toJsonBase: (entry) => (entry as TestChangeLogEntry).toJsonBase(),
+        toSafeJson: (original) {
           // Produce a safe shape for TestChangeLogEntry
           final now = HlcTimestampGenerator.generate();
           return {

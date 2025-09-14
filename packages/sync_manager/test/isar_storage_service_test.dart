@@ -34,7 +34,6 @@ void main() {
       adjustedData['parentId'] = 'root';
     }
     return {
-      'projectId': projectId,
       'domainId': projectId,
       'domainType': 'project',
       'entityType': entityType,
@@ -78,6 +77,39 @@ void main() {
   });
 
   group('IsarStorageService Basic Operations', () {
+    setUpAll(() async {
+      // register Isar Change Log factory group
+      registerChangeLogEntryFactoryGroup(
+        SerializableGroup(
+          fromJson: IsarChangeLogEntry.fromJson,
+          fromJsonBase: IsarChangeLogEntry.fromJsonBase,
+          toJson: (entry) => (entry as IsarChangeLogEntry).toJson(),
+          toJsonBase: (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
+          toSafeJson: (original) {
+            // Build a safe JSON shape for recovery on deserialization errors
+            final now = HlcTimestampGenerator.generate();
+            return {
+              'entityId': original['entityId'] ?? 'e-client',
+              'entityType': original['entityType'] ?? 'unknown',
+              'domainId': original['domainId'] ?? 'p-client',
+              'domainType': original['domainType'] ?? 'project',
+              'changeAt': original['changeAt'] ?? now.toIso8601String(),
+              'cid': original['cid'] ?? generateCid(now),
+              'storageId': original['storageId'] ?? 'local',
+              'changeBy': original['changeBy'] ?? 'client',
+              'dataJson': JsonUtils.normalize(original['dataJson']),
+              'operation': original['operation'] ?? 'update',
+              'operationInfoJson': JsonUtils.normalize(
+                original['operationInfoJson'],
+              ),
+              'stateChanged': original['stateChanged'] ?? false,
+              'unknownJson': JsonUtils.normalize(original['unknownJson']),
+            };
+          },
+        ),
+      );
+    });
+
     test('initializes successfully', () async {
       expect(storage.getStorageType(), equals('local'));
       final storageId = await storage.getStorageId();
@@ -96,27 +128,52 @@ void main() {
         entityType: 'project',
         entityId: 'entity-1',
         changeAt: baseTime,
+        storageId: '',
         data: {'nameLocal': 'Test Project', 'parentId': 'root'},
       );
 
-      // Create change
-      final createdChange = await storage.createChange(
-        domainType: 'project',
-        changeData: changeData,
+      // Create change via ChangeProcessingService to exercise full processing
+      final procResult = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: [changeData],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
       );
-      expect(createdChange.seq, greaterThan(0));
-      expect(createdChange.domainId, equals(projectId));
-      expect(createdChange.entityType, equals('project'));
-      expect(createdChange.entityId, equals('entity-1'));
+      expect(procResult.isSuccess, isTrue, reason: procResult.errorMessage);
+      expect(
+        procResult.resultsSummary!.created,
+        isNotEmpty,
+        reason:
+            'processChanges did not report created cids: ${procResult.resultsSummary}',
+      );
+      final createdCid = procResult.resultsSummary!.created.first;
+      final createdChange = await storage.getChange(
+        domainType: 'project',
+        domainId: projectId,
+        cid: createdCid,
+      );
+      expect(
+        createdChange,
+        isNotNull,
+        reason: 'createdChange not found by cid',
+      );
+      final createdChangeNN = createdChange!;
+      expect(createdChangeNN.seq, greaterThan(0));
+      expect(createdChangeNN.domainId, equals(projectId));
+      expect(createdChangeNN.entityType, equals('project'));
+      expect(createdChangeNN.entityId, equals('entity-1'));
 
       // Retrieve change by sequence number
       final retrievedChange = await storage.getChange(
         domainType: 'project',
         domainId: projectId,
-        cid: createdChange.cid,
+        cid: createdCid,
       );
       expect(retrievedChange, isNotNull);
-      expect(retrievedChange!.seq, equals(createdChange.seq));
+      expect(retrievedChange!.seq, equals(createdChangeNN.seq));
       expect(retrievedChange.entityId, equals('entity-1'));
     });
 
@@ -136,15 +193,23 @@ void main() {
       for (int i = 1; i <= 5; i++) {
         final changeData = changePayload(
           projectId: projectId,
+          storageId: '',
           entityType: 'project',
           entityId: 'entity-$i',
           changeAt: baseTime.add(Duration(minutes: i)),
           data: {'nameLocal': 'Project $i', 'parentId': 'root'},
         );
-        await storage.createChange(
-          domainType: 'project',
-          changeData: changeData,
+        // Seed via ChangeProcessingService to get the same end-to-end behavior
+        final r = await ChangeProcessingService.processChanges(
+          storageMode: 'save',
+          changes: [changeData],
+          srcStorageType: 'local',
+          srcStorageId: 'local-client',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
         );
+        expect(r.isSuccess, isTrue, reason: r.errorMessage);
       }
 
       // Get changes with limit
@@ -169,6 +234,7 @@ void main() {
       for (int i = 1; i <= 3; i++) {
         final changeData = changePayload(
           projectId: projectId,
+          storageId: '',
           entityType: 'project',
           entityId: 'entity-$i',
           changeAt: baseTime.add(Duration(minutes: i)),

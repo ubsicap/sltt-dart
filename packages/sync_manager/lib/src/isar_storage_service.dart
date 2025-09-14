@@ -284,59 +284,20 @@ class IsarStorageService extends BaseStorageService {
     );
   }
 
-  // createChange intentionally unsupported in IsarStorageService; callers
-  // should use updateChangeLogAndState which handles both change and state
-  // updates atomically. Provide a stub to satisfy the BaseStorageService
-  // abstract contract.
-  @override
   Future<BaseChangeLogEntry> createChange({
     required String domainType,
     required Map<String, dynamic> changeData,
   }) async {
-    // Minimal compatibility wrapper: construct an IsarChangeLogEntry from the
-    // provided changeData and call updateChangeLogAndState to persist both
-    // change and (optional) entity state. This keeps existing tests working
-    // which call createChange directly.
+    // final newChange = client.IsarChangeLogEntry.fromJson(changeData);
 
-    // We accept any fields present in `changeData` and pass them through to
-    // the IsarChangeLogEntry.fromJson constructor. No local extraction is
-    // required here; callers must provide sufficient fields.
+    // // Save change in a transaction
+    // await _isar.writeTxn(() async {
+    //   await _isar.collection<client.IsarChangeLogEntry>().put(newChange);
+    // });
 
-    // Build a change log entry JSON payload. Keep any extra fields present in
-    // changeData so downstream code can use them.
-    final entryJson = <String, dynamic>{...changeData};
+    // return _convertToChangeLogEntry(newChange);
 
-    // If changeAt is a String, try to parse; otherwise allow DateTime.
-    if (entryJson['changeAt'] is String) {
-      entryJson['changeAt'] = DateTime.parse(entryJson['changeAt'] as String);
-    }
-
-    final changeEntry = client.IsarChangeLogEntry.fromJson(entryJson);
-
-    // Prepare minimal stateUpdates map if a state snapshot is present in
-    // changeData under the key 'state' or 'entityState'. Otherwise leave
-    // empty.
-    final stateUpdates = <String, dynamic>{};
-    if (changeData.containsKey('state') && changeData['state'] is Map) {
-      stateUpdates.addAll(
-        Map<String, dynamic>.from(changeData['state'] as Map),
-      );
-    } else if (changeData.containsKey('entityState') &&
-        changeData['entityState'] is Map) {
-      stateUpdates.addAll(
-        Map<String, dynamic>.from(changeData['entityState'] as Map),
-      );
-    }
-
-    final result = await updateChangeLogAndState(
-      domainType: domainType,
-      changeLogEntry: changeEntry,
-      changeUpdates: {},
-      entityState: null,
-      stateUpdates: stateUpdates,
-    );
-
-    return result.newChangeLogEntry;
+    throw UnimplementedError('deprecated');
   }
 
   @override

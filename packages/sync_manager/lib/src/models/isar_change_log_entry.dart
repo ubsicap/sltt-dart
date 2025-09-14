@@ -14,11 +14,11 @@ bool get isarChangeLogEntryFactoryRegistration =>
 final _isarChangeLogEntryFactoryRegistration = (() {
   registerChangeLogEntryFactoryGroup(
     SerializableGroup<BaseChangeLogEntry>(
-      (json) => IsarChangeLogEntry.fromJson(json),
-      (json) => IsarChangeLogEntry.fromJsonBase(json),
-      (entry) => (entry as IsarChangeLogEntry).toJson(),
-      (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
-      (original) {
+      fromJson: IsarChangeLogEntry.fromJson,
+      fromJsonBase: IsarChangeLogEntry.fromJsonBase,
+      toJson: (entry) => (entry as IsarChangeLogEntry).toJson(),
+      toJsonBase: (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
+      toSafeJson: (original) {
         // Build a safe JSON shape for recovery on deserialization errors
         // TODO: can we have a service do most of the mapping?
         final now = HlcTimestampGenerator.generate();

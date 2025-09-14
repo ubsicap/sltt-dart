@@ -6,11 +6,11 @@ class SerializableGroup<T> {
   final Map<String, dynamic> Function(T) toJsonBase;
   final Map<String, dynamic> Function(Map<String, dynamic>) toSafeJson;
 
-  SerializableGroup(
-    this.fromJson,
-    this.fromJsonBase,
-    this.toJson,
-    this.toJsonBase,
-    this.toSafeJson,
-  );
+  SerializableGroup({
+    required this.fromJson,
+    required this.fromJsonBase,
+    required this.toJson,
+    required this.toJsonBase,
+    required this.toSafeJson,
+  });
 }
