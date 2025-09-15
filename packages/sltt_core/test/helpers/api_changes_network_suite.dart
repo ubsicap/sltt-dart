@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:sltt_core/sltt_core.dart';
+// import 'package:sltt_core/sltt_core.dart'; // <-- may cause circular import?
+import 'package:sltt_core/src/services/date_time_service.dart';
+import 'package:sltt_core/src/services/uid_service.dart';
 import 'package:test/test.dart';
 
 /// Test suite configuration for API change network tests
