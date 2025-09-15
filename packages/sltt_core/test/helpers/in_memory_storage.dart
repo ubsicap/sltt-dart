@@ -193,10 +193,50 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, int>> getEntityTypeStats({
+  Future<Map<String, dynamic>> getEntityTypeStats({
     required String domainType,
     String? domainId,
-  }) async => <String, int>{};
+  }) async {
+    // Compute per-entityType creates/updates/deletes from the in-memory change log
+    final changes = _changesByDomainType[domainType] ?? [];
+
+    final Map<String, Map<String, int>> perType = {};
+    int totalCreates = 0;
+    int totalUpdates = 0;
+    int totalDeletes = 0;
+
+    for (final c in changes) {
+      if (domainId != null && c.domainId != domainId) continue;
+      final type = c.entityType;
+      final map = perType[type] ??= {
+        'creates': 0,
+        'updates': 0,
+        'deletes': 0,
+        'total': 0,
+      };
+      if (c.operation == 'create') {
+        map['creates'] = (map['creates'] ?? 0) + 1;
+        totalCreates++;
+      } else if (c.operation == 'update') {
+        map['updates'] = (map['updates'] ?? 0) + 1;
+        totalUpdates++;
+      } else if (c.operation == 'delete') {
+        map['deletes'] = (map['deletes'] ?? 0) + 1;
+        totalDeletes++;
+      }
+      map['total'] =
+          (map['creates'] ?? 0) + (map['updates'] ?? 0) + (map['deletes'] ?? 0);
+    }
+
+    final totals = {
+      'creates': totalCreates,
+      'updates': totalUpdates,
+      'deletes': totalDeletes,
+      'total': totalCreates + totalUpdates + totalDeletes,
+    };
+
+    return {'entityTypes': perType, 'totals': totals};
+  }
 
   @override
   Future<List<String>> getAllDomainIds({required String domainType}) async =>
