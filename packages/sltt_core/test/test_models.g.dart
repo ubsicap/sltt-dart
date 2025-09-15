@@ -19,8 +19,7 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
           domainType: $checkedConvert('domainType', (v) => v as String),
           changeAt: $checkedConvert('changeAt',
               (v) => const UtcDateTimeConverter().fromJson(v as String)),
-          storageId:
-              $checkedConvert('storageId', (v) => v as String? ?? 'local'),
+          storageId: $checkedConvert('storageId', (v) => v as String? ?? ''),
           changeBy: $checkedConvert('changeBy', (v) => v as String),
           dataJson: $checkedConvert('dataJson', (v) => v as String),
           operation: $checkedConvert('operation', (v) => v as String),
