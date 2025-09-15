@@ -9,3 +9,10 @@
  - When adding new API network tests, register them in `packages/sltt_core/test/helpers/api_changes_network_suite.dart` and call the specific test entries from each test runner (for example `packages/sltt_core/test/api_changes_network_test.dart` and `packages/sync_manager/test/isar_storage_api_changes_network_test.dart`).
    This keeps test discovery consistent across storage backends and avoids duplicated test logic.
 
+- Do not automatically add code just so deserialization works; always confirm with the repository maintainer before adding such code.
+   - such code may mask data that is required to be added upstream
+   - as an example of what NOT to auto add:
+     ```dart
+      // Fallback for missing 'domainType' in JSON (should be added upstream)
+      mergedStateJson['domainType'] = domainType;
+     ```
