@@ -179,8 +179,6 @@ class IsarStorageService extends BaseStorageService {
       // Create new entity state from state updates
       // Make a shallow copy and ensure required metadata fields exist
       final stateJson = Map<String, dynamic>.from(stateUpdates);
-      stateJson['domainType'] = domainType;
-      stateJson['entityType'] = changeLogEntry.entityType;
 
       newEntityState = createIsarEntityStateFromJson(
         entityTypeEnum,

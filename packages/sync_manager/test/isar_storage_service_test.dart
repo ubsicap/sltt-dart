@@ -234,6 +234,7 @@ void main() {
         changeLogEntry: change,
         changeUpdates: {'seq': 1, 'stateChanged': true},
         stateUpdates: {
+          'domainType': 'project',
           'entityId': entityId,
           'entityType': 'project',
           'change_domainId': projectId,
@@ -289,6 +290,7 @@ void main() {
         changeLogEntry: change,
         changeUpdates: {'seq': 1, 'stateChanged': true},
         stateUpdates: {
+          'domainType': 'project',
           'entityId': entityId,
           'entityType': 'document',
           'change_domainId': projectId,
@@ -340,6 +342,7 @@ void main() {
         changeLogEntry: change,
         changeUpdates: {'seq': 1, 'stateChanged': true},
         stateUpdates: {
+          'domainType': 'project',
           'entityId': entityId,
           'entityType': 'team',
           'change_domainId': projectId,
@@ -751,6 +754,7 @@ void main() {
           changeLogEntry: change1,
           changeUpdates: {'seq': 1, 'stateChanged': true},
           stateUpdates: {
+            'domainType': 'project',
             'entityId': entityId,
             'entityType': 'project',
             'change_domainId': projectId,
@@ -858,6 +862,7 @@ void main() {
         changeLogEntry: change1,
         changeUpdates: {'seq': 1, 'stateChanged': true},
         stateUpdates: {
+          'domainType': 'project',
           'entityId': entityId,
           'entityType': 'project',
           'change_domainId': projectId,
