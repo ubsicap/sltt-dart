@@ -618,9 +618,24 @@ abstract class BaseRestApiServer {
                     'description':
                         'Total number of changes across all projects',
                   },
-                  'projectCount': {
+                  'domainIdCount': {
                     'type': 'integer',
-                    'description': 'Number of projects with changes',
+                    'description': 'Number of domain IDs with changes',
+                  },
+                  'creates': {
+                    'type': 'integer',
+                    'description':
+                        'Total create operations across all projects',
+                  },
+                  'updates': {
+                    'type': 'integer',
+                    'description':
+                        'Total update operations across all projects',
+                  },
+                  'deletes': {
+                    'type': 'integer',
+                    'description':
+                        'Total delete operations across all projects',
                   },
                 },
               },
@@ -1187,6 +1202,9 @@ abstract class BaseRestApiServer {
 
       // Aggregate stats across all projects
       int totalChanges = 0;
+      int totalCreates = 0;
+      int totalUpdates = 0;
+      int totalDeletes = 0;
       final Map<String, int> entityTypeTotals = {};
 
       for (final domainId in domainIds) {
@@ -1201,6 +1219,10 @@ abstract class BaseRestApiServer {
           );
 
           totalChanges += (changeStats['total'] as int? ?? 0);
+          // If changeStats includes per-op breakdowns (creates/updates/deletes), add them
+          totalCreates += (changeStats['creates'] as int? ?? 0);
+          totalUpdates += (changeStats['updates'] as int? ?? 0);
+          totalDeletes += (changeStats['deletes'] as int? ?? 0);
 
           // Aggregate entity type stats. New shape from some storages is:
           // { 'entityTypes': { '<type>': {creates, updates, deletes, total}}, 'totals': {...} }
@@ -1231,7 +1253,10 @@ abstract class BaseRestApiServer {
         jsonEncode({
           'changeStats': {
             'total': totalChanges,
-            'projectCount': domainIds.length,
+            'domainIdCount': domainIds.length,
+            'creates': totalCreates,
+            'updates': totalUpdates,
+            'deletes': totalDeletes,
           },
           'entityTypeStats': entityTypeTotals,
           'timestamp': DateTime.now().toIso8601String(),

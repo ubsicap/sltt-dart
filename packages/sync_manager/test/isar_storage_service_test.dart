@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:isar/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
@@ -84,8 +85,9 @@ void main() {
   });
 
   setUp(() async {
-    // Create unique database name for each test
-    testDbName = 'test_${DateTime.now().millisecondsSinceEpoch}';
+    // Create unique database name for each test (use microseconds + random)
+    testDbName =
+        'test_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1 << 31)}';
     storage = IsarStorageService(testDbName, 'Test');
     await storage.initialize();
   });
@@ -617,10 +619,14 @@ void main() {
       // New shape: { 'entityTypes': { '<type>': {creates, updates, deletes, total}}, 'totals': {...} }
       expect(stats.containsKey('entityTypes'), isTrue);
       final entityTypes = stats['entityTypes'] as Map<String, dynamic>;
-      expect((entityTypes['project'] as Map<String, dynamic>)['total'],
-          greaterThanOrEqualTo(1));
-      expect((entityTypes['document'] as Map<String, dynamic>)['total'],
-          greaterThanOrEqualTo(2));
+      expect(
+        (entityTypes['project'] as Map<String, dynamic>)['total'],
+        greaterThanOrEqualTo(1),
+      );
+      expect(
+        (entityTypes['document'] as Map<String, dynamic>)['total'],
+        greaterThanOrEqualTo(2),
+      );
     });
 
     test('gets all projects', () async {
