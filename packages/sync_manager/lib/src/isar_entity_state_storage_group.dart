@@ -35,6 +35,8 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   // schema removed - declare schema list separately in register_entity_states
   final dynamic Function(Isar) collection;
   final Future<T?> Function(Isar, String, String) findByDomainAndEntity;
+  final Future<List<T>> Function(Isar, String, {String? cursor, int? limit})
+  findByDomainWithPagination;
 
   IsarEntityStateStorageGroup({
     required this.entityType,
@@ -43,6 +45,7 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
     // schema removed
     required this.collection,
     required this.findByDomainAndEntity,
+    required this.findByDomainWithPagination,
   });
 }
 

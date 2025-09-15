@@ -1031,13 +1031,48 @@ class IsarStorageService extends BaseStorageService {
     bool includeMetadata = false,
   }) async {
     try {
-      // Simple stub implementation that returns empty results
-      // TODO: Implement proper entity state querying once Isar models are fixed
-      return {
-        'items': <Map<String, dynamic>>[],
-        'hasMore': false,
-        'nextCursor': null,
-      };
+      // Convert entityType string to EntityType enum
+      final entityTypeEnum = EntityType.values.firstWhere(
+        (e) => e.value == entityType,
+        orElse: () => EntityType.unknown,
+      );
+
+      if (entityTypeEnum == EntityType.unknown) {
+        throw ArgumentError('Unsupported entity type: $entityType');
+      }
+
+      // Get the storage group for this entity type
+      final storageGroup = getEntityStateStorageGroup(entityTypeEnum);
+      if (storageGroup == null) {
+        throw ArgumentError(
+          'No storage group registered for entity type: $entityType',
+        );
+      }
+
+      // Use the storage group's pagination function for efficient querying
+      final effectiveLimit = limit ?? 100;
+      final entities = await storageGroup.findByDomainWithPagination(
+        _isar,
+        domainId,
+        cursor: cursor,
+        limit: effectiveLimit + 1, // Get one extra to check if there are more
+      );
+
+      // Check if there are more results
+      final hasMore = entities.length > effectiveLimit;
+      final resultEntities = hasMore
+          ? entities.take(effectiveLimit).toList()
+          : entities;
+
+      // Convert to JSON and determine next cursor
+      final items = resultEntities
+          .map((entity) => (entity as dynamic).toJson())
+          .toList();
+      final nextCursor = hasMore && resultEntities.isNotEmpty
+          ? (resultEntities.last as dynamic).entityId as String?
+          : null;
+
+      return {'items': items, 'hasMore': hasMore, 'nextCursor': nextCursor};
     } on ArgumentError {
       // Re-throw ArgumentError so it can be caught by the API handler as a 400 error
       rethrow;

@@ -187,6 +187,28 @@ void main() {
       });
     });
 
+    group('GET /api/state', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> stateTests;
+
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        stateTests = testGroups['GET /api/state']!;
+      });
+
+      test('returns empty list for entityCollection with no states', () async {
+        await stateTests['returns empty list for entityCollection with no states']!();
+      });
+
+      test(
+        'returns seeded entity state by entityCollection and entityId',
+        () async {
+          await stateTests['returns seeded entity state by entityCollection and entityId']!();
+        },
+      );
+    });
+
     test('verifies all suite tests are being run', () async {
       final suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
       final allSuiteTests = suite.getTestGroups();
@@ -216,6 +238,8 @@ void main() {
         'srcStorageType: local, srcStorageId: matches server storage id',
         'srcStorageType: local, srcStorageId: different from server',
         'srcStorageType: cloud, srcStorageId: cloud',
+        'returns empty list for entityCollection with no states',
+        'returns seeded entity state by entityCollection and entityId',
       };
 
       // Check that we have the same number of tests

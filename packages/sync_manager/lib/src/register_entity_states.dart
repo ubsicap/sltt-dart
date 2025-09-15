@@ -33,6 +33,16 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .and()
           .entityIdEqualTo(entityId)
           .findFirst(),
+      findByDomainWithPagination:
+          (Isar db, String domainId, {String? cursor, int? limit}) async {
+            var query = db.isarProjectStates.filter().change_domainIdEqualTo(
+              domainId,
+            );
+            if (cursor != null) {
+              query = query.and().entityIdGreaterThan(cursor);
+            }
+            return await query.sortByEntityId().limit(limit ?? 100).findAll();
+          },
     ),
   );
   registerIsarEntityStateStorageGroup(
@@ -49,6 +59,16 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .and()
           .entityIdEqualTo(entityId)
           .findFirst(),
+      findByDomainWithPagination:
+          (Isar db, String domainId, {String? cursor, int? limit}) async {
+            var query = db.isarDocumentStates.filter().change_domainIdEqualTo(
+              domainId,
+            );
+            if (cursor != null) {
+              query = query.and().entityIdGreaterThan(cursor);
+            }
+            return await query.sortByEntityId().limit(limit ?? 100).findAll();
+          },
     ),
   );
   registerIsarEntityStateStorageGroup(
@@ -65,6 +85,16 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .and()
           .entityIdEqualTo(entityId)
           .findFirst(),
+      findByDomainWithPagination:
+          (Isar db, String domainId, {String? cursor, int? limit}) async {
+            var query = db.isarTeamStates.filter().change_domainIdEqualTo(
+              domainId,
+            );
+            if (cursor != null) {
+              query = query.and().entityIdGreaterThan(cursor);
+            }
+            return await query.sortByEntityId().limit(limit ?? 100).findAll();
+          },
     ),
   );
   registerIsarEntityStateStorageGroup(
@@ -81,6 +111,16 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .and()
           .entityIdEqualTo(entityId)
           .findFirst(),
+      findByDomainWithPagination:
+          (Isar db, String domainId, {String? cursor, int? limit}) async {
+            var query = db.isarTaskStates.filter().change_domainIdEqualTo(
+              domainId,
+            );
+            if (cursor != null) {
+              query = query.and().entityIdGreaterThan(cursor);
+            }
+            return await query.sortByEntityId().limit(limit ?? 100).findAll();
+          },
     ),
   );
 }

@@ -236,6 +236,12 @@ class ApiChangesNetworkTestSuite {
         'srcStorageType: cloud, srcStorageId: cloud': () =>
             _testPostChangesCloudStorage(),
       },
+      'GET /api/state': {
+        'returns empty list for entityCollection with no states': () =>
+            _testGetStateEmpty(),
+        'returns seeded entity state by entityCollection and entityId': () =>
+            _testGetStateWithSeededData(),
+      },
     };
   }
 
@@ -751,6 +757,65 @@ class ApiChangesNetworkTestSuite {
     expect(json['storageId'], equals(serverStorageId));
     expect(json['changeUpdates'], isA<List>());
     expect(json['stateUpdates'], isA<List>());
+  }
+
+  Future<void> _testGetStateEmpty() async {
+    final baseUrl = await resolveBaseUrl();
+    final uri = baseUrl.replace(path: '/api/state/projects/test-project/tasks');
+    final req = await HttpClient().getUrl(uri);
+    final res = await req.close();
+    expect(res.statusCode, 200);
+    final body = await res.transform(utf8.decoder).join();
+    final json = jsonDecode(body) as Map<String, dynamic>;
+    expect(json['items'], isA<List>());
+    expect(json['items'], isEmpty);
+    expect(json['hasMore'], isFalse);
+  }
+
+  Future<void> _testGetStateWithSeededData() async {
+    // Seed a state via the API using the same approach as other tests
+    final expectedNameLocal = 'Seeded Task';
+    final expectedParentId = 'seed-project';
+
+    // Use the existing seedChange method to create the test data
+    await seedChange(
+      changePayload(
+        domainId: 'seed-project',
+        entityType: 'task',
+        entityId: 'task-1',
+        changeAt: baseTime,
+        data: {'nameLocal': expectedNameLocal, 'parentId': expectedParentId},
+        operation: 'create',
+      ),
+    );
+
+    final baseUrl = await resolveBaseUrl();
+
+    // Query collection
+    final uri = baseUrl.replace(path: '/api/state/projects/seed-project/tasks');
+    final req = await HttpClient().getUrl(uri);
+    final res = await req.close();
+    expect(res.statusCode, 200);
+    final body = await res.transform(utf8.decoder).join();
+    final json = jsonDecode(body) as Map<String, dynamic>;
+    expect(json['items'], isA<List>());
+    expect(json['items'].length, 1);
+    final item = json['items'].first as Map<String, dynamic>;
+    expect(item['data_nameLocal'], expectedNameLocal, reason: body);
+
+    // Query specific entity
+    final uri2 = baseUrl.replace(
+      path: '/api/state/projects/seed-project/tasks/seed-project-task-1',
+    );
+    final req2 = await HttpClient().getUrl(uri2);
+    final res2 = await req2.close();
+    expect(res2.statusCode, 200);
+    final body2 = await res2.transform(utf8.decoder).join();
+    final json2 = jsonDecode(body2) as Map<String, dynamic>;
+    expect(json2['entityId'], 'seed-project-task-1');
+    final state = json2['state'] as Map<String, dynamic>;
+    expect(state['data_nameLocal'], expectedNameLocal, reason: body2);
+    expect(state['data_parentId'], expectedParentId, reason: body2);
   }
 }
 
