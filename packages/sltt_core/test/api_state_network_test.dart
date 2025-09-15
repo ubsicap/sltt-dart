@@ -26,6 +26,20 @@ void main() {
     final addr = server.address;
     expect(addr, isNotNull);
     baseUrl = Uri.parse(addr!);
+
+    // Register change-log entry factory group for tests
+    registerChangeLogEntryFactoryGroup(
+      SerializableGroup<BaseChangeLogEntry>(
+        fromJson: TestChangeLogEntry.fromJson,
+        fromJsonBase: TestChangeLogEntry.fromJsonBase,
+        toJson: (entry) => (entry as TestChangeLogEntry).toJson(),
+        toJsonBase: (entry) => (entry as TestChangeLogEntry).toJsonBase(),
+        toSafeJson: (original) {
+          // Use the common safe JSON service
+          return SafeJsonService.generateSafeChangeLogJson(original);
+        },
+      ),
+    );
   });
 
   tearDownAll(() async {
@@ -47,75 +61,82 @@ void main() {
       expect(json['hasMore'], isFalse);
     });
 
-    test(
-      'returns seeded entity state by entityCollection and entityId',
-      () async {
-        // Seed a state directly into storage via updateChangeLogAndState
-        final change = TestChangeLogEntry(
-          cid: 'seed-cid',
-          entityId: 'task-1',
-          entityType: 'task',
-          domainId: 'seed-project',
-          domainType: 'project',
-          changeAt: DateTime.now(),
-          changeBy: 'tester',
-          dataJson: '{}',
-          operation: 'create',
-          stateChanged: true,
-        );
+    test('returns seeded entity state by entityCollection and entityId', () async {
+      // Seed a state directly into storage via updateChangeLogAndState
+      final expectedNameLocal = 'Seeded Task';
+      final expectedParentId = 'seed-project';
+      final change = TestChangeLogEntry(
+        cid: 'seed-cid',
+        entityId: 'seed-project-task-1',
+        entityType: 'task',
+        domainId: 'seed-project',
+        domainType: 'project',
+        changeAt: DateTime.now(),
+        changeBy: 'tester',
+        operation: 'create',
+        stateChanged: false,
+        dataJson: jsonEncode({
+          'nameLocal': expectedNameLocal,
+          'parentId': expectedParentId,
+        }),
+      );
 
-        final stateUpdates = {
-          'entityId': 'seed-project-task-1',
-          'entityType': 'task',
-          'domainType': 'project',
-          'domainId': 'seed-project',
-          'data_nameLocal': 'Seeded Task',
-        };
+      // Route the seeded change through the production change processing pipeline
+      // so a canonical state is produced rather than seeding the state directly.
+      final changeJson = change.toJson();
+      final procResult = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: [changeJson],
+        srcStorageType: 'cloud',
+        srcStorageId: 'cloudId',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
 
-        await storage.updateChangeLogAndState(
-          domainType: 'project',
-          changeLogEntry: change,
-          changeUpdates: {},
-          entityState: null,
-          stateUpdates: stateUpdates,
-        );
+      expect(
+        procResult.isSuccess,
+        isTrue,
+        reason:
+            'ChangeProcessingService failed: ${procResult.errorMessage ?? "Unknown error"}\nresultsSummary: ${procResult.resultsSummary}',
+      );
 
-        // Query collection
-        final uri = baseUrl.replace(
-          path: '/api/state/projects/seed-project/tasks',
-        );
-        final req = await HttpClient().getUrl(uri);
-        final res = await req.close();
-        expect(res.statusCode, 200);
-        final body = await res.transform(utf8.decoder).join();
-        print('DEBUG: collection response body: $body');
-        final json = jsonDecode(body) as Map<String, dynamic>;
-        expect(json['items'], isA<List>());
-        expect(json['items'].length, 1);
-        final item = json['items'].first as Map<String, dynamic>;
-        print('DEBUG: collection first item: $item');
-        print(
-          'DEBUG: data_nameLocal exists: ${item.containsKey('data_nameLocal')}',
-        );
-        print('DEBUG: data_nameLocal value: ${item['data_nameLocal']}');
-        print(
-          'DEBUG: data_nameLocal runtimeType: ${item['data_nameLocal']?.runtimeType}',
-        );
-        expect(item['data_nameLocal'], 'Seeded Task');
+      // Query collection
+      final uri = baseUrl.replace(
+        path: '/api/state/projects/seed-project/tasks',
+      );
+      final req = await HttpClient().getUrl(uri);
+      final res = await req.close();
+      expect(res.statusCode, 200);
+      final body = await res.transform(utf8.decoder).join();
+      print('DEBUG: collection response body: $body');
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      expect(json['items'], isA<List>());
+      expect(json['items'].length, 1);
+      final item = json['items'].first as Map<String, dynamic>;
+      print('DEBUG: collection first item: $item');
+      print(
+        'DEBUG: data_nameLocal exists: ${item.containsKey('data_nameLocal')}',
+      );
+      print('DEBUG: data_nameLocal value: ${item['data_nameLocal']}');
+      print(
+        'DEBUG: data_nameLocal runtimeType: ${item['data_nameLocal']?.runtimeType}',
+      );
+      expect(item['data_nameLocal'], expectedNameLocal, reason: body);
 
-        // Query specific entity
-        final uri2 = baseUrl.replace(
-          path: '/api/state/projects/seed-project/tasks/seed-project-task-1',
-        );
-        final req2 = await HttpClient().getUrl(uri2);
-        final res2 = await req2.close();
-        expect(res2.statusCode, 200);
-        final body2 = await res2.transform(utf8.decoder).join();
-        final json2 = jsonDecode(body2) as Map<String, dynamic>;
-        expect(json2['entityId'], 'seed-project-task-1');
-        final state = json2['state'] as Map<String, dynamic>;
-        expect(state['data_nameLocal'], 'Seeded Task');
-      },
-    );
+      // Query specific entity
+      final uri2 = baseUrl.replace(
+        path: '/api/state/projects/seed-project/tasks/${change.entityId}',
+      );
+      final req2 = await HttpClient().getUrl(uri2);
+      final res2 = await req2.close();
+      expect(res2.statusCode, 200);
+      final body2 = await res2.transform(utf8.decoder).join();
+      final json2 = jsonDecode(body2) as Map<String, dynamic>;
+      expect(json2['entityId'], change.entityId);
+      final state = json2['state'] as Map<String, dynamic>;
+      expect(state['data_nameLocal'], expectedNameLocal, reason: body2);
+      expect(state['data_parentId'], expectedParentId, reason: body2);
+    });
   });
 }

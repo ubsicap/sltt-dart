@@ -72,42 +72,8 @@ class InMemoryStorage implements BaseStorageService {
     // Debug: log merged state payload before constructing TestEntityState
     TestEntityState? newState;
     try {
-      // Ensure required test-state fields are present to avoid JSON deserialization errors
-      if (!merged.containsKey('data_nameLocal')) {
-        merged['data_nameLocal'] = '';
-      }
-      // Make sure domainType and entityType are present for test deserializers
-      if (!merged.containsKey('domainType')) {
-        merged['domainType'] = domainType;
-      }
-      if (!merged.containsKey('entityType')) {
-        merged['entityType'] = newChange.entityType;
-      }
-      // Ensure presence of fields expected by TestEntityState.fromJson
-      merged['unknownJson'] = merged['unknownJson'] ?? '{}';
-      merged['change_domainId'] =
-          merged['change_domainId'] ?? newChange.domainId;
-      merged['change_domainId_orig_'] =
-          merged['change_domainId_orig_'] ?? newChange.domainId;
-      merged['change_changeAt'] =
-          merged['change_changeAt'] ?? newChange.changeAt.toIso8601String();
-      merged['change_changeAt_orig_'] =
-          merged['change_changeAt_orig_'] ??
-          newChange.changeAt.toIso8601String();
-      merged['change_cid'] = merged['change_cid'] ?? newChange.cid;
-      merged['change_cid_orig_'] = merged['change_cid_orig_'] ?? newChange.cid;
-      merged['change_changeBy'] =
-          merged['change_changeBy'] ?? newChange.changeBy;
-      merged['change_changeBy_orig_'] =
-          merged['change_changeBy_orig_'] ?? newChange.changeBy;
-      merged['data_parentId'] = merged['data_parentId'] ?? '';
-      merged['data_parentId_changeAt_'] =
-          merged['data_parentId_changeAt_'] ??
-          newChange.changeAt.toIso8601String();
-      merged['data_parentId_cid_'] =
-          merged['data_parentId_cid_'] ?? newChange.cid;
-      merged['data_parentId_changeBy_'] =
-          merged['data_parentId_changeBy_'] ?? newChange.changeBy;
+      // Intentionally do not inject fallback fields here. Tests should provide
+      // the minimal required fields
       print(
         'DEBUG: InMemoryStorage merged state for CID ${newChange.cid}: $merged',
       );

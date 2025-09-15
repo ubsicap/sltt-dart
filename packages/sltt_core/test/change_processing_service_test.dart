@@ -585,6 +585,7 @@ void main() {
             entityId: 'entity-1',
             changeAt: baseTime,
             storageId: '', // Empty for save mode
+            data: {'nameLocal': 'Local Match Test', 'parentId': 'root'},
           );
           final r2 = await ChangeProcessingService.processChanges(
             changes: [p2],
@@ -609,6 +610,7 @@ void main() {
             entityType: 'project',
             entityId: 'entity-1',
             changeAt: baseTime,
+            data: {'nameLocal': 'Cloud Src Test', 'parentId': 'entity-0'},
           );
           final r3 = await ChangeProcessingService.processChanges(
             changes: [p3],
@@ -623,7 +625,7 @@ void main() {
             r3.isSuccess,
             isTrue,
             reason:
-                'r3 processChanges failed: ${r3.errorMessage ?? "Unknown error"}',
+                'r3 processChanges failed: ${r3.errorMessage ?? "Unknown error"}\nresultsSummary: ${r3.resultsSummary}',
           );
           expect(r3.resultsSummary!.storageId, equals(serverStorageId));
         },

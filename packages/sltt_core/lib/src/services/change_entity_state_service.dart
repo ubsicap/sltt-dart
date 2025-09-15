@@ -478,6 +478,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
     'stateUpdates': {
       if (entityState == null) ...{
         'entityId': changeLogEntry.entityId,
+        'domainType': changeLogEntry.domainType,
         'entityType': changeLogEntry.entityType.toString().split('.').last,
         'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
         // _orig_ empty/default field_x_orig_ should inherit field_x values

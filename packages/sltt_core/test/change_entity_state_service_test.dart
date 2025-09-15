@@ -776,6 +776,7 @@ void main() {
           updates.stateUpdates,
           equals({
             'entityId': 'entity2',
+            'domainType': 'project',
             'entityType': 'task',
             'change_dataSchemaRev': null,
             'change_domainId_orig_': 'project1',

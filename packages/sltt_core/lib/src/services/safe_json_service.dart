@@ -21,9 +21,13 @@ class SafeJsonService {
 
     return {
       'entityId': original['entityId'] ?? '',
+      // Ensure the minimal required type identifiers exist. Tests and
+      // deserializers expect non-null strings for these fields.
       'entityType': original['entityType'] ?? 'unknown',
       'domainId': original['domainId'] ?? '',
-      'domainType': original['domainType'] ?? '',
+      // domainType is required by BaseEntityState deserialization (checked
+      // mode). Provide an explicit fallback so failures are centralized.
+      'domainType': original['domainType'] ?? 'unknown',
       'changeAt': original['changeAt'] ?? now.toIso8601String(),
       'cid': original['cid'] ?? generateCid(now),
       'storageId': original['storageId'] ?? '',
@@ -32,7 +36,9 @@ class SafeJsonService {
       'operation': original['operation'] ?? 'unknown',
       'operationInfoJson': JsonUtils.normalize(original['operationInfoJson']),
       'stateChanged': original['stateChanged'] ?? false,
-      'unknownJson': JsonUtils.normalize(original['unknownJson']),
+      // Ensure unknownJson is at least an empty object string; many
+      // serializers expect a JSON string here.
+      'unknownJson': JsonUtils.normalize(original['unknownJson'] ?? '{}'),
     };
   }
 }
