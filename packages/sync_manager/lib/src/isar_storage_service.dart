@@ -774,17 +774,17 @@ class IsarStorageService extends BaseStorageService {
   /// Get all unique project IDs across all entityStates
   @override
   Future<List<String>> getAllDomainIds({required String domainType}) async {
-    final allChanges = await _isar.isarChangeLogEntrys
+    // Use the entity-type sync state collection which tracks domainIds
+    // for each entityType/domain combination. This avoids scanning the
+    // entire change log and is more efficient for discovering known domains.
+    final entries = await _isar.isarEntityTypeSyncStates
         .filter()
         .domainTypeEqualTo(domainType)
         .findAll();
 
-    // Extract unique domain IDs
     final domainIds = <String>{};
-    for (final change in allChanges) {
-      if (change.domainId.isNotEmpty) {
-        domainIds.add(change.domainId);
-      }
+    for (final e in entries) {
+      if (e.domainId.isNotEmpty) domainIds.add(e.domainId);
     }
 
     return domainIds.toList()..sort();
