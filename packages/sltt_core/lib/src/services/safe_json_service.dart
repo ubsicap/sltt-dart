@@ -33,8 +33,6 @@ class SafeJsonService {
       'operationInfoJson': JsonUtils.normalize(original['operationInfoJson']),
       'stateChanged': original['stateChanged'] ?? false,
       'unknownJson': JsonUtils.normalize(original['unknownJson']),
-      'dataSchemaRev': original['dataSchemaRev'] ?? 0,
-      'schemaVersion': original['schemaVersion'] ?? 1,
     };
   }
 }
