@@ -115,6 +115,7 @@ void main() {
       changeLogEntry: change,
       changeUpdates: {'seq': 42, 'stateChanged': true},
       stateUpdates: {
+        'domainType': 'project',
         'entityId': entityId,
         'entityType': 'project',
         'change_domainId': projectId,

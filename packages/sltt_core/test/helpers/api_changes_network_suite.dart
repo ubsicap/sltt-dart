@@ -292,12 +292,12 @@ class ApiChangesNetworkTestSuite {
     // Use helper to post a single change so the helper can ensure
     // unique CIDs are generated per request to avoid unique index
     // violations when tests run repeatedly.
-    final now = DateTime.now().toUtc();
+    final now = HlcTimestampGenerator.generate();
     final change = {
       'domainId': 'proj-1',
       'domainType': 'project',
       'entityType': 'project',
-      'entityId': 'entity-1',
+      'entityId': 'entity-1-OWna',
       'changeBy': 'tester',
       'changeAt': now.toIso8601String(),
       'cid': generateCid(now),
