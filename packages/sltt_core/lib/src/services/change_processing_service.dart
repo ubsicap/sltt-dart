@@ -30,6 +30,9 @@ class ChangeProcessingService {
     /// `save` or `sync`
     required String storageMode,
 
+    /// If true, return an error if there are any errors in resultsSummary
+    bool returnErrorIfInResultsSummary = true,
+
     /// changes to `save` or `sync`
     required List<Map<String, dynamic>> changes,
 
@@ -279,6 +282,15 @@ class ChangeProcessingService {
             'stackTrace': stackTrace.toString(),
           });
         }
+      }
+
+      if (returnErrorIfInResultsSummary && resultsSummary.errors.isNotEmpty) {
+        return ChangeProcessingResult(
+          errorMessage:
+              'One or more changes resulted in errors. See resultsSummary for details.',
+          errorCode: 400, // consider using 207 Multi-Status in future?
+          resultsSummary: resultsSummary,
+        );
       }
 
       return ChangeProcessingResult(resultsSummary: resultsSummary);

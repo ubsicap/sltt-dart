@@ -1112,6 +1112,7 @@ abstract class BaseRestApiServer {
       // Use the change processing service
       final result = await ChangeProcessingService.processChanges(
         storageMode: storageMode,
+        returnErrorIfInResultsSummary: storageMode == 'save',
         changes: changes,
         srcStorageType: srcStorageType,
         srcStorageId: srcStorageId,
@@ -1125,6 +1126,18 @@ abstract class BaseRestApiServer {
           result.errorMessage!,
           result.errorCode!,
           result.stackTrace,
+        );
+      }
+
+      if (storageMode == 'save' &&
+          result.resultsSummary != null &&
+          result.resultsSummary!.errors.isNotEmpty) {
+        // If in 'save' mode and there were errors, return 500 Internal Server Error
+        return _errorResponse(
+          'Errors reported in resultsSummary',
+          result.errorCode ?? 500,
+          null,
+          result.resultsSummary,
         );
       }
 
@@ -1446,6 +1459,7 @@ abstract class BaseRestApiServer {
     String message,
     int statusCode, [
     StackTrace? stackTrace,
+    ChangeProcessingSummary? resultsSummary,
   ]) {
     // Log error to console
     print('[$serverName] Error ($statusCode): $message');
@@ -1462,6 +1476,9 @@ abstract class BaseRestApiServer {
     // Include stack trace information if provided
     if (stackTrace != null) {
       errorBody['stackTrace'] = stackTrace.toString();
+    }
+    if (resultsSummary != null) {
+      errorBody['resultsSummary'] = resultsSummary.toJson();
     }
 
     return Response(

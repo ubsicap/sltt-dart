@@ -1,4 +1,10 @@
 @Tags(['network'])
+// NOTE: This test file intentionally drives tests from
+// `packages/sltt_core/test/helpers/api_changes_network_suite.dart`.
+// When adding new POST /api/changes tests, register them in the suite
+// and call the specific suite entries here so all backends run the same
+// individual tests (instead of duplicating logic in multiple files).
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:shelf/shelf.dart';
@@ -82,6 +88,10 @@ void main() {
 
   group('API Changes Network Tests (Individual Test Groups)', () {
     // Run individual test groups with proper naming
+    // NOTE: When adding new POST /api/changes tests, register them in
+    // `packages/sltt_core/test/helpers/api_changes_network_suite.dart` and
+    // add a corresponding `test()` call in this file and
+    // `packages/sync_manager/test/isar_storage_api_changes_network_test.dart`.
     group('POST /api/changes', () {
       late ApiChangesNetworkTestSuite suite;
       late Map<String, Future<void> Function()> postTests;
@@ -96,6 +106,20 @@ void main() {
         'with includeChangeUpdates/includeStateUpdates returns summaries',
         () async {
           await postTests['with includeChangeUpdates/includeStateUpdates returns summaries']!();
+        },
+      );
+
+      test(
+        'save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)',
+        () async {
+          await postTests['save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)']!();
+        },
+      );
+
+      test(
+        'sync mode: returns success with errors in summary (returnErrorIfInResultsSummary=false)',
+        () async {
+          await postTests['sync mode: returns success with errors in summary (returnErrorIfInResultsSummary=false)']!();
         },
       );
     });
@@ -203,6 +227,8 @@ void main() {
       // This should match the suiteTestNames set
       final actuallyRunTestNames = {
         'with includeChangeUpdates/includeStateUpdates returns summaries',
+        'save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)',
+        'sync mode: returns success with errors in summary (returnErrorIfInResultsSummary=false)',
         'returns empty list for project with no changes',
         'returns changes for project with seeded data',
         'respects limit parameter',

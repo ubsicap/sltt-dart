@@ -1,5 +1,12 @@
 @Tags(['network'])
+// NOTE: This Isar test runner should call individual tests from
+// `packages/sltt_core/test/helpers/api_changes_network_suite.dart` rather
+// than duplicating test logic. When you add a new POST /api/changes test,
+// register it in the suite and call it from both this file and
+// `packages/sltt_core/test/api_changes_network_test.dart` so all backends
+// exercise the same behavior.
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:shelf/shelf.dart';
@@ -108,6 +115,11 @@ void main() {
 
   group('API Changes Network Tests (Individual Test Groups)', () {
     // Run individual test groups with proper naming
+    // NOTE: When adding new POST /api/changes tests, register them in
+    // `packages/sltt_core/test/helpers/api_changes_network_suite.dart` and
+    // add a corresponding `test()` call in this file and
+    // `packages/sltt_core/test/api_changes_network_test.dart` so all
+    // storage backends execute the same behavior.
     group('POST /api/changes', () {
       late ApiChangesNetworkTestSuite suite;
       late Map<String, Future<void> Function()> postTests;
@@ -122,6 +134,20 @@ void main() {
         'with includeChangeUpdates/includeStateUpdates returns summaries',
         () async {
           await postTests['with includeChangeUpdates/includeStateUpdates returns summaries']!();
+        },
+      );
+
+      test(
+        'save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)',
+        () async {
+          await postTests['save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)']!();
+        },
+      );
+
+      test(
+        'sync mode: returns success with errors in summary (returnErrorIfInResultsSummary=false)',
+        () async {
+          await postTests['sync mode: returns success with errors in summary (returnErrorIfInResultsSummary=false)']!();
         },
       );
     });
@@ -214,6 +240,10 @@ void main() {
       });
     });
 
+    // The returnErrorIfInResultsSummary behaviors are covered by the
+    // 'POST /api/changes' group above which calls the centralized suite
+    // entries. Removing the duplicate group prevents test duplication.
+
     // Verification test to ensure all suite tests are being run
     test('verifies all suite tests are being run (IsarStorageService)', () async {
       final suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
@@ -231,6 +261,8 @@ void main() {
       // This should match the suiteTestNames set
       final actuallyRunTestNames = {
         'with includeChangeUpdates/includeStateUpdates returns summaries',
+        'save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)',
+        'sync mode: returns success with errors in summary (returnErrorIfInResultsSummary=false)',
         'returns empty list for project with no changes',
         'returns changes for project with seeded data',
         'respects limit parameter',

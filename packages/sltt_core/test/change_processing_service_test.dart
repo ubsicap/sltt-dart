@@ -283,6 +283,139 @@ void main() {
       });
     });
 
+    group('- returnErrorIfInResultsSummary tests', () {
+      setUp(() {
+        storage = InMemoryStorage(storageType: 'local');
+      });
+
+      tearDown(() async {
+        await storage.close();
+      });
+
+      test(
+        'save mode returns error when summary has errors (returnErrorIfInResultsSummary=true)',
+        () async {
+          await storage.initialize();
+          final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+
+          // Create a change that will cause an error (invalid JSON)
+          final changeData = {
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'task',
+            'entityId': 'task-save-error-test',
+            'changeBy': 'tester',
+            'changeAt': baseTime.toUtc().toIso8601String(),
+            'cid': generateCid(baseTime),
+            'storageId': '', // Empty for save mode
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': true,
+            'unknownJson': '{}',
+            'dataJson': 'invalid-json', // This will cause an error
+          };
+
+          final result = await ChangeProcessingService.processChanges(
+            storageMode: 'save',
+            changes: [changeData],
+            srcStorageType: 'local',
+            srcStorageId: 'local',
+            storage: storage,
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+            returnErrorIfInResultsSummary: true, // Save mode default
+          );
+
+          expect(result.isError, isTrue);
+          expect(
+            result.errorMessage,
+            contains('One or more changes resulted in errors'),
+          );
+        },
+      );
+
+      test(
+        'sync mode returns success despite summary errors (returnErrorIfInResultsSummary=false)',
+        () async {
+          await storage.initialize();
+          final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+
+          // Create a change that will cause an error (invalid JSON)
+          final changeData = {
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'task',
+            'entityId': 'task-sync-error-test',
+            'changeBy': 'tester',
+            'changeAt': baseTime.toUtc().toIso8601String(),
+            'cid': generateCid(baseTime),
+            'storageId': 'remote-storage', // Non-empty for sync mode
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': true,
+            'unknownJson': '{}',
+            'dataJson': 'invalid-json', // This will cause an error
+          };
+
+          final result = await ChangeProcessingService.processChanges(
+            storageMode: 'sync',
+            changes: [changeData],
+            srcStorageType: 'cloud',
+            srcStorageId: 'cloud-storage',
+            storage: storage,
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+            returnErrorIfInResultsSummary: false, // Sync mode default
+          );
+
+          expect(result.isSuccess, isTrue);
+          expect(result.resultsSummary, isNotNull);
+          expect(result.resultsSummary!.errors, isNotEmpty);
+        },
+      );
+
+      test(
+        'explicit returnErrorIfInResultsSummary=false overrides save mode behavior',
+        () async {
+          await storage.initialize();
+          final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+
+          // Create a change that will cause an error (invalid JSON)
+          final changeData = {
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'task',
+            'entityId': 'task-override-test',
+            'changeBy': 'tester',
+            'changeAt': baseTime.toUtc().toIso8601String(),
+            'cid': generateCid(baseTime),
+            'storageId': '', // Empty for save mode
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': true,
+            'unknownJson': '{}',
+            'dataJson': 'invalid-json', // This will cause an error
+          };
+
+          // Explicitly override save mode default behavior
+          final result = await ChangeProcessingService.processChanges(
+            storageMode: 'save',
+            changes: [changeData],
+            srcStorageType: 'local',
+            srcStorageId: 'local',
+            storage: storage,
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+            returnErrorIfInResultsSummary: false, // Override save mode default
+          );
+
+          expect(result.isSuccess, isTrue);
+          expect(result.resultsSummary, isNotNull);
+          expect(result.resultsSummary!.errors, isNotEmpty);
+        },
+      );
+    });
+
     group('- api_changes_network_tests', () {
       late InMemoryStorage svcStorage;
 
