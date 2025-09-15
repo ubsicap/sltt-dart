@@ -593,40 +593,19 @@ void main() {
         includeStateUpdates: false,
       );
       expect(dr.isSuccess, isTrue, reason: dr.errorMessage);
+      expect(
+        dr.resultsSummary!.deleted,
+        equals([deletePayload['cid']]),
+        reason:
+            'processChanges did not report deleted cids: ${dr.resultsSummary}',
+      );
 
-      // The persisted cid should match the input payload cid.
-      // But sometimes the persisted CID may be reported in the processChanges
-      // resultsSummary instead of being directly discoverable by the input
-      // payload (depending on internal normalization). Try a robust lookup:
       final expectedCid = deletePayload['cid'] as String;
       var persisted = await storage.getChange(
         domainType: 'project',
         domainId: projectId,
         cid: expectedCid,
       );
-
-      // Fallback: search for a CID reported in the processChanges results
-      // (deleted/created/updated) and use that to fetch the persisted change.
-      if (persisted == null) {
-        final summary = dr.resultsSummary;
-        String? foundCid;
-        if (summary != null) {
-          if (summary.deleted.isNotEmpty) {
-            foundCid = summary.deleted.first;
-          } else if (summary.created.isNotEmpty) {
-            foundCid = summary.created.first;
-          } else if (summary.updated.isNotEmpty) {
-            foundCid = summary.updated.first;
-          }
-        }
-        if (foundCid != null) {
-          persisted = await storage.getChange(
-            domainType: 'project',
-            domainId: projectId,
-            cid: foundCid,
-          );
-        }
-      }
 
       expect(
         persisted,
