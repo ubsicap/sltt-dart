@@ -236,6 +236,9 @@ class IsarStorageService extends BaseStorageService {
             .findFirst();
 
         final op = newChange.operation;
+        print(
+          'updateChangeLogAndState - Upserting entity-type sync state for entityType=${changeLogEntry.entityType} entityId=${newChange.entityId} domainId=${newChange.domainId} op=$op existing=${existing != null}',
+        );
         if (existing != null) {
           // Explicitly increment counters on the existing record so the
           // stored counts reflect the actual number of ops performed.

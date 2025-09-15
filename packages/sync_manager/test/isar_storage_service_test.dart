@@ -579,8 +579,7 @@ void main() {
     test('gets entity type statistics', () async {
       final projectId = 'proj-entity-stats';
 
-      // Create changes for different entity types via canonical processing
-      for (final payload in [
+      final payload = [
         changePayload(
           projectId: projectId,
           entityType: 'project',
@@ -599,34 +598,75 @@ void main() {
           entityId: 'doc-2',
           changeAt: baseTime.add(const Duration(minutes: 2)),
         ),
-      ]) {
-        final r = await ChangeProcessingService.processChanges(
-          storageMode: 'save',
-          changes: [payload],
-          srcStorageType: 'local',
-          srcStorageId: 'local-client',
-          storage: storage,
-          includeChangeUpdates: false,
-          includeStateUpdates: false,
-        );
-        expect(r.isSuccess, isTrue, reason: r.errorMessage);
-      }
-
+        changePayload(
+          projectId: projectId,
+          entityType: 'document',
+          entityId: 'doc-2',
+          changeAt: baseTime.add(const Duration(minutes: 3)),
+          data: {'title': 'Updated Title'},
+        ),
+        changePayload(
+          projectId: projectId,
+          entityType: 'document',
+          entityId: 'doc-2',
+          changeAt: baseTime.add(const Duration(minutes: 4)),
+          data: {'deleted': true},
+        ),
+      ];
+      final r = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: payload,
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(r.isSuccess, isTrue, reason: r.errorMessage);
+      expect(
+        r.resultsSummary?.created.length,
+        equals(3),
+        reason:
+            'processChanges did not report created cids: ${r.resultsSummary}',
+      );
+      expect(
+        r.resultsSummary?.updated.length,
+        equals(1),
+        reason:
+            'processChanges did not report updated cids: ${r.resultsSummary}',
+      );
+      expect(
+        r.resultsSummary?.deleted.length,
+        equals(1),
+        reason:
+            'processChanges did not report deleted cids: ${r.resultsSummary}',
+      );
       final stats = await storage.getEntityTypeStats(
         domainType: 'project',
         domainId: projectId,
       );
       // New shape: { 'entityTypes': { '<type>': {creates, updates, deletes, total}}, 'totals': {...} }
       expect(stats.containsKey('entityTypes'), isTrue);
-      final entityTypes = stats['entityTypes'] as Map<String, dynamic>;
+      final entityTypes = stats['entityTypes'];
       expect(
-        (entityTypes['project'] as Map<String, dynamic>)['total'],
-        equals(1),
+        entityTypes['project'],
+        equals({
+          'creates': 1,
+          'updates': 0,
+          'deletes': 0,
+          'total': 1,
+          'latestChangeAt': '2023-01-01T00:00:00.000Z',
+          'latestSeq': 1,
+        }),
       );
-      expect(
-        (entityTypes['document'] as Map<String, dynamic>)['total'],
-        equals(2),
-      );
+      expect(entityTypes['document'], {
+        'creates': 2,
+        'updates': 1,
+        'deletes': 1,
+        'total': 4,
+        'latestChangeAt': '2023-01-01T00:04:00.000Z',
+        'latestSeq': 5,
+      });
     });
 
     test('gets all projects', () async {
