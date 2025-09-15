@@ -262,7 +262,6 @@ class DynamoDBStorageService extends BaseStorageService {
     }).toList();
   }
 
-  @override
   Future<List<ChangeLogEntry>> getChangesSince(String domainId, int seq) async {
     if (!_initialized) await initialize();
 

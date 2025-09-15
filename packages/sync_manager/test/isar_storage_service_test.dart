@@ -225,58 +225,6 @@ void main() {
         expect(change.domainId, equals(projectId));
       }
     });
-
-    test('gets changes since specific sequence number', () async {
-      final projectId = 'proj-since';
-      final changes = <BaseChangeLogEntry>[];
-
-      // Create multiple changes
-      for (int i = 1; i <= 3; i++) {
-        final changeData = changePayload(
-          projectId: projectId,
-          storageId: '',
-          entityType: 'project',
-          entityId: 'entity-$i',
-          changeAt: baseTime.add(Duration(minutes: i)),
-          data: {'nameLocal': 'Project $i', 'parentId': 'root'},
-        );
-        final r = await ChangeProcessingService.processChanges(
-          storageMode: 'save',
-          changes: [changeData],
-          srcStorageType: 'local',
-          srcStorageId: 'local-client',
-          storage: storage,
-          includeChangeUpdates: false,
-          includeStateUpdates: false,
-        );
-        expect(r.isSuccess, isTrue, reason: r.errorMessage);
-        expect(
-          r.resultsSummary!.created,
-          isNotEmpty,
-          reason:
-              'processChanges did not report created cids: ${r.resultsSummary}',
-        );
-        final createdCid = r.resultsSummary!.created.first;
-        final change = await storage.getChange(
-          domainType: 'project',
-          domainId: projectId,
-          cid: createdCid,
-        );
-        expect(change, isNotNull);
-        changes.add(change!);
-      }
-
-      // Get changes since the first one
-      final sinceChanges = await storage.getChangesSince(
-        projectId,
-        changes[0].seq,
-      );
-
-      // Should include changes 2 and 3 (after seq 1)
-      expect(sinceChanges.length, equals(2));
-      expect(sinceChanges[0].entityId, equals('entity-2'));
-      expect(sinceChanges[1].entityId, equals('entity-3'));
-    });
   });
 
   group('IsarStorageService Entity State Operations', () {

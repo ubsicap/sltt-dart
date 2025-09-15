@@ -592,23 +592,6 @@ class IsarStorageService extends BaseStorageService {
   }
   */
 
-  // Get changes since a specific sequence number (for syncing)
-  Future<List<BaseChangeLogEntry>> getChangesSince(
-    String domainId,
-    int seq,
-  ) async {
-    final results = await _isar.isarChangeLogEntrys
-        .where()
-        .seqGreaterThan(seq)
-        .filter()
-        .domainIdEqualTo(domainId)
-        .findAll();
-
-    // Sort by seq in ascending order
-    results.sort((a, b) => a.seq.compareTo(b.seq));
-    return _convertToChangeLogEntries(results);
-  }
-
   // COMMENTED OUT FOR NOW - TO BE FIXED LATER
   /*
   // Store multiple changes (for batch operations)

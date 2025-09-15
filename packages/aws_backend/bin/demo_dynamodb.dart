@@ -111,7 +111,7 @@ Future<void> main() async {
     }
     print('✅ Specific change retrieval test passed\n');
 
-    // Test 4: Get changes since sequence
+    // TODO: Change to use cursor: Test 4: Get changes since sequence
     print('📈 Testing changes since sequence...');
     final changesSince = await storage.getChangesSince(
       demoProjectId,
