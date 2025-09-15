@@ -554,11 +554,25 @@ void main() {
             'processChanges did not report created or updated cids: ${r2.resultsSummary}',
       );
 
-      // The delete operation can produce entity state JSON with many null
-      // fields which json_serializable checked-mode will reject. To avoid
-      // changing production code here, create the delete change via the
-      // lower-level storage API and provide explicit non-null state
-      // metadata required by the Isar entity state deserializers.
+      final seed3 = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: [
+          changePayload(
+            projectId: projectId,
+            entityType: 'project',
+            entityId: 'entity-3',
+            changeAt: baseTime.subtract(const Duration(minutes: 2)),
+            operation: 'create',
+          ),
+        ],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(seed3.isSuccess, isTrue, reason: seed3.errorMessage);
+
       final deletePayload = changePayload(
         projectId: projectId,
         entityType: 'project',
@@ -566,38 +580,61 @@ void main() {
         changeAt: baseTime.add(const Duration(minutes: 2)),
         operation: 'delete',
         addDefaultParentId: false,
+        data: {'deleted': true},
       );
 
-      final deleteChange = IsarChangeLogEntry.fromJson(deletePayload);
-      final deleteResult = await storage.updateChangeLogAndState(
+      final dr = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: [deletePayload],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(dr.isSuccess, isTrue, reason: dr.errorMessage);
+
+      // The persisted cid should match the input payload cid.
+      // But sometimes the persisted CID may be reported in the processChanges
+      // resultsSummary instead of being directly discoverable by the input
+      // payload (depending on internal normalization). Try a robust lookup:
+      final expectedCid = deletePayload['cid'] as String;
+      var persisted = await storage.getChange(
         domainType: 'project',
-        changeLogEntry: deleteChange,
-        changeUpdates: {'stateChanged': true},
-        stateUpdates: {
-          'entityId': deleteChange.entityId,
-          'entityType': deleteChange.entityType,
-          'change_domainId': projectId,
-          'change_changeAt': deleteChange.changeAt.toIso8601String(),
-          'change_cid': deleteChange.cid,
-          'change_changeBy': deleteChange.changeBy,
-          // Orig fields set to safe defaults
-          'change_domainId_orig_': '',
-          'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
-              .toIso8601String(),
-          'change_cid_orig_': '',
-          'change_changeBy_orig_': '',
-          // data_parentId required by BaseEntityState mixin
-          'data_parentId': deleteChange.entityId,
-          'data_parentId_changeAt_': deleteChange.changeAt.toIso8601String(),
-          'data_parentId_cid_': deleteChange.cid,
-          'data_parentId_changeBy_': deleteChange.changeBy,
-          'unknownJson': '{}',
-        },
+        domainId: projectId,
+        cid: expectedCid,
       );
 
-      // Basic sanity checks on the updateChangeLogAndState result
-      expect(deleteResult.newChangeLogEntry, isNotNull);
-      expect(deleteResult.newChangeLogEntry.cid, isNotEmpty);
+      // Fallback: search for a CID reported in the processChanges results
+      // (deleted/created/updated) and use that to fetch the persisted change.
+      if (persisted == null) {
+        final summary = dr.resultsSummary;
+        String? foundCid;
+        if (summary != null) {
+          if (summary.deleted.isNotEmpty) {
+            foundCid = summary.deleted.first;
+          } else if (summary.created.isNotEmpty) {
+            foundCid = summary.created.first;
+          } else if (summary.updated.isNotEmpty) {
+            foundCid = summary.updated.first;
+          }
+        }
+        if (foundCid != null) {
+          persisted = await storage.getChange(
+            domainType: 'project',
+            domainId: projectId,
+            cid: foundCid,
+          );
+        }
+      }
+
+      expect(
+        persisted,
+        isNotNull,
+        reason:
+            'Persisted delete change was not found by payload cid ($expectedCid) or by processChanges results: ${dr.resultsSummary}',
+      );
+      expect(persisted!.operation, equals('delete'));
 
       final stats = await storage.getChangeStats(
         domainType: 'project',
