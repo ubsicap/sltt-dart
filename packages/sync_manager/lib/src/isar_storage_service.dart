@@ -437,11 +437,38 @@ class IsarStorageService extends BaseStorageService {
         .operationEqualTo('delete')
         .count();
 
+    // Determine the most recent change (by seq) for latestChangeAt/latestSeq
+    DateTime? mostRecentChangeAt;
+    int mostRecentSeq = 0;
+    try {
+      final changes = await _isar.isarChangeLogEntrys
+          .filter()
+          .domainIdEqualTo(domainId)
+          .and()
+          .domainTypeEqualTo(domainType)
+          .findAll();
+
+      for (final c in changes) {
+        // `c.seq` is an `int` (Isar Id) and `c.changeAt` is a `DateTime` on
+        // the Isar model. Use the typed values directly instead of parsing or
+        // null-coalescing which caused analyzer errors.
+        final seq = c.seq;
+        if (seq > mostRecentSeq) {
+          mostRecentSeq = seq;
+          mostRecentChangeAt = c.changeAt.toUtc();
+        }
+      }
+    } catch (e) {
+      // ignore scanning failures and leave latest fields null/zero
+    }
+
     return {
       'total': total,
       'creates': creates,
       'updates': updates,
       'deletes': deletes,
+      'latestChangeAt': mostRecentChangeAt?.toIso8601String(),
+      'latestSeq': mostRecentSeq,
     };
   }
 
