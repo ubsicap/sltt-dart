@@ -20,24 +20,7 @@ void main() {
         toJson: (entry) => (entry as IsarChangeLogEntry).toJson(),
         toJsonBase: (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
         toSafeJson: (original) {
-          final now = HlcTimestampGenerator.generate();
-          return {
-            'entityId': original['entityId'] ?? 'e-client',
-            'entityType': original['entityType'] ?? 'unknown',
-            'domainId': original['domainId'] ?? 'p-client',
-            'domainType': original['domainType'] ?? 'project',
-            'changeAt': original['changeAt'] ?? now.toIso8601String(),
-            'cid': original['cid'] ?? generateCid(now),
-            'storageId': original['storageId'] ?? 'local',
-            'changeBy': original['changeBy'] ?? 'client',
-            'dataJson': JsonUtils.normalize(original['dataJson']),
-            'operation': original['operation'] ?? 'update',
-            'operationInfoJson': JsonUtils.normalize(
-              original['operationInfoJson'],
-            ),
-            'stateChanged': original['stateChanged'] ?? false,
-            'unknownJson': JsonUtils.normalize(original['unknownJson']),
-          };
+          return SafeJsonService.generateSafeChangeLogJson(original);
         },
       ),
     );
@@ -59,7 +42,9 @@ void main() {
         if (file.path.contains(testDbName)) {
           try {
             await file.delete();
-          } catch (e) {}
+          } catch (e) {
+            // Ignore errors during cleanup
+          }
         }
       }
     }

@@ -19,26 +19,8 @@ final _isarChangeLogEntryFactoryRegistration = (() {
       toJson: (entry) => (entry as IsarChangeLogEntry).toJson(),
       toJsonBase: (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
       toSafeJson: (original) {
-        // Build a safe JSON shape for recovery on deserialization errors
-        // TODO: can we have a service do most of the mapping?
-        final now = HlcTimestampGenerator.generate();
-        return {
-          'entityId': original['entityId'] ?? 'e-client',
-          'entityType': original['entityType'] ?? 'unknown',
-          'domainId': original['domainId'] ?? 'p-client',
-          'domainType': original['domainType'] ?? 'project',
-          'changeAt': original['changeAt'] ?? now.toIso8601String(),
-          'cid': original['cid'] ?? generateCid(now),
-          'storageId': original['storageId'] ?? 'local',
-          'changeBy': original['changeBy'] ?? 'client',
-          'dataJson': JsonUtils.normalize(original['dataJson']),
-          'operation': original['operation'] ?? 'update',
-          'operationInfoJson': JsonUtils.normalize(
-            original['operationInfoJson'],
-          ),
-          'stateChanged': original['stateChanged'] ?? false,
-          'unknownJson': JsonUtils.normalize(original['unknownJson']),
-        };
+        // Use the common safe JSON service
+        return SafeJsonService.generateSafeChangeLogJson(original);
       },
     ),
   );

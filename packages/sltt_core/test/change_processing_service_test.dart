@@ -19,23 +19,8 @@ void main() {
           toJson: (entry) => (entry as TestChangeLogEntry).toJson(),
           toJsonBase: (entry) => (entry as TestChangeLogEntry).toJsonBase(),
           toSafeJson: (original) {
-            // Produce a safe shape for TestChangeLogEntry
-            final now = HlcTimestampGenerator.generate();
-            return {
-              'entityId': original['entityId'] ?? 'e-test',
-              'entityType': original['entityType'] ?? 'project',
-              'domainId': original['domainId'] ?? 'p-test',
-              'domainType': original['domainType'] ?? 'project',
-              'changeAt': original['changeAt'] ?? now.toIso8601String(),
-              'cid': original['cid'] ?? generateCid(now),
-              'changeBy': original['changeBy'] ?? 'test-user',
-              'storageId': original['storageId'] ?? 'test-storage',
-              'operation': original['operation'] ?? 'update',
-              'operationInfoJson': original['operationInfoJson'] ?? '{}',
-              'stateChanged': original['stateChanged'] ?? false,
-              'unknownJson': original['unknownJson'] ?? '{}',
-              'dataJson': original['dataJson'] ?? '{}',
-            };
+            // Use the common safe JSON service
+            return SafeJsonService.generateSafeChangeLogJson(original);
           },
         ),
       );

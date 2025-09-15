@@ -13,6 +13,7 @@ export 'src/services/change_entity_state_service.dart';
 export 'src/services/change_processing_service.dart';
 export 'src/services/date_time_service.dart';
 export 'src/services/json_serialization_service.dart';
+export 'src/services/safe_json_service.dart';
 export 'src/services/uid_service.dart';
 export 'src/storage/base_storage_service.dart';
 export 'src/storage/stats/entity_type_summary.dart';
