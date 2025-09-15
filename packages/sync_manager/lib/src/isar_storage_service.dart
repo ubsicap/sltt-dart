@@ -166,11 +166,6 @@ class IsarStorageService extends BaseStorageService {
       final mergedStateJson = {...entityState.toJson(), ...stateUpdates}
         ..removeWhere((k, v) => v == null);
 
-      // Ensure required top-level metadata fields are present for Isar model
-      // generation/validation (BaseEntityState requires 'domainType' and 'entityType').
-      mergedStateJson['domainType'] = domainType;
-      mergedStateJson['entityType'] = changeLogEntry.entityType;
-
       print(
         'updateChangeLogAndState - after merge - mergedStateJson id: ${mergedStateJson['id']}',
       );
