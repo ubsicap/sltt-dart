@@ -15,3 +15,5 @@ export 'src/services/date_time_service.dart';
 export 'src/services/json_serialization_service.dart';
 export 'src/services/uid_service.dart';
 export 'src/storage/base_storage_service.dart';
+export 'src/storage/stats/entity_type_summary.dart';
+export 'src/storage/stats/entity_type_stats.dart';

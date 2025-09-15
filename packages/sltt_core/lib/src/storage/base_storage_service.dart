@@ -103,13 +103,21 @@ abstract class BaseStorageService {
   });
 
   /// Get statistics about change operations
-  Future<Map<String, dynamic>> getChangeStats({
+  ///
+  /// NOTE: This returns an `EntityTypeStats` structure that includes per-
+  /// entity-type summaries and global totals. This unifies the stats shape
+  /// so callers only need to handle one typed structure.
+  Future<EntityTypeStats> getChangeStats({
     required String domainType,
     required String domainId,
   });
 
-  /// Get statistics about entity types
-  Future<Map<String, dynamic>> getEntityTypeStats({
+  /// Get statistics about entity state (based on current persisted entity state)
+  ///
+  /// This returns stats derived from the current entity state storage (e.g. counts
+  /// of existing entities per entityType and latest state metadata). It is distinct
+  /// from `getChangeStats`, which is computed from the change log.
+  Future<EntityTypeStats> getStateStats({
     required String domainType,
     required String domainId,
   });
@@ -153,3 +161,5 @@ typedef UpdateChangeLogAndStateResult = ({
   BaseChangeLogEntry newChangeLogEntry,
   BaseEntityState newEntityState,
 });
+
+// Stats types are implemented in separate files under src/storage/stats/

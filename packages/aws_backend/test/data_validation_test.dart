@@ -170,7 +170,7 @@ void main() {
 
       final data = jsonDecode(response.body);
       expect(data['changes'], isA<List>());
-      expect(data['count'], greaterThanOrEqualTo(5)); // We created 5 changes
+  expect(data['count'], equals(5)); // We created 5 changes
 
       print('✅ Data integrity verification!');
       print('   Total changes retrieved: ${data['count']}');

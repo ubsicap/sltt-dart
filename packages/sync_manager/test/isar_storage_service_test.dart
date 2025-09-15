@@ -565,15 +565,27 @@ void main() {
       );
       expect(persisted!.operation, equals('delete'));
 
-      final stats = await storage.getChangeStats(
+      final statsDyn = await storage.getChangeStats(
         domainType: 'project',
         domainId: projectId,
       );
-      print('DEBUG: change stats for $projectId -> $stats');
-      expect(stats['total'], greaterThanOrEqualTo(3));
-      expect(stats['creates'], greaterThanOrEqualTo(1));
-      expect(stats['updates'], greaterThanOrEqualTo(1));
-      expect(stats['deletes'], greaterThanOrEqualTo(1));
+      print('DEBUG: change stats for $projectId -> $statsDyn');
+      // Compute expected counts from the processResults so the test
+      // remains correct regardless of how individual changes were
+      // classified (create vs update) by ChangeProcessingService.
+      final expectedCreates =
+          (r1.resultsSummary!.created.length) +
+          (seed2.resultsSummary!.created.length) +
+          (r2.resultsSummary!.created.length) +
+          (seed3.resultsSummary!.created.length);
+      final expectedUpdates = r2.resultsSummary!.updated.length;
+      final expectedDeletes = dr.resultsSummary!.deleted.length;
+      final expectedTotal = expectedCreates + expectedUpdates + expectedDeletes;
+
+      expect(statsDyn.totals.total, equals(expectedTotal));
+      expect(statsDyn.totals.creates, equals(expectedCreates));
+      expect(statsDyn.totals.updates, equals(expectedUpdates));
+      expect(statsDyn.totals.deletes, equals(expectedDeletes));
     });
 
     test('gets entity type statistics', () async {
@@ -641,11 +653,12 @@ void main() {
         reason:
             'processChanges did not report deleted cids: ${r.resultsSummary}',
       );
-      final stats = await storage.getEntityTypeStats(
+      final statsDyn = await storage.getStateStats(
         domainType: 'project',
         domainId: projectId,
       );
       // New shape: { 'entityTypes': { '<type>': {creates, updates, deletes, total}}, 'totals': {...} }
+      final stats = statsDyn.toJson();
       expect(stats.containsKey('entityTypes'), isTrue);
       final entityTypes = stats['entityTypes'];
       expect(

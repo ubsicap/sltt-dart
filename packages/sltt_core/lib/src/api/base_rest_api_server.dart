@@ -1180,16 +1180,20 @@ abstract class BaseRestApiServer {
         domainType: domainType,
         domainId: domainId,
       );
-      final entityTypeStats = await storage.getEntityTypeStats(
+      final entityTypeStats = await storage.getStateStats(
         domainType: domainType,
         domainId: domainId,
       );
 
+      // Typed results: use the EntityTypeStats API and serialize to JSON
+      final changeStatsJson = changeStats.totals.toJson();
+      final entityTypeStatsJson = entityTypeStats.toJson();
+
       return Response.ok(
         jsonEncode({
           'projectId': domainId,
-          'changeStats': changeStats,
-          'entityTypeStats': entityTypeStats,
+          'changeStats': changeStatsJson,
+          'entityTypeStats': entityTypeStatsJson,
           'timestamp': DateTime.now().toIso8601String(),
           'storageType': storageTypeDescription,
         }),
@@ -1226,35 +1230,22 @@ abstract class BaseRestApiServer {
             domainType: domainType,
             domainId: domainId,
           );
-          final entityTypeStats = await storage.getEntityTypeStats(
+          final entityTypeStats = await storage.getStateStats(
             domainType: domainType,
             domainId: domainId,
           );
 
-          totalChanges += (changeStats['total'] as int? ?? 0);
-          // If changeStats includes per-op breakdowns (creates/updates/deletes), add them
-          totalCreates += (changeStats['creates'] as int? ?? 0);
-          totalUpdates += (changeStats['updates'] as int? ?? 0);
-          totalDeletes += (changeStats['deletes'] as int? ?? 0);
+          // Typed EntityTypeStats: read totals and entityTypes directly
+          totalChanges += changeStats.totals.total;
+          totalCreates += changeStats.totals.creates;
+          totalUpdates += changeStats.totals.updates;
+          totalDeletes += changeStats.totals.deletes;
 
-          // Aggregate entity type stats. New shape from some storages is:
-          // { 'entityTypes': { '<type>': {creates, updates, deletes, total}}, 'totals': {...} }
-          if (entityTypeStats.containsKey('entityTypes')) {
-            final et = entityTypeStats['entityTypes'] as Map<String, dynamic>;
-            for (final entry in et.entries) {
-              final entityType = entry.key;
-              final count =
-                  (entry.value as Map<String, dynamic>)['total'] as int? ?? 0;
-              entityTypeTotals[entityType] =
-                  (entityTypeTotals[entityType] ?? 0) + count;
-            }
-          } else {
-            for (final entry in entityTypeStats.entries) {
-              final entityType = entry.key;
-              final count = entry.value as int? ?? 0;
-              entityTypeTotals[entityType] =
-                  (entityTypeTotals[entityType] ?? 0) + count;
-            }
+          for (final entry in entityTypeStats.entityTypes.entries) {
+            final entityType = entry.key;
+            final count = entry.value.total;
+            entityTypeTotals[entityType] =
+                (entityTypeTotals[entityType] ?? 0) + count;
           }
         } catch (e) {
           // Skip individual project errors but continue aggregating

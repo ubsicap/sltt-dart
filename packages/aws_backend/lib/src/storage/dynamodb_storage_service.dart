@@ -400,7 +400,7 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getEntityTypeStats(String domainId) async {
+  Future<Map<String, dynamic>> getStateStats(String domainId) async {
     if (!_initialized) await initialize();
 
     // For DynamoDB, we use Query on GSI1 instead of Scan for better performance

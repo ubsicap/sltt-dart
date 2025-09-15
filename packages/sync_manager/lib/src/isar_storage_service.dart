@@ -402,78 +402,95 @@ class IsarStorageService extends BaseStorageService {
 
   // Statistics operations
   @override
-  Future<Map<String, dynamic>> getChangeStats({
+  Future<EntityTypeStats> getChangeStats({
     required String domainType,
     required String domainId,
   }) async {
-    final total = await _isar.isarChangeLogEntrys
+    // Aggregate change-log entries per entityType to compute creates/updates/deletes
+    final changes = await _isar.isarChangeLogEntrys
         .filter()
         .domainIdEqualTo(domainId)
         .and()
         .domainTypeEqualTo(domainType)
-        .count();
-    final creates = await _isar.isarChangeLogEntrys
-        .filter()
-        .domainIdEqualTo(domainId)
-        .and()
-        .domainTypeEqualTo(domainType)
-        .and()
-        .operationEqualTo('create')
-        .count();
-    final updates = await _isar.isarChangeLogEntrys
-        .filter()
-        .domainIdEqualTo(domainId)
-        .and()
-        .domainTypeEqualTo(domainType)
-        .and()
-        .operationEqualTo('update')
-        .count();
-    final deletes = await _isar.isarChangeLogEntrys
-        .filter()
-        .domainIdEqualTo(domainId)
-        .and()
-        .domainTypeEqualTo(domainType)
-        .and()
-        .operationEqualTo('delete')
-        .count();
+        .findAll();
 
-    // Determine the most recent change (by seq) for latestChangeAt/latestSeq
+    final Map<String, Map<String, dynamic>> perType = {};
+    int totalCreates = 0;
+    int totalUpdates = 0;
+    int totalDeletes = 0;
     DateTime? mostRecentChangeAt;
-    int mostRecentSeq = 0;
-    try {
-      final changes = await _isar.isarChangeLogEntrys
-          .filter()
-          .domainIdEqualTo(domainId)
-          .and()
-          .domainTypeEqualTo(domainType)
-          .findAll();
+    int mostRecentSeq = -1;
 
-      for (final c in changes) {
-        // `c.seq` is an `int` (Isar Id) and `c.changeAt` is a `DateTime` on
-        // the Isar model. Use the typed values directly instead of parsing or
-        // null-coalescing which caused analyzer errors.
-        final seq = c.seq;
-        if (seq > mostRecentSeq) {
-          mostRecentSeq = seq;
-          mostRecentChangeAt = c.changeAt.toUtc();
+    for (final c in changes) {
+      final type = c.entityType;
+      final map = perType[type] ??= {
+        'creates': 0,
+        'updates': 0,
+        'deletes': 0,
+        'total': 0,
+      };
+
+      if (c.operation == 'create') {
+        map['creates'] = (map['creates'] ?? 0) + 1;
+        totalCreates++;
+      } else if (c.operation == 'update') {
+        map['updates'] = (map['updates'] ?? 0) + 1;
+        totalUpdates++;
+      } else if (c.operation == 'delete') {
+        map['deletes'] = (map['deletes'] ?? 0) + 1;
+        totalDeletes++;
+      }
+
+      map['total'] =
+          (map['creates'] ?? 0) + (map['updates'] ?? 0) + (map['deletes'] ?? 0);
+
+      // latest per-type changeAt/seq
+      final ca = c.changeAt.toUtc();
+      final existing = map['latestChangeAt'] as String?;
+      if (existing == null) {
+        map['latestChangeAt'] = ca.toIso8601String();
+      } else {
+        final ex = DateTime.tryParse(existing)?.toUtc();
+        if (ex == null || ca.isAfter(ex)) {
+          map['latestChangeAt'] = ca.toIso8601String();
         }
       }
-    } catch (e) {
-      // ignore scanning failures and leave latest fields null/zero
+      if ((map['latestSeq'] as int? ?? -1) < c.seq) map['latestSeq'] = c.seq;
+
+      if (mostRecentChangeAt == null || ca.isAfter(mostRecentChangeAt)) {
+        mostRecentChangeAt = ca;
+      }
+      if (c.seq > mostRecentSeq) mostRecentSeq = c.seq;
     }
 
-    return {
-      'total': total,
-      'creates': creates,
-      'updates': updates,
-      'deletes': deletes,
-      'latestChangeAt': mostRecentChangeAt?.toIso8601String(),
-      'latestSeq': mostRecentSeq,
-    };
+    final Map<String, EntityTypeSummary> typedPerType = {};
+    perType.forEach((k, v) {
+      typedPerType[k] = EntityTypeSummary(
+        creates: v['creates'] as int? ?? 0,
+        updates: v['updates'] as int? ?? 0,
+        deletes: v['deletes'] as int? ?? 0,
+        total: v['total'] as int? ?? 0,
+        latestChangeAt:
+            (v['latestChangeAt'] as String?) ?? '1970-01-01T00:00:00Z',
+        latestSeq: v['latestSeq'] as int? ?? -1,
+      );
+    });
+
+    final totals = EntityTypeSummary(
+      creates: totalCreates,
+      updates: totalUpdates,
+      deletes: totalDeletes,
+      total: totalCreates + totalUpdates + totalDeletes,
+      latestChangeAt:
+          mostRecentChangeAt?.toIso8601String() ?? '1970-01-01T00:00:00Z',
+      latestSeq: mostRecentSeq,
+    );
+
+    return EntityTypeStats(entityTypes: typedPerType, totals: totals);
   }
 
   @override
-  Future<Map<String, dynamic>> getEntityTypeStats({
+  Future<EntityTypeStats> getStateStats({
     required String domainType,
     required String domainId,
   }) async {
@@ -509,12 +526,12 @@ class IsarStorageService extends BaseStorageService {
       // ignore debugging failures
     }
 
-    final Map<String, Map<String, dynamic>> perType = {};
+    final Map<String, EntityTypeSummary> perType = {};
     int totalCreates = 0;
     int totalUpdates = 0;
     int totalDeletes = 0;
     DateTime? mostRecentChangeAt;
-    int mostRecentSeq = 0;
+    int mostRecentSeq = -1;
 
     for (final e in entries) {
       final type = e.entityType;
@@ -532,14 +549,14 @@ class IsarStorageService extends BaseStorageService {
       final latestChangeAt = e.changeAt.toUtc().toIso8601String();
       final latestSeq = e.seq;
 
-      perType[type] = {
-        'creates': creates,
-        'updates': updates,
-        'deletes': deletes,
-        'total': total,
-        'latestChangeAt': latestChangeAt,
-        'latestSeq': latestSeq,
-      };
+      perType[type] = EntityTypeSummary(
+        creates: creates,
+        updates: updates,
+        deletes: deletes,
+        total: total,
+        latestChangeAt: latestChangeAt,
+        latestSeq: latestSeq,
+      );
 
       totalCreates += creates;
       totalUpdates += updates;
@@ -554,16 +571,19 @@ class IsarStorageService extends BaseStorageService {
       if (latestSeq > mostRecentSeq) mostRecentSeq = latestSeq;
     }
 
-    final totals = {
-      'creates': totalCreates,
-      'updates': totalUpdates,
-      'deletes': totalDeletes,
-      'total': totalCreates + totalUpdates + totalDeletes,
-      'latestChangeAt': mostRecentChangeAt?.toIso8601String(),
-      'latestSeq': mostRecentSeq,
-    };
+    final totals = EntityTypeSummary(
+      creates: totalCreates,
+      updates: totalUpdates,
+      deletes: totalDeletes,
+      total: totalCreates + totalUpdates + totalDeletes,
+      latestChangeAt:
+          mostRecentChangeAt?.toIso8601String() ?? '1970-01-01T00:00:00Z',
+      latestSeq: mostRecentSeq,
+    );
 
-    return {'entityTypes': perType, 'totals': totals};
+    // Convert perType map values from dynamic to the typed map expected by
+    // EntityTypeStats: Map<String, EntityTypeSummary>
+    return EntityTypeStats(entityTypes: perType, totals: totals);
   }
 
   @override

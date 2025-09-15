@@ -132,7 +132,7 @@ Future<void> main() async {
     final changeStats = await storage.getChangeStats(demoProjectId);
     print('   Change stats: $changeStats');
 
-    final entityStats = await storage.getEntityTypeStats(demoProjectId);
+    final entityStats = await storage.getStateStats(demoProjectId);
     print('   Entity type stats: $entityStats');
     print('✅ Statistics test passed\n');
 

@@ -174,28 +174,9 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getChangeStats({
+  Future<EntityTypeStats> getChangeStats({
     required String domainType,
     required String domainId,
-  }) async {
-    final changes = _changesByDomainType[domainType] ?? [];
-    final proj = changes.where((c) => c.domainId == domainId).toList();
-    final total = proj.length;
-    final creates = proj.where((c) => c.operation == 'create').length;
-    final updates = proj.where((c) => c.operation == 'update').length;
-    final deletes = proj.where((c) => c.operation == 'delete').length;
-    return {
-      'total': total,
-      'creates': creates,
-      'updates': updates,
-      'deletes': deletes,
-    };
-  }
-
-  @override
-  Future<Map<String, dynamic>> getEntityTypeStats({
-    required String domainType,
-    String? domainId,
   }) async {
     // Compute per-entityType creates/updates/deletes from the in-memory change log
     final changes = _changesByDomainType[domainType] ?? [];
@@ -205,10 +186,10 @@ class InMemoryStorage implements BaseStorageService {
     int totalUpdates = 0;
     int totalDeletes = 0;
     DateTime? mostRecentChangeAt;
-    int mostRecentSeq = 0;
+    int mostRecentSeq = -1;
 
     for (final c in changes) {
-      if (domainId != null && c.domainId != domainId) continue;
+      if (c.domainId != domainId) continue;
       final type = c.entityType;
       final map = perType[type] ??= {
         'creates': 0,
@@ -240,23 +221,93 @@ class InMemoryStorage implements BaseStorageService {
           map['latestChangeAt'] = ca.toIso8601String();
         }
       }
-      if ((map['latestSeq'] as int? ?? 0) < c.seq) map['latestSeq'] = c.seq;
+      if ((map['latestSeq'] as int? ?? -1) < c.seq) map['latestSeq'] = c.seq;
       if (mostRecentChangeAt == null || ca.isAfter(mostRecentChangeAt)) {
         mostRecentChangeAt = ca;
       }
       if (c.seq > mostRecentSeq) mostRecentSeq = c.seq;
     }
 
-    final totals = {
-      'creates': totalCreates,
-      'updates': totalUpdates,
-      'deletes': totalDeletes,
-      'total': totalCreates + totalUpdates + totalDeletes,
-      'latestChangeAt': mostRecentChangeAt?.toIso8601String(),
-      'latestSeq': mostRecentSeq,
-    };
+    final Map<String, EntityTypeSummary> typedPerType = {};
+    perType.forEach((k, v) {
+      typedPerType[k] = EntityTypeSummary(
+        creates: v['creates'] as int? ?? 0,
+        updates: v['updates'] as int? ?? 0,
+        deletes: v['deletes'] as int? ?? 0,
+        total: v['total'] as int? ?? 0,
+        latestChangeAt:
+            (v['latestChangeAt'] as String?) ?? '1970-01-01T00:00:00Z',
+        latestSeq: v['latestSeq'] as int? ?? -1,
+      );
+    });
 
-    return {'entityTypes': perType, 'totals': totals};
+    final totals = EntityTypeSummary(
+      creates: totalCreates,
+      updates: totalUpdates,
+      deletes: totalDeletes,
+      total: totalCreates + totalUpdates + totalDeletes,
+      latestChangeAt:
+          mostRecentChangeAt?.toIso8601String() ?? '1970-01-01T00:00:00Z',
+      latestSeq: mostRecentSeq,
+    );
+
+    return EntityTypeStats(entityTypes: typedPerType, totals: totals);
+  }
+
+  @override
+  Future<EntityTypeStats> getStateStats({
+    required String domainType,
+    required String domainId,
+  }) async {
+    // Compute stats based on current persisted entity states
+    final states = _statesByDomainType[domainType] ?? {};
+
+    final Map<String, int> counts = {};
+    DateTime? mostRecentChangeAt;
+
+    for (final entry in states.entries) {
+      final key = entry.key; // 'domainId|entityType|entityId'
+      if (!key.startsWith('$domainId|')) continue;
+      final parts = key.split('|');
+      if (parts.length != 3) continue;
+      final entityType = parts[1];
+      counts[entityType] = (counts[entityType] ?? 0) + 1;
+
+      final state = entry.value;
+      // Attempt to read latest change metadata from TestEntityState fields
+      try {
+        final ca = state.change_changeAt.toUtc();
+        if (mostRecentChangeAt == null || ca.isAfter(mostRecentChangeAt)) {
+          mostRecentChangeAt = ca;
+        }
+      } catch (_) {}
+      // TestEntityState doesn't have a seq field in this in-memory model; leave as -1
+    }
+
+    final Map<String, EntityTypeSummary> typedPerType = {};
+    counts.forEach((k, v) {
+      typedPerType[k] = EntityTypeSummary(
+        creates: 0,
+        updates: 0,
+        deletes: 0,
+        total: v,
+        latestChangeAt:
+            mostRecentChangeAt?.toIso8601String() ?? '1970-01-01T00:00:00Z',
+        latestSeq: -1,
+      );
+    });
+
+    final totals = EntityTypeSummary(
+      creates: 0,
+      updates: 0,
+      deletes: 0,
+      total: counts.values.fold(0, (a, b) => a + b),
+      latestChangeAt:
+          mostRecentChangeAt?.toIso8601String() ?? '1970-01-01T00:00:00Z',
+      latestSeq: -1,
+    );
+
+    return EntityTypeStats(entityTypes: typedPerType, totals: totals);
   }
 
   @override

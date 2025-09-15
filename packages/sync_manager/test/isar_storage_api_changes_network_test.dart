@@ -6,7 +6,6 @@
 // `packages/sltt_core/test/api_changes_network_test.dart` so all backends
 // exercise the same behavior.
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:shelf/shelf.dart';
