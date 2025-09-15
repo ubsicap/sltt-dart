@@ -462,10 +462,12 @@ class IsarStorageService extends BaseStorageService {
         .domainTypeEqualTo(domainType)
         .findAll();
 
-    final Map<String, Map<String, int>> perType = {};
+    final Map<String, Map<String, dynamic>> perType = {};
     int totalCreates = 0;
     int totalUpdates = 0;
     int totalDeletes = 0;
+    DateTime? mostRecentChangeAt;
+    int mostRecentSeq = 0;
 
     for (final e in entries) {
       final type = e.entityType;
@@ -480,58 +482,29 @@ class IsarStorageService extends BaseStorageService {
       if (deletes < 0) deletes = 1;
       final total = creates + updates + deletes;
 
+      final latestChangeAt = e.changeAt.toUtc().toIso8601String();
+      final latestSeq = e.seq;
+
       perType[type] = {
         'creates': creates,
         'updates': updates,
         'deletes': deletes,
         'total': total,
+        'latestChangeAt': latestChangeAt,
+        'latestSeq': latestSeq,
       };
 
       totalCreates += creates;
       totalUpdates += updates;
       totalDeletes += deletes;
-    }
 
-    // If there are no entityType sync state entries (or all zeros), fall back
-    // to scanning changeLog entries grouped by entityType. This keeps behavior
-    // compatible with older tests/backends.
-    if (perType.isEmpty || (totalCreates + totalUpdates + totalDeletes) == 0) {
-      final allEntries = await _isar.isarChangeLogEntrys
-          .filter()
-          .domainIdEqualTo(domainId)
-          .and()
-          .domainTypeEqualTo(domainType)
-          .findAll();
-
-      perType.clear();
-      totalCreates = 0;
-      totalUpdates = 0;
-      totalDeletes = 0;
-
-      for (final entry in allEntries) {
-        final type = entry.entityType;
-        final op = entry.operation;
-        final map = perType[type] ??= {
-          'creates': 0,
-          'updates': 0,
-          'deletes': 0,
-          'total': 0,
-        };
-        if (op == 'create') {
-          map['creates'] = (map['creates'] ?? 0) + 1;
-          totalCreates++;
-        } else if (op == 'update') {
-          map['updates'] = (map['updates'] ?? 0) + 1;
-          totalUpdates++;
-        } else if (op == 'delete') {
-          map['deletes'] = (map['deletes'] ?? 0) + 1;
-          totalDeletes++;
+      final parsed = DateTime.tryParse(latestChangeAt)?.toUtc();
+      if (parsed != null) {
+        if (mostRecentChangeAt == null || parsed.isAfter(mostRecentChangeAt)) {
+          mostRecentChangeAt = parsed;
         }
-        map['total'] =
-            (map['creates'] ?? 0) +
-            (map['updates'] ?? 0) +
-            (map['deletes'] ?? 0);
       }
+      if (latestSeq > mostRecentSeq) mostRecentSeq = latestSeq;
     }
 
     final totals = {
@@ -539,6 +512,8 @@ class IsarStorageService extends BaseStorageService {
       'updates': totalUpdates,
       'deletes': totalDeletes,
       'total': totalCreates + totalUpdates + totalDeletes,
+      'latestChangeAt': mostRecentChangeAt?.toIso8601String(),
+      'latestSeq': mostRecentSeq,
     };
 
     return {'entityTypes': perType, 'totals': totals};

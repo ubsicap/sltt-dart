@@ -200,10 +200,12 @@ class InMemoryStorage implements BaseStorageService {
     // Compute per-entityType creates/updates/deletes from the in-memory change log
     final changes = _changesByDomainType[domainType] ?? [];
 
-    final Map<String, Map<String, int>> perType = {};
+    final Map<String, Map<String, dynamic>> perType = {};
     int totalCreates = 0;
     int totalUpdates = 0;
     int totalDeletes = 0;
+    DateTime? mostRecentChangeAt;
+    int mostRecentSeq = 0;
 
     for (final c in changes) {
       if (domainId != null && c.domainId != domainId) continue;
@@ -226,6 +228,21 @@ class InMemoryStorage implements BaseStorageService {
       }
       map['total'] =
           (map['creates'] ?? 0) + (map['updates'] ?? 0) + (map['deletes'] ?? 0);
+
+      // Maintain latest changeAt/seq per entityType
+      final ca = c.changeAt.toUtc();
+      final existing = map['latestChangeAt'] as String?;
+      if (existing == null) {
+        map['latestChangeAt'] = ca.toIso8601String();
+      } else {
+        final ex = DateTime.tryParse(existing)?.toUtc();
+        if (ex == null || ca.isAfter(ex))
+          map['latestChangeAt'] = ca.toIso8601String();
+      }
+      if ((map['latestSeq'] as int? ?? 0) < c.seq) map['latestSeq'] = c.seq;
+      if (mostRecentChangeAt == null || ca.isAfter(mostRecentChangeAt))
+        mostRecentChangeAt = ca;
+      if (c.seq > mostRecentSeq) mostRecentSeq = c.seq;
     }
 
     final totals = {
@@ -233,6 +250,8 @@ class InMemoryStorage implements BaseStorageService {
       'updates': totalUpdates,
       'deletes': totalDeletes,
       'total': totalCreates + totalUpdates + totalDeletes,
+      'latestChangeAt': mostRecentChangeAt?.toIso8601String(),
+      'latestSeq': mostRecentSeq,
     };
 
     return {'entityTypes': perType, 'totals': totals};
