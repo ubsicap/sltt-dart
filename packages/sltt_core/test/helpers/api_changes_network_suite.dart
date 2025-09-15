@@ -660,7 +660,7 @@ class ApiChangesNetworkTestSuite {
       changePayload(
         domainId: 'discover-storage-id',
         entityType: 'project',
-        entityId: 'dummy',
+        entityId: 'dummy-AWIpz',
         changeAt: baseTime,
         data: {'nameLocal': 'Dummy'},
       ),

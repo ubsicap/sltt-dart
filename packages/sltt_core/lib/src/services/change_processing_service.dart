@@ -287,7 +287,7 @@ class ChangeProcessingService {
       if (returnErrorIfInResultsSummary && resultsSummary.errors.isNotEmpty) {
         return ChangeProcessingResult(
           errorMessage:
-              'One or more changes resulted in errors. See resultsSummary for details.',
+              'One or more changes resulted in errors. See resultsSummary for details:\n$resultsSummary',
           errorCode: 400, // consider using 207 Multi-Status in future?
           resultsSummary: resultsSummary,
         );

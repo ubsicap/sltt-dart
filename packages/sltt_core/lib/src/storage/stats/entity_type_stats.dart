@@ -3,7 +3,7 @@ import 'entity_type_summary.dart';
 
 part 'entity_type_stats.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class EntityTypeStats {
   final Map<String, EntityTypeSummary> entityTypes;
   final EntityTypeSummary totals;

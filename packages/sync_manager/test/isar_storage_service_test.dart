@@ -180,7 +180,7 @@ void main() {
           projectId: projectId,
           storageId: '',
           entityType: 'project',
-          entityId: 'entity-$i',
+          entityId: 'entity-$i-ayix',
           changeAt: baseTime.add(Duration(minutes: i)),
           data: {'nameLocal': 'Project $i', 'parentId': 'root'},
         );
@@ -643,29 +643,46 @@ void main() {
         domainType: 'project',
         domainId: projectId,
       );
-      // New shape: { 'entityTypes': { '<type>': {creates, updates, deletes, total}}, 'totals': {...} }
-      final stats = statsDyn.toJson();
-      expect(stats.containsKey('entityTypes'), isTrue);
-      final entityTypes = stats['entityTypes'];
-      expect(
-        entityTypes['project'],
-        equals({
+      final expectedStats = EntityTypeStats.fromJson({
+        'entityTypes': {
+          'project': {
+            'creates': 1,
+            'updates': 0,
+            'deletes': 0,
+            'total': 1,
+            'latestChangeAt': '2023-01-01T00:00:00.000Z',
+            'latestSeq': 1,
+          },
+          'document': {
+            'creates': 2,
+            'updates': 1,
+            'deletes': 1,
+            'total': 4,
+            'latestChangeAt': '2023-01-01T00:04:00.000Z',
+            'latestSeq': 5,
+          },
+        },
+        'totals': {
           'creates': 1,
           'updates': 0,
           'deletes': 0,
           'total': 1,
           'latestChangeAt': '2023-01-01T00:00:00.000Z',
           'latestSeq': 1,
-        }),
+        },
+      }).toJson();
+      // New shape: { 'entityTypes': { '<type>': {creates, updates, deletes, total}}, 'totals': {...} }
+      final stats = statsDyn.toJson();
+      expect(stats.containsKey('entityTypes'), isTrue);
+      final entityTypes = stats['entityTypes'];
+      expect(
+        entityTypes['project'],
+        equals(expectedStats['entityTypes']['project']),
       );
-      expect(entityTypes['document'], {
-        'creates': 2,
-        'updates': 1,
-        'deletes': 1,
-        'total': 4,
-        'latestChangeAt': '2023-01-01T00:04:00.000Z',
-        'latestSeq': 5,
-      });
+      expect(
+        entityTypes['document'],
+        equals(expectedStats['entityTypes']['document']),
+      );
     });
 
     test('gets all projects', () async {
