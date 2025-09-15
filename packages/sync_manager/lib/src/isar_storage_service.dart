@@ -237,7 +237,8 @@ class IsarStorageService extends BaseStorageService {
 
         final op = newChange.operation;
         if (existing != null) {
-          // Build a replacement instance preserving the same id
+          // Explicitly increment counters on the existing record so the
+          // stored counts reflect the actual number of ops performed.
           final newEt = IsarEntityTypeSyncState(
             id: existing.id,
             entityType: existing.entityType,
@@ -248,14 +249,16 @@ class IsarStorageService extends BaseStorageService {
             cid: newChange.cid,
             changeAt: newChange.changeAt,
             seq: newChange.seq,
-            created: op == 'create' ? Isar.autoIncrement : existing.created,
-            updated: op == 'update' ? Isar.autoIncrement : existing.updated,
-            deleted: op == 'delete' ? Isar.autoIncrement : existing.deleted,
+            created: existing.created + (op == 'create' ? 1 : 0),
+            updated: existing.updated + (op == 'update' ? 1 : 0),
+            deleted: existing.deleted + (op == 'delete' ? 1 : 0),
             createdAt: existing.createdAt,
             updatedAt: DateTime.now(),
           );
           await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
         } else {
+          // New record - initialize counters to 1 for the matching op, 0
+          // otherwise.
           final newEt = IsarEntityTypeSyncState(
             entityType: changeLogEntry.entityType,
             domainId: newChange.domainId,
@@ -265,9 +268,9 @@ class IsarStorageService extends BaseStorageService {
             cid: newChange.cid,
             changeAt: newChange.changeAt,
             seq: newChange.seq,
-            created: newChange.operation == 'create' ? Isar.autoIncrement : 0,
-            updated: newChange.operation == 'update' ? Isar.autoIncrement : 0,
-            deleted: newChange.operation == 'delete' ? Isar.autoIncrement : 0,
+            created: newChange.operation == 'create' ? 1 : 0,
+            updated: newChange.operation == 'update' ? 1 : 0,
+            deleted: newChange.operation == 'delete' ? 1 : 0,
           );
           await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
         }
@@ -461,6 +464,20 @@ class IsarStorageService extends BaseStorageService {
         .and()
         .domainTypeEqualTo(domainType)
         .findAll();
+
+    // Debug: print entity-type sync state entries returned by Isar
+    try {
+      print(
+        'DEBUG: isarEntityTypeSyncStates count=${entries.length} for domain=$domainId type=$domainType',
+      );
+      for (final e in entries) {
+        print(
+          'DEBUG: ET=${e.entityType} created=${e.created} updated=${e.updated} deleted=${e.deleted} changeAt=${e.changeAt} seq=${e.seq} cid=${e.cid}',
+        );
+      }
+    } catch (e) {
+      // ignore debugging failures
+    }
 
     final Map<String, Map<String, dynamic>> perType = {};
     int totalCreates = 0;

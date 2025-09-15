@@ -621,11 +621,11 @@ void main() {
       final entityTypes = stats['entityTypes'] as Map<String, dynamic>;
       expect(
         (entityTypes['project'] as Map<String, dynamic>)['total'],
-        greaterThanOrEqualTo(1),
+        equals(1),
       );
       expect(
         (entityTypes['document'] as Map<String, dynamic>)['total'],
-        greaterThanOrEqualTo(2),
+        equals(2),
       );
     });
 

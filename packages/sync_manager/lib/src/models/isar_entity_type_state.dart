@@ -26,14 +26,9 @@ class IsarEntityTypeSyncState extends SyncState {
     required super.changeAt,
     required super.seq,
 
-    /// pass Isar.autoIncrement whenever we need to bump a crud operation value
-    this.created = 0,
-
-    /// pass `Isar.autoIncrement` whenever we need to bump a CRUD operation value
-    this.updated = 0,
-
-    /// pass `Isar.autoIncrement` whenever we need to bump a CRUD operation value
-    this.deleted = 0,
+    required this.created,
+    required this.updated,
+    required this.deleted,
     super.createdAt,
     super.updatedAt,
   });
