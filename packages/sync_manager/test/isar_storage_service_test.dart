@@ -614,8 +614,13 @@ void main() {
         domainType: 'project',
         domainId: projectId,
       );
-      expect(stats['project'], greaterThanOrEqualTo(1));
-      expect(stats['document'], greaterThanOrEqualTo(2));
+      // New shape: { 'entityTypes': { '<type>': {creates, updates, deletes, total}}, 'totals': {...} }
+      expect(stats.containsKey('entityTypes'), isTrue);
+      final entityTypes = stats['entityTypes'] as Map<String, dynamic>;
+      expect((entityTypes['project'] as Map<String, dynamic>)['total'],
+          greaterThanOrEqualTo(1));
+      expect((entityTypes['document'] as Map<String, dynamic>)['total'],
+          greaterThanOrEqualTo(2));
     });
 
     test('gets all projects', () async {

@@ -1202,12 +1202,24 @@ abstract class BaseRestApiServer {
 
           totalChanges += (changeStats['total'] as int? ?? 0);
 
-          // Aggregate entity type stats
-          for (final entry in entityTypeStats.entries) {
-            final entityType = entry.key;
-            final count = entry.value as int? ?? 0;
-            entityTypeTotals[entityType] =
-                (entityTypeTotals[entityType] ?? 0) + count;
+          // Aggregate entity type stats. New shape from some storages is:
+          // { 'entityTypes': { '<type>': {creates, updates, deletes, total}}, 'totals': {...} }
+          if (entityTypeStats.containsKey('entityTypes')) {
+            final et = entityTypeStats['entityTypes'] as Map<String, dynamic>;
+            for (final entry in et.entries) {
+              final entityType = entry.key;
+              final count =
+                  (entry.value as Map<String, dynamic>)['total'] as int? ?? 0;
+              entityTypeTotals[entityType] =
+                  (entityTypeTotals[entityType] ?? 0) + count;
+            }
+          } else {
+            for (final entry in entityTypeStats.entries) {
+              final entityType = entry.key;
+              final count = entry.value as int? ?? 0;
+              entityTypeTotals[entityType] =
+                  (entityTypeTotals[entityType] ?? 0) + count;
+            }
           }
         } catch (e) {
           // Skip individual project errors but continue aggregating

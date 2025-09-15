@@ -396,19 +396,16 @@ class IsarStorageService extends BaseStorageService {
 
   // Statistics operations
   @override
-  @override
   Future<Map<String, dynamic>> getChangeStats({
     required String domainType,
     required String domainId,
   }) async {
-    // TODO: use _isar.isarEntityTypeStates to add up all entityType op counts
     final total = await _isar.isarChangeLogEntrys
         .filter()
         .domainIdEqualTo(domainId)
         .and()
         .domainTypeEqualTo(domainType)
         .count();
-    // TODO: use _isar.isarEntityTypeStates for op counts
     final creates = await _isar.isarChangeLogEntrys
         .filter()
         .domainIdEqualTo(domainId)
@@ -447,20 +444,104 @@ class IsarStorageService extends BaseStorageService {
     required String domainType,
     required String domainId,
   }) async {
-    final allEntries = await _isar.isarChangeLogEntrys
+    // Use the IsarEntityTypeSyncState collection which tracks per-entityType
+    // created/updated/deleted counters. We will return a structured map with
+    // per-entityType breakdowns and aggregate totals, e.g.:
+    // {
+    //   'entityTypes': {
+    //     'project': {'creates': X, 'updates': Y, 'deletes': Z, 'total': T},
+    //     ...
+    //   },
+    //   'totals': {'creates': X, 'updates': Y, 'deletes': Z, 'total': T}
+    // }
+
+    final entries = await _isar.isarEntityTypeSyncStates
         .filter()
         .domainIdEqualTo(domainId)
         .and()
         .domainTypeEqualTo(domainType)
         .findAll();
-    final stats = <String, int>{};
 
-    for (final entry in allEntries) {
-      final entityTypeKey = entry.entityType;
-      stats[entityTypeKey] = (stats[entityTypeKey] ?? 0) + 1;
+    final Map<String, Map<String, int>> perType = {};
+    int totalCreates = 0;
+    int totalUpdates = 0;
+    int totalDeletes = 0;
+
+    for (final e in entries) {
+      final type = e.entityType;
+      // Some implementations use Isar.autoIncrement as a marker to bump the
+      // counter; interpret negative/autoIncrement values as +1 for counting
+      // purposes.
+      int creates = e.created;
+      int updates = e.updated;
+      int deletes = e.deleted;
+      if (creates < 0) creates = 1;
+      if (updates < 0) updates = 1;
+      if (deletes < 0) deletes = 1;
+      final total = creates + updates + deletes;
+
+      perType[type] = {
+        'creates': creates,
+        'updates': updates,
+        'deletes': deletes,
+        'total': total,
+      };
+
+      totalCreates += creates;
+      totalUpdates += updates;
+      totalDeletes += deletes;
     }
 
-    return stats;
+    // If there are no entityType sync state entries (or all zeros), fall back
+    // to scanning changeLog entries grouped by entityType. This keeps behavior
+    // compatible with older tests/backends.
+    if (perType.isEmpty || (totalCreates + totalUpdates + totalDeletes) == 0) {
+      final allEntries = await _isar.isarChangeLogEntrys
+          .filter()
+          .domainIdEqualTo(domainId)
+          .and()
+          .domainTypeEqualTo(domainType)
+          .findAll();
+
+      perType.clear();
+      totalCreates = 0;
+      totalUpdates = 0;
+      totalDeletes = 0;
+
+      for (final entry in allEntries) {
+        final type = entry.entityType;
+        final op = entry.operation;
+        final map = perType[type] ??= {
+          'creates': 0,
+          'updates': 0,
+          'deletes': 0,
+          'total': 0,
+        };
+        if (op == 'create') {
+          map['creates'] = (map['creates'] ?? 0) + 1;
+          totalCreates++;
+        } else if (op == 'update') {
+          map['updates'] = (map['updates'] ?? 0) + 1;
+          totalUpdates++;
+        } else if (op == 'delete') {
+          map['deletes'] = (map['deletes'] ?? 0) + 1;
+          totalDeletes++;
+        }
+        map['total'] =
+            (map['creates'] ?? 0) +
+            (map['updates'] ?? 0) +
+            (map['deletes'] ?? 0);
+      }
+    }
+
+    final totals = {
+      'creates': totalCreates,
+      'updates': totalUpdates,
+      'deletes': totalDeletes,
+      'total': totalCreates + totalUpdates + totalDeletes,
+    };
+
+    return {'entityTypes': perType, 'totals': totals};
   }
 
   @override
