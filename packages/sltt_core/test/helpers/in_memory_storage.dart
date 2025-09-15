@@ -236,12 +236,14 @@ class InMemoryStorage implements BaseStorageService {
         map['latestChangeAt'] = ca.toIso8601String();
       } else {
         final ex = DateTime.tryParse(existing)?.toUtc();
-        if (ex == null || ca.isAfter(ex))
+        if (ex == null || ca.isAfter(ex)) {
           map['latestChangeAt'] = ca.toIso8601String();
+        }
       }
       if ((map['latestSeq'] as int? ?? 0) < c.seq) map['latestSeq'] = c.seq;
-      if (mostRecentChangeAt == null || ca.isAfter(mostRecentChangeAt))
+      if (mostRecentChangeAt == null || ca.isAfter(mostRecentChangeAt)) {
         mostRecentChangeAt = ca;
+      }
       if (c.seq > mostRecentSeq) mostRecentSeq = c.seq;
     }
 

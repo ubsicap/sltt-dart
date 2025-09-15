@@ -16,11 +16,11 @@ void registerEntityStateFactory(
   Map<String, dynamic> Function(BaseEntityState) toJsonBase,
 ) {
   _entityStateFactories[entityType] = SerializableGroup(
-    fromJson,
-    fromJsonBase,
-    toJson,
-    toJsonBase,
-    (json) {
+    fromJson: fromJson,
+    fromJsonBase: fromJsonBase,
+    toJson: toJson,
+    toJsonBase: toJsonBase,
+    toSafeJson: (json) {
       throw Exception('No safe JSON conversion implemented for $entityType');
     },
   );
