@@ -78,6 +78,18 @@ abstract class BaseEntityState
   final String data_parentId_changeBy_;
   @override
   final DateTime? data_parentId_cloudAt_;
+  @override
+  final String data_parentProp;
+  @override
+  final int? data_parentProp_dataSchemaRev_;
+  @override
+  final DateTime data_parentProp_changeAt_;
+  @override
+  final String data_parentProp_cid_;
+  @override
+  final String data_parentProp_changeBy_;
+  @override
+  final DateTime? data_parentProp_cloudAt_;
 
   BaseEntityState({
     required String entityId,
@@ -113,6 +125,12 @@ abstract class BaseEntityState
     required this.data_parentId_cid_,
     required this.data_parentId_changeBy_,
     this.data_parentId_cloudAt_,
+    required this.data_parentProp,
+    this.data_parentProp_dataSchemaRev_,
+    required this.data_parentProp_changeAt_,
+    required this.data_parentProp_cid_,
+    required this.data_parentProp_changeBy_,
+    this.data_parentProp_cloudAt_,
   }) : unknownJson = JsonUtils.normalize(unknownJson),
        change_domainId_orig_ = BaseEntityState.normalizeOrigString(
          change_domainId_orig_,
@@ -193,6 +211,15 @@ mixin CoreEntityDataFields {
   String get data_parentId_cid_;
   String get data_parentId_changeBy_;
   DateTime? get data_parentId_cloudAt_;
+
+  /// Arbitrary parent property extracted from change.dataJson.
+  /// Required in schema (mirror of data_parentId semantics).
+  String get data_parentProp;
+  int? get data_parentProp_dataSchemaRev_;
+  DateTime get data_parentProp_changeAt_;
+  String get data_parentProp_cid_;
+  String get data_parentProp_changeBy_;
+  DateTime? get data_parentProp_cloudAt_;
 }
 
 mixin CoreChangeLogEntryFields {

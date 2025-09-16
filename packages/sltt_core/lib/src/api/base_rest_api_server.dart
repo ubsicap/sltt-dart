@@ -553,6 +553,13 @@ abstract class BaseRestApiServer {
               'required': false,
               'description': 'Filter entities by parent ID',
             },
+            {
+              'name': 'parentProp',
+              'type': 'string',
+              'required': false,
+              'description':
+                  'Filter entities by an arbitrary parent property extracted from change.dataJson',
+            },
           ],
           'response': {
             'type': 'object',
@@ -1333,6 +1340,7 @@ abstract class BaseRestApiServer {
       final limitStr = queryParams['limit'];
       final fieldMetadataStr = queryParams['field_metadata'];
       final parentId = queryParams['parentId'];
+      final parentProp = queryParams['parentProp'];
 
       // Parse limit parameter
       int limit = 100; // Default limit
@@ -1362,6 +1370,7 @@ abstract class BaseRestApiServer {
         limit: limit,
         includeMetadata: includeFieldMetadata,
         parentId: parentId,
+        parentProp: parentProp,
       );
 
       return Response.ok(

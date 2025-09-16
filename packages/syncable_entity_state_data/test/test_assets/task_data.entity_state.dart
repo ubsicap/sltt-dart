@@ -37,6 +37,13 @@ class TaskDataEntityState extends BaseEntityState {
     required super.data_parentId_changeAt_,
     required super.data_parentId_cid_,
     required super.data_parentId_changeBy_,
+    // parentProp related meta (optional)
+    super.data_parentProp,
+    super.data_parentProp_dataSchemaRev_,
+    super.data_parentProp_changeAt_,
+    super.data_parentProp_cid_,
+    super.data_parentProp_changeBy_,
+    super.data_parentProp_cloudAt_,
     required String unknownJson,
     super.change_dataSchemaRev,
     super.change_cloudAt,
@@ -68,6 +75,8 @@ class TaskDataEntityState extends BaseEntityState {
           change_changeBy_orig_: change_changeBy,
           data_parentId_dataSchemaRev_: null,
           data_parentId_cloudAt_: null,
+          data_parentProp_dataSchemaRev_: null,
+          data_parentProp_cloudAt_: null,
         );
   static TaskDataEntityState fromJsonBase(Map<String, dynamic> json) =>
       _$TaskDataEntityStateFromJson(json);

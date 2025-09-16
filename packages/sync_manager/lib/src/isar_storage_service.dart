@@ -1030,6 +1030,7 @@ class IsarStorageService extends BaseStorageService {
     int? limit,
     bool includeMetadata = false,
     String? parentId,
+    String? parentProp,
   }) async {
     try {
       // Convert entityType string to EntityType enum
@@ -1060,6 +1061,7 @@ class IsarStorageService extends BaseStorageService {
         cursor: cursor,
         limit: effectiveLimit + 1, // Get one extra to check if there are more
         parentId: parentId,
+        parentProp: parentProp,
       );
 
       // Check if there are more results
@@ -1072,11 +1074,25 @@ class IsarStorageService extends BaseStorageService {
       final items = resultEntities
           .map((entity) => (entity as dynamic).toJson())
           .toList();
+      // If parentProp filter requested and storage group couldn't apply DB-level
+      // filter, apply in-memory filter here on the returned JSON items.
+      List<Map<String, dynamic>> filteredItems =
+          List<Map<String, dynamic>>.from(items);
+      if (parentProp != null) {
+        filteredItems = filteredItems
+            .where((it) => it['data_parentProp'] == parentProp)
+            .cast<Map<String, dynamic>>()
+            .toList();
+      }
       final nextCursor = hasMore && resultEntities.isNotEmpty
           ? (resultEntities.last as dynamic).entityId as String?
           : null;
 
-      return {'items': items, 'hasMore': hasMore, 'nextCursor': nextCursor};
+      return {
+        'items': filteredItems,
+        'hasMore': hasMore,
+        'nextCursor': nextCursor,
+      };
     } on ArgumentError {
       // Re-throw ArgumentError so it can be caught by the API handler as a 400 error
       rethrow;

@@ -41,6 +41,7 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
     String? cursor,
     int? limit,
     String? parentId,
+    String? parentProp,
   })
   findByDomainWithPagination;
 

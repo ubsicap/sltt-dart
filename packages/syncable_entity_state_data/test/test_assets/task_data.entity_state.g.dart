@@ -19,6 +19,16 @@ TaskDataEntityState _$TaskDataEntityStateFromJson(Map<String, dynamic> json) =>
           DateTime.parse(json['data_parentId_changeAt_'] as String),
       data_parentId_cid_: json['data_parentId_cid_'] as String,
       data_parentId_changeBy_: json['data_parentId_changeBy_'] as String,
+      data_parentProp: json['data_parentProp'] as String,
+      data_parentProp_dataSchemaRev_:
+          (json['data_parentProp_dataSchemaRev_'] as num?)?.toInt(),
+      data_parentProp_changeAt_:
+          DateTime.parse(json['data_parentProp_changeAt_'] as String),
+      data_parentProp_cid_: json['data_parentProp_cid_'] as String,
+      data_parentProp_changeBy_: json['data_parentProp_changeBy_'] as String,
+      data_parentProp_cloudAt_: json['data_parentProp_cloudAt_'] == null
+          ? null
+          : DateTime.parse(json['data_parentProp_cloudAt_'] as String),
       unknownJson: json['unknownJson'] as String,
       change_dataSchemaRev: (json['change_dataSchemaRev'] as num?)?.toInt(),
       change_cloudAt: json['change_cloudAt'] == null
@@ -89,6 +99,14 @@ Map<String, dynamic> _$TaskDataEntityStateToJson(
           instance.data_parentId_changeAt_.toIso8601String(),
       'data_parentId_cid_': instance.data_parentId_cid_,
       'data_parentId_changeBy_': instance.data_parentId_changeBy_,
+      'data_parentProp': instance.data_parentProp,
+      'data_parentProp_dataSchemaRev_': instance.data_parentProp_dataSchemaRev_,
+      'data_parentProp_changeAt_':
+          instance.data_parentProp_changeAt_.toIso8601String(),
+      'data_parentProp_cid_': instance.data_parentProp_cid_,
+      'data_parentProp_changeBy_': instance.data_parentProp_changeBy_,
+      'data_parentProp_cloudAt_':
+          instance.data_parentProp_cloudAt_?.toIso8601String(),
       'entityId': instance.entityId,
       'data_nameLocal': instance.data_nameLocal,
       'data_nameLocal_dataSchemaRev_': instance.data_nameLocal_dataSchemaRev_,

@@ -293,6 +293,7 @@ class InMemoryStorage implements BaseStorageService {
     int? limit,
     bool includeMetadata = false,
     String? parentId,
+    String? parentProp,
   }) async {
     final states = _statesByDomainType[domainType] ?? {};
     var results = states.entries
@@ -309,6 +310,12 @@ class InMemoryStorage implements BaseStorageService {
     if (parentId != null) {
       results = results
           .where((state) => state['data_parentId'] == parentId)
+          .toList();
+    }
+    // Filter by parentProp if provided
+    if (parentProp != null) {
+      results = results
+          .where((state) => state['data_parentProp'] == parentProp)
           .toList();
     }
 

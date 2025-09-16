@@ -38,7 +38,9 @@ class SyncableEntityStateDataGenerator
       (f) => !f.isStatic && !f.isSynthetic && f.isPublic,
     );
     // Core fields already provided by BaseEntityState; don't generate duplicates.
-    const coreFieldNames = {'parentId', 'deleted', 'rank'};
+    // Add 'parentProp' to core fields so generated entity state classes
+    // include the base-class parentProp/meta fields rather than generating them.
+    const coreFieldNames = {'parentId', 'parentProp', 'deleted', 'rank'};
     final dataFields = allFields.where((f) => !coreFieldNames.contains(f.name));
 
     // Optionally enforce Isar compatibility
@@ -117,6 +119,14 @@ class SyncableEntityStateDataGenerator
     buffer.writeln('    required super.data_parentId_changeAt_,');
     buffer.writeln('    required super.data_parentId_cid_,');
     buffer.writeln('    required super.data_parentId_changeBy_,');
+    // parentProp is optional and may be absent from older change logs; pass nulls
+    buffer.writeln('    // parentProp related meta (optional)');
+    buffer.writeln('    super.data_parentProp,');
+    buffer.writeln('    super.data_parentProp_dataSchemaRev_,');
+    buffer.writeln('    super.data_parentProp_changeAt_,');
+    buffer.writeln('    super.data_parentProp_cid_,');
+    buffer.writeln('    super.data_parentProp_changeBy_,');
+    buffer.writeln('    super.data_parentProp_cloudAt_,');
     buffer.writeln('    required String unknownJson,');
     buffer.writeln('    super.change_dataSchemaRev,');
     buffer.writeln('    super.change_cloudAt,');
@@ -151,9 +161,11 @@ class SyncableEntityStateDataGenerator
     buffer.writeln('    change_changeAt_orig_: change_changeAt,');
     buffer.writeln('    change_cid_orig_: change_cid,');
     buffer.writeln('    change_changeBy_orig_: change_changeBy,');
-    // Pass nulls for optional parentId meta values (instance fields not available yet)
+    // Pass nulls for optional parentId and parentProp meta values (instance fields not available yet)
     buffer.writeln('    data_parentId_dataSchemaRev_: null,');
     buffer.writeln('    data_parentId_cloudAt_: null,');
+    buffer.writeln('    data_parentProp_dataSchemaRev_: null,');
+    buffer.writeln('    data_parentProp_cloudAt_: null,');
     buffer.writeln('  );');
 
     // Base (json_serializable) helpers

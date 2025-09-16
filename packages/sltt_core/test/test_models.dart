@@ -103,6 +103,12 @@ class TestEntityState extends BaseEntityState {
     required super.data_parentId_cid_,
     required super.data_parentId_changeBy_,
     super.data_parentId_cloudAt_,
+    required super.data_parentProp,
+    super.data_parentProp_dataSchemaRev_,
+    required super.data_parentProp_changeAt_,
+    required super.data_parentProp_cid_,
+    required super.data_parentProp_changeBy_,
+    super.data_parentProp_cloudAt_,
   }) : super(entityId: entityId);
 
   factory TestEntityState.fromJson(Map<String, dynamic> json) =>

@@ -136,6 +136,7 @@ abstract class BaseStorageService {
     int? limit,
     bool includeMetadata = false,
     String? parentId,
+    String? parentProp,
   });
 
   Future<Map<String, dynamic>> getEntityState({

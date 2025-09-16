@@ -163,6 +163,12 @@ class ApiChangesNetworkTestSuite {
         !adjustedData.containsKey('parentId')) {
       adjustedData['parentId'] = 'root';
     }
+    // Also add a default parentProp when not provided so tests include it
+    if (addDefaultParentId &&
+        operation != 'delete' &&
+        !adjustedData.containsKey('parentProp')) {
+      adjustedData['parentProp'] = 'root';
+    }
     final namespacedEntityId = '$domainId-$entityId';
     final namespacedCid = '$domainId-${generateCid(changeAt)}';
     return {

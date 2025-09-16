@@ -40,6 +40,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             String? cursor,
             int? limit,
             String? parentId,
+            String? parentProp,
           }) async {
             var query = db.isarProjectStates.filter().change_domainIdEqualTo(
               domainId,
@@ -47,6 +48,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             if (parentId != null) {
               query = query.and().data_parentIdEqualTo(parentId);
             }
+            // parentProp filtering handled at storage service level if supported
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }
@@ -75,6 +77,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             String? cursor,
             int? limit,
             String? parentId,
+            String? parentProp,
           }) async {
             var query = db.isarDocumentStates.filter().change_domainIdEqualTo(
               domainId,
@@ -82,6 +85,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             if (parentId != null) {
               query = query.and().data_parentIdEqualTo(parentId);
             }
+            // parentProp filtering handled at storage service level if supported
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }
@@ -110,6 +114,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             String? cursor,
             int? limit,
             String? parentId,
+            String? parentProp,
           }) async {
             var query = db.isarTeamStates.filter().change_domainIdEqualTo(
               domainId,
@@ -117,6 +122,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             if (parentId != null) {
               query = query.and().data_parentIdEqualTo(parentId);
             }
+            // parentProp filtering handled at storage service level if supported
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }
@@ -145,6 +151,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             String? cursor,
             int? limit,
             String? parentId,
+            String? parentProp,
           }) async {
             var query = db.isarTaskStates.filter().change_domainIdEqualTo(
               domainId,
@@ -152,6 +159,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             if (parentId != null) {
               query = query.and().data_parentIdEqualTo(parentId);
             }
+            // parentProp filtering handled at storage service level if supported
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }

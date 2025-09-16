@@ -141,6 +141,18 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
               $checkedConvert('data_parentId_changeBy_', (v) => v as String),
           data_parentId_cloudAt_: $checkedConvert('data_parentId_cloudAt_',
               (v) => v == null ? null : DateTime.parse(v as String)),
+          data_parentProp:
+              $checkedConvert('data_parentProp', (v) => v as String),
+          data_parentProp_dataSchemaRev_: $checkedConvert(
+              'data_parentProp_dataSchemaRev_', (v) => (v as num?)?.toInt()),
+          data_parentProp_changeAt_: $checkedConvert(
+              'data_parentProp_changeAt_', (v) => DateTime.parse(v as String)),
+          data_parentProp_cid_:
+              $checkedConvert('data_parentProp_cid_', (v) => v as String),
+          data_parentProp_changeBy_:
+              $checkedConvert('data_parentProp_changeBy_', (v) => v as String),
+          data_parentProp_cloudAt_: $checkedConvert('data_parentProp_cloudAt_',
+              (v) => v == null ? null : DateTime.parse(v as String)),
         );
         return val;
       },
@@ -184,6 +196,14 @@ Map<String, dynamic> _$TestEntityStateToJson(TestEntityState instance) =>
       'data_parentId_changeBy_': instance.data_parentId_changeBy_,
       'data_parentId_cloudAt_':
           instance.data_parentId_cloudAt_?.toIso8601String(),
+      'data_parentProp': instance.data_parentProp,
+      'data_parentProp_dataSchemaRev_': instance.data_parentProp_dataSchemaRev_,
+      'data_parentProp_changeAt_':
+          instance.data_parentProp_changeAt_.toIso8601String(),
+      'data_parentProp_cid_': instance.data_parentProp_cid_,
+      'data_parentProp_changeBy_': instance.data_parentProp_changeBy_,
+      'data_parentProp_cloudAt_':
+          instance.data_parentProp_cloudAt_?.toIso8601String(),
       'data_nameLocal': instance.data_nameLocal,
       'entityId': instance.entityId,
     };
