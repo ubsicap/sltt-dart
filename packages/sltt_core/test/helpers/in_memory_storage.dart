@@ -292,18 +292,28 @@ class InMemoryStorage implements BaseStorageService {
     String? cursor,
     int? limit,
     bool includeMetadata = false,
+    String? parentId,
   }) async {
     final states = _statesByDomainType[domainType] ?? {};
-    final results = states.entries
+    var results = states.entries
         .where(
           (e) =>
               e.key.startsWith('$domainId|$entityType|') &&
               (cursor == null ||
                   e.key.compareTo('$domainId|$entityType|$cursor') > 0),
         )
-        .take(limit ?? 100)
         .map((e) => e.value.toJson())
         .toList();
+
+    // Filter by parentId if provided
+    if (parentId != null) {
+      results = results
+          .where((state) => state['data_parentId'] == parentId)
+          .toList();
+    }
+
+    results = results.take(limit ?? 100).toList();
+
     if (results.isEmpty) {
       return {'items': [], 'nextCursor': null, 'hasMore': false};
     }

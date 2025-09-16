@@ -1029,6 +1029,7 @@ class IsarStorageService extends BaseStorageService {
     String? cursor,
     int? limit,
     bool includeMetadata = false,
+    String? parentId,
   }) async {
     try {
       // Convert entityType string to EntityType enum
@@ -1051,11 +1052,14 @@ class IsarStorageService extends BaseStorageService {
 
       // Use the storage group's pagination function for efficient querying
       final effectiveLimit = limit ?? 100;
+
+      // Use database-level parentId filtering for better performance
       final entities = await storageGroup.findByDomainWithPagination(
         _isar,
         domainId,
         cursor: cursor,
         limit: effectiveLimit + 1, // Get one extra to check if there are more
+        parentId: parentId,
       );
 
       // Check if there are more results

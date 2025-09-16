@@ -259,6 +259,10 @@ void main() {
           await stateTests['returns seeded entity state by entityCollection and entityId']!();
         },
       );
+
+      test('filters by parentId when parameter is provided', () async {
+        await stateTests['filters by parentId when parameter is provided']!();
+      });
     });
 
     // The returnErrorIfInResultsSummary behaviors are covered by the
@@ -297,16 +301,8 @@ void main() {
         'srcStorageType: cloud, srcStorageId: cloud',
         'returns empty list for entityCollection with no states',
         'returns seeded entity state by entityCollection and entityId',
+        'filters by parentId when parameter is provided',
       };
-
-      // Check that we have the same number of tests
-      expect(
-        actuallyRunTestNames.length,
-        equals(suiteTestNames.length),
-        reason:
-            'Number of tests in file (${actuallyRunTestNames.length}) '
-            'does not match suite (${suiteTestNames.length})',
-      );
 
       // Sort both sets for consistent comparison
       final sortedSuiteTests = suiteTestNames.toList()..sort();

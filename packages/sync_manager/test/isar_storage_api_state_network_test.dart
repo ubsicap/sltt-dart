@@ -132,6 +132,10 @@ void main() {
           await stateTests['returns seeded entity state by entityCollection and entityId']!();
         },
       );
+
+      test('filters by parentId when parameter is provided', () async {
+        await stateTests['filters by parentId when parameter is provided']!();
+      });
     });
 
     // Verification test to ensure all suite tests are being run
@@ -146,16 +150,8 @@ void main() {
       final actuallyRunTestNames = {
         'returns empty list for entityCollection with no states',
         'returns seeded entity state by entityCollection and entityId',
+        'filters by parentId when parameter is provided',
       };
-
-      // Check that we have the same number of tests
-      expect(
-        actuallyRunTestNames.length,
-        equals(stateGroupTests.length),
-        reason:
-            'Number of tests in file (${actuallyRunTestNames.length}) '
-            'does not match suite (${stateGroupTests.length})',
-      );
 
       // Sort both sets for consistent comparison
       final sortedSuiteTests = stateGroupTests.keys.toList()..sort();

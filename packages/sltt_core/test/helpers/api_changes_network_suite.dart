@@ -241,6 +241,8 @@ class ApiChangesNetworkTestSuite {
             _testGetStateEmpty(),
         'returns seeded entity state by entityCollection and entityId': () =>
             _testGetStateWithSeededData(),
+        'filters by parentId when parameter is provided': () =>
+            _testGetStateWithParentIdFilter(),
       },
     };
   }
@@ -816,6 +818,126 @@ class ApiChangesNetworkTestSuite {
     final state = json2['state'] as Map<String, dynamic>;
     expect(state['data_nameLocal'], expectedNameLocal, reason: body2);
     expect(state['data_parentId'], expectedParentId, reason: body2);
+  }
+
+  Future<void> _testGetStateWithParentIdFilter() async {
+    // Seed multiple tasks with different parentIds
+    await seedChange(
+      changePayload(
+        domainId: 'filter-project',
+        entityType: 'task',
+        entityId: 'task-parent-a-1',
+        changeAt: baseTime,
+        data: {'nameLocal': 'Task A1', 'parentId': 'parent-a'},
+        operation: 'create',
+      ),
+    );
+
+    await seedChange(
+      changePayload(
+        domainId: 'filter-project',
+        entityType: 'task',
+        entityId: 'task-parent-a-2',
+        changeAt: baseTime.add(const Duration(seconds: 1)),
+        data: {'nameLocal': 'Task A2', 'parentId': 'parent-a'},
+        operation: 'create',
+      ),
+    );
+
+    await seedChange(
+      changePayload(
+        domainId: 'filter-project',
+        entityType: 'task',
+        entityId: 'task-parent-b-1',
+        changeAt: baseTime.add(const Duration(seconds: 2)),
+        data: {'nameLocal': 'Task B1', 'parentId': 'parent-b'},
+        operation: 'create',
+      ),
+    );
+
+    final baseUrl = await resolveBaseUrl();
+
+    // Test: Get all tasks (no filter)
+    final allTasksUri = baseUrl.replace(
+      path: '/api/state/projects/filter-project/tasks',
+    );
+    final allTasksReq = await HttpClient().getUrl(allTasksUri);
+    final allTasksRes = await allTasksReq.close();
+    expect(allTasksRes.statusCode, 200);
+    final allTasksBody = await allTasksRes.transform(utf8.decoder).join();
+    final allTasksJson = jsonDecode(allTasksBody) as Map<String, dynamic>;
+    expect(allTasksJson['items'], isA<List>());
+    expect(
+      allTasksJson['items'].length,
+      3,
+      reason: 'Should return all 3 tasks',
+    );
+
+    // Test: Filter by parentId=parent-a
+    final parentAUri = baseUrl.replace(
+      path: '/api/state/projects/filter-project/tasks',
+      queryParameters: {'parentId': 'parent-a'},
+    );
+    final parentAReq = await HttpClient().getUrl(parentAUri);
+    final parentARes = await parentAReq.close();
+    expect(parentARes.statusCode, 200);
+    final parentABody = await parentARes.transform(utf8.decoder).join();
+    final parentAJson = jsonDecode(parentABody) as Map<String, dynamic>;
+    expect(parentAJson['items'], isA<List>());
+    expect(
+      parentAJson['items'].length,
+      2,
+      reason: 'Should return 2 tasks with parent-a',
+    );
+
+    // Verify the returned tasks have the correct parentId
+    for (final item in parentAJson['items']) {
+      expect(item['data_parentId'], 'parent-a', reason: parentABody);
+    }
+
+    // Test: Filter by parentId=parent-b
+    final parentBUri = baseUrl.replace(
+      path: '/api/state/projects/filter-project/tasks',
+      queryParameters: {'parentId': 'parent-b'},
+    );
+    final parentBReq = await HttpClient().getUrl(parentBUri);
+    final parentBRes = await parentBReq.close();
+    expect(parentBRes.statusCode, 200);
+    final parentBBody = await parentBRes.transform(utf8.decoder).join();
+    final parentBJson = jsonDecode(parentBBody) as Map<String, dynamic>;
+    expect(parentBJson['items'], isA<List>());
+    expect(
+      parentBJson['items'].length,
+      1,
+      reason: 'Should return 1 task with parent-b',
+    );
+    expect(
+      parentBJson['items'][0]['data_parentId'],
+      'parent-b',
+      reason: parentBBody,
+    );
+    expect(
+      parentBJson['items'][0]['data_nameLocal'],
+      'Task B1',
+      reason: parentBBody,
+    );
+
+    // Test: Filter by non-existent parentId
+    final nonExistentUri = baseUrl.replace(
+      path: '/api/state/projects/filter-project/tasks',
+      queryParameters: {'parentId': 'non-existent'},
+    );
+    final nonExistentReq = await HttpClient().getUrl(nonExistentUri);
+    final nonExistentRes = await nonExistentReq.close();
+    expect(nonExistentRes.statusCode, 200);
+    final nonExistentBody = await nonExistentRes.transform(utf8.decoder).join();
+    final nonExistentJson = jsonDecode(nonExistentBody) as Map<String, dynamic>;
+    expect(nonExistentJson['items'], isA<List>());
+    expect(
+      nonExistentJson['items'],
+      isEmpty,
+      reason: 'Should return empty list for non-existent parentId',
+    );
   }
 }
 

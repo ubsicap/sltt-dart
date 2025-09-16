@@ -96,6 +96,35 @@ void main() {
       expect(result['nextCursor'], isNull);
     });
 
+    test('accepts parentId parameter without error', () async {
+      final result = await storage!.getEntityStates(
+        domainType: 'project',
+        domainId: 'test-project',
+        entityType: 'task',
+        parentId: 'some-parent-id',
+      );
+
+      expect(result['items'], isEmpty);
+      expect(result['hasMore'], isFalse);
+      expect(result['nextCursor'], isNull);
+    });
+
+    test('parentId parameter works with other parameters', () async {
+      final result = await storage!.getEntityStates(
+        domainType: 'project',
+        domainId: 'test-project',
+        entityType: 'task',
+        parentId: 'some-parent-id',
+        limit: 50,
+        cursor: 'some-cursor',
+        includeMetadata: true,
+      );
+
+      expect(result['items'], isEmpty);
+      expect(result['hasMore'], isFalse);
+      expect(result['nextCursor'], isNull);
+    });
+
     // More comprehensive tests with real data would go here, but they require
     // proper setup of entity states using the full updateChangeLogAndState
     // method with proper state data structure, which is better tested in

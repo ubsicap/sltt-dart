@@ -34,10 +34,19 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .entityIdEqualTo(entityId)
           .findFirst(),
       findByDomainWithPagination:
-          (Isar db, String domainId, {String? cursor, int? limit}) async {
+          (
+            Isar db,
+            String domainId, {
+            String? cursor,
+            int? limit,
+            String? parentId,
+          }) async {
             var query = db.isarProjectStates.filter().change_domainIdEqualTo(
               domainId,
             );
+            if (parentId != null) {
+              query = query.and().data_parentIdEqualTo(parentId);
+            }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }
@@ -60,10 +69,19 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .entityIdEqualTo(entityId)
           .findFirst(),
       findByDomainWithPagination:
-          (Isar db, String domainId, {String? cursor, int? limit}) async {
+          (
+            Isar db,
+            String domainId, {
+            String? cursor,
+            int? limit,
+            String? parentId,
+          }) async {
             var query = db.isarDocumentStates.filter().change_domainIdEqualTo(
               domainId,
             );
+            if (parentId != null) {
+              query = query.and().data_parentIdEqualTo(parentId);
+            }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }
@@ -86,10 +104,19 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .entityIdEqualTo(entityId)
           .findFirst(),
       findByDomainWithPagination:
-          (Isar db, String domainId, {String? cursor, int? limit}) async {
+          (
+            Isar db,
+            String domainId, {
+            String? cursor,
+            int? limit,
+            String? parentId,
+          }) async {
             var query = db.isarTeamStates.filter().change_domainIdEqualTo(
               domainId,
             );
+            if (parentId != null) {
+              query = query.and().data_parentIdEqualTo(parentId);
+            }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }
@@ -112,10 +139,19 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .entityIdEqualTo(entityId)
           .findFirst(),
       findByDomainWithPagination:
-          (Isar db, String domainId, {String? cursor, int? limit}) async {
+          (
+            Isar db,
+            String domainId, {
+            String? cursor,
+            int? limit,
+            String? parentId,
+          }) async {
             var query = db.isarTaskStates.filter().change_domainIdEqualTo(
               domainId,
             );
+            if (parentId != null) {
+              query = query.and().data_parentIdEqualTo(parentId);
+            }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }

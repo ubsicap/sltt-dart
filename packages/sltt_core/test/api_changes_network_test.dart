@@ -240,6 +240,7 @@ void main() {
         'srcStorageType: cloud, srcStorageId: cloud',
         'returns empty list for entityCollection with no states',
         'returns seeded entity state by entityCollection and entityId',
+        'filters by parentId when parameter is provided',
       };
 
       // Check that we have the same number of tests

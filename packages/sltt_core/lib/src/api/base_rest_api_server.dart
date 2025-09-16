@@ -547,6 +547,12 @@ abstract class BaseRestApiServer {
             {'name': 'cursor', 'type': 'string', 'required': false},
             {'name': 'limit', 'type': 'integer', 'required': false},
             {'name': 'includeMetadata', 'type': 'boolean', 'required': false},
+            {
+              'name': 'parentId',
+              'type': 'string',
+              'required': false,
+              'description': 'Filter entities by parent ID',
+            },
           ],
           'response': {
             'type': 'object',
@@ -1326,6 +1332,7 @@ abstract class BaseRestApiServer {
       final cursor = queryParams['cursor'];
       final limitStr = queryParams['limit'];
       final fieldMetadataStr = queryParams['field_metadata'];
+      final parentId = queryParams['parentId'];
 
       // Parse limit parameter
       int limit = 100; // Default limit
@@ -1354,6 +1361,7 @@ abstract class BaseRestApiServer {
         cursor: cursor,
         limit: limit,
         includeMetadata: includeFieldMetadata,
+        parentId: parentId,
       );
 
       return Response.ok(
