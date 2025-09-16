@@ -279,6 +279,11 @@ void main() {
           'data_parentId_changeAt_': baseTime.toIso8601String(),
           'data_parentId_cid_': change.cid,
           'data_parentId_changeBy_': 'tester',
+          'data_parentProp': 'pList',
+          'data_parentProp_dataSchemaRev_': 0,
+          'data_parentProp_changeAt_': baseTime.toIso8601String(),
+          'data_parentProp_cid_': change.cid,
+          'data_parentProp_changeBy_': 'tester',
           // parentProp meta fields added above
           'unknownJson': '{}',
         },
