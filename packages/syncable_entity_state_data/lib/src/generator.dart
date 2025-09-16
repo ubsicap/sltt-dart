@@ -68,20 +68,18 @@ class SyncableEntityStateDataGenerator
     final sourceFileName =
         buildStep.inputId.pathSegments.last; // e.g. task_data.dart
     final baseName = sourceFileName.replaceAll('.dart', ''); // task_data
-    final libraryName = '${baseName}_entity_state';
     final gPartName = '$baseName.entity_state.g.dart';
     buffer
-      ..writeln('library $libraryName;')
       // Import the original source file so the original data class symbol
       // (e.g. TaskData) is in scope for the toData() mapper and any type
       // references. This keeps the generated library standalone while still
       // enabling the round-trip mapping.
-      ..writeln("import '$sourceFileName';")
+  ..writeln("import '$sourceFileName';")
       ..writeln()
       ..writeln("import 'package:json_annotation/json_annotation.dart';")
       ..writeln("import 'package:sltt_core/sltt_core.dart';")
       ..writeln()
-      ..writeln("part '$gPartName';")
+  ..writeln("part '$gPartName';")
       ..writeln();
     buffer.writeln(
       '@JsonSerializable(includeIfNull: $includeIfNull, explicitToJson: true)',
@@ -109,8 +107,9 @@ class SyncableEntityStateDataGenerator
     buffer.writeln('  $entityStateClassName({');
     buffer.writeln('    required this.entityId,');
     buffer.writeln(
-      "    String? entityType, // optional override, defaults to inferred '$entityTypeValue'",
+      '    // entityType is fixed for this generated class and must not be overridden',
     );
+  buffer.writeln('    required super.domainType,');
     buffer.writeln('    required super.change_domainId,');
     buffer.writeln('    required super.change_changeAt,');
     buffer.writeln('    required super.change_cid,');
@@ -120,14 +119,14 @@ class SyncableEntityStateDataGenerator
     buffer.writeln('    required super.data_parentId_cid_,');
     buffer.writeln('    required super.data_parentId_changeBy_,');
     // parentProp is optional and may be absent from older change logs; pass nulls
-    buffer.writeln('    // parentProp related meta (optional)');
-    buffer.writeln('    super.data_parentProp,');
-    buffer.writeln('    super.data_parentProp_dataSchemaRev_,');
-    buffer.writeln('    super.data_parentProp_changeAt_,');
-    buffer.writeln('    super.data_parentProp_cid_,');
-    buffer.writeln('    super.data_parentProp_changeBy_,');
-    buffer.writeln('    super.data_parentProp_cloudAt_,');
-    buffer.writeln('    required String unknownJson,');
+  buffer.writeln('    // parentProp related meta (required to match BaseEntityState)');
+  buffer.writeln('    required super.data_parentProp,');
+  buffer.writeln('    super.data_parentProp_dataSchemaRev_,');
+  buffer.writeln('    required super.data_parentProp_changeAt_,');
+  buffer.writeln('    required super.data_parentProp_cid_,');
+  buffer.writeln('    required super.data_parentProp_changeBy_,');
+  buffer.writeln('    super.data_parentProp_cloudAt_,');
+  buffer.writeln('    required super.unknownJson,');
     buffer.writeln('    super.change_dataSchemaRev,');
     buffer.writeln('    super.change_cloudAt,');
     buffer.writeln('    super.data_rank,');
@@ -155,8 +154,7 @@ class SyncableEntityStateDataGenerator
 
     buffer.writeln('  }) : super(');
     buffer.writeln('    entityId: entityId,');
-    buffer.writeln("    entityType: entityType ?? '$entityTypeValue',");
-    buffer.writeln('    unknownJson: unknownJson,');
+  buffer.writeln("    entityType: '$entityTypeValue',");
     buffer.writeln('    change_domainId_orig_: change_domainId,');
     buffer.writeln('    change_changeAt_orig_: change_changeAt,');
     buffer.writeln('    change_cid_orig_: change_cid,');

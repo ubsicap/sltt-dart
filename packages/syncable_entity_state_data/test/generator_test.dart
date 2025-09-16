@@ -11,7 +11,7 @@ void main() {
       generated,
       contains('class TaskDataEntityState extends BaseEntityState'),
     );
-    expect(generated, contains("entityType: entityType ?? 'task'"));
+    expect(generated, contains("entityType: 'task'"));
     expect(generated, contains('fromJsonBase'));
     expect(generated, contains('toJsonBase'));
     expect(generated, contains('toJsonSafe'));

@@ -6,12 +6,10 @@
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: non_constant_identifier_names
-library task_data_entity_state;
-
-import 'task_data.dart';
-
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
+
+import 'task_data.dart';
 
 part 'task_data.entity_state.g.dart';
 
@@ -28,7 +26,7 @@ class TaskDataEntityState extends BaseEntityState {
   final DateTime? data_nameLocal_cloudAt_;
   TaskDataEntityState({
     required this.entityId,
-    String? entityType, // optional override, defaults to inferred 'task'
+  required super.domainType,
     required super.change_domainId,
     required super.change_changeAt,
     required super.change_cid,
@@ -37,14 +35,14 @@ class TaskDataEntityState extends BaseEntityState {
     required super.data_parentId_changeAt_,
     required super.data_parentId_cid_,
     required super.data_parentId_changeBy_,
-    // parentProp related meta (optional)
-    super.data_parentProp,
+    // parentProp related meta (required to match BaseEntityState)
+    required super.data_parentProp,
     super.data_parentProp_dataSchemaRev_,
-    super.data_parentProp_changeAt_,
-    super.data_parentProp_cid_,
-    super.data_parentProp_changeBy_,
+    required super.data_parentProp_changeAt_,
+    required super.data_parentProp_cid_,
+    required super.data_parentProp_changeBy_,
     super.data_parentProp_cloudAt_,
-    required String unknownJson,
+  required super.unknownJson,
     super.change_dataSchemaRev,
     super.change_cloudAt,
     super.data_rank,
@@ -67,16 +65,11 @@ class TaskDataEntityState extends BaseEntityState {
     this.data_nameLocal_cloudAt_,
   }) : super(
           entityId: entityId,
-          entityType: entityType ?? 'task',
-          unknownJson: unknownJson,
+          entityType: 'task',
           change_domainId_orig_: change_domainId,
           change_changeAt_orig_: change_changeAt,
           change_cid_orig_: change_cid,
           change_changeBy_orig_: change_changeBy,
-          data_parentId_dataSchemaRev_: null,
-          data_parentId_cloudAt_: null,
-          data_parentProp_dataSchemaRev_: null,
-          data_parentProp_cloudAt_: null,
         );
   static TaskDataEntityState fromJsonBase(Map<String, dynamic> json) =>
       _$TaskDataEntityStateFromJson(json);
