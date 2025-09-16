@@ -36,8 +36,9 @@ const IsarStorageStateSchema = CollectionSchema(
       id: 3,
       name: r'updatedAt',
       type: IsarType.dateTime,
-    )
+    ),
   },
+
   estimateSize: _isarStorageStateEstimateSize,
   serialize: _isarStorageStateSerialize,
   deserialize: _isarStorageStateDeserialize,
@@ -46,10 +47,11 @@ const IsarStorageStateSchema = CollectionSchema(
   indexes: {},
   links: {},
   embeddedSchemas: {},
+
   getId: _isarStorageStateGetId,
   getLinks: _isarStorageStateGetLinks,
   attach: _isarStorageStateAttach,
-  version: '3.1.0+1',
+  version: '3.3.0-dev.2',
 );
 
 int _isarStorageStateEstimateSize(
@@ -120,7 +122,10 @@ List<IsarLinkBase<dynamic>> _isarStorageStateGetLinks(IsarStorageState object) {
 }
 
 void _isarStorageStateAttach(
-    IsarCollection<dynamic> col, Id id, IsarStorageState object) {}
+  IsarCollection<dynamic> col,
+  Id id,
+  IsarStorageState object,
+) {}
 
 extension IsarStorageStateQueryWhereSort
     on QueryBuilder<IsarStorageState, IsarStorageState, QWhere> {
@@ -134,17 +139,15 @@ extension IsarStorageStateQueryWhereSort
 extension IsarStorageStateQueryWhere
     on QueryBuilder<IsarStorageState, IsarStorageState, QWhereClause> {
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterWhereClause> idEqualTo(
-      Id id) {
+    Id id,
+  ) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: id,
-        upper: id,
-      ));
+      return query.addWhereClause(IdWhereClause.between(lower: id, upper: id));
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterWhereClause>
-      idNotEqualTo(Id id) {
+  idNotEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -167,7 +170,7 @@ extension IsarStorageStateQueryWhere
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterWhereClause>
-      idGreaterThan(Id id, {bool include = false}) {
+  idGreaterThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: id, includeLower: include),
@@ -176,7 +179,7 @@ extension IsarStorageStateQueryWhere
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterWhereClause>
-      idLessThan(Id id, {bool include = false}) {
+  idLessThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: id, includeUpper: include),
@@ -191,12 +194,14 @@ extension IsarStorageStateQueryWhere
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: lowerId,
-        includeLower: includeLower,
-        upper: upperId,
-        includeUpper: includeUpper,
-      ));
+      return query.addWhereClause(
+        IdWhereClause.between(
+          lower: lowerId,
+          includeLower: includeLower,
+          upper: upperId,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 }
@@ -204,165 +209,166 @@ extension IsarStorageStateQueryWhere
 extension IsarStorageStateQueryFilter
     on QueryBuilder<IsarStorageState, IsarStorageState, QFilterCondition> {
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      createdAtEqualTo(DateTime value) {
+  createdAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'createdAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'createdAt', value: value),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      createdAtGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  createdAtGreaterThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'createdAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'createdAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      createdAtLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  createdAtLessThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'createdAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'createdAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      createdAtBetween(
+  createdAtBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'createdAt',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'createdAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      idEqualTo(Id value) {
+  idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'id', value: value),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      idGreaterThan(
-    Id value, {
-    bool include = false,
-  }) {
+  idGreaterThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      idLessThan(
-    Id value, {
-    bool include = false,
-  }) {
+  idLessThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      idBetween(
+  idBetween(
     Id lower,
     Id upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'id',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'id',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageIdEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  storageIdEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'storageId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'storageId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageIdGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'storageId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageIdLessThan(
+  storageIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'storageId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'storageId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageIdBetween(
+  storageIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'storageId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
+  storageIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -370,135 +376,140 @@ extension IsarStorageStateQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'storageId',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'storageId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageIdStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  storageIdStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'storageId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'storageId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageIdEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  storageIdEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'storageId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'storageId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageIdContains(String value, {bool caseSensitive = true}) {
+  storageIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'storageId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'storageId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageIdMatches(String pattern, {bool caseSensitive = true}) {
+  storageIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'storageId',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'storageId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageIdIsEmpty() {
+  storageIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'storageId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'storageId', value: ''),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageIdIsNotEmpty() {
+  storageIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'storageId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'storageId', value: ''),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageTypeEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  storageTypeEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'storageType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'storageType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageTypeGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'storageType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageTypeLessThan(
+  storageTypeGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'storageType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'storageType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageTypeBetween(
+  storageTypeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'storageType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
+  storageTypeBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -506,140 +517,141 @@ extension IsarStorageStateQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'storageType',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'storageType',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageTypeStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  storageTypeStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'storageType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'storageType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageTypeEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  storageTypeEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'storageType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'storageType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageTypeContains(String value, {bool caseSensitive = true}) {
+  storageTypeContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'storageType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'storageType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageTypeMatches(String pattern, {bool caseSensitive = true}) {
+  storageTypeMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'storageType',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'storageType',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageTypeIsEmpty() {
+  storageTypeIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'storageType',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'storageType', value: ''),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      storageTypeIsNotEmpty() {
+  storageTypeIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'storageType',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'storageType', value: ''),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      updatedAtEqualTo(DateTime value) {
+  updatedAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'updatedAt', value: value),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      updatedAtGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  updatedAtGreaterThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'updatedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      updatedAtLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  updatedAtLessThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'updatedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterFilterCondition>
-      updatedAtBetween(
+  updatedAtBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'updatedAt',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'updatedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 }
@@ -653,56 +665,56 @@ extension IsarStorageStateQueryLinks
 extension IsarStorageStateQuerySortBy
     on QueryBuilder<IsarStorageState, IsarStorageState, QSortBy> {
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      sortByCreatedAt() {
+  sortByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.asc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      sortByCreatedAtDesc() {
+  sortByCreatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.desc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      sortByStorageId() {
+  sortByStorageId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageId', Sort.asc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      sortByStorageIdDesc() {
+  sortByStorageIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageId', Sort.desc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      sortByStorageType() {
+  sortByStorageType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageType', Sort.asc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      sortByStorageTypeDesc() {
+  sortByStorageTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageType', Sort.desc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      sortByUpdatedAt() {
+  sortByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      sortByUpdatedAtDesc() {
+  sortByUpdatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
@@ -712,14 +724,14 @@ extension IsarStorageStateQuerySortBy
 extension IsarStorageStateQuerySortThenBy
     on QueryBuilder<IsarStorageState, IsarStorageState, QSortThenBy> {
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      thenByCreatedAt() {
+  thenByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.asc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      thenByCreatedAtDesc() {
+  thenByCreatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.desc);
     });
@@ -732,49 +744,49 @@ extension IsarStorageStateQuerySortThenBy
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      thenByIdDesc() {
+  thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      thenByStorageId() {
+  thenByStorageId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageId', Sort.asc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      thenByStorageIdDesc() {
+  thenByStorageIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageId', Sort.desc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      thenByStorageType() {
+  thenByStorageType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageType', Sort.asc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      thenByStorageTypeDesc() {
+  thenByStorageTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageType', Sort.desc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      thenByUpdatedAt() {
+  thenByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QAfterSortBy>
-      thenByUpdatedAtDesc() {
+  thenByUpdatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
@@ -784,28 +796,28 @@ extension IsarStorageStateQuerySortThenBy
 extension IsarStorageStateQueryWhereDistinct
     on QueryBuilder<IsarStorageState, IsarStorageState, QDistinct> {
   QueryBuilder<IsarStorageState, IsarStorageState, QDistinct>
-      distinctByCreatedAt() {
+  distinctByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'createdAt');
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QDistinct>
-      distinctByStorageId({bool caseSensitive = true}) {
+  distinctByStorageId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'storageId', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QDistinct>
-      distinctByStorageType({bool caseSensitive = true}) {
+  distinctByStorageType({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'storageType', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<IsarStorageState, IsarStorageState, QDistinct>
-      distinctByUpdatedAt() {
+  distinctByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'updatedAt');
     });
@@ -821,7 +833,7 @@ extension IsarStorageStateQueryProperty
   }
 
   QueryBuilder<IsarStorageState, DateTime, QQueryOperations>
-      createdAtProperty() {
+  createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdAt');
     });
@@ -834,14 +846,14 @@ extension IsarStorageStateQueryProperty
   }
 
   QueryBuilder<IsarStorageState, String, QQueryOperations>
-      storageTypeProperty() {
+  storageTypeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'storageType');
     });
   }
 
   QueryBuilder<IsarStorageState, DateTime, QQueryOperations>
-      updatedAtProperty() {
+  updatedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'updatedAt');
     });

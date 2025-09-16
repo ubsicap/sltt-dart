@@ -1,4 +1,4 @@
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'isar_entity_state_storage_group.dart';

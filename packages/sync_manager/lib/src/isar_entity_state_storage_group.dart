@@ -1,4 +1,4 @@
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 /// Storage group for Isar entity state operations

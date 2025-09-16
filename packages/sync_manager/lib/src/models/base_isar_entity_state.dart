@@ -1,6 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, prefer_initializing_formals
 
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 /// Abstract base class for all Isar entity state collections
