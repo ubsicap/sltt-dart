@@ -9,17 +9,12 @@ part of 'task_data.entity_state.dart';
 TaskDataEntityState _$TaskDataEntityStateFromJson(Map<String, dynamic> json) =>
     TaskDataEntityState(
       entityId: json['entityId'] as String,
-      entityType: json['entityType'] as String?,
-      domainType:
-          json['domainType'] as String? ?? domainType ?? entityType ?? 'task',
+      domainType: json['domainType'] as String,
       change_domainId: json['change_domainId'] as String,
       change_changeAt: DateTime.parse(json['change_changeAt'] as String),
       change_cid: json['change_cid'] as String,
       change_changeBy: json['change_changeBy'] as String,
       data_parentId: json['data_parentId'] as String,
-      data_parentId_changeAt_:
-          DateTime.parse(json['data_parentId_changeAt_'] as String),
-      domainType: json['domainType'] ?? domainType ?? entityType ?? 'task',
       data_parentId_changeAt_:
           DateTime.parse(json['data_parentId_changeAt_'] as String),
       data_parentId_cid_: json['data_parentId_cid_'] as String,
@@ -77,7 +72,6 @@ TaskDataEntityState _$TaskDataEntityStateFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$TaskDataEntityStateToJson(
         TaskDataEntityState instance) =>
     <String, dynamic>{
-      'entityType': instance.entityType,
       'domainType': instance.domainType,
       'unknownJson': instance.unknownJson,
       'change_domainId': instance.change_domainId,

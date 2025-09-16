@@ -71,10 +71,10 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
       // (e.g. TaskData) is in scope for the toData() mapper and any type
       // references. This keeps the generated library standalone while still
       // enabling the round-trip mapping.
-      ..writeln("import '$sourceFileName';")
-      ..writeln()
       ..writeln("import 'package:json_annotation/json_annotation.dart';")
       ..writeln("import 'package:sltt_core/sltt_core.dart';")
+      ..writeln()
+      ..writeln("import '$sourceFileName';")
       ..writeln()
       ..writeln("part '$gPartName';")
       ..writeln();
@@ -156,11 +156,6 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
     buffer.writeln('    change_changeAt_orig_: change_changeAt,');
     buffer.writeln('    change_cid_orig_: change_cid,');
     buffer.writeln('    change_changeBy_orig_: change_changeBy,');
-    // Pass nulls for optional parentId and parentProp meta values (instance fields not available yet)
-    buffer.writeln('    data_parentId_dataSchemaRev_: null,');
-    buffer.writeln('    data_parentId_cloudAt_: null,');
-    buffer.writeln('    data_parentProp_dataSchemaRev_: null,');
-    buffer.writeln('    data_parentProp_cloudAt_: null,');
     buffer.writeln('  );');
 
     // Base (json_serializable) helpers

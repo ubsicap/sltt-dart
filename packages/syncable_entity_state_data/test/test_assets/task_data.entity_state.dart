@@ -26,6 +26,7 @@ class TaskDataEntityState extends BaseEntityState {
   final DateTime? data_nameLocal_cloudAt_;
   TaskDataEntityState({
     required this.entityId,
+    // entityType is fixed for this generated class and must not be overridden
     required super.domainType,
     required super.change_domainId,
     required super.change_changeAt,
@@ -71,7 +72,8 @@ class TaskDataEntityState extends BaseEntityState {
           change_cid_orig_: change_cid,
           change_changeBy_orig_: change_changeBy,
         );
-  static TaskDataEntityState fromJsonBase(Map<String, dynamic> json) => _$TaskDataEntityStateFromJson(json);
+  static TaskDataEntityState fromJsonBase(Map<String, dynamic> json) =>
+      _$TaskDataEntityStateFromJson(json);
   Map<String, dynamic> toJsonBase() => _$TaskDataEntityStateToJson(this);
   Map<String, dynamic> toJsonSafe() {
     final j = toJson();
@@ -82,14 +84,16 @@ class TaskDataEntityState extends BaseEntityState {
     return j;
   }
 
-  factory TaskDataEntityState.fromJson(Map<String, dynamic> json) => deserializeWithUnknownFieldData(
+  factory TaskDataEntityState.fromJson(Map<String, dynamic> json) =>
+      deserializeWithUnknownFieldData(
         _$TaskDataEntityStateFromJson,
         json,
         _$TaskDataEntityStateToJson,
       );
 
   @override
-  Map<String, dynamic> toJson() => serializeWithUnknownFieldData(this, _$TaskDataEntityStateToJson);
+  Map<String, dynamic> toJson() =>
+      serializeWithUnknownFieldData(this, _$TaskDataEntityStateToJson);
 }
 
 // Mapper back to the original data class
