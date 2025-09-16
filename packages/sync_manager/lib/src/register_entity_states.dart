@@ -48,7 +48,9 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             if (parentId != null) {
               query = query.and().data_parentIdEqualTo(parentId);
             }
-            // parentProp filtering handled at storage service level if supported
+            if (parentProp != null) {
+              query = query.and().data_parentPropEqualTo(parentProp);
+            }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }
@@ -85,7 +87,9 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             if (parentId != null) {
               query = query.and().data_parentIdEqualTo(parentId);
             }
-            // parentProp filtering handled at storage service level if supported
+            if (parentProp != null) {
+              query = query.and().data_parentPropEqualTo(parentProp);
+            }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }
@@ -122,7 +126,9 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             if (parentId != null) {
               query = query.and().data_parentIdEqualTo(parentId);
             }
-            // parentProp filtering handled at storage service level if supported
+            if (parentProp != null) {
+              query = query.and().data_parentPropEqualTo(parentProp);
+            }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }
@@ -159,7 +165,9 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             if (parentId != null) {
               query = query.and().data_parentIdEqualTo(parentId);
             }
-            // parentProp filtering handled at storage service level if supported
+            if (parentProp != null) {
+              query = query.and().data_parentPropEqualTo(parentProp);
+            }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
             }

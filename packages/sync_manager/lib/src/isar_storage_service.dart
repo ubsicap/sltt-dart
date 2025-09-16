@@ -1070,29 +1070,17 @@ class IsarStorageService extends BaseStorageService {
           ? entities.take(effectiveLimit).toList()
           : entities;
 
-      // Convert to JSON and determine next cursor
+      // Convert to JSON and determine next cursor. Rely on DB-level filtering
+      // (generated Isar query helpers) to handle `parentProp` and `parentId`.
       final items = resultEntities
           .map((entity) => (entity as dynamic).toJson())
           .toList();
-      // If parentProp filter requested and storage group couldn't apply DB-level
-      // filter, apply in-memory filter here on the returned JSON items.
-      List<Map<String, dynamic>> filteredItems =
-          List<Map<String, dynamic>>.from(items);
-      if (parentProp != null) {
-        filteredItems = filteredItems
-            .where((it) => it['data_parentProp'] == parentProp)
-            .cast<Map<String, dynamic>>()
-            .toList();
-      }
+
       final nextCursor = hasMore && resultEntities.isNotEmpty
           ? (resultEntities.last as dynamic).entityId as String?
           : null;
 
-      return {
-        'items': filteredItems,
-        'hasMore': hasMore,
-        'nextCursor': nextCursor,
-      };
+      return {'items': items, 'hasMore': hasMore, 'nextCursor': nextCursor};
     } on ArgumentError {
       // Re-throw ArgumentError so it can be caught by the API handler as a 400 error
       rethrow;
