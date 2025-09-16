@@ -53,6 +53,12 @@ void main() {
         data_parentId_cid_: 'cid',
         data_parentId_changeBy_: 'user',
         data_parentId_cloudAt_: DateTime.now().toUtc(),
+        // Add some parentProp data for testing
+        data_parentProp: 'pList',
+        data_parentProp_dataSchemaRev_: 1,
+        data_parentProp_changeAt_: DateTime.now().toUtc(),
+        data_parentProp_cid_: 'cid',
+        data_parentProp_changeBy_: 'user',
         unknownJson: '',
       );
       state.setUnknown('baz', 'qux');

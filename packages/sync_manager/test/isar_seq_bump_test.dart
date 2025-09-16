@@ -65,7 +65,7 @@ void main() {
       'operationInfoJson': '{}',
       'stateChanged': false,
       'unknownJson': '{}',
-      'dataJson': jsonEncode({'parentId': 'root'}),
+      'dataJson': jsonEncode({'parentId': 'root', 'parentProp': 'pList'}),
     };
 
     final r = await ChangeProcessingService.processChanges(
@@ -105,7 +105,11 @@ void main() {
       'operationInfoJson': '{}',
       'stateChanged': false,
       'unknownJson': '{}',
-      'dataJson': jsonEncode({'nameLocal': 'X', 'parentId': 'root'}),
+      'dataJson': jsonEncode({
+        'nameLocal': 'X',
+        'parentId': 'root',
+        'parentProp': 'pList',
+      }),
     };
 
     final change = IsarChangeLogEntry.fromJson(payload);
@@ -157,7 +161,7 @@ void main() {
         'operationInfoJson': '{}',
         'stateChanged': false,
         'unknownJson': '{}',
-        'dataJson': jsonEncode({'parentId': 'root'}),
+        'dataJson': jsonEncode({'parentId': 'root', 'parentProp': 'pList'}),
       };
 
       final r = await ChangeProcessingService.processChanges(

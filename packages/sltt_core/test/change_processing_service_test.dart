@@ -68,7 +68,8 @@ void main() {
           'operationInfoJson': '{}',
           'stateChanged': true,
           'unknownJson': '{}',
-          'dataJson': '{"nameLocal": "Test Task", "parentId": "root"}',
+          'dataJson':
+              '{"nameLocal": "Test Task", "parentId": "root", "parentProp": "pList"}',
         };
 
         final result = await ChangeProcessingService.processChanges(
@@ -112,7 +113,8 @@ void main() {
           'operationInfoJson': '{}',
           'stateChanged': true,
           'unknownJson': '{}',
-          'dataJson': '{"nameLocal": "Test Task", "parentId": "root"}',
+          'dataJson':
+              '{"nameLocal": "Test Task", "parentId": "root", "parentProp": "pList"}',
         };
 
         final result = await ChangeProcessingService.processChanges(
@@ -170,7 +172,8 @@ void main() {
           'operationInfoJson': '{}',
           'stateChanged': true,
           'unknownJson': '{}',
-          'dataJson': '{"nameLocal": "Test Task", "parentId": "root"}',
+          'dataJson':
+              '{"nameLocal": "Test Task", "parentId": "root", "parentProp": "pList"}',
         };
 
         final result = await ChangeProcessingService.processChanges(
@@ -219,7 +222,8 @@ void main() {
             'operationInfoJson': '{}',
             'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"nameLocal": "Task 1", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Task 1", "parentId": "root", "parentProp": "pList"}',
           },
           {
             'domainId': 'test-project',
@@ -237,7 +241,8 @@ void main() {
             'operationInfoJson': '{}',
             'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"nameLocal": "Task 2", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Task 2", "parentId": "root", "parentProp": "pList"}',
           },
         ];
 
@@ -428,6 +433,11 @@ void main() {
             !adjustedData.containsKey('parentId')) {
           adjustedData['parentId'] = 'root';
         }
+        if (addDefaultParentId &&
+            operation != 'delete' &&
+            !adjustedData.containsKey('parentProp')) {
+          adjustedData['parentProp'] = 'pList';
+        }
         final namespacedEntityId = '$domainId-$entityId';
         final namespacedCid = '$domainId-${generateCid(changeAt)}';
         return {
@@ -460,7 +470,11 @@ void main() {
               changeAt: now,
               storageId: '', // Empty for save mode
               operation: 'update',
-              data: {'nameLocal': 'Core API Net Test', 'parentId': 'root'},
+              data: {
+                'nameLocal': 'Core API Net Test',
+                'parentId': 'root',
+                'parentProp': 'pList',
+              },
             ),
           ];
 
@@ -585,7 +599,11 @@ void main() {
             entityId: 'entity-1',
             changeAt: baseTime,
             storageId: '', // Empty for save mode
-            data: {'nameLocal': 'Local Match Test', 'parentId': 'root'},
+            data: {
+              'nameLocal': 'Local Match Test',
+              'parentId': 'root',
+              'parentProp': 'pList',
+            },
           );
           final r2 = await ChangeProcessingService.processChanges(
             changes: [p2],
@@ -610,7 +628,11 @@ void main() {
             entityType: 'project',
             entityId: 'entity-1',
             changeAt: baseTime,
-            data: {'nameLocal': 'Cloud Src Test', 'parentId': 'entity-0'},
+            data: {
+              'nameLocal': 'Cloud Src Test',
+              'parentId': 'entity-0',
+              'parentProp': 'pList',
+            },
           );
           final r3 = await ChangeProcessingService.processChanges(
             changes: [p3],
@@ -665,7 +687,8 @@ void main() {
             'operationInfoJson': '{}',
             'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Test Project", "parentId": "root", "parentProp": "pList"}',
           };
 
           final result = await ChangeProcessingService.processChanges(
@@ -725,7 +748,8 @@ void main() {
             'operationInfoJson': '{}',
             'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"nameLocal": "Sync Project", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Sync Project", "parentId": "root", "parentProp": "pList"}',
           };
 
           final result = await ChangeProcessingService.processChanges(
@@ -786,7 +810,8 @@ void main() {
             'operationInfoJson': '{}',
             'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"nameLocal": "Original Name", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Original Name", "parentId": "root", "parentProp": "pList"}',
           };
 
           await ChangeProcessingService.processChanges(
@@ -818,7 +843,8 @@ void main() {
             'operationInfoJson': '{}',
             'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"nameLocal": "Updated Name", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Updated Name", "parentId": "root", "parentProp": "pList"}',
           };
 
           final result = await ChangeProcessingService.processChanges(
@@ -881,7 +907,8 @@ void main() {
             'stateChanged': true,
             'unknownField':
                 'should be rejected', // This should become unknownJson during deserialization
-            'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Test Project", "parentId": "root", "parentProp": "pList"}',
           };
 
           final storageType = cloudStorage.getStorageType();
@@ -929,7 +956,8 @@ void main() {
             'operationInfoJson': '{}',
             'stateChanged': true,
             'unknownJson': '{"unknownField": "should be rejected"}',
-            'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Test Project", "parentId": "root", "parentProp": "pList"}',
           };
 
           final storageType = cloudStorage.getStorageType();
@@ -977,7 +1005,8 @@ void main() {
             'operationInfoJson': '{}',
             'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"nameLocal": "Local Project", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Local Project", "parentId": "root", "parentProp": "pList"}',
           };
 
           final result = await ChangeProcessingService.processChanges(
@@ -1040,7 +1069,7 @@ void main() {
               'stateChanged': true,
               'unknownJson': '{}',
               'dataJson':
-                  '{"nameLocal": "Sync Local Project", "parentId": "root"}',
+                  '{"nameLocal": "Sync Local Project", "parentId": "root", "parentProp": "pList"}',
             };
 
             final result = await ChangeProcessingService.processChanges(
@@ -1105,7 +1134,8 @@ void main() {
             'stateChanged': true,
             'unknownField':
                 'should be rejected', // This should become unknownJson during deserialization
-            'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Test Project", "parentId": "root", "parentProp": "pList"}',
           };
           final storageType = localStorage.getStorageType();
           final result = await ChangeProcessingService.processChanges(
@@ -1150,7 +1180,8 @@ void main() {
             'operationInfoJson': '{}',
             'stateChanged': true,
             'unknownJson': '{"unknownField": "should be rejected"}',
-            'dataJson': '{"nameLocal": "Test Project", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Test Project", "parentId": "root", "parentProp": "pList"}',
           };
 
           final storageType = localStorage.getStorageType();
@@ -1201,7 +1232,8 @@ void main() {
             'operationInfoJson': '{}',
             'stateChanged': true,
             'unknownJson': '{}',
-            'dataJson': '{"nameLocal": "Original Local", "parentId": "root"}',
+            'dataJson':
+                '{"nameLocal": "Original Local", "parentId": "root", "parentProp": "pList"}',
           };
 
           await ChangeProcessingService.processChanges(
@@ -1234,7 +1266,7 @@ void main() {
             'stateChanged': true,
             'unknownJson': '{}',
             'dataJson':
-                '{"nameLocal": "Updated from Cloud", "parentId": "root"}',
+                '{"nameLocal": "Updated from Cloud", "parentId": "root", "parentProp": "pList"}',
           };
 
           final result = await ChangeProcessingService.processChanges(
@@ -1282,101 +1314,98 @@ void main() {
       );
 
       group('Cross-Storage Type Comparisons', () {
-        test(
-          'save mode - both storage types should behave identically',
-          () async {
-            // use the static API directly; ChangeProcessingService is static-only
+        test('save mode - both storage types should behave identically', () async {
+          // use the static API directly; ChangeProcessingService is static-only
 
-            final baseTime = DateTime.now().toUtc();
+          final baseTime = DateTime.now().toUtc();
 
-            // Process same change in both storage types
-            final changeData = {
-              'domainId': 'test-project',
-              'domainType': 'project',
-              'entityType': 'project',
-              'entityId': 'entity-cross',
-              'changeBy': 'user1',
-              'changeAt': baseTime.toIso8601String(),
-              'cid': generateCid(baseTime),
-              'storageId': '', // Empty for save mode
-              'operation': 'create',
-              'operationInfoJson': '{}',
-              'stateChanged': true,
-              'unknownJson': '{}',
-              'dataJson':
-                  '{"nameLocal": "Cross Storage Test", "parentId": "root"}',
-            };
+          // Process same change in both storage types
+          final changeData = {
+            'domainId': 'test-project',
+            'domainType': 'project',
+            'entityType': 'project',
+            'entityId': 'entity-cross',
+            'changeBy': 'user1',
+            'changeAt': baseTime.toIso8601String(),
+            'cid': generateCid(baseTime),
+            'storageId': '', // Empty for save mode
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': true,
+            'unknownJson': '{}',
+            'dataJson':
+                '{"nameLocal": "Cross Storage Test", "parentId": "root", "parentProp": "pList"}',
+          };
 
-            final cloudResult = await ChangeProcessingService.processChanges(
-              changes: [changeData],
-              storage: cloudStorage,
-              storageMode: 'save',
-              srcStorageType: 'local',
-              srcStorageId: 'test-src',
-              includeChangeUpdates: false,
-              includeStateUpdates: false,
-            );
+          final cloudResult = await ChangeProcessingService.processChanges(
+            changes: [changeData],
+            storage: cloudStorage,
+            storageMode: 'save',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
 
-            final localResult = await ChangeProcessingService.processChanges(
-              changes: [changeData],
-              storage: localStorage,
-              storageMode: 'save',
-              srcStorageType: 'local',
-              srcStorageId: 'test-src',
-              includeChangeUpdates: false,
-              includeStateUpdates: false,
-            );
+          final localResult = await ChangeProcessingService.processChanges(
+            changes: [changeData],
+            storage: localStorage,
+            storageMode: 'save',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
 
-            expect(cloudResult.isSuccess, isTrue);
-            expect(localResult.isSuccess, isTrue);
+          expect(cloudResult.isSuccess, isTrue);
+          expect(localResult.isSuccess, isTrue);
 
-            // Both should store change log entries in save mode
-            final cloudChanges = await cloudStorage.getChangesWithCursor(
-              domainType: 'project',
-              domainId: 'test-project',
-            );
-            final localChanges = await localStorage.getChangesWithCursor(
-              domainType: 'project',
-              domainId: 'test-project',
-            );
+          // Both should store change log entries in save mode
+          final cloudChanges = await cloudStorage.getChangesWithCursor(
+            domainType: 'project',
+            domainId: 'test-project',
+          );
+          final localChanges = await localStorage.getChangesWithCursor(
+            domainType: 'project',
+            domainId: 'test-project',
+          );
 
-            expect(
-              cloudChanges.length,
-              equals(1),
-              reason: 'Cloud storage should store change log in save mode',
-            );
-            expect(
-              localChanges.length,
-              equals(1),
-              reason: 'Local storage should store change log in save mode',
-            );
+          expect(
+            cloudChanges.length,
+            equals(1),
+            reason: 'Cloud storage should store change log in save mode',
+          );
+          expect(
+            localChanges.length,
+            equals(1),
+            reason: 'Local storage should store change log in save mode',
+          );
 
-            // Both should store state
-            final cloudState = await cloudStorage.getCurrentEntityState(
-              domainType: 'project',
-              domainId: 'test-project',
-              entityType: 'project',
-              entityId: 'entity-cross',
-            );
-            final localState = await localStorage.getCurrentEntityState(
-              domainType: 'project',
-              domainId: 'test-project',
-              entityType: 'project',
-              entityId: 'entity-cross',
-            );
+          // Both should store state
+          final cloudState = await cloudStorage.getCurrentEntityState(
+            domainType: 'project',
+            domainId: 'test-project',
+            entityType: 'project',
+            entityId: 'entity-cross',
+          );
+          final localState = await localStorage.getCurrentEntityState(
+            domainType: 'project',
+            domainId: 'test-project',
+            entityType: 'project',
+            entityId: 'entity-cross',
+          );
 
-            expect(cloudState, isNotNull);
-            expect(localState, isNotNull);
-            expect(
-              cloudState!.toJson()['data_nameLocal'],
-              equals('Cross Storage Test'),
-            );
-            expect(
-              localState!.toJson()['data_nameLocal'],
-              equals('Cross Storage Test'),
-            );
-          },
-        );
+          expect(cloudState, isNotNull);
+          expect(localState, isNotNull);
+          expect(
+            cloudState!.toJson()['data_nameLocal'],
+            equals('Cross Storage Test'),
+          );
+          expect(
+            localState!.toJson()['data_nameLocal'],
+            equals('Cross Storage Test'),
+          );
+        });
 
         test(
           'sync mode - storage types should behave according to requirements',
@@ -1400,7 +1429,7 @@ void main() {
               'stateChanged': true,
               'unknownJson': '{}',
               'dataJson':
-                  '{"nameLocal": "Sync Cross Test", "parentId": "root"}',
+                  '{"nameLocal": "Sync Cross Test", "parentId": "root", "parentProp": "pList"}',
             };
 
             final cloudResult = await ChangeProcessingService.processChanges(
@@ -1490,7 +1519,8 @@ void main() {
           domainType: 'project',
           changeAt: DateTime.now().toUtc(),
           changeBy: 'test-user',
-          dataJson: '{"nameLocal": "Test", "parentId": "root"}',
+          dataJson:
+              '{"nameLocal": "Test", "parentId": "root", "parentProp": "pList"}',
           operation: 'create',
           stateChanged: true,
           unknownJson: '{}',
@@ -1530,7 +1560,8 @@ void main() {
             domainType: 'project',
             changeAt: DateTime.now().toUtc(),
             changeBy: 'test-user',
-            dataJson: '{"nameLocal": "Test", "parentId": "root"}',
+            dataJson:
+                '{"nameLocal": "Test", "parentId": "root", "parentProp": "pList"}',
             operation: 'create',
             stateChanged: true,
             unknownJson: '{"unknownField": "should be rejected"}',
@@ -1567,7 +1598,8 @@ void main() {
             domainType: 'project',
             changeAt: DateTime.now().toUtc(),
             changeBy: 'test-user',
-            dataJson: '{"nameLocal": "Test", "parentId": "root"}',
+            dataJson:
+                '{"nameLocal": "Test", "parentId": "root", "parentProp": "pList"}',
             operation: 'create',
             stateChanged: true,
             unknownJson: '{"unknownField": "should be rejected"}',
@@ -1602,7 +1634,8 @@ void main() {
           domainType: 'project',
           changeAt: DateTime.now().toUtc(),
           changeBy: 'test-user',
-          dataJson: '{"nameLocal": "Test", "parentId": "root"}',
+          dataJson:
+              '{"nameLocal": "Test", "parentId": "root", "parentProp": "pList"}',
           operation: 'create',
           stateChanged: true,
           unknownJson: '{"unknownField": "allowed in sync mode"}',
@@ -1627,7 +1660,8 @@ void main() {
           domainType: 'project',
           changeAt: DateTime.now().toUtc(),
           changeBy: 'test-user',
-          dataJson: '{"nameLocal": "Test", "parentId": "root"}',
+          dataJson:
+              '{"nameLocal": "Test", "parentId": "root", "parentProp": "pList"}',
           operation: 'create',
           stateChanged: true,
           unknownJson: '{"unknownField1": "value1", "unknownField2": "value2"}',

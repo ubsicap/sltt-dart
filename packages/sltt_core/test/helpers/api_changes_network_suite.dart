@@ -167,7 +167,7 @@ class ApiChangesNetworkTestSuite {
     if (addDefaultParentId &&
         operation != 'delete' &&
         !adjustedData.containsKey('parentProp')) {
-      adjustedData['parentProp'] = 'root';
+      adjustedData['parentProp'] = 'pList';
     }
     final namespacedEntityId = '$domainId-$entityId';
     final namespacedCid = '$domainId-${generateCid(changeAt)}';
@@ -329,6 +329,7 @@ class ApiChangesNetworkTestSuite {
       'dataJson': jsonEncode({
         'nameLocal': 'Core API Net Test',
         'parentId': 'root',
+        'parentProp': 'pList',
       }),
     };
 
@@ -792,7 +793,11 @@ class ApiChangesNetworkTestSuite {
         entityType: 'task',
         entityId: 'task-1',
         changeAt: baseTime,
-        data: {'nameLocal': expectedNameLocal, 'parentId': expectedParentId},
+        data: {
+          'nameLocal': expectedNameLocal,
+          'parentId': expectedParentId,
+          'parentProp': 'pList',
+        },
         operation: 'create',
       ),
     );
@@ -824,6 +829,7 @@ class ApiChangesNetworkTestSuite {
     final state = json2['state'] as Map<String, dynamic>;
     expect(state['data_nameLocal'], expectedNameLocal, reason: body2);
     expect(state['data_parentId'], expectedParentId, reason: body2);
+    expect(state['data_parentProp'], 'pList', reason: body2);
   }
 
   Future<void> _testGetStateWithParentIdFilter() async {
@@ -834,7 +840,11 @@ class ApiChangesNetworkTestSuite {
         entityType: 'task',
         entityId: 'task-parent-a-1',
         changeAt: baseTime,
-        data: {'nameLocal': 'Task A1', 'parentId': 'parent-a'},
+        data: {
+          'nameLocal': 'Task A1',
+          'parentId': 'parent-a',
+          'parentProp': 'pList',
+        },
         operation: 'create',
       ),
     );
@@ -845,7 +855,11 @@ class ApiChangesNetworkTestSuite {
         entityType: 'task',
         entityId: 'task-parent-a-2',
         changeAt: baseTime.add(const Duration(seconds: 1)),
-        data: {'nameLocal': 'Task A2', 'parentId': 'parent-a'},
+        data: {
+          'nameLocal': 'Task A2',
+          'parentId': 'parent-a',
+          'parentProp': 'pList',
+        },
         operation: 'create',
       ),
     );
@@ -856,7 +870,11 @@ class ApiChangesNetworkTestSuite {
         entityType: 'task',
         entityId: 'task-parent-b-1',
         changeAt: baseTime.add(const Duration(seconds: 2)),
-        data: {'nameLocal': 'Task B1', 'parentId': 'parent-b'},
+        data: {
+          'nameLocal': 'Task B1',
+          'parentId': 'parent-b',
+          'parentProp': 'pList',
+        },
         operation: 'create',
       ),
     );
@@ -899,6 +917,7 @@ class ApiChangesNetworkTestSuite {
     // Verify the returned tasks have the correct parentId
     for (final item in parentAJson['items']) {
       expect(item['data_parentId'], 'parent-a', reason: parentABody);
+      expect(item['data_parentProp'], 'pList', reason: parentABody);
     }
 
     // Test: Filter by parentId=parent-b
@@ -920,6 +939,11 @@ class ApiChangesNetworkTestSuite {
     expect(
       parentBJson['items'][0]['data_parentId'],
       'parent-b',
+      reason: parentBBody,
+    );
+    expect(
+      parentBJson['items'][0]['data_parentProp'],
+      'pList',
       reason: parentBBody,
     );
     expect(

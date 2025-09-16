@@ -26,6 +26,11 @@ void main() {
         'data_parentId_changeAt_': DateTime.now().toIso8601String(),
         'data_parentId_cid_': 'cid-parent',
         'data_parentId_changeBy_': 'u1',
+        'data_parentProp': 'pList',
+        'data_parentProp_dataSchemaRev_': 0,
+        'data_parentProp_changeAt_': DateTime.now().toIso8601String(),
+        'data_parentProp_cid_': 'cid-parent',
+        'data_parentProp_changeBy_': 'u1',
         // required orig_ fields set with same values
         'change_domainId_orig_': 'd1',
         'change_changeAt_orig_': DateTime.now().toIso8601String(),
@@ -62,6 +67,11 @@ void main() {
           'data_parentId_changeAt_': '2024-01-01T10:00:00Z',
           'data_parentId_cid_': 'cid-parent',
           'data_parentId_changeBy_': 'creator',
+          'data_parentProp': 'pList',
+          'data_parentProp_dataSchemaRev_': 0,
+          'data_parentProp_changeAt_': '2024-01-01T10:00:00Z',
+          'data_parentProp_cid_': 'cid-parentprop-new',
+          'data_parentProp_changeBy_': 'creator',
           // Note: using empty/default values to test that _orig_ fields get proper values
           'change_domainId_orig_': '',
           'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
@@ -107,6 +117,11 @@ void main() {
         'data_parentId_changeAt_': '2024-02-01T10:00:00Z',
         'data_parentId_cid_': 'cid-parent-current',
         'data_parentId_changeBy_': 'updater',
+        'data_parentProp': 'pList',
+        'data_parentProp_dataSchemaRev_': 0,
+        'data_parentProp_changeAt_': '2024-02-01T10:00:00Z',
+        'data_parentProp_cid_': 'cid-parent-current',
+        'data_parentProp_changeBy_': 'updater',
         // Note: providing specific _orig_ values that should be preserved
         'change_domainId_orig_': 'd3-original',
         'change_changeAt_orig_': '2024-01-15T09:30:00Z',

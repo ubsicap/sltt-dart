@@ -70,6 +70,12 @@ void main() {
         data_parentId_cid_: 'c2',
         data_parentId_changeBy_: 'user2',
         data_parentId_cloudAt_: DateTime.parse('2023-01-02T07:00:00Z'),
+        data_parentProp: 'pList',
+        data_parentProp_dataSchemaRev_: 0,
+        data_parentProp_changeAt_: DateTime.parse('2023-01-02T07:00:00Z'),
+        data_parentProp_cid_: 'cid-parentprop-new',
+        data_parentProp_changeBy_: 'creator',
+        data_parentProp_cloudAt_: DateTime.parse('2023-01-02T08:00:00Z'),
         unknownJson: '',
       );
       final json = state.toJson();
@@ -100,10 +106,15 @@ void main() {
         'change_changeBy': 'user1',
         'change_changeBy_orig_': 'user1',
         'data_parentId': 'parent1',
+        'data_parentProp': 'pList',
         'data_parentId_dataSchemaRev_': 1,
         'data_parentId_changeAt_': baseTime.toIso8601String(),
         'data_parentId_cid_': 'cid1',
         'data_parentId_changeBy_': 'user1',
+        'data_parentProp_dataSchemaRev_': 1,
+        'data_parentProp_changeAt_': baseTime.toIso8601String(),
+        'data_parentProp_cid_': 'cid1',
+        'data_parentProp_changeBy_': 'user1',
         // Add some rank data for testing
         'data_nameLocal': 'Test Task',
         'data_nameLocal_dataSchemaRev_': 1,
@@ -130,9 +141,13 @@ void main() {
           'entityType': 'task',
           'domainType': 'project',
           'data_parentId': 'parent1',
+          'data_parentProp': 'pList',
           'data_parentId_changeAt_': baseTime.toIso8601String(),
           'data_parentId_cid_': 'cid1',
           'data_parentId_changeBy_': 'u1',
+          'data_parentProp_changeAt_': baseTime.toIso8601String(),
+          'data_parentProp_cid_': 'cid1',
+          'data_parentProp_changeBy_': 'u1',
           'data_nameLocal': 'Task 1',
           'data_nameLocal_changeAt_': baseTime.toIso8601String(),
           'data_nameLocal_cid_': 'cid1',
@@ -560,6 +575,7 @@ void main() {
             dataJson: jsonEncode({
               'rank': '1',
               'parentId': 'parent2',
+              'parentProp': 'pList',
               'nameLocal': 'New Name',
             }),
             operation: 'update',
@@ -580,7 +596,7 @@ void main() {
               'operation': 'update',
               'operationInfoJson': jsonEncode({
                 'outdatedBys': [],
-                'noOpFields': ['rank'],
+                'noOpFields': ['rank', 'parentProp'],
               }),
               'stateChanged': true,
               'dataJson': jsonEncode({
@@ -639,6 +655,12 @@ void main() {
           'data_parentId_changeAt_': olderTime.toIso8601String(),
           'data_parentId_cid_': 'cid1',
           'data_parentId_changeBy_': 'user1',
+          // parentProp matches incoming (no-op)
+          'data_parentProp': 'pList',
+          'data_parentProp_dataSchemaRev_': 1,
+          'data_parentProp_changeAt_': baseTime.toIso8601String(),
+          'data_parentProp_cid_': 'cid-name',
+          'data_parentProp_changeBy_': 'user1',
           // rank was updated after incoming change -> incoming rank should be outdated
           'data_rank': '9',
           'data_rank_dataSchemaRev_': 1,
@@ -666,6 +688,7 @@ void main() {
           dataJson: jsonEncode({
             'rank': '1',
             'parentId': 'parent2',
+            'parentProp': 'pList',
             'nameLocal': 'Same Name',
           }),
           operation: 'update',
@@ -687,7 +710,7 @@ void main() {
             'operation': 'outdated',
             'operationInfoJson': jsonEncode({
               'outdatedBys': ['rank'],
-              'noOpFields': ['nameLocal'],
+              'noOpFields': ['parentProp', 'nameLocal'],
             }),
             'stateChanged': false,
             'cloudAt': null,
@@ -745,7 +768,11 @@ void main() {
           changeAt: baseTime.add(const Duration(minutes: 1)),
           cid: 'cid3',
           changeBy: 'user1',
-          dataJson: jsonEncode({'rank': '1', 'parentId': 'parent2'}),
+          dataJson: jsonEncode({
+            'rank': '1',
+            'parentId': 'parent2',
+            'parentProp': 'pList',
+          }),
           operation: 'create',
           operationInfoJson: jsonEncode({}),
           stateChanged: true,
@@ -768,7 +795,11 @@ void main() {
             }),
             'stateChanged': true,
             'cloudAt': null,
-            'dataJson': jsonEncode({'rank': '1', 'parentId': 'parent2'}),
+            'dataJson': jsonEncode({
+              'rank': '1',
+              'parentId': 'parent2',
+              'parentProp': 'pList',
+            }),
           }),
         );
         // stateUpdates should initialize entity fields appropriately
@@ -799,6 +830,11 @@ void main() {
             'data_parentId_changeBy_': 'user1',
             'data_rank_cloudAt_': null,
             'data_parentId_cloudAt_': null,
+            'data_parentProp': 'pList',
+            'data_parentProp_changeAt_': '2023-01-01T00:01:00.000Z',
+            'data_parentProp_cid_': 'cid3',
+            'data_parentProp_changeBy_': 'user1',
+            'data_parentProp_cloudAt_': null,
           }),
         );
       });
@@ -815,6 +851,7 @@ void main() {
           dataJson: jsonEncode({
             'nameLocal': 'Localized Name',
             'parentId': 'parent3',
+            'parentProp': 'pList',
           }),
           operation: 'create',
           operationInfoJson: jsonEncode({}),
@@ -846,6 +883,7 @@ void main() {
             'dataJson': jsonEncode({
               'nameLocal': 'Localized Name',
               'parentId': 'parent3',
+              'parentProp': 'pList',
             }),
             'cloudAt': null,
           }),
@@ -980,6 +1018,12 @@ void main() {
             'data_parentId_changeAt_': baseTime.toIso8601String(),
             'data_parentId_cid_': 'cid1',
             'data_parentId_changeBy_': 'user1',
+            'data_parentProp': 'pList',
+            'data_parentProp_dataSchemaRev_': 1,
+            'data_parentProp_changeAt_': baseTime.toIso8601String(),
+            'data_parentProp_cid_': 'cid1',
+            'data_parentProp_changeBy_': 'user1',
+            'data_parentProp_cloudAt_': null,
             'data_rank': '1',
             'data_rank_dataSchemaRev': 1,
             'data_rank_dataSchemaRev_': 1,
@@ -1063,6 +1107,11 @@ void main() {
             'data_parentId_changeAt_': baseTime.toIso8601String(),
             'data_parentId_cid_': 'cid1',
             'data_parentId_changeBy_': 'user1',
+            'data_parentProp': 'pList',
+            'data_parentProp_dataSchemaRev_': 1,
+            'data_parentProp_changeAt_': baseTime.toIso8601String(),
+            'data_parentProp_cid_': 'cid1',
+            'data_parentProp_changeBy_': 'user1',
             'data_rank': '1',
             'data_rank_dataSchemaRev_': 1,
             'data_rank_changeAt_': olderTime

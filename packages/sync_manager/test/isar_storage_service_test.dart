@@ -34,6 +34,22 @@ void main() {
         !adjustedData.containsKey('parentId')) {
       adjustedData['parentId'] = 'root';
     }
+    // Ensure parentProp is present whenever parentId is present (or when we
+    // injected a default parentId). Tests expect a default parentProp of
+    // 'pList'. Don't add for deletes.
+    if (operation != 'delete') {
+      if (adjustedData.containsKey('parentId') &&
+          !adjustedData.containsKey('parentProp')) {
+        adjustedData['parentProp'] = 'pList';
+      }
+      // If parentId was not provided but we inject a default one above then
+      // also inject the default parentProp.
+      if (addDefaultParentId &&
+          !adjustedData.containsKey('parentId') &&
+          !adjustedData.containsKey('parentProp')) {
+        adjustedData['parentProp'] = 'pList';
+      }
+    }
     return {
       'domainId': projectId,
       'domainType': 'project',
@@ -114,7 +130,11 @@ void main() {
         entityId: 'entity-1',
         changeAt: baseTime,
         storageId: '',
-        data: {'nameLocal': 'Test Project', 'parentId': 'root'},
+        data: {
+          'nameLocal': 'Test Project',
+          'parentId': 'root',
+          'parentProp': 'pList',
+        },
       );
 
       // Create change via ChangeProcessingService to exercise full processing
@@ -182,7 +202,11 @@ void main() {
           entityType: 'project',
           entityId: 'entity-$i-ayix',
           changeAt: baseTime.add(Duration(minutes: i)),
-          data: {'nameLocal': 'Project $i', 'parentId': 'root'},
+          data: {
+            'nameLocal': 'Project $i',
+            'parentId': 'root',
+            'parentProp': 'pList',
+          },
         );
         // Seed via ChangeProcessingService to get the same end-to-end behavior
         final r = await ChangeProcessingService.processChanges(
@@ -223,7 +247,11 @@ void main() {
         entityType: 'project',
         entityId: entityId,
         changeAt: baseTime,
-        data: {'nameLocal': 'Test Project', 'parentId': 'root'},
+        data: {
+          'nameLocal': 'Test Project',
+          'parentId': 'root',
+          'parentProp': 'pList',
+        },
         operation: 'create',
       );
 
@@ -251,6 +279,7 @@ void main() {
           'data_parentId_changeAt_': baseTime.toIso8601String(),
           'data_parentId_cid_': change.cid,
           'data_parentId_changeBy_': 'tester',
+          // parentProp meta fields added above
           'unknownJson': '{}',
         },
       );
@@ -280,7 +309,11 @@ void main() {
         entityType: 'document',
         entityId: entityId,
         changeAt: baseTime,
-        data: {'title': 'Test Document', 'parentId': 'root'},
+        data: {
+          'title': 'Test Document',
+          'parentId': 'root',
+          'parentProp': 'pList',
+        },
         operation: 'create',
       );
 
@@ -307,6 +340,10 @@ void main() {
           'data_parentId_changeAt_': baseTime.toIso8601String(),
           'data_parentId_cid_': change.cid,
           'data_parentId_changeBy_': 'tester',
+          'data_parentProp': 'pList',
+          'data_parentProp_changeAt_': baseTime.toIso8601String(),
+          'data_parentProp_cid_': change.cid,
+          'data_parentProp_changeBy_': 'tester',
           'unknownJson': '{}',
         },
       );
@@ -332,7 +369,7 @@ void main() {
         entityType: 'team',
         entityId: entityId,
         changeAt: baseTime,
-        data: {'name': 'Test Team', 'parentId': 'root'},
+        data: {'name': 'Test Team', 'parentId': 'root', 'parentProp': 'pList'},
         operation: 'create',
       );
 
@@ -373,6 +410,10 @@ void main() {
           'data_parentId_changeAt_': baseTime.toIso8601String(),
           'data_parentId_cid_': change.cid,
           'data_parentId_changeBy_': 'tester',
+          'data_parentProp': 'pList',
+          'data_parentProp_changeAt_': baseTime.toIso8601String(),
+          'data_parentProp_cid_': change.cid,
+          'data_parentProp_changeBy_': 'tester',
         },
       );
 
@@ -794,6 +835,10 @@ void main() {
             'data_parentId_changeAt_': baseTime.toIso8601String(),
             'data_parentId_cid_': change1.cid,
             'data_parentId_changeBy_': 'user1',
+            'data_parentProp': 'pList',
+            'data_parentProp_changeAt_': baseTime.toIso8601String(),
+            'data_parentProp_cid_': change1.cid,
+            'data_parentProp_changeBy_': 'user1',
           },
         );
 
@@ -898,6 +943,10 @@ void main() {
           'data_parentId_cid_': change1.cid,
           'data_parentId_changeBy_': 'user1',
           'data_parentId_cloudAt_': null,
+          'data_parentProp': 'pList',
+          'data_parentProp_changeAt_': baseTime.toIso8601String(),
+          'data_parentProp_cid_': change1.cid,
+          'data_parentProp_changeBy_': 'user1',
         },
       );
 
@@ -957,7 +1006,10 @@ void main() {
         entityType: 'project',
         entityId: entityId,
         changeAt: baseTime,
-        data: {'parentId': 'root'}, // Minimal required data
+        data: {
+          'parentId': 'root',
+          'parentProp': 'pList',
+        }, // Minimal required data
         operation: 'create',
       );
       final r = await ChangeProcessingService.processChanges(
@@ -992,7 +1044,11 @@ void main() {
         entityType: 'project',
         entityId: entityId,
         changeAt: baseTime,
-        data: {'nameLocal': 'To Be Deleted', 'parentId': 'root'},
+        data: {
+          'nameLocal': 'To Be Deleted',
+          'parentId': 'root',
+          'parentProp': 'pList',
+        },
         operation: 'create',
       );
       final r1 = await ChangeProcessingService.processChanges(
