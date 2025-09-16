@@ -5,12 +5,10 @@ import 'package:sltt_core/sltt_core.dart';
 part 'isar_change_log_entry.g.dart';
 
 /// Public getter to ensure IsarChangeLogEntry factory registration in tests
-// ignore: library_private_types_in_public_api
 bool get isarChangeLogEntryFactoryRegistration =>
     _isarChangeLogEntryFactoryRegistration;
 
 // Register the IsarChangeLogEntry factory group for safe (de)serialization
-// ignore: unused_element
 final _isarChangeLogEntryFactoryRegistration = (() {
   registerChangeLogEntryFactoryGroup(
     SerializableGroup<BaseChangeLogEntry>(

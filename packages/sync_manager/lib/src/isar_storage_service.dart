@@ -45,7 +45,10 @@ class IsarStorageService extends BaseStorageService {
   IsarStorageService(this._databaseName, this._logPrefix);
 
   @override
-  Future<void> initialize() async {
+  Future<void> initialize({
+    List<CollectionSchema>? providedEntityStateSchemas,
+    void Function(Isar)? registerStorageGroups,
+  }) async {
     if (_initialized) return;
 
     // Create local directory for database
@@ -54,20 +57,28 @@ class IsarStorageService extends BaseStorageService {
       await dir.create(recursive: true);
     }
 
-    // Initialize Isar with change log + sync state + registered entity schemas
+    // Use provided schemas or fall back to default registered schemas
+    final schemasToUse = providedEntityStateSchemas ?? entityStateSchemas;
+
+    // Initialize Isar with change log + sync state + entity schemas
     final schemas = <CollectionSchema>[
       IsarStorageStateSchema,
       IsarEntityTypeSyncStateSchema,
       CursorSyncStateSchema,
       client.IsarChangeLogEntrySchema,
-      ...entityStateSchemas,
+      ...schemasToUse,
     ];
 
     // Initialize Isar with all schemas
     _isar = await Isar.open(schemas, directory: dir.path, name: _databaseName);
 
-    // Now register the storage groups with the initialized Isar instance
-    registerAllIsarEntityStateStorageGroups(_isar);
+    // Register storage groups with the initialized Isar instance
+    if (registerStorageGroups != null) {
+      registerStorageGroups(_isar);
+    } else {
+      // Fall back to default registration
+      registerAllIsarEntityStateStorageGroups(_isar);
+    }
 
     _initialized = true;
     print(
