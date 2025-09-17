@@ -9,14 +9,15 @@ environment:
 isar_version: &isar_version 3.3.0-dev.2
 
 dependencies:
-  analyzer: any
+  analyzer: ^7.0.0
   build: any
-  source_gen: any
+  source_gen: ^3.0.0
   meta: ^1.11.0
   json_annotation: ^4.9.0
-  dart_style: any
+  dart_style: ^3.0.0
   sltt_core:
     path: ../sltt_core
+  pub_semver: ^2.2.0
 
 dev_dependencies:
   build_runner: ^2.4.9

@@ -1,9 +1,10 @@
 import 'dart:async';
 
-import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/element2.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
+import 'package:pub_semver/pub_semver.dart';
 import 'package:source_gen/source_gen.dart';
 
 import 'annotations.dart';
@@ -11,17 +12,17 @@ import 'annotations.dart';
 /// Generator that produces `*EntityState` classes for data classes annotated
 /// with `@SyncableEntityStateData`.
 class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEntityStateData> {
-  final _formatter = DartFormatter();
+  final _formatter = DartFormatter(languageVersion: Version.parse('3.3.0'));
 
   @override
   FutureOr<String?> generateForAnnotatedElement(
-    Element element,
+    Element2 element,
     ConstantReader annotation,
     BuildStep buildStep,
   ) {
-    if (element is! ClassElement) return null;
+    if (element is! ClassElement2) return null;
 
-    final className = element.name;
+  final className = element.displayName;
     final entityStateClassName = '${className}EntityState';
     final entityTypeValue = annotation.read('entityType').stringValue;
     final jsonRequired = annotation.peek('jsonRequired')?.boolValue ?? true;
@@ -32,14 +33,14 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
     // entityTypeValue already provided explicitly via annotation
 
     // Collect data fields (instance, non-static, public)
-    final allFields = element.fields.where(
+    final allFields = element.fields2.where(
       (f) => !f.isStatic && !f.isSynthetic && f.isPublic,
     );
     // Core fields already provided by BaseEntityState; don't generate duplicates.
     // Add 'parentProp' to core fields so generated entity state classes
     // include the base-class parentProp/meta fields rather than generating them.
     const coreFieldNames = {'parentId', 'parentProp', 'deleted', 'rank'};
-    final dataFields = allFields.where((f) => !coreFieldNames.contains(f.name));
+  final dataFields = allFields.where((f) => !coreFieldNames.contains(f.displayName));
 
     // Optionally enforce Isar compatibility
     final incompatible = <String, String>{};
@@ -47,12 +48,12 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
       for (final f in dataFields) {
         final dt = f.type.getDisplayString(withNullability: true);
         if (!_isIsarCompatibleType(f.type)) {
-          incompatible[f.name] = dt;
+          incompatible[f.displayName] = dt;
         }
       }
       if (incompatible.isNotEmpty) {
         throw InvalidGenerationSourceError(
-          'Fields not Isar-compatible in ${element.name}: ${incompatible.entries.map((e) => '${e.key}:${e.value}').join(', ')}',
+          'Fields not Isar-compatible in ${element.displayName}: ${incompatible.entries.map((e) => '${e.key}:${e.value}').join(', ')}',
           element: element,
         );
       }
@@ -90,7 +91,7 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
 
     // Data field declarations + meta markers per field
     for (final field in dataFields) {
-      final name = field.name;
+  final name = field.displayName;
       final typeStr = field.type.getDisplayString(withNullability: true);
       buffer.writeln('  final $typeStr data_$name;');
       buffer.writeln('  final int? data_${name}_dataSchemaRev_;');
@@ -140,7 +141,7 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
     buffer.writeln('    super.data_deleted_cloudAt_,');
 
     for (final field in dataFields) {
-      final name = field.name;
+  final name = field.displayName;
       buffer.writeln('    required this.data_$name,');
       buffer.writeln('    this.data_${name}_dataSchemaRev_,');
       buffer.writeln('    this.data_${name}_changeAt_,');
@@ -170,7 +171,7 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
     buffer.writeln('  Map<String, dynamic> toJsonSafe() {');
     buffer.writeln('    final j = toJson();');
     for (final field in allFields) {
-      final name = field.name;
+  final name = field.displayName;
       // Provide basic defaults based on type
       final typeStr = field.type.getDisplayString(withNullability: true);
       final defaultExpr = _defaultForType(typeStr);
@@ -206,7 +207,7 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
       '$className _${entityStateClassName}ToData($entityStateClassName s) => $className(',
     );
     for (final field in allFields) {
-      final originalName = field.name;
+  final originalName = field.displayName;
       if (coreFieldNames.contains(originalName)) {
         // Map to base class field naming (data_<core>)
         buffer.writeln('  $originalName: s.data_$originalName,');
