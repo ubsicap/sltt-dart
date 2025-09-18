@@ -35,7 +35,7 @@ String generateCid([DateTime? timestamp]) {
       '${local.millisecond.toString().padLeft(3, '0')}';
 
   // Timezone offset: ±HHmm
-  final offset = now.timeZoneOffset;
+  final offset = local.timeZoneOffset;
 
   /// NOTE: '+' is not as url safe as '_'
   final offsetSign = offset.isNegative ? '-' : '_';
