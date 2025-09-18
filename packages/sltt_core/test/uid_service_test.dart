@@ -18,15 +18,4 @@ void main() {
       expect(allowed.contains(ch), isTrue);
     }
   });
-
-  test('generateCid produces a stable-looking formatted id', () {
-    final cid = generateCid(DateTime.now());
-    // Pattern: YYYY-mmdd-HHMMss-sss[_-]HHmm-{4chars}
-    final re = RegExp(r'^\d{4}-\d{4}-\d{6}-\d{3}[_\\-]\d{4}-[A-Za-z0-9]{4}$');
-    expect(
-      re.hasMatch(cid),
-      isTrue,
-      reason: 'CID ($cid) did not match expected pattern',
-    );
-  });
 }

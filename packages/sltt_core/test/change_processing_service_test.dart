@@ -62,7 +62,7 @@ void main() {
           'entityId': 'task-1',
           'changeBy': 'tester',
           'changeAt': baseTime.toUtc().toIso8601String(),
-          'cid': generateCid(baseTime),
+          'cid': generateCid(),
           'storageId': '', // Empty for save mode
           'operation': 'create',
           'operationInfoJson': '{}',
@@ -107,7 +107,7 @@ void main() {
           'entityId': 'task-change-updates',
           'changeBy': 'tester',
           'changeAt': baseTime.toUtc().toIso8601String(),
-          'cid': generateCid(baseTime),
+          'cid': generateCid(),
           'storageId': '', // Empty for save mode
           'operation': 'create',
           'operationInfoJson': '{}',
@@ -166,7 +166,7 @@ void main() {
           'entityId': 'task-state-updates',
           'changeBy': 'tester',
           'changeAt': baseTime.toUtc().toIso8601String(),
-          'cid': generateCid(baseTime),
+          'cid': generateCid(),
           'storageId': '', // Empty for save mode
           'operation': 'create',
           'operationInfoJson': '{}',
@@ -216,7 +216,7 @@ void main() {
             'entityId': 'task-multi-1',
             'changeBy': 'tester',
             'changeAt': baseTime.toUtc().toIso8601String(),
-            'cid': generateCid(baseTime),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -235,7 +235,7 @@ void main() {
                 .add(const Duration(minutes: 1))
                 .toUtc()
                 .toIso8601String(),
-            'cid': generateCid(baseTime.add(const Duration(minutes: 1))),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -296,7 +296,7 @@ void main() {
             'entityId': 'task-save-error-test',
             'changeBy': 'tester',
             'changeAt': baseTime.toUtc().toIso8601String(),
-            'cid': generateCid(baseTime),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -338,7 +338,7 @@ void main() {
             'entityId': 'task-sync-error-test',
             'changeBy': 'tester',
             'changeAt': baseTime.toUtc().toIso8601String(),
-            'cid': generateCid(baseTime),
+            'cid': generateCid(),
             'storageId': 'remote-storage', // Non-empty for sync mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -378,7 +378,7 @@ void main() {
             'entityId': 'task-override-test',
             'changeBy': 'tester',
             'changeAt': baseTime.toUtc().toIso8601String(),
-            'cid': generateCid(baseTime),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -439,7 +439,7 @@ void main() {
           adjustedData['parentProp'] = 'pList';
         }
         final namespacedEntityId = '$domainId-$entityId';
-        final namespacedCid = '$domainId-${generateCid(changeAt)}';
+        final namespacedCid = '$domainId-${generateCid()}';
         return {
           'domainId': domainId,
           'domainType': 'project',
@@ -681,7 +681,7 @@ void main() {
             'entityId': 'entity-1',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(DateTime.now().toUtc()),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -742,7 +742,7 @@ void main() {
             'entityId': 'entity-2',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(DateTime.now().toUtc()),
+            'cid': generateCid(),
             'storageId': 'remote-storage-id', // Non-empty for sync mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -804,7 +804,7 @@ void main() {
             'entityId': 'entity-3',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(DateTime.now().toUtc()),
+            'cid': generateCid(),
             'storageId': '',
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -835,9 +835,7 @@ void main() {
                 .add(const Duration(minutes: 1))
                 .toUtc()
                 .toIso8601String(),
-            'cid': generateCid(
-              DateTime.now().add(const Duration(minutes: 1)).toUtc(),
-            ),
+            'cid': generateCid(),
             'storageId': 'remote-storage-id',
             'operation': 'update',
             'operationInfoJson': '{}',
@@ -900,7 +898,7 @@ void main() {
             'entityId': 'entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(DateTime.now().toUtc()),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -950,7 +948,7 @@ void main() {
             'entityId': 'entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(DateTime.now().toUtc()),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -999,7 +997,7 @@ void main() {
             'entityId': 'entity-4',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(DateTime.now().toUtc()),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1062,7 +1060,7 @@ void main() {
               'entityId': 'entity-5',
               'changeBy': 'user1',
               'changeAt': DateTime.now().toUtc().toIso8601String(),
-              'cid': generateCid(DateTime.now().toUtc()),
+              'cid': generateCid(),
               'storageId': 'remote-storage-id', // Non-empty for sync mode
               'operation': 'create',
               'operationInfoJson': '{}',
@@ -1127,7 +1125,7 @@ void main() {
             'entityId': 'entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(DateTime.now().toUtc()),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1174,7 +1172,7 @@ void main() {
             'entityId': 'entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(DateTime.now().toUtc()),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1226,7 +1224,7 @@ void main() {
             'entityId': 'entity-6',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(DateTime.now().toUtc()),
+            'cid': generateCid(),
             'storageId': '',
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1257,9 +1255,7 @@ void main() {
                 .add(const Duration(minutes: 1))
                 .toUtc()
                 .toIso8601String(),
-            'cid': generateCid(
-              DateTime.now().add(const Duration(minutes: 1)).toUtc(),
-            ),
+            'cid': generateCid(),
             'storageId': 'cloud-storage-id',
             'operation': 'update',
             'operationInfoJson': '{}',
@@ -1327,7 +1323,7 @@ void main() {
             'entityId': 'entity-cross',
             'changeBy': 'user1',
             'changeAt': baseTime.toIso8601String(),
-            'cid': generateCid(baseTime),
+            'cid': generateCid(),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1422,7 +1418,7 @@ void main() {
               'entityId': 'entity-sync-cross',
               'changeBy': 'user1',
               'changeAt': baseTime.toIso8601String(),
-              'cid': generateCid(baseTime),
+              'cid': generateCid(),
               'storageId': 'remote-storage-id', // Non-empty for sync mode
               'operation': 'create',
               'operationInfoJson': '{}',

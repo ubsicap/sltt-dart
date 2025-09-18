@@ -57,7 +57,7 @@ void main() {
       'entityId': entityId,
       'changeBy': 'tester',
       'changeAt': changeAt.toUtc().toIso8601String(),
-      'cid': generateCid(changeAt),
+      'cid': generateCid(),
       'storageId': storageId,
       'operation': operation,
       'operationInfoJson': '{}',

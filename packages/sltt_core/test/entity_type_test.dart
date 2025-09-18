@@ -26,10 +26,20 @@ void main() {
     }
   });
 
+  test('generateCid produces a stable-looking formatted id', () {
+    final cid = generateCid();
+    // Pattern: YYYY-mmdd-HHMMss-sss[_-]HHmm-{4chars}
+    final re = RegExp(r'^\d{4}-\d{4}-\d{6}-\d{3}[_\\-]\d{4}-[A-Za-z0-9]{4}$');
+    expect(
+      re.hasMatch(cid),
+      isTrue,
+      reason: 'CID ($cid) did not match expected pattern',
+    );
+  });
+
   test('generateEntityId and extractEntityTypeFromId roundtrip', () {
-    final ts = DateTime.utc(2020, 1, 1);
     for (final e in EntityType.values.where((e) => e != EntityType.unknown)) {
-      final id = EntityType.generateEntityId(e.value, ts);
+      final id = EntityType.generateEntityId(e.value);
       final extracted = EntityType.extractEntityTypeFromId(id);
       expect(
         extracted,

@@ -1,4 +1,6 @@
-import '../services/uid_service.dart';
+import 'dart:math';
+
+import 'package:sltt_core/sltt_core.dart';
 
 // Top-level constants for entity type string values. Use these wherever a
 // stable string literal for an entity type is needed to avoid duplication.
@@ -199,15 +201,11 @@ enum EntityType {
   /// Generate a unique entity ID with embedded entity type suffix
   /// Format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}-{entity-suffix}
   /// Similar to BaseChangeLogEntry.generateCid() but with entity type suffix
-  static String generateEntityId(String entityType, [DateTime? timestamp]) {
+  static String generateEntityId(String entityType) {
     final suffix = getSuffix(entityType);
-    final cid = generateCid(timestamp);
+    final cid = generateCid();
     return '$cid-$suffix';
   }
-
-  /// Instance method to generate entity ID for this entity type
-  String generateId([DateTime? timestamp]) =>
-      generateEntityId(value, timestamp);
 
   /// Extract entity type suffix from an entity ID
   /// Returns null if the entity ID doesn't follow the expected format
@@ -230,4 +228,37 @@ enum EntityType {
 
   @override
   String toString() => value;
+}
+
+
+/// Generates a unique CID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HHmm-{4-character-random}
+/// optional [timestamp] parameter allows deterministic testing
+String generateCid() {
+  final now = HlcTimestampGenerator.generate();
+  final local = now.toLocal();
+
+  // Format: YYYY-mmdd-HHMMss-sss
+  final datePart =
+      '${local.year.toString().padLeft(4, '0')}-'
+      '${local.month.toString().padLeft(2, '0')}${local.day.toString().padLeft(2, '0')}-'
+      '${local.hour.toString().padLeft(2, '0')}${local.minute.toString().padLeft(2, '0')}${local.second.toString().padLeft(2, '0')}-'
+      '${local.millisecond.toString().padLeft(3, '0')}';
+
+  // Timezone offset: ±HHmm
+  final offset = local.timeZoneOffset;
+
+  /// NOTE: '+' is not as url safe as '_'
+  final offsetSign = offset.isNegative ? '-' : '_';
+  final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
+  final offsetMinutes = (offset.inMinutes.abs() % 60).toString().padLeft(
+    2,
+    '0',
+  );
+  final timezonePart = '$offsetSign$offsetHours$offsetMinutes';
+
+  // 4-character random part
+  final rng = /* timestamp != null ? Random(timestamp.millisecond) : */ Random();
+  final randomPart = generateRandomChars(4, rng: rng);
+
+  return '$datePart$timezonePart-$randomPart';
 }

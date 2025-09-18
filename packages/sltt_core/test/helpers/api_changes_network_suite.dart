@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 // import 'package:sltt_core/sltt_core.dart'; // <-- may cause circular import?
-import 'package:sltt_core/src/services/date_time_service.dart';
-import 'package:sltt_core/src/services/uid_service.dart';
+import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 /// Test suite configuration for API change network tests
@@ -170,7 +169,7 @@ class ApiChangesNetworkTestSuite {
       adjustedData['parentProp'] = 'pList';
     }
     final namespacedEntityId = '$domainId-$entityId';
-    final namespacedCid = '$domainId-${generateCid(changeAt)}';
+    final namespacedCid = '$domainId-${generateCid()}';
     return {
       'domainId': domainId,
       'domainType': 'project',
@@ -316,7 +315,7 @@ class ApiChangesNetworkTestSuite {
       'entityId': 'entity-1-OWna',
       'changeBy': 'tester',
       'changeAt': now.toIso8601String(),
-      'cid': generateCid(now),
+      'cid': generateCid(),
       // Provide a non-empty storageId so the helper will use it as srcStorageId
       // when constructing the request. The helper will still clear storageId
       // on the posted change (save mode) but uses this original value for
@@ -354,7 +353,7 @@ class ApiChangesNetworkTestSuite {
       'entityId': 'task-save-error-test',
       'changeBy': 'tester',
       'changeAt': DateTime.now().toUtc().toIso8601String(),
-      'cid': generateCid(DateTime.now().toUtc()),
+      'cid': generateCid(),
       'storageId': '', // empty for save mode
       'operation': 'create',
       'operationInfoJson': '{}',
@@ -395,7 +394,7 @@ class ApiChangesNetworkTestSuite {
       'entityId': 'task-sync-error-test',
       'changeBy': 'tester',
       'changeAt': DateTime.now().toUtc().toIso8601String(),
-      'cid': generateCid(DateTime.now().toUtc()),
+      'cid': generateCid(),
       'storageId': 'remote-storage', // non-empty for sync mode
       'operation': 'create',
       'operationInfoJson': '{}',

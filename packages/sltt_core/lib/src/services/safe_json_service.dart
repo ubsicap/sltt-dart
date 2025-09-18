@@ -1,6 +1,4 @@
-import '../services/json_serialization_service.dart';
-import '../services/date_time_service.dart';
-import '../services/uid_service.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 /// Common service for generating safe JSON fallbacks during deserialization recovery.
 ///
@@ -29,7 +27,7 @@ class SafeJsonService {
       // mode). Provide an explicit fallback so failures are centralized.
       'domainType': original['domainType'] ?? 'unknown',
       'changeAt': original['changeAt'] ?? now.toIso8601String(),
-      'cid': original['cid'] ?? generateCid(now),
+      'cid': original['cid'] ?? generateCid(),
       'storageId': original['storageId'] ?? '',
       'changeBy': original['changeBy'] ?? '',
       'dataJson': JsonUtils.normalize(original['dataJson']),
