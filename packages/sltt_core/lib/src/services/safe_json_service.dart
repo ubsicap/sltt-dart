@@ -27,7 +27,9 @@ class SafeJsonService {
       // mode). Provide an explicit fallback so failures are centralized.
       'domainType': original['domainType'] ?? 'unknown',
       'changeAt': original['changeAt'] ?? now.toIso8601String(),
-      'cid': original['cid'] ?? generateCid(),
+      'cid':
+          original['cid'] ??
+          generateCid(entityType: EntityType.tryFromString(original['entityType'] as String?) ?? EntityType.unknown),
       'storageId': original['storageId'] ?? '',
       'changeBy': original['changeBy'] ?? '',
       'dataJson': JsonUtils.normalize(original['dataJson']),

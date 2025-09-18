@@ -29,7 +29,7 @@ void main() {
   test('generateCid produces a stable-looking formatted id', () {
     final cid = generateCid(entityType: EntityType.portion);
     // Pattern: YYYY-mmdd-HHMMss-sss[_-]HHmm-{4chars}
-    final re = RegExp(r'^\d{4}-\d{4}-\d{6}-\d{3}[_\\-]\d{4}-[A-Za-z0-9]{4}-cid$');
+    final re = RegExp(r'^\d{4}-\d{4}-\d{6}-\d{3}[_\\-]\d{4}-[A-Za-z0-9]{4}-prtn-cid$');
     expect(
       re.hasMatch(cid),
       isTrue,

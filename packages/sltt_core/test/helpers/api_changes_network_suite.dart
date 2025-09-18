@@ -169,7 +169,10 @@ class ApiChangesNetworkTestSuite {
       adjustedData['parentProp'] = 'pList';
     }
     final namespacedEntityId = '$domainId-$entityId';
-    final namespacedCid = '$domainId-${generateCid()}';
+  // Use entityType-aware cid generation when entityType is provided
+  String genCidFor(String entityType) =>
+    generateCid(entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown);
+  final namespacedCid = '$domainId-${genCidFor(entityType)}';
     return {
       'domainId': domainId,
       'domainType': 'project',
@@ -315,7 +318,7 @@ class ApiChangesNetworkTestSuite {
       'entityId': 'entity-1-OWna',
       'changeBy': 'tester',
       'changeAt': now.toIso8601String(),
-      'cid': generateCid(),
+      'cid': '$domainCollection-${generateCid(entityType: EntityType.project)}',
       // Provide a non-empty storageId so the helper will use it as srcStorageId
       // when constructing the request. The helper will still clear storageId
       // on the posted change (save mode) but uses this original value for
@@ -353,7 +356,7 @@ class ApiChangesNetworkTestSuite {
       'entityId': 'task-save-error-test',
       'changeBy': 'tester',
       'changeAt': DateTime.now().toUtc().toIso8601String(),
-      'cid': generateCid(),
+      'cid': '$domainCollection-${generateCid(entityType: EntityType.task)}',
       'storageId': '', // empty for save mode
       'operation': 'create',
       'operationInfoJson': '{}',
@@ -394,7 +397,7 @@ class ApiChangesNetworkTestSuite {
       'entityId': 'task-sync-error-test',
       'changeBy': 'tester',
       'changeAt': DateTime.now().toUtc().toIso8601String(),
-      'cid': generateCid(),
+      'cid': '$domainCollection-${generateCid(entityType: EntityType.task)}',
       'storageId': 'remote-storage', // non-empty for sync mode
       'operation': 'create',
       'operationInfoJson': '{}',

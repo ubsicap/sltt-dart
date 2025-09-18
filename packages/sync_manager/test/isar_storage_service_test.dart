@@ -57,7 +57,7 @@ void main() {
       'entityId': entityId,
       'changeBy': 'tester',
       'changeAt': changeAt.toUtc().toIso8601String(),
-      'cid': generateCid(),
+      'cid': generateCid(entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown),
       'storageId': storageId,
       'operation': operation,
       'operationInfoJson': '{}',
