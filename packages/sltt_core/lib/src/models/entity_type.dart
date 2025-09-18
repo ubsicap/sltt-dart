@@ -153,7 +153,7 @@ enum EntityType {
     kEntityTypeTask: 'task',
     kEntityTypeMember: 'memb',
     kEntityTypeMessage: 'mesg',
-    kEntityTypePortion: 'port',
+    kEntityTypePortion: 'prtn',
     kEntityTypePassage: 'psgZ',
     kEntityTypeReference: 'refZ',
     kEntityTypeDocument: 'docu',
@@ -193,18 +193,18 @@ enum EntityType {
       EntityType.values.map((e) => e.value).toList();
 
   /// Get entity suffix for any entity type value
-  static String getSuffix(String entityType) {
-    return suffixMapping[entityType] ??
-        entityType.substring(0, 4).padRight(4, 'Z');
+  static String getSuffix({required EntityType entityType}) {
+    return suffixMapping[entityType.value] ??
+        entityType.value.substring(0, 4).padRight(4, 'Z');
   }
 
-  /// Generate a unique entity ID with embedded entity type suffix
-  /// Format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}-{entity-suffix}
-  /// Similar to BaseChangeLogEntry.generateCid() but with entity type suffix
-  static String generateEntityId(String entityType) {
-    final suffix = getSuffix(entityType);
-    final cid = generateCid();
-    return '$cid-$suffix';
+  /// Generate a unique entity ID with embedded entity type short suffix
+  /// Format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}-{entity-short}
+  /// Similar to generateCid() but without -cid suffix
+  static String generateEntityId({required EntityType entityType}) {
+    final suffix = getSuffix(entityType: entityType);
+    final coreId = generateCoreId();
+    return '$coreId-$suffix';
   }
 
   /// Extract entity type suffix from an entity ID
@@ -232,8 +232,7 @@ enum EntityType {
 
 
 /// Generates a unique CID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HHmm-{4-character-random}
-/// optional [timestamp] parameter allows deterministic testing
-String generateCid() {
+String generateCoreId() {
   final now = HlcTimestampGenerator.generate();
   final local = now.toLocal();
 
@@ -261,4 +260,11 @@ String generateCid() {
   final randomPart = generateRandomChars(4, rng: rng);
 
   return '$datePart$timezonePart-$randomPart';
+}
+
+/// Generate a unique CID (Change Log Entry ID) with embedded entity type suffix
+/// Format: YYYY-mmdd-HHMMss-sss[_-]HHmm-{4chars}-{entity-short}-cid
+String generateCid({required EntityType entityType}) {
+  final entityId = EntityType.generateEntityId(entityType: entityType);
+  return '$entityId-cid';
 }
