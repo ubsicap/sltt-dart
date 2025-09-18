@@ -16,5 +16,6 @@ export 'src/services/json_serialization_service.dart';
 export 'src/services/safe_json_service.dart';
 export 'src/services/uid_service.dart';
 export 'src/storage/base_storage_service.dart';
-export 'src/storage/stats/entity_type_summary.dart';
 export 'src/storage/stats/entity_type_stats.dart';
+export 'src/storage/stats/entity_type_summary.dart';
+export 'src/utils/json_utils.dart';
