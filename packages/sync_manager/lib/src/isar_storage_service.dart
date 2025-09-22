@@ -231,7 +231,7 @@ class IsarStorageService extends BaseStorageService {
       );
       // Upsert entity-type sync state counters (created/updated/deleted)
       try {
-        final existing = await _isar.isarEntityTypeSyncStates
+        final existingEntityTypeSyncStates = await _isar.isarEntityTypeSyncStates
             .where()
             .entityTypeDomainIdEqualTo(
               changeLogEntry.entityType,
@@ -241,25 +241,25 @@ class IsarStorageService extends BaseStorageService {
 
         final op = newChange.operation;
         print(
-          'updateChangeLogAndState - Upserting entity-type sync state for entityType=${changeLogEntry.entityType} entityId=${newChange.entityId} domainId=${newChange.domainId} op=$op existing=${existing != null}',
+          'updateChangeLogAndState - Upserting entity-type sync state for entityType=${changeLogEntry.entityType} entityId=${newChange.entityId} domainId=${newChange.domainId} op=$op existing=${existingEntityTypeSyncStates != null}',
         );
-        if (existing != null) {
+        if (existingEntityTypeSyncStates != null) {
           // Explicitly increment counters on the existing record so the
           // stored counts reflect the actual number of ops performed.
           final newEt = IsarEntityTypeSyncState(
-            id: existing.id,
-            entityType: existing.entityType,
-            domainId: existing.domainId,
-            domainType: existing.domainType,
+            id: existingEntityTypeSyncStates.id,
+            entityType: existingEntityTypeSyncStates.entityType,
+            domainId: existingEntityTypeSyncStates.domainId,
+            domainType: existingEntityTypeSyncStates.domainType,
             storageId: _storageId,
             storageType: getStorageType(),
             cid: newChange.cid,
             changeAt: newChange.changeAt,
             seq: newChange.seq,
-            created: existing.created + (op == 'create' ? 1 : 0),
-            updated: existing.updated + (op == 'update' ? 1 : 0),
-            deleted: existing.deleted + (op == 'delete' ? 1 : 0),
-            createdAt: existing.createdAt,
+            created: existingEntityTypeSyncStates.created + (op == 'create' ? 1 : 0),
+            updated: existingEntityTypeSyncStates.updated + (op == 'update' ? 1 : 0),
+            deleted: existingEntityTypeSyncStates.deleted + (op == 'delete' ? 1 : 0),
+            createdAt: existingEntityTypeSyncStates.createdAt,
             updatedAt: DateTime.now(),
           );
           await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
