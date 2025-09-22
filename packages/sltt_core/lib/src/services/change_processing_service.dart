@@ -232,18 +232,18 @@ class ChangeProcessingService {
           );
 
           // Ensure changeUpdates reflect the storage's identity in save mode
-          final outgoingChangeUpdates = <String, dynamic>{
+          final changeUpdates = <String, dynamic>{
             ...result.changeUpdates,
           };
           if (storageMode == 'save') {
             // In save mode the persisted change should indicate the storage that saved it
-            outgoingChangeUpdates['storageId'] = targetStorageId;
+            changeUpdates['storageId'] = targetStorageId;
           }
 
           final updateResults = await storage.updateChangeLogAndState(
             domainType: changeLogEntry.domainType,
             changeLogEntry: changeLogEntry,
-            changeUpdates: outgoingChangeUpdates,
+            changeUpdates: changeUpdates,
             entityState: entityState,
             stateUpdates: result.stateUpdates,
           );
