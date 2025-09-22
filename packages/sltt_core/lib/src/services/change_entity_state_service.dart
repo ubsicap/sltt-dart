@@ -90,7 +90,7 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   // Decide whether to preserve incoming change data in the change-log entry.
   // In "sync" mode we generally preserve the incoming data when it originated
   // from another storage (non-empty storageId). In "save" mode the incoming
-  // change represents a local save, so we do not preserve the incoming data.
+  // change represents a local save, so we can trim incoming data.
   final shouldPreserveData = storageMode == 'sync';
   final changeLogEntryUpdates = <String, dynamic>{
     'operation': operation,
