@@ -79,10 +79,11 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   final operation = (updates['operation'] as String? ?? '');
   final stateChanged = operation != 'noOp' && operation != 'outdated';
   Map<String, dynamic> additionalWarnings = getAdditionalWarnings(
-    operation,
-    changeLogEntry,
-    entityState,
-    stateUpdates,
+    operation: operation,
+    changeLogEntry: changeLogEntry,
+    entityState: entityState,
+    stateUpdates: stateUpdates,
+    storageMode: storageMode,
   );
 
   // Build the full set of change-log entry updates callers can apply
@@ -114,18 +115,19 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   );
 }
 
-/// TODO: finish this function and add tests
 /// additional warnings:
 /// 1) incoming operation does not match actual operation
 /// 2) incoming field_x_orig_ does not match existing state
-Map<String, dynamic> getAdditionalWarnings(
-  String operation,
-  BaseChangeLogEntry changeLogEntry,
+Map<String, dynamic> getAdditionalWarnings({
+  required String operation,
+  required BaseChangeLogEntry changeLogEntry,
   BaseEntityState? entityState,
-  Map<String, dynamic> stateUpdates,
-) {
+  required Map<String, dynamic> stateUpdates,
+  required String storageMode,
+}) {
   final additionalWarnings = <String, dynamic>{};
   if (['create', 'update', 'delete'].contains(operation) &&
+      (storageMode != 'save' || changeLogEntry.operation.isNotEmpty) &&
       changeLogEntry.operation != operation) {
     additionalWarnings['operation'] = changeLogEntry.operation;
   }

@@ -182,10 +182,11 @@ void main() {
         );
 
         final warnings = getAdditionalWarnings(
-          'create',
-          entry,
-          entityState,
-          <String, dynamic>{},
+          operation: 'create',
+          changeLogEntry: entry,
+          entityState: entityState,
+          stateUpdates: <String, dynamic>{},
+          storageMode: 'sync',
         );
 
         expect(warnings.containsKey('operation'), isTrue);
@@ -217,10 +218,11 @@ void main() {
           };
 
           final warnings = getAdditionalWarnings(
-            'create',
-            entry,
-            null,
-            stateUpdates,
+            operation: 'create',
+            changeLogEntry: entry,
+            entityState: null,
+            stateUpdates: stateUpdates,
+            storageMode: 'sync',
           );
 
           expect(warnings.containsKey('change_domainId_orig_'), isTrue);
@@ -239,8 +241,8 @@ void main() {
           };
 
           final warnings = getAdditionalWarnings(
-            'update',
-            TestChangeLogEntry(
+            operation: 'update',
+            changeLogEntry: TestChangeLogEntry(
               entityId: 'e1',
               entityType: 'task',
               domainId: 'd1',
@@ -258,8 +260,9 @@ void main() {
               stateChanged: true,
               unknownJson: jsonEncode({}),
             ),
-            entityState,
-            stateUpdates,
+            entityState: entityState,
+            stateUpdates: stateUpdates,
+            storageMode: 'sync',
           );
 
           expect(warnings.containsKey('data_rank_orig_'), isTrue);
@@ -267,6 +270,63 @@ void main() {
           expect(stateUpdates.containsKey('data_rank_orig_'), isFalse);
         },
       );
+
+      test('should report empty change log entry operation for sync mode', () {
+        final entry = TestChangeLogEntry(
+          entityId: 'e1',
+          entityType: 'task',
+          domainId: 'd1',
+          domainType: 'project',
+          changeAt: baseTime,
+          cid: 'c1',
+          storageId: 'local',
+          changeBy: 'user1',
+          dataJson: jsonEncode({'data_nameLocal': 'Task 1'}),
+          operation: '',
+          operationInfoJson: jsonEncode({}),
+          stateChanged: true,
+          unknownJson: jsonEncode({}),
+        );
+
+        final warnings = getAdditionalWarnings(
+          operation: 'update',
+          changeLogEntry: entry,
+          entityState: entityState,
+          stateUpdates: <String, dynamic>{},
+          storageMode: 'sync',
+        );
+
+        expect(warnings.containsKey('operation'), isTrue);
+        expect(warnings['operation'], equals(''));
+      });
+
+      test('should not report empty change log entry operation for save mode', () {
+        final entry = TestChangeLogEntry(
+          entityId: 'e1',
+          entityType: 'task',
+          domainId: 'd1',
+          domainType: 'project',
+          changeAt: baseTime,
+          cid: 'c1',
+          storageId: 'local',
+          changeBy: 'user1',
+          dataJson: jsonEncode({'data_nameLocal': 'Task 1'}),
+          operation: '',
+          operationInfoJson: jsonEncode({}),
+          stateChanged: true,
+          unknownJson: jsonEncode({}),
+        );
+
+        final warnings = getAdditionalWarnings(
+          operation: 'update',
+          changeLogEntry: entry,
+          entityState: entityState,
+          stateUpdates: <String, dynamic>{},
+          storageMode: 'save',
+        );
+
+        expect(warnings.containsKey('operation'), isFalse);
+      });
     });
 
     group('getMaybeIsDuplicateCidResult', () {
