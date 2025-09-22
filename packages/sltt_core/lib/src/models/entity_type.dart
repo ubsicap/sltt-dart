@@ -199,11 +199,12 @@ enum EntityType {
   }
 
   /// Generate a unique entity ID with embedded entity type short suffix
-  /// Format: YYYY-mmdd-HHMMss-sss±HHmm-{4-character-random}-{entity-short}
+  /// Format: YYYY-mmdd-HHMMss-sss±HH{UC}-{4-character-random}-{entity-short}
   /// Similar to generateCid() but without -cid suffix
-  static String generateEntityId({required EntityType entityType}) {
+  /// ({String? [userId]}) embed 2 character hash of the userId after the timezone hour offset, 'UK' by default
+  static String generateEntityId({required EntityType entityType, String? userId}) {
     final suffix = getSuffix(entityType: entityType);
-    final coreId = generateCoreId();
+    final coreId = generateCoreId(userId: userId);
     return '$coreId-$suffix';
   }
 
@@ -230,9 +231,9 @@ enum EntityType {
   String toString() => value;
 }
 
-
-/// Generates a unique CID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HHmm-{4-character-random}
-String generateCoreId() {
+/// Generates a unique CID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HH{UC}-{4-character-random}
+/// ({String? userId}) embed 2 character hash of the userId after the timezone hour offset, 'UK' by default
+String generateCoreId({String? userId}) {
   final now = HlcTimestampGenerator.generate();
   final local = now.toLocal();
 
@@ -249,22 +250,25 @@ String generateCoreId() {
   /// NOTE: '+' is not as url safe as '_'
   final offsetSign = offset.isNegative ? '-' : '_';
   final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
-  final offsetMinutes = (offset.inMinutes.abs() % 60).toString().padLeft(
-    2,
-    '0',
-  );
-  final timezonePart = '$offsetSign$offsetHours$offsetMinutes';
+  // final offsetMinutes = (offset.inMinutes.abs() % 60).toString().padLeft(
+  //   2,
+  //   '0',
+  // );
+  final timezonePart = '$offsetSign$offsetHours';
 
   // 4-character random part
   final rng = /* timestamp != null ? Random(timestamp.millisecond) : */ Random();
   final randomPart = generateRandomChars(4, rng: rng);
-
-  return '$datePart$timezonePart-$randomPart';
+  final userCode = (userId != null)
+      ? generateRandomChars(2,chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', rng: rng)
+      : 'UK' /* unknown */;
+  return '$datePart$timezonePart$userCode-$randomPart';
 }
 
 /// Generate a unique CID (Change Log Entry ID) with embedded entity type suffix
-/// Format: YYYY-mmdd-HHMMss-sss[_-]HHmm-{4chars}-{entity-short}-cid
-String generateCid({required EntityType entityType}) {
-  final entityId = EntityType.generateEntityId(entityType: entityType);
+/// Format: YYYY-mmdd-HHMMss-sss[_-]HH{UC}-{4chars}-{entity-short}-cid
+/// ({String? userId}) embed 2 character hash of the userId after the timezone hour offset, 'UK' by default
+String generateCid({required EntityType entityType, String? userId}) {
+  final entityId = EntityType.generateEntityId(entityType: entityType, userId: userId);
   return '$entityId-cid';
 }
