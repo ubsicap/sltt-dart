@@ -48,6 +48,7 @@ class IsarStorageService extends BaseStorageService {
   Future<void> initialize({
     List<CollectionSchema>? providedEntityStateSchemas,
     void Function(Isar)? registerStorageGroups,
+    bool inspector = false,
   }) async {
     if (_initialized) return;
 
@@ -70,7 +71,12 @@ class IsarStorageService extends BaseStorageService {
     ];
 
     // Initialize Isar with all schemas
-    _isar = await Isar.open(schemas, directory: dir.path, name: _databaseName);
+    _isar = await Isar.open(
+      schemas,
+      directory: dir.path,
+      name: _databaseName,
+      inspector: inspector,
+    );
 
     // Register storage groups with the initialized Isar instance
     if (registerStorageGroups != null) {
