@@ -260,7 +260,10 @@ String generateCoreId({String? userId}) {
   final rng = /* timestamp != null ? Random(timestamp.millisecond) : */ Random();
   final randomPart = generateRandomChars(4, rng: rng);
   final userCode = (userId != null)
-      ? generateRandomChars(2,chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', rng: rng)
+      ? generateRandomChars(
+        2, chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+        rng: Random(1234567890) /* stable for same userId */
+      )
       : 'UK' /* unknown */;
   return '$datePart$timezonePart$userCode-$randomPart';
 }
