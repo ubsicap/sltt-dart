@@ -102,10 +102,10 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     'stateChanged': stateChanged,
     'cloudAt': changeLogEntry.cloudAt,
   };
-  if (!shouldPreserveData) {
-    changeLogEntryUpdates['dataJson'] = jsonEncode(changeDataUpdates);
-  } else {
+  if (shouldPreserveData) {
     changeLogEntryUpdates['dataJson'] = changeLogEntry.dataJson;
+  } else {
+    changeLogEntryUpdates['dataJson'] = jsonEncode(changeDataUpdates);
   }
 
   return GetUpdateResults(
