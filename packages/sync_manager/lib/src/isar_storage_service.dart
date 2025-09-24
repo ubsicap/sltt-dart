@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -408,6 +409,45 @@ class IsarStorageService extends BaseStorageService {
       deletedCount = await _isar.isarChangeLogEntrys.deleteAllByCid(cids);
     });
     return deletedCount;
+  }
+
+  /// Subscribe to entity state changes for real-time updates
+  StreamSubscription<void> lazyListenToEntityChanges({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    String? entityId,
+    String? parentId,
+    String? parentProp,
+    required void Function() onChanged,
+    bool fireImmediately = true,
+  }) {
+    // Use the registered storage group to get the right collection
+    final storageGroup = getEntityStateStorageGroup(EntityType.values.firstWhere(
+      (e) => e.value == entityType,
+      orElse: () => throw StateError('Unknown entity type: $entityType'),
+    ));
+
+    if (storageGroup == null) {
+      throw StateError('No storage group registered for entity type: $entityType');
+    }
+
+    if (storageGroup.lazyListenToEntityChanges == null) {
+      throw StateError(
+        'Storage group for entity type $entityType does not support subscriptions',
+      );
+    }
+
+    return storageGroup.lazyListenToEntityChanges!(
+      domainType: domainType,
+      domainId: domainId,
+      entityType: entityType,
+      entityId: entityId,
+      parentId: parentId,
+      parentProp: parentProp,
+      onChanged: onChanged,
+      fireImmediately: fireImmediately,
+    );
   }
 
   // Statistics operations
@@ -1073,8 +1113,7 @@ class IsarStorageService extends BaseStorageService {
 
       // Use database-level parentId filtering for better performance
       final entities = await storageGroup.findByDomainWithPagination(
-        _isar,
-        domainId,
+        domainId: domainId,
         cursor: cursor,
         limit: effectiveLimit + 1, // Get one extra to check if there are more
         parentId: parentId,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
@@ -35,15 +37,25 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   // schema removed - declare schema list separately in register_entity_states
   final dynamic Function(Isar) collection;
   final Future<T?> Function(Isar, String, String) findByDomainAndEntity;
-  final Future<List<T>> Function(
-    Isar,
-    String, {
+  final Future<List<T>> Function({
+    required String domainId,
     String? cursor,
     int? limit,
     String? parentId,
     String? parentProp,
   })
   findByDomainWithPagination;
+
+  final StreamSubscription<void> Function({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    String? entityId,
+    String? parentId,
+    String? parentProp,
+    required void Function() onChanged,
+    bool fireImmediately,
+  })? lazyListenToEntityChanges;
 
   IsarEntityStateStorageGroup({
     required this.entityType,
@@ -53,6 +65,7 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
     required this.collection,
     required this.findByDomainAndEntity,
     required this.findByDomainWithPagination,
+    this.lazyListenToEntityChanges,
   });
 }
 

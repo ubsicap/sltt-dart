@@ -35,14 +35,14 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .findFirst(),
       findByDomainWithPagination:
           (
-            Isar db,
-            String domainId, {
+            {
+            required String domainId,
             String? cursor,
             int? limit,
             String? parentId,
             String? parentProp,
           }) async {
-            var query = db.isarProjectStates.filter().change_domainIdEqualTo(
+            var query = isar.isarProjectStates.filter().change_domainIdEqualTo(
               domainId,
             );
             if (parentId != null) {
@@ -73,15 +73,14 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .entityIdEqualTo(entityId)
           .findFirst(),
       findByDomainWithPagination:
-          (
-            Isar db,
-            String domainId, {
+          ({
+            required String domainId,
             String? cursor,
             int? limit,
             String? parentId,
-            String? parentProp,
+            String? parentProp
           }) async {
-            var query = db.isarDocumentStates.filter().change_domainIdEqualTo(
+            var query = isar.isarDocumentStates.filter().change_domainIdEqualTo(
               domainId,
             );
             if (parentId != null) {
@@ -112,15 +111,14 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .entityIdEqualTo(entityId)
           .findFirst(),
       findByDomainWithPagination:
-          (
-            Isar db,
-            String domainId, {
+          ({
+            required String domainId,
             String? cursor,
             int? limit,
             String? parentId,
             String? parentProp,
           }) async {
-            var query = db.isarTeamStates.filter().change_domainIdEqualTo(
+            var query = isar.isarTeamStates.filter().change_domainIdEqualTo(
               domainId,
             );
             if (parentId != null) {
@@ -151,15 +149,14 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .entityIdEqualTo(entityId)
           .findFirst(),
       findByDomainWithPagination:
-          (
-            Isar db,
-            String domainId, {
+          ({
+            required String domainId,
             String? cursor,
             int? limit,
             String? parentId,
             String? parentProp,
           }) async {
-            var query = db.isarTaskStates.filter().change_domainIdEqualTo(
+            var query = isar.isarTaskStates.filter().change_domainIdEqualTo(
               domainId,
             );
             if (parentId != null) {
