@@ -993,14 +993,6 @@ void main() {
     });
   });
 
-  group('IsarStorageService markAsOutdated', () {
-    test('markAsOutdated method exists and can be called', () async {
-      // Test that the method exists and doesn't throw
-      await storage.markAsOutdated('test-project', 1, 2);
-      // Since it's currently stubbed, just verify it doesn't throw
-    });
-  });
-
   group('IsarStorageService Edge Cases', () {
     test('handles entity creation with minimal data', () async {
       final projectId = 'proj-minimal';

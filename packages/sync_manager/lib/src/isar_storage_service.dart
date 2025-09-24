@@ -731,28 +731,6 @@ class IsarStorageService extends BaseStorageService {
     return results;
   }
 
-  // COMMENTED OUT - markAsOutdated needs collection fix (this is the duplicate)
-  /*
-  /// Mark a change as outdated by another change.
-  ///
-  /// Updates the outdatedBy field to indicate this change has been
-  /// superseded by a newer change with the specified sequence number.
-  @override
-  Future<void> markAsOutdated(
-    String projectId,
-    int seq,
-    int outdatedBySeq,
-  ) async {
-    await _isar.writeTxn(() async {
-      final change = await _isar.isarChangeLogEntrys.get(seq);
-      if (change != null && change.projectId == projectId) {
-        change.outdatedBy = outdatedBySeq;
-        await _isar.isarChangeLogEntrys.put(change);
-      }
-    });
-  }
-  */
-
   // COMMENTED OUT - getLastSeq needs collection fix
   /*
   // Get the highest sequence number in the database
@@ -894,13 +872,6 @@ class IsarStorageService extends BaseStorageService {
         .filter()
         .domainIdEqualTo(domainId)
         .findFirst();
-  }
-
-  // STUBBED METHODS THAT NEED TO BE PROPERLY IMPLEMENTED LATER
-
-  Future<void> markAsOutdated(String projectId, int seq, int outdatedBy) async {
-    // TODO: Implement when fixing Isar queries
-    // For now, just stub this out
   }
 
   /// Create or update sync state for a project
