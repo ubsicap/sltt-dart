@@ -1,6 +1,6 @@
 {
     // Dart-specific formatting settings
-    "dart.lineLength": 120,
+    "dart.lineLength": 80,
     "dart.showTodos": true,
     "[dart]": {
         "editor.rulers": [80, 120],
