@@ -35,7 +35,7 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   final T Function(Map<String, dynamic>) fromJson;
   final Future<void> Function(BaseEntityState) put;
   // schema removed - declare schema list separately in register_entity_states
-  final dynamic Function(Isar) collection;
+  final IsarCollection<T> Function(Isar) collection;
   final Future<T?> Function(Isar, String, String) findByDomainAndEntity;
   final Future<List<T>> Function({
     required String domainId,
