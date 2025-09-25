@@ -139,8 +139,10 @@ class SyncManager {
         );
       }
 
-      final responseData = projectsResponse.data as Map<String, dynamic>;
-      final projects = (responseData['items'] as List<dynamic>).cast<String>();
+      final projectsResponseData =
+          projectsResponse.data as Map<String, dynamic>;
+      final projects = (projectsResponseData['items'] as List<dynamic>)
+          .cast<String>();
       print(
         '[SyncManager] Found ${projects.length} projects in cloud: $projects',
       );
@@ -152,6 +154,8 @@ class SyncManager {
           projectCursorChanges: {},
           storageSummaries: {},
           message: 'No projects found in cloud to downsync',
+          error: null,
+          errorStackTrace: null,
         );
       }
 
@@ -183,15 +187,15 @@ class SyncManager {
               '$_cloudStorageUrl/api/changes/projects/$encodedProjectId?cursor=$cursor';
 
           final response = await _dio.get(url);
-
-          srcStorageId = responseData['storageId'];
-          srcStorageType = responseData['storageType'];
+          final changesResponseData = response.data as Map<String, dynamic>;
 
           if (response.statusCode == 200) {
+            srcStorageId = changesResponseData['storageId'];
+            srcStorageType = changesResponseData['storageType'];
             // TODO Deserialize response data
-            final responseData = response.data as Map<String, dynamic>;
-            final changesBatch = responseData['changes'] as List<dynamic>;
-            final nextCursor = responseData['cursor'] as int?;
+            final changesBatch =
+                changesResponseData['changes'] as List<dynamic>;
+            final nextCursor = changesResponseData['cursor'] as int?;
             /*
                final responseData = <String, dynamic>{
                 'storageId': storageId,
@@ -291,14 +295,19 @@ class SyncManager {
         storageSummaries: storageSummaries,
         message:
             'Successfully downsynced $totalDownloadedCount changes from ${projects.length} projects',
+        error: null,
+        errorStackTrace: null,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('[SyncManager] Downsync failed: $e');
+      print('[SyncManager] Stack trace: $stackTrace');
       return DownsyncResult(
         success: false,
         projectCursorChanges: projectCursorChanges,
         storageSummaries: storageSummaries,
         message: 'Downsync failed: $e',
+        error: e.toString(),
+        errorStackTrace: stackTrace.toString(),
       );
     }
   }
@@ -440,11 +449,17 @@ class DownsyncResult {
   /// list of processing summaries per cursor request (keyed by $projectId/$cursor)
   final StorageSummaries storageSummaries;
 
+  /// Optional error details (populated when success == false)
+  final String? error;
+  final String? errorStackTrace;
+
   DownsyncResult({
     required this.success,
     required this.message,
     required this.projectCursorChanges,
     required this.storageSummaries,
+    this.error,
+    this.errorStackTrace,
   });
 
   Map<String, dynamic> toJson() => {
@@ -452,6 +467,8 @@ class DownsyncResult {
     'message': message,
     'projectCursorChanges': projectCursorChanges,
     'storageSummaries': storageSummaries,
+    'error': error,
+    'errorStackTrace': errorStackTrace,
   };
 }
 

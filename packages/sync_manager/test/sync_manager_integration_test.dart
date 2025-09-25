@@ -53,6 +53,44 @@ void main() {
         reason: 'Cloud server address should be available after startServer',
       );
       cloudBaseUrl = cloudAddress!;
+
+      // Seed the cloud storage with a test project __test_2 so downsync has data
+      final cloudStorage = CloudStorageService.instance;
+      await cloudStorage.initialize();
+
+      final cloudSeedChange = IsarChangeLogEntry(
+        changeAt: DateTime.now(),
+        cid: generateCid(entityType: EntityType.project, userId: 'test'),
+        domainType: 'project',
+        domainId: '__test_2',
+        entityType: 'project',
+        operation: 'create',
+        entityId: 'proj-cloud-2',
+        dataJson: stableStringify(
+          BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
+        ),
+        changeBy: 'test',
+        stateChanged: false,
+        storageId: '',
+        unknownJson: '{}',
+        operationInfoJson: '{}',
+      );
+
+      final cloudSeedResult = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: [cloudSeedChange.toJson()],
+        srcStorageType: srcStorageType,
+        srcStorageId: srcStorageId,
+        storage: cloudStorage,
+        includeChangeUpdates: true,
+        includeStateUpdates: true,
+      );
+      expect(
+        cloudSeedResult.isSuccess,
+        isTrue,
+        reason:
+            'Seeding cloud storage with __test_2 should succeed: ${cloudSeedResult.errorMessage}',
+      );
     });
 
     tearDownAll(() async {
@@ -111,7 +149,8 @@ void main() {
       expect(
         result.success,
         isTrue,
-        reason: 'Outsync should succeed and return success=true',
+        reason:
+            'Unexpected outsync failure: ${result.error} at ${result.errorStackTrace}',
       );
       // Ensure local change was deleted from actual LocalStorageService
       final remaining = await local.getChangesForSync();
@@ -138,7 +177,8 @@ void main() {
       expect(
         downsyncResult.success,
         isTrue,
-        reason: 'Unexpected downsync failure: ${downsyncResult.message}',
+        reason:
+            'Unexpected downsync failure: ${downsyncResult.error} at ${downsyncResult.errorStackTrace}',
       );
 
       // Verify local storage has received changes for __test_2
