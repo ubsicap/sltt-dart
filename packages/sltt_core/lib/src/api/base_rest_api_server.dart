@@ -130,6 +130,7 @@ abstract class BaseRestApiServer {
     // Standard endpoints (same for all servers)
     router.get('/health', _handleHealth);
     router.get('/api/help', _handleApiDocs);
+    // global stats for debugging and tests only
     router.get(
       '/api/stats',
       _handleGetGlobalStats,
@@ -1220,6 +1221,7 @@ abstract class BaseRestApiServer {
   }
 
   /// Get global statistics across all projects
+  /// For debugging and testing only
   Future<Response> _handleGetGlobalStats(Request request) async {
     try {
       final resolved = _resolveDomainCollection(request);
