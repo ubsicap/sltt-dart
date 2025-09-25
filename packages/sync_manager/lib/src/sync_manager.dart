@@ -140,8 +140,7 @@ class SyncManager {
       }
 
       final responseData = projectsResponse.data as Map<String, dynamic>;
-      final projects = (responseData['projects'] as List<dynamic>)
-          .cast<String>();
+      final projects = (responseData['items'] as List<dynamic>).cast<String>();
       print(
         '[SyncManager] Found ${projects.length} projects in cloud: $projects',
       );

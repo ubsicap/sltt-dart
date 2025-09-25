@@ -1,3 +1,5 @@
+import 'package:sltt_core/sltt_core.dart';
+
 import 'localhost_rest_api_server.dart';
 import 'server_ports.dart';
 
@@ -20,7 +22,7 @@ class MultiServerLauncher {
     print('[MultiServerLauncher] All servers started successfully');
   }
 
-  Future<void> startServer(StorageType storageType, int port) async {
+  Future<StartResponse> startServer(StorageType storageType, int port) async {
     switch (storageType) {
       case StorageType.local:
         if (_localStorageServer == null) {
@@ -28,24 +30,32 @@ class MultiServerLauncher {
             StorageType.local,
             'SlttLocalStorage',
           );
-          await _localStorageServer!.start(port: port);
+          return await _localStorageServer!.start(port: port);
         } else {
-          print('[MultiServerLauncher] Outsyncs server is already running');
+          print(
+            '[MultiServerLauncher] Local storage server is already running',
+          );
         }
-        return;
+        return StartResponse(
+          storageId: await _localStorageServer!.storage.getStorageId(),
+          storageType: _localStorageServer!.storage.getStorageType(),
+        );
       case StorageType.cloud:
         if (_cloudStorageServer == null) {
           _cloudStorageServer = LocalhostRestApiServer(
             StorageType.cloud,
             'SlttMockCloudStorage',
           );
-          await _cloudStorageServer!.start(port: port);
+          return await _cloudStorageServer!.start(port: port);
         } else {
           print(
             '[MultiServerLauncher] Cloud storage server is already running',
           );
         }
-        return;
+        return StartResponse(
+          storageId: await _cloudStorageServer!.storage.getStorageId(),
+          storageType: _cloudStorageServer!.storage.getStorageType(),
+        );
     }
     // print('[MultiServerLauncher] Unknown server type: $storageType');
   }

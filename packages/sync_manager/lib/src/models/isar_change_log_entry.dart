@@ -11,14 +11,19 @@ bool get isarChangeLogEntryFactoryRegistration =>
 // Register the IsarChangeLogEntry factory group for safe (de)serialization
 final _isarChangeLogEntryFactoryRegistration = (() {
   registerChangeLogEntryFactoryGroup(
-    SerializableGroup<BaseChangeLogEntry>(
+    SerializableGroup<IsarChangeLogEntry>(
       fromJson: IsarChangeLogEntry.fromJson,
       fromJsonBase: IsarChangeLogEntry.fromJsonBase,
-      toJson: (entry) => (entry as IsarChangeLogEntry).toJson(),
-      toJsonBase: (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
+      toJson: (entry) => entry.toJson(),
+      toJsonBase: (entry) => entry.toJsonBase(),
       toSafeJson: (original) {
         // Use the common safe JSON service
         return SafeJsonService.generateSafeChangeLogJson(original);
+      },
+      validate: (entry) async {
+        // TODO: Validate the entry dataJson against the schema for the entity type
+        // for now just validate BaseDataFields
+        BaseDataFields.fromJson(entry.getData());
       },
     ),
   );

@@ -101,14 +101,18 @@ abstract class BaseRestApiServer {
   }
 
   /// Start the server on the specified port
-  Future<void> start({required int port}) async {
+  Future<StartResponse> start({required int port}) async {
     if (_server != null) {
+      final storageId = await storage.getStorageId();
+      final storageType = storage.getStorageType();
       print('[$serverName] Server is already running');
-      return;
+      return StartResponse(storageId: storageId, storageType: storageType);
     }
 
     // Initialize the storage service
     await storage.initialize();
+    final storageId = await storage.ensureStorageId();
+    final storageType = storage.getStorageType();
 
     final router = buildRouter();
 
@@ -119,7 +123,10 @@ abstract class BaseRestApiServer {
         .addHandler(router.call);
 
     _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
-    print('[$serverName] Server started on http://localhost:$port');
+    print(
+      '[$serverName] Server started on http://localhost:$port (storageId="$storageId", storageType="$storageType")',
+    );
+    return StartResponse(storageId: storageId, storageType: storageType);
   }
 
   /// Build the router with standard endpoints
@@ -1530,4 +1537,11 @@ Middleware _customLogRequests({required String serverName, required int port}) {
       return response;
     };
   };
+}
+
+class StartResponse {
+  final String storageId;
+  final String storageType;
+
+  StartResponse({required this.storageId, required this.storageType});
 }

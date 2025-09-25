@@ -12,13 +12,14 @@ EntityTypeStats _$EntityTypeStatsFromJson(Map<String, dynamic> json) =>
         (k, e) =>
             MapEntry(k, EntityTypeSummary.fromJson(e as Map<String, dynamic>)),
       ),
-      totals:
-          EntityTypeSummary.fromJson(json['totals'] as Map<String, dynamic>),
+      totals: EntityTypeSummary.fromJson(
+        json['totals'] as Map<String, dynamic>,
+      ),
     );
 
-Map<String, dynamic> _$EntityTypeStatsToJson(EntityTypeStats instance) =>
-    <String, dynamic>{
-      'entityTypes':
-          instance.entityTypes.map((k, e) => MapEntry(k, e.toJson())),
-      'totals': instance.totals.toJson(),
-    };
+Map<String, dynamic> _$EntityTypeStatsToJson(
+  EntityTypeStats instance,
+) => <String, dynamic>{
+  'entityTypes': instance.entityTypes.map((k, e) => MapEntry(k, e.toJson())),
+  'totals': instance.totals.toJson(),
+};
