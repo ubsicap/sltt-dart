@@ -331,18 +331,23 @@ class SyncManager {
     );
   }
 
+  Future<List<String>> getSyncedProjects() async {
+    final projects = await _localStorage.getAllDomainIds(domainType: 'project');
+    return projects;
+  }
+
   // Check sync status and statistics
-  Future<SyncStatus> getSyncStatus(String domainId) async {
+  Future<SyncStatus> getSyncStatus(String projectId) async {
     try {
       final localChangeStats = await _localStorage.getChangeStats(
         domainType: 'project',
-        domainId: domainId,
+        domainId: projectId,
       );
       final outsyncsCount = localChangeStats.totals.total;
 
       final localStateStats = await _localStorage.getStateStats(
         domainType: 'project',
-        domainId: domainId,
+        domainId: projectId,
       );
 
       // Try to get cloud storage stats
@@ -350,7 +355,7 @@ class SyncManager {
       EntityTypeStats? cloudStateStats;
       try {
         final response = await _dio.get(
-          '$_cloudStorageUrl/api/stats/projects/$domainId',
+          '$_cloudStorageUrl/api/stats/projects/$projectId',
         );
         if (response.statusCode == 200) {
           final stats = response.data as Map<String, dynamic>;

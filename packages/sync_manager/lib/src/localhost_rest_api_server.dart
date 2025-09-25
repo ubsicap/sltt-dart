@@ -2,7 +2,7 @@ import 'package:sltt_core/sltt_core.dart';
 
 import 'isar_storage_service.dart';
 
-enum StorageType { local, cloudStorage }
+enum StorageType { local, cloud }
 
 /// Enhanced REST API server using local Isar storage.
 ///
@@ -23,7 +23,7 @@ class LocalhostRestApiServer extends BaseRestApiServer {
     switch (storageType) {
       case StorageType.local:
         return LocalStorageService.instance;
-      case StorageType.cloudStorage:
+      case StorageType.cloud:
         return CloudStorageService.instance;
     }
   }

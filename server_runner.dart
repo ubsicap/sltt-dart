@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:sync_manager/sync_manager.dart.todo';
+import 'package:sync_manager/sync_manager.dart';
 
 void main(List<String> args) async {
   final launcher = MultiServerLauncher.instance;
@@ -10,7 +10,9 @@ void main(List<String> args) async {
     print('Usage: dart bin/server_runner.dart <command> [options]');
     print('Commands:');
     print('  start-all              - Start all three servers');
-    print('  start <type>           - Start specific server (outsyncs, cloud)');
+    print(
+      '  start <type>           - Start specific storage server (local, cloud)',
+    );
     print('  stop-all               - Stop all servers');
     print('  stop <type>            - Stop specific server');
     print('  status                 - Show server status');
@@ -44,20 +46,23 @@ void main(List<String> args) async {
       case 'start':
         if (args.length < 2) {
           print('Usage: dart bin/server_runner.dart start <type>');
-          print('Types: outsyncs, cloud');
+          print('Types: local, cloud');
           return;
         }
 
-        final serverType = args[1];
-        final port = _getDefaultPort(serverType);
-        await launcher.startServer(serverType, port);
+        final storageType = args[1];
+        final port = _getDefaultPort(storageType);
+        final parsedStorageType = StorageType.values.byName(
+          storageType.toLowerCase(),
+        );
+        await launcher.startServer(parsedStorageType, port);
         print(
-          '$serverType server started on port $port. Press Ctrl+C to stop.',
+          '$storageType server started on port $port. Press Ctrl+C to stop.',
         );
 
         ProcessSignal.sigint.watch().listen((signal) async {
-          print('\nShutting down $serverType server...');
-          await launcher.stopServer(serverType);
+          print('\nShutting down $storageType server...');
+          await launcher.stopServer(parsedStorageType);
           exit(0);
         });
 
@@ -74,7 +79,11 @@ void main(List<String> args) async {
           print('Usage: dart bin/server_runner.dart stop <type>');
           return;
         }
-        await launcher.stopServer(args[1]);
+        final storageType = args[1];
+        final parsedStorageType = StorageType.values.byName(
+          storageType.toLowerCase(),
+        );
+        await launcher.stopServer(parsedStorageType);
         break;
 
       case 'status':
@@ -83,13 +92,10 @@ void main(List<String> args) async {
 
         print('Server Status:');
         print(
-          '  Downsyncs: ${status['downsyncs']! ? 'Running' : 'Stopped'} ${addresses['downsyncs'] ?? ''}',
+          '  Local: ${status['local']! ? 'Running' : 'Stopped'} ${addresses['local'] ?? ''}',
         );
         print(
-          '  Outsyncs: ${status['outsyncs']! ? 'Running' : 'Stopped'} ${addresses['outsyncs'] ?? ''}',
-        );
-        print(
-          '  Cloud Storage: ${status['cloudStorage']! ? 'Running' : 'Stopped'} ${addresses['cloudStorage'] ?? ''}',
+          '  Cloud: ${status['cloud']! ? 'Running' : 'Stopped'} ${addresses['cloud'] ?? ''}',
         );
         break;
 
@@ -119,8 +125,12 @@ void main(List<String> args) async {
 
       case 'sync-status':
         await syncManager.initialize();
-        final status = await syncManager.getSyncStatus();
-        print('Sync Status: ${status.toJson()}');
+        final syncedProjects = await syncManager.getSyncedProjects();
+        print('Synced Projects: $syncedProjects');
+        for (final projectId in syncedProjects) {
+          final status = await syncManager.getSyncStatus(projectId);
+          print('Project $projectId Sync Status: ${status.toJson()}');
+        }
         await syncManager.close();
         break;
 
@@ -136,12 +146,11 @@ void main(List<String> args) async {
   }
 }
 
-int _getDefaultPort(String serverType) {
-  switch (serverType.toLowerCase()) {
-    case 'outsyncs':
-      return kOutsyncsPort;
+int _getDefaultPort(String storageType) {
+  switch (storageType) {
+    case 'local':
+      return kLocalStoragePort;
     case 'cloud':
-    case 'cloudstorage':
       return kCloudStoragePort;
     default:
       return 8283;
