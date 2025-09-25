@@ -8,7 +8,7 @@
         "editor.hover.delay": 300,
         "editor.wordWrap": "bounded",
         "editor.wordWrapColumn": 120,
-        "editor.formatOnSave": false,
+        "editor.formatOnSave": true /* Enable if dart save and run extension is not used */,
         "editor.formatOnType": false,
         "editor.insertSpaces": true,
         "editor.tabSize": 2,
@@ -44,5 +44,7 @@
     },
     "cSpell.words": [
         "Syncable"
-    ]
+    ],
+    "editor.codeActionsOnSave": {
+    },
 }
