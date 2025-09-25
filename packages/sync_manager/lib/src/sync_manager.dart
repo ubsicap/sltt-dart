@@ -229,14 +229,16 @@ class SyncManager {
             totalChangesForProject += incomingChanges.length;
 
             // Track the highest sequence number for this project
-            // TODO: shouldn't last seq always be at the end of the batch?
-            // if it's not sorted properly, should we report as an error?
             for (final change in incomingChanges) {
               final seq = change['seq'] as int;
               if (seq > highestSeqForProject) {
                 highestSeqForProject = seq;
                 cid = change['cid'] as String? ?? '';
                 changeAt = DateTime.parse(change['changeAt'] as String);
+              } else {
+                throw Exception(
+                  'Received out-of-order sequence number for project $projectId: $seq <= $highestSeqForProject, (from $_cloudStorageUrl) change:\n$change',
+                );
               }
             }
 
