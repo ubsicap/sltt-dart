@@ -57,7 +57,9 @@ void main() {
       'entityId': entityId,
       'changeBy': 'tester',
       'changeAt': changeAt.toUtc().toIso8601String(),
-      'cid': generateCid(entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown),
+      'cid': generateCid(
+        entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown,
+      ),
       'storageId': storageId,
       'operation': operation,
       'operationInfoJson': '{}',
@@ -1166,6 +1168,132 @@ void main() {
         await storage.initialize();
       },
     );
+
+    test('testResetDomainStorage deletes domain-scoped data', () async {
+      final domainId = '__test_reset_1';
+      final entityId = 'entity-to-clear';
+
+      // Seed a change which will also create entity state via canonical processing
+      final payload = changePayload(
+        projectId: domainId,
+        entityType: 'project',
+        entityId: entityId,
+        changeAt: baseTime,
+        operation: 'create',
+      );
+
+      final seedRes = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: [payload],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(seedRes.isSuccess, isTrue, reason: seedRes.errorMessage);
+      final createdCid = seedRes.resultsSummary!.created.first;
+
+      // Verify the change and the entity state exist
+      final createdChange = await storage.getChange(
+        domainType: 'project',
+        domainId: domainId,
+        cid: createdCid,
+      );
+      expect(
+        createdChange,
+        isNotNull,
+        reason: 'Seeded change should be present before reset',
+      );
+
+      final entityState = await storage.getCurrentEntityState(
+        domainType: 'project',
+        domainId: domainId,
+        entityType: 'project',
+        entityId: entityId,
+      );
+      expect(
+        entityState,
+        isNotNull,
+        reason: 'Seeded entity state should be present before reset',
+      );
+
+      // Create a cursor sync state for the domain
+      await storage.upsertCursorSyncState(
+        domainType: 'project',
+        domainId: domainId,
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        seq: createdChange!.seq,
+        cid: createdChange.cid,
+        changeAt: createdChange.changeAt,
+      );
+
+      final cursorBefore = await storage.getCursorSyncState(domainId);
+      expect(
+        cursorBefore,
+        isNotNull,
+        reason: 'Cursor sync state should exist before reset',
+      );
+
+      // Perform the test reset
+      await storage.testResetDomainStorage(
+        domainType: 'project',
+        domainId: domainId,
+      );
+
+      // Verify change is removed
+      final afterChange = await storage.getChange(
+        domainType: 'project',
+        domainId: domainId,
+        cid: createdCid,
+      );
+      expect(
+        afterChange,
+        isNull,
+        reason: 'Change should be deleted by testResetDomainStorage',
+      );
+
+      // Verify entity state removed
+      final afterState = await storage.getCurrentEntityState(
+        domainType: 'project',
+        domainId: domainId,
+        entityType: 'project',
+        entityId: entityId,
+      );
+      expect(
+        afterState,
+        isNull,
+        reason: 'Entity state should be deleted by testResetDomainStorage',
+      );
+
+      // Verify cursor state removed
+      final cursorAfter = await storage.getCursorSyncState(domainId);
+      expect(
+        cursorAfter,
+        isNull,
+        reason: 'Cursor sync state should be deleted by testResetDomainStorage',
+      );
+
+      // Verify domain is no longer reported
+      final allDomains = await storage.getAllDomainIds(domainType: 'project');
+      expect(
+        allDomains,
+        isNot(contains(domainId)),
+        reason: 'Domain should not be listed after reset',
+      );
+    });
+
+    test('testResetDomainStorage rejects unsafe domain ids', () async {
+      // Should throw if domainId does not start with __test
+      expect(
+        () => storage.testResetDomainStorage(
+          domainType: 'project',
+          domainId: 'prod-1',
+        ),
+        throwsArgumentError,
+      );
+    });
 
     test('can create and retrieve CursorSyncState directly in Isar', () async {
       final now = DateTime.now().toUtc();
