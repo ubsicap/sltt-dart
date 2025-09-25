@@ -9,7 +9,7 @@ abstract class BaseEntityState
     with HasUnknownField
     implements
         CoreEntityMetaData,
-        CoreEntityDataFields,
+        CoreEntityStateDataFields,
         CoreChangeLogEntryFields,
         CoreChangeLogEntryOriginalFields {
   // keep the public contract
@@ -189,7 +189,7 @@ mixin CoreEntityMetaData {
   String? get unknownJson;
 }
 
-mixin CoreEntityDataFields {
+mixin CoreEntityStateDataFields {
   /// Padded string value for rank (e.g., '00001', '00002').
   String? get data_rank;
   int? get data_rank_dataSchemaRev_;

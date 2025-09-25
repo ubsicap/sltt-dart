@@ -190,3 +190,12 @@ mixin StorageResponsibilities {
   /// Expected to be empty string in `save` mode, but in `sync` mode it may be populated from BaseChangeLogEntry.generateShortStorageId()
   String get storageId;
 }
+
+/// These fields are shared across entity types in dataJson.
+/// See also CoreEntityStateDataFields
+mixin CoreDataFields {
+  String? get rank;
+  bool? get deleted;
+  String get parentId;
+  String get parentProp;
+}

@@ -47,12 +47,17 @@ BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
     throw Exception('No registered change log entry SerializableGroup');
   }
   // Reuse existing safe deserialization helper which will attempt recovery
-  return deserializeChangeLogEntrySafely<BaseChangeLogEntry>(
+  final changeLogEntry = deserializeChangeLogEntrySafely<BaseChangeLogEntry>(
     fromJsonBase: group.fromJsonBase,
     json: json,
     toJsonBase: group.toJsonBase,
     toSafeJson: group.toSafeJson,
   );
+  // validate changeLogEntry dataJson if a validator is provided
+  if (group.validate != null) {
+    group.validate!(changeLogEntry);
+  }
+  return changeLogEntry;
 }
 
 /// Deserialize a BaseChangeLogEntry subclass using the provided factory.

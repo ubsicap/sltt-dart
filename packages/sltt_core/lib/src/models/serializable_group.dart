@@ -5,6 +5,7 @@ class SerializableGroup<T> {
   final Map<String, dynamic> Function(T) toJson;
   final Map<String, dynamic> Function(T) toJsonBase;
   final Map<String, dynamic> Function(Map<String, dynamic>) toSafeJson;
+  final Future<void> Function(T)? validate;
 
   SerializableGroup({
     required this.fromJson,
@@ -12,5 +13,6 @@ class SerializableGroup<T> {
     required this.toJson,
     required this.toJsonBase,
     required this.toSafeJson,
+    this.validate,
   });
 }
