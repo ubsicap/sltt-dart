@@ -36,12 +36,27 @@ void registerChangeLogEntryFactoryGroup(
   _changeLogEntryFactoryGroup = group;
 }
 
+validateChangeLogEntryDataJson(BaseChangeLogEntry entry) {
+  final group = _changeLogEntryFactoryGroup;
+  if (group == null) {
+    throw Exception('No registered change log entry SerializableGroup');
+  }
+  if (group.validate != null) {
+    return group.validate!(entry);
+  } else {
+    throw Exception(
+      'No validate function provided in registered change log entry SerializableGroup',
+    );
+  }
+}
+
 /// Deserialize the provided [json] into the registered `BaseChangeLogEntry`
 /// instance for the indicated `entityType` using the safe deserialization
 /// wrapper (which will produce a recovery JSON on error).
 BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
-  Map<String, dynamic> json,
-) {
+  Map<String, dynamic> json, {
+  bool validateDataJson = false,
+}) {
   final group = _changeLogEntryFactoryGroup;
   if (group == null) {
     throw Exception('No registered change log entry SerializableGroup');
@@ -54,7 +69,12 @@ BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
     toSafeJson: group.toSafeJson,
   );
   // validate changeLogEntry dataJson if a validator is provided
-  if (group.validate != null) {
+  if (validateDataJson) {
+    if (group.validate == null) {
+      throw Exception(
+        'No validate function provided in registered change log entry SerializableGroup',
+      );
+    }
     group.validate!(changeLogEntry);
   }
   return changeLogEntry;

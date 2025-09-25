@@ -23,6 +23,9 @@ final _isarChangeLogEntryFactoryRegistration = (() {
       validate: (entry) async {
         // TODO: Validate the entry dataJson against the schema for the entity type
         // for now just validate BaseDataFields
+        if (entry.dataJson.isEmpty || entry.dataJson == '{}') {
+          throw Exception('ChangeLogEntry dataJson is empty');
+        }
         BaseDataFields.fromJson(entry.getData());
       },
     ),

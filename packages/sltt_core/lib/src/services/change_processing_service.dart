@@ -97,6 +97,7 @@ class ChangeProcessingService {
               invalidStorageIds.add(i);
             }
           } else if (storageMode == 'save') {
+            validateChangeLogEntryDataJson(changeLogEntry);
             if (changeLogEntry.storageId.trim().isNotEmpty) {
               invalidStorageIds.add(i);
             }
