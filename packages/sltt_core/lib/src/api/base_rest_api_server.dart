@@ -167,6 +167,10 @@ abstract class BaseRestApiServer {
       '/api/state/<domainCollection>/<domainId>/<entityCollection>/<entityId>',
       _handleGetEntityState,
     );
+    router.delete(
+      '/api/storage/__test/reset/<domainCollection>/<domainId>',
+      _handleStorageTestReset,
+    );
 
     // Handle OPTIONS requests for CORS
     router.options('/<path|.*>', _handleOptions);
@@ -1447,6 +1451,54 @@ abstract class BaseRestApiServer {
       return _errorResponse('$e', 400);
     } catch (e) {
       return _errorResponse('Failed to fetch entity state: $e', 500);
+    }
+  }
+
+  /// Handle storage test reset
+  /// route: '/api/storage/__test/reset/<domainCollection>/<domainId>'
+  /// For __testXXX domainIds only
+  Future<Response> _handleStorageTestReset(Request request) async {
+    try {
+      final resolved = _resolveDomainCollection(request);
+      if (resolved['error'] != null) {
+        return _errorResponse(resolved['error'] as String, 400);
+      }
+      final domainType = resolved['domainType'] as String;
+      final domainId = _extractDomainId(request);
+      if (domainId == null || domainId.isEmpty) {
+        return _errorResponse('Domain ID is required', 400);
+      }
+
+      if (!domainId.startsWith('__test')) {
+        return _errorResponse(
+          'Test reset is only allowed for __testXXX domain IDs',
+          403,
+        );
+      }
+
+      await storage.testResetDomainStorage(
+        domainType: domainType,
+        domainId: domainId,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'All data for domainId "$domainId" has been deleted',
+          'domainId': domainId,
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on ArgumentError catch (e) {
+      return _errorResponse('$e', 400);
+    } catch (e, stackTrace) {
+      print('Error in test reset: $e');
+      print('Stack trace: $stackTrace');
+      return _errorResponse(
+        'Failed to perform test reset: ${e.toString()}',
+        500,
+        stackTrace,
+      );
     }
   }
 

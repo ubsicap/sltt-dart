@@ -105,6 +105,14 @@ void main() {
       // LocalStorageService contains the change entries.
       final local = LocalStorageService.instance;
       await local.initialize();
+      LocalStorageService.instance.testResetDomainStorage(
+        domainType: 'project',
+        domainId: '__test_1',
+      );
+      LocalStorageService.instance.testResetDomainStorage(
+        domainType: 'project',
+        domainId: '__test_2',
+      );
 
       final changeBy = 'test';
       final change = IsarChangeLogEntry(

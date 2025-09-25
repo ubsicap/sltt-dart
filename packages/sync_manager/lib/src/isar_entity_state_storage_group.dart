@@ -55,16 +55,20 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
     String? parentProp,
     required void Function() onChanged,
     bool fireImmediately,
-  })? lazyListenToEntityChanges;
+  })?
+  lazyListenToEntityChanges;
+
+  Future<void> Function({required String domainType, required String domainId})
+  deleteByDomain;
 
   IsarEntityStateStorageGroup({
     required this.entityType,
     required this.fromJson,
     required this.put,
-    // schema removed
     required this.collection,
     required this.findByDomainAndEntity,
     required this.findByDomainWithPagination,
+    required this.deleteByDomain,
     this.lazyListenToEntityChanges,
   });
 }

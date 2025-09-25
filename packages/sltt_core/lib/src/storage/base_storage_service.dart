@@ -156,6 +156,12 @@ abstract class BaseStorageService {
   /// Ensure a storageId exists and is persisted if possible; return it.
   /// Should be invoked during initialize().
   Future<String> ensureStorageId();
+
+  /// For testing: reset storage for a specific domainId (e.g. '__test_1')
+  Future<void> testResetDomainStorage({
+    required String domainType,
+    required String domainId,
+  });
 }
 
 /// Return type for updateChangeLogAndState: a tuple of change log entry and entity state.

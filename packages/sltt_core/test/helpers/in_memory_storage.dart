@@ -352,4 +352,13 @@ class InMemoryStorage implements BaseStorageService {
     }
     return <String, dynamic>{};
   }
+
+  @override
+  Future<void> testResetDomainStorage({
+    required String domainType,
+    required String domainId,
+  }) {
+    // TODO: implement testResetDomainStorage
+    throw UnimplementedError();
+  }
 }

@@ -898,103 +898,6 @@ class IsarStorageService extends BaseStorageService {
     });
   }
 
-  /*
-
-  // State management methods for IsarProjectState
-  Future<void> saveProjectState(IsarProjectState projectState) async {
-    await _isar.writeTxn(() async {
-      await _isar.isarProjectStates.put(projectState);
-    });
-  }
-
-  Future<IsarProjectState?> getProjectState(String projectId) async {
-    return await _isar.isarProjectStates
-        .filter()
-        .change_domainIdEqualTo(projectId)
-        .findFirst();
-  }
-
-  Future<List<IsarProjectState>> getAllProjectStates() async {
-    return await _isar.isarProjectStates.where().findAll();
-  }
-
-  Future<bool> deleteProjectState(String projectId) async {
-    // TODO: Implement when fixing project state management
-    return false;
-  }
-
-  // State management methods for IsarTeamState
-  Future<void> saveTeamState(IsarTeamState teamState) async {
-    await _isar.writeTxn(() async {
-      await _isar.isarTeamStates.put(teamState);
-    });
-  }
-
-  Future<IsarTeamState?> getTeamState(String teamId) async {
-    return await _isar.isarTeamStates
-        .filter()
-        .entityIdEqualTo(teamId)
-        .findFirst();
-  }
-
-  Future<List<IsarTeamState>> getAllTeamStates() async {
-    return await _isar.isarTeamStates.where().findAll();
-  }
-
-  Future<bool> deleteTeamState(String teamId) async {
-    // TODO: Implement when fixing team state management
-    return false;
-  }
-
-  /// Applies a changelog entry to the appropriate state collection
-  /// Returns the updated state entity
-  Future<dynamic> applyChangelogToState(
-    client.IsarChangeLogEntry changeLogEntry,
-  ) async {
-    // TODO: Fix when implementing state application logic
-    throw UnimplementedError('State application needs to be implemented');
-  }
-
-  /// Applies changelog entry to project state
-  Future<IsarProjectState> _applyChangelogToProjectState(
-    client.IsarChangeLogEntry changeLogEntry,
-  ) async {
-    // TODO: Fix when implementing project state updates
-    throw UnimplementedError('Project state updates need to be implemented');
-  }
-
-  /// Applies changelog entry to team state
-  Future<IsarTeamState> _applyChangelogToTeamState(
-    client.IsarChangeLogEntry changeLogEntry,
-  ) async {
-    // TODO: Fix when implementing team state updates
-    throw UnimplementedError('Team state updates need to be implemented');
-  }
-
-  /// Applies changelog entry to document state
-  Future<IsarDocumentState> _applyChangelogToDocumentState(
-    client.IsarChangeLogEntry changeLogEntry,
-  ) async {
-    // TODO: Fix when implementing document state updates
-    throw UnimplementedError('Document state updates need to be implemented');
-  }
-
-  /// Gets document state by entity ID
-  Future<IsarDocumentState?> getDocumentState(String entityId) async {
-    return await _isar.isarDocumentStates
-        .filter()
-        .entityIdEqualTo(entityId)
-        .findFirst();
-  }
-
-  /// Saves document state
-  Future<void> saveDocumentState(IsarDocumentState documentState) async {
-    await _isar.writeTxn(() async {
-      await _isar.isarDocumentStates.put(documentState);
-    });
-  }
-  */
-
   @override
   Future<Map<String, dynamic>> getEntityStates({
     required String domainType,
@@ -1063,6 +966,66 @@ class IsarStorageService extends BaseStorageService {
     } catch (e) {
       throw Exception('Failed to get entity states: $e');
     }
+  }
+
+  @override
+  Future<void> testResetDomainStorage({
+    required String domainType,
+    required String domainId,
+  }) {
+    if (domainId.isEmpty) {
+      throw ArgumentError('domainId cannot be empty');
+    }
+    if (domainType.isEmpty) {
+      throw ArgumentError('domainType cannot be empty');
+    }
+    if (domainId.startsWith('__test') == false) {
+      throw ArgumentError(
+        'For safety, domainId must start with "__test" to prevent accidental data loss',
+      );
+    }
+
+    print(
+      '[$_logPrefix] testResetDomainStorage - Deleting all data for domainId=$domainId domainType=$domainType',
+    );
+
+    // Delete all change log entries for the domain
+    return _isar.writeTxn(() async {
+      final changesToDelete = await _isar.isarChangeLogEntrys
+          .filter()
+          .domainIdEqualTo(domainId)
+          .and()
+          .domainTypeEqualTo(domainType)
+          .findAll();
+      final seqsToDelete = changesToDelete.map((e) => e.seq).toList();
+      await _isar.isarChangeLogEntrys.deleteAll(seqsToDelete);
+
+      // Delete all entity states for the domain across all registered storage groups
+      final entityTypes = getAllRegisteredEntityTypes();
+      for (final et in entityTypes) {
+        final group = getEntityStateStorageGroup(et);
+        if (group == null) continue;
+        await group.deleteByDomain(domainType: domainType, domainId: domainId);
+      }
+
+      // Delete all cursor sync states for the domain
+      final cursorStatesToDelete = await _isar.cursorSyncStates
+          .filter()
+          .domainIdEqualTo(domainId)
+          .findAll();
+      final cursorIdsToDelete = cursorStatesToDelete.map((e) => e.id).toList();
+      await _isar.cursorSyncStates.deleteAll(cursorIdsToDelete);
+
+      // Delete all entity-type sync states for the domain
+      final entityTypeSyncStatesToDelete = await _isar.isarEntityTypeSyncStates
+          .filter()
+          .domainIdEqualTo(domainId)
+          .findAll();
+      final etsIdsToDelete = entityTypeSyncStatesToDelete
+          .map((e) => e.id)
+          .toList();
+      await _isar.isarEntityTypeSyncStates.deleteAll(etsIdsToDelete);
+    });
   }
 
   // STUBBED HELPER METHODS FOR PAGINATION - TO BE IMPLEMENTED LATER

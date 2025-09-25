@@ -34,8 +34,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
           .entityIdEqualTo(entityId)
           .findFirst(),
       findByDomainWithPagination:
-          (
-            {
+          ({
             required String domainId,
             String? cursor,
             int? limit,
@@ -56,6 +55,13 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             }
             return await query.sortByEntityId().limit(limit ?? 100).findAll();
           },
+      deleteByDomain: ({required domainId, required domainType}) =>
+          isar.writeTxn(() async {
+            await isar.isarProjectStates
+                .filter()
+                .change_domainIdEqualTo(domainId)
+                .deleteAll();
+          }),
     ),
   );
   registerIsarEntityStateStorageGroup(
@@ -78,7 +84,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             String? cursor,
             int? limit,
             String? parentId,
-            String? parentProp
+            String? parentProp,
           }) async {
             var query = isar.isarDocumentStates.filter().change_domainIdEqualTo(
               domainId,
@@ -94,6 +100,13 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             }
             return await query.sortByEntityId().limit(limit ?? 100).findAll();
           },
+      deleteByDomain: ({required domainId, required domainType}) =>
+          isar.writeTxn(() async {
+            await isar.isarDocumentStates
+                .filter()
+                .change_domainIdEqualTo(domainId)
+                .deleteAll();
+          }),
     ),
   );
   registerIsarEntityStateStorageGroup(
@@ -132,6 +145,13 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             }
             return await query.sortByEntityId().limit(limit ?? 100).findAll();
           },
+      deleteByDomain: ({required domainId, required domainType}) =>
+          isar.writeTxn(() async {
+            await isar.isarTeamStates
+                .filter()
+                .change_domainIdEqualTo(domainId)
+                .deleteAll();
+          }),
     ),
   );
   registerIsarEntityStateStorageGroup(
@@ -170,6 +190,13 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
             }
             return await query.sortByEntityId().limit(limit ?? 100).findAll();
           },
+      deleteByDomain: ({required domainId, required domainType}) =>
+          isar.writeTxn(() async {
+            await isar.isarTaskStates
+                .filter()
+                .change_domainIdEqualTo(domainId)
+                .deleteAll();
+          }),
     ),
   );
 }
