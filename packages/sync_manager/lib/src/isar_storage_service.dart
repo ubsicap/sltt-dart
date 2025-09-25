@@ -238,7 +238,8 @@ class IsarStorageService extends BaseStorageService {
       );
       // Upsert entity-type sync state counters (created/updated/deleted)
       try {
-        final existingEntityTypeSyncStates = await _isar.isarEntityTypeSyncStates
+        final existingEntityTypeSyncStates = await _isar
+            .isarEntityTypeSyncStates
             .where()
             .entityTypeDomainIdEqualTo(
               changeLogEntry.entityType,
@@ -263,9 +264,12 @@ class IsarStorageService extends BaseStorageService {
             cid: newChange.cid,
             changeAt: newChange.changeAt,
             seq: newChange.seq,
-            created: existingEntityTypeSyncStates.created + (op == 'create' ? 1 : 0),
-            updated: existingEntityTypeSyncStates.updated + (op == 'update' ? 1 : 0),
-            deleted: existingEntityTypeSyncStates.deleted + (op == 'delete' ? 1 : 0),
+            created:
+                existingEntityTypeSyncStates.created + (op == 'create' ? 1 : 0),
+            updated:
+                existingEntityTypeSyncStates.updated + (op == 'update' ? 1 : 0),
+            deleted:
+                existingEntityTypeSyncStates.deleted + (op == 'delete' ? 1 : 0),
             createdAt: existingEntityTypeSyncStates.createdAt,
             updatedAt: DateTime.now(),
           );
@@ -337,68 +341,6 @@ class IsarStorageService extends BaseStorageService {
     return change != null ? _convertToChangeLogEntry(change) : null;
   }
 
-  // COMMENTED OUT HELPER METHODS UNTIL FIXED
-  /*
-  Future<List<BaseChangeLogEntry>> getAllChanges() async {
-    final results = await _isar.isarChangeLogEntrys
-        .where()
-        .sortByChangeAtDesc()
-        .findAll();
-    return _convertToChangeLogEntries(results);
-  }
-
-  Future<List<BaseChangeLogEntry>> getChangesByEntityType(
-    EntityType entityType,
-  ) async {
-    final results = await _isar.isarChangeLogEntrys
-        .filter()
-        .entityTypeEqualTo(entityType)
-        .sortByChangeAtDesc()
-        .findAll();
-    return _convertToChangeLogEntries(results);
-  }
-
-  Future<List<BaseChangeLogEntry>> getChangesByOperation(
-    String operation,
-  ) async {
-    final results = await _isar.isarChangeLogEntrys
-        .filter()
-        .operationEqualTo(operation)
-        .sortByChangeAtDesc()
-        .findAll();
-    return _convertToChangeLogEntries(results);
-  }
-  */
-
-  // COMMENTED OUT HELPER METHODS THAT NEED TO BE FIXED LATER
-  /*
-  Future<List<BaseChangeLogEntry>> getChangesByEntityId(String entityId) async {
-    final results = await _isar.isarChangeLogEntrys
-        .filter()
-        .entityIdEqualTo(entityId)
-        .sortByChangeAtDesc()
-        .findAll();
-    return _convertToChangeLogEntries(results);
-  }
-
-  Future<List<BaseChangeLogEntry>> getChangesInDateRange(
-    DateTime startDate,
-    DateTime endDate,
-  ) async {
-    final results = await _isar.isarChangeLogEntrys
-        .filter()
-        .changeAtBetween(startDate, endDate)
-        .sortByChangeAtDesc()
-        .findAll();
-    return _convertToChangeLogEntries(results);
-  }
-
-  /// Get the total count of change log entries.
-  Future<int> getChangeCount() async {
-    return await _isar.isarChangeLogEntrys.count();
-  }
-  */
-
   /// Delete multiple changes by sequence numbers.
   ///
   /// Used for cleanup after successful outsync operations.
@@ -423,13 +365,17 @@ class IsarStorageService extends BaseStorageService {
     bool fireImmediately = true,
   }) {
     // Use the registered storage group to get the right collection
-    final storageGroup = getEntityStateStorageGroup(EntityType.values.firstWhere(
-      (e) => e.value == entityType,
-      orElse: () => throw StateError('Unknown entity type: $entityType'),
-    ));
+    final storageGroup = getEntityStateStorageGroup(
+      EntityType.values.firstWhere(
+        (e) => e.value == entityType,
+        orElse: () => throw StateError('Unknown entity type: $entityType'),
+      ),
+    );
 
     if (storageGroup == null) {
-      throw StateError('No storage group registered for entity type: $entityType');
+      throw StateError(
+        'No storage group registered for entity type: $entityType',
+      );
     }
 
     if (storageGroup.lazyListenToEntityChanges == null) {
