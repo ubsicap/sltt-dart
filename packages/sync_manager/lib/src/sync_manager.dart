@@ -340,35 +340,26 @@ class SyncManager {
       );
       final outsyncsCount = localChangeStats.totals.total;
 
-      final localEntityStats = await _localStorage.getStateStats(
+      final localStateStats = await _localStorage.getStateStats(
         domainType: 'project',
         domainId: domainId,
       );
 
       // Try to get cloud storage stats
-      int cloudCount = 0;
+      EntityTypeStats? cloudChangeStats;
+      EntityTypeStats? cloudStateStats;
       try {
         final response = await _dio.get(
           '$_cloudStorageUrl/api/stats/projects/$domainId',
         );
         if (response.statusCode == 200) {
           final stats = response.data as Map<String, dynamic>;
-          /* expect response in form of:
-            {
-          'projectId': domainId,
-          'changeStats': changeStatsJson,
-          'entityTypeStats': entityTypeStatsJson,
-          'timestamp': DateTime.now().toIso8601String(),
-          'storageType': storageTypeDescription,
-          }
-          */
-          final changeStats = EntityTypeStats.fromJson(
+          cloudChangeStats = EntityTypeStats.fromJson(
             stats['changeStats'] as Map<String, dynamic>,
           );
-          final entityTypeStats = EntityTypeStats.fromJson(
+          cloudStateStats = EntityTypeStats.fromJson(
             stats['entityTypeStats'] as Map<String, dynamic>,
           );
-          cloudCount = changeStats.totals.total;
         }
       } catch (e) {
         print('[SyncManager] Could not fetch cloud storage stats: $e');
@@ -376,16 +367,19 @@ class SyncManager {
 
       return SyncStatus(
         outsyncsCount: outsyncsCount,
-        cloudCount: cloudCount,
-        lastSyncTime:
-            DateTime.now(), // In a real implementation, this would be persisted
+        localChangeStats: localChangeStats,
+        localStateStats: localStateStats,
+        cloudChangeStats: cloudChangeStats,
+        cloudStateStats: cloudStateStats,
       );
     } catch (e) {
       print('[SyncManager] Failed to get sync status: $e');
       return SyncStatus(
         outsyncsCount: 0,
-        cloudCount: 0,
-        lastSyncTime: DateTime.now(),
+        localChangeStats: null,
+        localStateStats: null,
+        cloudChangeStats: null,
+        cloudStateStats: null,
       );
     }
   }
@@ -477,18 +471,24 @@ class FullSyncResult {
 
 class SyncStatus {
   final int outsyncsCount;
-  final int cloudCount;
-  final DateTime lastSyncTime;
+  final EntityTypeStats? localChangeStats;
+  final EntityTypeStats? localStateStats;
+  final EntityTypeStats? cloudChangeStats;
+  final EntityTypeStats? cloudStateStats;
 
   SyncStatus({
     required this.outsyncsCount,
-    required this.cloudCount,
-    required this.lastSyncTime,
+    required this.localChangeStats,
+    required this.localStateStats,
+    required this.cloudChangeStats,
+    required this.cloudStateStats,
   });
 
   Map<String, dynamic> toJson() => {
     'outsyncsCount': outsyncsCount,
-    'cloudCount': cloudCount,
-    'lastSyncTime': lastSyncTime.toIso8601String(),
+    'localChangeStats': localChangeStats?.toJson(),
+    'localStateStats': localStateStats?.toJson(),
+    'cloudChangeStats': cloudChangeStats?.toJson(),
+    'cloudStateStats': cloudStateStats?.toJson(),
   };
 }
