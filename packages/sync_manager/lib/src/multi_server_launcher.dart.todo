@@ -30,11 +30,11 @@ class MultiServerLauncher {
 
   Future<void> startServer(String serverType, int port) async {
     switch (serverType.toLowerCase()) {
-      case 'outsyncs':
+      case 'local':
         if (_outsyncsServer == null) {
           _outsyncsServer = LocalhostRestApiServer(
-            StorageType.outsyncs,
-            'outsyncs',
+            StorageType.local,
+            'local',
           );
           await _outsyncsServer!.start(port: port);
         } else {

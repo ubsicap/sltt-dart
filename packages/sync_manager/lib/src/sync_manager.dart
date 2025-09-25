@@ -10,8 +10,7 @@ class SyncManager {
   SyncManager._();
 
   final Dio _dio = Dio();
-  final OutsyncsStorageService _outsyncsStorage =
-      OutsyncsStorageService.instance;
+  final LocalStorageService _localStorage = LocalStorageService.instance;
 
   // API endpoints - defaults to AWS dev cloud, can be overridden for testing
   String _cloudStorageUrl = kCloudDevUrl;
@@ -27,7 +26,7 @@ class SyncManager {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    await _outsyncsStorage.initialize();
+    await _localStorage.initialize();
 
     _dio.options.headers['Content-Type'] = 'application/json';
     _dio.options.connectTimeout = const Duration(seconds: 10);
@@ -45,7 +44,7 @@ class SyncManager {
       print('[SyncManager] Starting outsync to cloud...');
 
       // Get changes for sync (excludes outdated changes)
-      final changesToSync = await _outsyncsStorage.getChangesForSync();
+      final changesToSync = await _localStorage.getChangesForSync();
 
       if (changesToSync.isEmpty) {
         print('[SyncManager] No changes to outsync');
@@ -78,7 +77,7 @@ class SyncManager {
             '[SyncManager] Deleting outsynced changes from local storage...',
           );
 
-          final deletedCount = await _outsyncsStorage.deleteChanges(cidsSynced);
+          final deletedCount = await _localStorage.deleteChanges(cidsSynced);
           print(
             '[SyncManager] Deleted $deletedCount outsynced changes from local storage',
           );
@@ -132,6 +131,7 @@ class SyncManager {
       print('[SyncManager] Starting downsync from cloud...');
 
       // First, get all projects from the cloud storage (authoritative source)
+      // /api/<domainCollection>', _handleGetDomainIds
       final projectsResponse = await _dio.get('$_cloudStorageUrl/api/projects');
       if (projectsResponse.statusCode != 200) {
         throw Exception(
@@ -161,7 +161,7 @@ class SyncManager {
         print('[SyncManager] Downsyncing project: $projectId');
 
         // Get the last sync state for this specific project
-        final syncState = await _outsyncsStorage.getCursorSyncState(projectId);
+        final syncState = await _localStorage.getCursorSyncState(projectId);
         int lastSeq = syncState?.seq ?? 0;
         String cid = syncState?.cid ?? '';
         DateTime changeAt =
@@ -173,19 +173,20 @@ class SyncManager {
         int totalChangesForProject = 0;
         int highestSeqForProject =
             lastSeq; // Track highest sequence for this project
-        String srcStorageId = 'unknown';
-        String srcStorageType = 'cloud';
+        String srcStorageId = '**TBD**';
+        String srcStorageType = '**TBD**';
 
         // Continue fetching with cursor until no more changes
         do {
           final encodedProjectId = Uri.encodeComponent(projectId);
+          // router.get('/api/changes/<domainCollection>/<domainId>', _handleGetChanges);
           final url =
-              '$_cloudStorageUrl/api/projects/$encodedProjectId/changes?cursor=$cursor';
+              '$_cloudStorageUrl/api/changes/projects/$encodedProjectId?cursor=$cursor';
 
           final response = await _dio.get(url);
 
-          srcStorageId = responseData['storageId'] ?? 'unknown';
-          srcStorageType = responseData['storageType'] ?? 'cloud';
+          srcStorageId = responseData['storageId'];
+          srcStorageType = responseData['storageType'];
 
           if (response.statusCode == 200) {
             // TODO Deserialize response data
@@ -220,7 +221,7 @@ class SyncManager {
               changes: incomingChanges,
               srcStorageType: srcStorageType,
               srcStorageId: srcStorageId,
-              storage: _outsyncsStorage,
+              storage: _localStorage,
               includeChangeUpdates: true,
               includeStateUpdates: true,
             );
@@ -262,7 +263,7 @@ class SyncManager {
 
         // Update sync state for this project if we processed any changes
         if (totalChangesForProject > 0) {
-          await _outsyncsStorage.upsertCursorSyncState(
+          await _localStorage.upsertCursorSyncState(
             domainType: 'project',
             domainId: projectId,
             srcStorageType: srcStorageType,
@@ -331,17 +332,43 @@ class SyncManager {
   }
 
   // Check sync status and statistics
-  Future<SyncStatus> getSyncStatus() async {
+  Future<SyncStatus> getSyncStatus(String domainId) async {
     try {
-      final outsyncsCount = 0; // await _outsyncsStorage.getChangeCount();
+      final localChangeStats = await _localStorage.getChangeStats(
+        domainType: 'project',
+        domainId: domainId,
+      );
+      final outsyncsCount = localChangeStats.totals.total;
+
+      final localEntityStats = await _localStorage.getStateStats(
+        domainType: 'project',
+        domainId: domainId,
+      );
 
       // Try to get cloud storage stats
       int cloudCount = 0;
       try {
-        final response = await _dio.get('$_cloudStorageUrl/api/stats');
+        final response = await _dio.get(
+          '$_cloudStorageUrl/api/stats/projects/$domainId',
+        );
         if (response.statusCode == 200) {
           final stats = response.data as Map<String, dynamic>;
-          cloudCount = stats['changeStats']['total'] as int;
+          /* expect response in form of:
+            {
+          'projectId': domainId,
+          'changeStats': changeStatsJson,
+          'entityTypeStats': entityTypeStatsJson,
+          'timestamp': DateTime.now().toIso8601String(),
+          'storageType': storageTypeDescription,
+          }
+          */
+          final changeStats = EntityTypeStats.fromJson(
+            stats['changeStats'] as Map<String, dynamic>,
+          );
+          final entityTypeStats = EntityTypeStats.fromJson(
+            stats['entityTypeStats'] as Map<String, dynamic>,
+          );
+          cloudCount = changeStats.totals.total;
         }
       } catch (e) {
         print('[SyncManager] Could not fetch cloud storage stats: $e');
@@ -365,12 +392,12 @@ class SyncManager {
 
   /// Clear all sync states (useful for testing)
   Future<void> clearAllSyncStates() async {
-    await _outsyncsStorage.clearAllCursorSyncStates();
+    await _localStorage.clearAllCursorSyncStates();
   }
 
   Future<void> close() async {
     if (_initialized) {
-      await _outsyncsStorage.close();
+      await _localStorage.close();
       _initialized = false;
       print('[SyncManager] Closed');
     }

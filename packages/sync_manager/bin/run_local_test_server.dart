@@ -16,7 +16,7 @@ void main(List<String> args) async {
       ? int.tryParse(args[portArgIndex + 1]) ?? 8081
       : 8081;
 
-  final storage = OutsyncsStorageService.instance;
+  final storage = LocalStorageService.instance;
   final server = LocalTestServer(
     serverName: 'sync-manager-local',
     storage: storage,

@@ -373,8 +373,7 @@ bin/
 ### Key Components
 
 #### Storage Services
-- **OutsyncsStorageService**: Manages local changes awaiting upload
-- **DownsyncsStorageService**: Manages changes received from cloud
+- **LocalStorageService**: Manages local state and changes awaiting upload
 - **CloudStorageService**: Simulates cloud storage (append-only)
 
 #### Sync Manager

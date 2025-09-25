@@ -1099,12 +1099,12 @@ class IsarStorageService extends BaseStorageService {
 }
 
 // Singleton wrappers for each storage type
-class OutsyncsStorageService extends IsarStorageService {
-  static OutsyncsStorageService? _instance;
-  static OutsyncsStorageService get instance =>
-      _instance ??= OutsyncsStorageService._();
+class LocalStorageService extends IsarStorageService {
+  static LocalStorageService? _instance;
+  static LocalStorageService get instance =>
+      _instance ??= LocalStorageService._();
 
-  OutsyncsStorageService._() : super('outsyncs', 'OutsyncsStorage');
+  LocalStorageService._() : super('local_storage', 'LocalStorage');
 }
 
 class CloudStorageService extends IsarStorageService {
