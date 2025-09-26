@@ -90,6 +90,10 @@ class ChangeProcessingService {
           final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
             changeData,
           );
+          if (changeLogEntry.operation == 'error') {
+            // If deserialization failed, we'll catch this in the main loop
+            continue;
+          }
 
           // Validate storageId based on storageMode
           if (storageMode == 'sync') {
