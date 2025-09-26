@@ -7,8 +7,8 @@ import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_entity_type_state.dart';
 import 'package:sync_manager/src/models/isar_storage_state.dart';
+import 'package:sync_manager/sync_manager.dart';
 
-import 'isar_entity_state_storage_group.dart';
 import 'models/isar_change_log_entry.dart' as client;
 import 'register_entity_states.dart';
 
@@ -668,7 +668,7 @@ class IsarStorageService extends BaseStorageService {
     var results = await query
         .seqGreaterThan(cursor ?? 0)
         .filter()
-        .cloudAtIsNotNull()
+        .cloudAtIsNull()
         .findAll();
 
     if (limit != null && results.length > limit) {
@@ -1076,6 +1076,9 @@ class CloudStorageService extends IsarStorageService {
       _instance ??= CloudStorageService._();
 
   CloudStorageService._() : super('cloud_storage', 'CloudStorage');
+
+  @override
+  String getStorageType() => 'cloud';
 
   @override
   DateTime? maybeCreateCloudAt() => DateTime.now().toUtc();
