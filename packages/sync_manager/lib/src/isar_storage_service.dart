@@ -12,29 +12,6 @@ import 'package:sync_manager/sync_manager.dart';
 import 'models/isar_change_log_entry.dart' as client;
 import 'register_entity_states.dart';
 
-/// Service function to create the correct Isar*State from JSON
-///
-/// This function first tries to use registered storage groups from the
-/// IsarEntityStateStorageGroup system. If no storage group is found,
-/// it falls back to hardcoded types for backwards compatibility.
-///
-/// To add a new entity type:
-/// 1. Create your IsarXxxState class
-/// 2. Register it using registerIsarEntityStateStorageGroup()
-/// 3. The registration will automatically handle fromJson and put operations
-BaseEntityState createIsarEntityStateFromJson(
-  EntityType entityTypeEnum,
-  Map<String, dynamic> json,
-  String originalTypeString,
-) {
-  final storageGroup = getEntityStateStorageGroup(entityTypeEnum);
-  if (storageGroup != null) {
-    return storageGroup.fromJson(json);
-  }
-
-  throw UnimplementedError('Unknown entity type: $originalTypeString');
-}
-
 class IsarStorageService extends BaseStorageService {
   final String _databaseName;
   final String _logPrefix;
@@ -43,12 +20,18 @@ class IsarStorageService extends BaseStorageService {
   bool _initialized = false;
   late String _storageId;
 
+  final IsarEntityStateStorageRegistry _entityStateRegistry =
+      IsarEntityStateStorageRegistry();
+
+  IsarEntityStateStorageRegistry get entityStateRegistry =>
+      _entityStateRegistry;
+
   IsarStorageService(this._databaseName, this._logPrefix);
 
   @override
   Future<void> initialize({
     List<CollectionSchema>? providedEntityStateSchemas,
-    void Function(Isar)? registerStorageGroups,
+    void Function(IsarEntityStateStorageRegistry, Isar)? registerStorageGroups,
     bool inspector = false,
   }) async {
     if (_initialized) return;
@@ -79,12 +62,15 @@ class IsarStorageService extends BaseStorageService {
       inspector: inspector,
     );
 
-    // Register storage groups with the initialized Isar instance
+    // Register storage groups with the initialized Isar instance. Always
+    // start from a clean registry so re-initialization doesn't duplicate
+    // entries.
+    _entityStateRegistry.clear();
     if (registerStorageGroups != null) {
-      registerStorageGroups(_isar);
+      registerStorageGroups(_entityStateRegistry, _isar);
     } else {
       // Fall back to default registration
-      registerAllIsarEntityStateStorageGroups(_isar);
+      registerAllIsarEntityStateStorageGroups(_entityStateRegistry, _isar);
     }
 
     _initialized = true;
@@ -110,6 +96,19 @@ class IsarStorageService extends BaseStorageService {
     List<client.IsarChangeLogEntry> clientEntries,
   ) {
     return clientEntries.map(_convertToChangeLogEntry).toList();
+  }
+
+  BaseEntityState _createEntityStateFromJson(
+    EntityType entityTypeEnum,
+    Map<String, dynamic> json,
+    String originalTypeString,
+  ) {
+    final storageGroup = _entityStateRegistry.get(entityTypeEnum);
+    if (storageGroup != null) {
+      return storageGroup.fromJson(json);
+    }
+
+    throw UnimplementedError('Unknown entity type: $originalTypeString');
   }
 
   @override
@@ -188,7 +187,7 @@ class IsarStorageService extends BaseStorageService {
         'updateChangeLogAndState - after merge - mergedStateJson id: ${mergedStateJson['id']}',
       );
 
-      newEntityState = createIsarEntityStateFromJson(
+      newEntityState = _createEntityStateFromJson(
         entityTypeEnum,
         mergedStateJson,
         changeLogEntry.entityType,
@@ -198,7 +197,7 @@ class IsarStorageService extends BaseStorageService {
       // Make a shallow copy and ensure required metadata fields exist
       final stateJson = Map<String, dynamic>.from(stateUpdates);
 
-      newEntityState = createIsarEntityStateFromJson(
+      newEntityState = _createEntityStateFromJson(
         entityTypeEnum,
         stateJson,
         changeLogEntry.entityType,
@@ -224,7 +223,7 @@ class IsarStorageService extends BaseStorageService {
       );
 
       // Try to use registered storage group first
-      final storageGroup = getEntityStateStorageGroup(entityTypeEnum);
+      final storageGroup = _entityStateRegistry.get(entityTypeEnum);
       if (storageGroup != null) {
         await storageGroup.put(newEntityState);
       } else {
@@ -365,7 +364,7 @@ class IsarStorageService extends BaseStorageService {
     bool fireImmediately = true,
   }) {
     // Use the registered storage group to get the right collection
-    final storageGroup = getEntityStateStorageGroup(
+    final storageGroup = _entityStateRegistry.get(
       EntityType.values.firstWhere(
         (e) => e.value == entityType,
         orElse: () => throw StateError('Unknown entity type: $entityType'),
@@ -739,7 +738,7 @@ class IsarStorageService extends BaseStorageService {
       return null;
     }
 
-    final storageGroup = getEntityStateStorageGroup(entityTypeEnum);
+    final storageGroup = _entityStateRegistry.get(entityTypeEnum);
     if (storageGroup == null) {
       throw Exception('Storage group not found: $entityTypeEnum');
     }
@@ -756,9 +755,9 @@ class IsarStorageService extends BaseStorageService {
     bool includeMetadata = false,
   }) async {
     // Search all registered storage groups for the entity
-    final entityTypes = getAllRegisteredEntityTypes();
+    final entityTypes = _entityStateRegistry.registeredEntityTypes();
     for (final et in entityTypes) {
-      final group = getEntityStateStorageGroup(et);
+      final group = _entityStateRegistry.get(et);
       if (group == null) continue;
       final state = await group.findByDomainAndEntity(
         _isar,
@@ -921,7 +920,7 @@ class IsarStorageService extends BaseStorageService {
       }
 
       // Get the storage group for this entity type
-      final storageGroup = getEntityStateStorageGroup(entityTypeEnum);
+      final storageGroup = _entityStateRegistry.get(entityTypeEnum);
       if (storageGroup == null) {
         throw ArgumentError(
           'No storage group registered for entity type: $entityType',
@@ -1001,9 +1000,9 @@ class IsarStorageService extends BaseStorageService {
       await _isar.isarChangeLogEntrys.deleteAll(seqsToDelete);
 
       // Delete all entity states for the domain across all registered storage groups
-      final entityTypes = getAllRegisteredEntityTypes();
+      final entityTypes = _entityStateRegistry.registeredEntityTypes();
       for (final et in entityTypes) {
-        final group = getEntityStateStorageGroup(et);
+        final group = _entityStateRegistry.get(et);
         if (group == null) {
           throw StateError('Storage group not found: $et');
         }

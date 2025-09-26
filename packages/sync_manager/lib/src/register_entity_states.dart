@@ -18,8 +18,11 @@ final List<CollectionSchema> entityStateSchemas = [
 ];
 
 /// Register all Isar entity state storage groups
-void registerAllIsarEntityStateStorageGroups(Isar isar) {
-  registerIsarEntityStateStorageGroup(
+void registerAllIsarEntityStateStorageGroups(
+  IsarEntityStateStorageRegistry registry,
+  Isar isar,
+) {
+  registry.register(
     IsarEntityStateStorageGroup<IsarProjectState>(
       entityType: EntityType.project,
       fromJson: IsarProjectState.fromJson,
@@ -62,7 +65,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
               .deleteAll(),
     ),
   );
-  registerIsarEntityStateStorageGroup(
+  registry.register(
     IsarEntityStateStorageGroup<IsarDocumentState>(
       entityType: EntityType.document,
       fromJson: IsarDocumentState.fromJson,
@@ -105,7 +108,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
               .deleteAll(),
     ),
   );
-  registerIsarEntityStateStorageGroup(
+  registry.register(
     IsarEntityStateStorageGroup<IsarTeamState>(
       entityType: EntityType.team,
       fromJson: IsarTeamState.fromJson,
@@ -148,7 +151,7 @@ void registerAllIsarEntityStateStorageGroups(Isar isar) {
               .deleteAll(),
     ),
   );
-  registerIsarEntityStateStorageGroup(
+  registry.register(
     IsarEntityStateStorageGroup<IsarTaskState>(
       entityType: EntityType.task,
       fromJson: IsarTaskState.fromJson,

@@ -73,27 +73,34 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   });
 }
 
-/// Registry for Isar entity state storage groups
-final Map<EntityType, IsarEntityStateStorageGroup> _storageGroups = {};
+/// Registry container that stores entity state storage groups. Each
+/// `IsarStorageService` instance should own its own registry so that
+/// multiple services can coexist without sharing registrations.
+class IsarEntityStateStorageRegistry {
+  final Map<EntityType, IsarEntityStateStorageGroup> _storageGroups = {};
 
-/// Register an Isar entity state storage group
-void registerIsarEntityStateStorageGroup<T extends BaseEntityState>(
-  IsarEntityStateStorageGroup<T> group,
-) {
-  _storageGroups[group.entityType] = group;
-}
+  /// Register or replace the storage group for the given entity type.
+  void register<T extends BaseEntityState>(
+    IsarEntityStateStorageGroup<T> group,
+  ) {
+    _storageGroups[group.entityType] = group;
+  }
 
-/// Get the storage group for a specific entity type
-IsarEntityStateStorageGroup? getEntityStateStorageGroup(EntityType entityType) {
-  return _storageGroups[entityType];
-}
+  /// Retrieve the storage group for the specified entity type, if registered.
+  IsarEntityStateStorageGroup? get(EntityType entityType) {
+    return _storageGroups[entityType];
+  }
 
-/// Return all registered entity state storage groups as a list.
-List<IsarEntityStateStorageGroup> getAllRegisteredEntityStateStorageGroups() {
-  return _storageGroups.values.toList(growable: false);
-}
+  /// Return all registered storage groups as an immutable list.
+  List<IsarEntityStateStorageGroup> allGroups() {
+    return _storageGroups.values.toList(growable: false);
+  }
 
-/// Get all registered entity types
-List<EntityType> getAllRegisteredEntityTypes() {
-  return _storageGroups.keys.toList();
+  /// Return all registered entity types as an immutable list.
+  List<EntityType> registeredEntityTypes() {
+    return _storageGroups.keys.toList(growable: false);
+  }
+
+  /// Remove all registered groups.
+  void clear() => _storageGroups.clear();
 }
