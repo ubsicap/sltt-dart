@@ -50,6 +50,24 @@ validateChangeLogEntryDataJson(BaseChangeLogEntry entry) {
   }
 }
 
+/// Serialize a registered BaseChangeLogEntry instance into a safe JSON map
+/// using the registered SerializableGroup's toJsonBase and the
+/// shared serializeWithUnknownFieldData helper which will merge unknown
+/// fields stored in the object's unknownJson string.
+Map<String, dynamic> serializeChangeLogEntryUsingRegistry(
+  BaseChangeLogEntry entry,
+) {
+  final group = _changeLogEntryFactoryGroup;
+  if (group == null) {
+    throw Exception('No registered change log entry SerializableGroup');
+  }
+  // Use the group's toJsonBase to get known-fields map, then merge unknowns
+  return serializeWithUnknownFieldData<BaseChangeLogEntry>(
+    entry,
+    group.toJsonBase,
+  );
+}
+
 /// Deserialize the provided [json] into the registered `BaseChangeLogEntry`
 /// instance for the indicated `entityType` using the safe deserialization
 /// wrapper (which will produce a recovery JSON on error).
@@ -78,6 +96,38 @@ BaseChangeLogEntry deserializeChangeLogEntryUsingRegistry(
     group.validate!(changeLogEntry);
   }
   return changeLogEntry;
+}
+
+List<BaseChangeLogEntry> fromJsonChangeLogEntryList(
+  List<dynamic> jsonList, {
+  bool validateDataJson = false,
+}) {
+  final group = _changeLogEntryFactoryGroup;
+  if (group == null) {
+    throw Exception('No registered change log entry SerializableGroup');
+  }
+  return jsonList.map((json) {
+    if (json is Map<String, dynamic>) {
+      return deserializeChangeLogEntryUsingRegistry(
+        json,
+        validateDataJson: validateDataJson,
+      );
+    } else {
+      throw Exception('Invalid JSON object in list: $json');
+    }
+  }).toList();
+}
+
+List<Map<String, dynamic>> toJsonChangeLogEntryList(
+  List<BaseChangeLogEntry> entries,
+) {
+  final group = _changeLogEntryFactoryGroup;
+  if (group == null) {
+    throw Exception('No registered change log entry SerializableGroup');
+  }
+  return entries
+      .map((entry) => serializeChangeLogEntryUsingRegistry(entry))
+      .toList();
 }
 
 /// Deserialize a BaseChangeLogEntry subclass using the provided factory.
@@ -136,7 +186,7 @@ Map<String, dynamic> _createSafeJsonFromDeserializationError({
   final safeJson = toSafeJson(originalJson);
 
   // Ensure minimal required fields exist and normalize entityType
-  safeJson['entityType'] = EntityType.unknown.value;
+  // safeJson['entityType'] = EntityType.unknown.value;
   safeJson['operation'] = 'error';
   safeJson['operationInfoJson'] = jsonEncode({
     ...(jsonDecode(JsonUtils.normalize(safeJson['operationInfoJson']))),
@@ -145,5 +195,8 @@ Map<String, dynamic> _createSafeJsonFromDeserializationError({
     'json': originalJson,
   });
 
+  print(
+    '** Deserialization error, using safe JSON, error: ${errorInfo['error']}. Safe JSON: ${const JsonEncoder.withIndent('  ').convert(safeJson)}',
+  );
   return safeJson;
 }

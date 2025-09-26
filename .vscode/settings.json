@@ -3,6 +3,7 @@
     "dart.lineLength": 80,
     "dart.showTodos": true,
     "[dart]": {
+        "editor.inlayHints.enabled": "on",
         "editor.rulers": [80, 120],
         "editor.hover.enabled": true,
         "editor.hover.delay": 300,

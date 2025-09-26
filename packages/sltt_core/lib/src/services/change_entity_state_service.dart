@@ -54,6 +54,14 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     );
   }
 
+  if (['error', 'no-op', 'hold'].contains(changeLogEntry.operation)) {
+    return const GetUpdateResults(
+      isDuplicate: false,
+      stateUpdates: <String, dynamic>{},
+      changeUpdates: <String, dynamic>{},
+    );
+  }
+
   // Compute changed vs no-op fields
   final fieldChangesOrNoOps = getFieldChangesOrNoOps(
     changeLogEntry,

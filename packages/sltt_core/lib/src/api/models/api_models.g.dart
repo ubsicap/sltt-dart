@@ -9,9 +9,7 @@ part of 'api_models.dart';
 CreateChangesRequest _$CreateChangesRequestFromJson(
   Map<String, dynamic> json,
 ) => CreateChangesRequest(
-  changes: (json['changes'] as List<dynamic>)
-      .map((e) => ChangeEntry.fromJson(e as Map<String, dynamic>))
-      .toList(),
+  changes: fromJsonChangeLogEntryList(json['changes'] as List),
   srcStorageType: json['srcStorageType'] as String,
   srcStorageId: json['srcStorageId'] as String,
   storageMode: json['storageMode'] as String?,
@@ -22,34 +20,13 @@ CreateChangesRequest _$CreateChangesRequestFromJson(
 Map<String, dynamic> _$CreateChangesRequestToJson(
   CreateChangesRequest instance,
 ) => <String, dynamic>{
-  'changes': instance.changes.map((e) => e.toJson()).toList(),
+  'changes': toJsonChangeLogEntryList(instance.changes),
   'srcStorageType': instance.srcStorageType,
   'srcStorageId': instance.srcStorageId,
   'storageMode': instance.storageMode,
   'includeChangeUpdates': instance.includeChangeUpdates,
   'includeStateUpdates': instance.includeStateUpdates,
 };
-
-ChangeEntry _$ChangeEntryFromJson(Map<String, dynamic> json) => ChangeEntry(
-  domainId: json['domainId'] as String,
-  entityType: json['entityType'] as String,
-  entityId: json['entityId'] as String,
-  operation: json['operation'] as String?,
-  dataJson: json['dataJson'] as String?,
-  changeAt: json['changeAt'] as String?,
-  cid: json['cid'] as String?,
-);
-
-Map<String, dynamic> _$ChangeEntryToJson(ChangeEntry instance) =>
-    <String, dynamic>{
-      'domainId': instance.domainId,
-      'entityType': instance.entityType,
-      'entityId': instance.entityId,
-      'operation': instance.operation,
-      'dataJson': instance.dataJson,
-      'changeAt': instance.changeAt,
-      'cid': instance.cid,
-    };
 
 CreateChangesResponse _$CreateChangesResponseFromJson(
   Map<String, dynamic> json,

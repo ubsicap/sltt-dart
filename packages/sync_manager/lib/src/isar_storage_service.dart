@@ -1004,8 +1004,17 @@ class IsarStorageService extends BaseStorageService {
       final entityTypes = getAllRegisteredEntityTypes();
       for (final et in entityTypes) {
         final group = getEntityStateStorageGroup(et);
-        if (group == null) continue;
-        await group.deleteByDomain(domainType: domainType, domainId: domainId);
+        if (group == null) {
+          throw StateError('Storage group not found: $et');
+        }
+        try {
+          await group.deleteByDomain(
+            domainType: domainType,
+            domainId: domainId,
+          );
+        } catch (e) {
+          print('Error deleting entity states for $et: $e');
+        }
       }
 
       // Delete all cursor sync states for the domain

@@ -82,17 +82,47 @@ class ChangeProcessingService {
         );
       }
 
-      // Validate all storageIds before processing any changes
+      // Validate all changes before processing any changes
       final invalidStorageIds = <int>[];
+      final List<int> invalidOperations = [];
+      final List<int> invalidStateChanged = [];
       for (int i = 0; i < changes.length; i++) {
         final changeData = changes[i];
         try {
+          final operation = changeData['operation'];
+          final validIncomingSaveOperations = [
+            '',
+            'create',
+            'update',
+            'delete',
+          ];
+          final validIncomingSyncOperations = [
+            'create',
+            'update',
+            'delete',
+            'no-op',
+          ];
+          if (storageMode == 'save' &&
+              !validIncomingSaveOperations.contains(operation)) {
+            invalidOperations.add(i);
+            continue;
+          }
+          if (storageMode == 'sync' &&
+              !validIncomingSyncOperations.contains(operation)) {
+            invalidOperations.add(i);
+            continue;
+          }
           final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
             changeData,
           );
           if (changeLogEntry.operation == 'error') {
-            // If deserialization failed, we'll catch this in the main loop
-            continue;
+            // If deserialization failed, right now we'll
+            // treat this as a programming error that should be fixed
+            return ChangeProcessingResult(
+              errorMessage:
+                  'Change[$i] cid(${changeLogEntry.cid}) deserialization encountered error: ${const JsonEncoder.withIndent('  ').convert(changeLogEntry.getOperationInfo())}',
+              errorCode: 400,
+            );
           }
 
           // Validate storageId based on storageMode
@@ -100,10 +130,16 @@ class ChangeProcessingService {
             if (changeLogEntry.storageId.trim().isEmpty) {
               invalidStorageIds.add(i);
             }
+            if (changeLogEntry.stateChanged == false) {
+              invalidStateChanged.add(i);
+            }
           } else if (storageMode == 'save') {
             validateChangeLogEntryDataJson(changeLogEntry);
             if (changeLogEntry.storageId.trim().isNotEmpty) {
               invalidStorageIds.add(i);
+            }
+            if (changeLogEntry.stateChanged == true) {
+              invalidStateChanged.add(i);
             }
           }
         } catch (e) {
@@ -117,6 +153,23 @@ class ChangeProcessingService {
         return ChangeProcessingResult(
           errorMessage:
               'Changes [${invalidStorageIds.join(', ')}] in $storageMode mode must have $expectedState storageId',
+          errorCode: 400,
+        );
+      }
+      if (invalidOperations.isNotEmpty) {
+        return ChangeProcessingResult(
+          errorMessage:
+              'Changes [${invalidOperations.join(', ')}] have invalid operations for $storageMode mode',
+          errorCode: 400,
+        );
+      }
+      if (invalidStateChanged.isNotEmpty) {
+        final expectedState = storageMode == 'sync'
+            ? 'true'
+            : 'false or omitted';
+        return ChangeProcessingResult(
+          errorMessage:
+              'Changes [${invalidStateChanged.join(', ')}] in $storageMode mode must have stateChanged=$expectedState',
           errorCode: 400,
         );
       }
@@ -174,6 +227,16 @@ class ChangeProcessingService {
 
           if (validationResult != null) {
             return validationResult;
+          }
+          // validate that domainId and entityId match if their types match
+          if (changeLogEntry.domainType == changeLogEntry.entityType) {
+            if (changeLogEntry.domainId != changeLogEntry.entityId) {
+              return ChangeProcessingResult(
+                errorMessage:
+                    'Domain (${changeLogEntry.domainType}) ID (${changeLogEntry.domainId}) and Entity (${changeLogEntry.entityType}) ID (${changeLogEntry.entityId}) must match for ${changeLogEntry.cid}',
+                errorCode: 400,
+              );
+            }
           }
 
           // Get current entity state

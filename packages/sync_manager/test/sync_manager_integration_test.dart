@@ -57,11 +57,11 @@ void main() {
       // Seed the cloud storage with a test project __test_2 so downsync has data
       final cloudStorage = CloudStorageService.instance;
       await cloudStorage.initialize();
-      cloudStorage.testResetDomainStorage(
+      await cloudStorage.testResetDomainStorage(
         domainType: 'project',
         domainId: '__test_1',
       );
-      cloudStorage.testResetDomainStorage(
+      await cloudStorage.testResetDomainStorage(
         domainType: 'project',
         domainId: '__test_2',
       );
@@ -73,7 +73,7 @@ void main() {
         domainId: '__test_2',
         entityType: 'project',
         operation: 'create',
-        entityId: 'proj-cloud-2',
+        entityId: '__test_2',
         dataJson: stableStringify(
           BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
         ),
@@ -113,8 +113,15 @@ void main() {
       // LocalStorageService contains the change entries.
       final local = LocalStorageService.instance;
       await local.initialize();
-      local.testResetDomainStorage(domainType: 'project', domainId: '__test_1');
-      local.testResetDomainStorage(domainType: 'project', domainId: '__test_2');
+      final localStorageId = await local.getStorageId();
+      await local.testResetDomainStorage(
+        domainType: 'project',
+        domainId: '__test_1',
+      );
+      await local.testResetDomainStorage(
+        domainType: 'project',
+        domainId: '__test_2',
+      );
 
       final changeBy = 'test';
       final change = IsarChangeLogEntry(
@@ -124,7 +131,7 @@ void main() {
         domainId: '__test_1',
         entityType: 'project',
         operation: 'create',
-        entityId: 'proj-1',
+        entityId: '__test_1',
         dataJson: stableStringify(
           BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
         ),
@@ -149,6 +156,26 @@ void main() {
         isTrue,
         reason:
             'Seeding local storage should succeed: ${seedResult.errorMessage}',
+      );
+      expect(
+        seedResult.resultsSummary?.toJson(),
+        equals({
+          'storageType': 'local',
+          'storageId': localStorageId,
+          'stateUpdates': isA<List<Map<String, dynamic>>>(),
+          'changeUpdates': isA<List<Map<String, dynamic>>>(),
+          'created': [change.cid],
+          'updated': [],
+          'deleted': [],
+          'noOps': [],
+          'clouded': [],
+          'dups': [],
+          'unknowns': [],
+          'info': isA<List<Map<String, dynamic>>>(),
+          'errors': [],
+          'unprocessed': [],
+        }),
+        reason: 'Seeding local storage should process 1 change',
       );
 
       await syncManager.initialize();

@@ -93,12 +93,6 @@ List<IsarEntityStateStorageGroup> getAllRegisteredEntityStateStorageGroups() {
   return _storageGroups.values.toList(growable: false);
 }
 
-/// Get all registered schemas for Isar initialization
-List<CollectionSchema> getAllRegisteredSchemas() {
-  // Schemas are defined explicitly in register_entity_states.dart
-  return <CollectionSchema>[];
-}
-
 /// Get all registered entity types
 List<EntityType> getAllRegisteredEntityTypes() {
   return _storageGroups.keys.toList();

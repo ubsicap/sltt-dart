@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
 
@@ -60,12 +62,8 @@ class SyncManager {
 
       // Send changes to cloud storage using typed API model
       final srcStorageId = await _localStorage.getStorageId();
-      final changeEntries = changesToSync
-          .map((c) => ChangeEntry.fromJson(c.toJson()))
-          .toList();
-
       final req = CreateChangesRequest(
-        changes: changeEntries,
+        changes: changesToSync,
         srcStorageType: 'local',
         srcStorageId: srcStorageId,
         storageMode: 'sync',
@@ -107,12 +105,14 @@ class SyncManager {
 
           print('[SyncManager] Partial outsync nothing processed');
 
+          final message = 'Partial nothing processed';
           return OutsyncResult(
             success: false,
-            message: 'Partial nothing processed',
+            message: message,
             changeSummary: summary,
             deletedLocalChanges: [],
-            error: 'Partial nothing processed',
+            error:
+                '$message, errors: ${const JsonEncoder.withIndent('  ').convert(summary.errors)}',
             errorStackTrace: null,
           );
         }

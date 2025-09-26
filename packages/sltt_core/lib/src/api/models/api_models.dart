@@ -1,13 +1,16 @@
 import 'package:json_annotation/json_annotation.dart';
-
-import '../../storage/stats/entity_type_stats.dart';
-import '../../storage/stats/entity_type_summary.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 part 'api_models.g.dart';
 
 @JsonSerializable(explicitToJson: true)
 class CreateChangesRequest {
-  final List<ChangeEntry> changes;
+  ///serialized/deserialized manually in the service to ensure proper (de)serialization
+  @JsonKey(
+    toJson: toJsonChangeLogEntryList,
+    fromJson: fromJsonChangeLogEntryList,
+  )
+  final List<BaseChangeLogEntry> changes;
   final String srcStorageType;
   final String srcStorageId;
   final String? storageMode;
@@ -26,31 +29,6 @@ class CreateChangesRequest {
   factory CreateChangesRequest.fromJson(Map<String, dynamic> json) =>
       _$CreateChangesRequestFromJson(json);
   Map<String, dynamic> toJson() => _$CreateChangesRequestToJson(this);
-}
-
-@JsonSerializable()
-class ChangeEntry {
-  final String domainId;
-  final String entityType;
-  final String entityId;
-  final String? operation;
-  final String? dataJson;
-  final String? changeAt;
-  final String? cid;
-
-  ChangeEntry({
-    required this.domainId,
-    required this.entityType,
-    required this.entityId,
-    this.operation,
-    this.dataJson,
-    this.changeAt,
-    this.cid,
-  });
-
-  factory ChangeEntry.fromJson(Map<String, dynamic> json) =>
-      _$ChangeEntryFromJson(json);
-  Map<String, dynamic> toJson() => _$ChangeEntryToJson(this);
 }
 
 @JsonSerializable(explicitToJson: true)
