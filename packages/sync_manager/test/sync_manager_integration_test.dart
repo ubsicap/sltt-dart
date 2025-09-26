@@ -57,6 +57,14 @@ void main() {
       // Seed the cloud storage with a test project __test_2 so downsync has data
       final cloudStorage = CloudStorageService.instance;
       await cloudStorage.initialize();
+      cloudStorage.testResetDomainStorage(
+        domainType: 'project',
+        domainId: '__test_1',
+      );
+      cloudStorage.testResetDomainStorage(
+        domainType: 'project',
+        domainId: '__test_2',
+      );
 
       final cloudSeedChange = IsarChangeLogEntry(
         changeAt: DateTime.now(),
@@ -105,14 +113,8 @@ void main() {
       // LocalStorageService contains the change entries.
       final local = LocalStorageService.instance;
       await local.initialize();
-      LocalStorageService.instance.testResetDomainStorage(
-        domainType: 'project',
-        domainId: '__test_1',
-      );
-      LocalStorageService.instance.testResetDomainStorage(
-        domainType: 'project',
-        domainId: '__test_2',
-      );
+      local.testResetDomainStorage(domainType: 'project', domainId: '__test_1');
+      local.testResetDomainStorage(domainType: 'project', domainId: '__test_2');
 
       final changeBy = 'test';
       final change = IsarChangeLogEntry(
@@ -160,12 +162,44 @@ void main() {
         reason:
             'Unexpected outsync failure: ${result.error} at ${result.errorStackTrace}',
       );
-      // Ensure local change was deleted from actual LocalStorageService
-      final remaining = await local.getChangesForSync();
       expect(
-        remaining,
-        isEmpty,
-        reason: 'Local change should be removed after successful outsync',
+        result.deletedLocalChanges,
+        equals([change.cid]),
+        reason:
+            'Unexpected outsync failure: ${result.error} at ${result.errorStackTrace}',
+      );
+      // Use SyncManager.getSyncStatus to confirm the project has no pending outsyncs
+      final status = await syncManager.getSyncStatus('__test_1');
+      expect(
+        status.localChangeStats?.totals.toJson(),
+        equals({
+          'creates': 0,
+          'updates': 0,
+          'deletes': 0,
+          'total': 0,
+          'latestChangeAt': isA<String>(),
+          'latestSeq': isA<int>(),
+        }),
+        reason:
+            'After successful outsync, project __test_1 should have 0 pending outsyncs',
+      );
+      expect(
+        status.cloudChangeStats?.toJson(),
+        equals(null),
+        reason:
+            'After successful outsync, project __test_1 should have 0 pending outsyncs',
+      );
+      expect(
+        status.cloudChangeStats?.toJson(),
+        equals(null),
+        reason:
+            'After successful outsync, project __test_1 should have 0 pending outsyncs',
+      );
+      expect(
+        status.cloudChangeStats?.toJson(),
+        equals(null),
+        reason:
+            'After successful outsync, project __test_1 should have 0 pending outsyncs',
       );
     });
 
@@ -189,7 +223,16 @@ void main() {
             'Unexpected downsync failure: ${downsyncResult.error} at ${downsyncResult.errorStackTrace}',
       );
 
-      // Verify local storage has received changes for __test_2
+      final status = await syncManager.getSyncStatus('__test_2');
+      // After downsync we expect local state stats to be available for the project
+      expect(
+        status.localStateStats,
+        isNotNull,
+        reason:
+            'getSyncStatus should report local state stats for __test_2 after downsync',
+      );
+
+      // Verify local storage has received changes for __test_2 and report status via SyncManager
       final projects = await LocalStorageService.instance.getAllDomainIds(
         domainType: 'project',
       );

@@ -58,10 +58,24 @@ class SyncManager {
 
       print('[SyncManager] Found ${changesToSync.length} changes to outsync');
 
-      // Send changes to cloud storage
+      // Send changes to cloud storage using typed API model
+      final srcStorageId = await _localStorage.getStorageId();
+      final changeEntries = changesToSync
+          .map((c) => ChangeEntry.fromJson(c.toJson()))
+          .toList();
+
+      final req = CreateChangesRequest(
+        changes: changeEntries,
+        srcStorageType: 'local',
+        srcStorageId: srcStorageId,
+        storageMode: 'sync',
+        includeChangeUpdates: true,
+        includeStateUpdates: true,
+      );
+
       final response = await _dio.post(
         '$_cloudStorageUrl/api/changes',
-        data: changesToSync.map((c) => c.toJson()).toList(),
+        data: req.toJson(),
       );
 
       if (response.statusCode == 200) {
@@ -351,7 +365,6 @@ class SyncManager {
         domainType: 'project',
         domainId: projectId,
       );
-      final outsyncsCount = localChangeStats.totals.total;
 
       final localStateStats = await _localStorage.getStateStats(
         domainType: 'project',
@@ -359,7 +372,7 @@ class SyncManager {
       );
 
       // Try to get cloud storage stats
-      EntityTypeStats? cloudChangeStats;
+      EntityTypeSummary? cloudChangeStats;
       EntityTypeStats? cloudStateStats;
       try {
         final response = await _dio.get(
@@ -367,19 +380,15 @@ class SyncManager {
         );
         if (response.statusCode == 200) {
           final stats = response.data as Map<String, dynamic>;
-          cloudChangeStats = EntityTypeStats.fromJson(
-            stats['changeStats'] as Map<String, dynamic>,
-          );
-          cloudStateStats = EntityTypeStats.fromJson(
-            stats['entityTypeStats'] as Map<String, dynamic>,
-          );
+          final ps = ProjectStatsResponse.fromJson(stats);
+          cloudStateStats = ps.entityTypeStats;
+          cloudChangeStats = ps.changeStats;
         }
       } catch (e) {
         print('[SyncManager] Could not fetch cloud storage stats: $e');
       }
 
       return SyncStatus(
-        outsyncsCount: outsyncsCount,
         localChangeStats: localChangeStats,
         localStateStats: localStateStats,
         cloudChangeStats: cloudChangeStats,
@@ -388,7 +397,6 @@ class SyncManager {
     } catch (e) {
       print('[SyncManager] Failed to get sync status: $e');
       return SyncStatus(
-        outsyncsCount: 0,
         localChangeStats: null,
         localStateStats: null,
         cloudChangeStats: null,
@@ -491,14 +499,12 @@ class FullSyncResult {
 }
 
 class SyncStatus {
-  final int outsyncsCount;
   final EntityTypeStats? localChangeStats;
   final EntityTypeStats? localStateStats;
-  final EntityTypeStats? cloudChangeStats;
+  final EntityTypeSummary? cloudChangeStats;
   final EntityTypeStats? cloudStateStats;
 
   SyncStatus({
-    required this.outsyncsCount,
     required this.localChangeStats,
     required this.localStateStats,
     required this.cloudChangeStats,
@@ -506,7 +512,6 @@ class SyncStatus {
   });
 
   Map<String, dynamic> toJson() => {
-    'outsyncsCount': outsyncsCount,
     'localChangeStats': localChangeStats?.toJson(),
     'localStateStats': localStateStats?.toJson(),
     'cloudChangeStats': cloudChangeStats?.toJson(),
