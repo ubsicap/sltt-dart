@@ -117,13 +117,13 @@ class ChangeProcessingService {
             changeData,
           );
           if (changeLogEntry.operation == 'error') {
-            // If deserialization failed, right now we'll
-            // treat this as a programming error that should be fixed
-            return ChangeProcessingResult(
-              errorMessage:
-                  'Change[$i] cid(${changeLogEntry.cid}) deserialization encountered error: ${const JsonEncoder.withIndent('  ').convert(changeLogEntry.getOperationInfo())}',
-              errorCode: 400,
-            );
+            // If deserialization failed, don't treat this as a fatal programming
+            // error here. Allow the main processing loop to handle the entry so
+            // that per-change errors are collected into the resultsSummary.
+            // This ensures sync-mode requests can return 200 with errors in the
+            // summary (returnErrorIfInResultsSummary=false) instead of a
+            // top-level HTTP 400.
+            continue;
           }
 
           // Validate storageId based on storageMode
@@ -139,7 +139,11 @@ class ChangeProcessingService {
               invalidSeqProvided.add(i);
             }
           } else if (storageMode == 'save') {
-            validateChangeLogEntryDataJson(changeLogEntry);
+            // validateChangeLogEntryDataJson may be async (test validators),
+            // so await it to ensure exceptions are caught by the surrounding
+            // try/catch and reported in the resultsSummary rather than
+            // bubbling as an unhandled exception.
+            await validateChangeLogEntryDataJson(changeLogEntry);
             if (changeLogEntry.storageId.trim().isNotEmpty) {
               invalidStorageIds.add(i);
             }
@@ -185,11 +189,20 @@ class ChangeProcessingService {
         );
       }
       if (invalidSeqProvided.isNotEmpty) {
-        return ChangeProcessingResult(
-          errorMessage:
-              'Changes [${invalidSeqProvided.join(', ')}] in save mode must not include a caller-provided seq',
-          errorCode: 400,
-        );
+        if (storageMode == 'sync') {
+          return ChangeProcessingResult(
+            errorMessage:
+                'Changes [${invalidSeqProvided.join(', ')}] in sync mode must include a valid positive seq',
+            errorCode: 400,
+          );
+        }
+        if (storageMode == 'save') {
+          return ChangeProcessingResult(
+            errorMessage:
+                'Changes [${invalidSeqProvided.join(', ')}] in save mode must not include a caller-provided seq:',
+            errorCode: 400,
+          );
+        }
       }
 
       final targetStorageType = storage.getStorageType();

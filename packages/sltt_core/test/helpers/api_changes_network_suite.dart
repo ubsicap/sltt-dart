@@ -406,6 +406,7 @@ class ApiChangesNetworkTestSuite {
     final uri = baseUrl.replace(path: '/api/changes');
 
     final change = {
+      'seq': 1235, // include seq to simulate existing change
       'domainId': 'test-project',
       'domainType': 'project',
       'entityType': 'task',
@@ -442,7 +443,7 @@ class ApiChangesNetworkTestSuite {
     final body = await res.transform(utf8.decoder).join();
 
     // Sync mode should return success with errors reported in the summary
-    expect(res.statusCode, equals(200));
+    expect(res.statusCode, equals(200), reason: body);
     final jsonRes = jsonDecode(body) as Map<String, dynamic>;
     expect(jsonRes.containsKey('errors'), isTrue);
     expect((jsonRes['errors'] as List).isNotEmpty, isTrue);
