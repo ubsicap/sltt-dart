@@ -86,6 +86,7 @@ class ChangeProcessingService {
       final invalidStorageIds = <int>[];
       final List<int> invalidOperations = [];
       final List<int> invalidStateChanged = [];
+      final List<int> invalidSeqProvided = [];
       for (int i = 0; i < changes.length; i++) {
         final changeData = changes[i];
         try {
@@ -133,6 +134,10 @@ class ChangeProcessingService {
             if (changeLogEntry.stateChanged == false) {
               invalidStateChanged.add(i);
             }
+            if (changeLogEntry.seq <= 0) {
+              // syncing assumes seq has already been provided
+              invalidSeqProvided.add(i);
+            }
           } else if (storageMode == 'save') {
             validateChangeLogEntryDataJson(changeLogEntry);
             if (changeLogEntry.storageId.trim().isNotEmpty) {
@@ -140,6 +145,12 @@ class ChangeProcessingService {
             }
             if (changeLogEntry.stateChanged == true) {
               invalidStateChanged.add(i);
+            }
+            // Reject positive caller-provided seq values in save mode: callers must not
+            // supply a positive seq when asking the server to 'save' a change. The
+            // storage is responsible for assigning its own auto-increment seq.
+            if (changeLogEntry.seq > 0) {
+              invalidSeqProvided.add(i);
             }
           }
         } catch (e) {
@@ -170,6 +181,13 @@ class ChangeProcessingService {
         return ChangeProcessingResult(
           errorMessage:
               'Changes [${invalidStateChanged.join(', ')}] in $storageMode mode must have stateChanged=$expectedState',
+          errorCode: 400,
+        );
+      }
+      if (invalidSeqProvided.isNotEmpty) {
+        return ChangeProcessingResult(
+          errorMessage:
+              'Changes [${invalidSeqProvided.join(', ')}] in save mode must not include a caller-provided seq',
           errorCode: 400,
         );
       }

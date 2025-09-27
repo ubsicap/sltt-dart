@@ -8,8 +8,9 @@ import 'test_models.dart';
 
 void main() {
   // Helper to generate a cid when we only have an entityType string
-  String genCidFor(String entityType) =>
-      generateCid(entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown);
+  String genCidFor(String entityType) => generateCid(
+    entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown,
+  );
 
   group('ChangeProcessingService', () {
     late InMemoryStorage storage;
@@ -63,7 +64,7 @@ void main() {
           'domainId': 'test-project',
           'domainType': 'project',
           'entityType': 'task',
-          'entityId': 'task-1',
+          'entityId': 'test-project-task-1',
           'changeBy': 'tester',
           'changeAt': baseTime.toUtc().toIso8601String(),
           'cid': generateCid(entityType: EntityType.task),
@@ -108,7 +109,7 @@ void main() {
           'domainId': 'test-project',
           'domainType': 'project',
           'entityType': 'task',
-          'entityId': 'task-change-updates',
+          'entityId': 'test-project-task-change-updates',
           'changeBy': 'tester',
           'changeAt': baseTime.toUtc().toIso8601String(),
           'cid': generateCid(entityType: EntityType.task),
@@ -167,7 +168,7 @@ void main() {
           'domainId': 'test-project',
           'domainType': 'project',
           'entityType': 'task',
-          'entityId': 'task-state-updates',
+          'entityId': 'test-project-task-state-updates',
           'changeBy': 'tester',
           'changeAt': baseTime.toUtc().toIso8601String(),
           'cid': generateCid(entityType: EntityType.task),
@@ -217,7 +218,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'task',
-            'entityId': 'task-multi-1',
+            'entityId': 'test-project-task-multi-1',
             'changeBy': 'tester',
             'changeAt': baseTime.toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.task),
@@ -233,7 +234,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'task',
-            'entityId': 'task-multi-2',
+            'entityId': 'test-project-task-multi-2',
             'changeBy': 'tester',
             'changeAt': baseTime
                 .add(const Duration(minutes: 1))
@@ -297,7 +298,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'task',
-            'entityId': 'task-save-error-test',
+            'entityId': 'test-project-task-save-error-test',
             'changeBy': 'tester',
             'changeAt': baseTime.toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.task),
@@ -339,7 +340,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'task',
-            'entityId': 'task-sync-error-test',
+            'entityId': 'test-project-task-sync-error-test',
             'changeBy': 'tester',
             'changeAt': baseTime.toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.task),
@@ -379,7 +380,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'task',
-            'entityId': 'task-override-test',
+            'entityId': 'test-project-task-override-test',
             'changeBy': 'tester',
             'changeAt': baseTime.toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.task),
@@ -443,7 +444,7 @@ void main() {
           adjustedData['parentProp'] = 'pList';
         }
         final namespacedEntityId = '$domainId-$entityId';
-  final namespacedCid = '$domainId-${genCidFor(entityType)}';
+        final namespacedCid = '$domainId-${genCidFor(entityType)}';
         return {
           'domainId': domainId,
           'domainType': 'project',
@@ -682,7 +683,8 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-1',
+            // EntityId must be namespaced with domainId for project domain
+            'entityId': 'test-project-entity-1',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.project),
@@ -743,7 +745,8 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-2',
+            // EntityId must be namespaced with domainId for project domain
+            'entityId': 'test-project-entity-2',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.project),
@@ -788,7 +791,7 @@ void main() {
             domainType: 'project',
             domainId: 'test-project',
             entityType: 'project',
-            entityId: 'entity-2',
+            entityId: 'test-project-entity-2',
           );
           expect(
             state,
@@ -805,7 +808,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-3',
+            'entityId': 'test-project-entity-3',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.project),
@@ -832,14 +835,14 @@ void main() {
           final updateData = {
             'domainId': 'test-project',
             'domainType': 'project',
-      'entityType': 'project',
-            'entityId': 'entity-3',
+            'entityType': 'project',
+            'entityId': 'test-project-entity-3',
             'changeBy': 'user2',
             'changeAt': DateTime.now()
                 .add(const Duration(minutes: 1))
                 .toUtc()
                 .toIso8601String(),
-      'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.project),
             'storageId': 'remote-storage-id',
             'operation': 'update',
             'operationInfoJson': '{}',
@@ -899,7 +902,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-unknown',
+            'entityId': 'test-project-entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.project),
@@ -949,7 +952,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-unknown',
+            'entityId': 'test-project-entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.project),
@@ -998,7 +1001,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-4',
+            'entityId': 'test-project-entity-4',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.project),
@@ -1061,7 +1064,7 @@ void main() {
               'domainId': 'test-project',
               'domainType': 'project',
               'entityType': 'project',
-              'entityId': 'entity-5',
+              'entityId': 'test-project-entity-5',
               'changeBy': 'user1',
               'changeAt': DateTime.now().toUtc().toIso8601String(),
               'cid': generateCid(entityType: EntityType.project),
@@ -1126,7 +1129,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-unknown',
+            'entityId': 'test-project-entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.project),
@@ -1173,7 +1176,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-unknown',
+            'entityId': 'test-project-entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.project),
@@ -1225,7 +1228,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-6',
+            'entityId': 'test-project-entity-6',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.project),
@@ -1253,7 +1256,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-6',
+            'entityId': 'test-project-entity-6',
             'changeBy': 'user2',
             'changeAt': DateTime.now()
                 .add(const Duration(minutes: 1))
@@ -1324,7 +1327,7 @@ void main() {
             'domainId': 'test-project',
             'domainType': 'project',
             'entityType': 'project',
-            'entityId': 'entity-cross',
+            'entityId': 'test-project-entity-cross',
             'changeBy': 'user1',
             'changeAt': baseTime.toIso8601String(),
             'cid': generateCid(entityType: EntityType.project),
@@ -1419,7 +1422,7 @@ void main() {
               'domainId': 'test-project',
               'domainType': 'project',
               'entityType': 'project',
-              'entityId': 'entity-sync-cross',
+              'entityId': 'test-project-entity-sync-cross',
               'changeBy': 'user1',
               'changeAt': baseTime.toIso8601String(),
               'cid': generateCid(entityType: EntityType.project),

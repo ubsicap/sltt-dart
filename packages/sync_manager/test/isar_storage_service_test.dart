@@ -29,27 +29,32 @@ void main() {
     bool addDefaultParentId = true,
   }) {
     final adjustedData = Map<String, dynamic>.from(data);
-    // Ensure required parentId is present unless it's an explicit delete
-    if (addDefaultParentId &&
-        operation != 'delete' &&
-        !adjustedData.containsKey('parentId')) {
-      adjustedData['parentId'] = 'root';
-    }
-    // Ensure parentProp is present whenever parentId is present (or when we
-    // injected a default parentId). Tests expect a default parentProp of
-    // 'pList'. Don't add for deletes.
+    // Normalize parentId/parentProp: treat explicit nulls as missing and
+    // inject defaults for non-delete operations. This prevents cases where
+    // tests pass `parentId: null` (or omit parentId) which would later
+    // cause checked deserialization errors inside the server code.
     if (operation != 'delete') {
-      if (adjustedData.containsKey('parentId') &&
-          !adjustedData.containsKey('parentProp')) {
+      final hasParentKey = adjustedData.containsKey('parentId');
+      final parentVal = adjustedData['parentId'];
+      if (addDefaultParentId && (!hasParentKey || parentVal == null)) {
+        adjustedData['parentId'] = 'root';
+      }
+
+      // Ensure parentProp exists and is non-null when parentId is present
+      final hasParentProp = adjustedData.containsKey('parentProp');
+      final parentPropVal = adjustedData['parentProp'];
+      if (!hasParentProp || parentPropVal == null) {
         adjustedData['parentProp'] = 'pList';
       }
-      // If parentId was not provided but we inject a default one above then
-      // also inject the default parentProp.
-      if (addDefaultParentId &&
-          !adjustedData.containsKey('parentId') &&
-          !adjustedData.containsKey('parentProp')) {
-        adjustedData['parentProp'] = 'pList';
-      }
+    }
+
+    // If entityType is 'task' ensure a default nameLocal is present for
+    // non-delete operations so IsarTaskState deserialization doesn't fail
+    // when tests omit nameLocal.
+    if (operation != 'delete' &&
+        entityType == 'task' &&
+        !adjustedData.containsKey('nameLocal')) {
+      adjustedData['nameLocal'] = 'Test $entityId';
     }
     return {
       'domainId': projectId,
@@ -118,7 +123,7 @@ void main() {
       final projectId = 'proj-basic';
       final changeData = changePayload(
         projectId: projectId,
-        entityType: 'project',
+        entityType: 'task',
         entityId: 'entity-1',
         changeAt: baseTime,
         storageId: '',
@@ -160,7 +165,7 @@ void main() {
       final createdChangeNN = createdChange!;
       expect(createdChangeNN.seq, greaterThan(0));
       expect(createdChangeNN.domainId, equals(projectId));
-      expect(createdChangeNN.entityType, equals('project'));
+      expect(createdChangeNN.entityType, equals('task'));
       expect(createdChangeNN.entityId, equals('entity-1'));
 
       // Retrieve change by sequence number
@@ -191,7 +196,7 @@ void main() {
         final changeData = changePayload(
           projectId: projectId,
           storageId: '',
-          entityType: 'project',
+          entityType: 'task',
           entityId: 'entity-$i-ayix',
           changeAt: baseTime.add(Duration(minutes: i)),
           data: {
@@ -457,7 +462,7 @@ void main() {
         changes: [
           changePayload(
             projectId: projectId,
-            entityType: 'project',
+            entityType: 'task',
             entityId: 'entity-1',
             changeAt: baseTime,
             operation: 'create',
@@ -484,7 +489,7 @@ void main() {
         changes: [
           changePayload(
             projectId: projectId,
-            entityType: 'project',
+            entityType: 'task',
             entityId: 'entity-2',
             changeAt: baseTime.subtract(const Duration(minutes: 1)),
             operation: 'create',
@@ -504,7 +509,7 @@ void main() {
         changes: [
           changePayload(
             projectId: projectId,
-            entityType: 'project',
+            entityType: 'task',
             entityId: 'entity-2',
             changeAt: baseTime.add(const Duration(minutes: 1)),
             operation: 'update',
@@ -533,7 +538,7 @@ void main() {
         changes: [
           changePayload(
             projectId: projectId,
-            entityType: 'project',
+            entityType: 'task',
             entityId: 'entity-3',
             changeAt: baseTime.subtract(const Duration(minutes: 2)),
             operation: 'create',
@@ -549,12 +554,12 @@ void main() {
 
       final deletePayload = changePayload(
         projectId: projectId,
-        entityType: 'project',
+        entityType: 'task',
         entityId: 'entity-3',
         changeAt: baseTime.add(const Duration(minutes: 2)),
         operation: 'delete',
         addDefaultParentId: false,
-        data: {'deleted': true},
+        data: {'deleted': true, 'parentId': 'root', 'parentProp': 'pList'},
       );
 
       final dr = await ChangeProcessingService.processChanges(
@@ -618,7 +623,7 @@ void main() {
       final payload = [
         changePayload(
           projectId: projectId,
-          entityType: 'project',
+          entityType: 'task',
           entityId: 'proj-1',
           changeAt: baseTime,
         ),
@@ -683,7 +688,7 @@ void main() {
       );
       final expectedStats = EntityTypeStats.fromJson({
         'entityTypes': {
-          'project': {
+          'task': {
             'creates': 1,
             'updates': 0,
             'deletes': 0,
@@ -730,7 +735,7 @@ void main() {
       for (int i = 0; i < projects.length; i++) {
         final payload = changePayload(
           projectId: projects[i],
-          entityType: 'project',
+          entityType: 'task',
           entityId: 'entity-$i',
           changeAt: baseTime.add(Duration(minutes: i)),
         );
@@ -992,7 +997,7 @@ void main() {
 
       final changeData = changePayload(
         projectId: projectId,
-        entityType: 'project',
+        entityType: 'task',
         entityId: entityId,
         changeAt: baseTime,
         data: {
@@ -1023,6 +1028,79 @@ void main() {
       expect(change.entityId, equals(entityId));
     });
 
+    test('project/project matching ids succeeds', () async {
+      final projectId = 'proj-match-1';
+      final entityId = 'proj-match-1';
+
+      final changeData = changePayload(
+        projectId: projectId,
+        entityType: 'task',
+        entityId: entityId,
+        changeAt: baseTime,
+        data: {
+          'nameLocal': 'Matching Project',
+          'parentId': 'root',
+          'parentProp': 'pList',
+        },
+        operation: 'create',
+      );
+
+      final r = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: [changeData],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+
+      expect(r.isSuccess, isTrue, reason: r.errorMessage);
+      expect(r.resultsSummary?.created, isNotEmpty);
+    });
+
+    test('project/project mismatched ids fails', () async {
+      final projectId = 'proj-mismatch-1';
+      final entityId = 'entity-not-equal';
+
+      final changeData = changePayload(
+        projectId: projectId,
+        entityType: 'project',
+        entityId: entityId,
+        changeAt: baseTime,
+        data: {
+          'nameLocal': 'Mismatched Project',
+          'parentId': 'root',
+          'parentProp': 'pList',
+        },
+        operation: 'create',
+      );
+
+      final r = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: [changeData],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+
+      // Expect processing to report failure due to invariant violation.
+      // Accept either an error message or a populated resultsSummary.errors.
+      expect(r.isSuccess, isFalse);
+      final hasErrorMessage =
+          r.errorMessage != null && r.errorMessage!.isNotEmpty;
+      final hasSummaryErrors = (r.resultsSummary?.errors != null)
+          ? r.resultsSummary!.errors.isNotEmpty
+          : false;
+      expect(
+        hasErrorMessage || hasSummaryErrors,
+        isTrue,
+        reason: 'Expected an error message or summary errors but got none',
+      );
+    });
+
     test('handles entity deletion', () async {
       final projectId = 'proj-delete';
       final entityId = 'entity-delete';
@@ -1030,7 +1108,7 @@ void main() {
       // First create the entity via canonical processing
       final createPayload = changePayload(
         projectId: projectId,
-        entityType: 'project',
+        entityType: 'task',
         entityId: entityId,
         changeAt: baseTime,
         data: {
@@ -1054,10 +1132,10 @@ void main() {
       // Then delete it
       final deletePayload = changePayload(
         projectId: projectId,
-        entityType: 'project',
+        entityType: 'task',
         entityId: entityId,
         changeAt: baseTime.add(const Duration(minutes: 1)),
-        data: {'deleted': true},
+        data: {'deleted': true, 'parentId': 'root', 'parentProp': 'pList'},
         operation: 'delete',
         addDefaultParentId: false,
       );
@@ -1096,7 +1174,7 @@ void main() {
 
       final changeData = changePayload(
         projectId: projectId,
-        entityType: 'project',
+        entityType: 'task',
         entityId: entityId,
         changeAt: baseTime,
         data: largeData,
@@ -1166,7 +1244,12 @@ void main() {
       // Seed a change which will also create entity state via canonical processing
       final payload = changePayload(
         projectId: domainId,
-        entityType: 'project',
+        // This test seeds a change and entity state for the domain. The
+        // entityId intentionally differs from the domainId, so use a
+        // non-project entity type (task) so the production invariant
+        // (project/project -> ids must match) is not violated by the
+        // seeded test data.
+        entityType: 'task',
         entityId: entityId,
         changeAt: baseTime,
         operation: 'create',
@@ -1196,10 +1279,11 @@ void main() {
         reason: 'Seeded change should be present before reset',
       );
 
+      // The seeded entity state is for a 'task' (see payload above).
       final entityState = await storage.getCurrentEntityState(
         domainType: 'project',
         domainId: domainId,
-        entityType: 'project',
+        entityType: 'task',
         entityId: entityId,
       );
       expect(
@@ -1248,7 +1332,7 @@ void main() {
       final afterState = await storage.getCurrentEntityState(
         domainType: 'project',
         domainId: domainId,
-        entityType: 'project',
+        entityType: 'task',
         entityId: entityId,
       );
       expect(

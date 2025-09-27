@@ -664,21 +664,6 @@ class IsarStorageService extends BaseStorageService {
 
   /// Get changes for syncing - excludes outdated changes.
   ///
-  /// Returns only changes that haven't been marked as outdated,
-  /// which prevents syncing obsolete change log entries.
-  Future<List<BaseChangeLogEntry>> getChangesNotOutdated(
-    String projectId,
-  ) async {
-    var results = await _isar.isarChangeLogEntrys
-        .where()
-        .filter()
-        .domainIdEqualTo(projectId)
-        .findAll();
-    return _convertToChangeLogEntries(results);
-  }
-
-  /// Get changes for syncing - excludes outdated changes.
-  ///
   /// Returns only changes that haven't been cloud-synced yet.
   Future<List<client.IsarChangeLogEntry>> getChangesForSync({
     int? cursor,

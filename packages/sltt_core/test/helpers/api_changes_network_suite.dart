@@ -155,6 +155,7 @@ class ApiChangesNetworkTestSuite {
     Map<String, dynamic> data = const <String, dynamic>{},
     String operation = 'update',
     bool addDefaultParentId = true,
+    bool stateChanged = false,
   }) {
     final adjustedData = Map<String, dynamic>.from(data);
     if (addDefaultParentId &&
@@ -168,11 +169,20 @@ class ApiChangesNetworkTestSuite {
         !adjustedData.containsKey('parentProp')) {
       adjustedData['parentProp'] = 'pList';
     }
-    final namespacedEntityId = '$domainId-$entityId';
-  // Use entityType-aware cid generation when entityType is provided
-  String genCidFor(String entityType) =>
-    generateCid(entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown);
-  final namespacedCid = '$domainId-${genCidFor(entityType)}';
+    // If the entityType is a top-level domain entity (project), the
+    // production invariant requires the entityId to equal the domainId.
+    // Adjust test payloads here (test-only change) so project/project
+    // change payloads satisfy that invariant while keeping other
+    // entityTypes namespaced as <domainId>-<entityId>.
+    final namespacedEntityId = entityType == 'project'
+        ? domainId
+        : '$domainId-$entityId';
+
+    // Use entityType-aware cid generation when entityType is provided
+    String genCidFor(String entityType) => generateCid(
+      entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown,
+    );
+    final namespacedCid = '$domainId-${genCidFor(entityType)}';
     return {
       'domainId': domainId,
       'domainType': 'project',
@@ -184,7 +194,7 @@ class ApiChangesNetworkTestSuite {
       'storageId': storageId,
       'operation': operation,
       'operationInfoJson': '{}',
-      'stateChanged': false,
+      'stateChanged': stateChanged,
       'unknownJson': '{}',
       'dataJson': jsonEncode(adjustedData),
     };
@@ -314,7 +324,7 @@ class ApiChangesNetworkTestSuite {
     final change = {
       'domainId': 'proj-1',
       'domainType': 'project',
-      'entityType': 'project',
+      'entityType': 'task',
       'entityId': 'entity-1-OWna',
       'changeBy': 'tester',
       'changeAt': now.toIso8601String(),
@@ -360,21 +370,26 @@ class ApiChangesNetworkTestSuite {
       'storageId': '', // empty for save mode
       'operation': 'create',
       'operationInfoJson': '{}',
-      'stateChanged': true,
+      'stateChanged': false,
       'unknownJson': '{}',
       'dataJson': 'invalid-json',
     };
 
     final req = await HttpClient().postUrl(uri);
     req.headers.contentType = ContentType.json;
+    // Request the server to include change/state updates so processing
+    // happens synchronously in the request/response cycle. This ensures
+    // any parsing errors (e.g. invalid JSON payload) surface while the
+    // test is still awaiting the response and avoids uncaught async
+    // exceptions after the test completes.
     req.write(
       jsonEncode({
         'changes': [change],
         'srcStorageType': 'local',
         'srcStorageId': 'test-client',
         'storageMode': 'save',
-        'includeChangeUpdates': false,
-        'includeStateUpdates': false,
+        'includeChangeUpdates': true,
+        'includeStateUpdates': true,
       }),
     );
 
@@ -408,14 +423,18 @@ class ApiChangesNetworkTestSuite {
 
     final req = await HttpClient().postUrl(uri);
     req.headers.contentType = ContentType.json;
+    // Include change/state updates so the server returns the errors in the
+    // response body while the test is still awaiting it. This keeps the
+    // test and server processing within the same async scope and avoids
+    // stray asynchronous exceptions after the test completes.
     req.write(
       jsonEncode({
         'changes': [change],
         'srcStorageType': 'cloud',
         'srcStorageId': 'cloud-client',
         'storageMode': 'sync',
-        'includeChangeUpdates': false,
-        'includeStateUpdates': false,
+        'includeChangeUpdates': true,
+        'includeStateUpdates': true,
       }),
     );
 
@@ -632,8 +651,10 @@ class ApiChangesNetworkTestSuite {
           entityType: 'task',
           entityId: entity,
           changeAt: newer,
-          data: {'rank': '2'},
-          addDefaultParentId: false,
+          // include parentId/parentProp so the server's deserialization
+          // (which requires parentId for non-delete entities) does not
+          // encounter a null value. This is a test-only payload change.
+          data: {'rank': '2', 'parentId': 'root', 'parentProp': 'pList'},
         ),
       );
       print(
@@ -660,9 +681,21 @@ class ApiChangesNetworkTestSuite {
     expect(cu, isNotNull, reason: 'No changeUpdates present in response');
     expect(su, isNotNull, reason: 'No stateUpdates present in response');
     expect(cu!['operation'], 'update');
+    // operationInfoJson contains metadata about outdated fields and no-op
+    // fields. Some storage implementations may mark parentId/parentProp as
+    // no-op when they were unchanged; accept either an empty noOpFields
+    // array or one that contains those two fields.
+    final opInfo = jsonDecode(cu['operationInfoJson'] as String) as Map;
+    expect(opInfo['outdatedBys'], equals([]));
+    final noOpFields = (opInfo['noOpFields'] as List).cast<String>();
     expect(
-      cu['operationInfoJson'],
-      equals(jsonEncode({'outdatedBys': [], 'noOpFields': []})),
+      noOpFields.isEmpty ||
+          (noOpFields.length == 2 &&
+              noOpFields.contains('parentId') &&
+              noOpFields.contains('parentProp')),
+      isTrue,
+      reason:
+          'noOpFields should be either empty or contain [parentId,parentProp]',
     );
     expect(cu['stateChanged'], isTrue);
     expect(cu['dataJson'], jsonEncode({'rank': '2'}));
@@ -743,6 +776,7 @@ class ApiChangesNetworkTestSuite {
         entityId: 'entity-1',
         changeAt: baseTime,
         data: {'nameLocal': 'Test Entity'},
+        stateChanged: true,
       ),
     ];
 

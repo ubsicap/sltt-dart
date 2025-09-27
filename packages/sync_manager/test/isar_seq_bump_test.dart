@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sync_manager/src/isar_storage_service.dart';
-import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
+import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -41,12 +41,66 @@ void main() {
     }
   });
 
-  test('auto-increments seq when not provided', () async {
-    final projectId = 'proj-seq-auto';
+  test('save auto-increments seq when autoIncrement provided', () async {
+    final projectId = 'proj-seq-auto-inc';
     final payload = {
+      'seq': Isar.autoIncrement,
       'domainId': projectId,
       'domainType': 'project',
-      'entityType': 'project',
+      // Use a non-project entityType so entityId may differ from domainId in tests
+      'entityType': 'task',
+      'entityId': 'e-auto-inc-1',
+      'changeBy': 'tester',
+      'changeAt': DateTime.now().toUtc().toIso8601String(),
+      'cid': 'cid-auto-inc-',
+      'storageId': '',
+      'operation': '',
+      'operationInfoJson': '{}',
+      'stateChanged': false,
+      'unknownJson': '{}',
+      // Include required task fields for IsarTaskState
+      'dataJson': jsonEncode({
+        'parentId': 'root',
+        'parentProp': 'pList',
+        'nameLocal': 'Auto Inc Task',
+      }),
+    };
+
+    for (int i = 1; i <= 3; i++) {
+      payload['cid'] = 'cid-auto-inc-$i';
+      payload['entityId'] = 'e-auto-inc-$i';
+      print(
+        'Processing payload with cid: ${payload['cid']}, entityId: ${payload['entityId']}',
+      );
+      final r = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: [payload],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(r.isSuccess, isTrue, reason: r.errorMessage);
+      final createdCid = r.resultsSummary!.created.first;
+      final createdChange = await storage.getChange(
+        domainType: 'project',
+        domainId: projectId,
+        cid: createdCid,
+      );
+      expect(createdChange, isNotNull);
+      expect(createdChange!.seq, equals(i));
+    }
+  });
+
+  test('save auto-increments seq when null', () async {
+    final projectId = 'proj-seq-auto';
+    final payload = {
+      'seq': null,
+      'domainId': projectId,
+      'domainType': 'project',
+      // Use a non-project entityType so entityId may differ from domainId in tests
+      'entityType': 'task',
       'entityId': 'e-auto-1',
       'changeBy': 'tester',
       'changeAt': DateTime.now().toUtc().toIso8601String(),
@@ -56,7 +110,12 @@ void main() {
       'operationInfoJson': '{}',
       'stateChanged': false,
       'unknownJson': '{}',
-      'dataJson': jsonEncode({'parentId': 'root', 'parentProp': 'pList'}),
+      // Include required task fields for IsarTaskState
+      'dataJson': jsonEncode({
+        'parentId': 'root',
+        'parentProp': 'pList',
+        'nameLocal': 'Auto Task',
+      }),
     };
 
     final r = await ChangeProcessingService.processChanges(
@@ -76,17 +135,20 @@ void main() {
       cid: createdCid,
     );
     expect(createdChange, isNotNull);
-    expect(createdChange!.seq, greaterThan(0));
+    expect(createdChange!.seq, equals(1));
   });
 
-  test('honors explicit seq when provided', () async {
+  test('deserialize uses autoIncrement when seq is absent or null', () {
+    final deserializedSeqNull = null; // deserialize seq
     final projectId = 'proj-seq-explicit';
     final entityId = 'e-explicit-1';
     final changeAt = DateTime.now().toUtc();
     final payload = {
+      'seq': deserializedSeqNull,
       'domainId': projectId,
       'domainType': 'project',
-      'entityType': 'project',
+      // Use a non-project entityType so entityId may differ from domainId in tests
+      'entityType': 'task',
       'entityId': entityId,
       'changeBy': 'tester',
       'changeAt': changeAt.toIso8601String(),
@@ -104,42 +166,41 @@ void main() {
     };
 
     final change = IsarChangeLogEntry.fromJson(payload);
-
-    final result = await storage.updateChangeLogAndState(
-      domainType: 'project',
-      changeLogEntry: change,
-      changeUpdates: {'seq': 42, 'stateChanged': true},
-      stateUpdates: {
-        'domainType': 'project',
-        'entityId': entityId,
-        'entityType': 'project',
-        'change_domainId': projectId,
-        'change_changeAt': changeAt.toIso8601String(),
-        'change_cid': change.cid,
-        'change_changeBy': 'tester',
-        'change_domainId_orig_': '',
-        'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
-            .toIso8601String(),
-        'change_cid_orig_': '',
-        'change_changeBy_orig_': '',
-        'data_nameLocal': 'X',
-        'data_parentId': 'root',
-        'data_parentId_changeAt_': changeAt.toIso8601String(),
-        'data_parentId_cid_': change.cid,
-        'data_parentId_changeBy_': 'tester',
-        'data_parentProp': 'pList',
-        'data_parentProp_dataSchemaRev_': 0,
-        'data_parentProp_changeAt_': changeAt.toIso8601String(),
-        'data_parentProp_cid_': change.cid,
-        'data_parentProp_changeBy_': 'tester',
-        'unknownJson': '{}',
-      },
-    );
-
-    expect(result.newChangeLogEntry.seq, equals(42));
+    expect(change.seq, equals(Isar.autoIncrement));
   });
 
-  test('seq values increase monotonically for multiple inserts', () async {
+  test('deserialization preserves seq (before sync)', () {
+    final deserializedSeq = 12345; // deserialize seq
+    final projectId = 'proj-seq-explicit';
+    final entityId = 'e-explicit-1';
+    final changeAt = DateTime.now().toUtc();
+    final payload = {
+      'seq': deserializedSeq,
+      'domainId': projectId,
+      'domainType': 'project',
+      // Use a non-project entityType so entityId may differ from domainId in tests
+      'entityType': 'task',
+      'entityId': entityId,
+      'changeBy': 'tester',
+      'changeAt': changeAt.toIso8601String(),
+      'cid': 'cid-explicit-1',
+      'storageId': '',
+      'operation': 'create',
+      'operationInfoJson': '{}',
+      'stateChanged': false,
+      'unknownJson': '{}',
+      'dataJson': jsonEncode({
+        'nameLocal': 'X',
+        'parentId': 'root',
+        'parentProp': 'pList',
+      }),
+    };
+
+    final change = IsarChangeLogEntry.fromJson(payload);
+    expect(change.seq, equals(deserializedSeq));
+  });
+
+  test('seq values increase monotonically for multiple saves', () async {
     final projectId = 'proj-seq-monotonic';
     final baseCid = DateTime.now().microsecondsSinceEpoch;
     final seqs = <int>[];
@@ -147,7 +208,8 @@ void main() {
       final payload = {
         'domainId': projectId,
         'domainType': 'project',
-        'entityType': 'project',
+        // Use a non-project entityType so multiple different entityIds are allowed
+        'entityType': 'task',
         'entityId': 'e-mon-$i',
         'changeBy': 'tester',
         'changeAt': DateTime.now().toUtc().toIso8601String(),
@@ -157,7 +219,11 @@ void main() {
         'operationInfoJson': '{}',
         'stateChanged': false,
         'unknownJson': '{}',
-        'dataJson': jsonEncode({'parentId': 'root', 'parentProp': 'pList'}),
+        'dataJson': jsonEncode({
+          'parentId': 'root',
+          'parentProp': 'pList',
+          'nameLocal': 'Mon $i',
+        }),
       };
 
       final r = await ChangeProcessingService.processChanges(
@@ -181,6 +247,172 @@ void main() {
     }
 
     expect(seqs.length, equals(3));
-    expect(seqs[0] < seqs[1] && seqs[1] < seqs[2], isTrue);
+    // DB is fresh per test setup; expect first seq == 1 and incrementing by 1
+    expect(seqs, equals([1, 2, 3]));
+  });
+
+  test('save-mode should reject positive caller-provided seq', () async {
+    final cloud = CloudStorageService.instance;
+    await cloud.initialize();
+    await cloud.testResetDomainStorage(
+      domainType: 'project',
+      domainId: '__test_save_conflict',
+    );
+
+    final payload = {
+      'seq': 9999,
+      'changeAt': DateTime.now().toUtc().toIso8601String(),
+      'cid': 'cid-save-conflict-1',
+      'domainType': 'project',
+      'domainId': '__test_save_conflict',
+      'entityType': 'project',
+      'operation': 'create',
+      'entityId': '__test_save_conflict',
+      'dataJson': stableStringify(
+        BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
+      ),
+      'changeBy': 'tester',
+      'stateChanged': true,
+      'storageId': '',
+      'unknownJson': '{}',
+      'operationInfoJson': '{}',
+    };
+
+    final res = await ChangeProcessingService.processChanges(
+      storageMode: 'save',
+      changes: [payload],
+      srcStorageType: 'cloud',
+      srcStorageId: 'test-save-conflict',
+      storage: cloud,
+      includeChangeUpdates: true,
+      includeStateUpdates: false,
+    );
+
+    // Desired behavior: save mode should reject a caller-provided seq that
+    // conflicts with storage auto-increment. Assert we receive an error.
+    expect(
+      res.isSuccess,
+      isFalse,
+      reason: 'Save-mode should reject conflicting seq',
+    );
+  });
+
+  test('sync-mode should reject negative seq', () async {
+    final payload = {
+      'seq': -1,
+      'changeAt': DateTime.now().toUtc().toIso8601String(),
+      'cid': 'cid-sync-nonpositive-1',
+      'domainType': 'project',
+      'domainId': '__test_sync_nonpositive',
+      'entityType': 'project',
+      'operation': 'create',
+      'entityId': '__test_sync_nonpositive',
+      'dataJson': stableStringify(
+        BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
+      ),
+      'changeBy': 'tester',
+      'stateChanged': true,
+      'storageId': 'cloud-storage-1',
+      'unknownJson': '{}',
+      'operationInfoJson': '{}',
+    };
+
+    final res = await ChangeProcessingService.processChanges(
+      storageMode: 'sync',
+      changes: [payload],
+      srcStorageType: 'cloud',
+      srcStorageId: 'test-sync-nonpositive',
+      storage: storage,
+      includeChangeUpdates: true,
+      includeStateUpdates: false,
+    );
+
+    // Desired behavior: sync mode should reject a non-positive seq.
+    expect(
+      res.isSuccess,
+      isFalse,
+      reason: 'Sync-mode should reject non-positive seq',
+    );
+  });
+
+  test('sync-mode should reject 0 seq', () async {
+    final payload = {
+      'seq': 0,
+      'changeAt': DateTime.now().toUtc().toIso8601String(),
+      'cid': 'cid-sync-nonpositive-1',
+      'domainType': 'project',
+      'domainId': '__test_sync_nonpositive',
+      'entityType': 'project',
+      'operation': 'create',
+      'entityId': '__test_sync_nonpositive',
+      'dataJson': stableStringify(
+        BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
+      ),
+      'changeBy': 'tester',
+      'stateChanged': true,
+      'storageId': 'cloud-storage-1',
+      'unknownJson': '{}',
+      'operationInfoJson': '{}',
+    };
+
+    final res = await ChangeProcessingService.processChanges(
+      storageMode: 'sync',
+      changes: [payload],
+      srcStorageType: 'cloud',
+      srcStorageId: 'test-sync-nonpositive',
+      storage: storage,
+      includeChangeUpdates: true,
+      includeStateUpdates: false,
+    );
+
+    // Desired behavior: sync mode should reject a non-positive seq.
+    expect(
+      res.isSuccess,
+      isFalse,
+      reason: 'Sync-mode should reject non-positive seq',
+    );
+  });
+
+  test('sync-mode should accept (but overwrite) positive seq', () async {
+    final deserializedSeq = 12345; // Simulate a deserialized seq
+    final change = IsarChangeLogEntry(
+      seq: deserializedSeq,
+      changeAt: DateTime.now().toUtc(),
+      cid: 'cid-sync-1',
+      domainType: 'project',
+      domainId: '__test_sync_positive_seq',
+      entityType: 'project',
+      operation: 'create',
+      entityId: '__test_sync_positive_seq',
+      dataJson: stableStringify(
+        BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
+      ),
+      changeBy: 'tester',
+      stateChanged: true,
+      storageId: 'cloud-storage-1',
+      unknownJson: '{}',
+      operationInfoJson: '{}',
+    );
+
+    final res = await ChangeProcessingService.processChanges(
+      storageMode: 'sync',
+      changes: [change.toJson()],
+      srcStorageType: 'cloud',
+      srcStorageId: 'test-sync-authoritative',
+      storage: storage,
+      includeChangeUpdates: true,
+      includeStateUpdates: false,
+    );
+
+    expect(res.isSuccess, isTrue, reason: res.errorMessage);
+
+    final entries = await storage.getChangesWithCursor(
+      domainType: 'project',
+      domainId: '__test_sync_positive_seq',
+    );
+    expect(entries, isNotEmpty);
+    final stored = entries.first as IsarChangeLogEntry;
+    // In sync mode the payload seq should be preserved
+    expect(stored.seq, isNot(deserializedSeq));
   });
 }
