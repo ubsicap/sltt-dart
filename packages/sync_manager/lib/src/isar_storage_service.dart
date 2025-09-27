@@ -166,6 +166,13 @@ class IsarStorageService extends BaseStorageService {
     // Create updated change log entry
     final newChangeJson = {...changeLogEntry.toJson(), ...changeUpdates};
     final newChange = client.IsarChangeLogEntry.fromJson(newChangeJson);
+    // IMPORTANT: When writing to storage, avoid using an incoming
+    // seq value from the caller. Isar uses `seq` as the primary key and
+    // calling `put` with a specific seq can overwrite an existing entry
+    // with the same id. To prevent accidental overwrites when syncing
+    // changes into the cloud, force the cloud storage to assign a new
+    // auto-increment id.
+    newChange.seq = Isar.autoIncrement;
 
     // Convert to appropriate Isar state type based on entity type
     final entityTypeEnum = EntityType.values.firstWhere(
