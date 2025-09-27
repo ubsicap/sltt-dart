@@ -157,7 +157,7 @@ abstract class BaseRestApiServer {
       _handleGetChange,
     );
     // Move stats under /api/stats/<domainCollection>/<domainId>
-    router.get('/api/stats/<domainCollection>/<domainId>/', _handleGetStats);
+    router.get('/api/stats/<domainCollection>/<domainId>', _handleGetStats);
     router.get(
       '/api/state/<domainCollection>/<domainId>/<entityCollection>',
       _handleGetEntityStates,
@@ -1201,13 +1201,25 @@ abstract class BaseRestApiServer {
         return _errorResponse('Domain ID is required', 400);
       }
 
+      // Debugging: log parameters so tests can diagnose unexpected 404s
+      print(
+        '[BaseRestApiServer] _handleGetStats domainCollection=${request.params["domainCollection"]} domainType=$domainType domainId=$domainId',
+      );
+
       final changeStats = await storage.getChangeStats(
         domainType: domainType,
         domainId: domainId,
       );
+      print(
+        '[BaseRestApiServer] storage.getChangeStats returned: ${changeStats.totals}',
+      );
+
       final entityTypeStats = await storage.getStateStats(
         domainType: domainType,
         domainId: domainId,
+      );
+      print(
+        '[BaseRestApiServer] storage.getStateStats returned: $entityTypeStats',
       );
 
       // Typed results: use the EntityTypeStats API and serialize to JSON

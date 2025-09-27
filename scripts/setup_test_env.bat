@@ -50,7 +50,7 @@ if not exist "%TARGET_ISAR_DIR%" (
 	mkdir "%TARGET_ISAR_DIR%" 1>nul 2>nul
 )
 
-copy /Y "%ISAR_DLL" "%TARGET_ISAR_DIR%\isar.dll" 1>nul
+copy /Y "%ISAR_DLL%" "%TARGET_ISAR_DIR%\isar.dll" 1>nul
 if errorlevel 1 (
 	echo ERROR: Failed to copy isar.dll to "%TARGET_ISAR_DIR%".
 	exit /b 3

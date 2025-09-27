@@ -212,21 +212,9 @@ void main() {
       );
       expect(
         status.cloudChangeStats?.toJson(),
-        equals(null),
+        equals(isNotNull),
         reason:
-            'After successful outsync, project __test_1 should have 0 pending outsyncs',
-      );
-      expect(
-        status.cloudChangeStats?.toJson(),
-        equals(null),
-        reason:
-            'After successful outsync, project __test_1 should have 0 pending outsyncs',
-      );
-      expect(
-        status.cloudChangeStats?.toJson(),
-        equals(null),
-        reason:
-            'After successful outsync, project __test_1 should have 0 pending outsyncs',
+            'After successful outsync, project __test_1 should have change logs in the cloud',
       );
     });
 
@@ -236,7 +224,14 @@ void main() {
       // Ensure local storage is initialized and cleared for this test
       final local = LocalStorageService.instance;
       await local.initialize();
-      await local.clearAllCursorSyncStates();
+      await local.testResetDomainStorage(
+        domainType: 'project',
+        domainId: '__test_1',
+      );
+      await local.testResetDomainStorage(
+        domainType: 'project',
+        domainId: '__test_2',
+      );
       await syncManager.initialize();
       syncManager.configureCloudUrl(cloudBaseUrl);
 
@@ -253,16 +248,21 @@ void main() {
       final status = await syncManager.getSyncStatus('__test_2');
       // After downsync we expect local state stats to be available for the project
       expect(
-        status.localStateStats,
-        isNotNull,
+        status.localStateStats?.totals.toJson(),
+        equals({
+          'creates': 1,
+          'updates': 0,
+          'deletes': 0,
+          'total': 1,
+          'latestChangeAt': isA<String>(),
+          'latestSeq': isA<int>(),
+        }),
         reason:
             'getSyncStatus should report local state stats for __test_2 after downsync',
       );
 
       // Verify local storage has received changes for __test_2 and report status via SyncManager
-      final projects = await LocalStorageService.instance.getAllDomainIds(
-        domainType: 'project',
-      );
+      final projects = await local.getAllDomainIds(domainType: 'project');
       expect(
         projects,
         contains('__test_2'),

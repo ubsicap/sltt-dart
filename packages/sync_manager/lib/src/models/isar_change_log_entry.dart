@@ -11,11 +11,12 @@ bool get isarChangeLogEntryFactoryRegistration =>
 // Register the IsarChangeLogEntry factory group for safe (de)serialization
 final _isarChangeLogEntryFactoryRegistration = (() {
   registerChangeLogEntryFactoryGroup(
-    SerializableGroup<IsarChangeLogEntry>(
-      fromJson: IsarChangeLogEntry.fromJson,
-      fromJsonBase: IsarChangeLogEntry.fromJsonBase,
-      toJson: (entry) => entry.toJson(),
-      toJsonBase: (entry) => entry.toJsonBase(),
+    // Register as BaseChangeLogEntry to ensure function signatures match
+    SerializableGroup<BaseChangeLogEntry>(
+      fromJson: (m) => IsarChangeLogEntry.fromJson(m),
+      fromJsonBase: (m) => IsarChangeLogEntry.fromJsonBase(m),
+      toJson: (entry) => (entry as IsarChangeLogEntry).toJson(),
+      toJsonBase: (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
       toSafeJson: (original) {
         // Use the common safe JSON service
         return SafeJsonService.generateSafeChangeLogJson(original);
@@ -23,10 +24,11 @@ final _isarChangeLogEntryFactoryRegistration = (() {
       validate: (entry) async {
         // TODO: Validate the entry dataJson against the schema for the entity type
         // for now just validate BaseDataFields
-        if (entry.dataJson.isEmpty || entry.dataJson == '{}') {
+        final e = entry as IsarChangeLogEntry;
+        if (e.dataJson.isEmpty || e.dataJson == '{}') {
           throw Exception('ChangeLogEntry dataJson is empty');
         }
-        BaseDataFields.fromJson(entry.getData());
+        BaseDataFields.fromJson(e.getData());
       },
     ),
   );

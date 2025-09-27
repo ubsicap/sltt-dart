@@ -345,9 +345,34 @@ class IsarStorageService extends BaseStorageService {
   /// Used for cleanup after successful outsync operations.
   /// Returns the number of changes actually deleted.
   Future<int> deleteChanges(List<String> cids) async {
+    print(
+      '[$_logPrefix, $_databaseName, ${getStorageType()}] deleteChanges called for cids=$cids',
+    );
     int deletedCount = 0;
     await _isar.writeTxn(() async {
+      // Debug: list entries that match the cids before deleting
+      try {
+        final all = await _isar.isarChangeLogEntrys.where().findAll();
+        final before = all.where((e) => cids.contains(e.cid)).toList();
+        print(
+          '[$_logPrefix] deleteChanges - matching entries before delete: count=${before.length}',
+        );
+        for (final e in before) {
+          print(
+            '[$_logPrefix] deleteChanges - will delete: seq=${e.seq} cid=${e.cid} domain=${e.domainId} domainType=${e.domainType} entityType=${e.entityType} cloudAt=${e.cloudAt} storageId=${e.storageId}',
+          );
+        }
+      } catch (e) {
+        print(
+          '[$_logPrefix] deleteChanges - debug: failed to list matching entries: $e',
+        );
+      }
+
       deletedCount = await _isar.isarChangeLogEntrys.deleteAllByCid(cids);
+
+      print(
+        '[$_logPrefix] deleteChanges - deletedCount=$deletedCount for cids=$cids',
+      );
     });
     return deletedCount;
   }
@@ -408,6 +433,20 @@ class IsarStorageService extends BaseStorageService {
         .and()
         .domainTypeEqualTo(domainType)
         .findAll();
+
+    // Debug: print change-log entries found for this domain
+    try {
+      print(
+        '[$_logPrefix] getChangeStats - found ${changes.length} change-log entries for domainId=$domainId domainType=$domainType',
+      );
+      for (final c in changes) {
+        print(
+          '[$_logPrefix] getChangeStats - seq=${c.seq} cid=${c.cid} op=${c.operation} entityType=${c.entityType} cloudAt=${c.cloudAt} storageId=${c.storageId}',
+        );
+      }
+    } catch (e) {
+      print('[$_logPrefix] getChangeStats - debug print failed: $e');
+    }
 
     final Map<String, Map<String, dynamic>> perType = {};
     int totalCreates = 0;
@@ -670,6 +709,20 @@ class IsarStorageService extends BaseStorageService {
         .cloudAtIsNull()
         .findAll();
 
+    // Debug: log which changes are being returned for sync
+    try {
+      print(
+        '[$_logPrefix] getChangesForSync - returning ${results.length} changes (cursor=$cursor limit=$limit)',
+      );
+      for (final r in results) {
+        print(
+          '[$_logPrefix] getChangesForSync - seq=${r.seq} cid=${r.cid} domain=${r.domainId} domainType=${r.domainType} op=${r.operation} entityType=${r.entityType} cloudAt=${r.cloudAt} storageId=${r.storageId}',
+        );
+      }
+    } catch (e) {
+      print('[$_logPrefix] getChangesForSync - debug print failed: $e');
+    }
+
     if (limit != null && results.length > limit) {
       results = results.sublist(0, limit);
     }
@@ -779,6 +832,7 @@ class IsarStorageService extends BaseStorageService {
 
     final seqsToDelete = allChanges.map((e) => e.seq).toList();
 
+    print('[$_logPrefix] deleteAllChanges - totalEntries=${allChanges.length}');
     int deletedCount = 0;
     await _isar.writeTxn(() async {
       for (final seq in seqsToDelete) {
@@ -788,6 +842,7 @@ class IsarStorageService extends BaseStorageService {
       }
     });
 
+    print('[$_logPrefix] deleteAllChanges - deletedCount=$deletedCount');
     return deletedCount;
   }
 
