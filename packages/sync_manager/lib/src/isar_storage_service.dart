@@ -352,34 +352,9 @@ class IsarStorageService extends BaseStorageService {
   /// Used for cleanup after successful outsync operations.
   /// Returns the number of changes actually deleted.
   Future<int> deleteChanges(List<String> cids) async {
-    print(
-      '[$_logPrefix, $_databaseName, ${getStorageType()}] deleteChanges called for cids=$cids',
-    );
     int deletedCount = 0;
     await _isar.writeTxn(() async {
-      // Debug: list entries that match the cids before deleting
-      try {
-        final all = await _isar.isarChangeLogEntrys.where().findAll();
-        final before = all.where((e) => cids.contains(e.cid)).toList();
-        print(
-          '[$_logPrefix] deleteChanges - matching entries before delete: count=${before.length}',
-        );
-        for (final e in before) {
-          print(
-            '[$_logPrefix] deleteChanges - will delete: seq=${e.seq} cid=${e.cid} domain=${e.domainId} domainType=${e.domainType} entityType=${e.entityType} cloudAt=${e.cloudAt} storageId=${e.storageId}',
-          );
-        }
-      } catch (e) {
-        print(
-          '[$_logPrefix] deleteChanges - debug: failed to list matching entries: $e',
-        );
-      }
-
       deletedCount = await _isar.isarChangeLogEntrys.deleteAllByCid(cids);
-
-      print(
-        '[$_logPrefix] deleteChanges - deletedCount=$deletedCount for cids=$cids',
-      );
     });
     return deletedCount;
   }
