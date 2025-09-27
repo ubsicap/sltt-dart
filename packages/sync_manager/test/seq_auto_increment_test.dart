@@ -1,25 +1,13 @@
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('Seq auto-increment regression', () {
     setUpAll(() async {
-      // Register change log entry serializer group (same as integration tests)
-      registerChangeLogEntryFactoryGroup(
-        SerializableGroup<BaseChangeLogEntry>(
-          fromJson: IsarChangeLogEntry.fromJson,
-          fromJsonBase: IsarChangeLogEntry.fromJsonBase,
-          toJson: (entry) => (entry as IsarChangeLogEntry).toJson(),
-          toJsonBase: (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
-          toSafeJson: (original) =>
-              SafeJsonService.generateSafeChangeLogJson(original),
-          validate: (entry) async {
-            // Ensure dataJson isn't empty and parses to BaseDataFields
-            BaseDataFields.fromJson(entry.getData());
-          },
-        ),
-      );
+      // Register common Isar change log serializer used by tests
+      registerIsarChangeLogSerializableGroup();
       // Ensure storages are initialized and cleared
       final local = LocalStorageService.instance;
       await local.initialize();

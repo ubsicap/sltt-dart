@@ -1,10 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
+import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -13,17 +14,7 @@ void main() {
 
   setUpAll(() async {
     // Register IsarChangeLogEntry factory group for deserialization used by ChangeProcessingService
-    registerChangeLogEntryFactoryGroup(
-      SerializableGroup(
-        fromJson: IsarChangeLogEntry.fromJson,
-        fromJsonBase: IsarChangeLogEntry.fromJsonBase,
-        toJson: (entry) => (entry as IsarChangeLogEntry).toJson(),
-        toJsonBase: (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
-        toSafeJson: (original) {
-          return SafeJsonService.generateSafeChangeLogJson(original);
-        },
-      ),
-    );
+    registerIsarChangeLogSerializableGroup();
   });
 
   setUp(() async {

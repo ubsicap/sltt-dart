@@ -1,6 +1,7 @@
 // No top-level dart:io/convert/async imports required after switching to MultiServerLauncher
 
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
@@ -19,23 +20,7 @@ void main() {
 
     setUpAll(() async {
       // register change log entry SerializableGroup
-      registerChangeLogEntryFactoryGroup(
-        SerializableGroup<BaseChangeLogEntry>(
-          fromJson: IsarChangeLogEntry.fromJson,
-          fromJsonBase: IsarChangeLogEntry.fromJsonBase,
-          toJson: (entry) => (entry as IsarChangeLogEntry).toJson(),
-          toJsonBase: (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
-          toSafeJson: (original) {
-            // Use the common safe JSON service
-            return SafeJsonService.generateSafeChangeLogJson(original);
-          },
-          validate: (entry) async {
-            // TODO: Validate the entry dataJson against the schema for the entity type
-            // for now just validate BaseDataFields
-            BaseDataFields.fromJson(entry.getData());
-          },
-        ),
-      );
+      registerIsarChangeLogSerializableGroup();
 
       // Start the in-process cloud server using MultiServerLauncher.
       final storageInfo = await MultiServerLauncher.instance.startServer(

@@ -8,6 +8,7 @@ import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 import 'package:sync_manager/src/models/isar_storage_state.dart';
+import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -71,18 +72,7 @@ void main() {
 
   setUpAll(() async {
     // register Isar Change Log factory group
-    registerChangeLogEntryFactoryGroup(
-      SerializableGroup(
-        fromJson: IsarChangeLogEntry.fromJson,
-        fromJsonBase: IsarChangeLogEntry.fromJsonBase,
-        toJson: (entry) => (entry as IsarChangeLogEntry).toJson(),
-        toJsonBase: (entry) => (entry as IsarChangeLogEntry).toJsonBase(),
-        toSafeJson: (original) {
-          // Use the common safe JSON service
-          return SafeJsonService.generateSafeChangeLogJson(original);
-        },
-      ),
-    );
+    registerIsarChangeLogSerializableGroup();
   });
 
   setUp(() async {
