@@ -27,6 +27,7 @@ void main() {
     Map<String, dynamic> data = const <String, dynamic>{},
     String operation = 'update',
     bool addDefaultParentId = true,
+    int? seq,
   }) {
     final adjustedData = Map<String, dynamic>.from(data);
     // Normalize parentId/parentProp: treat explicit nulls as missing and
@@ -72,6 +73,7 @@ void main() {
       'stateChanged': false,
       'unknownJson': '{}',
       'dataJson': jsonEncode(adjustedData),
+      if (seq != null) 'seq': seq,
     };
   }
 
