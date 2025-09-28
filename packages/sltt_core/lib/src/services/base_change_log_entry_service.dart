@@ -186,7 +186,7 @@ Map<String, dynamic> _createSafeJsonFromDeserializationError({
   final safeJson = toSafeJson(originalJson);
 
   // Ensure minimal required fields exist and normalize entityType
-  // safeJson['entityType'] = EntityType.unknown.value;
+  safeJson['entityType'] = EntityType.unknown.value;
   safeJson['operation'] = 'error';
   safeJson['operationInfoJson'] = jsonEncode({
     ...(jsonDecode(JsonUtils.normalize(safeJson['operationInfoJson']))),
