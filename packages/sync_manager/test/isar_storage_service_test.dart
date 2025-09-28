@@ -1002,11 +1002,12 @@ void main() {
         entityType: 'task',
         entityId: entityId,
         changeAt: baseTime,
+        storageId: '',
         data: {
+          'nameLocal': 'Test Project',
           'parentId': 'root',
           'parentProp': 'pList',
-        }, // Minimal required data
-        operation: 'create',
+        },
       );
       final r = await ChangeProcessingService.processChanges(
         storageMode: 'save',

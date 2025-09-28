@@ -432,6 +432,7 @@ void main() {
         Map<String, dynamic> data = const <String, dynamic>{},
         String operation = 'update',
         bool addDefaultParentId = true,
+        int? seq,
       }) {
         final adjustedData = Map<String, dynamic>.from(data);
         if (addDefaultParentId &&
@@ -657,6 +658,7 @@ void main() {
             entityType: 'project',
             entityId: 'entity-1',
             changeAt: baseTime,
+            seq: 1,
             data: {
               'nameLocal': 'Cloud Src Test',
               'parentId': 'entity-0',
