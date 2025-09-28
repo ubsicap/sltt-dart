@@ -345,6 +345,7 @@ void main() {
             'changeAt': baseTime.toUtc().toIso8601String(),
             'cid': generateCid(entityType: EntityType.task),
             'storageId': 'remote-storage', // Non-empty for sync mode
+            'seq': 1,
             'operation': 'create',
             'operationInfoJson': '{}',
             'stateChanged': true,
@@ -443,9 +444,17 @@ void main() {
             !adjustedData.containsKey('parentProp')) {
           adjustedData['parentProp'] = 'pList';
         }
-        final namespacedEntityId = '$domainId-$entityId';
+        // For project-typed entities the entityId must equal the domainId.
+        // When tests pass entityType == 'project' with a short entityId we
+        // should treat the entity as the project itself (no additional
+        // namespacing). This keeps test-data simple and avoids violating the
+        // production invariant that project entityId == domainId.
+        final namespacedEntityId = entityType == 'project'
+            ? domainId
+            : '$domainId-$entityId';
         final namespacedCid = '$domainId-${genCidFor(entityType)}';
-        return {
+
+        final payload = {
           'domainId': domainId,
           'domainType': 'project',
           'entityType': entityType,
@@ -456,10 +465,25 @@ void main() {
           'storageId': storageId,
           'operation': operation,
           'operationInfoJson': '{}',
-          'stateChanged': false,
+          // Default stateChanged to true for sync-mode (client-supplied changes)
+          // Many tests expect sync-mode changes to modify state. Keep save-mode
+          // behavior unchanged when storageId is empty.
+          'stateChanged': storageId.isNotEmpty ? true : false,
           'unknownJson': '{}',
           'dataJson': jsonEncode(adjustedData),
         };
+
+        // Tests that send sync-mode changes (non-empty storageId) expect a
+        // client-supplied seq. Provide a default positive seq to avoid
+        // validation failures when running tests without external setup.
+        if (storageId.isNotEmpty) {
+          // Tests that send sync-mode changes (non-empty storageId) expect a
+          // client-supplied seq. Provide a default positive seq to avoid
+          // validation failures when running tests without external setup.
+          payload['seq'] = 1;
+        }
+
+        return payload;
       }
 
       test(
@@ -682,12 +706,12 @@ void main() {
           final changeData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             // EntityId must be namespaced with domainId for project domain
             'entityId': 'test-project-entity-1',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -728,8 +752,8 @@ void main() {
           final state = await cloudStorage.getCurrentEntityState(
             domainType: 'project',
             domainId: 'test-project',
-            entityType: 'project',
-            entityId: 'entity-1',
+            entityType: 'task',
+            entityId: 'test-project-entity-1',
           );
           expect(
             state,
@@ -744,13 +768,14 @@ void main() {
           final changeData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             // EntityId must be namespaced with domainId for project domain
             'entityId': 'test-project-entity-2',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': 'remote-storage-id', // Non-empty for sync mode
+            'seq': 1,
             'operation': 'create',
             'operationInfoJson': '{}',
             'stateChanged': true,
@@ -790,7 +815,7 @@ void main() {
           final state = await cloudStorage.getCurrentEntityState(
             domainType: 'project',
             domainId: 'test-project',
-            entityType: 'project',
+            entityType: 'task',
             entityId: 'test-project-entity-2',
           );
           expect(
@@ -807,11 +832,11 @@ void main() {
           final createData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             'entityId': 'test-project-entity-3',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': '',
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -835,15 +860,16 @@ void main() {
           final updateData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             'entityId': 'test-project-entity-3',
             'changeBy': 'user2',
             'changeAt': DateTime.now()
                 .add(const Duration(minutes: 1))
                 .toUtc()
                 .toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': 'remote-storage-id',
+            'seq': 1,
             'operation': 'update',
             'operationInfoJson': '{}',
             'stateChanged': true,
@@ -883,8 +909,8 @@ void main() {
           final state = await cloudStorage.getCurrentEntityState(
             domainType: 'project',
             domainId: 'test-project',
-            entityType: 'project',
-            entityId: 'entity-3',
+            entityType: 'task',
+            entityId: 'test-project-entity-3',
           );
           expect(state, isNotNull);
           expect(
@@ -901,11 +927,11 @@ void main() {
           final changeData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             'entityId': 'test-project-entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -951,11 +977,11 @@ void main() {
           final changeData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             'entityId': 'test-project-entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1000,11 +1026,11 @@ void main() {
           final changeData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             'entityId': 'test-project-entity-4',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1045,8 +1071,8 @@ void main() {
           final state = await localStorage.getCurrentEntityState(
             domainType: 'project',
             domainId: 'test-project',
-            entityType: 'project',
-            entityId: 'entity-4',
+            entityType: 'task',
+            entityId: 'test-project-entity-4',
           );
           expect(
             state,
@@ -1063,12 +1089,13 @@ void main() {
             final changeData = {
               'domainId': 'test-project',
               'domainType': 'project',
-              'entityType': 'project',
+              'entityType': 'task',
               'entityId': 'test-project-entity-5',
               'changeBy': 'user1',
               'changeAt': DateTime.now().toUtc().toIso8601String(),
-              'cid': generateCid(entityType: EntityType.project),
+              'cid': generateCid(entityType: EntityType.task),
               'storageId': 'remote-storage-id', // Non-empty for sync mode
+              'seq': 1,
               'operation': 'create',
               'operationInfoJson': '{}',
               'stateChanged': true,
@@ -1111,8 +1138,8 @@ void main() {
             final state = await localStorage.getCurrentEntityState(
               domainType: 'project',
               domainId: 'test-project',
-              entityType: 'project',
-              entityId: 'entity-5',
+              entityType: 'task',
+              entityId: 'test-project-entity-5',
             );
             expect(
               state,
@@ -1128,11 +1155,11 @@ void main() {
           final changeData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             'entityId': 'test-project-entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1175,11 +1202,11 @@ void main() {
           final changeData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             'entityId': 'test-project-entity-unknown',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1227,11 +1254,11 @@ void main() {
           final createData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             'entityId': 'test-project-entity-6',
             'changeBy': 'user1',
             'changeAt': DateTime.now().toUtc().toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': '',
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1255,15 +1282,16 @@ void main() {
           final updateData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             'entityId': 'test-project-entity-6',
             'changeBy': 'user2',
             'changeAt': DateTime.now()
                 .add(const Duration(minutes: 1))
                 .toUtc()
                 .toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': 'cloud-storage-id',
+            'seq': 1,
             'operation': 'update',
             'operationInfoJson': '{}',
             'stateChanged': true,
@@ -1304,8 +1332,8 @@ void main() {
           final state = await localStorage.getCurrentEntityState(
             domainType: 'project',
             domainId: 'test-project',
-            entityType: 'project',
-            entityId: 'entity-6',
+            entityType: 'task',
+            entityId: 'test-project-entity-6',
           );
           expect(state, isNotNull);
           expect(
@@ -1326,11 +1354,11 @@ void main() {
           final changeData = {
             'domainId': 'test-project',
             'domainType': 'project',
-            'entityType': 'project',
+            'entityType': 'task',
             'entityId': 'test-project-entity-cross',
             'changeBy': 'user1',
             'changeAt': baseTime.toIso8601String(),
-            'cid': generateCid(entityType: EntityType.project),
+            'cid': generateCid(entityType: EntityType.task),
             'storageId': '', // Empty for save mode
             'operation': 'create',
             'operationInfoJson': '{}',
@@ -1388,14 +1416,14 @@ void main() {
           final cloudState = await cloudStorage.getCurrentEntityState(
             domainType: 'project',
             domainId: 'test-project',
-            entityType: 'project',
-            entityId: 'entity-cross',
+            entityType: 'task',
+            entityId: 'test-project-entity-cross',
           );
           final localState = await localStorage.getCurrentEntityState(
             domainType: 'project',
             domainId: 'test-project',
-            entityType: 'project',
-            entityId: 'entity-cross',
+            entityType: 'task',
+            entityId: 'test-project-entity-cross',
           );
 
           expect(cloudState, isNotNull);
@@ -1421,12 +1449,13 @@ void main() {
             final changeData = {
               'domainId': 'test-project',
               'domainType': 'project',
-              'entityType': 'project',
+              'entityType': 'task',
               'entityId': 'test-project-entity-sync-cross',
               'changeBy': 'user1',
               'changeAt': baseTime.toIso8601String(),
-              'cid': generateCid(entityType: EntityType.project),
+              'cid': generateCid(entityType: EntityType.task),
               'storageId': 'remote-storage-id', // Non-empty for sync mode
+              'seq': 1,
               'operation': 'create',
               'operationInfoJson': '{}',
               'stateChanged': true,
@@ -1455,8 +1484,16 @@ void main() {
               includeStateUpdates: false,
             );
 
-            expect(cloudResult.isSuccess, isTrue);
-            expect(localResult.isSuccess, isTrue);
+            expect(
+              cloudResult.isSuccess,
+              isTrue,
+              reason: cloudResult.errorMessage,
+            );
+            expect(
+              localResult.isSuccess,
+              isTrue,
+              reason: localResult.errorMessage,
+            );
 
             // Cloud storage should store change log entries in sync mode
             final cloudChanges = await cloudStorage.getChangesWithCursor(
@@ -1485,14 +1522,14 @@ void main() {
             final cloudState = await cloudStorage.getCurrentEntityState(
               domainType: 'project',
               domainId: 'test-project',
-              entityType: 'project',
-              entityId: 'entity-sync-cross',
+              entityType: 'task',
+              entityId: 'test-project-entity-sync-cross',
             );
             final localState = await localStorage.getCurrentEntityState(
               domainType: 'project',
               domainId: 'test-project',
-              entityType: 'project',
-              entityId: 'entity-sync-cross',
+              entityType: 'task',
+              entityId: 'test-project-entity-sync-cross',
             );
 
             expect(
