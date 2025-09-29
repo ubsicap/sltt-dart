@@ -49,6 +49,10 @@ class ChangeProcessingService {
     /// include detailed state updates in the response
     required bool includeStateUpdates,
   }) async {
+    final storageType = storage.getStorageType();
+    print(
+      '[ChangeProcessingService] Starting processChanges with storageType=$storageType, storageMode=$storageMode, srcStorageType=$srcStorageType, srcStorageId=$srcStorageId, changesCount=${changes.length}, includeChangeUpdates=$includeChangeUpdates, includeStateUpdates=$includeStateUpdates',
+    );
     try {
       if (changes.isEmpty) {
         return const ChangeProcessingResult(
@@ -87,6 +91,7 @@ class ChangeProcessingService {
       final List<int> invalidOperations = [];
       final List<int> invalidStateChanged = [];
       final List<int> invalidSeqProvided = [];
+      final List<int> invalidCloudAt = [];
       for (int i = 0; i < changes.length; i++) {
         final changeData = changes[i];
         try {
@@ -126,8 +131,11 @@ class ChangeProcessingService {
             continue;
           }
 
-          // Validate storageId based on storageMode
+          // Validate other storageMode issues
           if (storageMode == 'sync') {
+            if (srcStorageType == 'cloud' && changeLogEntry.cloudAt == null) {
+              invalidCloudAt.add(i);
+            }
             if (changeLogEntry.storageId.trim().isEmpty) {
               invalidStorageIds.add(i);
             }
@@ -144,6 +152,9 @@ class ChangeProcessingService {
             // try/catch and reported in the resultsSummary rather than
             // bubbling as an unhandled exception.
             await validateChangeLogEntryDataJson(changeLogEntry);
+            if (changeLogEntry.cloudAt != null) {
+              invalidCloudAt.add(i);
+            }
             if (changeLogEntry.storageId.trim().isNotEmpty) {
               invalidStorageIds.add(i);
             }
@@ -234,7 +245,7 @@ class ChangeProcessingService {
           );
 
           print(
-            'DEBUG: Deserialized changeLogEntry: cid=${changeLogEntry.cid}, unknownJson=${changeLogEntry.getUnknown()}',
+            '[${storage.getStorageType()}] DEBUG: Deserialized changeLogEntry: cid=${changeLogEntry.cid}, unknownJson=${changeLogEntry.getUnknown()}',
           );
 
           // Validate that unknownJson is empty when required
@@ -281,12 +292,12 @@ class ChangeProcessingService {
           // Debug: log the current entity state for diagnosis
           try {
             print(
-              'DEBUG: entityState for CID ${changeLogEntry.cid}: ${entityState?.toJson()}',
+              '[${storage.getStorageType()}] DEBUG: entityState for CID ${changeLogEntry.cid}: ${entityState?.toJson()}',
             );
           } catch (e, st) {
             // Log failure to serialize entity state for debug purposes
             print(
-              'DEBUG: failed to serialize entityState for CID ${changeLogEntry.cid}: $e',
+              '[${storage.getStorageType()}] DEBUG: failed to serialize entityState for CID ${changeLogEntry.cid}: $e',
             );
             print(st);
           }
@@ -301,12 +312,12 @@ class ChangeProcessingService {
           // Debug: log detailed result info
           try {
             print(
-              'DEBUG: getUpdates result for CID ${changeLogEntry.cid}: isDuplicate=${result.isDuplicate} changeUpdates=${result.changeUpdates} stateUpdates=${result.stateUpdates}',
+              '[${storage.getStorageType()}] DEBUG: getUpdates result for CID ${changeLogEntry.cid}: isDuplicate=${result.isDuplicate} changeUpdates=${result.changeUpdates} stateUpdates=${result.stateUpdates}',
             );
           } catch (e, st) {
             // Log debug printing failures
             print(
-              'DEBUG: failed to print getUpdates result for CID ${changeLogEntry.cid}: $e',
+              '[${storage.getStorageType()}] DEBUG: failed to print getUpdates result for CID ${changeLogEntry.cid}: $e',
             );
             print(st);
           }
@@ -327,7 +338,7 @@ class ChangeProcessingService {
           // Update storage with the change and state
           // Debug: log computed stateUpdates for diagnosis
           print(
-            'DEBUG: computed stateUpdates for CID ${changeLogEntry.cid}: ${result.stateUpdates}',
+            '[${storage.getStorageType()}] DEBUG: computed stateUpdates for CID ${changeLogEntry.cid}: ${result.stateUpdates}',
           );
 
           // Ensure changeUpdates reflect the storage's identity in save mode
@@ -337,12 +348,18 @@ class ChangeProcessingService {
             changeUpdates['storageId'] = targetStorageId;
           }
 
+          final shouldSkipChangeLogWrite =
+              result.isDuplicate ||
+              (targetStorageType == 'local' && changeLogEntry.cloudAt != null);
+
           final updateResults = await storage.updateChangeLogAndState(
             domainType: changeLogEntry.domainType,
             changeLogEntry: changeLogEntry,
             changeUpdates: changeUpdates,
             entityState: entityState,
             stateUpdates: result.stateUpdates,
+            skipChangeLogWrite: shouldSkipChangeLogWrite,
+            skipStateWrite: result.stateUpdates.isEmpty,
           );
 
           // In sync mode, warn if we get unexpected state changes
@@ -352,7 +369,7 @@ class ChangeProcessingService {
               !result.isDuplicate &&
               result.stateUpdates.isNotEmpty) {
             print(
-              'WARNING: Sync mode resulted in state change for CID ${changeLogEntry.cid}. '
+              '[${storage.getStorageType()}] WARNING: Sync mode resulted in state change for CID ${changeLogEntry.cid}. '
               'Operation: ${updateResults.newChangeLogEntry.operation}. '
               'This may indicate a data inconsistency worth investigating.'
               'ChangeLogEntry: $changeLogEntry'
@@ -382,9 +399,11 @@ class ChangeProcessingService {
       }
 
       if (returnErrorIfInResultsSummary && resultsSummary.errors.isNotEmpty) {
+        final errorMessage =
+            'One or more changes resulted in errors. See resultsSummary for details:\n$resultsSummary';
+        print('[${storage.getStorageType()}] $errorMessage: $resultsSummary');
         return ChangeProcessingResult(
-          errorMessage:
-              'One or more changes resulted in errors. See resultsSummary for details:\n$resultsSummary',
+          errorMessage: errorMessage,
           errorCode: 400, // consider using 207 Multi-Status in future?
           resultsSummary: resultsSummary,
         );

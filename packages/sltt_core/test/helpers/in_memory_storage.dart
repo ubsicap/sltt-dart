@@ -52,18 +52,23 @@ class InMemoryStorage implements BaseStorageService {
     required Map<String, dynamic> changeUpdates,
     BaseEntityState? entityState,
     required Map<String, dynamic> stateUpdates,
+    bool skipChangeLogWrite = false,
+    bool skipStateWrite = false,
   }) async {
     final newChangeJson = {...changeLogEntry.toJson(), ...changeUpdates};
     // Ensure a sequence number exists and is monotonic for in-memory storage
-    if (newChangeJson['seq'] == null ||
-        (newChangeJson['seq'] is int && newChangeJson['seq'] == 0)) {
+    if (!skipChangeLogWrite &&
+        (newChangeJson['seq'] == null ||
+            (newChangeJson['seq'] is int && newChangeJson['seq'] == 0))) {
       newChangeJson['seq'] = _nextSeq++;
     }
     final newChange = TestChangeLogEntry.fromJson(newChangeJson);
 
-    final changes = _changesByDomainType.putIfAbsent(domainType, () => []);
-    // persist change for subsequent queries
-    changes.add(newChange);
+    if (!skipChangeLogWrite) {
+      final changes = _changesByDomainType.putIfAbsent(domainType, () => []);
+      // persist change for subsequent queries
+      changes.add(newChange);
+    }
 
     final prior = (entityState?.toJson() ?? <String, dynamic>{});
     final merged = {...prior, ...stateUpdates}
@@ -79,14 +84,17 @@ class InMemoryStorage implements BaseStorageService {
       );
       newState = TestEntityState.fromJson(merged);
       final states = _statesByDomainType.putIfAbsent(domainType, () => {});
-      // Use the entityId from the serialized state (newState.entityId)
-      // because TestEntityState may include a namespaced id (e.g. 'seed-project-task-1')
-      states[_key(
-            newChange.domainId,
-            newChange.entityType,
-            newState.entityId,
-          )] =
-          newState;
+      if (!skipStateWrite) {
+        // persist state for subsequent queries
+        // Use the entityId from the serialized state (newState.entityId)
+        // because TestEntityState may include a namespaced id (e.g. 'seed-project-task-1')
+        states[_key(
+              newChange.domainId,
+              newChange.entityType,
+              newState.entityId,
+            )] =
+            newState;
+      }
     } catch (e, st) {
       // Surface parsing errors for diagnostics
       print(

@@ -1,53 +1,33 @@
-import 'dart:io';
-import 'package:test/test.dart';
 import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
+import 'package:test/test.dart';
 
 void main() {
-  IsarStorageService? storage;
+  late final IsarStorageService storage;
   // Use a unique database name per test run to avoid unique-index collisions
   // from prior runs when the same static name is reused.
   final testDbName =
       'test_get_entity_states_${DateTime.now().microsecondsSinceEpoch}';
 
-  Future<void> cleanupTestDatabase() async {
-    try {
-      final dir = Directory('./isar_db');
-      if (await dir.exists()) {
-        final files = await dir.list().toList();
-        for (final file in files) {
-          if (file.path.contains(testDbName)) {
-            await file.delete();
-          }
-        }
-      }
-    } catch (e) {
-      print('Warning: Failed to clean up test database: $e');
-    }
-  }
-
   setUpAll(() async {
-    await cleanupTestDatabase();
     isarChangeLogEntryFactoryRegistration;
     // Pass the unique testDbName as the database name (first arg) and a
     // short log prefix as the second argument.
     storage = IsarStorageService(testDbName, 'local');
-    await storage!.initialize();
+    await storage.deleteDatabase();
+    await storage.initialize();
     print(
       '[TestGetEntityStates] Isar database initialized at: ./isar_db/$testDbName.isar',
     );
   });
 
   tearDownAll(() async {
-    if (storage != null) {
-      await storage!.close();
-    }
-    await cleanupTestDatabase();
+    await storage.close();
   });
 
   group('IsarStorageService.getEntityStates', () {
     test('returns empty list when no entities exist', () async {
-      final result = await storage!.getEntityStates(
+      final result = await storage.getEntityStates(
         domainType: 'project',
         domainId: 'non-existent-project',
         entityType: 'task',
@@ -61,7 +41,7 @@ void main() {
 
     test('throws ArgumentError for unsupported entity type', () async {
       expect(
-        () => storage!.getEntityStates(
+        () => storage.getEntityStates(
           domainType: 'project',
           domainId: 'test-project',
           entityType: 'unsupported-type',
@@ -77,7 +57,7 @@ void main() {
     });
 
     test('handles large cursor values gracefully', () async {
-      final result = await storage!.getEntityStates(
+      final result = await storage.getEntityStates(
         domainType: 'project',
         domainId: 'test-project',
         entityType: 'task',
@@ -90,7 +70,7 @@ void main() {
     });
 
     test('handles edge case with zero limit', () async {
-      final result = await storage!.getEntityStates(
+      final result = await storage.getEntityStates(
         domainType: 'project',
         domainId: 'test-project',
         entityType: 'task',
@@ -104,7 +84,7 @@ void main() {
     });
 
     test('accepts parentId parameter without error', () async {
-      final result = await storage!.getEntityStates(
+      final result = await storage.getEntityStates(
         domainType: 'project',
         domainId: 'test-project',
         entityType: 'task',
@@ -117,7 +97,7 @@ void main() {
     });
 
     test('parentId parameter works with other parameters', () async {
-      final result = await storage!.getEntityStates(
+      final result = await storage.getEntityStates(
         domainType: 'project',
         domainId: 'test-project',
         entityType: 'task',
@@ -203,7 +183,7 @@ void main() {
         'data_nameLocal': 'Task 1',
       });
 
-      await storage!.updateChangeLogAndState(
+      await storage.updateChangeLogAndState(
         domainType: 'project',
         changeLogEntry: IsarChangeLogEntry.fromJson(change1),
         changeUpdates: {'stateChanged': true},
@@ -273,7 +253,7 @@ void main() {
         'data_parentProp_changeBy_': 'tester',
         'data_nameLocal': 'Task 2',
       });
-      await storage!.updateChangeLogAndState(
+      await storage.updateChangeLogAndState(
         domainType: 'project',
         changeLogEntry: IsarChangeLogEntry.fromJson(change2),
         changeUpdates: {'stateChanged': true},
@@ -317,7 +297,7 @@ void main() {
       );
 
       // Query for parentProp == 'pList'
-      final res = await storage!.getEntityStates(
+      final res = await storage.getEntityStates(
         domainType: 'project',
         domainId: 'test-project',
         entityType: 'task',
@@ -334,7 +314,7 @@ void main() {
     test(
       'returns empty items when parentProp does not match any entity',
       () async {
-        final res = await storage!.getEntityStates(
+        final res = await storage.getEntityStates(
           domainType: 'project',
           domainId: 'test-project',
           entityType: 'task',

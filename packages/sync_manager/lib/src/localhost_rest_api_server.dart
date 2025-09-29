@@ -11,8 +11,14 @@ enum StorageType { local, cloud }
 class LocalhostRestApiServer extends BaseRestApiServer {
   final StorageType storageType;
 
-  LocalhostRestApiServer(this.storageType, String serverName)
-    : super(serverName: serverName, storage: _createStorage(storageType));
+  LocalhostRestApiServer(
+    this.storageType,
+    String serverName, {
+    BaseStorageService? storage,
+  }) : super(
+         serverName: serverName,
+         storage: storage ?? _createStorage(storageType),
+       );
 
   @override
   String get storageTypeDescription =>

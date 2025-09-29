@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:isar_community/isar.dart';
@@ -19,6 +18,7 @@ class IsarStorageService extends BaseStorageService {
   late Isar _isar;
   bool _initialized = false;
   late String _storageId;
+  late String _dbPath;
 
   final IsarEntityStateStorageRegistry _entityStateRegistry =
       IsarEntityStateStorageRegistry();
@@ -27,6 +27,12 @@ class IsarStorageService extends BaseStorageService {
       _entityStateRegistry;
 
   IsarStorageService(this._databaseName, this._logPrefix);
+
+  get databaseName => _databaseName;
+  get logPrefix => _logPrefix;
+
+  /// full path to database file
+  get databasePath => _initialized ? _dbPath : null;
 
   @override
   Future<void> initialize({
@@ -61,6 +67,7 @@ class IsarStorageService extends BaseStorageService {
       name: _databaseName,
       inspector: inspector,
     );
+    _dbPath = '${dir.path}/$_databaseName.isar';
 
     // Register storage groups with the initialized Isar instance. Always
     // start from a clean registry so re-initialization doesn't duplicate
@@ -162,17 +169,35 @@ class IsarStorageService extends BaseStorageService {
     required Map<String, dynamic> changeUpdates,
     BaseEntityState? entityState,
     required Map<String, dynamic> stateUpdates,
+    bool skipChangeLogWrite = false,
+    bool skipStateWrite = false,
   }) async {
+    if (skipChangeLogWrite && skipStateWrite ||
+        (changeUpdates.isEmpty && stateUpdates.isEmpty)) {
+      // no change to state or change log entry
+      print('[$_logPrefix] updateChangeLogAndState - no changes detected');
+      return (newChangeLogEntry: changeLogEntry, newEntityState: entityState!);
+    }
     // Create updated change log entry
     final newChangeJson = {...changeLogEntry.toJson(), ...changeUpdates};
     final newChange = client.IsarChangeLogEntry.fromJson(newChangeJson);
-    // IMPORTANT: When writing to storage, avoid using an incoming
-    // seq value from the caller. Isar uses `seq` as the primary key and
-    // calling `put` with a specific seq can overwrite an existing entry
-    // with the same id. To prevent accidental overwrites when syncing
-    // changes into the cloud, force the cloud storage to assign a new
-    // auto-increment id.
-    newChange.seq = Isar.autoIncrement;
+    if (!skipChangeLogWrite) {
+      // IMPORTANT: When writing to storage, avoid using an incoming
+      // seq value from the caller. Isar uses `seq` as the primary key and
+      // calling `put` with a specific seq can overwrite an existing entry
+      // with the same id. To prevent accidental overwrites when syncing
+      // changes into the cloud, force the storage to assign a new
+      // auto-increment id.
+      newChange.seq = Isar.autoIncrement;
+      // Ensure cloud-backed storages stamp the change with cloudAt so that
+      // downstream clients can recognize it as cloud-origin and skip
+      // re-syncing it back up.
+      newChange.cloudAt ??= maybeCreateCloudAt();
+    } else {
+      print(
+        'updateChangeLogAndState - skipping change log write for cid=${newChange.cid} (cloudAt=${newChange.cloudAt})',
+      );
+    }
 
     // Convert to appropriate Isar state type based on entity type
     final entityTypeEnum = EntityType.values.firstWhere(
@@ -223,85 +248,94 @@ class IsarStorageService extends BaseStorageService {
 
     // Save both change and state in a transaction
     await _isar.writeTxn(() async {
-      await _isar.collection<client.IsarChangeLogEntry>().put(newChange);
+      if (!skipChangeLogWrite) {
+        await _isar.collection<client.IsarChangeLogEntry>().put(newChange);
 
-      print(
-        'updateChangeLogAndState - after put - newChange id: ${newChange.seq}',
-      );
+        print(
+          'updateChangeLogAndState - after put - newChange id: ${newChange.seq}',
+        );
+      }
 
       // Try to use registered storage group first
       final storageGroup = _entityStateRegistry.get(entityTypeEnum);
-      if (storageGroup != null) {
-        await storageGroup.put(newEntityState);
-      } else {
+      if (storageGroup == null) {
         throw UnimplementedError(
           'No storage group registered for entity type: ${changeLogEntry.entityType}',
         );
+      }
+      if (!skipStateWrite) {
+        await storageGroup.put(newEntityState);
       }
 
       print(
         'updateChangeLogAndState - after put - newEntityState id: ${newEntityState.toJson()['id']}',
       );
-      // Upsert entity-type sync state counters (created/updated/deleted)
-      try {
-        final existingEntityTypeSyncStates = await _isar
-            .isarEntityTypeSyncStates
-            .where()
-            .entityTypeDomainIdEqualTo(
-              changeLogEntry.entityType,
-              newChange.domainId,
-            )
-            .findFirst();
 
-        final op = newChange.operation;
-        print(
-          'updateChangeLogAndState - Upserting entity-type sync state for entityType=${changeLogEntry.entityType} entityId=${newChange.entityId} domainId=${newChange.domainId} op=$op existing=${existingEntityTypeSyncStates != null}',
-        );
-        if (existingEntityTypeSyncStates != null) {
-          // Explicitly increment counters on the existing record so the
-          // stored counts reflect the actual number of ops performed.
-          final newEt = IsarEntityTypeSyncState(
-            id: existingEntityTypeSyncStates.id,
-            entityType: existingEntityTypeSyncStates.entityType,
-            domainId: existingEntityTypeSyncStates.domainId,
-            domainType: existingEntityTypeSyncStates.domainType,
-            storageId: _storageId,
-            storageType: getStorageType(),
-            cid: newChange.cid,
-            changeAt: newChange.changeAt,
-            seq: newChange.seq,
-            created:
-                existingEntityTypeSyncStates.created + (op == 'create' ? 1 : 0),
-            updated:
-                existingEntityTypeSyncStates.updated + (op == 'update' ? 1 : 0),
-            deleted:
-                existingEntityTypeSyncStates.deleted + (op == 'delete' ? 1 : 0),
-            createdAt: existingEntityTypeSyncStates.createdAt,
-            updatedAt: DateTime.now(),
+      if (!skipStateWrite) {
+        // Upsert entity-type sync state counters (created/updated/deleted)
+        try {
+          final existingEntityTypeSyncStates = await _isar
+              .isarEntityTypeSyncStates
+              .where()
+              .entityTypeDomainIdEqualTo(
+                changeLogEntry.entityType,
+                newChange.domainId,
+              )
+              .findFirst();
+
+          final op = newChange.operation;
+          print(
+            'updateChangeLogAndState - Upserting entity-type sync state for entityType=${changeLogEntry.entityType} entityId=${newChange.entityId} domainId=${newChange.domainId} op=$op existing=${existingEntityTypeSyncStates != null}',
           );
-          await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
-        } else {
-          // New record - initialize counters to 1 for the matching op, 0
-          // otherwise.
-          final newEt = IsarEntityTypeSyncState(
-            entityType: changeLogEntry.entityType,
-            domainId: newChange.domainId,
-            domainType: domainType,
-            storageId: _storageId,
-            storageType: getStorageType(),
-            cid: newChange.cid,
-            changeAt: newChange.changeAt,
-            seq: newChange.seq,
-            created: newChange.operation == 'create' ? 1 : 0,
-            updated: newChange.operation == 'update' ? 1 : 0,
-            deleted: newChange.operation == 'delete' ? 1 : 0,
+          if (existingEntityTypeSyncStates != null) {
+            // Explicitly increment counters on the existing record so the
+            // stored counts reflect the actual number of ops performed.
+            final newEt = IsarEntityTypeSyncState(
+              id: existingEntityTypeSyncStates.id,
+              entityType: existingEntityTypeSyncStates.entityType,
+              domainId: existingEntityTypeSyncStates.domainId,
+              domainType: existingEntityTypeSyncStates.domainType,
+              storageId: _storageId,
+              storageType: getStorageType(),
+              cid: newChange.cid,
+              changeAt: newChange.changeAt,
+              seq: newChange.seq,
+              created:
+                  existingEntityTypeSyncStates.created +
+                  (op == 'create' ? 1 : 0),
+              updated:
+                  existingEntityTypeSyncStates.updated +
+                  (op == 'update' ? 1 : 0),
+              deleted:
+                  existingEntityTypeSyncStates.deleted +
+                  (op == 'delete' ? 1 : 0),
+              createdAt: existingEntityTypeSyncStates.createdAt,
+              updatedAt: DateTime.now(),
+            );
+            await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
+          } else {
+            // New record - initialize counters to 1 for the matching op, 0
+            // otherwise.
+            final newEt = IsarEntityTypeSyncState(
+              entityType: changeLogEntry.entityType,
+              domainId: newChange.domainId,
+              domainType: domainType,
+              storageId: _storageId,
+              storageType: getStorageType(),
+              cid: newChange.cid,
+              changeAt: newChange.changeAt,
+              seq: newChange.seq,
+              created: newChange.operation == 'create' ? 1 : 0,
+              updated: newChange.operation == 'update' ? 1 : 0,
+              deleted: newChange.operation == 'delete' ? 1 : 0,
+            );
+            await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
+          }
+        } catch (e) {
+          print(
+            '[$_logPrefix] Warning: failed to upsert entity-type sync state: $e',
           );
-          await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
         }
-      } catch (e) {
-        print(
-          '[$_logPrefix] Warning: failed to upsert entity-type sync state: $e',
-        );
       }
     });
 
@@ -531,11 +565,11 @@ class IsarStorageService extends BaseStorageService {
     // Debug: print entity-type sync state entries returned by Isar
     try {
       print(
-        'DEBUG: isarEntityTypeSyncStates count=${entries.length} for domain=$domainId type=$domainType',
+        '[$_logPrefix] DEBUG: isarEntityTypeSyncStates count=${entries.length} for domain=$domainId type=$domainType',
       );
       for (final e in entries) {
         print(
-          'DEBUG: ET=${e.entityType} created=${e.created} updated=${e.updated} deleted=${e.deleted} changeAt=${e.changeAt} seq=${e.seq} cid=${e.cid}',
+          '[$_logPrefix] DEBUG: ET=${e.entityType} created=${e.created} updated=${e.updated} deleted=${e.deleted} changeAt=${e.changeAt} seq=${e.seq} cid=${e.cid}',
         );
       }
     } catch (e) {
@@ -611,32 +645,63 @@ class IsarStorageService extends BaseStorageService {
     }
   }
 
-  // COMMENTED OUT - deleteOutdatedChanges needs collection fix
-  /*
-  /// Delete outdated changes to save storage space.
+  /// Close this Isar instance (if open) and optionally delete the on-disk
+  /// Isar files for this storage name.
   ///
-  /// This removes change log entries that have been marked as outdated
-  /// by newer changes, helping to keep the storage size manageable.
-  Future<int> deleteOutdatedChanges() async {
-    final outdatedChanges = await _isar.isarChangeLogEntrys
-        .filter()
-        .outdatedByIsNotNull()
-        .findAll();
-
-    final seqsToDelete = outdatedChanges.map((e) => e.seq).toList();
-
-    int deletedCount = 0;
-    await _isar.writeTxn(() async {
-      for (final seq in seqsToDelete) {
-        if (await _isar.isarChangeLogEntrys.delete(seq)) {
-          deletedCount++;
+  /// This helper is safe to call even if the instance was never
+  /// initialized; it will attempt to close the Isar instance if open and
+  /// then remove the exact files: `{dbName}.isar` and `{dbName}.isar-lck`,
+  /// plus a directory named exactly `{dbName}` under the `./isar_db`
+  /// directory. Use this from tests/cleanup code instead of deleting by
+  /// prefix.
+  Future<void> deleteDatabase() async {
+    try {
+      if (_initialized) {
+        try {
+          await _isar.close();
+        } catch (_) {
+          // ignore
         }
+        _initialized = false;
       }
-    });
 
-    return deletedCount;
+      // Always remove the on-disk files for this database. Tests and
+      // tooling expect deleteDatabase to remove files unconditionally.
+      await IsarStorageService.deleteDatabaseFiles(_databaseName);
+    } catch (e) {
+      print('[$_logPrefix] Warning: deleteDatabase failed: $e');
+    }
   }
-  */
+
+  /// Static helper that deletes on-disk Isar files for a given database
+  /// name. This is useful from tests and tooling where you don't have an
+  /// initialized IsarStorageService instance.
+  static Future<void> deleteDatabaseFiles(
+    String databaseName, {
+    String dirPath = './isar_db',
+  }) async {
+    try {
+      final dir = Directory(dirPath);
+      if (!await dir.exists()) return;
+
+      final isarFile = File('$dirPath/$databaseName.isar');
+      final isarLck = File('$dirPath/$databaseName.isar-lck');
+      final dbDir = Directory('$dirPath/$databaseName');
+
+      if (await isarFile.exists()) {
+        await isarFile.delete();
+      }
+      if (await isarLck.exists()) {
+        await isarLck.delete();
+      }
+      if (await dbDir.exists()) {
+        await dbDir.delete(recursive: true);
+      }
+    } catch (e) {
+      // Non-fatal - log and continue
+      print('[test-utils] Failed to delete Isar files for $databaseName: $e');
+    }
+  }
 
   // Cursor-based pagination and filtering
   @override
@@ -662,12 +727,13 @@ class IsarStorageService extends BaseStorageService {
     return _convertToChangeLogEntries(results);
   }
 
-  /// Get changes for syncing - excludes outdated changes.
+  /// Get changes for syncing
   ///
   /// Returns only changes that haven't been cloud-synced yet.
   Future<List<client.IsarChangeLogEntry>> getChangesForSync({
     int? cursor,
     int? limit,
+    List<String>? domainIds,
   }) async {
     var query = _isar.isarChangeLogEntrys.where();
     var results = await query
@@ -675,6 +741,12 @@ class IsarStorageService extends BaseStorageService {
         .filter()
         .cloudAtIsNull()
         .findAll();
+
+    if (domainIds != null && domainIds.isNotEmpty) {
+      results = results
+          .where((entry) => domainIds.contains(entry.domainId))
+          .toList();
+    }
 
     // Debug: log which changes are being returned for sync
     try {
@@ -695,46 +767,6 @@ class IsarStorageService extends BaseStorageService {
     }
     return results;
   }
-
-  // COMMENTED OUT - getLastSeq needs collection fix
-  /*
-  // Get the highest sequence number in the database
-  Future<int> getLastSeq() async {
-    final result = await _isar.isarChangeLogEntrys.where().findAll();
-    if (result.isEmpty) {
-      return 0;
-    }
-    return result.map((e) => e.seq).reduce((a, b) => a > b ? a : b);
-  }
-  */
-
-  // COMMENTED OUT FOR NOW - TO BE FIXED LATER
-  /*
-  // Store multiple changes (for batch operations)
-  Future<List<BaseChangeLogEntry>> createChanges(
-    List<Map<String, dynamic>> changesData,
-  ) async {
-    final changes = changesData
-        .map((changeData) => client.IsarChangeLogEntry.fromJson(changeData))
-        .toList();
-
-    // Set cloudAt for changes if this is a cloud storage service
-    for (final change in changes) {
-      change.cloudAt ??= maybeCreateCloudAt();
-    }
-
-    await _isar.writeTxn(() async {
-      await _isar.collection<client.IsarChangeLogEntry>().putAll(changes);
-    });
-
-    // Convert IsarChangeLogEntry to BaseChangeLogEntry for the interface
-    return changes
-        .map(
-          (clientEntry) => _convertToChangeLogEntry(clientEntry),
-        )
-        .toList();
-  }
-  */
 
   /// Get the current state of an entity for field-level comparison
   @override
@@ -789,9 +821,9 @@ class IsarStorageService extends BaseStorageService {
     return <String, dynamic>{};
   }
 
-  /// Hook method for subclasses to optionally add cloud timestamp.
-  /// Override this in CloudStorageService to return DateTime.now().
-  DateTime? maybeCreateCloudAt() => null;
+  /// (Mock/Local) Cloud storage should add cloud timestamp.
+  DateTime? maybeCreateCloudAt() =>
+      getStorageType() == 'cloud' ? DateTime.now().toUtc() : null;
 
   /// Delete all changes - useful for testing cleanup
   Future<int> deleteAllChanges() async {
@@ -1109,32 +1141,4 @@ class CloudStorageService extends IsarStorageService {
 
   @override
   String getStorageType() => 'cloud';
-
-  @override
-  DateTime? maybeCreateCloudAt() => DateTime.now().toUtc();
-
-  @override
-  Future<BaseChangeLogEntry> createChange({
-    required String domainType,
-    required Map<String, dynamic> changeData,
-  }) async {
-    print('changeData: ${jsonEncode(changeData)}');
-
-    // For cloud storage, always force sequence auto-generation by removing seq
-    final cloudChangeData = Map<String, dynamic>.from(changeData);
-    cloudChangeData.remove('seq'); // Force auto-increment in cloud storage
-
-    final change = client.IsarChangeLogEntry.fromJson(cloudChangeData);
-
-    // Set cloudAt since this is a cloud storage service
-    change.cloudAt ??= maybeCreateCloudAt();
-
-    print('change: ${jsonEncode(change)}');
-    await _isar.writeTxn(() async {
-      await _isar.collection<client.IsarChangeLogEntry>().put(change);
-    });
-
-    // Return as base BaseChangeLogEntry
-    return _convertToChangeLogEntry(change);
-  }
 }

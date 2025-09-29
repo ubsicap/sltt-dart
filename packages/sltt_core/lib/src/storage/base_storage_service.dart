@@ -70,6 +70,8 @@ abstract class BaseStorageService {
     required Map<String, dynamic> changeUpdates,
     BaseEntityState? entityState,
     required Map<String, dynamic> stateUpdates,
+    bool skipChangeLogWrite = false,
+    bool skipStateWrite = false,
   });
 
   /// Get the current state of an entity for field-level comparison.

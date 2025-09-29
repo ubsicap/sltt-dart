@@ -22,13 +22,18 @@ class MultiServerLauncher {
     print('[MultiServerLauncher] All servers started successfully');
   }
 
-  Future<StartResponse> startServer(StorageType storageType, int port) async {
+  Future<StartResponse> startServer(
+    StorageType storageType,
+    int port, {
+    BaseStorageService? storage,
+  }) async {
     switch (storageType) {
       case StorageType.local:
         if (_localStorageServer == null) {
           _localStorageServer = LocalhostRestApiServer(
             StorageType.local,
             'SlttLocalStorage',
+            storage: storage,
           );
           return await _localStorageServer!.start(port: port);
         } else {
@@ -45,6 +50,7 @@ class MultiServerLauncher {
           _cloudStorageServer = LocalhostRestApiServer(
             StorageType.cloud,
             'SlttMockCloudStorage',
+            storage: storage,
           );
           return await _cloudStorageServer!.start(port: port);
         } else {

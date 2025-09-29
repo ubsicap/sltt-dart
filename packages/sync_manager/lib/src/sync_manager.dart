@@ -41,7 +41,7 @@ class SyncManager {
   // Get all projects that have changes to sync
 
   // Outsync changes from outsyncs to cloud storage
-  Future<OutsyncResult> outsyncToCloud() async {
+  Future<OutsyncResult> outsyncToCloud({List<String>? domainIds}) async {
     try {
       print('[SyncManager] Starting outsync to cloud...');
 
@@ -137,44 +137,54 @@ class SyncManager {
     }
   }
 
-  // Downsync changes from cloud storage to downsyncs
-  Future<DownsyncResult> downsyncFromCloud() async {
+  // Downsync changes from cloud storage to local state
+  Future<DownsyncResult> downsyncFromCloud({List<String>? domainIds}) async {
     ProjectCursorChanges projectCursorChanges = {};
     StorageSummaries storageSummaries = {};
     try {
       print('[SyncManager] Starting downsync from cloud...');
 
-      // First, get all projects from the cloud storage (authoritative source)
-      // /api/<domainCollection>', _handleGetDomainIds
-      final projectsResponse = await _dio.get('$_cloudStorageUrl/api/projects');
-      if (projectsResponse.statusCode != 200) {
-        throw Exception(
-          'Failed to get projects from cloud: ${projectsResponse.statusCode}',
+      if (domainIds != null && domainIds.isNotEmpty) {
+        print(
+          '[SyncManager] Downsync limited to specified domainIds: $domainIds',
         );
-      }
-
-      final projectsResponseData =
-          projectsResponse.data as Map<String, dynamic>;
-      final projects = (projectsResponseData['items'] as List<dynamic>)
-          .cast<String>();
-      print(
-        '[SyncManager] Found ${projects.length} projects in cloud: $projects',
-      );
-
-      if (projects.isEmpty) {
-        print('[SyncManager] No projects found in cloud to downsync');
-        return DownsyncResult(
-          success: true,
-          projectCursorChanges: {},
-          storageSummaries: {},
-          message: 'No projects found in cloud to downsync',
-          error: null,
-          errorStackTrace: null,
+      } else {
+        print('[SyncManager] Downsyncing all projects: ');
+        // First, get all projects from the cloud storage (authoritative source)
+        // /api/<domainCollection>', _handleGetDomainIds
+        final projectsResponse = await _dio.get(
+          '$_cloudStorageUrl/api/projects',
         );
+        if (projectsResponse.statusCode != 200) {
+          throw Exception(
+            'Failed to get projects from cloud: ${projectsResponse.statusCode}',
+          );
+        }
+
+        final projectsResponseData =
+            projectsResponse.data as Map<String, dynamic>;
+        final projects = (projectsResponseData['items'] as List<dynamic>)
+            .cast<String>();
+        print(
+          '[SyncManager] Found ${projects.length} projects in cloud: $projects',
+        );
+
+        if (projects.isEmpty) {
+          print('[SyncManager] No projects found in cloud to downsync');
+          return DownsyncResult(
+            success: true,
+            projectCursorChanges: {},
+            storageSummaries: {},
+            message: 'No projects found in cloud to downsync',
+            error: null,
+            errorStackTrace: null,
+          );
+        }
+        domainIds = projects.toList();
       }
 
       // For each project, downsync its changes with cursor-based pagination
-      for (final projectId in projects) {
+      for (final projectId in domainIds) {
         print('[SyncManager] Downsyncing project: $projectId');
 
         // Get the last sync state for this specific project
@@ -308,7 +318,7 @@ class SyncManager {
         projectCursorChanges: projectCursorChanges,
         storageSummaries: storageSummaries,
         message:
-            'Successfully downsynced $totalDownloadedCount changes from ${projects.length} projects',
+            'Successfully downsynced $totalDownloadedCount changes from ${domainIds.length} projects',
         error: null,
         errorStackTrace: null,
       );
@@ -327,14 +337,14 @@ class SyncManager {
   }
 
   // Perform full sync: outsync first, then downsync
-  Future<FullSyncResult> performFullSync() async {
+  Future<FullSyncResult> performFullSync({List<String>? domainIds}) async {
     print('[SyncManager] Starting full sync...');
 
     // Step 1: Outsync to cloud (deletes local changes immediately)
-    final outsyncResult = await outsyncToCloud();
+    final outsyncResult = await outsyncToCloud(domainIds: domainIds);
 
     // Step 2: Downsync from cloud
-    final downsyncResult = await downsyncFromCloud();
+    final downsyncResult = await downsyncFromCloud(domainIds: domainIds);
 
     // Use the already computed deleted local sequences from outsync result
     final finalOutsyncResult = OutsyncResult(

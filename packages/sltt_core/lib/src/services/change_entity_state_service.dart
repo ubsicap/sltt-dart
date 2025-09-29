@@ -1,8 +1,6 @@
 import 'dart:convert';
 
-import 'package:sltt_core/src/models/base_change_log_entry.dart';
-import 'package:sltt_core/src/models/base_entity_state.dart';
-import 'package:sltt_core/src/utils/json_utils.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 class LastWriteWinsResult {
   /// may or may not be the same as the incoming changeLogEntryToWrite
@@ -108,7 +106,9 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
       if (additionalWarnings.isNotEmpty) ...{'warnings': additionalWarnings},
     }),
     'stateChanged': stateChanged,
-    'cloudAt': changeLogEntry.cloudAt,
+    'cloudAt': changeLogEntry.cloudAt != null
+        ? changeLogEntry.toJson()['cloudAt'] /* use UtcDateTimeConverter */
+        : null,
   };
   if (shouldPreserveData) {
     changeLogEntryUpdates['dataJson'] = changeLogEntry.dataJson;
@@ -216,15 +216,15 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult(
   final entityStateJson = entityState.toJson();
   final changeLogCid = changeLogEntry.cid;
 
-  final changeLogEntryChangeAt = changeLogEntry.cloudAt?.toIso8601String();
+  final changeLogEntryCloudAt = changeLogEntry.cloudAt?.toIso8601String();
 
   // todo: add test for checking latest cid first
   if (entityState.change_cid == changeLogCid) {
     isDuplicate = true;
-    if (changeLogEntryChangeAt != null &&
-        entityStateJson['change_cloudAt'] != changeLogEntryChangeAt) {
+    if (changeLogEntryCloudAt != null &&
+        entityStateJson['change_cloudAt'] != changeLogEntryCloudAt) {
       // Update latest-level cloudAt
-      stateUpdates['change_cloudAt'] = changeLogEntryChangeAt;
+      stateUpdates['change_cloudAt'] = changeLogEntryCloudAt;
     }
   }
 
@@ -238,10 +238,10 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult(
         final fieldWithoutCid = key.substring(0, key.length - 4);
         final entityStateFieldCloudAt =
             entityStateJson['${fieldWithoutCid}_cloudAt_'];
-        if (changeLogEntryChangeAt != null &&
-            entityStateFieldCloudAt != changeLogEntryChangeAt) {
+        if (changeLogEntryCloudAt != null &&
+            entityStateFieldCloudAt != changeLogEntryCloudAt) {
           // Update field-level cloudAt
-          stateUpdates['${fieldWithoutCid}_cloudAt_'] = changeLogEntryChangeAt;
+          stateUpdates['${fieldWithoutCid}_cloudAt_'] = changeLogEntryCloudAt;
         }
         break;
       }

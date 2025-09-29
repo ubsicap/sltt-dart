@@ -1095,6 +1095,7 @@ void main() {
               'entityId': 'test-project-entity-5',
               'changeBy': 'user1',
               'changeAt': DateTime.now().toUtc().toIso8601String(),
+              'cloudAt': DateTime.now().toUtc().toIso8601String(),
               'cid': generateCid(entityType: EntityType.task),
               'storageId': 'remote-storage-id', // Non-empty for sync mode
               'seq': 1,
@@ -1122,8 +1123,19 @@ void main() {
               reason: 'Sync mode should succeed: ${result.errorMessage}',
             );
 
-            // NOTE: Current implementation stores change log entry in local storage for sync mode
-            // TODO: According to requirements, local storage in sync mode should typically
+            expect(
+              result.resultsSummary,
+              isNotNull,
+              reason: 'Results summary should be returned',
+            );
+
+            expect(
+              result.resultsSummary!.created,
+              equals([changeData['cid']]),
+              reason: 'One change log entry should be created',
+            );
+
+            // According to requirements, local storage in sync mode should typically
             // only update state (unless hosting team storage)
             final changes = await localStorage.getChangesWithCursor(
               domainType: 'project',
@@ -1131,9 +1143,8 @@ void main() {
             );
             expect(
               changes.length,
-              equals(1),
-              reason:
-                  'Current implementation: Local storage stores change log entry in sync mode',
+              equals(0),
+              reason: 'Local storage stores change log entry in sync mode',
             );
 
             // Verify state was updated

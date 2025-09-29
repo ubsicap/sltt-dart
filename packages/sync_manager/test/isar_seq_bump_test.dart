@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:isar_community/isar.dart';
@@ -26,19 +25,7 @@ void main() {
 
   tearDown(() async {
     await storage.close();
-    final dir = Directory('./isar_db');
-    if (await dir.exists()) {
-      final files = await dir.list().toList();
-      for (final file in files) {
-        if (file.path.contains(testDbName)) {
-          try {
-            await file.delete();
-          } catch (e) {
-            // Ignore errors during cleanup
-          }
-        }
-      }
-    }
+    await storage.deleteDatabase();
   });
 
   test('save auto-increments seq when autoIncrement provided', () async {

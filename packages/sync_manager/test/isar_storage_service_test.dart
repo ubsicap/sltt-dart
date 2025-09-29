@@ -87,26 +87,13 @@ void main() {
     testDbName =
         'test_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1 << 31)}';
     storage = IsarStorageService(testDbName, 'Test');
+    await storage.deleteDatabase();
     await storage.initialize();
   });
 
   tearDown(() async {
     // Close storage service
     await storage.close();
-    // Clean up test database files
-    final dir = Directory('./isar_db');
-    if (await dir.exists()) {
-      final files = await dir.list().toList();
-      for (final file in files) {
-        if (file.path.contains(testDbName)) {
-          try {
-            await file.delete();
-          } catch (e) {
-            // Ignore deletion errors during cleanup
-          }
-        }
-      }
-    }
   });
 
   group('IsarStorageService Basic Operations', () {

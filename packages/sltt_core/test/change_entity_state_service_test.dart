@@ -300,33 +300,36 @@ void main() {
         expect(warnings['operation'], equals(''));
       });
 
-      test('should not report empty change log entry operation for save mode', () {
-        final entry = TestChangeLogEntry(
-          entityId: 'e1',
-          entityType: 'task',
-          domainId: 'd1',
-          domainType: 'project',
-          changeAt: baseTime,
-          cid: 'c1',
-          storageId: 'local',
-          changeBy: 'user1',
-          dataJson: jsonEncode({'data_nameLocal': 'Task 1'}),
-          operation: '',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
+      test(
+        'should not report empty change log entry operation for save mode',
+        () {
+          final entry = TestChangeLogEntry(
+            entityId: 'e1',
+            entityType: 'task',
+            domainId: 'd1',
+            domainType: 'project',
+            changeAt: baseTime,
+            cid: 'c1',
+            storageId: 'local',
+            changeBy: 'user1',
+            dataJson: jsonEncode({'data_nameLocal': 'Task 1'}),
+            operation: '',
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            unknownJson: jsonEncode({}),
+          );
 
-        final warnings = getAdditionalWarnings(
-          operation: 'update',
-          changeLogEntry: entry,
-          entityState: entityState,
-          stateUpdates: <String, dynamic>{},
-          storageMode: 'save',
-        );
+          final warnings = getAdditionalWarnings(
+            operation: 'update',
+            changeLogEntry: entry,
+            entityState: entityState,
+            stateUpdates: <String, dynamic>{},
+            storageMode: 'save',
+          );
 
-        expect(warnings.containsKey('operation'), isFalse);
-      });
+          expect(warnings.containsKey('operation'), isFalse);
+        },
+      );
     });
 
     group('getMaybeIsDuplicateCidResult', () {
@@ -575,7 +578,7 @@ void main() {
             }),
             'stateChanged': true,
             'dataJson': jsonEncode({'rank': '2'}),
-            'cloudAt': changeLogEntry.cloudAt,
+            'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
           }),
         );
       });
@@ -583,6 +586,7 @@ void main() {
       test('preserves incoming data when targetStorageId differs (cloud)', () {
         // incoming change originated from 'local' but is being sent to 'cloud'
         final newerTime = baseTime.add(const Duration(minutes: 5));
+        final cloudAt = DateTime.now();
         final changeLogEntry = TestChangeLogEntry(
           entityId: 'entity1',
           entityType: 'task',
@@ -597,6 +601,7 @@ void main() {
           operationInfoJson: jsonEncode({}),
           stateChanged: true,
           unknownJson: jsonEncode({}),
+          cloudAt: cloudAt,
         );
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
@@ -614,7 +619,7 @@ void main() {
               'noOpFields': ['rank'],
             }),
             'stateChanged': false,
-            'cloudAt': changeLogEntry.cloudAt,
+            'cloudAt': changeLogEntry.cloudAt!.toUtc().toIso8601String(),
             'dataJson': jsonEncode({'rank': entityState.data_rank}),
           }),
         );
@@ -663,7 +668,7 @@ void main() {
                 'parentId': 'parent2',
                 'nameLocal': 'New Name',
               }),
-              'cloudAt': changeLogEntry.cloudAt,
+              'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
             }),
           );
 
@@ -814,7 +819,7 @@ void main() {
             }),
             'stateChanged': false,
             'dataJson': jsonEncode({}),
-            'cloudAt': changeLogEntry.cloudAt,
+            'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
           }),
         );
       });
@@ -983,10 +988,49 @@ void main() {
             }),
             'stateChanged': true,
             'dataJson': jsonEncode({'deleted': true}),
-            'cloudAt': changeLogEntry.cloudAt,
+            'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
           }),
         );
       });
+
+      test(
+        'changeUpdates cloudAt is a serialized ISO string when non-null',
+        () {
+          // create a change with an explicit cloudAt DateTime
+          final cloudTime = DateTime.parse('2023-01-01T02:00:00Z');
+          final changeLogEntry = TestChangeLogEntry(
+            entityId: 'entityX',
+            entityType: 'task',
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: baseTime.add(const Duration(minutes: 1)),
+            cid: 'cid-cloud',
+            storageId: 'cloud',
+            changeBy: 'user1',
+            dataJson: jsonEncode({'rank': '1'}),
+            operation: 'update',
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            unknownJson: jsonEncode({}),
+            cloudAt: cloudTime,
+          );
+
+          final updates = getUpdatesForChangeLogEntryAndEntityState(
+            changeLogEntry,
+            null,
+            storageMode: 'save',
+          );
+
+          final cloudVal = updates.changeUpdates['cloudAt'];
+          // Must be present
+          expect(cloudVal, isNotNull);
+          // And must be serialized as a String (not a DateTime object)
+          expect(cloudVal, isA<String>());
+          // And parsable back to the original instant
+          final parsed = DateTime.parse(cloudVal as String).toUtc();
+          expect(parsed, equals(cloudTime.toUtc()));
+        },
+      );
 
       test(
         'should use latest timestamp pathway when change is newer than latest',
@@ -1126,7 +1170,7 @@ void main() {
               }),
               'stateChanged': false,
               'dataJson': jsonEncode({}),
-              'cloudAt': changeLogEntry.cloudAt,
+              'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
             }),
           );
           expect(updates.stateUpdates, equals({}));
@@ -1212,7 +1256,7 @@ void main() {
               }),
               'stateChanged': true,
               'dataJson': jsonEncode({'rank': '2'}),
-              'cloudAt': changeLogEntry.cloudAt,
+              'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
             }),
           );
           // Latest metadata should NOT be updated to reflect this change

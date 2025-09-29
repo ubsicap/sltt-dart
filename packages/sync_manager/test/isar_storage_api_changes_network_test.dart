@@ -37,24 +37,6 @@ void main() {
   IsarStorageService? storage;
   const testDbName = 'test_local_api_changes';
 
-  Future<void> cleanupTestDatabase() async {
-    try {
-      // Clean up any existing test database files
-      final dir = Directory('./isar_db');
-      if (await dir.exists()) {
-        final files = await dir.list().toList();
-        for (final file in files) {
-          if (file.path.contains(testDbName)) {
-            await file.delete();
-          }
-        }
-      }
-    } catch (e) {
-      // Ignore cleanup errors - they're not critical
-      print('Warning: Could not clean up test database: $e');
-    }
-  }
-
   Future<Uri> resolveBaseUrl() async {
     // Use a completer to serialize initialization and avoid double-starting
     // the server if multiple tests call resolveBaseUrl concurrently.
@@ -69,11 +51,10 @@ void main() {
       return baseUrl!;
     }
 
-    // Clean up any existing test database first
-    await cleanupTestDatabase();
-
     // Create IsarStorageService with a consistent test database name
     storage = IsarStorageService(testDbName, 'TestLocalStorage');
+    // Clean up any existing test database first
+    await storage!.deleteDatabase();
     await storage!.initialize();
     final app = TestServer(serverName: 'sync-manager-it', storage: storage!);
     final handler = const Pipeline().addHandler(app.router().call);
@@ -91,6 +72,11 @@ void main() {
     isarChangeLogEntryFactoryRegistration;
   });
 
+  setUp(() async {
+    // Ensure the server is started and baseUrl is available before each test
+    await resolveBaseUrl();
+  });
+
   tearDownAll(() async {
     if (server != null) {
       await server!.close(force: true);
@@ -98,8 +84,6 @@ void main() {
     if (storage != null) {
       await storage!.close();
     }
-    // Clean up test database after tests complete
-    await cleanupTestDatabase();
   });
 
   // Create the test suite instance

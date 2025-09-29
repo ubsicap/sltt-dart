@@ -1,4 +1,7 @@
 # setup_test_env.ps1
+# NOTE FOR AUTOMATION AGENTS: Prefer running `dart test` directly after cd to `sync_manager`
+# Only fall back to this script if Isar DLL load errors persist, and even then
+# be aware it may not fully resolve the issue on every system.
 # 1) Locate isar.dll in the local Pub cache (hosted pub.dev)
 # 2) Copy it into the package .dart_tool\isar folder (so tools that look there find it)
 # 3) Prepend the DLL folder to PATH for this session (so the Windows loader can find it when tests run from temp dirs)
