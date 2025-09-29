@@ -269,13 +269,192 @@ void main() {
     });
 
     test(
+      'full sync: outsynced lww local changes and downsynced cloud changes',
+      () async {
+        final syncManager = SyncManager.instance;
+        final local = LocalStorageService.instance;
+        final cloud = CloudStorageService.instance;
+
+        // seed cloud first then local so local lww change wins
+        const projectId = '__test_full_cloud_local_lww';
+        final cloudChange = IsarChangeLogEntry(
+          changeAt: DateTime.now().subtract(const Duration(minutes: 1)),
+          cid: generateCid(
+            entityType: EntityType.project,
+            userId: 'cloud-full',
+          ),
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'project',
+          operation: 'create',
+          entityId: projectId,
+          dataJson: stableStringify({
+            ...BaseDataFields(
+              parentId: 'root',
+              parentProp: 'projects',
+            ).toJson(),
+            'nameLocal': 'Edited by cloud-full',
+          }),
+          changeBy: 'cloud-full',
+          stateChanged: false,
+          storageId: '',
+          unknownJson: '{}',
+          operationInfoJson: '{}',
+        );
+
+        final cloudSeed = await ChangeProcessingService.processChanges(
+          storageMode: 'save',
+          changes: [cloudChange.toJson()],
+          srcStorageType: srcStorageType,
+          srcStorageId: srcStorageId,
+          storage: cloud,
+          includeChangeUpdates: true,
+          includeStateUpdates: true,
+        );
+        expect(
+          cloudSeed.isSuccess,
+          isTrue,
+          reason:
+              'Seeding cloud storage for full sync should succeed: ${cloudSeed.errorMessage}',
+        );
+        expect(
+          cloudSeed.resultsSummary?.toJson(),
+          equals({
+            'storageType': 'cloud',
+            'storageId': await cloud.getStorageId(),
+            'stateUpdates': isA<List<Map<String, dynamic>>>(),
+            'changeUpdates': isA<List<Map<String, dynamic>>>(),
+            'created': [cloudChange.cid],
+            'updated': [],
+            'deleted': [],
+            'outdated': [],
+            'noOps': [],
+            'clouded': [],
+            'dups': [],
+            'unknowns': [],
+            'info': isA<List<Map<String, dynamic>>>(),
+            'errors': [],
+            'unprocessed': [],
+          }),
+          reason: 'Seeding cloud storage should process 1 change',
+        );
+        final localChange = IsarChangeLogEntry(
+          changeAt: DateTime.now(),
+          cid: generateCid(
+            entityType: EntityType.project,
+            userId: 'local-full',
+          ),
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'project',
+          operation: 'create',
+          entityId: projectId,
+          dataJson: stableStringify({
+            ...BaseDataFields(
+              parentId: 'root',
+              parentProp: 'projects',
+            ).toJson(),
+            'nameLocal': 'Edited by local-full',
+          }),
+          changeBy: 'local-full',
+          stateChanged: false,
+          storageId: '',
+          unknownJson: '{}',
+          operationInfoJson: '{}',
+        );
+        final localSeed = await ChangeProcessingService.processChanges(
+          storageMode: 'save',
+          changes: [localChange.toJson()],
+          srcStorageType: srcStorageType,
+          srcStorageId: srcStorageId,
+          storage: local,
+          includeChangeUpdates: true,
+          includeStateUpdates: true,
+        );
+        expect(
+          localSeed.isSuccess,
+          isTrue,
+          reason:
+              'Seeding local storage for full sync should succeed: ${localSeed.errorMessage}',
+        );
+        expect(
+          localSeed.resultsSummary?.toJson(),
+          equals({
+            'storageType': 'local',
+            'storageId': await local.getStorageId(),
+            'stateUpdates': isA<List<Map<String, dynamic>>>(),
+            'changeUpdates': isA<List<Map<String, dynamic>>>(),
+            'created': [localChange.cid],
+            'updated': [],
+            'deleted': [],
+            'outdated': [],
+            'noOps': [],
+            'clouded': [],
+            'dups': [],
+            'unknowns': [],
+            'info': isA<List<Map<String, dynamic>>>(),
+            'errors': [],
+            'unprocessed': [],
+          }),
+          reason: 'Seeding local storage should process 1 change',
+        );
+        await syncManager.initialize();
+        syncManager.configureCloudUrl(cloudBaseUrl);
+        final fullSyncResult = await syncManager.performFullSync();
+        expect(
+          fullSyncResult.success,
+          isTrue,
+          reason:
+              'Full sync should succeed: ${fullSyncResult.downsyncResult.error}',
+        );
+        expect(
+          fullSyncResult.outsyncResult.deletedLocalChanges,
+          contains(localChange.cid),
+          reason: 'Full sync should remove outsynced local change from storage',
+        );
+        expect(
+          fullSyncResult.downsyncResult.projectCursorChanges.values
+              .expand((changes) => changes)
+              .any((change) => change['entityId'] == projectId),
+          isTrue,
+          reason: 'Downsync should include the cloud project change',
+        );
+        // Verify outsynced project has no pending local-origin changes
+        final localStatus = await syncManager.getSyncStatus(projectId);
+        final pendingLocalChanges = await local.getChangesWithCursor(
+          domainType: 'project',
+          domainId: projectId,
+        );
+        expect(
+          pendingLocalChanges,
+          isEmpty,
+          reason:
+              'After full sync, project $projectId should have 0 pending local-origin changes',
+        );
+        expect(
+          localStatus.localStateStats?.totals.toJson(),
+          equals({
+            'creates': 1,
+            'updates': 1,
+            'deletes': 0,
+            'total': 2,
+            'latestChangeAt': localChange.changeAt.toIso8601String(),
+            'latestSeq': 3,
+          }),
+          reason:
+              'After full sync, project $projectId should have 1 local state entity',
+        );
+      },
+    );
+
+    test(
       'full sync: outsynced OUTDATED local changes and downsynced cloud changes',
       () async {
         final syncManager = SyncManager.instance;
         final local = LocalStorageService.instance;
         final cloud = CloudStorageService.instance;
 
-        const cloudProjectId = '__test_full_cloud';
+        const projectId = '__test_full_cloud_local_outdated';
 
         // Seed a local change that should be outsynced
         final localChange = IsarChangeLogEntry(
@@ -285,10 +464,10 @@ void main() {
             userId: 'local-full',
           ),
           domainType: 'project',
-          domainId: cloudProjectId,
+          domainId: projectId,
           entityType: 'project',
           operation: 'create',
-          entityId: cloudProjectId,
+          entityId: projectId,
           dataJson: stableStringify({
             ...BaseDataFields(
               parentId: 'root',
@@ -349,10 +528,10 @@ void main() {
             userId: 'cloud-full',
           ),
           domainType: 'project',
-          domainId: cloudProjectId,
+          domainId: projectId,
           entityType: 'project',
           operation: 'create',
-          entityId: cloudProjectId,
+          entityId: projectId,
           dataJson: stableStringify({
             ...BaseDataFields(
               parentId: 'root',
@@ -424,30 +603,30 @@ void main() {
         expect(
           fullSyncResult.downsyncResult.projectCursorChanges.values
               .expand((changes) => changes)
-              .any((change) => change['entityId'] == cloudProjectId),
+              .any((change) => change['entityId'] == projectId),
           isTrue,
           reason: 'Downsync should include the cloud project change',
         );
 
         // Verify outsynced project has no pending local-origin changes
-        final localStatus = await syncManager.getSyncStatus(cloudProjectId);
+        final localStatus = await syncManager.getSyncStatus(projectId);
         final pendingLocalChanges = await local.getChangesWithCursor(
           domainType: 'project',
-          domainId: cloudProjectId,
+          domainId: projectId,
         );
 
         expect(
           pendingLocalChanges,
           isEmpty,
           reason:
-              'Full sync should remove local-origin change log entries for $cloudProjectId, but got: ${(pendingLocalChanges).map((c) => c.toJson())}',
+              'Full sync should remove local-origin change log entries for $projectId, but got: ${(pendingLocalChanges).map((c) => c.toJson())}',
         );
 
         final totals = localStatus.localChangeStats?.totals;
         expect(
           totals,
           isNotNull,
-          reason: 'Change stats should be available for $cloudProjectId',
+          reason: 'Change stats should be available for $projectId',
         );
         expect(totals?.toJson(), {
           'creates': 1,
@@ -461,9 +640,9 @@ void main() {
         // Verify downsynced project exists locally
         final downsyncedState = await local.getCurrentEntityState(
           domainType: 'project',
-          domainId: cloudProjectId,
+          domainId: projectId,
           entityType: 'project',
-          entityId: cloudProjectId,
+          entityId: projectId,
         );
         expect(
           downsyncedState,
