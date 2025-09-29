@@ -20,6 +20,9 @@ ChangeProcessingSummary _$ChangeProcessingSummaryFromJson(
   created: (json['created'] as List<dynamic>).map((e) => e as String).toList(),
   updated: (json['updated'] as List<dynamic>).map((e) => e as String).toList(),
   deleted: (json['deleted'] as List<dynamic>).map((e) => e as String).toList(),
+  outdated: (json['outdated'] as List<dynamic>)
+      .map((e) => e as String)
+      .toList(),
   noOps: (json['noOps'] as List<dynamic>).map((e) => e as String).toList(),
   clouded: (json['clouded'] as List<dynamic>).map((e) => e as String).toList(),
   dups: (json['dups'] as List<dynamic>).map((e) => e as String).toList(),
@@ -47,6 +50,7 @@ Map<String, dynamic> _$ChangeProcessingSummaryToJson(
   'created': instance.created,
   'updated': instance.updated,
   'deleted': instance.deleted,
+  'outdated': instance.outdated,
   'noOps': instance.noOps,
   'clouded': instance.clouded,
   'dups': instance.dups,

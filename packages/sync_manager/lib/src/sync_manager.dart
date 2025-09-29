@@ -32,7 +32,8 @@ class SyncManager {
 
     _dio.options.headers['Content-Type'] = 'application/json';
     _dio.options.connectTimeout = const Duration(seconds: 10);
-    _dio.options.receiveTimeout = const Duration(seconds: 30);
+    _dio.options.receiveTimeout = const Duration(seconds: 300);
+    _dio.options.sendTimeout = const Duration(seconds: 300);
 
     _initialized = true;
     print('[SyncManager] Initialized with cloud URL: $_cloudStorageUrl');
@@ -103,9 +104,9 @@ class SyncManager {
         } else {
           // Handle partial failure
 
-          print('[SyncManager] Partial outsync nothing processed');
+          final message = '### Partial outsync: nothing processed!';
+          print('[SyncManager] $message');
 
-          final message = 'Partial nothing processed';
           return OutsyncResult(
             success: false,
             message: message,

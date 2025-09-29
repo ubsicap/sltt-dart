@@ -27,6 +27,9 @@ class ChangeProcessingSummary {
   /// A list of deleted entity IDs
   List<String> deleted;
 
+  /// A list of outdated entity IDs (received change is older than current state)
+  List<String> outdated;
+
   /// A list of no-op entity IDs
   List<String> noOps;
 
@@ -49,6 +52,7 @@ class ChangeProcessingSummary {
     ...created,
     ...updated,
     ...deleted,
+    ...outdated,
     ...noOps,
     ...clouded,
     ...dups,
@@ -65,6 +69,7 @@ class ChangeProcessingSummary {
     required this.created,
     required this.updated,
     required this.deleted,
+    required this.outdated,
     required this.noOps,
     required this.clouded,
     required this.dups,

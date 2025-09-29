@@ -226,6 +226,7 @@ class ChangeProcessingService {
         created: [],
         updated: [],
         deleted: [],
+        outdated: [],
         noOps: [],
         clouded: [], // duplicates from the cloud
         dups: [],
@@ -535,6 +536,8 @@ class ChangeProcessingService {
       resultsSummary.updated.add(updateResults.newChangeLogEntry.cid);
     } else if (newOperation == 'delete') {
       resultsSummary.deleted.add(updateResults.newChangeLogEntry.cid);
+    } else if (newOperation == 'outdated') {
+      resultsSummary.outdated.add(updateResults.newChangeLogEntry.cid);
     } else if (newOperation == 'no-op') {
       resultsSummary.noOps.add(updateResults.newChangeLogEntry.cid);
     } else if (result.isDuplicate) {
