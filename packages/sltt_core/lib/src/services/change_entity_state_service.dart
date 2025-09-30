@@ -102,6 +102,10 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
             ? const UtcDateTimeConverter().toJson(DateTime.now())
             : null);
 
+  final String storedAt = storageType == 'cloud'
+      ? cloudAt!
+      : const UtcDateTimeConverter().toJson(DateTime.now());
+
   // Build the full set of change-log entry updates callers can apply
   // Decide whether to preserve incoming change data in the change-log entry.
   // In "sync" mode we generally preserve the incoming data when it originated
@@ -116,6 +120,7 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
       if (additionalWarnings.isNotEmpty) ...{'warnings': additionalWarnings},
     }),
     'stateChanged': stateChanged,
+    'storedAt': storedAt,
     'cloudAt': cloudAt,
     if (storageMode == 'save') ...{
       // In save mode the persisted change should indicate the storage that originally saved it

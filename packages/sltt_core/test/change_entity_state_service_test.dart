@@ -1442,6 +1442,104 @@ void main() {
           );
         },
       );
+
+      test('should add storedAt for local storage changes', () {
+        final changeLogEntry = TestChangeLogEntry(
+          entityId: 'entity1',
+          entityType: 'task',
+          domainId: 'project1',
+          domainType: 'project',
+          changeAt: baseTime.add(const Duration(minutes: 1)),
+          cid: 'cid-store-1',
+          storageId: '',
+          changeBy: 'user1',
+          dataJson: jsonEncode({'rank': '1'}),
+          operation: 'update',
+          operationInfoJson: jsonEncode({}),
+          stateChanged: true,
+          unknownJson: jsonEncode({}),
+        );
+
+        final updates = getUpdatesForChangeLogEntryAndEntityState(
+          changeLogEntry,
+          entityState,
+          storageMode: 'save',
+          storageType: 'local',
+          targetStorageId: 'localId-1',
+        );
+
+        expect(
+          updates.changeUpdates.containsKey('storedAt'),
+          isTrue,
+          reason:
+              'storedAt should be added for local storage changes, but was missing',
+        );
+        final storedAtVal = updates.changeUpdates['storedAt'];
+        expect(storedAtVal, isNotNull);
+        expect(storedAtVal, isA<String>());
+        final parsed = DateTime.parse(storedAtVal as String);
+        expect(
+          parsed.isUtc,
+          isTrue,
+          reason: 'storedAt should be in UTC, but was not: $parsed',
+        );
+        expect(
+          parsed.isAfter(baseTime),
+          isTrue,
+          reason: 'storedAt should be after baseTime, but was not: $parsed',
+        );
+      });
+
+      test('should add storedAt for cloud storage changes (match cloudAt)', () {
+        final cloudAt = DateTime.parse('2023-01-01T02:00:00Z');
+        final changeLogEntry = TestChangeLogEntry(
+          entityId: 'entity1',
+          entityType: 'task',
+          domainId: 'project1',
+          domainType: 'project',
+          changeAt: baseTime.add(const Duration(minutes: 1)),
+          cid: 'cid-cloud-store-1',
+          storageId: 'localId-1',
+          changeBy: 'user1',
+          dataJson: jsonEncode({'rank': '1'}),
+          operation: 'update',
+          operationInfoJson: jsonEncode({}),
+          stateChanged: true,
+          unknownJson: jsonEncode({}),
+          cloudAt: cloudAt,
+        );
+
+        final updates = getUpdatesForChangeLogEntryAndEntityState(
+          changeLogEntry,
+          entityState,
+          storageMode: 'sync',
+          storageType: 'cloud',
+          targetStorageId: 'cloudId-1',
+        );
+
+        expect(
+          updates.changeUpdates.containsKey('storedAt'),
+          isTrue,
+          reason:
+              'storedAt should be added for cloud storage changes, but was missing',
+        );
+        final storedAtVal = updates.changeUpdates['storedAt'];
+        expect(storedAtVal, isNotNull);
+        expect(storedAtVal, isA<String>());
+        final parsed = DateTime.parse(storedAtVal as String);
+        expect(
+          parsed.isUtc,
+          isTrue,
+          reason: 'storedAt should be in UTC, but was not: $parsed',
+        );
+        // storedAt should match cloudAt in this pathway
+        expect(
+          parsed.toUtc(),
+          equals(cloudAt.toUtc()),
+          reason:
+              'storedAt should match cloudAt, but did not. storedAt=$parsed, cloudAt=$cloudAt',
+        );
+      });
     });
   });
 }
