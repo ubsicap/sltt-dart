@@ -83,7 +83,7 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
       (updates['stateUpdates'] as Map<String, dynamic>?) ?? <String, dynamic>{};
   final outdatedBys = (updates['outdatedBys'] as List<String>? ?? <String>[]);
   final operation = (updates['operation'] as String? ?? '');
-  final stateChanged = operation != 'noOp' && operation != 'outdated';
+  final stateChanged = stateUpdates.isNotEmpty;
   Map<String, dynamic> additionalWarnings = getAdditionalWarnings(
     operation: operation,
     changeLogEntry: changeLogEntry,

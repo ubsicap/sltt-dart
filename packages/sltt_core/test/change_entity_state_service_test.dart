@@ -777,7 +777,7 @@ void main() {
               'outdatedBys': ['rank'],
               'noOpFields': ['parentProp', 'nameLocal'],
             }),
-            'stateChanged': false,
+            'stateChanged': true,
             'cloudAt': null,
             'dataJson': jsonEncode({'parentId': 'parent2'}),
           }),
