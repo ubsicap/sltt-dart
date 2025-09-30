@@ -193,6 +193,9 @@ class IsarStorageService extends BaseStorageService {
       // downstream clients can recognize it as cloud-origin and skip
       // re-syncing it back up.
       newChange.cloudAt ??= maybeCreateCloudAt();
+      // storedAt should reflect the time the backend stored the change.
+      // For cloud-backed storages prefer cloudAt; otherwise use current time.
+      newChange.storedAt = newChange.cloudAt ?? DateTime.now().toUtc();
     } else {
       print(
         'updateChangeLogAndState - skipping change log write for cid=${newChange.cid} (cloudAt=${newChange.cloudAt})',

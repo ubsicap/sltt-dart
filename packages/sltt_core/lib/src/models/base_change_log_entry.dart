@@ -53,6 +53,10 @@ abstract class BaseChangeLogEntry
   DateTime? cloudAt;
 
   @override
+  @UtcDateTimeConverter()
+  DateTime? storedAt;
+
+  @override
   String changeBy;
 
   int? schemaVersion = 0;
@@ -121,6 +125,7 @@ abstract class BaseChangeLogEntry
     this.operationInfoJson = '{}',
     this.dataSchemaRev,
     this.cloudAt,
+    this.storedAt,
     required this.changeBy,
     this.schemaVersion,
     this.unknownJson = '{}',
@@ -140,6 +145,7 @@ abstract class BaseChangeLogEntry
     required Map<String, dynamic> data,
     int? dataSchemaRev,
     DateTime? cloudAt,
+    DateTime? storedAt,
     required String changeBy,
     required String cid,
     int? schemaVersion,
@@ -157,6 +163,7 @@ abstract class BaseChangeLogEntry
          operationInfoJson: jsonEncode(operationInfo),
          dataSchemaRev: dataSchemaRev,
          cloudAt: cloudAt,
+         storedAt: storedAt,
          changeBy: changeBy,
          schemaVersion: schemaVersion,
          unknownJson: jsonEncode(unknown),
@@ -184,6 +191,7 @@ mixin StorageResponsibilities {
   String get operation;
   String get operationInfoJson;
   bool get stateChanged;
+  DateTime? get storedAt;
   DateTime? get cloudAt;
 
   /// The ID of the storage used to save this change log entry.

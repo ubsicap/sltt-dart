@@ -89,8 +89,13 @@ const IsarChangeLogEntrySchema = CollectionSchema(
       name: r'storageId',
       type: IsarType.string,
     ),
-    r'unknownJson': PropertySchema(
+    r'storedAt': PropertySchema(
       id: 15,
+      name: r'storedAt',
+      type: IsarType.dateTime,
+    ),
+    r'unknownJson': PropertySchema(
+      id: 16,
       name: r'unknownJson',
       type: IsarType.string,
     ),
@@ -166,7 +171,8 @@ void _isarChangeLogEntrySerialize(
   writer.writeLong(offsets[12], object.schemaVersion);
   writer.writeBool(offsets[13], object.stateChanged);
   writer.writeString(offsets[14], object.storageId);
-  writer.writeString(offsets[15], object.unknownJson);
+  writer.writeDateTime(offsets[15], object.storedAt);
+  writer.writeString(offsets[16], object.unknownJson);
 }
 
 IsarChangeLogEntry _isarChangeLogEntryDeserialize(
@@ -192,7 +198,8 @@ IsarChangeLogEntry _isarChangeLogEntryDeserialize(
     seq: id,
     stateChanged: reader.readBool(offsets[13]),
     storageId: reader.readString(offsets[14]),
-    unknownJson: reader.readStringOrNull(offsets[15]) ?? '{}',
+    storedAt: reader.readDateTimeOrNull(offsets[15]),
+    unknownJson: reader.readStringOrNull(offsets[16]) ?? '{}',
   );
   return object;
 }
@@ -235,6 +242,8 @@ P _isarChangeLogEntryDeserializeProp<P>(
     case 14:
       return (reader.readString(offset)) as P;
     case 15:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 16:
       return (reader.readStringOrNull(offset) ?? '{}') as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2196,6 +2205,79 @@ extension IsarChangeLogEntryQueryFilter
   }
 
   QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  storedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'storedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  storedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'storedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  storedAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'storedAt', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  storedAtGreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'storedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  storedAtLessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'storedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  storedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'storedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
   unknownJsonEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -2556,6 +2638,20 @@ extension IsarChangeLogEntryQuerySortBy
   }
 
   QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
+  sortByStoredAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
+  sortByStoredAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
   sortByUnknownJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.asc);
@@ -2797,6 +2893,20 @@ extension IsarChangeLogEntryQuerySortThenBy
   }
 
   QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
+  thenByStoredAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
+  thenByStoredAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
   thenByUnknownJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.asc);
@@ -2922,6 +3032,13 @@ extension IsarChangeLogEntryQueryWhereDistinct
   }
 
   QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
+  distinctByStoredAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'storedAt');
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
   distinctByUnknownJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'unknownJson', caseSensitive: caseSensitive);
@@ -3041,6 +3158,13 @@ extension IsarChangeLogEntryQueryProperty
     });
   }
 
+  QueryBuilder<IsarChangeLogEntry, DateTime?, QQueryOperations>
+  storedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'storedAt');
+    });
+  }
+
   QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
   unknownJsonProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -3072,6 +3196,13 @@ IsarChangeLogEntry _$IsarChangeLogEntryFromJson(Map<String, dynamic> json) =>
         dataJson: $checkedConvert('dataJson', (v) => v as String),
         cloudAt: $checkedConvert(
           'cloudAt',
+          (v) => _$JsonConverterFromJson<String, DateTime>(
+            v,
+            const UtcDateTimeConverter().fromJson,
+          ),
+        ),
+        storedAt: $checkedConvert(
+          'storedAt',
           (v) => _$JsonConverterFromJson<String, DateTime>(
             v,
             const UtcDateTimeConverter().fromJson,
@@ -3116,6 +3247,10 @@ Map<String, dynamic> _$IsarChangeLogEntryToJson(IsarChangeLogEntry instance) =>
       'dataSchemaRev': instance.dataSchemaRev,
       'cloudAt': _$JsonConverterToJson<String, DateTime>(
         instance.cloudAt,
+        const UtcDateTimeConverter().toJson,
+      ),
+      'storedAt': _$JsonConverterToJson<String, DateTime>(
+        instance.storedAt,
         const UtcDateTimeConverter().toJson,
       ),
       'changeBy': instance.changeBy,

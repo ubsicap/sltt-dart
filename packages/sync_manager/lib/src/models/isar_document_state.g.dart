@@ -67,168 +67,173 @@ const IsarDocumentStateSchema = CollectionSchema(
       name: r'change_domainId_orig_',
       type: IsarType.string,
     ),
-    r'data_contentLength': PropertySchema(
+    r'change_storedAt': PropertySchema(
       id: 10,
+      name: r'change_storedAt',
+      type: IsarType.dateTime,
+    ),
+    r'data_contentLength': PropertySchema(
+      id: 11,
       name: r'data_contentLength',
       type: IsarType.long,
     ),
     r'data_deleted': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'data_deleted',
       type: IsarType.bool,
     ),
     r'data_deleted_changeAt_': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'data_deleted_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_deleted_changeBy_': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'data_deleted_changeBy_',
       type: IsarType.string,
     ),
     r'data_deleted_cid_': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'data_deleted_cid_',
       type: IsarType.string,
     ),
     r'data_deleted_cloudAt_': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'data_deleted_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_deleted_dataSchemaRev_': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'data_deleted_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_parentId': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'data_parentId',
       type: IsarType.string,
     ),
     r'data_parentId_changeAt_': PropertySchema(
-      id: 18,
+      id: 19,
       name: r'data_parentId_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentId_changeBy_': PropertySchema(
-      id: 19,
+      id: 20,
       name: r'data_parentId_changeBy_',
       type: IsarType.string,
     ),
     r'data_parentId_cid_': PropertySchema(
-      id: 20,
+      id: 21,
       name: r'data_parentId_cid_',
       type: IsarType.string,
     ),
     r'data_parentId_cloudAt_': PropertySchema(
-      id: 21,
+      id: 22,
       name: r'data_parentId_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentId_dataSchemaRev_': PropertySchema(
-      id: 22,
+      id: 23,
       name: r'data_parentId_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_parentProp': PropertySchema(
-      id: 23,
+      id: 24,
       name: r'data_parentProp',
       type: IsarType.string,
     ),
     r'data_parentProp_changeAt_': PropertySchema(
-      id: 24,
+      id: 25,
       name: r'data_parentProp_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentProp_changeBy_': PropertySchema(
-      id: 25,
+      id: 26,
       name: r'data_parentProp_changeBy_',
       type: IsarType.string,
     ),
     r'data_parentProp_cid_': PropertySchema(
-      id: 26,
+      id: 27,
       name: r'data_parentProp_cid_',
       type: IsarType.string,
     ),
     r'data_parentProp_cloudAt_': PropertySchema(
-      id: 27,
+      id: 28,
       name: r'data_parentProp_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentProp_dataSchemaRev_': PropertySchema(
-      id: 28,
+      id: 29,
       name: r'data_parentProp_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_rank': PropertySchema(
-      id: 29,
+      id: 30,
       name: r'data_rank',
       type: IsarType.string,
     ),
     r'data_rank_changeAt_': PropertySchema(
-      id: 30,
+      id: 31,
       name: r'data_rank_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_rank_changeBy_': PropertySchema(
-      id: 31,
+      id: 32,
       name: r'data_rank_changeBy_',
       type: IsarType.string,
     ),
     r'data_rank_cid_': PropertySchema(
-      id: 32,
+      id: 33,
       name: r'data_rank_cid_',
       type: IsarType.string,
     ),
     r'data_rank_cloudAt_': PropertySchema(
-      id: 33,
+      id: 34,
       name: r'data_rank_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_rank_dataSchemaRev_': PropertySchema(
-      id: 34,
+      id: 35,
       name: r'data_rank_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_title': PropertySchema(
-      id: 35,
+      id: 36,
       name: r'data_title',
       type: IsarType.string,
     ),
     r'data_title_changeAt_': PropertySchema(
-      id: 36,
+      id: 37,
       name: r'data_title_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_title_cid_': PropertySchema(
-      id: 37,
+      id: 38,
       name: r'data_title_cid_',
       type: IsarType.string,
     ),
     r'domainType': PropertySchema(
-      id: 38,
+      id: 39,
       name: r'domainType',
       type: IsarType.string,
     ),
     r'entityId': PropertySchema(
-      id: 39,
+      id: 40,
       name: r'entityId',
       type: IsarType.string,
     ),
     r'entityType': PropertySchema(
-      id: 40,
+      id: 41,
       name: r'entityType',
       type: IsarType.string,
     ),
     r'schemaVersion': PropertySchema(
-      id: 41,
+      id: 42,
       name: r'schemaVersion',
       type: IsarType.long,
     ),
     r'unknownJson': PropertySchema(
-      id: 42,
+      id: 43,
       name: r'unknownJson',
       type: IsarType.string,
     ),
@@ -346,39 +351,40 @@ void _isarDocumentStateSerialize(
   writer.writeLong(offsets[7], object.change_dataSchemaRev);
   writer.writeString(offsets[8], object.change_domainId);
   writer.writeString(offsets[9], object.change_domainId_orig_);
-  writer.writeLong(offsets[10], object.data_contentLength);
-  writer.writeBool(offsets[11], object.data_deleted);
-  writer.writeDateTime(offsets[12], object.data_deleted_changeAt_);
-  writer.writeString(offsets[13], object.data_deleted_changeBy_);
-  writer.writeString(offsets[14], object.data_deleted_cid_);
-  writer.writeDateTime(offsets[15], object.data_deleted_cloudAt_);
-  writer.writeLong(offsets[16], object.data_deleted_dataSchemaRev_);
-  writer.writeString(offsets[17], object.data_parentId);
-  writer.writeDateTime(offsets[18], object.data_parentId_changeAt_);
-  writer.writeString(offsets[19], object.data_parentId_changeBy_);
-  writer.writeString(offsets[20], object.data_parentId_cid_);
-  writer.writeDateTime(offsets[21], object.data_parentId_cloudAt_);
-  writer.writeLong(offsets[22], object.data_parentId_dataSchemaRev_);
-  writer.writeString(offsets[23], object.data_parentProp);
-  writer.writeDateTime(offsets[24], object.data_parentProp_changeAt_);
-  writer.writeString(offsets[25], object.data_parentProp_changeBy_);
-  writer.writeString(offsets[26], object.data_parentProp_cid_);
-  writer.writeDateTime(offsets[27], object.data_parentProp_cloudAt_);
-  writer.writeLong(offsets[28], object.data_parentProp_dataSchemaRev_);
-  writer.writeString(offsets[29], object.data_rank);
-  writer.writeDateTime(offsets[30], object.data_rank_changeAt_);
-  writer.writeString(offsets[31], object.data_rank_changeBy_);
-  writer.writeString(offsets[32], object.data_rank_cid_);
-  writer.writeDateTime(offsets[33], object.data_rank_cloudAt_);
-  writer.writeLong(offsets[34], object.data_rank_dataSchemaRev_);
-  writer.writeString(offsets[35], object.data_title);
-  writer.writeDateTime(offsets[36], object.data_title_changeAt_);
-  writer.writeString(offsets[37], object.data_title_cid_);
-  writer.writeString(offsets[38], object.domainType);
-  writer.writeString(offsets[39], object.entityId);
-  writer.writeString(offsets[40], object.entityType);
-  writer.writeLong(offsets[41], object.schemaVersion);
-  writer.writeString(offsets[42], object.unknownJson);
+  writer.writeDateTime(offsets[10], object.change_storedAt);
+  writer.writeLong(offsets[11], object.data_contentLength);
+  writer.writeBool(offsets[12], object.data_deleted);
+  writer.writeDateTime(offsets[13], object.data_deleted_changeAt_);
+  writer.writeString(offsets[14], object.data_deleted_changeBy_);
+  writer.writeString(offsets[15], object.data_deleted_cid_);
+  writer.writeDateTime(offsets[16], object.data_deleted_cloudAt_);
+  writer.writeLong(offsets[17], object.data_deleted_dataSchemaRev_);
+  writer.writeString(offsets[18], object.data_parentId);
+  writer.writeDateTime(offsets[19], object.data_parentId_changeAt_);
+  writer.writeString(offsets[20], object.data_parentId_changeBy_);
+  writer.writeString(offsets[21], object.data_parentId_cid_);
+  writer.writeDateTime(offsets[22], object.data_parentId_cloudAt_);
+  writer.writeLong(offsets[23], object.data_parentId_dataSchemaRev_);
+  writer.writeString(offsets[24], object.data_parentProp);
+  writer.writeDateTime(offsets[25], object.data_parentProp_changeAt_);
+  writer.writeString(offsets[26], object.data_parentProp_changeBy_);
+  writer.writeString(offsets[27], object.data_parentProp_cid_);
+  writer.writeDateTime(offsets[28], object.data_parentProp_cloudAt_);
+  writer.writeLong(offsets[29], object.data_parentProp_dataSchemaRev_);
+  writer.writeString(offsets[30], object.data_rank);
+  writer.writeDateTime(offsets[31], object.data_rank_changeAt_);
+  writer.writeString(offsets[32], object.data_rank_changeBy_);
+  writer.writeString(offsets[33], object.data_rank_cid_);
+  writer.writeDateTime(offsets[34], object.data_rank_cloudAt_);
+  writer.writeLong(offsets[35], object.data_rank_dataSchemaRev_);
+  writer.writeString(offsets[36], object.data_title);
+  writer.writeDateTime(offsets[37], object.data_title_changeAt_);
+  writer.writeString(offsets[38], object.data_title_cid_);
+  writer.writeString(offsets[39], object.domainType);
+  writer.writeString(offsets[40], object.entityId);
+  writer.writeString(offsets[41], object.entityType);
+  writer.writeLong(offsets[42], object.schemaVersion);
+  writer.writeString(offsets[43], object.unknownJson);
 }
 
 IsarDocumentState _isarDocumentStateDeserialize(
@@ -398,40 +404,40 @@ IsarDocumentState _isarDocumentStateDeserialize(
     change_dataSchemaRev: reader.readLongOrNull(offsets[7]),
     change_domainId: reader.readString(offsets[8]),
     change_domainId_orig_: reader.readString(offsets[9]),
-    data_contentLength: reader.readLongOrNull(offsets[10]),
-    data_deleted: reader.readBoolOrNull(offsets[11]),
-    data_deleted_changeAt_: reader.readDateTimeOrNull(offsets[12]),
-    data_deleted_changeBy_: reader.readStringOrNull(offsets[13]),
-    data_deleted_cid_: reader.readStringOrNull(offsets[14]),
-    data_deleted_cloudAt_: reader.readDateTimeOrNull(offsets[15]),
-    data_deleted_dataSchemaRev_: reader.readLongOrNull(offsets[16]),
-    data_parentId: reader.readString(offsets[17]),
-    data_parentId_changeAt_: reader.readDateTime(offsets[18]),
-    data_parentId_changeBy_: reader.readString(offsets[19]),
-    data_parentId_cid_: reader.readString(offsets[20]),
-    data_parentId_cloudAt_: reader.readDateTimeOrNull(offsets[21]),
-    data_parentId_dataSchemaRev_: reader.readLongOrNull(offsets[22]),
-    data_parentProp: reader.readString(offsets[23]),
-    data_parentProp_changeAt_: reader.readDateTime(offsets[24]),
-    data_parentProp_changeBy_: reader.readString(offsets[25]),
-    data_parentProp_cid_: reader.readString(offsets[26]),
-    data_parentProp_cloudAt_: reader.readDateTimeOrNull(offsets[27]),
-    data_parentProp_dataSchemaRev_: reader.readLongOrNull(offsets[28]),
-    data_rank: reader.readStringOrNull(offsets[29]),
-    data_rank_changeAt_: reader.readDateTimeOrNull(offsets[30]),
-    data_rank_changeBy_: reader.readStringOrNull(offsets[31]),
-    data_rank_cid_: reader.readStringOrNull(offsets[32]),
-    data_rank_cloudAt_: reader.readDateTimeOrNull(offsets[33]),
-    data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[34]),
-    data_title: reader.readStringOrNull(offsets[35]),
-    data_title_changeAt_: reader.readDateTimeOrNull(offsets[36]),
-    data_title_cid_: reader.readStringOrNull(offsets[37]),
-    domainType: reader.readString(offsets[38]),
-    entityId: reader.readString(offsets[39]),
-    entityType: reader.readStringOrNull(offsets[40]) ?? 'document',
+    data_contentLength: reader.readLongOrNull(offsets[11]),
+    data_deleted: reader.readBoolOrNull(offsets[12]),
+    data_deleted_changeAt_: reader.readDateTimeOrNull(offsets[13]),
+    data_deleted_changeBy_: reader.readStringOrNull(offsets[14]),
+    data_deleted_cid_: reader.readStringOrNull(offsets[15]),
+    data_deleted_cloudAt_: reader.readDateTimeOrNull(offsets[16]),
+    data_deleted_dataSchemaRev_: reader.readLongOrNull(offsets[17]),
+    data_parentId: reader.readString(offsets[18]),
+    data_parentId_changeAt_: reader.readDateTime(offsets[19]),
+    data_parentId_changeBy_: reader.readString(offsets[20]),
+    data_parentId_cid_: reader.readString(offsets[21]),
+    data_parentId_cloudAt_: reader.readDateTimeOrNull(offsets[22]),
+    data_parentId_dataSchemaRev_: reader.readLongOrNull(offsets[23]),
+    data_parentProp: reader.readString(offsets[24]),
+    data_parentProp_changeAt_: reader.readDateTime(offsets[25]),
+    data_parentProp_changeBy_: reader.readString(offsets[26]),
+    data_parentProp_cid_: reader.readString(offsets[27]),
+    data_parentProp_cloudAt_: reader.readDateTimeOrNull(offsets[28]),
+    data_parentProp_dataSchemaRev_: reader.readLongOrNull(offsets[29]),
+    data_rank: reader.readStringOrNull(offsets[30]),
+    data_rank_changeAt_: reader.readDateTimeOrNull(offsets[31]),
+    data_rank_changeBy_: reader.readStringOrNull(offsets[32]),
+    data_rank_cid_: reader.readStringOrNull(offsets[33]),
+    data_rank_cloudAt_: reader.readDateTimeOrNull(offsets[34]),
+    data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[35]),
+    data_title: reader.readStringOrNull(offsets[36]),
+    data_title_changeAt_: reader.readDateTimeOrNull(offsets[37]),
+    data_title_cid_: reader.readStringOrNull(offsets[38]),
+    domainType: reader.readString(offsets[39]),
+    entityId: reader.readString(offsets[40]),
+    entityType: reader.readStringOrNull(offsets[41]) ?? 'document',
     id: id,
-    schemaVersion: reader.readLongOrNull(offsets[41]),
-    unknownJson: reader.readString(offsets[42]),
+    schemaVersion: reader.readLongOrNull(offsets[42]),
+    unknownJson: reader.readString(offsets[43]),
   );
   return object;
 }
@@ -464,70 +470,72 @@ P _isarDocumentStateDeserializeProp<P>(
     case 9:
       return (reader.readString(offset)) as P;
     case 10:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 11:
-      return (reader.readBoolOrNull(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 12:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readBoolOrNull(offset)) as P;
     case 13:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 14:
       return (reader.readStringOrNull(offset)) as P;
     case 15:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 16:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 17:
-      return (reader.readString(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 18:
-      return (reader.readDateTime(offset)) as P;
-    case 19:
       return (reader.readString(offset)) as P;
+    case 19:
+      return (reader.readDateTime(offset)) as P;
     case 20:
       return (reader.readString(offset)) as P;
     case 21:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 22:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 23:
-      return (reader.readString(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 24:
-      return (reader.readDateTime(offset)) as P;
-    case 25:
       return (reader.readString(offset)) as P;
+    case 25:
+      return (reader.readDateTime(offset)) as P;
     case 26:
       return (reader.readString(offset)) as P;
     case 27:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 28:
-      return (reader.readLongOrNull(offset)) as P;
-    case 29:
-      return (reader.readStringOrNull(offset)) as P;
-    case 30:
       return (reader.readDateTimeOrNull(offset)) as P;
-    case 31:
+    case 29:
+      return (reader.readLongOrNull(offset)) as P;
+    case 30:
       return (reader.readStringOrNull(offset)) as P;
+    case 31:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 32:
       return (reader.readStringOrNull(offset)) as P;
     case 33:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 34:
-      return (reader.readLongOrNull(offset)) as P;
-    case 35:
-      return (reader.readStringOrNull(offset)) as P;
-    case 36:
       return (reader.readDateTimeOrNull(offset)) as P;
-    case 37:
+    case 35:
+      return (reader.readLongOrNull(offset)) as P;
+    case 36:
       return (reader.readStringOrNull(offset)) as P;
+    case 37:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 38:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 39:
       return (reader.readString(offset)) as P;
     case 40:
-      return (reader.readStringOrNull(offset) ?? 'document') as P;
+      return (reader.readString(offset)) as P;
     case 41:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset) ?? 'document') as P;
     case 42:
+      return (reader.readLongOrNull(offset)) as P;
+    case 43:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1853,6 +1861,61 @@ extension IsarDocumentStateQueryFilter
         FilterCondition.greaterThan(
           property: r'change_domainId_orig_',
           value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  change_storedAtEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'change_storedAt', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  change_storedAtGreaterThan(DateTime value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'change_storedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  change_storedAtLessThan(DateTime value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'change_storedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  change_storedAtBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'change_storedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
         ),
       );
     });
@@ -5743,6 +5806,20 @@ extension IsarDocumentStateQuerySortBy
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  sortByChange_storedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'change_storedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  sortByChange_storedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'change_storedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
   sortByData_contentLength() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_contentLength', Sort.asc);
@@ -6348,6 +6425,20 @@ extension IsarDocumentStateQuerySortThenBy
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  thenByChange_storedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'change_storedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  thenByChange_storedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'change_storedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
   thenByData_contentLength() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_contentLength', Sort.asc);
@@ -6911,6 +7002,13 @@ extension IsarDocumentStateQueryWhereDistinct
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QDistinct>
+  distinctByChange_storedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'change_storedAt');
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QDistinct>
   distinctByData_contentLength() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'data_contentLength');
@@ -7250,6 +7348,13 @@ extension IsarDocumentStateQueryProperty
   change_domainId_orig_Property() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'change_domainId_orig_');
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, DateTime, QQueryOperations>
+  change_storedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'change_storedAt');
     });
   }
 

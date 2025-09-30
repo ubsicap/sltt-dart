@@ -29,6 +29,9 @@ abstract class BaseEntityState
   @override
   final DateTime change_changeAt;
   @override
+  @UtcDateTimeConverter()
+  final DateTime change_storedAt;
+  @override
   final DateTime change_changeAt_orig_;
   @override
   final String change_cid;
@@ -101,6 +104,7 @@ abstract class BaseEntityState
     required String change_domainId_orig_,
     required this.change_changeAt,
     required DateTime change_changeAt_orig_,
+    DateTime? change_storedAt,
     required this.change_cid,
     required String change_cid_orig_,
     this.change_dataSchemaRev,
@@ -140,6 +144,11 @@ abstract class BaseEntityState
          change_changeAt_orig_,
          change_changeAt,
        ),
+       change_storedAt = BaseEntityState.normalizeStoredAt(
+         change_storedAt,
+         change_cloudAt,
+         change_changeAt,
+       ),
        change_cid_orig_ = BaseEntityState.normalizeOrigString(
          change_cid_orig_,
          change_cid,
@@ -171,6 +180,21 @@ abstract class BaseEntityState
     return orig.isAtSameMomentAs(defaultOrigDateTime()) == true
         ? current
         : orig;
+  }
+
+  /// Determine storedAt value for change entries.
+  /// Preference order:
+  /// 1) explicit storedAt (orig param)
+  /// 2) cloudAt (if present)
+  /// 3) changeAt (fallback)
+  static DateTime normalizeStoredAt(
+    DateTime? storedAt,
+    DateTime? cloudAt,
+    DateTime changeAt,
+  ) {
+    if (storedAt != null) return storedAt.toUtc();
+    if (cloudAt != null) return cloudAt.toUtc();
+    return changeAt.toUtc();
   }
 
   static DateTime? normalizeOrigDateTimeNullable(
@@ -224,6 +248,7 @@ mixin CoreEntityStateDataFields {
 
 mixin CoreChangeLogEntryFields {
   DateTime get change_changeAt;
+  DateTime get change_storedAt;
   String get change_changeBy;
   String get change_cid;
   DateTime? get change_cloudAt;

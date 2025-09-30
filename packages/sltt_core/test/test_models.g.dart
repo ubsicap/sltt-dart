@@ -18,6 +18,13 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
           'changeAt',
           (v) => const UtcDateTimeConverter().fromJson(v as String),
         ),
+        storedAt: $checkedConvert(
+          'storedAt',
+          (v) => _$JsonConverterFromJson<String, DateTime>(
+            v,
+            const UtcDateTimeConverter().fromJson,
+          ),
+        ),
         storageId: $checkedConvert('storageId', (v) => v as String? ?? ''),
         changeBy: $checkedConvert('changeBy', (v) => v as String),
         dataJson: $checkedConvert('dataJson', (v) => v as String),
@@ -68,6 +75,10 @@ Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
         instance.cloudAt,
         const UtcDateTimeConverter().toJson,
       ),
+      'storedAt': _$JsonConverterToJson<String, DateTime>(
+        instance.storedAt,
+        const UtcDateTimeConverter().toJson,
+      ),
       'changeBy': instance.changeBy,
       'schemaVersion': instance.schemaVersion,
       'unknownJson': instance.unknownJson,
@@ -105,6 +116,13 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
         change_changeAt: $checkedConvert(
           'change_changeAt',
           (v) => DateTime.parse(v as String),
+        ),
+        change_storedAt: $checkedConvert(
+          'change_storedAt',
+          (v) => _$JsonConverterFromJson<String, DateTime>(
+            v,
+            const UtcDateTimeConverter().fromJson,
+          ),
         ),
         change_changeAt_orig_: $checkedConvert(
           'change_changeAt_orig_',
@@ -223,6 +241,9 @@ Map<String, dynamic> _$TestEntityStateToJson(
   'change_domainId': instance.change_domainId,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
+  'change_storedAt': const UtcDateTimeConverter().toJson(
+    instance.change_storedAt,
+  ),
   'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),
   'change_cid': instance.change_cid,
   'change_cid_orig_': instance.change_cid_orig_,
