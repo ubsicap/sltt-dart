@@ -308,6 +308,8 @@ class ChangeProcessingService {
             changeLogEntry,
             entityState,
             storageMode: storageMode,
+            storageType: targetStorageType,
+            targetStorageId: targetStorageId,
           );
 
           // Debug: log detailed result info
@@ -344,10 +346,6 @@ class ChangeProcessingService {
 
           // Ensure changeUpdates reflect the storage's identity in save mode
           final changeUpdates = <String, dynamic>{...result.changeUpdates};
-          if (storageMode == 'save') {
-            // In save mode the persisted change should indicate the storage that saved it
-            changeUpdates['storageId'] = targetStorageId;
-          }
 
           final shouldSkipChangeLogWrite =
               result.isDuplicate ||

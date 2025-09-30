@@ -36,11 +36,14 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   BaseChangeLogEntry changeLogEntry,
   BaseEntityState? entityState, {
   required String storageMode,
+  required String storageType,
+  required String targetStorageId,
 }) {
   // Duplicate CID detection
   final duplicateCheck = getMaybeIsDuplicateCidResult(
-    changeLogEntry,
-    entityState,
+    changeLogEntry: changeLogEntry,
+    entityState: entityState,
+    storageType: storageType,
   );
 
   if (duplicateCheck.isDuplicate) {
@@ -52,6 +55,7 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     );
   }
 
+  // TODO: some errors we may want to save, at least for audit trail on cloud storage
   if (['error', 'no-op', 'hold'].contains(changeLogEntry.operation)) {
     return const GetUpdateResults(
       isDuplicate: false,
@@ -92,6 +96,12 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     storageMode: storageMode,
   );
 
+  final String? cloudAt = changeLogEntry.cloudAt != null
+      ? changeLogEntry.toJson()['cloudAt'] /* use UtcDateTimeConverter */
+      : (storageType == 'cloud'
+            ? const UtcDateTimeConverter().toJson(DateTime.now())
+            : null);
+
   // Build the full set of change-log entry updates callers can apply
   // Decide whether to preserve incoming change data in the change-log entry.
   // In "sync" mode we generally preserve the incoming data when it originated
@@ -106,9 +116,11 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
       if (additionalWarnings.isNotEmpty) ...{'warnings': additionalWarnings},
     }),
     'stateChanged': stateChanged,
-    'cloudAt': changeLogEntry.cloudAt != null
-        ? changeLogEntry.toJson()['cloudAt'] /* use UtcDateTimeConverter */
-        : null,
+    'cloudAt': cloudAt,
+    if (storageMode == 'save') ...{
+      // In save mode the persisted change should indicate the storage that originally saved it
+      'storageId': targetStorageId,
+    },
   };
   if (shouldPreserveData) {
     changeLogEntryUpdates['dataJson'] = changeLogEntry.dataJson;
@@ -197,10 +209,11 @@ class GetMaybeIsDuplicateCidResult {
 /// Checks if the given change log entry is a duplicate based on its cid.
 ///
 /// @returns { isDuplicate: boolean, cloudAt?: DateTime }
-GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult(
-  BaseChangeLogEntry changeLogEntry,
-  BaseEntityState? entityState,
-) {
+GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult({
+  required BaseChangeLogEntry changeLogEntry,
+  required BaseEntityState? entityState,
+  required String storageType,
+}) {
   // Implement the logic to check for duplicate cid
   bool isDuplicate = false;
   final stateUpdates = <String, dynamic>{};
@@ -218,10 +231,10 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult(
 
   final changeLogEntryCloudAt = changeLogEntry.cloudAt?.toIso8601String();
 
-  // todo: add test for checking latest cid first
   if (entityState.change_cid == changeLogCid) {
     isDuplicate = true;
-    if (changeLogEntryCloudAt != null &&
+    if (storageType == 'local' &&
+        changeLogEntryCloudAt != null &&
         entityStateJson['change_cloudAt'] != changeLogEntryCloudAt) {
       // Update latest-level cloudAt
       stateUpdates['change_cloudAt'] = changeLogEntryCloudAt;

@@ -341,7 +341,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime,
           cid: 'cid1', // Same as entity state
-          storageId: 'local',
+          storageId: 'localId',
           changeBy: 'user1',
           dataJson: jsonEncode({'rank': '1'}),
           operation: 'update',
@@ -351,12 +351,83 @@ void main() {
         );
 
         final result = getMaybeIsDuplicateCidResult(
-          changeLogEntry,
-          entityState,
+          changeLogEntry: changeLogEntry,
+          entityState: entityState,
+          storageType: 'local',
         );
 
         expect(result.isDuplicate, isTrue);
       });
+
+      test(
+        'should return duplicate with cloudAt stateUpdates for local storageType',
+        () {
+          final changeLogEntry = TestChangeLogEntry(
+            entityId: 'entity1',
+            entityType: 'task',
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: baseTime,
+            cid: 'cid1', // Same as entity state
+            storageId: 'localId',
+            changeBy: 'user1',
+            dataJson: jsonEncode({'rank': '1'}),
+            operation: 'update',
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            unknownJson: jsonEncode({}),
+            cloudAt: baseTime.add(const Duration(minutes: 10)),
+          );
+
+          final result = getMaybeIsDuplicateCidResult(
+            changeLogEntry: changeLogEntry,
+            entityState: entityState,
+            storageType: 'local',
+          );
+
+          expect(result.isDuplicate, isTrue);
+          expect(result.stateUpdates, isNotNull);
+          expect(
+            result.stateUpdates,
+            equals({
+              'change_cloudAt': changeLogEntry.cloudAt!
+                  .toUtc()
+                  .toIso8601String(), // should match
+            }),
+          );
+        },
+      );
+
+      test(
+        'should not return cloudAt stateUpdates for duplicate with cloudAt for cloud storageType',
+        () {
+          final changeLogEntry = TestChangeLogEntry(
+            entityId: 'entity1',
+            entityType: 'task',
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: baseTime,
+            cid: 'cid1', // Same as entity state
+            storageId: 'localId',
+            changeBy: 'user1',
+            dataJson: jsonEncode({'rank': '1'}),
+            operation: 'update',
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            unknownJson: jsonEncode({}),
+            cloudAt: baseTime.add(const Duration(minutes: 10)),
+          );
+
+          final result = getMaybeIsDuplicateCidResult(
+            changeLogEntry: changeLogEntry,
+            entityState: entityState,
+            storageType: 'cloud',
+          );
+
+          expect(result.isDuplicate, isTrue);
+          expect(result.stateUpdates, isEmpty);
+        },
+      );
 
       test('should return false for different CID', () {
         final changeLogEntry = TestChangeLogEntry(
@@ -376,8 +447,9 @@ void main() {
         );
 
         final result = getMaybeIsDuplicateCidResult(
-          changeLogEntry,
-          entityState,
+          changeLogEntry: changeLogEntry,
+          entityState: entityState,
+          storageType: 'local',
         );
 
         expect(result.isDuplicate, isFalse);
@@ -531,7 +603,7 @@ void main() {
           domainType: 'project',
           changeAt: newerTime,
           cid: 'cid2',
-          storageId: 'local',
+          storageId: '',
           changeBy: 'user2',
           dataJson: jsonEncode({'rank': '2'}),
           operation: 'update',
@@ -543,6 +615,8 @@ void main() {
           changeLogEntry,
           entityState,
           storageMode: 'save',
+          storageType: 'local',
+          targetStorageId: 'localId',
         );
 
         // Entity state should update via stateUpdates
@@ -577,6 +651,7 @@ void main() {
               'noOpFields': [],
             }),
             'stateChanged': true,
+            'storageId': 'localId',
             'dataJson': jsonEncode({'rank': '2'}),
             'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
           }),
@@ -594,7 +669,7 @@ void main() {
           domainType: 'project',
           changeAt: newerTime,
           cid: 'cid-local-1',
-          storageId: 'local',
+          storageId: 'localId-1' /* original */,
           changeBy: 'user2',
           dataJson: jsonEncode({'rank': entityState.data_rank}),
           operation: 'update',
@@ -607,6 +682,8 @@ void main() {
           changeLogEntry,
           entityState,
           storageMode: 'sync',
+          storageType: 'local',
+          targetStorageId: 'localId-2',
         );
 
         // Operation should be computed as noOp and report noOpFields; data subset is omitted
@@ -630,6 +707,7 @@ void main() {
         () {
           // incoming has rank same as existing (no-op), parentId changed and nameLocal new
           final changeLogEntry = TestChangeLogEntry(
+            storageId: '',
             entityId: 'entity1',
             entityType: 'task',
             domainId: 'project1',
@@ -653,6 +731,8 @@ void main() {
             changeLogEntry,
             entityState,
             storageMode: 'save',
+            storageType: 'local',
+            targetStorageId: 'localId',
           );
 
           expect(
@@ -664,6 +744,7 @@ void main() {
                 'noOpFields': ['rank', 'parentProp'],
               }),
               'stateChanged': true,
+              'storageId': 'localId',
               'dataJson': jsonEncode({
                 'parentId': 'parent2',
                 'nameLocal': 'New Name',
@@ -748,7 +829,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime, // between olderTime and newerFieldTime
           cid: 'cid7',
-          storageId: 'local',
+          storageId: '',
           changeBy: 'user2',
           dataJson: jsonEncode({
             'rank': '1',
@@ -766,6 +847,8 @@ void main() {
           changeLogEntry,
           entityStateMixed,
           storageMode: 'save',
+          storageType: 'local',
+          targetStorageId: 'localId',
         );
 
         // rank should be outdated, nameLocal no-op, parentId should be applied
@@ -778,6 +861,7 @@ void main() {
               'noOpFields': ['parentProp', 'nameLocal'],
             }),
             'stateChanged': true,
+            'storageId': 'localId',
             'cloudAt': null,
             'dataJson': jsonEncode({'parentId': 'parent2'}),
           }),
@@ -794,7 +878,7 @@ void main() {
           domainType: 'project',
           changeAt: olderTime,
           cid: 'cid2',
-          storageId: 'local',
+          storageId: '',
           changeBy: 'user2',
           dataJson: jsonEncode({'rank': '3'}),
           operation: 'update',
@@ -807,6 +891,8 @@ void main() {
           changeLogEntry,
           entityState,
           storageMode: 'save',
+          storageType: 'local',
+          targetStorageId: 'localId',
         );
 
         expect(
@@ -818,6 +904,7 @@ void main() {
               'noOpFields': [],
             }),
             'stateChanged': false,
+            'storageId': 'localId',
             'dataJson': jsonEncode({}),
             'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
           }),
@@ -826,6 +913,7 @@ void main() {
 
       test('should handle new entity creation', () {
         final changeLogEntry = TestChangeLogEntry(
+          storageId: '',
           entityId: 'entity2',
           entityType: 'task',
           domainId: 'project1',
@@ -848,6 +936,8 @@ void main() {
           changeLogEntry,
           null, // No existing entity state
           storageMode: 'save',
+          storageType: 'local',
+          targetStorageId: 'localId',
         );
 
         expect(
@@ -859,6 +949,7 @@ void main() {
               'noOpFields': [],
             }),
             'stateChanged': true,
+            'storageId': 'localId',
             'cloudAt': null,
             'dataJson': jsonEncode({
               'rank': '1',
@@ -906,6 +997,7 @@ void main() {
 
       test('should populate nameLocal from change data', () {
         final changeLogEntry = TestChangeLogEntry(
+          storageId: '',
           entityId: 'entity3',
           entityType: 'task',
           domainId: 'project1',
@@ -928,6 +1020,8 @@ void main() {
           changeLogEntry,
           null,
           storageMode: 'save',
+          storageType: 'local',
+          targetStorageId: 'localId',
         );
 
         expect(updates.stateUpdates['data_parentId'], equals('parent3'));
@@ -945,6 +1039,7 @@ void main() {
               'noOpFields': [],
             }),
             'stateChanged': true,
+            'storageId': 'localId',
             'dataJson': jsonEncode({
               'nameLocal': 'Localized Name',
               'parentId': 'parent3',
@@ -963,7 +1058,7 @@ void main() {
           domainType: 'project',
           changeAt: baseTime.add(const Duration(minutes: 1)),
           cid: 'cid4',
-          storageId: 'local',
+          storageId: '',
           changeBy: 'user1',
           dataJson: jsonEncode({'deleted': true}),
           operation: 'delete',
@@ -976,6 +1071,8 @@ void main() {
           changeLogEntry,
           entityState,
           storageMode: 'save',
+          storageType: 'local',
+          targetStorageId: 'localId',
         );
 
         expect(
@@ -987,6 +1084,7 @@ void main() {
               'noOpFields': [],
             }),
             'stateChanged': true,
+            'storageId': 'localId',
             'dataJson': jsonEncode({'deleted': true}),
             'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
           }),
@@ -994,18 +1092,64 @@ void main() {
       });
 
       test(
-        'changeUpdates cloudAt is a serialized ISO string when non-null',
+        'changeUpdates cloudAt is assigned when null in cloud storageType',
         () {
-          // create a change with an explicit cloudAt DateTime
-          final cloudTime = DateTime.parse('2023-01-01T02:00:00Z');
+          // create a change with a null cloudAt
           final changeLogEntry = TestChangeLogEntry(
             entityId: 'entityX',
             entityType: 'task',
             domainId: 'project1',
             domainType: 'project',
             changeAt: baseTime.add(const Duration(minutes: 1)),
-            cid: 'cid-cloud',
-            storageId: 'cloud',
+            cid: 'cid-cloud-sync',
+            storageId: 'localId-1',
+            changeBy: 'user1',
+            dataJson: jsonEncode({'rank': '1'}),
+            operation: 'update',
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            unknownJson: jsonEncode({}),
+            cloudAt: null,
+          );
+
+          final updates = getUpdatesForChangeLogEntryAndEntityState(
+            changeLogEntry,
+            null,
+            storageMode: 'sync',
+            storageType: 'cloud',
+            targetStorageId: 'cloudId-1',
+          );
+
+          final cloudVal = updates.changeUpdates['cloudAt'];
+          // Must be present
+          expect(cloudVal, isNotNull);
+          // And must be serialized as a String (not a DateTime object)
+          expect(cloudVal, isA<String>());
+          // And parsable back to the original instant
+          final parsed = DateTime.parse(cloudVal as String);
+          expect(
+            parsed.isUtc,
+            isTrue,
+            reason: 'Should be in UTC, but was not: $parsed',
+          );
+          // preserve original storageId in this pathway
+          expect(updates.changeUpdates['storageId'], isNull);
+        },
+      );
+
+      test(
+        'changeUpdates cloudAt is a serialized ISO string when non-null',
+        () {
+          // create a change with an explicit cloudAt DateTime
+          final cloudTime = DateTime.parse('2023-01-01T02:00:00Z');
+          final changeLogEntry = TestChangeLogEntry(
+            entityId: 'entityY',
+            entityType: 'task',
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: baseTime.add(const Duration(minutes: 1)),
+            cid: 'cid-cloud-sync2',
+            storageId: 'localId-1',
             changeBy: 'user1',
             dataJson: jsonEncode({'rank': '1'}),
             operation: 'update',
@@ -1018,7 +1162,9 @@ void main() {
           final updates = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
             null,
-            storageMode: 'save',
+            storageMode: 'sync',
+            storageType: 'cloud',
+            targetStorageId: 'cloudId-1',
           );
 
           final cloudVal = updates.changeUpdates['cloudAt'];
@@ -1038,6 +1184,7 @@ void main() {
           // Test the case where incoming change is newer than the latest timestamp
           final newerTime = baseTime.add(const Duration(minutes: 5));
           final changeLogEntry = TestChangeLogEntry(
+            storageId: '',
             entityId: 'entity1',
             entityType: 'task',
             domainId: 'project1',
@@ -1056,6 +1203,8 @@ void main() {
             changeLogEntry,
             entityState, // Uses baseTime as latest change
             storageMode: 'save',
+            storageType: 'local',
+            targetStorageId: 'localId',
           );
 
           expect(
@@ -1067,6 +1216,7 @@ void main() {
                 'noOpFields': [],
               }),
               'stateChanged': true,
+              'storageId': 'localId',
               'dataJson': jsonEncode({'rank': '2'}),
               'cloudAt': null,
             }),
@@ -1090,6 +1240,18 @@ void main() {
         },
       );
 
+      test(
+        'should create change log entry for some non-state-changing errors in cloud storage',
+        () {
+          // TODO: generate a change producing an error that should be stored in cloudStorage
+          // Do we also want to do this for any local storage errors?
+        },
+        skip: 'Not implemented yet',
+      );
+
+      // this is interesting because it creates a change entry log even though
+      // the state hasn't changed
+      // should we do this for errors in the cloud sync pathway too?
       test(
         'should use field-level pathway when change is older than latest - outdated',
         () {
@@ -1158,6 +1320,8 @@ void main() {
             changeLogEntry,
             entityStateWithNewerField,
             storageMode: 'save',
+            storageType: 'local',
+            targetStorageId: 'localId',
           );
 
           expect(
@@ -1169,6 +1333,7 @@ void main() {
                 'noOpFields': [],
               }),
               'stateChanged': false,
+              'storageId': 'localId',
               'dataJson': jsonEncode({}),
               'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
             }),
@@ -1244,6 +1409,8 @@ void main() {
             changeLogEntry,
             entityStateWithOlderField,
             storageMode: 'save',
+            storageType: 'local',
+            targetStorageId: 'localId',
           );
 
           expect(
@@ -1255,6 +1422,7 @@ void main() {
                 'noOpFields': [],
               }),
               'stateChanged': true,
+              'storageId': 'localId',
               'dataJson': jsonEncode({'rank': '2'}),
               'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
             }),
