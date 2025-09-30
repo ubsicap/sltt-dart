@@ -593,6 +593,26 @@ void main() {
     });
 
     group('getUpdatesForChangeLogEntryAndEntityState', () {
+      // Helper: remove dynamic 'storedAt' from changeUpdates before deep-equality
+      // comparisons in tests that don't assert on storedAt specifically.
+      Map<String, dynamic> normalizeChangeUpdatesForAssert(
+        Map<String, dynamic> m,
+      ) {
+        final copy = Map<String, dynamic>.from(m);
+        copy.remove('storedAt');
+        return copy;
+      }
+
+      // Helper: remove dynamic 'change_storedAt' from stateUpdates before deep-equality
+      // comparisons in tests that don't assert on this field specifically.
+      Map<String, dynamic> normalizeStateUpdatesForAssert(
+        Map<String, dynamic> m,
+      ) {
+        final copy = Map<String, dynamic>.from(m);
+        copy.remove('change_storedAt');
+        return copy;
+      }
+
       test('should handle field-level conflict resolution', () {
         // Create a change log entry with newer field changes
         final newerTime = baseTime.add(const Duration(minutes: 5));
@@ -621,7 +641,7 @@ void main() {
 
         // Entity state should update via stateUpdates
         expect(
-          updates.stateUpdates,
+          normalizeStateUpdatesForAssert(updates.stateUpdates),
           equals({
             'change_domainType': 'project',
             'change_domainId': 'project1',
@@ -643,7 +663,7 @@ void main() {
         );
         // Validate change-log entry updates
         expect(
-          updates.changeUpdates,
+          normalizeChangeUpdatesForAssert(updates.changeUpdates),
           equals({
             'operation': 'update',
             'operationInfoJson': jsonEncode({
@@ -688,7 +708,7 @@ void main() {
 
         // Operation should be computed as noOp and report noOpFields; data subset is omitted
         expect(
-          updates.changeUpdates,
+          normalizeChangeUpdatesForAssert(updates.changeUpdates),
           equals({
             'operation': 'noOp',
             'operationInfoJson': jsonEncode({
@@ -736,7 +756,7 @@ void main() {
           );
 
           expect(
-            updates.changeUpdates,
+            normalizeChangeUpdatesForAssert(updates.changeUpdates),
             equals({
               'operation': 'update',
               'operationInfoJson': jsonEncode({
@@ -754,7 +774,7 @@ void main() {
           );
 
           expect(
-            updates.stateUpdates,
+            normalizeStateUpdatesForAssert(updates.stateUpdates),
             equals({
               'change_domainType': 'project',
               'change_domainId': 'project1',
@@ -853,7 +873,7 @@ void main() {
 
         // rank should be outdated, nameLocal no-op, parentId should be applied
         expect(
-          updates.changeUpdates,
+          normalizeChangeUpdatesForAssert(updates.changeUpdates),
           equals({
             'operation': 'outdated',
             'operationInfoJson': jsonEncode({
@@ -896,7 +916,7 @@ void main() {
         );
 
         expect(
-          updates.changeUpdates,
+          normalizeChangeUpdatesForAssert(updates.changeUpdates),
           equals({
             'operation': 'outdated',
             'operationInfoJson': jsonEncode({
@@ -941,7 +961,7 @@ void main() {
         );
 
         expect(
-          updates.changeUpdates,
+          normalizeChangeUpdatesForAssert(updates.changeUpdates),
           equals({
             'operation': 'create',
             'operationInfoJson': jsonEncode({
@@ -960,7 +980,7 @@ void main() {
         );
         // stateUpdates should initialize entity fields appropriately
         expect(
-          updates.stateUpdates,
+          normalizeStateUpdatesForAssert(updates.stateUpdates),
           equals({
             'entityId': 'entity2',
             'domainType': 'project',
@@ -1031,7 +1051,7 @@ void main() {
         );
         // Validate change log entry
         expect(
-          updates.changeUpdates,
+          normalizeChangeUpdatesForAssert(updates.changeUpdates),
           equals({
             'operation': 'create',
             'operationInfoJson': jsonEncode({
@@ -1076,7 +1096,7 @@ void main() {
         );
 
         expect(
-          updates.changeUpdates,
+          normalizeChangeUpdatesForAssert(updates.changeUpdates),
           equals({
             'operation': 'delete',
             'operationInfoJson': jsonEncode({
@@ -1208,7 +1228,7 @@ void main() {
           );
 
           expect(
-            updates.changeUpdates,
+            normalizeChangeUpdatesForAssert(updates.changeUpdates),
             equals({
               'operation': 'update',
               'operationInfoJson': jsonEncode({
@@ -1222,7 +1242,7 @@ void main() {
             }),
           );
           expect(
-            updates.stateUpdates,
+            normalizeStateUpdatesForAssert(updates.stateUpdates),
             equals({
               'change_domainType': 'project',
               'change_domainId': 'project1',
@@ -1325,7 +1345,7 @@ void main() {
           );
 
           expect(
-            updates.changeUpdates,
+            normalizeChangeUpdatesForAssert(updates.changeUpdates),
             equals({
               'operation': 'outdated',
               'operationInfoJson': jsonEncode({
@@ -1414,7 +1434,7 @@ void main() {
           );
 
           expect(
-            updates.changeUpdates,
+            normalizeChangeUpdatesForAssert(updates.changeUpdates),
             equals({
               'operation': 'update',
               'operationInfoJson': jsonEncode({

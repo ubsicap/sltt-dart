@@ -78,6 +78,8 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     entityState,
     fieldChanges,
     noOpFields,
+    storageType: storageType,
+    storageMode: storageMode,
   );
 
   final changeDataUpdates =
@@ -96,15 +98,9 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     storageMode: storageMode,
   );
 
-  final String? cloudAt = changeLogEntry.cloudAt != null
-      ? changeLogEntry.toJson()['cloudAt'] /* use UtcDateTimeConverter */
-      : (storageType == 'cloud'
-            ? const UtcDateTimeConverter().toJson(DateTime.now())
-            : null);
-
-  final String storedAt = storageType == 'cloud'
-      ? cloudAt!
-      : const UtcDateTimeConverter().toJson(DateTime.now());
+  // Read cloudAt/storedAt values computed by getDataAndStateUpdatesOrOutdatedBys
+  final String? cloudAt = updates['cloudAt'] as String?;
+  final String storedAt = updates['storedAt'] as String;
 
   // Build the full set of change-log entry updates callers can apply
   // Decide whether to preserve incoming change data in the change-log entry.
@@ -427,8 +423,10 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
   BaseChangeLogEntry changeLogEntry,
   BaseEntityState? entityState,
   Map<String, dynamic> fieldChanges,
-  List<String> noOpFields, // List of fields that are no-ops
-) {
+  List<String> noOpFields, { // List of fields that are no-ops
+  required String storageType,
+  required String storageMode,
+}) {
   final fieldUpdates = <String, dynamic>{};
   final outdatedBys = <String>[];
 
@@ -502,7 +500,23 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
     print(st);
   }
 
+  // compute serialized cloudAt/storedAt strings once so callers can reuse
+  final String? computedCloudAt = changeLogEntry.cloudAt != null
+      ? changeLogEntry.toJson()['cloudAt'] as String?
+      : (storageType == 'cloud'
+            ? const UtcDateTimeConverter().toJson(DateTime.now())
+            : null);
+
+  final String computedStoredAt = storageType == 'cloud'
+      ? (changeLogEntry.cloudAt != null
+            ? changeLogEntry.toJson()['cloudAt'] as String
+            : const UtcDateTimeConverter().toJson(DateTime.now()))
+      : const UtcDateTimeConverter().toJson(DateTime.now());
+
   return {
+    // expose the computed values to callers
+    'cloudAt': computedCloudAt,
+    'storedAt': computedStoredAt,
     'stateUpdates': {
       if (entityState == null) ...{
         'entityId': changeLogEntry.entityId,
@@ -523,7 +537,8 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
         'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
         'change_cid': changeLogEntry.cid,
         'change_changeBy': changeLogEntry.changeBy,
-        'change_cloudAt': changeLogEntry.cloudAt?.toIso8601String(),
+        'change_cloudAt': computedCloudAt,
+        'change_storedAt': computedStoredAt,
       },
       // Transform field updates to use data_ prefix for entity state
       // update data_ field values
@@ -543,10 +558,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
             MapEntry('data_${key}_changeBy_', changeLogEntry.changeBy),
       ),
       ...fieldUpdates.map(
-        (key, value) => MapEntry(
-          'data_${key}_cloudAt_',
-          changeLogEntry.cloudAt?.toIso8601String(),
-        ),
+        (key, value) => MapEntry('data_${key}_cloudAt_', computedCloudAt),
       ),
     },
     'changeDataUpdates': fieldUpdates,
