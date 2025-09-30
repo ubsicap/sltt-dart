@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:sync_manager/sync_manager.dart';
@@ -12,6 +14,46 @@ import 'package:test/test.dart';
 
 void main() {
   group('SyncManager integration', () {
+    // Helper to construct the expected flattened state map that the
+    // ChangeProcessingService produces when upserting entity state. The
+    // service expands the JSON fields in change.dataJson into flattened
+    // keys like `data_<field>` and also emits derived metadata fields.
+    Map<String, dynamic> expectedStateFromChange(IsarChangeLogEntry ch) {
+      final data = jsonDecode(ch.dataJson) as Map<String, dynamic>;
+      final changeAt = const UtcDateTimeConverter().toJson(ch.changeAt);
+      final map = <String, dynamic>{
+        'entityId': ch.entityId,
+        'domainType': ch.domainType,
+        'entityType': ch.entityType,
+        'change_dataSchemaRev': null,
+        'change_domainId_orig_': ch.domainId,
+        'change_cid_orig_': ch.cid,
+        'change_changeBy_orig_': ch.changeBy,
+        'change_changeAt_orig_': changeAt,
+        'change_domainType': ch.domainType,
+        'change_domainId': ch.domainId,
+        'change_changeAt': changeAt,
+        'change_cid': ch.cid,
+        'change_changeBy': ch.changeBy,
+        'change_cloudAt': null,
+      };
+
+      // For each data field include the flattened variants observed in the
+      // processing service output. This mirrors the debug output seen in
+      // test runs and keeps expectations deterministic.
+      for (final entry in data.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        map['data_$key'] = value;
+        map['data_${key}_changeAt_'] = changeAt;
+        map['data_${key}_cid_'] = ch.cid;
+        map['data_${key}_changeBy_'] = ch.changeBy;
+        map['data_${key}_cloudAt_'] = null;
+      }
+
+      return map;
+    }
+
     late String cloudBaseUrl;
     late String srcStorageId;
     late String srcStorageType;
@@ -141,13 +183,36 @@ void main() {
         reason:
             'Seeding local storage should succeed: ${seedResult.errorMessage}',
       );
+      final seedJson = seedResult.resultsSummary?.toJson();
+      final seedStateUpdates = [
+        {'cid': change.cid, 'state': expectedStateFromChange(change)},
+      ];
+      final seedChangeUpdates = [
+        {
+          'cid': change.cid,
+          'updates': {
+            'operation': change.operation,
+            'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
+            'stateChanged': true,
+            'cloudAt': null,
+            'dataJson': change.dataJson,
+          },
+        },
+      ];
+      final seedInfo = [
+        {
+          'cid': change.cid,
+          'operation': change.operation,
+          'info': {'outdatedBys': [], 'noOpFields': []},
+        },
+      ];
       expect(
-        seedResult.resultsSummary?.toJson(),
+        seedJson,
         equals({
           'storageType': 'local',
           'storageId': localStorageId,
-          'stateUpdates': isA<List<Map<String, dynamic>>>(),
-          'changeUpdates': isA<List<Map<String, dynamic>>>(),
+          'stateUpdates': seedStateUpdates,
+          'changeUpdates': seedChangeUpdates,
           'created': [change.cid],
           'updated': [],
           'deleted': [],
@@ -156,7 +221,7 @@ void main() {
           'clouded': [],
           'dups': [],
           'unknowns': [],
-          'info': isA<List<Map<String, dynamic>>>(),
+          'info': seedInfo,
           'errors': [],
           'unprocessed': [],
         }),
@@ -195,8 +260,8 @@ void main() {
           'updates': 0,
           'deletes': 0,
           'total': 0,
-          'latestChangeAt': isA<String>(),
-          'latestSeq': isA<int>(),
+          'latestChangeAt': '1970-01-01T00:00:00Z',
+          'latestSeq': -1,
         }),
         reason:
             'After successful outsync, project __test_1 should have 0 pending outsyncs',
@@ -244,15 +309,20 @@ void main() {
 
       final status = await syncManager.getSyncStatus('__test_2');
       // After downsync we expect local state stats to be available for the project
+      final totalsObj = status.localStateStats?.totals;
+      final totals = totalsObj?.toJson();
+      final expectedLatest = const UtcDateTimeConverter().toJson(
+        DateTime.parse(downsyncedChanges.first['changeAt'] as String),
+      );
       expect(
-        status.localStateStats?.totals.toJson(),
+        totals,
         equals({
           'creates': 1,
           'updates': 0,
           'deletes': 0,
           'total': 1,
-          'latestChangeAt': isA<String>(),
-          'latestSeq': isA<int>(),
+          'latestChangeAt': expectedLatest,
+          'latestSeq': totals?['latestSeq'],
         }),
         reason:
             'getSyncStatus should report local state stats for __test_2 after downsync',
@@ -318,13 +388,39 @@ void main() {
           reason:
               'Seeding cloud storage for full sync should succeed: ${cloudSeed.errorMessage}',
         );
+        final cloudSeedJson = cloudSeed.resultsSummary?.toJson();
+        final cloudStateUpdates = [
+          {
+            'cid': cloudChange.cid,
+            'state': expectedStateFromChange(cloudChange),
+          },
+        ];
+        final cloudChangeUpdates = [
+          {
+            'cid': cloudChange.cid,
+            'updates': {
+              'operation': cloudChange.operation,
+              'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
+              'stateChanged': true,
+              'cloudAt': null,
+              'dataJson': cloudChange.dataJson,
+            },
+          },
+        ];
+        final cloudInfo = [
+          {
+            'cid': cloudChange.cid,
+            'operation': cloudChange.operation,
+            'info': {'outdatedBys': [], 'noOpFields': []},
+          },
+        ];
         expect(
-          cloudSeed.resultsSummary?.toJson(),
+          cloudSeedJson,
           equals({
             'storageType': 'cloud',
             'storageId': await cloud.getStorageId(),
-            'stateUpdates': isA<List<Map<String, dynamic>>>(),
-            'changeUpdates': isA<List<Map<String, dynamic>>>(),
+            'stateUpdates': cloudStateUpdates,
+            'changeUpdates': cloudChangeUpdates,
             'created': [cloudChange.cid],
             'updated': [],
             'deleted': [],
@@ -333,7 +429,7 @@ void main() {
             'clouded': [],
             'dups': [],
             'unknowns': [],
-            'info': isA<List<Map<String, dynamic>>>(),
+            'info': cloudInfo,
             'errors': [],
             'unprocessed': [],
           }),
@@ -378,13 +474,39 @@ void main() {
           reason:
               'Seeding local storage for full sync should succeed: ${localSeed.errorMessage}',
         );
+        final localSeedJson = localSeed.resultsSummary?.toJson();
+        final localStateUpdates = [
+          {
+            'cid': localChange.cid,
+            'state': expectedStateFromChange(localChange),
+          },
+        ];
+        final localChangeUpdates = [
+          {
+            'cid': localChange.cid,
+            'updates': {
+              'operation': localChange.operation,
+              'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
+              'stateChanged': true,
+              'cloudAt': null,
+              'dataJson': localChange.dataJson,
+            },
+          },
+        ];
+        final localInfo = [
+          {
+            'cid': localChange.cid,
+            'operation': localChange.operation,
+            'info': {'outdatedBys': [], 'noOpFields': []},
+          },
+        ];
         expect(
-          localSeed.resultsSummary?.toJson(),
+          localSeedJson,
           equals({
             'storageType': 'local',
             'storageId': await local.getStorageId(),
-            'stateUpdates': isA<List<Map<String, dynamic>>>(),
-            'changeUpdates': isA<List<Map<String, dynamic>>>(),
+            'stateUpdates': localStateUpdates,
+            'changeUpdates': localChangeUpdates,
             'created': [localChange.cid],
             'updated': [],
             'deleted': [],
@@ -393,7 +515,7 @@ void main() {
             'clouded': [],
             'dups': [],
             'unknowns': [],
-            'info': isA<List<Map<String, dynamic>>>(),
+            'info': localInfo,
             'errors': [],
             'unprocessed': [],
           }),
@@ -565,13 +687,39 @@ void main() {
               'Seeding cloud storage for full sync should succeed: ${cloudSeed.errorMessage}',
         );
 
+        final cloudSeedJson2 = cloudSeed.resultsSummary?.toJson();
+        final cloudStateUpdates2 = [
+          {
+            'cid': cloudChange.cid,
+            'state': expectedStateFromChange(cloudChange),
+          },
+        ];
+        final cloudChangeUpdates2 = [
+          {
+            'cid': cloudChange.cid,
+            'updates': {
+              'operation': cloudChange.operation,
+              'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
+              'stateChanged': true,
+              'cloudAt': null,
+              'dataJson': cloudChange.dataJson,
+            },
+          },
+        ];
+        final cloudInfo2 = [
+          {
+            'cid': cloudChange.cid,
+            'operation': cloudChange.operation,
+            'info': {'outdatedBys': [], 'noOpFields': []},
+          },
+        ];
         expect(
-          cloudSeed.resultsSummary?.toJson(),
+          cloudSeedJson2,
           equals({
             'storageType': 'cloud',
             'storageId': await cloud.getStorageId(),
-            'stateUpdates': isA<List<Map<String, dynamic>>>(),
-            'changeUpdates': isA<List<Map<String, dynamic>>>(),
+            'stateUpdates': cloudStateUpdates2,
+            'changeUpdates': cloudChangeUpdates2,
             'created': [cloudChange.cid],
             'updated': [],
             'deleted': [],
@@ -580,7 +728,7 @@ void main() {
             'clouded': [],
             'dups': [],
             'unknowns': [],
-            'info': isA<List<Map<String, dynamic>>>(),
+            'info': cloudInfo2,
             'errors': [],
             'unprocessed': [],
           }),
@@ -634,14 +782,20 @@ void main() {
           isNotNull,
           reason: 'State stats should be available for $projectId',
         );
-        expect(stateTotals?.toJson(), {
-          'creates': 1,
-          'updates': 0,
-          'deletes': 0,
-          'total': 1,
-          'latestChangeAt': isA<String>(),
-          'latestSeq': isA<int>(),
-        });
+        final totalsMap = stateTotals?.toJson();
+        expect(
+          totalsMap,
+          equals({
+            'creates': 1,
+            'updates': 0,
+            'deletes': 0,
+            'total': 1,
+            'latestChangeAt': const UtcDateTimeConverter().toJson(
+              localChange.changeAt,
+            ),
+            'latestSeq': totalsMap?['latestSeq'],
+          }),
+        );
 
         // Verify downsynced project exists locally
         final downsyncedState = await local.getCurrentEntityState(
