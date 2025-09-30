@@ -151,6 +151,7 @@ void main() {
           'created': [change.cid],
           'updated': [],
           'deleted': [],
+          'outdated': [],
           'noOps': [],
           'clouded': [],
           'dups': [],
@@ -438,7 +439,9 @@ void main() {
             'updates': 1,
             'deletes': 0,
             'total': 2,
-            'latestChangeAt': localChange.changeAt.toIso8601String(),
+            'latestChangeAt': const UtcDateTimeConverter().toJson(
+              localChange.changeAt,
+            ),
             'latestSeq': 3,
           }),
           reason:
@@ -622,13 +625,16 @@ void main() {
               'Full sync should remove local-origin change log entries for $projectId, but got: ${(pendingLocalChanges).map((c) => c.toJson())}',
         );
 
-        final totals = localStatus.localChangeStats?.totals;
+        // After full sync and deletion of local change-log entries, pending
+        // change stats will be empty. Verify the historical state counters
+        // (localStateStats) still reflect the operation that occurred.
+        final stateTotals = localStatus.localStateStats?.totals;
         expect(
-          totals,
+          stateTotals,
           isNotNull,
-          reason: 'Change stats should be available for $projectId',
+          reason: 'State stats should be available for $projectId',
         );
-        expect(totals?.toJson(), {
+        expect(stateTotals?.toJson(), {
           'creates': 1,
           'updates': 0,
           'deletes': 0,

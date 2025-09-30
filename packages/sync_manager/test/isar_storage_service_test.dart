@@ -442,6 +442,59 @@ void main() {
   });
 
   group('IsarStorageService Statistics and Project Operations', () {
+    test('change-log deletion leaves state counters intact', () async {
+      final projectId = 'proj-separation';
+
+      // Create a single change via canonical processing so both a change-log
+      // entry and entity-type sync state counters are created.
+      final r = await ChangeProcessingService.processChanges(
+        storageMode: 'save',
+        changes: [
+          changePayload(
+            projectId: projectId,
+            entityType: 'task',
+            entityId: 'sep-1',
+            changeAt: baseTime,
+            operation: 'create',
+          ),
+        ],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(r.isSuccess, isTrue, reason: r.errorMessage);
+      final createdCid = r.resultsSummary!.created.first;
+
+      // Ensure change-log shows 1 pending change
+      final beforeStats = await storage.getChangeStats(
+        domainType: 'project',
+        domainId: projectId,
+      );
+      expect(beforeStats.totals.total, equals(1));
+
+      // Delete the change-log entry (simulate outsync cleanup)
+      final deleted = await storage.deleteChanges([createdCid]);
+      expect(deleted, equals(1), reason: 'Expected one change to be deleted');
+
+      // After deletion, change-log based stats should show zero pending changes
+      final afterChangeStats = await storage.getChangeStats(
+        domainType: 'project',
+        domainId: projectId,
+      );
+      expect(afterChangeStats.totals.total, equals(0));
+      expect(afterChangeStats.totals.creates, equals(0));
+
+      // But entity-type state counters (historical) should still reflect the
+      // original create operation performed earlier.
+      final stateStats = await storage.getStateStats(
+        domainType: 'project',
+        domainId: projectId,
+      );
+      expect(stateStats.totals.total, equals(1));
+      expect(stateStats.totals.creates, equals(1));
+    });
     test('gets change statistics', () async {
       final projectId = 'proj-stats';
 
