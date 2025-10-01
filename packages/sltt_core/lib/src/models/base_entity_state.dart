@@ -153,7 +153,7 @@ abstract class BaseEntityState
          change_cloudAt,
          change_changeAt,
        ),
-       change_storedAt_orig_ = BaseEntityState.normalizeStoredAt(
+       change_storedAt_orig_ = BaseEntityState.normalizeOrigStoredAt(
          change_storedAt_orig_,
          change_cloudAt,
          change_changeAt,
@@ -202,6 +202,20 @@ abstract class BaseEntityState
     DateTime changeAt,
   ) {
     if (storedAt != null) return storedAt.toUtc();
+    if (cloudAt != null) return cloudAt.toUtc();
+    return changeAt.toUtc();
+  }
+
+  /// Similar to normalizeStoredAt but intended for initializing _orig_ fields
+  /// where the provided orig value may be null or a default sentinel.
+  static DateTime normalizeOrigStoredAt(
+    DateTime? origStoredAt,
+    DateTime? cloudAt,
+    DateTime changeAt,
+  ) {
+    // If an explicit orig storedAt was provided, use it. Otherwise follow
+    // the same fallback order as normalizeStoredAt.
+    if (origStoredAt != null) return origStoredAt.toUtc();
     if (cloudAt != null) return cloudAt.toUtc();
     return changeAt.toUtc();
   }

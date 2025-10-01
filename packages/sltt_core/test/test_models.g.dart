@@ -124,6 +124,15 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
             const UtcDateTimeConverter().fromJson,
           ),
         ),
+        change_storedAt_orig_: $checkedConvert(
+          'change_storedAt_orig_',
+          (v) => (v == null || (v as String).isEmpty)
+              ? null
+              : _$JsonConverterFromJson<String, DateTime>(
+                  v,
+                  const UtcDateTimeConverter().fromJson,
+                ),
+        ),
         change_changeAt_orig_: $checkedConvert(
           'change_changeAt_orig_',
           (v) => DateTime.parse(v as String),
@@ -244,6 +253,9 @@ Map<String, dynamic> _$TestEntityStateToJson(
   'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),
   'change_storedAt': const UtcDateTimeConverter().toJson(
     instance.change_storedAt,
+  ),
+  'change_storedAt_orig_': const UtcDateTimeConverter().toJson(
+    instance.change_storedAt_orig_,
   ),
   'change_cid': instance.change_cid,
   'change_cid_orig_': instance.change_cid_orig_,

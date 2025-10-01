@@ -80,6 +80,7 @@ class TestEntityState extends BaseEntityState {
     required super.change_domainId_orig_,
     required super.change_changeAt,
     super.change_storedAt,
+    super.change_storedAt_orig_,
     required super.change_changeAt_orig_,
     required super.change_cid,
     required super.change_cid_orig_,

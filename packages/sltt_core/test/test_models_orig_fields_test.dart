@@ -78,6 +78,8 @@ void main() {
               .toIso8601String(),
           'change_cid_orig_': '',
           'change_changeBy_orig_': '',
+          // orig storedAt should default like storedAt: (cloudAt then changeAt)
+          'change_storedAt_orig_': '',
           'surprise': 'new_entity',
         };
 
@@ -91,6 +93,11 @@ void main() {
         );
         expect(entity.change_cid_orig_, equals('cid-new'));
         expect(entity.change_changeBy_orig_, equals('creator'));
+        // change_storedAt_orig_ should be set from current values (no cloudAt provided)
+        expect(
+          entity.change_storedAt_orig_,
+          equals(DateTime.parse('2024-01-01T10:00:00Z')),
+        );
 
         // Verify unknown fields still work
         final unknown = jsonDecode(entity.unknownJson) as Map<String, dynamic>;
@@ -127,6 +134,7 @@ void main() {
         'change_changeAt_orig_': '2024-01-15T09:30:00Z',
         'change_cid_orig_': 'cid-original',
         'change_changeBy_orig_': 'creator',
+        'change_storedAt_orig_': '2024-01-01T09:30:00Z',
         'surprise': 'updated_entity',
       };
 
@@ -139,6 +147,10 @@ void main() {
         equals(DateTime.parse('2024-01-15T09:30:00Z')),
       );
       expect(entity.change_cid_orig_, equals('cid-original'));
+      expect(
+        entity.change_storedAt_orig_,
+        equals(DateTime.parse('2024-01-01T09:30:00Z')),
+      );
       expect(entity.change_changeBy_orig_, equals('creator'));
 
       // Verify current values are different from _orig_ values
