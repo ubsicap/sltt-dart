@@ -61,5 +61,56 @@ If you want, I can also add an optional mode to create a junction from `repo/ven
 the global cache instead of copying; that avoids duplication but is not portable and still relies
 on your machine's state.
 
+Offline testing and build steps
+--------------------------------
+
+If you want to run tests fully offline you need to ensure dependencies are present in the cache
+and then tell the test runner not to call pub again. Example workflow (Windows):
+
+cmd.exe:
+```cmd
+REM set PUB_CACHE for the current window (example detected path for this machine)
+set "PUB_CACHE=C:\Users\ericd\AppData\Local\Pub\Cache"
+cd C:\path\to\repo
+dart pub get --offline
+cd packages\sltt_core
+dart test --no-pub
+```
+
+PowerShell (dot-source script to set env):
+```powershell
+. .\scripts\set_pub_cache.ps1
+Set-Location -Path 'C:\path\to\repo'
+# ensure dependencies are present in cache
+dart pub get --offline
+Set-Location -Path 'packages/sltt_core'
+dart test --no-pub
+```
+
+build_runner notes
+------------------
+If your package uses code generation (common in this repo), build artifacts may be required before
+running tests. Typical commands:
+
+- Generate code once (online or with a cache containing the builder packages):
+  ```cmd
+  dart run build_runner build --delete-conflicting-outputs
+  ```
+
+- Run an incremental watcher (dev loop):
+  ```cmd
+  dart run build_runner watch
+  ```
+
+- Clean generated outputs:
+  ```cmd
+  dart run build_runner clean
+  ```
+
+When running offline, `build_runner` still needs the builder packages available in the cache. If those
+builder packages are missing, `build_runner` will try to download them (and fail offline). Populate your
+cache first (or run the above commands once online to get the generated files checked into git if that
+fits your workflow).
+
 ---
 Generated on: 2025-10-01
