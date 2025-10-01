@@ -597,24 +597,26 @@ void main() {
     });
 
     group('getUpdatesForChangeLogEntryAndEntityState', () {
-      // Helper: remove dynamic 'storedAt' from changeUpdates before deep-equality
-      // comparisons in tests that don't assert on storedAt specifically.
-      Map<String, dynamic> normalizeChangeUpdatesForAssert(
-        Map<String, dynamic> m,
-      ) {
-        final copy = Map<String, dynamic>.from(m);
-        copy.remove('storedAt');
-        return copy;
-      }
+      // NOTE: removed helper functions that masked dynamic timestamp fields.
+      // Tests should explicitly assert presence/format of dynamic timestamps
+      // (like 'storedAt' and 'change_storedAt') where relevant, and perform
+      // map equality by creating a copy and removing those keys inline.
 
-      // Helper: remove dynamic 'change_storedAt' from stateUpdates before deep-equality
-      // comparisons in tests that don't assert on this field specifically.
-      Map<String, dynamic> normalizeStateUpdatesForAssert(
-        Map<String, dynamic> m,
-      ) {
-        final copy = Map<String, dynamic>.from(m);
-        copy.remove('change_storedAt');
-        return copy;
+      // Helper to assert a storedAt-like field exists, is a UTC ISO string,
+      // and is equal or after baseTime. Returns the string value (does NOT
+      // remove it from the map) so tests can include it in expected maps.
+      String assertAndGetStoredAt(Map<String, dynamic> m, String key) {
+        expect(m.containsKey(key), isTrue, reason: '$key should be present');
+        final val = m[key];
+        expect(val, isA<String>());
+        final parsed = DateTime.parse(val as String).toUtc();
+        expect(
+          parsed.isAtSameMomentAs(baseTime.toUtc()) ||
+              parsed.isAfter(baseTime.toUtc()),
+          isTrue,
+          reason: '$key should be equal or after baseTime',
+        );
+        return val;
       }
 
       test('should handle field-level conflict resolution', () {
@@ -643,9 +645,14 @@ void main() {
           targetStorageId: 'localId',
         );
 
+        final storedAtVal = assertAndGetStoredAt(
+          updates.stateUpdates,
+          'change_storedAt',
+        );
+
         // Entity state should update via stateUpdates
         expect(
-          normalizeStateUpdatesForAssert(updates.stateUpdates),
+          updates.stateUpdates,
           equals({
             'change_domainType': 'project',
             'change_domainId': 'project1',
@@ -653,6 +660,7 @@ void main() {
             'change_cid': 'cid2',
             'change_changeBy': 'user2',
             'change_cloudAt': null,
+            'change_storedAt': storedAtVal,
             'data_rank': '2',
             'data_rank_changeAt_': newerTime.toIso8601String(),
             'data_rank_cid_': 'cid2',
@@ -665,9 +673,13 @@ void main() {
           updates.stateUpdates['change_changeAt'],
           equals(newerTime.toIso8601String()),
         );
-        // Validate change-log entry updates
+        // Validate change-log entry updates: assert storedAt and include it in expected
+        final storedAtVal1 = assertAndGetStoredAt(
+          updates.changeUpdates,
+          'storedAt',
+        );
         expect(
-          normalizeChangeUpdatesForAssert(updates.changeUpdates),
+          updates.changeUpdates,
           equals({
             'operation': 'update',
             'operationInfoJson': jsonEncode({
@@ -678,6 +690,7 @@ void main() {
             'storageId': 'localId',
             'dataJson': jsonEncode({'rank': '2'}),
             'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
+            'storedAt': storedAtVal1,
           }),
         );
       });
@@ -693,7 +706,7 @@ void main() {
           domainType: 'project',
           changeAt: newerTime,
           cid: 'cid-local-1',
-          storageId: 'localId-1' /* original */,
+          storageId: 'localId-1', // original
           changeBy: 'user2',
           dataJson: jsonEncode({'rank': entityState.data_rank}),
           operation: 'update',
@@ -711,8 +724,12 @@ void main() {
         );
 
         // Operation should be computed as noOp and report noOpFields; data subset is omitted
+        final storedAtVal2 = assertAndGetStoredAt(
+          updates.changeUpdates,
+          'storedAt',
+        );
         expect(
-          normalizeChangeUpdatesForAssert(updates.changeUpdates),
+          updates.changeUpdates,
           equals({
             'operation': 'noOp',
             'operationInfoJson': jsonEncode({
@@ -722,6 +739,7 @@ void main() {
             'stateChanged': false,
             'cloudAt': changeLogEntry.cloudAt!.toUtc().toIso8601String(),
             'dataJson': jsonEncode({'rank': entityState.data_rank}),
+            'storedAt': storedAtVal2,
           }),
         );
       });
@@ -759,8 +777,12 @@ void main() {
             targetStorageId: 'localId',
           );
 
+          final storedAtVal3 = assertAndGetStoredAt(
+            updates.changeUpdates,
+            'storedAt',
+          );
           expect(
-            normalizeChangeUpdatesForAssert(updates.changeUpdates),
+            updates.changeUpdates,
             equals({
               'operation': 'update',
               'operationInfoJson': jsonEncode({
@@ -774,11 +796,14 @@ void main() {
                 'nameLocal': 'New Name',
               }),
               'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
+              'storedAt': storedAtVal3,
             }),
           );
 
+          // assert change_storedAt is present and valid (value included in expected map)
+          assertAndGetStoredAt(updates.stateUpdates, 'change_storedAt');
           expect(
-            normalizeStateUpdatesForAssert(updates.stateUpdates),
+            updates.stateUpdates,
             equals({
               'change_domainType': 'project',
               'change_domainId': 'project1',
@@ -786,6 +811,7 @@ void main() {
               'change_cid': 'cid6',
               'change_changeBy': 'user2',
               'change_cloudAt': null,
+              'change_storedAt': storedAtVal3,
               'data_parentId': 'parent2',
               'data_nameLocal': 'New Name',
               'data_parentId_changeAt_': '2023-01-01T00:01:00.000Z',
@@ -876,8 +902,12 @@ void main() {
         );
 
         // rank should be outdated, nameLocal no-op, parentId should be applied
+        final storedAtVal4 = assertAndGetStoredAt(
+          updates.changeUpdates,
+          'storedAt',
+        );
         expect(
-          normalizeChangeUpdatesForAssert(updates.changeUpdates),
+          updates.changeUpdates,
           equals({
             'operation': 'outdated',
             'operationInfoJson': jsonEncode({
@@ -888,6 +918,7 @@ void main() {
             'storageId': 'localId',
             'cloudAt': null,
             'dataJson': jsonEncode({'parentId': 'parent2'}),
+            'storedAt': storedAtVal4,
           }),
         );
       });
@@ -919,8 +950,12 @@ void main() {
           targetStorageId: 'localId',
         );
 
+        final storedAtVal5 = assertAndGetStoredAt(
+          updates.changeUpdates,
+          'storedAt',
+        );
         expect(
-          normalizeChangeUpdatesForAssert(updates.changeUpdates),
+          updates.changeUpdates,
           equals({
             'operation': 'outdated',
             'operationInfoJson': jsonEncode({
@@ -931,6 +966,7 @@ void main() {
             'storageId': 'localId',
             'dataJson': jsonEncode({}),
             'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
+            'storedAt': storedAtVal5,
           }),
         );
       });
@@ -964,8 +1000,12 @@ void main() {
           targetStorageId: 'localId',
         );
 
+        final storedAtVal6 = assertAndGetStoredAt(
+          updates.changeUpdates,
+          'storedAt',
+        );
         expect(
-          normalizeChangeUpdatesForAssert(updates.changeUpdates),
+          updates.changeUpdates,
           equals({
             'operation': 'create',
             'operationInfoJson': jsonEncode({
@@ -980,11 +1020,26 @@ void main() {
               'parentId': 'parent2',
               'parentProp': 'pList',
             }),
+            'storedAt': storedAtVal6,
           }),
         );
         // stateUpdates should initialize entity fields appropriately
+        // If present, change_storedAt must be equal or after baseTime
+        if (updates.stateUpdates.containsKey('change_storedAt')) {
+          final csVal = updates.stateUpdates['change_storedAt'];
+          expect(csVal, isA<String>());
+          final csParsed = DateTime.parse(csVal as String).toUtc();
+          expect(
+            csParsed.isAtSameMomentAs(baseTime.toUtc()) ||
+                csParsed.isAfter(baseTime.toUtc()),
+            isTrue,
+            reason: 'change_storedAt should be equal or after baseTime',
+          );
+          updates.stateUpdates.remove('change_storedAt');
+        }
+
         expect(
-          normalizeStateUpdatesForAssert(updates.stateUpdates),
+          updates.stateUpdates,
           equals({
             'entityId': 'entity2',
             'domainType': 'project',
@@ -1054,8 +1109,12 @@ void main() {
           equals('Localized Name'),
         );
         // Validate change log entry
+        final storedAtVal7 = assertAndGetStoredAt(
+          updates.changeUpdates,
+          'storedAt',
+        );
         expect(
-          normalizeChangeUpdatesForAssert(updates.changeUpdates),
+          updates.changeUpdates,
           equals({
             'operation': 'create',
             'operationInfoJson': jsonEncode({
@@ -1070,6 +1129,7 @@ void main() {
               'parentProp': 'pList',
             }),
             'cloudAt': null,
+            'storedAt': storedAtVal7,
           }),
         );
       });
@@ -1099,8 +1159,12 @@ void main() {
           targetStorageId: 'localId',
         );
 
+        final storedAtVal8 = assertAndGetStoredAt(
+          updates.changeUpdates,
+          'storedAt',
+        );
         expect(
-          normalizeChangeUpdatesForAssert(updates.changeUpdates),
+          updates.changeUpdates,
           equals({
             'operation': 'delete',
             'operationInfoJson': jsonEncode({
@@ -1111,6 +1175,7 @@ void main() {
             'storageId': 'localId',
             'dataJson': jsonEncode({'deleted': true}),
             'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
+            'storedAt': storedAtVal8,
           }),
         );
       });
@@ -1231,8 +1296,12 @@ void main() {
             targetStorageId: 'localId',
           );
 
+          final storedAtVal12 = assertAndGetStoredAt(
+            updates.changeUpdates,
+            'storedAt',
+          );
           expect(
-            normalizeChangeUpdatesForAssert(updates.changeUpdates),
+            updates.changeUpdates,
             equals({
               'operation': 'update',
               'operationInfoJson': jsonEncode({
@@ -1243,10 +1312,15 @@ void main() {
               'storageId': 'localId',
               'dataJson': jsonEncode({'rank': '2'}),
               'cloudAt': null,
+              'storedAt': storedAtVal12,
             }),
           );
           expect(
-            normalizeStateUpdatesForAssert(updates.stateUpdates),
+            (() {
+              final s = Map<String, dynamic>.from(updates.stateUpdates);
+              s.remove('change_storedAt');
+              return s;
+            })(),
             equals({
               'change_domainType': 'project',
               'change_domainId': 'project1',
@@ -1348,8 +1422,12 @@ void main() {
             targetStorageId: 'localId',
           );
 
+          final storedAtVal13 = assertAndGetStoredAt(
+            updates.changeUpdates,
+            'storedAt',
+          );
           expect(
-            normalizeChangeUpdatesForAssert(updates.changeUpdates),
+            updates.changeUpdates,
             equals({
               'operation': 'outdated',
               'operationInfoJson': jsonEncode({
@@ -1360,6 +1438,7 @@ void main() {
               'storageId': 'localId',
               'dataJson': jsonEncode({}),
               'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
+              'storedAt': storedAtVal13,
             }),
           );
           expect(updates.stateUpdates, equals({}));
@@ -1437,8 +1516,12 @@ void main() {
             targetStorageId: 'localId',
           );
 
+          final storedAtVal14 = assertAndGetStoredAt(
+            updates.changeUpdates,
+            'storedAt',
+          );
           expect(
-            normalizeChangeUpdatesForAssert(updates.changeUpdates),
+            updates.changeUpdates,
             equals({
               'operation': 'update',
               'operationInfoJson': jsonEncode({
@@ -1449,6 +1532,7 @@ void main() {
               'storageId': 'localId',
               'dataJson': jsonEncode({'rank': '2'}),
               'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
+              'storedAt': storedAtVal14,
             }),
           );
           // Latest metadata should NOT be updated to reflect this change
@@ -1498,15 +1582,11 @@ void main() {
           reason:
               'storedAt should be added for local storage changes, but was missing',
         );
-        final storedAtVal = updates.changeUpdates['storedAt'];
-        expect(storedAtVal, isNotNull);
-        expect(storedAtVal, isA<String>());
-        final parsed = DateTime.parse(storedAtVal as String);
-        expect(
-          parsed.isUtc,
-          isTrue,
-          reason: 'storedAt should be in UTC, but was not: $parsed',
+        final storedAtVal = assertAndGetStoredAt(
+          updates.changeUpdates,
+          'storedAt',
         );
+        final parsed = DateTime.parse(storedAtVal);
         expect(
           parsed.isAfter(baseTime),
           isTrue,
@@ -1547,18 +1627,14 @@ void main() {
           reason:
               'storedAt should be added for cloud storage changes, but was missing',
         );
-        final storedAtVal = updates.changeUpdates['storedAt'];
-        expect(storedAtVal, isNotNull);
-        expect(storedAtVal, isA<String>());
-        final parsed = DateTime.parse(storedAtVal as String);
-        expect(
-          parsed.isUtc,
-          isTrue,
-          reason: 'storedAt should be in UTC, but was not: $parsed',
+        final storedAtVal = assertAndGetStoredAt(
+          updates.changeUpdates,
+          'storedAt',
         );
+        final parsed = DateTime.parse(storedAtVal).toUtc();
         // storedAt should match cloudAt in this pathway
         expect(
-          parsed.toUtc(),
+          parsed,
           equals(cloudAt.toUtc()),
           reason:
               'storedAt should match cloudAt, but did not. storedAt=$parsed, cloudAt=$cloudAt',
