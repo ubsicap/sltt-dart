@@ -2,6 +2,8 @@
 
 import 'dart:io';
 
+import 'package:sltt_core/sltt_core.dart' show SlttLogger;
+
 class TestResult {
   final bool passed;
   final bool skipped;
@@ -22,7 +24,7 @@ Future<void> main(List<String> args) async {
   print('=' * 60);
 
   // Test 1: Basic unit tests (should always pass)
-  print('🔍 Running Basic Unit Tests...');
+  SlttLogger.logger.info('🔍 Running Basic Unit Tests...');
   final basicResult = await runTest(
     'packages/sltt_core',
     'test/basic_test.dart',

@@ -959,11 +959,13 @@ void main() {
             includeStateUpdates: false,
           );
 
-          print(
+          SlttLogger.logger.info(
             'Test result: isError=${result.isError}, errorMessage=${result.errorMessage}',
           );
-          print('Storage type: ${cloudStorage.getStorageType()}');
-          print('Results summary: ${result.resultsSummary}');
+          SlttLogger.logger.info(
+            'Storage type: ${cloudStorage.getStorageType()}',
+          );
+          SlttLogger.logger.info('Results summary: ${result.resultsSummary}');
 
           // The validation should either return an error result or add errors to the summary
           expect(result.isError, isTrue);
@@ -1008,11 +1010,13 @@ void main() {
             includeStateUpdates: false,
           );
 
-          print(
+          SlttLogger.logger.info(
             'Test result: isError=${result.isError}, errorMessage=${result.errorMessage}',
           );
-          print('Storage type: ${cloudStorage.getStorageType()}');
-          print('Results summary: ${result.resultsSummary}');
+          SlttLogger.logger.info(
+            'Storage type: ${cloudStorage.getStorageType()}',
+          );
+          SlttLogger.logger.info('Results summary: ${result.resultsSummary}');
 
           // The validation should either return an error result or add errors to the summary
           expect(result.isError, isTrue);
@@ -1197,11 +1201,11 @@ void main() {
             includeStateUpdates: false,
           );
 
-          print(
+          SlttLogger.logger.info(
             'Test result: isError=${result.isError}, errorMessage=${result.errorMessage}',
           );
-          print('Storage type: $storageType');
-          print('Results summary: ${result.resultsSummary}');
+          SlttLogger.logger.info('Storage type: $storageType');
+          SlttLogger.logger.info('Results summary: ${result.resultsSummary}');
 
           // The validation should either return an error result or add errors to the summary
           expect(result.isError, isTrue);
@@ -1244,11 +1248,11 @@ void main() {
             includeStateUpdates: false,
           );
 
-          print(
+          SlttLogger.logger.info(
             'Test result: isError=${result.isError}, errorMessage=${result.errorMessage}',
           );
-          print('Storage type: $storageType');
-          print('Results summary: ${result.resultsSummary}');
+          SlttLogger.logger.info('Storage type: $storageType');
+          SlttLogger.logger.info('Results summary: ${result.resultsSummary}');
 
           // The validation should either return an error result or add errors to the summary
           expect(result.isError, isTrue);

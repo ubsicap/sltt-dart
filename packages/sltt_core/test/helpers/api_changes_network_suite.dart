@@ -662,8 +662,8 @@ class ApiChangesNetworkTestSuite {
           data: {'rank': '2', 'parentId': 'root', 'parentProp': 'pList'},
         ),
       );
-      print(
-        'DEBUG: field-level conflict response (attempt $attempt): ${jsonEncode(resp)}',
+      SlttLogger.logger.fine(
+        'field-level conflict response (attempt $attempt): ${jsonEncode(resp)}',
       );
       lastResp = resp;
 

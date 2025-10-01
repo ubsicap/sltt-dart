@@ -22,7 +22,9 @@ class SyncManager {
   /// Configure the cloud storage URL (useful for testing with localhost)
   void configureCloudUrl(String cloudUrl) {
     _cloudStorageUrl = cloudUrl;
-    print('[SyncManager] Cloud URL configured to: $_cloudStorageUrl');
+    SlttLogger.logger.info(
+      '[SyncManager] Cloud URL configured to: $_cloudStorageUrl',
+    );
   }
 
   Future<void> initialize() async {
@@ -36,7 +38,9 @@ class SyncManager {
     _dio.options.sendTimeout = const Duration(seconds: 300);
 
     _initialized = true;
-    print('[SyncManager] Initialized with cloud URL: $_cloudStorageUrl');
+    SlttLogger.logger.info(
+      '[SyncManager] Initialized with cloud URL: $_cloudStorageUrl',
+    );
   }
 
   // Get all projects that have changes to sync
@@ -44,13 +48,13 @@ class SyncManager {
   // Outsync changes from outsyncs to cloud storage
   Future<OutsyncResult> outsyncToCloud({List<String>? domainIds}) async {
     try {
-      print('[SyncManager] Starting outsync to cloud...');
+      SlttLogger.logger.info('[SyncManager] Starting outsync to cloud...');
 
       // Get changes for sync (excludes outdated changes)
       final changesToSync = await _localStorage.getChangesForSync();
 
       if (changesToSync.isEmpty) {
-        print('[SyncManager] No changes to outsync');
+        SlttLogger.logger.fine('[SyncManager] No changes to outsync');
         return OutsyncResult(
           success: true,
           changeSummary: null,
@@ -59,7 +63,9 @@ class SyncManager {
         );
       }
 
-      print('[SyncManager] Found ${changesToSync.length} changes to outsync');
+      SlttLogger.logger.info(
+        '[SyncManager] Found ${changesToSync.length} changes to outsync',
+      );
 
       // Send changes to cloud storage using typed API model
       final srcStorageId = await _localStorage.getStorageId();
@@ -83,15 +89,15 @@ class SyncManager {
 
         if (cidsSynced.isNotEmpty) {
           // Immediately delete the outsynced changes to clean up local storage
-          print(
+          SlttLogger.logger.info(
             '[SyncManager] Successfully outsynced ${cidsSynced.length} changes to cloud',
           );
-          print(
+          SlttLogger.logger.fine(
             '[SyncManager] Deleting outsynced changes from local storage...',
           );
 
           final deletedCount = await _localStorage.deleteChanges(cidsSynced);
-          print(
+          SlttLogger.logger.info(
             '[SyncManager] Deleted $deletedCount outsynced changes from local storage',
           );
 
@@ -105,7 +111,7 @@ class SyncManager {
           // Handle partial failure
 
           final message = '### Partial outsync: nothing processed!';
-          print('[SyncManager] $message');
+          SlttLogger.logger.warning('[SyncManager] $message');
 
           return OutsyncResult(
             success: false,
@@ -124,8 +130,8 @@ class SyncManager {
         );
       }
     } catch (e, stackTrace) {
-      print('[SyncManager] Outsync failed: $e');
-      print('[SyncManager] Stack trace: $stackTrace');
+      SlttLogger.logger.severe('[SyncManager] Outsync failed: $e');
+      SlttLogger.logger.severe('[SyncManager] Stack trace: $stackTrace');
       return OutsyncResult(
         success: false,
         changeSummary: null,
@@ -143,14 +149,14 @@ class SyncManager {
     ProjectCursorChanges projectCursorChanges = {};
     StorageSummaries storageSummaries = {};
     try {
-      print('[SyncManager] Starting downsync from cloud...');
+      SlttLogger.logger.info('[SyncManager] Starting downsync from cloud...');
 
       if (domainIds != null && domainIds.isNotEmpty) {
-        print(
+        SlttLogger.logger.fine(
           '[SyncManager] Downsync limited to specified domainIds: $domainIds',
         );
       } else {
-        print('[SyncManager] Downsyncing all projects: ');
+        SlttLogger.logger.info('[SyncManager] Downsyncing all projects: ');
         // First, get all projects from the cloud storage (authoritative source)
         // /api/<domainCollection>', _handleGetDomainIds
         final projectsResponse = await _dio.get(
@@ -166,12 +172,14 @@ class SyncManager {
             projectsResponse.data as Map<String, dynamic>;
         final projects = (projectsResponseData['items'] as List<dynamic>)
             .cast<String>();
-        print(
+        SlttLogger.logger.info(
           '[SyncManager] Found ${projects.length} projects in cloud: $projects',
         );
 
         if (projects.isEmpty) {
-          print('[SyncManager] No projects found in cloud to downsync');
+          SlttLogger.logger.info(
+            '[SyncManager] No projects found in cloud to downsync',
+          );
           return DownsyncResult(
             success: true,
             projectCursorChanges: {},
@@ -186,7 +194,7 @@ class SyncManager {
 
       // For each project, downsync its changes with cursor-based pagination
       for (final projectId in domainIds) {
-        print('[SyncManager] Downsyncing project: $projectId');
+        SlttLogger.logger.info('[SyncManager] Downsyncing project: $projectId');
 
         // Get the last sync state for this specific project
         final syncState = await _localStorage.getCursorSyncState(projectId);
@@ -195,7 +203,7 @@ class SyncManager {
         DateTime changeAt =
             syncState?.changeAt ??
             DateTime.fromMillisecondsSinceEpoch(0).toUtc();
-        print('[SyncManager] Starting from seq: $lastSeq');
+        SlttLogger.logger.fine('[SyncManager] Starting from seq: $lastSeq');
 
         String? cursor = lastSeq.toString();
         int totalChangesForProject = 0;
@@ -232,7 +240,9 @@ class SyncManager {
             */
 
             if (changesBatch.isEmpty) {
-              print('[SyncManager] No more changes for project $projectId');
+              SlttLogger.logger.fine(
+                '[SyncManager] No more changes for project $projectId',
+              );
               break;
             }
 
@@ -271,21 +281,21 @@ class SyncManager {
               }
             }
 
-            print(
+            SlttLogger.logger.info(
               '[SyncManager] Applied ${incomingChanges.length} changes for project $projectId (batch)',
             );
 
             // Update cursor for next iteration
             cursor = nextCursor?.toString();
           } else {
-            print(
+            SlttLogger.logger.warning(
               '[SyncManager] Failed to downsync project $projectId: ${response.statusCode}',
             );
             break; // Exit cursor loop for this project
           }
         } while (cursor != null);
 
-        print(
+        SlttLogger.logger.info(
           '[SyncManager] Completed downsyncing project $projectId: $totalChangesForProject total changes',
         );
 
@@ -300,7 +310,7 @@ class SyncManager {
             cid: cid,
             changeAt: changeAt,
           );
-          print(
+          SlttLogger.logger.fine(
             '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
           );
         }
@@ -310,7 +320,7 @@ class SyncManager {
           .expand((changes) => changes)
           .length;
 
-      print(
+      SlttLogger.logger.info(
         '[SyncManager] Downsync completed. Total changes: $totalDownloadedCount',
       );
 
@@ -324,8 +334,8 @@ class SyncManager {
         errorStackTrace: null,
       );
     } catch (e, stackTrace) {
-      print('[SyncManager] Downsync failed: $e');
-      print('[SyncManager] Stack trace: $stackTrace');
+      SlttLogger.logger.severe('[SyncManager] Downsync failed: $e');
+      SlttLogger.logger.severe('[SyncManager] Stack trace: $stackTrace');
       return DownsyncResult(
         success: false,
         projectCursorChanges: projectCursorChanges,
@@ -339,7 +349,7 @@ class SyncManager {
 
   // Perform full sync: outsync first, then downsync
   Future<FullSyncResult> performFullSync({List<String>? domainIds}) async {
-    print('[SyncManager] Starting full sync...');
+    SlttLogger.logger.info('[SyncManager] Starting full sync...');
 
     // Step 1: Outsync to cloud (deletes local changes immediately)
     final outsyncResult = await outsyncToCloud(domainIds: domainIds);
@@ -396,7 +406,9 @@ class SyncManager {
           cloudChangeStats = ps.changeStats;
         }
       } catch (e) {
-        print('[SyncManager] Could not fetch cloud storage stats: $e');
+        SlttLogger.logger.warning(
+          '[SyncManager] Could not fetch cloud storage stats: $e',
+        );
       }
 
       return SyncStatus(
@@ -406,7 +418,7 @@ class SyncManager {
         cloudStateStats: cloudStateStats,
       );
     } catch (e) {
-      print('[SyncManager] Failed to get sync status: $e');
+      SlttLogger.logger.severe('[SyncManager] Failed to get sync status: $e');
       return SyncStatus(
         localChangeStats: null,
         localStateStats: null,
@@ -425,7 +437,7 @@ class SyncManager {
     if (_initialized) {
       await _localStorage.close();
       _initialized = false;
-      print('[SyncManager] Closed');
+      SlttLogger.logger.info('[SyncManager] Closed');
     }
   }
 }

@@ -26,12 +26,12 @@ void main(List<String> args) async {
   await server.start(port: port);
 
   final baseUrl = 'http://localhost:$port';
-  print('Local test server started at: $baseUrl');
-  print('Press CTRL+C to stop');
+  SlttLogger.logger.info('Local test server started at: $baseUrl');
+  SlttLogger.logger.info('Press CTRL+C to stop');
 
   // Keep process alive until terminated
   await ProcessSignal.sigint.watch().first;
-  print('Shutting down server...');
+  SlttLogger.logger.info('Shutting down server...');
   await server.storage.close();
   exit(0);
 }

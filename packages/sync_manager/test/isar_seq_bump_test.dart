@@ -56,7 +56,7 @@ void main() {
     for (int i = 1; i <= 3; i++) {
       payload['cid'] = 'cid-auto-inc-$i';
       payload['entityId'] = 'e-auto-inc-$i';
-      print(
+      SlttLogger.logger.info(
         'Processing payload with cid: ${payload['cid']}, entityId: ${payload['entityId']}',
       );
       final r = await ChangeProcessingService.processChanges(

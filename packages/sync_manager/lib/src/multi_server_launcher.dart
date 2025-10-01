@@ -14,12 +14,14 @@ class MultiServerLauncher {
   LocalhostRestApiServer? _cloudStorageServer;
 
   Future<void> startAllServers() async {
-    print('[MultiServerLauncher] Starting all servers...');
+    SlttLogger.logger.info('[MultiServerLauncher] Starting all servers...');
 
     await startServer(StorageType.local, kLocalStoragePort);
     await startServer(StorageType.cloud, kCloudStoragePort);
 
-    print('[MultiServerLauncher] All servers started successfully');
+    SlttLogger.logger.info(
+      '[MultiServerLauncher] All servers started successfully',
+    );
   }
 
   Future<StartResponse> startServer(
@@ -37,7 +39,7 @@ class MultiServerLauncher {
           );
           return await _localStorageServer!.start(port: port);
         } else {
-          print(
+          SlttLogger.logger.fine(
             '[MultiServerLauncher] Local storage server is already running',
           );
         }
@@ -54,7 +56,7 @@ class MultiServerLauncher {
           );
           return await _cloudStorageServer!.start(port: port);
         } else {
-          print(
+          SlttLogger.logger.fine(
             '[MultiServerLauncher] Cloud storage server is already running',
           );
         }
@@ -67,7 +69,7 @@ class MultiServerLauncher {
   }
 
   Future<void> stopAllServers() async {
-    print('[MultiServerLauncher] Stopping all servers...');
+    SlttLogger.logger.info('[MultiServerLauncher] Stopping all servers...');
 
     if (_localStorageServer != null) {
       await _localStorageServer!.stop();
@@ -79,7 +81,7 @@ class MultiServerLauncher {
       _cloudStorageServer = null;
     }
 
-    print('[MultiServerLauncher] All servers stopped');
+    SlttLogger.logger.info('[MultiServerLauncher] All servers stopped');
   }
 
   Future<void> stopServer(StorageType storageType) async {

@@ -1094,7 +1094,7 @@ class IsarStorageService extends BaseStorageService {
       );
     }
 
-    print(
+    SlttLogger.logger.info(
       '[$_logPrefix] testResetDomainStorage - Deleting all data for domainId=$domainId domainType=$domainType',
     );
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:aws_backend/aws_backend.dart';
+import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 /// AWS Lambda handler for SLTT backend API.
 ///
@@ -30,8 +31,7 @@ Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
 
     return response;
   } catch (e, stackTrace) {
-    print('Handler error: $e');
-    print('Stack trace: $stackTrace');
+    SlttLogger.logger.severe('Handler error: $e', e, stackTrace);
     return {
       'statusCode': 500,
       'headers': {'Content-Type': 'application/json'},
