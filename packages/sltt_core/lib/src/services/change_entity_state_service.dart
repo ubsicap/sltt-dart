@@ -611,19 +611,20 @@ CloudStoredPair _computeCloudAndStoredAt(
       ? changeLogEntry.toJson()['cloudAt'] as String?
       : null;
 
-  // For cloud storage, if incoming cloudAt is null we synthesize a cloudAt
-  // timestamp. For local storage, cloudAt remains null unless supplied.
-  final String? computedCloudAt =
-      incomingCloudAt ??
-      (storageType == 'cloud'
-          ? const UtcDateTimeConverter().toJson(DateTime.now())
-          : null);
+  // Synthesize a single timestamp when we need to generate now() so both
+  // cloudAt and storedAt (for cloud storage) use the exact same value.
+  // If the incoming change already provided a cloudAt string, reuse it.
+  final String nowIso = const UtcDateTimeConverter().toJson(DateTime.now());
 
-  // storedAt semantics: for cloud storage prefer the cloudAt string (if
-  // present), otherwise synthesize now(). For local storage always synthesize now().
+  // For cloud storage, if incoming cloudAt is null use the synthesized nowIso
+  // for both computedCloudAt and computedStoredAt. For local storage,
+  // computedCloudAt remains null and storedAt is synthesized nowIso.
+  final String? computedCloudAt =
+      incomingCloudAt ?? (storageType == 'cloud' ? nowIso : null);
+
   final String computedStoredAt = storageType == 'cloud'
-      ? (incomingCloudAt ?? const UtcDateTimeConverter().toJson(DateTime.now()))
-      : const UtcDateTimeConverter().toJson(DateTime.now());
+      ? (incomingCloudAt ?? nowIso)
+      : nowIso;
 
   return CloudStoredPair(computedCloudAt, computedStoredAt);
 }
