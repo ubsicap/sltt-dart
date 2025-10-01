@@ -455,18 +455,20 @@ class IsarStorageService extends BaseStorageService {
         .domainTypeEqualTo(domainType)
         .findAll();
 
-    // Debug: print change-log entries found for this domain
+    // Debug: log change-log entries found for this domain
     try {
-      print(
+      SlttLogger.logger.fine(
         '[$_logPrefix] getChangeStats - found ${changes.length} change-log entries for domainId=$domainId domainType=$domainType',
       );
       for (final c in changes) {
-        print(
+        SlttLogger.logger.fine(
           '[$_logPrefix] getChangeStats - seq=${c.seq} cid=${c.cid} op=${c.operation} entityType=${c.entityType} cloudAt=${c.cloudAt} storageId=${c.storageId}',
         );
       }
     } catch (e) {
-      print('[$_logPrefix] getChangeStats - debug print failed: $e');
+      SlttLogger.logger.warning(
+        '[$_logPrefix] getChangeStats - debug print failed: $e',
+      );
     }
 
     final Map<String, Map<String, dynamic>> perType = {};
@@ -569,11 +571,11 @@ class IsarStorageService extends BaseStorageService {
 
     // Debug: print entity-type sync state entries returned by Isar
     try {
-      print(
+      SlttLogger.logger.fine(
         '[$_logPrefix] DEBUG: isarEntityTypeSyncStates count=${entries.length} for domain=$domainId type=$domainType',
       );
       for (final e in entries) {
-        print(
+        SlttLogger.logger.fine(
           '[$_logPrefix] DEBUG: ET=${e.entityType} created=${e.created} updated=${e.updated} deleted=${e.deleted} changeAt=${e.changeAt} seq=${e.seq} cid=${e.cid}',
         );
       }
@@ -646,7 +648,7 @@ class IsarStorageService extends BaseStorageService {
     if (_initialized) {
       await _isar.close();
       _initialized = false;
-      print('[$_logPrefix] Isar database closed');
+      SlttLogger.logger.info('[$_logPrefix] Isar database closed');
     }
   }
 
@@ -674,7 +676,9 @@ class IsarStorageService extends BaseStorageService {
       // tooling expect deleteDatabase to remove files unconditionally.
       await IsarStorageService.deleteDatabaseFiles(_databaseName);
     } catch (e) {
-      print('[$_logPrefix] Warning: deleteDatabase failed: $e');
+      SlttLogger.logger.warning(
+        '[$_logPrefix] Warning: deleteDatabase failed: $e',
+      );
     }
   }
 
@@ -794,16 +798,18 @@ class IsarStorageService extends BaseStorageService {
 
     // Debug: log which changes are being returned for sync
     try {
-      print(
+      SlttLogger.logger.fine(
         '[$_logPrefix] getChangesForSync - returning ${results.length} changes (cursor=$cursor limit=$limit)',
       );
       for (final r in results) {
-        print(
+        SlttLogger.logger.fine(
           '[$_logPrefix] getChangesForSync - seq=${r.seq} cid=${r.cid} domain=${r.domainId} domainType=${r.domainType} op=${r.operation} entityType=${r.entityType} cloudAt=${r.cloudAt} storageId=${r.storageId}',
         );
       }
     } catch (e) {
-      print('[$_logPrefix] getChangesForSync - debug print failed: $e');
+      SlttLogger.logger.warning(
+        '[$_logPrefix] getChangesForSync - debug print failed: $e',
+      );
     }
 
     if (limit != null && results.length > limit) {
@@ -830,7 +836,9 @@ class IsarStorageService extends BaseStorageService {
     );
 
     if (entityTypeEnum == EntityType.unknown) {
-      print('getCurrentEntityState - Unknown entity type: "$entityType"');
+      SlttLogger.logger.warning(
+        'getCurrentEntityState - Unknown entity type: "$entityType"',
+      );
       return null;
     }
 
@@ -875,7 +883,9 @@ class IsarStorageService extends BaseStorageService {
 
     final seqsToDelete = allChanges.map((e) => e.seq).toList();
 
-    print('[$_logPrefix] deleteAllChanges - totalEntries=${allChanges.length}');
+    SlttLogger.logger.fine(
+      '[$_logPrefix] deleteAllChanges - totalEntries=${allChanges.length}',
+    );
     int deletedCount = 0;
     await _isar.writeTxn(() async {
       for (final seq in seqsToDelete) {
@@ -885,7 +895,9 @@ class IsarStorageService extends BaseStorageService {
       }
     });
 
-    print('[$_logPrefix] deleteAllChanges - deletedCount=$deletedCount');
+    SlttLogger.logger.fine(
+      '[$_logPrefix] deleteAllChanges - deletedCount=$deletedCount',
+    );
     return deletedCount;
   }
 
@@ -1110,7 +1122,7 @@ class IsarStorageService extends BaseStorageService {
             domainId: domainId,
           );
         } catch (e) {
-          print('Error deleting entity states for $et: $e');
+          SlttLogger.logger.warning('Error deleting entity states for $et: $e');
         }
       }
 

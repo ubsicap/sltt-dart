@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../logging.dart';
 import '../models/base_change_log_entry.dart';
 import '../models/entity_type.dart';
 import '../models/serializable_group.dart';
@@ -194,8 +195,9 @@ Map<String, dynamic> _createSafeJsonFromDeserializationError({
     'errorStack': errorInfo['errorStack'] ?? '',
     'json': originalJson,
   });
-
-  print(
+  // Log the deserialization failure including the recovered safe JSON.
+  // Use the project logger so output can be controlled in tests and CI.
+  SlttLogger.logger.severe(
     '** Deserialization error, using safe JSON, error: ${errorInfo['error']}. Safe JSON: ${const JsonEncoder.withIndent('  ').convert(safeJson)}',
   );
   return safeJson;

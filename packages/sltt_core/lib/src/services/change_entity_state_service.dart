@@ -404,13 +404,15 @@ GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
       // Debug: log comparison to aid diagnosing noOp/update classification
       try {
         final existingVal = existingData['data_$field'];
-        print(
+        SlttLogger.logger.fine(
           'DEBUG: comparing field "$field": existing=$existingVal (${existingVal.runtimeType}), existing_str=${stableStringify(existingVal)} incoming=$value (${value.runtimeType}), incoming_str=${stableStringify(value)}',
         );
       } catch (e, st) {
         // Log any unexpected errors during debug printing to avoid silent failures
-        print('DEBUG: comparing field "$field": error printing values: $e');
-        print(st);
+        SlttLogger.logger.warning(
+          'DEBUG: comparing field "$field": error printing values: $e',
+        );
+        SlttLogger.logger.warning(st.toString());
       }
       final entityFieldKey =
           'data_$field'; // Change log has 'rank', entity has 'data_rank'
@@ -503,24 +505,28 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
 
   // Debug: log detailed decision info
   try {
-    print(
+    SlttLogger.logger.fine(
       'DEBUG: getDataAndStateUpdatesOrOutdatedBys - cid=${changeLogEntry.cid} entityId=${changeLogEntry.entityId} fieldChanges=$fieldChanges noOpFields=$noOpFields outdatedBys=$outdatedBys isChangeNewerThanLatest=$isChangeNewerThanLatest',
     );
     if (entityState != null) {
       try {
-        print('DEBUG: existingEntityState=${entityState.toJson()}');
+        SlttLogger.logger.fine(
+          'DEBUG: existingEntityState=${entityState.toJson()}',
+        );
       } catch (e, st) {
         // If entityState serialization fails, log stack for diagnosis
-        print('DEBUG: failed to serialize existingEntityState: $e');
-        print(st);
+        SlttLogger.logger.warning(
+          'DEBUG: failed to serialize existingEntityState: $e',
+        );
+        SlttLogger.logger.warning(st.toString());
       }
     }
   } catch (e, st) {
     // Log any unexpected errors during debug printing
-    print(
+    SlttLogger.logger.warning(
       'DEBUG: getDataAndStateUpdatesOrOutdatedBys - debug print failed: $e',
     );
-    print(st);
+    SlttLogger.logger.warning(st.toString());
   }
 
   // Use provided cloud/stored pair (cs) if supplied to ensure the same

@@ -50,7 +50,7 @@ class ChangeProcessingService {
     required bool includeStateUpdates,
   }) async {
     final storageType = storage.getStorageType();
-    print(
+    SlttLogger.logger.info(
       '[ChangeProcessingService] Starting processChanges with storageType=$storageType, storageMode=$storageMode, srcStorageType=$srcStorageType, srcStorageId=$srcStorageId, changesCount=${changes.length}, includeChangeUpdates=$includeChangeUpdates, includeStateUpdates=$includeStateUpdates',
     );
     try {
@@ -245,7 +245,7 @@ class ChangeProcessingService {
             changeData,
           );
 
-          print(
+          SlttLogger.logger.fine(
             '[${storage.getStorageType()}] DEBUG: Deserialized changeLogEntry: cid=${changeLogEntry.cid}, unknownJson=${changeLogEntry.getUnknown()}',
           );
 
@@ -292,15 +292,15 @@ class ChangeProcessingService {
 
           // Debug: log the current entity state for diagnosis
           try {
-            print(
+            SlttLogger.logger.fine(
               '[${storage.getStorageType()}] DEBUG: entityState for CID ${changeLogEntry.cid}: ${entityState?.toJson()}',
             );
           } catch (e, st) {
             // Log failure to serialize entity state for debug purposes
-            print(
+            SlttLogger.logger.fine(
               '[${storage.getStorageType()}] DEBUG: failed to serialize entityState for CID ${changeLogEntry.cid}: $e',
             );
-            print(st);
+            SlttLogger.logger.fine(st.toString());
           }
 
           // Use enhanced change detection method
@@ -314,15 +314,15 @@ class ChangeProcessingService {
 
           // Debug: log detailed result info
           try {
-            print(
+            SlttLogger.logger.fine(
               '[${storage.getStorageType()}] DEBUG: getUpdates result for CID ${changeLogEntry.cid}: isDuplicate=${result.isDuplicate} changeUpdates=${result.changeUpdates} stateUpdates=${result.stateUpdates}',
             );
           } catch (e, st) {
             // Log debug printing failures
-            print(
+            SlttLogger.logger.fine(
               '[${storage.getStorageType()}] DEBUG: failed to print getUpdates result for CID ${changeLogEntry.cid}: $e',
             );
-            print(st);
+            SlttLogger.logger.fine(st.toString());
           }
 
           // Check payload size limits for save operations (sync operations preserve data)
@@ -340,7 +340,7 @@ class ChangeProcessingService {
 
           // Update storage with the change and state
           // Debug: log computed stateUpdates for diagnosis
-          print(
+          SlttLogger.logger.fine(
             '[${storage.getStorageType()}] DEBUG: computed stateUpdates for CID ${changeLogEntry.cid}: ${result.stateUpdates}',
           );
 
@@ -367,7 +367,7 @@ class ChangeProcessingService {
               updateResults.newChangeLogEntry.operation != 'no-op' &&
               !result.isDuplicate &&
               result.stateUpdates.isNotEmpty) {
-            print(
+            SlttLogger.logger.warning(
               '[${storage.getStorageType()}] WARNING: Sync mode resulted in state change for CID ${changeLogEntry.cid}. '
               'Operation: ${updateResults.newChangeLogEntry.operation}. '
               'This may indicate a data inconsistency worth investigating.'
@@ -400,7 +400,9 @@ class ChangeProcessingService {
       if (returnErrorIfInResultsSummary && resultsSummary.errors.isNotEmpty) {
         final errorMessage =
             'One or more changes resulted in errors. See resultsSummary for details:\n$resultsSummary';
-        print('[${storage.getStorageType()}] $errorMessage: $resultsSummary');
+        SlttLogger.logger.warning(
+          '[${storage.getStorageType()}] $errorMessage: $resultsSummary',
+        );
         return ChangeProcessingResult(
           errorMessage: errorMessage,
           errorCode: 400, // consider using 207 Multi-Status in future?
@@ -428,7 +430,7 @@ class ChangeProcessingService {
     final cid = changeLogEntry.cid;
     final unknownJson = changeLogEntry.unknownJson;
 
-    print(
+    SlttLogger.logger.fine(
       'DEBUG: validateUnknownJson - storageType=$storageType, storageMode=$storageMode, unknownJson=$unknownJson, cid=$cid',
     );
 
@@ -586,13 +588,15 @@ class ChangeProcessingService {
 
     // Debugging aid: log when tests produce unexpected empty updates
     try {
-      print(
+      SlttLogger.logger.fine(
         'DEBUG: _categorizeChangeResult includeChangeUpdates=$includeChangeUpdates includeStateUpdates=$includeStateUpdates cid=${updateResults.newChangeLogEntry.cid} changeUpdatesPresent=${result.changeUpdates.isNotEmpty} stateUpdatesPresent=${result.stateUpdates.isNotEmpty}',
       );
     } catch (e, st) {
       // Log failures of debug logging to avoid silent ignores
-      print('DEBUG: _categorizeChangeResult debug print failed: $e');
-      print(st);
+      SlttLogger.logger.warning(
+        'DEBUG: _categorizeChangeResult debug print failed: $e',
+      );
+      SlttLogger.logger.warning(st.toString());
     }
   }
 }

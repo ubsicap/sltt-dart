@@ -43,12 +43,16 @@ class SlttLogger {
     // Only add a handler once.
     if (!_initialized) {
       Logger.root.onRecord.listen((record) {
-        // Print minimal, human-friendly logs
-        print(
+        // Build a single string to print so tests that capture stdout see a
+        // coherent message rather than multiple print calls. Keep previous
+        // format but include optional error/stack on following lines.
+        final buffer = StringBuffer();
+        buffer.write(
           '[${record.level.name}] ${record.time.toIso8601String()} ${record.loggerName}: ${record.message}',
         );
-        if (record.error != null) print(record.error);
-        if (record.stackTrace != null) print(record.stackTrace);
+        if (record.error != null) buffer.write('\n${record.error}');
+        if (record.stackTrace != null) buffer.write('\n${record.stackTrace}');
+        print(buffer.toString());
       });
       _initialized = true;
     }

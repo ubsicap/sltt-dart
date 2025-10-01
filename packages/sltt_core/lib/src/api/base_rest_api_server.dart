@@ -105,7 +105,7 @@ abstract class BaseRestApiServer {
     if (_server != null) {
       final storageId = await storage.getStorageId();
       final storageType = storage.getStorageType();
-      print('[$serverName] Server is already running');
+      SlttLogger.logger.info('[$serverName] Server is already running');
       return StartResponse(storageId: storageId, storageType: storageType);
     }
 
@@ -123,7 +123,7 @@ abstract class BaseRestApiServer {
         .addHandler(router.call);
 
     _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
-    print(
+    SlttLogger.logger.info(
       '[$serverName] Server started on http://localhost:$port (storageId="$storageId", storageType="$storageType")',
     );
     return StartResponse(storageId: storageId, storageType: storageType);
@@ -904,8 +904,7 @@ abstract class BaseRestApiServer {
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e, stackTrace) {
-      print('Error getting domain IDs: $e');
-      print('Stack trace: $stackTrace');
+      SlttLogger.logger.severe('Error getting domain IDs: $e', e, stackTrace);
       return _errorResponse(
         'Failed to get domain IDs: ${e.toString()}',
         500,
@@ -931,8 +930,7 @@ abstract class BaseRestApiServer {
     } on ArgumentError catch (e) {
       return _errorResponse('$e', 400);
     } catch (e, stackTrace) {
-      print('Error getting domains: $e');
-      print('Stack trace: $stackTrace');
+      SlttLogger.logger.severe('Error getting domains: $e', e, stackTrace);
       return _errorResponse(
         'Failed to get domains: ${e.toString()}',
         500,
@@ -1020,8 +1018,9 @@ abstract class BaseRestApiServer {
       );
     } on ArgumentError catch (e) {
       return _errorResponse('$e', 400);
-    } catch (e) {
-      return _errorResponse('Failed to fetch changes: $e', 500);
+    } catch (e, st) {
+      SlttLogger.logger.severe('Failed to fetch changes: $e', e, st);
+      return _errorResponse('Failed to fetch changes: $e', 500, st);
     }
   }
 
@@ -1055,7 +1054,9 @@ abstract class BaseRestApiServer {
       }
 
       final changeJson = change.toJson();
-      print('_handleGetChange Response: ${jsonEncode(changeJson)}');
+      SlttLogger.logger.fine(
+        '_handleGetChange Response: ${jsonEncode(changeJson)}',
+      );
       return Response.ok(
         jsonEncode(changeJson),
         headers: {'Content-Type': 'application/json'},
@@ -1166,7 +1167,7 @@ abstract class BaseRestApiServer {
         );
       }
 
-      print(
+      SlttLogger.logger.fine(
         'Response: ${const JsonEncoder.withIndent('  ').convert(result.resultsSummary)}',
       );
 
@@ -1177,8 +1178,7 @@ abstract class BaseRestApiServer {
     } on ArgumentError catch (e) {
       return _errorResponse('$e', 400);
     } catch (e, stackTrace) {
-      print('Error creating changes: $e');
-      print('Stack trace: $stackTrace');
+      SlttLogger.logger.severe('Error creating changes: $e', e, stackTrace);
       return _errorResponse(
         'Failed to create changes: ${e.toString()}',
         500,
@@ -1202,7 +1202,7 @@ abstract class BaseRestApiServer {
       }
 
       // Debugging: log parameters so tests can diagnose unexpected 404s
-      print(
+      SlttLogger.logger.fine(
         '[BaseRestApiServer] _handleGetStats domainCollection=${request.params["domainCollection"]} domainType=$domainType domainId=$domainId',
       );
 
@@ -1210,7 +1210,7 @@ abstract class BaseRestApiServer {
         domainType: domainType,
         domainId: domainId,
       );
-      print(
+      SlttLogger.logger.fine(
         '[BaseRestApiServer] storage.getChangeStats returned: ${changeStats.totals}',
       );
 
@@ -1218,7 +1218,7 @@ abstract class BaseRestApiServer {
         domainType: domainType,
         domainId: domainId,
       );
-      print(
+      SlttLogger.logger.fine(
         '[BaseRestApiServer] storage.getStateStats returned: $entityTypeStats',
       );
 
@@ -1238,8 +1238,9 @@ abstract class BaseRestApiServer {
       );
     } on ArgumentError catch (e) {
       return _errorResponse('$e', 400);
-    } catch (e) {
-      return _errorResponse('Failed to fetch statistics: $e', 500);
+    } catch (e, st) {
+      SlttLogger.logger.severe('Failed to fetch statistics: $e', e, st);
+      return _errorResponse('Failed to fetch statistics: $e', 500, st);
     }
   }
 
@@ -1287,7 +1288,9 @@ abstract class BaseRestApiServer {
           }
         } catch (e) {
           // Skip individual project errors but continue aggregating
-          print('Warning: Failed to get stats for project $domainId: $e');
+          SlttLogger.logger.warning(
+            'Warning: Failed to get stats for project $domainId: $e',
+          );
         }
       }
 
@@ -1306,8 +1309,9 @@ abstract class BaseRestApiServer {
         }),
         headers: {'Content-Type': 'application/json'},
       );
-    } catch (e) {
-      return _errorResponse('Failed to fetch global statistics: $e', 500);
+    } catch (e, st) {
+      SlttLogger.logger.severe('Failed to fetch global statistics: $e', e, st);
+      return _errorResponse('Failed to fetch global statistics: $e', 500, st);
     }
   }
 
@@ -1504,8 +1508,7 @@ abstract class BaseRestApiServer {
     } on ArgumentError catch (e) {
       return _errorResponse('$e', 400);
     } catch (e, stackTrace) {
-      print('Error in test reset: $e');
-      print('Stack trace: $stackTrace');
+      SlttLogger.logger.severe('Error in test reset: $e', e, stackTrace);
       return _errorResponse(
         'Failed to perform test reset: ${e.toString()}',
         500,
@@ -1542,10 +1545,15 @@ abstract class BaseRestApiServer {
     StackTrace? stackTrace,
     ChangeProcessingSummary? resultsSummary,
   ]) {
-    // Log error to console
-    print('[$serverName] Error ($statusCode): $message');
-    if (stackTrace != null) {
-      print('[$serverName] Stack trace: $stackTrace');
+    // Log error using the project logger so tests/CI can control verbosity.
+    if (statusCode >= 500) {
+      SlttLogger.logger.severe(
+        '[$serverName] Error ($statusCode): $message',
+        null,
+        stackTrace,
+      );
+    } else {
+      SlttLogger.logger.warning('[$serverName] Error ($statusCode): $message');
     }
 
     final errorBody = <String, dynamic>{
@@ -1574,7 +1582,7 @@ abstract class BaseRestApiServer {
     if (_server != null) {
       await _server!.close();
       _server = null;
-      print('[$serverName] Server stopped');
+      SlttLogger.logger.info('[$serverName] Server stopped');
     }
 
     await storage.close();
@@ -1595,7 +1603,7 @@ Middleware _customLogRequests({required String serverName, required int port}) {
       final response = await innerHandler(request);
       final timestamp = DateTime.now().toIso8601String();
       final paddedName = serverName.padLeft(12);
-      print(
+      SlttLogger.logger.info(
         '$timestamp  $paddedName:$port  ${request.method}  [${response.statusCode}]  ${request.requestedUri.path}',
       );
       return response;
