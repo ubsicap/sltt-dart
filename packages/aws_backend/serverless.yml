@@ -16,7 +16,7 @@ provider:
   # Environment variables
   environment:
     STAGE: ${self:provider.stage}
-    DYNAMODB_TABLE: ${self:service}-changes-${self:provider.stage}
+    DYNAMODB_TABLE: ${self:service}-changes-states-${self:provider.stage}
     DYNAMODB_REGION: ${self:provider.region}
 
   # IAM permissions for DynamoDB
