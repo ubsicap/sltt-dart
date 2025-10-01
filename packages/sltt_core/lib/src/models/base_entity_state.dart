@@ -29,10 +29,13 @@ abstract class BaseEntityState
   @override
   final DateTime change_changeAt;
   @override
+  final DateTime change_changeAt_orig_;
+  @override
   @UtcDateTimeConverter()
   final DateTime change_storedAt;
   @override
-  final DateTime change_changeAt_orig_;
+  @UtcDateTimeConverter()
+  final DateTime change_storedAt_orig_;
   @override
   final String change_cid;
   @override
@@ -105,6 +108,7 @@ abstract class BaseEntityState
     required this.change_changeAt,
     required DateTime change_changeAt_orig_,
     DateTime? change_storedAt,
+    DateTime? change_storedAt_orig_,
     required this.change_cid,
     required String change_cid_orig_,
     this.change_dataSchemaRev,
@@ -146,6 +150,11 @@ abstract class BaseEntityState
        ),
        change_storedAt = BaseEntityState.normalizeStoredAt(
          change_storedAt,
+         change_cloudAt,
+         change_changeAt,
+       ),
+       change_storedAt_orig_ = BaseEntityState.normalizeStoredAt(
+         change_storedAt_orig_,
          change_cloudAt,
          change_changeAt,
        ),
@@ -258,6 +267,7 @@ mixin CoreChangeLogEntryFields {
 mixin CoreChangeLogEntryOriginalFields {
   String get change_domainId_orig_;
   DateTime get change_changeAt_orig_;
+  DateTime get change_storedAt_orig_;
   String get change_cid_orig_;
   // NOT needed: DateTime? get change_cloudAt_orig_;
   String get change_changeBy_orig_;

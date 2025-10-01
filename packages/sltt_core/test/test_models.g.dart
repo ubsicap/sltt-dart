@@ -241,10 +241,10 @@ Map<String, dynamic> _$TestEntityStateToJson(
   'change_domainId': instance.change_domainId,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
+  'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),
   'change_storedAt': const UtcDateTimeConverter().toJson(
     instance.change_storedAt,
   ),
-  'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),
   'change_cid': instance.change_cid,
   'change_cid_orig_': instance.change_cid_orig_,
   'change_dataSchemaRev': instance.change_dataSchemaRev,
