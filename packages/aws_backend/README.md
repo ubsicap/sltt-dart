@@ -323,6 +323,32 @@ dart test test/aws_rest_api_server_test.dart
 - **Problem**: "Runtime.ImportModuleError" in Lambda
   - **Solution**: Ensure binary is named `bootstrap` (serverless-dart handles this)
   - **Check**: Your handler in serverless.yml matches your Dart main function
+- **Problem**: "fork/exec /var/task/bootstrap: exec format error"
+  - **Solution**: Binary was compiled for wrong architecture (Windows vs Linux)
+  - **Fix**: Use `npm run build` (Docker-based) instead of `dart compile exe` directly on Windows
+
+### Debugging Lambda Issues
+
+When your deployed Lambda returns errors, use these commands to investigate:
+
+```bash
+# Get recent CloudWatch logs (last 1 hour)
+npm run logs:dev     # For dev stage
+npm run logs:prod    # For prod stage
+
+# Get deployment info (URLs, function names)
+npm run info:dev     # For dev stage
+npm run info:prod    # For prod stage
+
+# Manual CloudWatch access (if npm scripts don't work)
+npx serverless logs --function api --stage dev --aws-profile sltt-dart-dev --startTime 1h
+```
+
+Common error patterns in logs:
+- `Runtime.InvalidEntrypoint` + `exec format error` → Wrong architecture (use Docker build)
+- `Could not load credentials` → AWS credentials not available to Lambda
+- `ValidationException` → DynamoDB table/permissions issue
+- `Process exited before completing request` → Dart runtime crash (check initialization)
 
 ## Future Enhancements
 
