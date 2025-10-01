@@ -81,7 +81,7 @@ class IsarStorageService extends BaseStorageService {
     }
 
     _initialized = true;
-    print(
+    SlttLogger.logger.info(
       '[$_logPrefix] Isar database initialized at: ${dir.path}/$_databaseName.isar',
     );
 
@@ -175,7 +175,9 @@ class IsarStorageService extends BaseStorageService {
     if (skipChangeLogWrite && skipStateWrite ||
         (changeUpdates.isEmpty && stateUpdates.isEmpty)) {
       // no change to state or change log entry
-      print('[$_logPrefix] updateChangeLogAndState - no changes detected');
+      SlttLogger.logger.fine(
+        '[$_logPrefix] updateChangeLogAndState - no changes detected',
+      );
       return (newChangeLogEntry: changeLogEntry, newEntityState: entityState!);
     }
     // Create updated change log entry
@@ -197,7 +199,7 @@ class IsarStorageService extends BaseStorageService {
       // For cloud-backed storages prefer cloudAt; otherwise use current time.
       newChange.storedAt = newChange.cloudAt ?? DateTime.now().toUtc();
     } else {
-      print(
+      SlttLogger.logger.fine(
         'updateChangeLogAndState - skipping change log write for cid=${newChange.cid} (cloudAt=${newChange.cloudAt})',
       );
     }
@@ -212,13 +214,13 @@ class IsarStorageService extends BaseStorageService {
     late final BaseEntityState newEntityState;
     if (entityState != null) {
       // Merge state updates into existing state
-      print(
+      SlttLogger.logger.fine(
         'updateChangeLogAndState - before merge - entityState id: ${entityState.toJson()['id']}',
       );
       final mergedStateJson = {...entityState.toJson(), ...stateUpdates}
         ..removeWhere((k, v) => v == null);
 
-      print(
+      SlttLogger.logger.fine(
         'updateChangeLogAndState - after merge - mergedStateJson id: ${mergedStateJson['id']}',
       );
 
@@ -239,13 +241,13 @@ class IsarStorageService extends BaseStorageService {
       );
     }
 
-    print(
+    SlttLogger.logger.fine(
       'updateChangeLogAndState - before put - newChange seq: ${newChange.seq}',
     );
-    print(
+    SlttLogger.logger.fine(
       'updateChangeLogAndState - before put - newEntityState id: ${newEntityState.toJson()['id']}',
     );
-    print(
+    SlttLogger.logger.fine(
       'updateChangeLogAndState - before put - newEntityState entityId: ${newEntityState.entityId}',
     );
 
@@ -254,7 +256,7 @@ class IsarStorageService extends BaseStorageService {
       if (!skipChangeLogWrite) {
         await _isar.collection<client.IsarChangeLogEntry>().put(newChange);
 
-        print(
+        SlttLogger.logger.fine(
           'updateChangeLogAndState - after put - newChange id: ${newChange.seq}',
         );
       }
@@ -270,7 +272,7 @@ class IsarStorageService extends BaseStorageService {
         await storageGroup.put(newEntityState);
       }
 
-      print(
+      SlttLogger.logger.fine(
         'updateChangeLogAndState - after put - newEntityState id: ${newEntityState.toJson()['id']}',
       );
 
@@ -287,7 +289,7 @@ class IsarStorageService extends BaseStorageService {
               .findFirst();
 
           final op = newChange.operation;
-          print(
+          SlttLogger.logger.fine(
             'updateChangeLogAndState - Upserting entity-type sync state for entityType=${changeLogEntry.entityType} entityId=${newChange.entityId} domainId=${newChange.domainId} op=$op existing=${existingEntityTypeSyncStates != null}',
           );
           if (existingEntityTypeSyncStates != null) {
@@ -335,7 +337,7 @@ class IsarStorageService extends BaseStorageService {
             await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
           }
         } catch (e) {
-          print(
+          SlttLogger.logger.warning(
             '[$_logPrefix] Warning: failed to upsert entity-type sync state: $e',
           );
         }
@@ -683,26 +685,65 @@ class IsarStorageService extends BaseStorageService {
     String databaseName, {
     String dirPath = './isar_db',
   }) async {
-    try {
-      final dir = Directory(dirPath);
-      if (!await dir.exists()) return;
+    // Attempt deletion with retry/backoff because on Windows the files may be
+    // transiently locked by another process (or the VM). Try repeatedly for a
+    // short timeout before giving up.
+    final timeout = const Duration(seconds: 5);
+    final backoff = const Duration(milliseconds: 200);
+    final end = DateTime.now().add(timeout);
 
-      final isarFile = File('$dirPath/$databaseName.isar');
-      final isarLck = File('$dirPath/$databaseName.isar-lck');
-      final dbDir = Directory('$dirPath/$databaseName');
+    final dir = Directory(dirPath);
+    if (!await dir.exists()) return;
 
-      if (await isarFile.exists()) {
-        await isarFile.delete();
+    final isarFile = File('$dirPath/$databaseName.isar');
+    final isarLck = File('$dirPath/$databaseName.isar-lck');
+    final dbDir = Directory('$dirPath/$databaseName');
+
+    Future<bool> tryDeleteFile(File f) async {
+      try {
+        if (await f.exists()) {
+          await f.delete();
+        }
+        return true;
+      } catch (e) {
+        return false;
       }
-      if (await isarLck.exists()) {
-        await isarLck.delete();
+    }
+
+    Future<bool> tryDeleteDir(Directory d) async {
+      try {
+        if (await d.exists()) {
+          await d.delete(recursive: true);
+        }
+        return true;
+      } catch (e) {
+        return false;
       }
-      if (await dbDir.exists()) {
-        await dbDir.delete(recursive: true);
+    }
+
+    bool removed = false;
+    while (DateTime.now().isBefore(end)) {
+      final f1 = await tryDeleteFile(isarFile);
+      final f2 = await tryDeleteFile(isarLck);
+      final d1 = await tryDeleteDir(dbDir);
+
+      if (f1 && f2 && d1) {
+        removed = true;
+        break;
       }
-    } catch (e) {
-      // Non-fatal - log and continue
-      print('[test-utils] Failed to delete Isar files for $databaseName: $e');
+
+      // Wait a bit and retry
+      await Future.delayed(backoff);
+    }
+
+    if (!removed) {
+      SlttLogger.logger.warning(
+        '[test-utils] Failed to delete Isar files for $databaseName within ${timeout.inSeconds}s; files may be locked by another process',
+      );
+    } else {
+      SlttLogger.logger.fine(
+        '[test-utils] Deleted Isar files for $databaseName',
+      );
     }
   }
 
