@@ -1,3 +1,4 @@
+import 'package:sltt_core/src/logging.dart';
 import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 import 'package:test/test.dart';
@@ -16,7 +17,7 @@ void main() {
     storage = IsarStorageService(testDbName, 'local');
     await storage.deleteDatabase();
     await storage.initialize();
-    print(
+    SlttLogger.logger.info(
       '[TestGetEntityStates] Isar database initialized at: ./isar_db/$testDbName.isar',
     );
   });
@@ -155,8 +156,8 @@ void main() {
       };
 
       // Use updateChangeLogAndState to write states
-      print('DEBUG: stateUpdates for task-1 -> ');
-      print({
+      SlttLogger.logger.fine('DEBUG: stateUpdates for task-1 -> ');
+      SlttLogger.logger.fine({
         'domainType': 'project',
         'entityType': 'task',
         'entityId': 'task-1',
@@ -216,8 +217,8 @@ void main() {
         },
       );
 
-      print('DEBUG: stateUpdates for task-2 -> ');
-      print({
+      SlttLogger.logger.fine('DEBUG: stateUpdates for task-2 -> ');
+      SlttLogger.logger.fine({
         'domainType': 'project',
         'entityType': 'task',
         'entityId': 'task-2',

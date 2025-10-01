@@ -1,10 +1,6 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
-import 'package:sync_manager/sync_manager.dart';
-import 'package:test/test.dart';
-
 // helper removed; tests now use LocalStorageService.instance for seeding
 
 // Integration tests for SyncManager using a local cloud server launched by
@@ -12,7 +8,14 @@ import 'package:test/test.dart';
 // 1) Local storage starts with changes to outsync (outsync -> cloud)
 // 2) Cloud storage starts with changes to downsync (downsync -> local)
 
+// logging available via public export
+import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
+import 'package:sync_manager/sync_manager.dart';
+import 'package:test/test.dart';
+
 void main() {
+  // Initialize project logger so SLTT_LOG_LEVEL is honored in tests.
+  SlttLogger.init();
   group('SyncManager integration', () {
     // Helper to construct the expected flattened state map that the
     // ChangeProcessingService produces when upserting entity state. The
@@ -74,7 +77,10 @@ void main() {
       try {
         await local.deleteDatabase();
       } catch (e) {
-        print('[test] Warning: failed to delete local database: $e');
+        SlttLogger.logger.warning(
+          '[test] Warning: failed to delete local database: $e',
+        );
+        rethrow;
       }
       await local.initialize();
 
@@ -82,7 +88,10 @@ void main() {
       try {
         await cloudStorage.deleteDatabase();
       } catch (e) {
-        print('[test] Warning: failed to delete cloud database: $e');
+        SlttLogger.logger.warning(
+          '[test] Warning: failed to delete cloud database: $e',
+        );
+        rethrow;
       }
       await cloudStorage.initialize();
 
@@ -150,7 +159,8 @@ void main() {
           expect(
             state!.containsKey('change_storedAt'),
             isTrue,
-            reason: 'cloud seed state must include change_storedAt',
+            reason:
+                'cloud seed state must include change_storedAt: ${const JsonEncoder.withIndent(' ').convert(cloudSeedJson)}',
           );
           final storedAt = state['change_storedAt'] as String?;
           expect(storedAt, isNotNull);

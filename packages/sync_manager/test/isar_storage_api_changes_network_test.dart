@@ -94,7 +94,9 @@ void main() {
 
   // Option 2: Run specific groups with automatic test discovery
   final availableGroups = testSuite.getTestGroupNames();
-  print('Available test groups: $availableGroups'); // Helpful for debugging
+  SlttLogger.logger.info(
+    'Available test groups: $availableGroups',
+  ); // Helpful for debugging
 
   group('API Changes Network Tests (Individual Test Groups)', () {
     // Run individual test groups with proper naming

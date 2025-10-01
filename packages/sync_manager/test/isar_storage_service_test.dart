@@ -640,7 +640,7 @@ void main() {
         domainType: 'project',
         domainId: projectId,
       );
-      print('DEBUG: change stats for $projectId -> $statsDyn');
+      SlttLogger.logger.fine('DEBUG: change stats for $projectId -> $statsDyn');
       // Compute expected counts from the processResults so the test
       // remains correct regardless of how individual changes were
       // classified (create vs update) by ChangeProcessingService.
@@ -886,10 +886,12 @@ void main() {
           },
         );
 
-        print(
+        SlttLogger.logger.fine(
           '1 - Initial change result: ${result1.newChangeLogEntry.toJson()}',
         );
-        print('1 - Initial state result: ${result1.newEntityState.toJson()}');
+        SlttLogger.logger.fine(
+          '1 - Initial state result: ${result1.newEntityState.toJson()}',
+        );
 
         // Apply a newer change to nameLocal
         final newerTime = baseTime.add(const Duration(minutes: 5));
@@ -910,8 +912,12 @@ void main() {
           entityId: entityId,
         );
 
-        print('2 - Current state before update: ${currentState?.toJson()}');
-        print('2 - Current change result: ${change2.toJson()}');
+        SlttLogger.logger.fine(
+          '2 - Current state before update: ${currentState?.toJson()}',
+        );
+        SlttLogger.logger.fine(
+          '2 - Current change result: ${change2.toJson()}',
+        );
 
         final result = await storage.updateChangeLogAndState(
           domainType: 'project',
@@ -925,8 +931,12 @@ void main() {
           },
         );
 
-        print('3 - Update result: ${result.newChangeLogEntry.toJson()}');
-        print('3 - Update state result: ${result.newEntityState.toJson()}');
+        SlttLogger.logger.fine(
+          '3 - Update result: ${result.newChangeLogEntry.toJson()}',
+        );
+        SlttLogger.logger.fine(
+          '3 - Update state result: ${result.newEntityState.toJson()}',
+        );
 
         expect(result.newChangeLogEntry.seq, equals(2));
 

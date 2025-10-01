@@ -1,11 +1,15 @@
 import 'dart:convert';
 
+import 'package:sltt_core/src/logging.dart';
 import 'package:sltt_core/src/services/change_entity_state_service.dart';
 import 'package:test/test.dart';
 
 import 'test_models.dart';
 
 void main() {
+  // Initialize project logger with default level (WARNING). Tests can call
+  // SlttLogger.setLevel(Level.FINE) to enable verbose logs for debugging.
+  SlttLogger.init();
   group('Serialization/Deserialization', () {
     test('TestChangeLogEntry serializes and deserializes correctly', () {
       final entry = TestChangeLogEntry(

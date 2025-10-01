@@ -95,7 +95,7 @@ class InMemoryStorage implements BaseStorageService {
     try {
       // Intentionally do not inject fallback fields here. Tests should provide
       // the minimal required fields
-      print(
+      SlttLogger.logger.fine(
         'DEBUG: InMemoryStorage merged state for CID ${newChange.cid}: $merged',
       );
       newState = TestEntityState.fromJson(merged);
@@ -113,11 +113,11 @@ class InMemoryStorage implements BaseStorageService {
       }
     } catch (e, st) {
       // Surface parsing errors for diagnostics
-      print(
+      SlttLogger.logger.severe(
         'ERROR: Failed to construct TestEntityState from merged payload: $e',
       );
-      print('ERROR: merged payload: $merged');
-      print(st);
+      SlttLogger.logger.severe('ERROR: merged payload: $merged');
+      SlttLogger.logger.severe(st.toString());
       rethrow;
     }
 

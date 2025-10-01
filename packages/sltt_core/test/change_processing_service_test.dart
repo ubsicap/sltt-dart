@@ -7,6 +7,7 @@ import 'helpers/in_memory_storage.dart';
 import 'test_models.dart';
 
 void main() {
+  SlttLogger.init();
   // Helper to generate a cid when we only have an entityType string
   String genCidFor(String entityType) => generateCid(
     entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown,
@@ -140,15 +141,15 @@ void main() {
         );
 
         final summary = result.resultsSummary!;
-        print(
+        SlttLogger.logger.info(
           'Summary: storageType=${summary.storageType}, storageId=${summary.storageId}',
         );
-        print('changeUpdates: ${summary.changeUpdates}');
-        print('stateUpdates: ${summary.stateUpdates}');
-        print('created: ${summary.created}');
-        print('updated: ${summary.updated}');
-        print('errors: ${summary.errors}');
-        print('unprocessed: ${summary.unprocessed}');
+        SlttLogger.logger.info('changeUpdates: ${summary.changeUpdates}');
+        SlttLogger.logger.info('stateUpdates: ${summary.stateUpdates}');
+        SlttLogger.logger.info('created: ${summary.created}');
+        SlttLogger.logger.info('updated: ${summary.updated}');
+        SlttLogger.logger.info('errors: ${summary.errors}');
+        SlttLogger.logger.info('unprocessed: ${summary.unprocessed}');
 
         expect(summary.changeUpdates, isA<List>());
         expect(summary.changeUpdates.isNotEmpty, isTrue);
@@ -705,6 +706,9 @@ void main() {
         test('save mode - should store change log entry and state', () async {
           // use the static API directly; ChangeProcessingService is static-only
 
+          SlttLogger.logger.info(
+            'Storage type: ${cloudStorage.getStorageType()}',
+          );
           final changeData = {
             'domainId': 'test-project',
             'domainType': 'project',
