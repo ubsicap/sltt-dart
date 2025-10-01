@@ -26,6 +26,7 @@ dependencies:
 
   # JSON handling
   json_annotation: ^4.8.0
+  logging: ^1.0.0
 
 dev_dependencies:
   test: ^1.24.0
