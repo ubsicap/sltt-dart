@@ -18,7 +18,10 @@ void main() {
     // ChangeProcessingService produces when upserting entity state. The
     // service expands the JSON fields in change.dataJson into flattened
     // keys like `data_<field>` and also emits derived metadata fields.
-    Map<String, dynamic> expectedStateFromChange(IsarChangeLogEntry ch) {
+    Map<String, dynamic> expectedStateFromChange(
+      IsarChangeLogEntry ch, {
+      bool isCloudStorage = false,
+    }) {
       final data = jsonDecode(ch.dataJson) as Map<String, dynamic>;
       final changeAt = const UtcDateTimeConverter().toJson(ch.changeAt);
       final map = <String, dynamic>{
@@ -35,7 +38,7 @@ void main() {
         'change_changeAt': changeAt,
         'change_cid': ch.cid,
         'change_changeBy': ch.changeBy,
-        'change_cloudAt': null,
+        'change_cloudAt': isCloudStorage ? isA<String>() : null,
         'change_storedAt': isA<String>(),
       };
 
@@ -49,7 +52,7 @@ void main() {
         map['data_${key}_changeAt_'] = changeAt;
         map['data_${key}_cid_'] = ch.cid;
         map['data_${key}_changeBy_'] = ch.changeBy;
-        map['data_${key}_cloudAt_'] = null;
+        map['data_${key}_cloudAt_'] = isCloudStorage ? isA<String>() : null;
       }
 
       return map;
@@ -475,7 +478,7 @@ void main() {
         final cloudStateUpdates = [
           {
             'cid': cloudChange.cid,
-            'state': expectedStateFromChange(cloudChange),
+            'state': expectedStateFromChange(cloudChange, isCloudStorage: true),
           },
         ];
         final cloudChangeUpdates = [
@@ -486,7 +489,7 @@ void main() {
               'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
               'stateChanged': true,
               'storageId': await cloud.getStorageId(),
-              'cloudAt': null,
+              'cloudAt': isA<String>(),
               'storedAt': isA<String>(),
               'dataJson': cloudChange.dataJson,
             },
@@ -588,7 +591,9 @@ void main() {
               'operation': localChange.operation,
               'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
               'stateChanged': true,
+              'storageId': await local.getStorageId(),
               'cloudAt': null,
+              'storedAt': isA<String>(),
               'dataJson': localChange.dataJson,
             },
           },
@@ -670,7 +675,7 @@ void main() {
               'After full sync, project $projectId should have 1 local state entity',
         );
       },
-      skip: 'fixme',
+      // skip: 'fixme',
     );
 
     test(
@@ -821,7 +826,7 @@ void main() {
         final cloudStateUpdates2 = [
           {
             'cid': cloudChange.cid,
-            'state': expectedStateFromChange(cloudChange),
+            'state': expectedStateFromChange(cloudChange, isCloudStorage: true),
           },
         ];
         final cloudChangeUpdates2 = [
@@ -831,7 +836,9 @@ void main() {
               'operation': cloudChange.operation,
               'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
               'stateChanged': true,
-              'cloudAt': null,
+              'storageId': await cloud.getStorageId(),
+              'cloudAt': isA<String>(),
+              'storedAt': isA<String>(),
               'dataJson': cloudChange.dataJson,
             },
           },
@@ -941,7 +948,7 @@ void main() {
         );
       },
       timeout: const Timeout(Duration(minutes: 3)),
-      skip: 'fixme',
+      // skip: 'fixme',
     );
   });
 }
