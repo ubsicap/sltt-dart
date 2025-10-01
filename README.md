@@ -104,18 +104,6 @@ The complete system documentation below is for reference and will be moved to in
 
 - **Multi-Storage Architecture**: Separate storage services for outsyncs, downsyncs, and cloud simulation
 - **Advanced Sync Management**: Bi-directional sync with outsync and downsync capabilities
-- **REST API Servers**: Multiple API servers for different storage types with sync ## License
-
-This project is part of the SLTT Dart sync system.points
-- **Offline-First Storage**: Uses Isar for local data persistence with automatic change tracking
-- **Developer-Friendly**: Easy to debug, test, and extend with comprehensive tooling System
-
-A shared Dart backend codebase for offline-first, LAN-collaborative, cloud-sync applications with a comprehensive sync management system and REST API interface.
-
-## Features
-
-- **Multi-Storage Architecture**: Separate storage services for outsyncs, downsyncs, and cloud simulation
-- **Advanced Sync Management**: Bi-directional sync with outsync and downsync capabilities
 - **REST API Servers**: Multiple API servers for different storage types with sync endpoints
 - **Offline-First Storage**: Uses Isar for local data persistence with automatic change tracking
 - **Developer-Friendly**: Easy to debug, test, and extend with comprehensive tooling

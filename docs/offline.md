@@ -34,3 +34,16 @@ Notes
 -----
 - Do not commit vendor/pub-cache to git; instead publish as a release asset or store externally.
 - If a package is missing from the vendored cache, populate it while online and update `vendor/pub-cache`.
+
+Windows (copying the pub-cache)
+-----------------------------------------
+
+For Windows users a helper batch script is provided that automates copying the pub cache into `vendor\pub-cache` and prints the command to set `PUB_CACHE` for your shell session.
+
+Use the batch script from the repository root while online:
+
+```cmd
+scripts\use_vendored_pubcache.bat
+```
+
+The script uses robocopy under the hood and includes sensible defaults and safety checks. If you prefer to run the commands manually, see `scripts/use_vendored_pubcache.bat --help` for the exact flags and examples.
