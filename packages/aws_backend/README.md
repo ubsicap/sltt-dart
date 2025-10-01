@@ -22,7 +22,7 @@ aws_backend/
 │   │       └── aws_rest_api_server.dart         # REST API server for testing
 │   └── aws_backend.dart                         # Main export file
 ├── bin/
-│   ├── demo_dynamodb.dart                       # Demo script for testing
+│   ├── demo_dynamodb.old                        # Archived local demo script
 │   ├── integration_demo.dart                    # Hybrid local/cloud demo
 │   └── aws_lambda_server.dart                   # AWS Lambda handler
 ├── serverless.yml                              # Serverless Framework config
@@ -45,11 +45,14 @@ aws_backend/
    java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb -port 8000
    ```
 
-3. **Run the demo**:
-   ```bash
-   cd packages/aws_backend
-   dart run bin/demo_dynamodb.dart
-   ```
+3. **Smoke test the API locally**:
+  ```bash
+  cd packages/aws_backend
+  dart run bin/debug_server.dart
+  ```
+  > _Note_: The legacy `demo_dynamodb.dart` script has been archived as
+  > `demo_dynamodb.old`. Prefer the debug server or the new automated tests
+  > (`dart test`) when validating changes.
 
 ### Using DynamoDB Storage Service
 
@@ -173,6 +176,9 @@ The package includes a `serverless.yml` configuration optimized for AWS Lambda d
 # Deploy to AWS with project-specific configuration
 serverless deploy --stage dev --aws-profile sltt-dart-dev
 
+# Or use the provided npm script (build + deploy)
+npm run deploy:dev
+
 # The serverless-dart plugin will automatically:
 # 1. Build your Dart application (natively on Linux/WSL2, or in Docker on Windows/macOS)
 # 2. Compile to native binary using dart compile exe (or dart2native)
@@ -242,7 +248,7 @@ The demo script provides comprehensive testing of all DynamoDB operations:
 
 ```bash
 cd packages/aws_backend
-dart run bin/demo_dynamodb.dart
+dart run bin/debug_server.dart
 ```
 
 This will:
@@ -259,6 +265,16 @@ dart run bin/integration_demo.dart
 ```
 
 This demonstrates hybrid local/cloud synchronization.
+
+### Automated route checks
+
+Run the focused unit tests that exercise the health and help routes via the
+Lambda handler adaptor:
+
+```bash
+cd packages/aws_backend
+dart test test/aws_rest_api_server_test.dart
+```
 
 ## Development vs Production
 
