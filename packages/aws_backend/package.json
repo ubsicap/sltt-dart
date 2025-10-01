@@ -17,6 +17,7 @@
     "info:dev": "npx serverless info --stage dev --aws-profile sltt-dart-dev",
     "info:prod": "npx serverless info --stage prod --aws-profile sltt-dart-prd",
     "clean": "rm -f bootstrap && rm -rf .serverless",
+  "generate-server-urls": "node ../../scripts/generate_server_urls.js",
     "test": "dart test"
   },
   "keywords": [],
