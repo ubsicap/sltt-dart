@@ -387,14 +387,18 @@ void main() {
 
           expect(result.isDuplicate, isTrue);
           expect(result.stateUpdates, isNotNull);
+          // Expect cloudAt to match and storedAt to be present (parseable)
           expect(
             result.stateUpdates,
-            equals({
-              'change_cloudAt': changeLogEntry.cloudAt!
-                  .toUtc()
-                  .toIso8601String(), // should match
-            }),
+            containsPair(
+              'change_cloudAt',
+              changeLogEntry.cloudAt!.toUtc().toIso8601String(),
+            ),
           );
+          expect(result.stateUpdates.containsKey('change_storedAt'), isTrue);
+          final storedAtVal = result.stateUpdates['change_storedAt'];
+          expect(storedAtVal, isA<String>());
+          expect(DateTime.tryParse(storedAtVal), isNotNull);
         },
       );
 

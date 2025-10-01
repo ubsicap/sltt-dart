@@ -39,11 +39,20 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   required String storageType,
   required String targetStorageId,
 }) {
+  // Compute cloud/stored pair once for this change processing invocation so
+  // all downstream helpers use the exact same timestamps (avoids millisecond
+  // differences from multiple DateTime.now() calls).
+  final CloudStoredPair cs = _computeCloudAndStoredAt(
+    changeLogEntry,
+    storageType,
+  );
+
   // Duplicate CID detection
   final duplicateCheck = getMaybeIsDuplicateCidResult(
     changeLogEntry: changeLogEntry,
     entityState: entityState,
     storageType: storageType,
+    cloudStoredPair: cs,
   );
 
   if (duplicateCheck.isDuplicate) {
@@ -80,6 +89,7 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     noOpFields,
     storageType: storageType,
     storageMode: storageMode,
+    cs: cs,
   );
 
   final changeDataUpdates =
@@ -214,6 +224,7 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult({
   required BaseChangeLogEntry changeLogEntry,
   required BaseEntityState? entityState,
   required String storageType,
+  CloudStoredPair? cloudStoredPair,
 }) {
   // Implement the logic to check for duplicate cid
   bool isDuplicate = false;
@@ -232,6 +243,12 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult({
 
   final changeLogEntryCloudAt = changeLogEntry.cloudAt?.toIso8601String();
 
+  // Use provided cloud/stored pair (cs) if supplied so both values are
+  // consistent for the current invocation with other helpers.
+  final CloudStoredPair localCs =
+      cloudStoredPair ?? _computeCloudAndStoredAt(changeLogEntry, storageType);
+  final String computedStoredAt = localCs.storedAt;
+
   if (entityState.change_cid == changeLogCid) {
     isDuplicate = true;
     if (storageType == 'local' &&
@@ -239,6 +256,8 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult({
         entityStateJson['change_cloudAt'] != changeLogEntryCloudAt) {
       // Update latest-level cloudAt
       stateUpdates['change_cloudAt'] = changeLogEntryCloudAt;
+      // Also persist the storedAt so callers can persist change_storedAt
+      stateUpdates['change_storedAt'] = computedStoredAt;
     }
   }
 
@@ -256,6 +275,9 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult({
             entityStateFieldCloudAt != changeLogEntryCloudAt) {
           // Update field-level cloudAt
           stateUpdates['${fieldWithoutCid}_cloudAt_'] = changeLogEntryCloudAt;
+          // Also set latest-level storedAt for the change so downstream callers
+          // have the storedAt that corresponds to this cloudAt.
+          stateUpdates['change_storedAt'] = computedStoredAt;
         }
         break;
       }
@@ -426,6 +448,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
   List<String> noOpFields, { // List of fields that are no-ops
   required String storageType,
   required String storageMode,
+  CloudStoredPair? cs,
 }) {
   final fieldUpdates = <String, dynamic>{};
   final outdatedBys = <String>[];
@@ -500,18 +523,12 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
     print(st);
   }
 
-  // compute serialized cloudAt/storedAt strings once so callers can reuse
-  final String? computedCloudAt = changeLogEntry.cloudAt != null
-      ? changeLogEntry.toJson()['cloudAt'] as String?
-      : (storageType == 'cloud'
-            ? const UtcDateTimeConverter().toJson(DateTime.now())
-            : null);
-
-  final String computedStoredAt = storageType == 'cloud'
-      ? (changeLogEntry.cloudAt != null
-            ? changeLogEntry.toJson()['cloudAt'] as String
-            : const UtcDateTimeConverter().toJson(DateTime.now()))
-      : const UtcDateTimeConverter().toJson(DateTime.now());
+  // Use provided cloud/stored pair (cs) if supplied to ensure the same
+  // timestamps are used across the whole change processing invocation.
+  final CloudStoredPair localCs =
+      cs ?? _computeCloudAndStoredAt(changeLogEntry, storageType);
+  final String? computedCloudAt = localCs.cloudAt;
+  final String computedStoredAt = localCs.storedAt;
 
   return {
     // expose the computed values to callers
@@ -571,4 +588,42 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
       outdatedBys,
     ),
   };
+}
+
+/// Helper class to hold computed cloudAt and storedAt values. Using a single
+/// helper that returns both values ensures callers that need them during a
+/// single change-processing invocation get consistent timestamps (cached per
+/// call), rather than potentially different DateTime.now() values on repeated
+/// calls.
+class CloudStoredPair {
+  final String? cloudAt;
+  final String storedAt;
+
+  CloudStoredPair(this.cloudAt, this.storedAt);
+}
+
+CloudStoredPair _computeCloudAndStoredAt(
+  BaseChangeLogEntry changeLogEntry,
+  String storageType,
+) {
+  // If the incoming change has an explicit cloudAt we serialize and reuse it.
+  final String? incomingCloudAt = changeLogEntry.cloudAt != null
+      ? changeLogEntry.toJson()['cloudAt'] as String?
+      : null;
+
+  // For cloud storage, if incoming cloudAt is null we synthesize a cloudAt
+  // timestamp. For local storage, cloudAt remains null unless supplied.
+  final String? computedCloudAt =
+      incomingCloudAt ??
+      (storageType == 'cloud'
+          ? const UtcDateTimeConverter().toJson(DateTime.now())
+          : null);
+
+  // storedAt semantics: for cloud storage prefer the cloudAt string (if
+  // present), otherwise synthesize now(). For local storage always synthesize now().
+  final String computedStoredAt = storageType == 'cloud'
+      ? (incomingCloudAt ?? const UtcDateTimeConverter().toJson(DateTime.now()))
+      : const UtcDateTimeConverter().toJson(DateTime.now());
+
+  return CloudStoredPair(computedCloudAt, computedStoredAt);
 }
