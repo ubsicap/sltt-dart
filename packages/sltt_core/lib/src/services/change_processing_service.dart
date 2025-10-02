@@ -272,7 +272,8 @@ class ChangeProcessingService {
             return validationResult;
           }
           // validate that domainId and entityId match if their types match
-          if (changeLogEntry.domainType == changeLogEntry.entityType) {
+          if (changeLogEntry.domainType != 'unknown' &&
+              changeLogEntry.domainType == changeLogEntry.entityType) {
             if (changeLogEntry.domainId != changeLogEntry.entityId) {
               return ChangeProcessingResult(
                 errorMessage:
