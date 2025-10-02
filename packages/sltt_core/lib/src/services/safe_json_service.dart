@@ -18,6 +18,9 @@ class SafeJsonService {
     final now = HlcTimestampGenerator.generate();
 
     return {
+      // Provide a safe numeric seq fallback so generated deserializers that
+      // require `seq` will not fail when the caller omitted it.
+      'seq': original['seq'] ?? 0,
       'entityId': original['entityId'] ?? '',
       // Ensure the minimal required type identifiers exist. Tests and
       // deserializers expect non-null strings for these fields.
@@ -29,7 +32,11 @@ class SafeJsonService {
       'changeAt': original['changeAt'] ?? now.toIso8601String(),
       'cid':
           original['cid'] ??
-          generateCid(entityType: EntityType.tryFromString(original['entityType'] as String?) ?? EntityType.unknown),
+          generateCid(
+            entityType:
+                EntityType.tryFromString(original['entityType'] as String?) ??
+                EntityType.unknown,
+          ),
       'storageId': original['storageId'] ?? '',
       'changeBy': original['changeBy'] ?? '',
       'dataJson': JsonUtils.normalize(original['dataJson']),
