@@ -391,11 +391,19 @@ void main() {
         operation: 'create',
       );
 
+      final storageId = await storage.getStorageId();
+      final storedAtChange = DateTime.now().toIso8601String();
+
       final change = IsarChangeLogEntry.fromJson(changeData);
       await storage.updateChangeLogAndState(
         domainType: 'project',
         changeLogEntry: change,
-        changeUpdates: {'seq': 1, 'stateChanged': true},
+        changeUpdates: {
+          'seq': 1,
+          'stateChanged': true,
+          'storageId': storageId,
+          'storedAt': storedAtChange,
+        },
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,

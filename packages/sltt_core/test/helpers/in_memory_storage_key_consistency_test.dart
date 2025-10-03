@@ -26,6 +26,7 @@ void main() {
         dataJson: '{}',
         operation: 'create',
         storageId: 'required',
+        storedAt: DateTime.parse('2023-01-01T00:00:00Z'),
         stateChanged: true,
       );
 

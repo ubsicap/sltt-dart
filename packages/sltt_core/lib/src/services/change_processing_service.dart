@@ -41,65 +41,65 @@ class ChangeProcessingService {
     required bool skipChangeLogWrite,
     required bool skipStateWrite,
   }) {
-    final storageType = storage.getStorageType();
-
-    // For cloud storage, the incoming change must include cloudAt and a
-    // non-empty storageId. For local storage, storageId should be empty in
-    // save mode (caller), but storage-level enforcement may vary — the
-    // processing pre-validation already asserts many of these rules; this
-    // helper defends storage against missing fields after deserialization.
-    if (storageType == 'cloud') {
-      if (skipChangeLogWrite && skipStateWrite) {
-        // If both writes are skipped, there's nothing to validate
-        return;
+    if (skipChangeLogWrite && skipStateWrite) {
+      // If both writes are skipped, there's nothing to validate
+      return;
+    }
+    if (change.storageId.trim().isEmpty && !skipChangeLogWrite) {
+      throw ArgumentError('storage received non-empty storageId on change');
+    }
+    if (!skipChangeLogWrite) {
+      if (change.storedAt == null) {
+        throw ArgumentError('storage requires storedAt to be set on change');
       }
-      if (!skipChangeLogWrite) {
-        if (change.storageId.trim().isEmpty) {
-          throw ArgumentError(
-            'cloud storage requires non-empty storageId on change',
-          );
-        }
-        if (change.cloudAt == null) {
-          throw ArgumentError(
-            'cloud storage requires cloudAt to be set on change',
-          );
-        }
-        if (change.storedAt == null) {
-          throw ArgumentError(
-            'cloud storage requires storedAt to be set on change',
-          );
-        }
-      }
-
-      if (entityState != null && !skipStateWrite) {
-        // If entityState includes change-side timestamps, validate they match
-        // or are present as expected (do not mutate).
-        final esJson = entityState.toJson();
-        final esCloud = esJson['change_cloudAt'] as String?;
-        final esStored = esJson['change_storedAt'] as String?;
-        if (esCloud != null && change.cloudAt != null) {
-          if (esCloud != change.cloudAt!.toIso8601String()) {
-            throw ArgumentError(
-              'entityState.change_cloudAt does not match change.cloudAt',
-            );
-          }
-        }
-        if (esStored != null && change.storedAt != null) {
-          if (esStored != change.storedAt!.toIso8601String()) {
-            throw ArgumentError(
-              'entityState.change_storedAt does not match change.storedAt',
-            );
-          }
-        }
-      }
-    } else {
-      // storagId must be non-empty when storing to local
-      if (change.storageId.trim().isEmpty && !skipChangeLogWrite) {
-        // It's acceptable for storageId to be non-empty for local in some test
-        // setups, but warn/throw if it looks suspicious (caller provided a cloud id).
-        // Use ArgumentError to indicate invalid input.
+      if (storage.getStorageType() == 'cloud' && change.cloudAt == null) {
         throw ArgumentError(
-          'local storage received non-empty storageId on change',
+          'cloud storage requires cloudAt to be set on change',
+        );
+      }
+    }
+
+    if (!skipStateWrite && entityState == null) {
+      throw ArgumentError(
+        'storage requires entityState to be provided when writing state',
+      );
+    }
+    if (entityState != null && !skipStateWrite) {
+      // If entityState includes change-side timestamps, validate they match
+      // or are present as expected (do not mutate).
+      final esJson = entityState.toJson();
+      final esStored = esJson['change_storedAt'] as String?;
+      if (!skipChangeLogWrite &&
+          esStored != change.storedAt!.toIso8601String()) {
+        throw ArgumentError(
+          'entityState.change_storedAt ($esStored) does not match change.storedAt (${change.storedAt!.toIso8601String()})',
+        );
+      }
+      if (storage.getStorageType() == 'cloud' &&
+          !skipChangeLogWrite &&
+          change.cloudAt == null) {
+        throw ArgumentError(
+          'cloud storage requires change.cloudAt to be set when writing state',
+        );
+      }
+      // see if incoming change.cloudAt matches any of the entityState cloudAt's
+      // in other words, entityState.cloudAt may or may not match change.cloudAt
+      // depending on which field(s) actually got merged, but at least one of them
+      // should match the incoming change.cloudAt
+      final entityStateKvs = entityState.toJson();
+      final entityStateCloudAts = <String, dynamic>{};
+      entityStateKvs.forEach((key, value) {
+        if (key.endsWith('_cloudAt') ||
+            key.endsWith('_cloudAt_') && value is String) {
+          entityStateCloudAts[key] = value;
+        }
+      });
+      if (change.cloudAt != null &&
+          !entityStateCloudAts.values.contains(
+            change.cloudAt!.toIso8601String(),
+          )) {
+        throw ArgumentError(
+          'entityState does not contain any cloudAt matching change.cloudAt (${change.cloudAt!.toIso8601String()}). Got: $entityStateCloudAts',
         );
       }
     }
