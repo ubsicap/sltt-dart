@@ -251,18 +251,26 @@ void main() {
         operation: 'create',
       );
 
+      final storageId = await storage.getStorageId();
+      final storedAtChange1 = DateTime.now().toIso8601String();
       // Use updateChangeLogAndState to create both change and state
       final change = IsarChangeLogEntry.fromJson(changeData);
       final result = await storage.updateChangeLogAndState(
         domainType: 'project',
         changeLogEntry: change,
-        changeUpdates: {'seq': 1, 'stateChanged': true},
+        changeUpdates: {
+          'seq': 1,
+          'stateChanged': true,
+          'storageId': storageId,
+          'storedAt': storedAtChange1,
+        },
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,
           'entityType': 'project',
           'change_domainId': projectId,
           'change_changeAt': baseTime.toIso8601String(),
+          'change_storedAt': storedAtChange1,
           'change_cid': change.cid,
           'change_changeBy': 'tester',
           'change_domainId_orig_': '', // Empty string for string orig fields
