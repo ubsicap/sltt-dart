@@ -131,7 +131,7 @@ void main() {
         'storageId': '',
         'operation': 'create',
         'operationInfoJson': '{}',
-        'stateChanged': true,
+        'stateChanged': false,
         'unknownJson': '{}',
         'dataJson':
             '{"nameLocal": "Task 1", "parentId": "root", "parentProp": "pList"}',
@@ -149,7 +149,7 @@ void main() {
         'storageId': '',
         'operation': 'create',
         'operationInfoJson': '{}',
-        'stateChanged': true,
+        'stateChanged': false,
         'unknownJson': '{}',
         'dataJson':
             '{"nameLocal": "Task 2", "parentId": "root", "parentProp": "other"}',
@@ -184,10 +184,17 @@ void main() {
         'data_nameLocal': 'Task 1',
       });
 
+      final storageId = await storage.getStorageId();
+
+      final storedAtChange1 = now.toIso8601String();
       await storage.updateChangeLogAndState(
         domainType: 'project',
         changeLogEntry: IsarChangeLogEntry.fromJson(change1),
-        changeUpdates: {'stateChanged': true},
+        changeUpdates: {
+          'stateChanged': true,
+          'storageId': storageId,
+          'storedAt': storedAtChange1,
+        },
         stateUpdates: {
           'domainType': 'project',
           'entityType': 'task',
@@ -196,6 +203,8 @@ void main() {
           'change_domainId_orig_': 'test-project',
           'change_changeAt': now.toIso8601String(),
           'change_changeAt_orig_': now.toIso8601String(),
+          'change_storedAt': storedAtChange1,
+          'change_storedAt_orig_': storedAtChange1,
           'change_cid': cid1,
           'change_cid_orig_': cid1,
           'change_changeBy': 'tester',
@@ -254,10 +263,18 @@ void main() {
         'data_parentProp_changeBy_': 'tester',
         'data_nameLocal': 'Task 2',
       });
+
+      final storedAtChange2 = now
+          .add(const Duration(seconds: 1))
+          .toIso8601String();
       await storage.updateChangeLogAndState(
         domainType: 'project',
         changeLogEntry: IsarChangeLogEntry.fromJson(change2),
-        changeUpdates: {'stateChanged': true},
+        changeUpdates: {
+          'stateChanged': true,
+          'storageId': storageId,
+          'storedAt': storedAtChange2,
+        },
         stateUpdates: {
           'domainType': 'project',
           'entityType': 'task',
@@ -270,6 +287,8 @@ void main() {
           'change_changeAt_orig_': now
               .add(const Duration(seconds: 1))
               .toIso8601String(),
+          'change_storedAt': storedAtChange2,
+          'change_storedAt_orig_': storedAtChange2,
           'change_cid': cid2,
           'change_cid_orig_': cid2,
           'change_changeBy': 'tester',
