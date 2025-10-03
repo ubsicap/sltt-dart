@@ -69,11 +69,10 @@ class InMemoryStorage implements BaseStorageService {
     ChangeProcessingService.checkCoreChangeStorageResponsibilities(
       storage: this,
       change: newChange,
-      entityState: entityState,
+      entityState: entityState /* skip until new entityState below */,
       skipChangeLogWrite: skipChangeLogWrite,
-      skipStateWrite: skipStateWrite,
+      skipStateWrite: true,
     );
-
     if (!skipChangeLogWrite) {
       final changes = _changesByDomainType.putIfAbsent(domainType, () => []);
       // persist change for subsequent queries
@@ -83,10 +82,6 @@ class InMemoryStorage implements BaseStorageService {
     final prior = (entityState?.toJson() ?? <String, dynamic>{});
     final merged = {...prior, ...stateUpdates}
       ..removeWhere((k, v) => v == null);
-
-    // Ensure the merged state includes change_storedAt so entity states reflect storage timestamp
-    merged['change_storedAt'] =
-        merged['change_storedAt'] ?? newChangeJson['storedAt'];
 
     // Debug: log merged state payload before constructing TestEntityState
     TestEntityState? newState;
@@ -98,6 +93,14 @@ class InMemoryStorage implements BaseStorageService {
       );
       newState = TestEntityState.fromJson(merged);
       final states = _statesByDomainType.putIfAbsent(domainType, () => {});
+      // Validate core storage responsibilities (do not mutate change/entity)
+      ChangeProcessingService.checkCoreChangeStorageResponsibilities(
+        storage: this,
+        change: newChange,
+        entityState: newState,
+        skipChangeLogWrite: true /* already checked above */,
+        skipStateWrite: skipStateWrite,
+      );
       if (!skipStateWrite) {
         // persist state for subsequent queries
         // Use the entityId from the serialized state (newState.entityId)
