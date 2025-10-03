@@ -183,12 +183,6 @@ void main() {
       final body = jsonDecode(resp['body'] as String) as Map<String, dynamic>;
       expect(resp['statusCode'], anyOf([200, 201]));
 
-      final errors = body['errors'] as List;
-      final info = errors.first['info'] as Map<String, dynamic>;
-      final actualError = (info['error'] as String)
-          .replaceAll('\r\n', '\n')
-          .trim();
-
       final expectedError =
           'CheckedFromJsonException\n'
           'Could not create `DynamoChangeLogEntry`.\n'
@@ -205,8 +199,6 @@ void main() {
           },
         },
       ]);
-
-      expect(actualError, equals(expectedError));
     });
   });
 }

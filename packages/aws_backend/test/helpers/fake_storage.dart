@@ -124,13 +124,6 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     if (seq <= 0) seq = 1;
     mergedChangeJson['seq'] = seq;
 
-    // Ensure storedAt/cloudAt are ISO8601 strings
-    final now = DateTime.now().toUtc();
-    mergedChangeJson['storedAt'] =
-        mergedChangeJson['storedAt'] ?? now.toIso8601String();
-    mergedChangeJson['cloudAt'] =
-        mergedChangeJson['cloudAt'] ?? now.toIso8601String();
-
     // Normalize operation: default to 'create' for empty operations in tests
     if (mergedChangeJson['operation'] == null ||
         (mergedChangeJson['operation'] as String).isEmpty) {
@@ -140,6 +133,7 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     // Construct a DynamoChangeLogEntry (uses registered serializers)
     final newChange = DynamoChangeLogEntry.fromJson(mergedChangeJson);
 
+    final now = DateTime.now().toUtc();
     // Build new entity state JSON by merging prior state (if any) with updates.
     // Provide safe defaults for required fields when prior state is absent.
     final prior = entityState?.toJson() ?? <String, dynamic>{};
@@ -158,6 +152,7 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
         mergedState['change_domainId'] ?? newChange.domainId;
     mergedState['change_domainId_orig_'] =
         mergedState['change_domainId_orig_'] ?? newChange.domainId;
+    // Use the storedAt value from the change for change timestamps in state
     mergedState['change_changeAt'] =
         mergedState['change_changeAt'] ??
         (mergedChangeJson['storedAt']?.toString() ?? now.toIso8601String());
@@ -191,6 +186,15 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
         mergedState['data_parentProp_changeBy_'] ?? newChange.changeBy;
 
     final newState = DynamoEntityState.fromJson(mergedState);
+
+    // Validate core storage responsibilities (no mutation)
+    ChangeProcessingService.checkCoreChangeStorageResponsibilities(
+      storage: this,
+      change: newChange,
+      entityState: newState,
+      skipChangeLogWrite: skipChangeLogWrite,
+      skipStateWrite: skipStateWrite,
+    );
 
     return (newChangeLogEntry: newChange, newEntityState: newState);
   }

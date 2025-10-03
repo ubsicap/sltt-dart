@@ -22,6 +22,89 @@ class ChangeProcessingResult {
 
 /// Service for processing changes with field-level change detection
 class ChangeProcessingService {
+  /// Validate that storage-related responsibilities for a change and its
+  /// entity state are satisfied before persisting.
+  ///
+  /// - `storage`: the target BaseStorageService implementation
+  /// - `change`: the deserialized BaseChangeLogEntry to be written
+  /// - `entityState`: optional deserialized BaseEntityState associated with the change
+  /// - `skipChangeLogWrite`/`skipStateWrite`: booleans indicating whether writes
+  ///   are being skipped (storage implementations may call validation even when
+  ///   skipping to ensure callers provided required metadata)
+  ///
+  /// This function is defensive: it only validates and throws on invariant
+  /// violations; it does not mutate `change` or `entityState`.
+  static void checkCoreChangeStorageResponsibilities({
+    required BaseStorageService storage,
+    required BaseChangeLogEntry change,
+    BaseEntityState? entityState,
+    required bool skipChangeLogWrite,
+    required bool skipStateWrite,
+  }) {
+    final storageType = storage.getStorageType();
+
+    // For cloud storage, the incoming change must include cloudAt and a
+    // non-empty storageId. For local storage, storageId should be empty in
+    // save mode (caller), but storage-level enforcement may vary — the
+    // processing pre-validation already asserts many of these rules; this
+    // helper defends storage against missing fields after deserialization.
+    if (storageType == 'cloud') {
+      if (skipChangeLogWrite && skipStateWrite) {
+        // If both writes are skipped, there's nothing to validate
+        return;
+      }
+      if (!skipChangeLogWrite) {
+        if (change.storageId.trim().isEmpty) {
+          throw ArgumentError(
+            'cloud storage requires non-empty storageId on change',
+          );
+        }
+        if (change.cloudAt == null) {
+          throw ArgumentError(
+            'cloud storage requires cloudAt to be set on change',
+          );
+        }
+        if (change.storedAt == null) {
+          throw ArgumentError(
+            'cloud storage requires storedAt to be set on change',
+          );
+        }
+      }
+
+      if (entityState != null && !skipStateWrite) {
+        // If entityState includes change-side timestamps, validate they match
+        // or are present as expected (do not mutate).
+        final esJson = entityState.toJson();
+        final esCloud = esJson['change_cloudAt'] as String?;
+        final esStored = esJson['change_storedAt'] as String?;
+        if (esCloud != null && change.cloudAt != null) {
+          if (esCloud != change.cloudAt!.toIso8601String()) {
+            throw ArgumentError(
+              'entityState.change_cloudAt does not match change.cloudAt',
+            );
+          }
+        }
+        if (esStored != null && change.storedAt != null) {
+          if (esStored != change.storedAt!.toIso8601String()) {
+            throw ArgumentError(
+              'entityState.change_storedAt does not match change.storedAt',
+            );
+          }
+        }
+      }
+    } else {
+      // storagId must be non-empty when storing to local
+      if (change.storageId.trim().isEmpty && !skipChangeLogWrite) {
+        // It's acceptable for storageId to be non-empty for local in some test
+        // setups, but warn/throw if it looks suspicious (caller provided a cloud id).
+        // Use ArgumentError to indicate invalid input.
+        throw ArgumentError(
+          'local storage received non-empty storageId on change',
+        );
+      }
+    }
+  }
+
   /// 380KB (~400KB) Maximum payload size for DynamoDB/APIGateway (in bytes)
   static const int dynamodbPayloadLimit = 380000;
 
@@ -245,6 +328,12 @@ class ChangeProcessingService {
             changeData,
           );
 
+          // Defensive storage responsibility checks may be enforced by storage
+          // implementations after they deserialize incoming JSON into model
+          // objects. Provide a shared static helper so storage can call it to
+          // validate invariants (without mutating the objects). This helps
+          // keep validation consistent across storage implementations.
+
           SlttLogger.logger.fine(
             '[${storage.getStorageType()}] DEBUG: Deserialized changeLogEntry: cid=${changeLogEntry.cid}, unknownJson=${changeLogEntry.getUnknown()}',
           );
@@ -350,6 +439,7 @@ class ChangeProcessingService {
 
           final shouldSkipChangeLogWrite =
               result.isDuplicate ||
+              changeUpdates.isEmpty ||
               (targetStorageType == 'local' && changeLogEntry.cloudAt != null);
 
           final updateResults = await storage.updateChangeLogAndState(

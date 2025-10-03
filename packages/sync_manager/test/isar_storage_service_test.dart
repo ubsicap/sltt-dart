@@ -156,6 +156,16 @@ void main() {
       expect(createdChangeNN.domainId, equals(projectId));
       expect(createdChangeNN.entityType, equals('task'));
       expect(createdChangeNN.entityId, equals('entity-1'));
+      // Timestamps should be set by the processing pipeline (storedAt at minimum)
+      expect(
+        createdChangeNN.storedAt,
+        isNotNull,
+        reason:
+            'storedAt should be set by ChangeProcessingService/processChanges',
+      );
+      expect(createdChangeNN.storedAt, isA<DateTime>());
+      // For local source/storage we do not expect a cloudAt timestamp
+      expect(createdChangeNN.cloudAt, isNull);
 
       // Retrieve change by sequence number
       final retrievedChange = await storage.getChange(

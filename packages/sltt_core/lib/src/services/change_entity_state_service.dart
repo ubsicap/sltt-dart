@@ -65,6 +65,7 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   }
 
   // TODO: some errors we may want to save, at least for audit trail on cloud storage
+  // TODO: 'noOp'
   if (['error', 'no-op', 'hold'].contains(changeLogEntry.operation)) {
     return const GetUpdateResults(
       isDuplicate: false,

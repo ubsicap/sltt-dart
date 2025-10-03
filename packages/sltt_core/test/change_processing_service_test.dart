@@ -846,7 +846,7 @@ void main() {
             'storageId': '',
             'operation': 'create',
             'operationInfoJson': '{}',
-            'stateChanged': true,
+            'stateChanged': false,
             'unknownJson': '{}',
             'dataJson':
                 '{"nameLocal": "Original Name", "parentId": "root", "parentProp": "pList"}',

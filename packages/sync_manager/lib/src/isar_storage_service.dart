@@ -191,18 +191,22 @@ class IsarStorageService extends BaseStorageService {
       // changes into the cloud, force the storage to assign a new
       // auto-increment id.
       newChange.seq = Isar.autoIncrement;
-      // Ensure cloud-backed storages stamp the change with cloudAt so that
-      // downstream clients can recognize it as cloud-origin and skip
-      // re-syncing it back up.
-      newChange.cloudAt ??= maybeCreateCloudAt();
-      // storedAt should reflect the time the backend stored the change.
-      // For cloud-backed storages prefer cloudAt; otherwise use current time.
-      newChange.storedAt = newChange.cloudAt ?? DateTime.now().toUtc();
     } else {
       SlttLogger.logger.fine(
         'updateChangeLogAndState - skipping change log write for cid=${newChange.cid} (cloudAt=${newChange.cloudAt})',
       );
     }
+
+    // Validate core change/storage responsibilities using the shared helper.
+    // The validator will throw if required metadata (e.g., cloudAt for cloud
+    // storage) is missing. It does not mutate the change or state.
+    ChangeProcessingService.checkCoreChangeStorageResponsibilities(
+      storage: this,
+      change: newChange,
+      entityState: entityState,
+      skipChangeLogWrite: skipChangeLogWrite,
+      skipStateWrite: skipStateWrite,
+    );
 
     // Convert to appropriate Isar state type based on entity type
     final entityTypeEnum = EntityType.values.firstWhere(
@@ -315,7 +319,7 @@ class IsarStorageService extends BaseStorageService {
                   existingEntityTypeSyncStates.deleted +
                   (op == 'delete' ? 1 : 0),
               createdAt: existingEntityTypeSyncStates.createdAt,
-              updatedAt: DateTime.now(),
+              updatedAt: newChange.storedAt,
             );
             await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
           } else {
@@ -333,6 +337,9 @@ class IsarStorageService extends BaseStorageService {
               created: newChange.operation == 'create' ? 1 : 0,
               updated: newChange.operation == 'update' ? 1 : 0,
               deleted: newChange.operation == 'delete' ? 1 : 0,
+              // For new records set createdAt/updatedAt from storedAt when available
+              createdAt: newChange.storedAt ?? DateTime.now(),
+              updatedAt: newChange.storedAt ?? DateTime.now(),
             );
             await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
           }
@@ -872,10 +879,6 @@ class IsarStorageService extends BaseStorageService {
     }
     return <String, dynamic>{};
   }
-
-  /// (Mock/Local) Cloud storage should add cloud timestamp.
-  DateTime? maybeCreateCloudAt() =>
-      getStorageType() == 'cloud' ? DateTime.now().toUtc() : null;
 
   /// Delete all changes - useful for testing cleanup
   Future<int> deleteAllChanges() async {

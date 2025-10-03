@@ -56,16 +56,7 @@ class InMemoryStorage implements BaseStorageService {
     bool skipStateWrite = false,
   }) async {
     final newChangeJson = {...changeLogEntry.toJson(), ...changeUpdates};
-    // Ensure storedAt is present. For cloud storage types prefer cloudAt.
-    if (!newChangeJson.containsKey('storedAt') ||
-        newChangeJson['storedAt'] == null) {
-      final cloudAt = newChangeJson['cloudAt'] as String?;
-      if (storageType == 'cloud') {
-        newChangeJson['storedAt'] = cloudAt ?? newChangeJson['changeAt'];
-      } else {
-        newChangeJson['storedAt'] = DateTime.now().toUtc().toIso8601String();
-      }
-    }
+
     // Ensure a sequence number exists and is monotonic for in-memory storage
     if (!skipChangeLogWrite &&
         (newChangeJson['seq'] == null ||
@@ -73,6 +64,15 @@ class InMemoryStorage implements BaseStorageService {
       newChangeJson['seq'] = _nextSeq++;
     }
     final newChange = TestChangeLogEntry.fromJson(newChangeJson);
+
+    // Validate core storage responsibilities (do not mutate change/entity)
+    ChangeProcessingService.checkCoreChangeStorageResponsibilities(
+      storage: this,
+      change: newChange,
+      entityState: entityState,
+      skipChangeLogWrite: skipChangeLogWrite,
+      skipStateWrite: skipStateWrite,
+    );
 
     if (!skipChangeLogWrite) {
       final changes = _changesByDomainType.putIfAbsent(domainType, () => []);
@@ -85,10 +85,8 @@ class InMemoryStorage implements BaseStorageService {
       ..removeWhere((k, v) => v == null);
 
     // Ensure the merged state includes change_storedAt so entity states reflect storage timestamp
-    if (!merged.containsKey('change_storedAt') ||
-        merged['change_storedAt'] == null) {
-      merged['change_storedAt'] = newChangeJson['storedAt'];
-    }
+    merged['change_storedAt'] =
+        merged['change_storedAt'] ?? newChangeJson['storedAt'];
 
     // Debug: log merged state payload before constructing TestEntityState
     TestEntityState? newState;
