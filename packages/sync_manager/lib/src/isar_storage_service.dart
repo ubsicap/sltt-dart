@@ -448,6 +448,44 @@ class IsarStorageService extends BaseStorageService {
     );
   }
 
+  /// Subscribe to change log entry changes for sync triggering
+  StreamSubscription<void> lazyListenToChangeLogEntryChanges({
+    String? domainType,
+    String? domainId,
+    required void Function() onChanged,
+    bool fireImmediately = true,
+  }) {
+    // Create a query that optionally filters by domainType and domainId
+    if (domainType != null && domainId != null) {
+      // Filter by both domainType and domainId
+      return _isar.isarChangeLogEntrys
+          .filter()
+          .domainTypeEqualTo(domainType)
+          .and()
+          .domainIdEqualTo(domainId)
+          .watchLazy(fireImmediately: fireImmediately)
+          .listen((_) {
+            onChanged();
+          });
+    } else if (domainType != null) {
+      // Filter by domainType only
+      return _isar.isarChangeLogEntrys
+          .filter()
+          .domainTypeEqualTo(domainType)
+          .watchLazy(fireImmediately: fireImmediately)
+          .listen((_) {
+            onChanged();
+          });
+    } else {
+      // No filtering - watch all change log entries
+      return _isar.isarChangeLogEntrys
+          .watchLazy(fireImmediately: fireImmediately)
+          .listen((_) {
+            onChanged();
+          });
+    }
+  }
+
   // Statistics operations
   @override
   Future<EntityTypeStats> getChangeStats({

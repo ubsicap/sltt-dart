@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -18,6 +19,15 @@ class SyncManager {
   String _cloudStorageUrl = kCloudDevUrl;
 
   bool _initialized = false;
+
+  // Debounced sync state
+  Timer? _syncDebounceTimer;
+  StreamSubscription<void>? _changeLogSubscription;
+  bool _autoSyncEnabled = false;
+
+  // Public getters for testing
+  bool get autoSyncEnabled => _autoSyncEnabled;
+  StreamSubscription<void>? get changeLogSubscription => _changeLogSubscription;
 
   /// Configure the cloud storage URL (useful for testing with localhost)
   void configureCloudUrl(String cloudUrl) {
@@ -41,6 +51,66 @@ class SyncManager {
     SlttLogger.logger.info(
       '[SyncManager] Initialized with cloud URL: $_cloudStorageUrl',
     );
+  }
+
+  /// Enable automatic sync when change log entries are modified
+  /// Sync is debounced to trigger 500ms after the last change
+  void enableAutoSync({String? domainType, String? domainId}) {
+    if (_autoSyncEnabled) {
+      SlttLogger.logger.info('[SyncManager] Auto-sync already enabled');
+      return;
+    }
+
+    _autoSyncEnabled = true;
+    SlttLogger.logger.info('[SyncManager] Enabling auto-sync with debouncing');
+
+    _changeLogSubscription = _localStorage.lazyListenToChangeLogEntryChanges(
+      domainType: domainType,
+      domainId: domainId,
+      onChanged: _onChangeLogChanged,
+      fireImmediately: false,
+    );
+  }
+
+  /// Disable automatic sync
+  void disableAutoSync() {
+    if (!_autoSyncEnabled) return;
+
+    _autoSyncEnabled = false;
+    _syncDebounceTimer?.cancel();
+    _syncDebounceTimer = null;
+    _changeLogSubscription?.cancel();
+    _changeLogSubscription = null;
+
+    SlttLogger.logger.info('[SyncManager] Auto-sync disabled');
+  }
+
+  /// Called when change log entries are modified
+  void _onChangeLogChanged() {
+    // Cancel existing timer if it's running
+    _syncDebounceTimer?.cancel();
+
+    // Start a new timer for 500ms
+    _syncDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      SlttLogger.logger.info('[SyncManager] Triggering debounced full sync');
+      _performDebouncedSync();
+    });
+  }
+
+  /// Perform the actual sync (called after debounce period)
+  void _performDebouncedSync() async {
+    try {
+      await performFullSync();
+      SlttLogger.logger.info(
+        '[SyncManager] Debounced full sync completed successfully',
+      );
+    } catch (e, stackTrace) {
+      SlttLogger.logger.severe(
+        '[SyncManager] Debounced full sync failed: $e',
+        e,
+        stackTrace,
+      );
+    }
   }
 
   // Get all projects that have changes to sync
@@ -435,6 +505,9 @@ class SyncManager {
 
   Future<void> close() async {
     if (_initialized) {
+      // Clean up auto-sync resources
+      disableAutoSync();
+
       await _localStorage.close();
       _initialized = false;
       SlttLogger.logger.info('[SyncManager] Closed');
