@@ -230,6 +230,14 @@ mixin CoreEntityMetaData {
   String get entityId;
   String get entityType;
   String get domainType;
+
+  /// although change_storedAt originates from change log entry
+  /// it's different from the other change_ fields in that it's not
+  /// necessarily connected to the same changset cid.
+  /// It should get bumped for every change that gets merged to state,
+  /// even if it isn't with cid that has the latest change_changeAt
+  /// TODO: consider renaming this to just `storedAt`
+  DateTime get change_storedAt;
   int? get schemaVersion;
   String? get unknownJson;
 }
@@ -268,10 +276,11 @@ mixin CoreEntityStateDataFields {
 }
 
 mixin CoreChangeLogEntryFields {
-  DateTime get change_changeAt;
-  DateTime get change_storedAt;
-  String get change_changeBy;
+  /// the remaining change_ fields are from the cid change that
+  /// resulted in the latest _changeAt
   String get change_cid;
+  DateTime get change_changeAt;
+  String get change_changeBy;
   DateTime? get change_cloudAt;
   int? get change_dataSchemaRev;
 }

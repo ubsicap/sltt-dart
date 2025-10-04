@@ -191,7 +191,11 @@ mixin StorageResponsibilities {
   String get operation;
   String get operationInfoJson;
   bool get stateChanged;
+
+  /// we always expect this to eventually be set in getUpdatesForChangeLogEntryAndEntityState
   DateTime? get storedAt;
+
+  /// for cloud storage, we always expect this to eventually be set in getUpdatesForChangeLogEntryAndEntityState
   DateTime? get cloudAt;
 
   /// The ID of the storage used to save this change log entry.
