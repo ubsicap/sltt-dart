@@ -11,6 +11,7 @@ TestEntityState _mkEntityStateForChange(
   DateTime? cloudAtOverride,
 }) {
   final now = DateTime.now().toUtc();
+  final changeStoredAt = storedAtOverride ?? change.storedAt ?? now;
   return TestEntityState(
     data_nameLocal: 'test',
     entityId: change.entityId,
@@ -20,7 +21,7 @@ TestEntityState _mkEntityStateForChange(
     change_domainId: change.domainId,
     change_domainId_orig_: '',
     change_changeAt: change.changeAt,
-    change_storedAt: storedAtOverride ?? change.storedAt ?? now,
+    change_storedAt: changeStoredAt,
     change_changeAt_orig_: DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
     change_cid: change.cid,
     change_cid_orig_: '',
@@ -163,6 +164,8 @@ void main() {
     test('requires entityState when writing state', () {
       final localStorage = InMemoryStorage(storageType: 'local');
 
+      final fixedStoredAt = DateTime.parse('2025-10-04T22:10:00.000Z');
+
       final validChange = TestChangeLogEntry(
         cid: 'c4',
         entityId: 'e4',
@@ -175,7 +178,7 @@ void main() {
         operation: 'create',
         stateChanged: false,
         storageId: 'valid-storage-id',
-        storedAt: DateTime.now().toUtc(),
+        storedAt: fixedStoredAt,
       );
 
       // Should throw when a minimal/mismatched entityState is provided but

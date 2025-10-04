@@ -148,15 +148,13 @@ abstract class BaseEntityState
          change_changeAt_orig_,
          change_changeAt,
        ),
-       change_storedAt = BaseEntityState.normalizeStoredAt(
+       change_storedAt = BaseEntityState.normalizeOrigDateTime(
          change_storedAt,
-         change_cloudAt,
-         change_changeAt,
+         DateTime.now().toUtc(),
        ),
-       change_storedAt_orig_ = BaseEntityState.normalizeOrigStoredAt(
+       change_storedAt_orig_ = BaseEntityState.normalizeOrigDateTime(
          change_storedAt_orig_,
-         change_cloudAt,
-         change_changeAt,
+         change_storedAt ?? DateTime.now().toUtc(),
        ),
        change_cid_orig_ = BaseEntityState.normalizeOrigString(
          change_cid_orig_,

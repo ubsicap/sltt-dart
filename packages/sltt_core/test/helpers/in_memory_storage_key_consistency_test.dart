@@ -15,6 +15,7 @@ void main() {
       );
       await storage.initialize();
 
+      final storedAt = DateTime.now().toUtc();
       final change = TestChangeLogEntry(
         cid: 'cid-test-1',
         entityId: 'entity-1',
@@ -26,7 +27,6 @@ void main() {
         dataJson: '{}',
         operation: 'create',
         storageId: 'required',
-        storedAt: DateTime.parse('2023-01-01T00:00:00Z'),
         stateChanged: true,
       );
 
@@ -36,6 +36,7 @@ void main() {
         'entityType': 'task',
         'domainType': 'project',
         // change metadata (current and original) required by TestEntityState
+        'change_storedAt': storedAt.toIso8601String(),
         'change_domainId': 'project-1',
         'change_domainId_orig_': 'project-1',
         'change_changeAt': '2023-01-01T00:00:00Z',
@@ -58,7 +59,7 @@ void main() {
       final res = await storage.updateChangeLogAndState(
         domainType: 'project',
         changeLogEntry: change,
-        changeUpdates: {},
+        changeUpdates: {'storedAt': storedAt.toIso8601String()},
         entityState: null,
         stateUpdates: stateUpdates,
       );

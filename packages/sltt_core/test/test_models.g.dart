@@ -126,12 +126,10 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
         ),
         change_storedAt_orig_: $checkedConvert(
           'change_storedAt_orig_',
-          (v) => (v == null || (v as String).isEmpty)
-              ? null
-              : _$JsonConverterFromJson<String, DateTime>(
-                  v,
-                  const UtcDateTimeConverter().fromJson,
-                ),
+          (v) => _$JsonConverterFromJson<String, DateTime>(
+            v,
+            const UtcDateTimeConverter().fromJson,
+          ),
         ),
         change_changeAt_orig_: $checkedConvert(
           'change_changeAt_orig_',
