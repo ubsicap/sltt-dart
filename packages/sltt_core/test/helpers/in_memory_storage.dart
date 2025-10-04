@@ -65,20 +65,6 @@ class InMemoryStorage implements BaseStorageService {
     }
     final newChange = TestChangeLogEntry.fromJson(newChangeJson);
 
-    // Validate core storage responsibilities (do not mutate change/entity)
-    ChangeProcessingService.checkCoreChangeStorageResponsibilities(
-      storage: this,
-      change: newChange,
-      entityState: entityState /* skip until new entityState below */,
-      skipChangeLogWrite: skipChangeLogWrite,
-      skipStateWrite: true,
-    );
-    if (!skipChangeLogWrite) {
-      final changes = _changesByDomainType.putIfAbsent(domainType, () => []);
-      // persist change for subsequent queries
-      changes.add(newChange);
-    }
-
     final prior = (entityState?.toJson() ?? <String, dynamic>{});
     final merged = {...prior, ...stateUpdates}
       ..removeWhere((k, v) => v == null);
@@ -96,11 +82,16 @@ class InMemoryStorage implements BaseStorageService {
       // Validate core storage responsibilities (do not mutate change/entity)
       ChangeProcessingService.checkCoreChangeStorageResponsibilities(
         storage: this,
-        change: newChange,
-        entityState: newState,
-        skipChangeLogWrite: true /* already checked above */,
+        changeToPut: newChange,
+        entityStateToPut: newState,
+        skipChangeLogWrite: skipChangeLogWrite,
         skipStateWrite: skipStateWrite,
       );
+      if (!skipChangeLogWrite) {
+        final changes = _changesByDomainType.putIfAbsent(domainType, () => []);
+        // persist change for subsequent queries
+        changes.add(newChange);
+      }
       if (!skipStateWrite) {
         // persist state for subsequent queries
         // Use the entityId from the serialized state (newState.entityId)

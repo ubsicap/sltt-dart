@@ -4,6 +4,43 @@ import 'package:test/test.dart';
 import './helpers/in_memory_storage.dart';
 import './test_models.dart';
 
+// Helper to create a minimal TestEntityState for a change entry.
+TestEntityState _mkEntityStateForChange(
+  TestChangeLogEntry change, {
+  DateTime? storedAtOverride,
+  DateTime? cloudAtOverride,
+}) {
+  final now = DateTime.now().toUtc();
+  return TestEntityState(
+    data_nameLocal: 'test',
+    entityId: change.entityId,
+    entityType: change.entityType,
+    domainType: change.domainType,
+    unknownJson: '{}',
+    change_domainId: change.domainId,
+    change_domainId_orig_: '',
+    change_changeAt: change.changeAt,
+    change_storedAt: storedAtOverride ?? change.storedAt ?? now,
+    change_changeAt_orig_: DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
+    change_cid: change.cid,
+    change_cid_orig_: '',
+    change_changeBy: change.changeBy,
+    change_changeBy_orig_: '',
+    data_parentId: 'root',
+    data_parentId_changeAt_: change.changeAt,
+    data_parentId_cid_: change.cid,
+    data_parentId_changeBy_: change.changeBy,
+    data_parentProp: 'pList',
+    data_parentProp_changeAt_: change.changeAt,
+    data_parentProp_cid_: change.cid,
+    data_parentProp_changeBy_: change.changeBy,
+    // include cloudAt fields when provided
+    change_cloudAt: cloudAtOverride ?? change.cloudAt,
+    data_parentId_cloudAt_: cloudAtOverride ?? change.cloudAt,
+    data_parentProp_cloudAt_: cloudAtOverride ?? change.cloudAt,
+  );
+}
+
 void main() {
   group('checkCoreChangeStorageResponsibilities', () {
     test('rejects empty storageId for both local and cloud storage', () {
@@ -29,8 +66,8 @@ void main() {
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: localStorage,
-          change: changeWithEmptyStorageId,
-          entityState: null,
+          changeToPut: changeWithEmptyStorageId,
+          entityStateToPut: _mkEntityStateForChange(changeWithEmptyStorageId),
           skipChangeLogWrite: false,
           skipStateWrite: true,
         ),
@@ -40,8 +77,8 @@ void main() {
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: cloudStorage,
-          change: changeWithEmptyStorageId,
-          entityState: null,
+          changeToPut: changeWithEmptyStorageId,
+          entityStateToPut: _mkEntityStateForChange(changeWithEmptyStorageId),
           skipChangeLogWrite: false,
           skipStateWrite: true,
         ),
@@ -72,8 +109,8 @@ void main() {
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: localStorage,
-          change: changeWithoutStoredAt,
-          entityState: null,
+          changeToPut: changeWithoutStoredAt,
+          entityStateToPut: _mkEntityStateForChange(changeWithoutStoredAt),
           skipChangeLogWrite: false,
           skipStateWrite: true,
         ),
@@ -83,8 +120,8 @@ void main() {
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: cloudStorage,
-          change: changeWithoutStoredAt,
-          entityState: null,
+          changeToPut: changeWithoutStoredAt,
+          entityStateToPut: _mkEntityStateForChange(changeWithoutStoredAt),
           skipChangeLogWrite: false,
           skipStateWrite: true,
         ),
@@ -114,8 +151,8 @@ void main() {
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: cloudStorage,
-          change: changeWithoutCloudAt,
-          entityState: null,
+          changeToPut: changeWithoutCloudAt,
+          entityStateToPut: _mkEntityStateForChange(changeWithoutCloudAt),
           skipChangeLogWrite: false,
           skipStateWrite: true,
         ),
@@ -141,12 +178,16 @@ void main() {
         storedAt: DateTime.now().toUtc(),
       );
 
-      // Should throw when entityState is null but skipStateWrite is false
+      // Should throw when a minimal/mismatched entityState is provided but
+      // skipStateWrite is false and the content does not satisfy requirements.
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: localStorage,
-          change: validChange,
-          entityState: null,
+          changeToPut: validChange,
+          entityStateToPut: _mkEntityStateForChange(
+            validChange,
+            storedAtOverride: DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
+          ),
           skipChangeLogWrite: false,
           skipStateWrite: false,
         ),
@@ -202,8 +243,8 @@ void main() {
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: localStorage,
-          change: change,
-          entityState: entityStateWithMismatchedStoredAt,
+          changeToPut: change,
+          entityStateToPut: entityStateWithMismatchedStoredAt,
           skipChangeLogWrite: false,
           skipStateWrite: false,
         ),
@@ -260,8 +301,8 @@ void main() {
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: cloudStorage,
-          change: change,
-          entityState: entityStateWithoutMatchingCloudAt,
+          changeToPut: change,
+          entityStateToPut: entityStateWithoutMatchingCloudAt,
           skipChangeLogWrite: false,
           skipStateWrite: false,
         ),
@@ -316,8 +357,8 @@ void main() {
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: localStorage,
-          change: change,
-          entityState: validEntityState,
+          changeToPut: change,
+          entityStateToPut: validEntityState,
           skipChangeLogWrite: false,
           skipStateWrite: false,
         ),
@@ -376,8 +417,8 @@ void main() {
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: cloudStorage,
-          change: change,
-          entityState: validEntityState,
+          changeToPut: change,
+          entityStateToPut: validEntityState,
           skipChangeLogWrite: false,
           skipStateWrite: false,
         ),
@@ -407,8 +448,8 @@ void main() {
       expect(
         () => ChangeProcessingService.checkCoreChangeStorageResponsibilities(
           storage: cloudStorage,
-          change: invalidChange,
-          entityState: null,
+          changeToPut: invalidChange,
+          entityStateToPut: _mkEntityStateForChange(invalidChange),
           skipChangeLogWrite: true,
           skipStateWrite: true,
         ),

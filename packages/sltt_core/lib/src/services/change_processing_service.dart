@@ -36,8 +36,8 @@ class ChangeProcessingService {
   /// violations; it does not mutate `change` or `entityState`.
   static void checkCoreChangeStorageResponsibilities({
     required BaseStorageService storage,
-    required BaseChangeLogEntry change,
-    BaseEntityState? entityState,
+    required BaseChangeLogEntry changeToPut,
+    required BaseEntityState entityStateToPut,
     required bool skipChangeLogWrite,
     required bool skipStateWrite,
   }) {
@@ -45,39 +45,34 @@ class ChangeProcessingService {
       // If both writes are skipped, there's nothing to validate
       return;
     }
-    if (change.storageId.trim().isEmpty && !skipChangeLogWrite) {
-      throw ArgumentError('storage received non-empty storageId on change');
+    if (changeToPut.storageId.trim().isEmpty && !skipChangeLogWrite) {
+      throw ArgumentError('storage received empty storageId on change');
     }
     if (!skipChangeLogWrite) {
-      if (change.storedAt == null) {
+      if (changeToPut.storedAt == null) {
         throw ArgumentError('storage requires storedAt to be set on change');
       }
-      if (storage.getStorageType() == 'cloud' && change.cloudAt == null) {
+      if (storage.getStorageType() == 'cloud' && changeToPut.cloudAt == null) {
         throw ArgumentError(
           'cloud storage requires cloudAt to be set on change',
         );
       }
     }
 
-    if (!skipStateWrite && entityState == null) {
-      throw ArgumentError(
-        'storage requires entityState to be provided when writing state',
-      );
-    }
-    if (entityState != null && !skipStateWrite) {
+    if (!skipStateWrite) {
       // If entityState includes change-side timestamps, validate they match
       // or are present as expected (do not mutate).
-      final esJson = entityState.toJson();
+      final esJson = entityStateToPut.toJson();
       final esStored = esJson['change_storedAt'] as String?;
-      if (!skipChangeLogWrite &&
-          esStored != change.storedAt!.toIso8601String()) {
+      final changeStoredAt = changeToPut.storedAt?.toUtc().toIso8601String();
+      if (!skipChangeLogWrite && esStored != changeStoredAt) {
         throw ArgumentError(
-          'entityState.change_storedAt ($esStored) does not match change.storedAt (${change.storedAt!.toIso8601String()})',
+          'entityState.change_storedAt ($esStored) does not match change.storedAt ($changeStoredAt)',
         );
       }
       if (storage.getStorageType() == 'cloud' &&
           !skipChangeLogWrite &&
-          change.cloudAt == null) {
+          changeToPut.cloudAt == null) {
         throw ArgumentError(
           'cloud storage requires change.cloudAt to be set when writing state',
         );
@@ -86,7 +81,7 @@ class ChangeProcessingService {
       // in other words, entityState.cloudAt may or may not match change.cloudAt
       // depending on which field(s) actually got merged, but at least one of them
       // should match the incoming change.cloudAt
-      final entityStateKvs = entityState.toJson();
+      final entityStateKvs = entityStateToPut.toJson();
       final entityStateCloudAts = <String, dynamic>{};
       entityStateKvs.forEach((key, value) {
         if (key.endsWith('_cloudAt') ||
@@ -94,12 +89,12 @@ class ChangeProcessingService {
           entityStateCloudAts[key] = value;
         }
       });
-      if (change.cloudAt != null &&
+      if (changeToPut.cloudAt != null &&
           !entityStateCloudAts.values.contains(
-            change.cloudAt!.toIso8601String(),
+            changeToPut.cloudAt!.toIso8601String(),
           )) {
         throw ArgumentError(
-          'entityState does not contain any cloudAt matching change.cloudAt (${change.cloudAt!.toIso8601String()}). Got: $entityStateCloudAts',
+          'entityState does not contain any cloudAt matching change.cloudAt (${changeToPut.cloudAt!.toIso8601String()}). Got: $entityStateCloudAts',
         );
       }
     }

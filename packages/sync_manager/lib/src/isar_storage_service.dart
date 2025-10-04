@@ -197,17 +197,6 @@ class IsarStorageService extends BaseStorageService {
       );
     }
 
-    // Validate core change/storage responsibilities using the shared helper.
-    // The validator will throw if required metadata (e.g., cloudAt for cloud
-    // storage) is missing. It does not mutate the change or state.
-    ChangeProcessingService.checkCoreChangeStorageResponsibilities(
-      storage: this,
-      change: newChange,
-      entityState: entityState,
-      skipChangeLogWrite: skipChangeLogWrite,
-      skipStateWrite: skipStateWrite,
-    );
-
     // Convert to appropriate Isar state type based on entity type
     final entityTypeEnum = EntityType.values.firstWhere(
       (e) => e.value == changeLogEntry.entityType,
@@ -244,6 +233,17 @@ class IsarStorageService extends BaseStorageService {
         changeLogEntry.entityType,
       );
     }
+
+    // Validate core change/storage responsibilities using the shared helper.
+    // The validator will throw if required metadata (e.g., cloudAt for cloud
+    // storage) is missing. It does not mutate the change or state.
+    ChangeProcessingService.checkCoreChangeStorageResponsibilities(
+      storage: this,
+      changeToPut: newChange,
+      entityStateToPut: newEntityState,
+      skipChangeLogWrite: skipChangeLogWrite,
+      skipStateWrite: skipStateWrite,
+    );
 
     SlttLogger.logger.fine(
       'updateChangeLogAndState - before put - newChange seq: ${newChange.seq}',

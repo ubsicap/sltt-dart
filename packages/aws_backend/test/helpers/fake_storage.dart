@@ -152,13 +152,10 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
         mergedState['change_domainId'] ?? newChange.domainId;
     mergedState['change_domainId_orig_'] =
         mergedState['change_domainId_orig_'] ?? newChange.domainId;
-    // Use the storedAt value from the change for change timestamps in state
     mergedState['change_changeAt'] =
-        mergedState['change_changeAt'] ??
-        (mergedChangeJson['storedAt']?.toString() ?? now.toIso8601String());
+        mergedState['change_changeAt'] ?? now.toIso8601String();
     mergedState['change_changeAt_orig_'] =
-        mergedState['change_changeAt_orig_'] ??
-        (mergedChangeJson['storedAt']?.toString() ?? now.toIso8601String());
+        mergedState['change_changeAt_orig_'] ?? now.toIso8601String();
     mergedState['change_cid'] = mergedState['change_cid'] ?? newChange.cid;
     mergedState['change_cid_orig_'] =
         mergedState['change_cid_orig_'] ?? newChange.cid;
@@ -170,16 +167,14 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     // Minimal data_* required fields
     mergedState['data_parentId'] = mergedState['data_parentId'] ?? '';
     mergedState['data_parentId_changeAt_'] =
-        mergedState['data_parentId_changeAt_'] ??
-        (mergedChangeJson['storedAt']?.toString() ?? now.toIso8601String());
+        mergedState['data_parentId_changeAt_'] ?? now.toIso8601String();
     mergedState['data_parentId_cid_'] =
         mergedState['data_parentId_cid_'] ?? newChange.cid;
     mergedState['data_parentId_changeBy_'] =
         mergedState['data_parentId_changeBy_'] ?? newChange.changeBy;
     mergedState['data_parentProp'] = mergedState['data_parentProp'] ?? '';
     mergedState['data_parentProp_changeAt_'] =
-        mergedState['data_parentProp_changeAt_'] ??
-        (mergedChangeJson['storedAt']?.toString() ?? now.toIso8601String());
+        mergedState['data_parentProp_changeAt_'] ?? now.toIso8601String();
     mergedState['data_parentProp_cid_'] =
         mergedState['data_parentProp_cid_'] ?? newChange.cid;
     mergedState['data_parentProp_changeBy_'] =
@@ -190,8 +185,8 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     // Validate core storage responsibilities (no mutation)
     ChangeProcessingService.checkCoreChangeStorageResponsibilities(
       storage: this,
-      change: newChange,
-      entityState: newState,
+      changeToPut: newChange,
+      entityStateToPut: newState,
       skipChangeLogWrite: skipChangeLogWrite,
       skipStateWrite: skipStateWrite,
     );
