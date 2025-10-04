@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:isar_community/isar.dart';
 
 import 'sync_state.dart';
@@ -29,7 +31,7 @@ class IsarEntityTypeSyncState extends SyncState {
     required this.created,
     required this.updated,
     required this.deleted,
-    super.createdAt,
-    super.updatedAt,
+    super.storedAt_orig_,
+    super.storedAt,
   });
 }

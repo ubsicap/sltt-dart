@@ -1,6 +1,9 @@
 /// Tracks the last sync state for each domain.
 /// This collection does not inherit from BaseEntityState as it's purely
 /// for sync tracking and doesn't represent domain entity data.
+library;
+// ignore_for_file: non_constant_identifier_names
+
 abstract class SyncState {
   /// Domain ID (primary key for sync tracking)
   final String domainId;
@@ -22,11 +25,11 @@ abstract class SyncState {
 
   /// Local datetime when this sync state was created
   /// expect to always be set, either by default or from deserialization
-  final DateTime? createdAt;
+  final DateTime? storedAt_orig_;
 
   /// Local datetime when this sync state was last updated
   /// expect to always be set, either by default or from deserialization
-  final DateTime? updatedAt;
+  final DateTime? storedAt;
 
   SyncState({
     required this.domainId,
@@ -36,8 +39,8 @@ abstract class SyncState {
     required this.cid,
     required this.changeAt,
     required this.seq,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : createdAt = createdAt ?? updatedAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+    DateTime? storedAt_orig_,
+    DateTime? storedAt,
+  }) : storedAt_orig_ = storedAt_orig_ ?? storedAt ?? DateTime.now(),
+       storedAt = storedAt ?? DateTime.now();
 }

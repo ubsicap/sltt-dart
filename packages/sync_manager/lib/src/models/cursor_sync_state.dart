@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:isar_community/isar.dart';
 
 import 'sync_state.dart';
@@ -21,7 +23,7 @@ class CursorSyncState extends SyncState {
     required super.cid,
     required super.changeAt,
     required super.seq,
-    super.createdAt,
-    super.updatedAt,
+    super.storedAt_orig_,
+    super.storedAt,
   });
 }

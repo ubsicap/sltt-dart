@@ -23,35 +23,35 @@ const CursorSyncStateSchema = CollectionSchema(
       type: IsarType.dateTime,
     ),
     r'cid': PropertySchema(id: 1, name: r'cid', type: IsarType.string),
-    r'createdAt': PropertySchema(
-      id: 2,
-      name: r'createdAt',
-      type: IsarType.dateTime,
-    ),
     r'domainId': PropertySchema(
-      id: 3,
+      id: 2,
       name: r'domainId',
       type: IsarType.string,
     ),
     r'domainType': PropertySchema(
-      id: 4,
+      id: 3,
       name: r'domainType',
       type: IsarType.string,
     ),
-    r'seq': PropertySchema(id: 5, name: r'seq', type: IsarType.long),
+    r'seq': PropertySchema(id: 4, name: r'seq', type: IsarType.long),
     r'storageId': PropertySchema(
-      id: 6,
+      id: 5,
       name: r'storageId',
       type: IsarType.string,
     ),
     r'storageType': PropertySchema(
-      id: 7,
+      id: 6,
       name: r'storageType',
       type: IsarType.string,
     ),
-    r'updatedAt': PropertySchema(
+    r'storedAt': PropertySchema(
+      id: 7,
+      name: r'storedAt',
+      type: IsarType.dateTime,
+    ),
+    r'storedAt_orig_': PropertySchema(
       id: 8,
-      name: r'updatedAt',
+      name: r'storedAt_orig_',
       type: IsarType.dateTime,
     ),
   },
@@ -93,13 +93,13 @@ void _cursorSyncStateSerialize(
 ) {
   writer.writeDateTime(offsets[0], object.changeAt);
   writer.writeString(offsets[1], object.cid);
-  writer.writeDateTime(offsets[2], object.createdAt);
-  writer.writeString(offsets[3], object.domainId);
-  writer.writeString(offsets[4], object.domainType);
-  writer.writeLong(offsets[5], object.seq);
-  writer.writeString(offsets[6], object.storageId);
-  writer.writeString(offsets[7], object.storageType);
-  writer.writeDateTime(offsets[8], object.updatedAt);
+  writer.writeString(offsets[2], object.domainId);
+  writer.writeString(offsets[3], object.domainType);
+  writer.writeLong(offsets[4], object.seq);
+  writer.writeString(offsets[5], object.storageId);
+  writer.writeString(offsets[6], object.storageType);
+  writer.writeDateTime(offsets[7], object.storedAt);
+  writer.writeDateTime(offsets[8], object.storedAt_orig_);
 }
 
 CursorSyncState _cursorSyncStateDeserialize(
@@ -111,14 +111,14 @@ CursorSyncState _cursorSyncStateDeserialize(
   final object = CursorSyncState(
     changeAt: reader.readDateTime(offsets[0]),
     cid: reader.readString(offsets[1]),
-    createdAt: reader.readDateTimeOrNull(offsets[2]),
-    domainId: reader.readString(offsets[3]),
-    domainType: reader.readString(offsets[4]),
+    domainId: reader.readString(offsets[2]),
+    domainType: reader.readString(offsets[3]),
     id: id,
-    seq: reader.readLong(offsets[5]),
-    storageId: reader.readString(offsets[6]),
-    storageType: reader.readString(offsets[7]),
-    updatedAt: reader.readDateTimeOrNull(offsets[8]),
+    seq: reader.readLong(offsets[4]),
+    storageId: reader.readString(offsets[5]),
+    storageType: reader.readString(offsets[6]),
+    storedAt: reader.readDateTimeOrNull(offsets[7]),
+    storedAt_orig_: reader.readDateTimeOrNull(offsets[8]),
   );
   return object;
 }
@@ -135,17 +135,17 @@ P _cursorSyncStateDeserializeProp<P>(
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
-    case 5:
       return (reader.readLong(offset)) as P;
+    case 5:
+      return (reader.readString(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 8:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:
@@ -438,79 +438,6 @@ extension CursorSyncStateQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(property: r'cid', value: ''),
-      );
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  createdAtIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNull(property: r'createdAt'),
-      );
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  createdAtIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNotNull(property: r'createdAt'),
-      );
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  createdAtEqualTo(DateTime? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'createdAt', value: value),
-      );
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  createdAtGreaterThan(DateTime? value, {bool include = false}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'createdAt',
-          value: value,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  createdAtLessThan(DateTime? value, {bool include = false}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'createdAt',
-          value: value,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  createdAtBetween(
-    DateTime? lower,
-    DateTime? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'createdAt',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
       );
     });
   }
@@ -1190,39 +1117,39 @@ extension CursorSyncStateQueryFilter
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  updatedAtIsNull() {
+  storedAtIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
-        const FilterCondition.isNull(property: r'updatedAt'),
+        const FilterCondition.isNull(property: r'storedAt'),
       );
     });
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  updatedAtIsNotNull() {
+  storedAtIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
-        const FilterCondition.isNotNull(property: r'updatedAt'),
+        const FilterCondition.isNotNull(property: r'storedAt'),
       );
     });
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  updatedAtEqualTo(DateTime? value) {
+  storedAtEqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'updatedAt', value: value),
+        FilterCondition.equalTo(property: r'storedAt', value: value),
       );
     });
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  updatedAtGreaterThan(DateTime? value, {bool include = false}) {
+  storedAtGreaterThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(
           include: include,
-          property: r'updatedAt',
+          property: r'storedAt',
           value: value,
         ),
       );
@@ -1230,12 +1157,12 @@ extension CursorSyncStateQueryFilter
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  updatedAtLessThan(DateTime? value, {bool include = false}) {
+  storedAtLessThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.lessThan(
           include: include,
-          property: r'updatedAt',
+          property: r'storedAt',
           value: value,
         ),
       );
@@ -1243,7 +1170,7 @@ extension CursorSyncStateQueryFilter
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  updatedAtBetween(
+  storedAtBetween(
     DateTime? lower,
     DateTime? upper, {
     bool includeLower = true,
@@ -1252,7 +1179,80 @@ extension CursorSyncStateQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.between(
-          property: r'updatedAt',
+          property: r'storedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
+  storedAt_orig_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'storedAt_orig_'),
+      );
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
+  storedAt_orig_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'storedAt_orig_'),
+      );
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
+  storedAt_orig_EqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'storedAt_orig_', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
+  storedAt_orig_GreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'storedAt_orig_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
+  storedAt_orig_LessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'storedAt_orig_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
+  storedAt_orig_Between(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'storedAt_orig_',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -1294,20 +1294,6 @@ extension CursorSyncStateQuerySortBy
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy> sortByCidDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cid', Sort.desc);
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
-  sortByCreatedAt() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'createdAt', Sort.asc);
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
-  sortByCreatedAtDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'createdAt', Sort.desc);
     });
   }
 
@@ -1380,16 +1366,30 @@ extension CursorSyncStateQuerySortBy
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
-  sortByUpdatedAt() {
+  sortByStoredAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'updatedAt', Sort.asc);
+      return query.addSortBy(r'storedAt', Sort.asc);
     });
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
-  sortByUpdatedAtDesc() {
+  sortByStoredAtDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'updatedAt', Sort.desc);
+      return query.addSortBy(r'storedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
+  sortByStoredAt_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt_orig_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
+  sortByStoredAt_orig_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt_orig_', Sort.desc);
     });
   }
 }
@@ -1419,20 +1419,6 @@ extension CursorSyncStateQuerySortThenBy
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy> thenByCidDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'cid', Sort.desc);
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
-  thenByCreatedAt() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'createdAt', Sort.asc);
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
-  thenByCreatedAtDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'createdAt', Sort.desc);
     });
   }
 
@@ -1517,16 +1503,30 @@ extension CursorSyncStateQuerySortThenBy
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
-  thenByUpdatedAt() {
+  thenByStoredAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'updatedAt', Sort.asc);
+      return query.addSortBy(r'storedAt', Sort.asc);
     });
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
-  thenByUpdatedAtDesc() {
+  thenByStoredAtDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'updatedAt', Sort.desc);
+      return query.addSortBy(r'storedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
+  thenByStoredAt_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt_orig_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QAfterSortBy>
+  thenByStoredAt_orig_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt_orig_', Sort.desc);
     });
   }
 }
@@ -1545,13 +1545,6 @@ extension CursorSyncStateQueryWhereDistinct
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'cid', caseSensitive: caseSensitive);
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QDistinct>
-  distinctByCreatedAt() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'createdAt');
     });
   }
 
@@ -1591,9 +1584,16 @@ extension CursorSyncStateQueryWhereDistinct
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QDistinct>
-  distinctByUpdatedAt() {
+  distinctByStoredAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'updatedAt');
+      return query.addDistinctBy(r'storedAt');
+    });
+  }
+
+  QueryBuilder<CursorSyncState, CursorSyncState, QDistinct>
+  distinctByStoredAt_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'storedAt_orig_');
     });
   }
 }
@@ -1615,13 +1615,6 @@ extension CursorSyncStateQueryProperty
   QueryBuilder<CursorSyncState, String, QQueryOperations> cidProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'cid');
-    });
-  }
-
-  QueryBuilder<CursorSyncState, DateTime?, QQueryOperations>
-  createdAtProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'createdAt');
     });
   }
 
@@ -1657,9 +1650,16 @@ extension CursorSyncStateQueryProperty
   }
 
   QueryBuilder<CursorSyncState, DateTime?, QQueryOperations>
-  updatedAtProperty() {
+  storedAtProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'updatedAt');
+      return query.addPropertyName(r'storedAt');
+    });
+  }
+
+  QueryBuilder<CursorSyncState, DateTime?, QQueryOperations>
+  storedAt_orig_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'storedAt_orig_');
     });
   }
 }

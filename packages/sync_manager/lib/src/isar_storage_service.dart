@@ -318,8 +318,8 @@ class IsarStorageService extends BaseStorageService {
               deleted:
                   existingEntityTypeSyncStates.deleted +
                   (op == 'delete' ? 1 : 0),
-              createdAt: existingEntityTypeSyncStates.createdAt,
-              updatedAt: newChange.storedAt,
+              storedAt_orig_: existingEntityTypeSyncStates.storedAt_orig_,
+              storedAt: newChange.storedAt,
             );
             await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
           } else {
@@ -338,8 +338,8 @@ class IsarStorageService extends BaseStorageService {
               updated: newChange.operation == 'update' ? 1 : 0,
               deleted: newChange.operation == 'delete' ? 1 : 0,
               // For new records set createdAt/updatedAt from storedAt when available
-              createdAt: newChange.storedAt ?? DateTime.now(),
-              updatedAt: newChange.storedAt ?? DateTime.now(),
+              storedAt: newChange.storedAt ?? DateTime.now(),
+              storedAt_orig_: newChange.storedAt ?? DateTime.now(),
             );
             await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
           }
@@ -966,8 +966,8 @@ class IsarStorageService extends BaseStorageService {
         cid: cid,
         changeAt: changeAt,
         seq: seq,
-        createdAt: existing.createdAt,
-        updatedAt: DateTime.now().toUtc(),
+        storedAt_orig_: existing.storedAt_orig_,
+        storedAt: DateTime.now().toUtc(),
       );
     } else {
       // Create new
@@ -980,8 +980,8 @@ class IsarStorageService extends BaseStorageService {
         cid: cid,
         changeAt: changeAt,
         seq: seq,
-        createdAt: now,
-        updatedAt: now,
+        storedAt_orig_: now,
+        storedAt: now,
       );
     }
     await _isar.writeTxn(() async {

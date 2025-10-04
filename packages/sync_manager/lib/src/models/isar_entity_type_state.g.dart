@@ -25,44 +25,44 @@ const IsarEntityTypeSyncStateSchema = CollectionSchema(
     ),
     r'cid': PropertySchema(id: 1, name: r'cid', type: IsarType.string),
     r'created': PropertySchema(id: 2, name: r'created', type: IsarType.long),
-    r'createdAt': PropertySchema(
-      id: 3,
-      name: r'createdAt',
-      type: IsarType.dateTime,
-    ),
-    r'deleted': PropertySchema(id: 4, name: r'deleted', type: IsarType.long),
+    r'deleted': PropertySchema(id: 3, name: r'deleted', type: IsarType.long),
     r'domainId': PropertySchema(
-      id: 5,
+      id: 4,
       name: r'domainId',
       type: IsarType.string,
     ),
     r'domainType': PropertySchema(
-      id: 6,
+      id: 5,
       name: r'domainType',
       type: IsarType.string,
     ),
     r'entityType': PropertySchema(
-      id: 7,
+      id: 6,
       name: r'entityType',
       type: IsarType.string,
     ),
-    r'seq': PropertySchema(id: 8, name: r'seq', type: IsarType.long),
+    r'seq': PropertySchema(id: 7, name: r'seq', type: IsarType.long),
     r'storageId': PropertySchema(
-      id: 9,
+      id: 8,
       name: r'storageId',
       type: IsarType.string,
     ),
     r'storageType': PropertySchema(
-      id: 10,
+      id: 9,
       name: r'storageType',
       type: IsarType.string,
     ),
-    r'updated': PropertySchema(id: 11, name: r'updated', type: IsarType.long),
-    r'updatedAt': PropertySchema(
-      id: 12,
-      name: r'updatedAt',
+    r'storedAt': PropertySchema(
+      id: 10,
+      name: r'storedAt',
       type: IsarType.dateTime,
     ),
+    r'storedAt_orig_': PropertySchema(
+      id: 11,
+      name: r'storedAt_orig_',
+      type: IsarType.dateTime,
+    ),
+    r'updated': PropertySchema(id: 12, name: r'updated', type: IsarType.long),
   },
 
   estimateSize: _isarEntityTypeSyncStateEstimateSize,
@@ -123,16 +123,16 @@ void _isarEntityTypeSyncStateSerialize(
   writer.writeDateTime(offsets[0], object.changeAt);
   writer.writeString(offsets[1], object.cid);
   writer.writeLong(offsets[2], object.created);
-  writer.writeDateTime(offsets[3], object.createdAt);
-  writer.writeLong(offsets[4], object.deleted);
-  writer.writeString(offsets[5], object.domainId);
-  writer.writeString(offsets[6], object.domainType);
-  writer.writeString(offsets[7], object.entityType);
-  writer.writeLong(offsets[8], object.seq);
-  writer.writeString(offsets[9], object.storageId);
-  writer.writeString(offsets[10], object.storageType);
-  writer.writeLong(offsets[11], object.updated);
-  writer.writeDateTime(offsets[12], object.updatedAt);
+  writer.writeLong(offsets[3], object.deleted);
+  writer.writeString(offsets[4], object.domainId);
+  writer.writeString(offsets[5], object.domainType);
+  writer.writeString(offsets[6], object.entityType);
+  writer.writeLong(offsets[7], object.seq);
+  writer.writeString(offsets[8], object.storageId);
+  writer.writeString(offsets[9], object.storageType);
+  writer.writeDateTime(offsets[10], object.storedAt);
+  writer.writeDateTime(offsets[11], object.storedAt_orig_);
+  writer.writeLong(offsets[12], object.updated);
 }
 
 IsarEntityTypeSyncState _isarEntityTypeSyncStateDeserialize(
@@ -145,17 +145,17 @@ IsarEntityTypeSyncState _isarEntityTypeSyncStateDeserialize(
     changeAt: reader.readDateTime(offsets[0]),
     cid: reader.readString(offsets[1]),
     created: reader.readLong(offsets[2]),
-    createdAt: reader.readDateTimeOrNull(offsets[3]),
-    deleted: reader.readLong(offsets[4]),
-    domainId: reader.readString(offsets[5]),
-    domainType: reader.readString(offsets[6]),
-    entityType: reader.readString(offsets[7]),
+    deleted: reader.readLong(offsets[3]),
+    domainId: reader.readString(offsets[4]),
+    domainType: reader.readString(offsets[5]),
+    entityType: reader.readString(offsets[6]),
     id: id,
-    seq: reader.readLong(offsets[8]),
-    storageId: reader.readString(offsets[9]),
-    storageType: reader.readString(offsets[10]),
-    updated: reader.readLong(offsets[11]),
-    updatedAt: reader.readDateTimeOrNull(offsets[12]),
+    seq: reader.readLong(offsets[7]),
+    storageId: reader.readString(offsets[8]),
+    storageType: reader.readString(offsets[9]),
+    storedAt: reader.readDateTimeOrNull(offsets[10]),
+    storedAt_orig_: reader.readDateTimeOrNull(offsets[11]),
+    updated: reader.readLong(offsets[12]),
   );
   return object;
 }
@@ -174,25 +174,25 @@ P _isarEntityTypeSyncStateDeserializeProp<P>(
     case 2:
       return (reader.readLong(offset)) as P;
     case 3:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 4:
       return (reader.readLong(offset)) as P;
+    case 4:
+      return (reader.readString(offset)) as P;
     case 5:
       return (reader.readString(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
-    case 8:
       return (reader.readLong(offset)) as P;
+    case 8:
+      return (reader.readString(offset)) as P;
     case 9:
       return (reader.readString(offset)) as P;
     case 10:
-      return (reader.readString(offset)) as P;
-    case 11:
-      return (reader.readLong(offset)) as P;
-    case 12:
       return (reader.readDateTimeOrNull(offset)) as P;
+    case 11:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 12:
+      return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -883,103 +883,6 @@ extension IsarEntityTypeSyncStateQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'created',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  createdAtIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNull(property: r'createdAt'),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  createdAtIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNotNull(property: r'createdAt'),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  createdAtEqualTo(DateTime? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'createdAt', value: value),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  createdAtGreaterThan(DateTime? value, {bool include = false}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'createdAt',
-          value: value,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  createdAtLessThan(DateTime? value, {bool include = false}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'createdAt',
-          value: value,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  createdAtBetween(
-    DateTime? lower,
-    DateTime? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'createdAt',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -2112,6 +2015,200 @@ extension IsarEntityTypeSyncStateQueryFilter
     IsarEntityTypeSyncState,
     QAfterFilterCondition
   >
+  storedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'storedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'storedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'storedAt', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAtGreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'storedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAtLessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'storedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'storedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAt_orig_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'storedAt_orig_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAt_orig_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'storedAt_orig_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAt_orig_EqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'storedAt_orig_', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAt_orig_GreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'storedAt_orig_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAt_orig_LessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'storedAt_orig_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
+  storedAt_orig_Between(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'storedAt_orig_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarEntityTypeSyncState,
+    IsarEntityTypeSyncState,
+    QAfterFilterCondition
+  >
   updatedEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -2169,103 +2266,6 @@ extension IsarEntityTypeSyncStateQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'updated',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  updatedAtIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNull(property: r'updatedAt'),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  updatedAtIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNotNull(property: r'updatedAt'),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  updatedAtEqualTo(DateTime? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'updatedAt', value: value),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  updatedAtGreaterThan(DateTime? value, {bool include = false}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'updatedAt',
-          value: value,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  updatedAtLessThan(DateTime? value, {bool include = false}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'updatedAt',
-          value: value,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  updatedAtBetween(
-    DateTime? lower,
-    DateTime? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'updatedAt',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -2333,20 +2333,6 @@ extension IsarEntityTypeSyncStateQuerySortBy
   sortByCreatedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'created', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
-  sortByCreatedAt() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'createdAt', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
-  sortByCreatedAtDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'createdAt', Sort.desc);
     });
   }
 
@@ -2449,6 +2435,34 @@ extension IsarEntityTypeSyncStateQuerySortBy
   }
 
   QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
+  sortByStoredAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
+  sortByStoredAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
+  sortByStoredAt_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt_orig_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
+  sortByStoredAt_orig_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt_orig_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
   sortByUpdated() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updated', Sort.asc);
@@ -2459,20 +2473,6 @@ extension IsarEntityTypeSyncStateQuerySortBy
   sortByUpdatedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updated', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
-  sortByUpdatedAt() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'updatedAt', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
-  sortByUpdatedAtDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'updatedAt', Sort.desc);
     });
   }
 }
@@ -2523,20 +2523,6 @@ extension IsarEntityTypeSyncStateQuerySortThenBy
   thenByCreatedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'created', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
-  thenByCreatedAt() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'createdAt', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
-  thenByCreatedAtDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'createdAt', Sort.desc);
     });
   }
 
@@ -2653,6 +2639,34 @@ extension IsarEntityTypeSyncStateQuerySortThenBy
   }
 
   QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
+  thenByStoredAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
+  thenByStoredAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
+  thenByStoredAt_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt_orig_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
+  thenByStoredAt_orig_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt_orig_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
   thenByUpdated() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updated', Sort.asc);
@@ -2663,20 +2677,6 @@ extension IsarEntityTypeSyncStateQuerySortThenBy
   thenByUpdatedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updated', Sort.desc);
-    });
-  }
-
-  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
-  thenByUpdatedAt() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'updatedAt', Sort.asc);
-    });
-  }
-
-  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QAfterSortBy>
-  thenByUpdatedAtDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'updatedAt', Sort.desc);
     });
   }
 }
@@ -2706,13 +2706,6 @@ extension IsarEntityTypeSyncStateQueryWhereDistinct
   distinctByCreated() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'created');
-    });
-  }
-
-  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QDistinct>
-  distinctByCreatedAt() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'createdAt');
     });
   }
 
@@ -2766,16 +2759,23 @@ extension IsarEntityTypeSyncStateQueryWhereDistinct
   }
 
   QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QDistinct>
-  distinctByUpdated() {
+  distinctByStoredAt() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'updated');
+      return query.addDistinctBy(r'storedAt');
     });
   }
 
   QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QDistinct>
-  distinctByUpdatedAt() {
+  distinctByStoredAt_orig_() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'updatedAt');
+      return query.addDistinctBy(r'storedAt_orig_');
+    });
+  }
+
+  QueryBuilder<IsarEntityTypeSyncState, IsarEntityTypeSyncState, QDistinct>
+  distinctByUpdated() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'updated');
     });
   }
 }
@@ -2811,13 +2811,6 @@ extension IsarEntityTypeSyncStateQueryProperty
   createdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'created');
-    });
-  }
-
-  QueryBuilder<IsarEntityTypeSyncState, DateTime?, QQueryOperations>
-  createdAtProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'createdAt');
     });
   }
 
@@ -2869,17 +2862,24 @@ extension IsarEntityTypeSyncStateQueryProperty
     });
   }
 
-  QueryBuilder<IsarEntityTypeSyncState, int, QQueryOperations>
-  updatedProperty() {
+  QueryBuilder<IsarEntityTypeSyncState, DateTime?, QQueryOperations>
+  storedAtProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'updated');
+      return query.addPropertyName(r'storedAt');
     });
   }
 
   QueryBuilder<IsarEntityTypeSyncState, DateTime?, QQueryOperations>
-  updatedAtProperty() {
+  storedAt_orig_Property() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'updatedAt');
+      return query.addPropertyName(r'storedAt_orig_');
+    });
+  }
+
+  QueryBuilder<IsarEntityTypeSyncState, int, QQueryOperations>
+  updatedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'updated');
     });
   }
 }
