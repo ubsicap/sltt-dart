@@ -13,7 +13,7 @@ class SyncManager {
   SyncManager._();
 
   final Dio _dio = Dio();
-  final LocalStorageService _localStorage = LocalStorageService.instance;
+  late final IsarStorageService _localStorage;
 
   // API endpoints - defaults to AWS dev cloud, can be overridden for testing
   String _cloudStorageUrl = kCloudDevUrl;
@@ -37,9 +37,10 @@ class SyncManager {
     );
   }
 
-  Future<void> initialize() async {
+  Future<void> initialize({IsarStorageService? localStorage}) async {
     if (_initialized) return;
 
+    _localStorage = localStorage ?? LocalStorageService.instance;
     await _localStorage.initialize();
 
     _dio.options.headers['Content-Type'] = 'application/json';
