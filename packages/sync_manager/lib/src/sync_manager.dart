@@ -181,16 +181,17 @@ class SyncManager {
         } else {
           // Handle partial failure
 
-          final message = '### Partial outsync: nothing processed!';
-          SlttLogger.logger.warning('[SyncManager] $message');
-
+          final message =
+              '[SyncManager] ### Partial outsync: nothing processed!';
+          final error =
+              '$message, errors: ${const JsonEncoder.withIndent('  ').convert(summary.errors)}';
+          SlttLogger.logger.severe(error);
           return OutsyncResult(
             success: false,
             message: message,
             changeSummary: summary,
             deletedLocalChanges: [],
-            error:
-                '$message, errors: ${const JsonEncoder.withIndent('  ').convert(summary.errors)}',
+            error: error,
             errorStackTrace: null,
           );
         }
