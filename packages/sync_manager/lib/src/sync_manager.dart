@@ -512,6 +512,7 @@ class SyncManager {
 
       await _localStorage.close();
       _initialized = false;
+      _instance = null;
       SlttLogger.logger.info('[SyncManager] Closed');
     }
   }

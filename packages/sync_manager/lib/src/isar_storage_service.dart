@@ -691,7 +691,26 @@ class IsarStorageService extends BaseStorageService {
   @override
   Future<void> close() async {
     if (_initialized) {
-      await _isar.close();
+      if (!_isar.isOpen) {
+        SlttLogger.logger.info('[$_logPrefix] Isar database already closed');
+        return;
+      }
+      try {
+        // TODO: use backoff/retry to close because on Windows the files may be
+        // transiently locked by another process (or the VM).
+        await _isar.close();
+      } catch (e) {
+        if (_isar.isOpen) {
+          SlttLogger.logger.severe(
+            '[$_logPrefix] Warning: Isar close failed and database still open: $e',
+          );
+          rethrow;
+        } else {
+          SlttLogger.logger.info(
+            '[$_logPrefix] Warning: Isar close failed but database is now closed: $e',
+          );
+        }
+      }
       _initialized = false;
       SlttLogger.logger.info('[$_logPrefix] Isar database closed');
     }
@@ -1227,6 +1246,12 @@ class LocalStorageService extends IsarStorageService {
       _instance ??= LocalStorageService._();
 
   LocalStorageService._() : super('local_storage', 'LocalStorage');
+
+  @override
+  Future<void> close() async {
+    await super.close();
+    _instance = null;
+  }
 }
 
 class CloudStorageService extends IsarStorageService {
@@ -1238,4 +1263,10 @@ class CloudStorageService extends IsarStorageService {
 
   @override
   String getStorageType() => 'cloud';
+
+  @override
+  Future<void> close() async {
+    await super.close();
+    _instance = null;
+  }
 }
