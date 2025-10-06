@@ -14,30 +14,19 @@ class SlttLogger {
 
   static bool _initialized = false;
 
-  static void init({Level? level}) {
-    if (level != null) {
-      // Set the root logger's level so the change is effective without
-      // requiring hierarchicalLoggingEnabled for non-root loggers.
-      Logger.root.level = level;
-    } else {
-      try {
-        final env = Platform.environment['SLTT_LOG_LEVEL'];
-        if (env != null && env.isNotEmpty) {
-          Logger.root.level = _levelFromName(env) ?? Level.WARNING;
-        }
-      } catch (_) {
-        // Platform.environment may not be available in some test runners; ignore.
-      }
+  static void init({Level level = Level.WARNING}) {
+    // Prefer SLTT_LOG_LEVEL env var, then an explicit argument (default WARNING)
+    // Read the environment in a try/catch because
+    // some test runners restrict access to Platform.environment.
+    Level? envLevel;
+    try {
+      final env = Platform.environment['SLTT_LOG_LEVEL'];
+      if (env != null && env.isNotEmpty) envLevel = _levelFromName(env);
+    } catch (_) {
+      // ignore environment access errors
     }
-    // If no explicit level was provided and no environment variable was set,
-    // default to WARNING to keep test output quiet. This mirrors the
-    // documented default behavior and ensures non-logger print statements
-    // are not unexpectedly affected (they will still print).
-    // Ensure a default level when no explicit level or environment variable
-    // was provided. Assign directly since Logger.root.level is non-nullable
-    // in recent SDK versions and the analyzer will warn about redundant
-    // null checks.
-    Logger.root.level = Level.WARNING;
+
+    Logger.root.level = envLevel ?? level;
     // Root level is now controlled via Logger.root.level above.
 
     // Only add a handler once.
