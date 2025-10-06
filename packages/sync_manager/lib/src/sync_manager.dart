@@ -23,10 +23,10 @@ class SyncManager {
   // Debounced sync state
   Timer? _syncDebounceTimer;
   StreamSubscription<void>? _changeLogSubscription;
-  bool _autoSyncEnabled = false;
+  bool _autoOutsyncEnabled = false;
 
   // Public getters for testing
-  bool get autoSyncEnabled => _autoSyncEnabled;
+  bool get autoOutsyncEnabled => _autoOutsyncEnabled;
   StreamSubscription<void>? get changeLogSubscription => _changeLogSubscription;
 
   /// Configure the cloud storage URL (useful for testing with localhost)
@@ -56,13 +56,13 @@ class SyncManager {
 
   /// Enable automatic sync when change log entries are modified
   /// Sync is debounced to trigger 500ms after the last change
-  void enableAutoSync({String? domainType, String? domainId}) {
-    if (_autoSyncEnabled) {
+  void enableAutoOutsync({String? domainType, String? domainId}) {
+    if (_autoOutsyncEnabled) {
       SlttLogger.logger.info('[SyncManager] Auto-sync already enabled');
       return;
     }
 
-    _autoSyncEnabled = true;
+    _autoOutsyncEnabled = true;
     SlttLogger.logger.info('[SyncManager] Enabling auto-sync with debouncing');
 
     _changeLogSubscription = _localStorage.lazyListenToChangeLogEntryChanges(
@@ -74,10 +74,10 @@ class SyncManager {
   }
 
   /// Disable automatic sync
-  void disableAutoSync() {
-    if (!_autoSyncEnabled) return;
+  void disableAutoOutsync() {
+    if (!_autoOutsyncEnabled) return;
 
-    _autoSyncEnabled = false;
+    _autoOutsyncEnabled = false;
     _syncDebounceTimer?.cancel();
     _syncDebounceTimer = null;
     _changeLogSubscription?.cancel();
@@ -94,20 +94,20 @@ class SyncManager {
     // Start a new timer for 500ms
     _syncDebounceTimer = Timer(const Duration(milliseconds: 500), () {
       SlttLogger.logger.info('[SyncManager] Triggering debounced full sync');
-      _performDebouncedSync();
+      _performDebouncedOutsync();
     });
   }
 
-  /// Perform the actual sync (called after debounce period)
-  void _performDebouncedSync() async {
+  /// Perform the actual outsync (called after debounce period)
+  void _performDebouncedOutsync() async {
     try {
-      await performFullSync();
+      await outsyncToCloud();
       SlttLogger.logger.info(
-        '[SyncManager] Debounced full sync completed successfully',
+        '[SyncManager] Debounced outsync completed successfully',
       );
     } catch (e, stackTrace) {
       SlttLogger.logger.severe(
-        '[SyncManager] Debounced full sync failed: $e',
+        '[SyncManager] Debounced outsync failed: $e',
         e,
         stackTrace,
       );
@@ -508,7 +508,7 @@ class SyncManager {
   Future<void> close() async {
     if (_initialized) {
       // Clean up auto-sync resources
-      disableAutoSync();
+      disableAutoOutsync();
 
       await _localStorage.close();
       _initialized = false;

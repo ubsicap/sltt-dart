@@ -10,18 +10,21 @@ void main() async {
   // Enable automatic synchronization
   // This will listen for changes to the change log entries and trigger
   // a full sync 500ms after the last change
-  syncManager.enableAutoSync();
+  syncManager.enableAutoOutsync();
 
   // You can also enable auto-sync for a specific domain
-  syncManager.enableAutoSync(domainType: 'project');
+  syncManager.enableAutoOutsync(domainType: 'project');
 
   // Or for a specific entity within a domain
-  syncManager.enableAutoSync(domainType: 'project', domainId: 'my-project-123');
+  syncManager.enableAutoOutsync(
+    domainType: 'project',
+    domainId: 'my-project-123',
+  );
 
   // Now any changes to entities will automatically trigger sync after 500ms
 
   // Later, when you want to stop auto-sync:
-  syncManager.disableAutoSync();
+  syncManager.disableAutoOutsync();
 
   // Always clean up when done
   await syncManager.close();

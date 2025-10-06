@@ -1,13 +1,10 @@
 import 'dart:async';
 
-import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
 void main() {
-  SlttLogger.init();
-
-  group('SyncManager auto-sync', () {
+  group('SyncManager auto-outsync', () {
     late SyncManager syncManager;
     late LocalStorageService localStorage;
 
@@ -24,22 +21,22 @@ void main() {
     });
 
     tearDown(() async {
-      syncManager.disableAutoSync();
+      syncManager.disableAutoOutsync();
       await syncManager.close();
       await localStorage.deleteDatabase();
     });
 
-    test('can enable and disable auto-sync', () async {
+    test('can enable and disable auto-outsync', () async {
       // Should start disabled
-      expect(syncManager.autoSyncEnabled, isFalse);
+      expect(syncManager.autoOutsyncEnabled, isFalse);
 
       // Enable auto-sync
-      syncManager.enableAutoSync();
-      expect(syncManager.autoSyncEnabled, isTrue);
+      syncManager.enableAutoOutsync();
+      expect(syncManager.autoOutsyncEnabled, isTrue);
 
       // Disable auto-sync
-      syncManager.disableAutoSync();
-      expect(syncManager.autoSyncEnabled, isFalse);
+      syncManager.disableAutoOutsync();
+      expect(syncManager.autoOutsyncEnabled, isFalse);
     });
 
     test('change log subscription is created and cleaned up', () async {
@@ -47,11 +44,11 @@ void main() {
       expect(syncManager.changeLogSubscription, isNull);
 
       // Enable auto-sync
-      syncManager.enableAutoSync();
+      syncManager.enableAutoOutsync();
       expect(syncManager.changeLogSubscription, isNotNull);
 
       // Disable auto-sync
-      syncManager.disableAutoSync();
+      syncManager.disableAutoOutsync();
       expect(syncManager.changeLogSubscription, isNull);
     });
 
