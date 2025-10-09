@@ -284,23 +284,26 @@ class SyncManager {
         String srcStorageId = '**TBD**';
         String srcStorageType = '**TBD**';
 
+        bool hasMore = false;
         // Continue fetching with cursor until no more changes
         do {
           final encodedProjectId = Uri.encodeComponent(projectId);
           // router.get('/api/changes/<domainCollection>/<domainId>', _handleGetChanges);
           final url =
-              '$_cloudStorageUrl/api/changes/projects/$encodedProjectId?cursor=$cursor';
+              '$_cloudStorageUrl/api/changes/projects/$encodedProjectId?stateChanged=true&cursor=$cursor';
 
           final response = await _dio.get(url);
           final changesResponseData = response.data as Map<String, dynamic>;
 
+          hasMore = changesResponseData['hasMore'] as bool;
           if (response.statusCode == 200) {
             srcStorageId = changesResponseData['storageId'];
             srcStorageType = changesResponseData['storageType'];
             // TODO Deserialize response data
             final changesBatch =
                 changesResponseData['changes'] as List<dynamic>;
-            final nextCursor = changesResponseData['cursor'] as int?;
+            final nextCursor = changesResponseData['cursor'] as int;
+            highestSeqForProject = nextCursor;
             /*
                final responseData = <String, dynamic>{
                 'storageId': storageId,
@@ -355,33 +358,19 @@ class SyncManager {
             storageSummaries['$projectId/$cursor'] = results.resultsSummary;
             totalChangesForProject += incomingChanges.length;
 
-            // Track the highest sequence number for this project
-            for (final change in incomingChanges) {
-              final seq = change['seq'] as int;
-              if (seq > highestSeqForProject) {
-                highestSeqForProject = seq;
-                cid = change['cid'] as String? ?? '';
-                changeAt = DateTime.parse(change['changeAt'] as String);
-              } else {
-                throw Exception(
-                  'Received out-of-order sequence number for project $projectId: $seq <= $highestSeqForProject, (from $_cloudStorageUrl) change:\n$change',
-                );
-              }
-            }
-
             SlttLogger.logger.info(
               '[SyncManager] Applied ${incomingChanges.length} changes for project $projectId (batch)',
             );
 
             // Update cursor for next iteration
-            cursor = nextCursor?.toString();
+            cursor = nextCursor.toString();
           } else {
             SlttLogger.logger.warning(
               '[SyncManager] Failed to downsync project $projectId: ${response.statusCode}',
             );
             break; // Exit cursor loop for this project
           }
-        } while (cursor != null);
+        } while (hasMore);
 
         SlttLogger.logger.info(
           '[SyncManager] Completed downsyncing project $projectId: $totalChangesForProject total changes',

@@ -242,9 +242,13 @@ abstract class BaseRestApiServer {
         },
         'cursor': {
           'type': 'integer',
-          'required': false,
           'description':
-              'Next cursor for pagination (if more results available)',
+              'Cursor value for pagination — clients can use this as a bookmark/reference for the current position (cursor is typically returned when paging)',
+        },
+        'hasMore': {
+          'type': 'boolean',
+          'description':
+              'Whether more results are available beyond this response (use cursor to request the next page)',
         },
         'timestamp': {
           'type': 'string',
@@ -523,7 +527,20 @@ abstract class BaseRestApiServer {
           'parameters': [
             {'name': 'domainCollection', 'type': 'string', 'required': true},
             {'name': 'domainId', 'type': 'string', 'required': true},
-            {'name': 'cursor', 'type': 'integer', 'required': false},
+            {
+              'name': 'stateChanged',
+              'type': 'boolean',
+              'required': false,
+              'description':
+                  'Filter by whether the change resulted in a state update (true/false). If omitted, returns all changes.',
+            },
+            {
+              'name': 'cursor',
+              'type': 'integer',
+              'required': false,
+              'description':
+                  'Cursor (sequence number) to start from (exclusive). Clients can treat the returned cursor as a bookmark for the current position.',
+            },
             {'name': 'limit', 'type': 'integer', 'required': false},
           ],
           'response': {
@@ -531,7 +548,16 @@ abstract class BaseRestApiServer {
             'properties': {
               'changes': {'type': 'array', 'items': changeObjectSchema},
               'count': {'type': 'integer'},
-              'cursor': {'type': 'integer'},
+              'cursor': {
+                'type': 'integer',
+                'description':
+                    'Cursor for the response; clients can use this value as a bookmark to request the next page.',
+              },
+              'hasMore': {
+                'type': 'boolean',
+                'description':
+                    'True when more results are available beyond this response.',
+              },
               'timestamp': {'type': 'string', 'format': 'ISO8601'},
             },
           },
@@ -952,8 +978,23 @@ abstract class BaseRestApiServer {
         return _errorResponse('Domain ID is required', 400);
       }
 
+      final stateChangedParam = request.url.queryParameters['stateChanged'];
       final cursorParam = request.url.queryParameters['cursor'];
       final limitParam = request.url.queryParameters['limit'];
+
+      bool? stateChanged;
+      if (stateChangedParam != null) {
+        if (stateChangedParam.toLowerCase() == 'true') {
+          stateChanged = true;
+        } else if (stateChangedParam.toLowerCase() == 'false') {
+          stateChanged = false;
+        } else {
+          return _errorResponse(
+            'Invalid stateChanged value: must be true or false',
+            400,
+          );
+        }
+      }
 
       int? cursor;
       if (cursorParam != null) {
@@ -980,12 +1021,15 @@ abstract class BaseRestApiServer {
         }
       }
 
-      final changes = await storage.getChangesWithCursor(
+      final rawChanges = await storage.getChangesWithCursor(
         domainType: domainType,
         domainId: domainId,
         cursor: cursor,
         limit: limit,
       );
+      final changes = stateChanged != null
+          ? rawChanges.where((c) => c.stateChanged == stateChanged).toList()
+          : rawChanges;
 
       final storageId = await storage.getStorageId();
       final storageType = storage.getStorageType();
@@ -997,9 +1041,11 @@ abstract class BaseRestApiServer {
         'timestamp': DateTime.now().toIso8601String(),
       };
 
+      responseData['hasMore'] = false;
       // Add cursor to response if there are more changes available
-      if (changes.isNotEmpty && (limit == null || changes.length == limit)) {
-        final lastChangeId = changes.last.seq;
+      if (rawChanges.isNotEmpty &&
+          (limit == null || rawChanges.length == limit)) {
+        final lastChangeId = rawChanges.last.seq;
         final moreChanges = await storage.getChangesWithCursor(
           domainType: domainType,
           domainId: domainId,
@@ -1008,8 +1054,9 @@ abstract class BaseRestApiServer {
         );
 
         if (moreChanges.isNotEmpty) {
-          responseData['cursor'] = lastChangeId;
+          responseData['hasMore'] = true;
         }
+        responseData['cursor'] = lastChangeId;
       }
 
       return Response.ok(

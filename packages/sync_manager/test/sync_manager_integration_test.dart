@@ -934,11 +934,11 @@ void main() {
           totalsMap,
           equals({
             'creates': 1,
-            'updates': 0,
+            'updates': 1,
             'deletes': 0,
-            'total': 1,
+            'total': 2,
             'latestChangeAt': const UtcDateTimeConverter().toJson(
-              localChange.changeAt,
+              cloudChange.changeAt,
             ),
             'latestSeq': totalsMap?['latestSeq'],
           }),
