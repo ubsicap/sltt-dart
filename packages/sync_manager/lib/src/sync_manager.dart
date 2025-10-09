@@ -336,6 +336,22 @@ class SyncManager {
               includeStateUpdates: true,
             );
 
+            // TODO: how to handle more gracefully so we don't get stuck?
+            if (results.isError) {
+              final error =
+                  'Downsync processing error for project $projectId: '
+                  '${const JsonEncoder.withIndent('  ').convert(results.resultsSummary?.toJson())}';
+              SlttLogger.logger.severe(error);
+              return DownsyncResult(
+                success: false,
+                projectCursorChanges: projectCursorChanges,
+                storageSummaries: storageSummaries,
+                message: 'Downsync processing error for project $projectId',
+                error: error,
+                errorStackTrace: null,
+              );
+            }
+
             storageSummaries['$projectId/$cursor'] = results.resultsSummary;
             totalChangesForProject += incomingChanges.length;
 
