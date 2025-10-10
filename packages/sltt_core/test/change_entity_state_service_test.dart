@@ -1542,9 +1542,16 @@ void main() {
           // Latest metadata should NOT be updated to reflect this change
           expect(updates.stateUpdates.containsKey('change_changeAt'), isFalse);
           expect(updates.stateUpdates.containsKey('change_cid'), isFalse);
+          // change_storedAt and change_cloudAt are present when field updates are applied
+          final stateStoredAtVal = assertAndGetStoredAt(
+            updates.stateUpdates,
+            'change_storedAt',
+          );
           expect(
             updates.stateUpdates,
             equals({
+              'change_cloudAt': null,
+              'change_storedAt': stateStoredAtVal,
               'data_rank': '2',
               'data_rank_changeAt_': newerFieldTime.toIso8601String(),
               'data_rank_cid_': 'mid-cid',

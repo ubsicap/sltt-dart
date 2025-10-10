@@ -555,12 +555,21 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
             .toIso8601String(),
       },
       // latest metadata
-      if (isChangeNewerThanLatest && fieldUpdates.isNotEmpty) ...{
-        'change_domainType': changeLogEntry.domainType,
-        'change_domainId': changeLogEntry.domainId,
-        'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
-        'change_cid': changeLogEntry.cid,
-        'change_changeBy': changeLogEntry.changeBy,
+      // If there are any field updates, include the cloud/stored timestamps so
+      // callers can persist change_storedAt even when the incoming change is
+      // not newer than the entity's overall latest change. Only promote
+      // the latest-level change metadata when the incoming change is newer
+      // than the existing latest (isChangeNewerThanLatest).
+      if (fieldUpdates.isNotEmpty) ...{
+        if (isChangeNewerThanLatest) ...{
+          'change_domainType': changeLogEntry.domainType,
+          'change_domainId': changeLogEntry.domainId,
+          'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
+          'change_cid': changeLogEntry.cid,
+          'change_changeBy': changeLogEntry.changeBy,
+        },
+        // Always set cloudAt/storedAt when applying field updates so downstream
+        // callers can persist change_storedAt even for partial-field updates.
         'change_cloudAt': computedCloudAt,
         'change_storedAt': computedStoredAt,
       },
