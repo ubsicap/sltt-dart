@@ -163,6 +163,7 @@ void main() {
           'change_cid': 'cid1',
           'change_cid_orig_': 'cid1',
           'change_changeBy': 'u1',
+          'data_rank_dataSchemaRev_': 1,
           'change_changeBy_orig_': 'u1',
           'unknownJson': '{}',
         });
@@ -658,11 +659,12 @@ void main() {
         expect(
           updates.stateUpdates,
           equals({
-            'change_domainType': 'project',
+            'domainType': 'project',
             'change_domainId': 'project1',
             'change_changeAt': newerTime.toIso8601String(),
             'change_cid': 'cid2',
             'change_changeBy': 'user2',
+            'change_dataSchemaRev': null,
             'change_cloudAt': null,
             'change_storedAt': storedAtVal,
             'data_rank': '2',
@@ -670,6 +672,7 @@ void main() {
             'data_rank_cid_': 'cid2',
             'data_rank_changeBy_': 'user2',
             'data_rank_cloudAt_': null,
+            'data_rank_dataSchemaRev_': null,
           }),
         );
         // Latest metadata should be updated since change is newer
@@ -809,11 +812,12 @@ void main() {
           expect(
             updates.stateUpdates,
             equals({
-              'change_domainType': 'project',
+              'domainType': 'project',
               'change_domainId': 'project1',
               'change_changeAt': '2023-01-01T00:01:00.000Z',
               'change_cid': 'cid6',
               'change_changeBy': 'user2',
+              'change_dataSchemaRev': null,
               'change_cloudAt': null,
               'change_storedAt': storedAtVal3,
               'data_parentId': 'parent2',
@@ -826,6 +830,8 @@ void main() {
               'data_nameLocal_changeBy_': 'user2',
               'data_parentId_cloudAt_': null,
               'data_nameLocal_cloudAt_': null,
+              'data_parentId_dataSchemaRev_': null,
+              'data_nameLocal_dataSchemaRev_': null,
             }),
           );
         },
@@ -1041,6 +1047,17 @@ void main() {
           );
           updates.stateUpdates.remove('change_storedAt');
         }
+        // Also capture dynamic change_storedAt_orig_ if present
+        String? storedAtOrig;
+        if (updates.stateUpdates.containsKey('change_storedAt_orig_')) {
+          storedAtOrig =
+              updates.stateUpdates['change_storedAt_orig_'] as String?;
+          expect(
+            DateTime.tryParse(storedAtOrig ?? ''),
+            isNotNull,
+            reason: 'change_storedAt_orig_ should be a valid ISO timestamp',
+          );
+        }
 
         expect(
           updates.stateUpdates,
@@ -1053,7 +1070,7 @@ void main() {
             'change_cid_orig_': 'cid3',
             'change_changeBy_orig_': 'user1',
             'change_changeAt_orig_': '2023-01-01T00:01:00.000Z',
-            'change_domainType': 'project',
+            if (storedAtOrig != null) 'change_storedAt_orig_': storedAtOrig,
             'change_domainId': 'project1',
             'change_changeAt': '2023-01-01T00:01:00.000Z',
             'change_cid': 'cid3',
@@ -1069,7 +1086,10 @@ void main() {
             'data_parentId_changeBy_': 'user1',
             'data_rank_cloudAt_': null,
             'data_parentId_cloudAt_': null,
+            'data_rank_dataSchemaRev_': null,
+            'data_parentId_dataSchemaRev_': null,
             'data_parentProp': 'pList',
+            'data_parentProp_dataSchemaRev_': null,
             'data_parentProp_changeAt_': '2023-01-01T00:01:00.000Z',
             'data_parentProp_cid_': 'cid3',
             'data_parentProp_changeBy_': 'user1',
@@ -1326,17 +1346,19 @@ void main() {
               return s;
             })(),
             equals({
-              'change_domainType': 'project',
+              'domainType': 'project',
               'change_domainId': 'project1',
               'change_changeAt': '2023-01-01T00:05:00.000Z',
               'change_cid': 'new-cid',
               'change_changeBy': 'user2',
+              'change_dataSchemaRev': null,
               'change_cloudAt': null,
               'data_rank': '2',
               'data_rank_changeAt_': '2023-01-01T00:05:00.000Z',
               'data_rank_cid_': 'new-cid',
               'data_rank_changeBy_': 'user2',
               'data_rank_cloudAt_': null,
+              'data_rank_dataSchemaRev_': null,
             }),
           );
         },
@@ -1557,6 +1579,7 @@ void main() {
               'data_rank_cid_': 'mid-cid',
               'data_rank_changeBy_': 'user2',
               'data_rank_cloudAt_': null,
+              'data_rank_dataSchemaRev_': null,
             }),
           );
         },
@@ -1651,6 +1674,102 @@ void main() {
               'storedAt should match cloudAt, but did not. storedAt=$parsed, cloudAt=$cloudAt',
         );
       });
+
+      test(
+        'should detect field drift and produce stateUpdates compatible with TestEntityState deserialization',
+        () {
+          // Create a change log entry for a new entity with all required fields
+          final changeLogEntry = TestChangeLogEntry(
+            entityId: 'entity-drift-test',
+            entityType: 'task',
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: baseTime.add(const Duration(minutes: 1)),
+            cid: 'cid-drift-test',
+            storageId: '',
+            changeBy: 'user1',
+            dataJson: jsonEncode({
+              'nameLocal': 'Test Task Name',
+              'parentId': 'parent-drift-test',
+              'parentProp': 'pList',
+            }),
+            operation: 'create',
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            unknownJson: jsonEncode({}),
+            dataSchemaRev: 0,
+          );
+
+          final updates = getUpdatesForChangeLogEntryAndEntityState(
+            changeLogEntry,
+            null, // No existing entity state
+            storageMode: 'save',
+            storageType: 'cloud',
+            targetStorageId: 'targetStorageId',
+          );
+
+          // Debug: Print stateUpdates to understand what fields are being generated
+          SlttLogger.logger.info(
+            'DEBUG: stateUpdates keys: ${updates.stateUpdates.keys.toList()..sort()}',
+          );
+
+          // Step 2: Deserialize stateUpdates back to TestEntityState
+          final testEntityState = TestEntityState.fromJson(
+            updates.stateUpdates,
+          );
+
+          // Step 2 verification: Check if there are unknown fields
+          if (testEntityState.unknownJson != '{}') {
+            SlttLogger.logger.info(
+              'DEBUG: Unknown fields detected: ${testEntityState.unknownJson}',
+            );
+            SlttLogger.logger.info(
+              'DEBUG: Action needed: Either add missing fields to BaseEntityState or update TestEntityState',
+            );
+            fail(
+              'FIELD DRIFT DETECTED: TestEntityState has unknown fields: ${testEntityState.unknownJson}. '
+              'The service generates fields that the model does not recognize.',
+            );
+          }
+
+          expect(
+            testEntityState.unknownJson,
+            equals('{}'),
+            reason: 'TestEntityState should deserialize without unknown fields',
+          );
+
+          // Step 3: Round-trip serialize the entity state
+          final serializedJson = testEntityState.toJson();
+
+          // Step 3 verification: The serialized version should contain the same fields and values
+          // as the original stateUpdates (excluding dynamic timestamps that we handle separately)
+          final originalStateUpdates = Map<String, dynamic>.from(
+            updates.stateUpdates,
+          );
+
+          // remove unknownJson for comparison
+          serializedJson.remove('unknownJson');
+
+          expect(
+            serializedJson,
+            equals(originalStateUpdates),
+            reason:
+                'Round-trip serialization should produce consistent results',
+          );
+
+          // Verify specific field was properly handled
+          expect(
+            testEntityState.data_nameLocal,
+            equals('Test Task Name'),
+            reason: 'nameLocal field should be correctly deserialized',
+          );
+          expect(
+            serializedJson['data_nameLocal'],
+            equals('Test Task Name'),
+            reason: 'nameLocal field should be correctly serialized',
+          );
+        },
+      );
     });
   });
 }

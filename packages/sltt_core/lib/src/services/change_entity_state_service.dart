@@ -496,7 +496,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
       });
     }
   } else {
-    print(
+    SlttLogger.logger.fine(
       'getDataAndStateUpdatesOrOutdatedBys - entityState is null for ${changeLogEntry.entityId}',
     );
     isChangeNewerThanLatest = true;
@@ -548,11 +548,13 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
         'entityType': changeLogEntry.entityType.toString().split('.').last,
         'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
         // _orig_ empty/default field_x_orig_ should inherit field_x values
+        // TODO: fill in the actual values here instead of empty/default
         'change_domainId_orig_': '',
         'change_cid_orig_': '',
         'change_changeBy_orig_': '',
         'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
             .toIso8601String(),
+        'change_storedAt_orig_': computedStoredAt,
       },
       // latest metadata
       // If there are any field updates, include the cloud/stored timestamps so
@@ -562,11 +564,12 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
       // than the existing latest (isChangeNewerThanLatest).
       if (fieldUpdates.isNotEmpty) ...{
         if (isChangeNewerThanLatest) ...{
-          'change_domainType': changeLogEntry.domainType,
+          'domainType': changeLogEntry.domainType,
           'change_domainId': changeLogEntry.domainId,
           'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
           'change_cid': changeLogEntry.cid,
           'change_changeBy': changeLogEntry.changeBy,
+          'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
         },
         // Always set cloudAt/storedAt when applying field updates so downstream
         // callers can persist change_storedAt even for partial-field updates.
@@ -592,6 +595,12 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
       ),
       ...fieldUpdates.map(
         (key, value) => MapEntry('data_${key}_cloudAt_', computedCloudAt),
+      ),
+      ...fieldUpdates.map(
+        (key, value) => MapEntry(
+          'data_${key}_dataSchemaRev_',
+          changeLogEntry.dataSchemaRev,
+        ),
       ),
     },
     'changeDataUpdates': fieldUpdates,

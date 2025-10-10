@@ -66,6 +66,11 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
 @JsonSerializable(includeIfNull: true, checked: true)
 class TestEntityState extends BaseEntityState {
   final String data_nameLocal;
+  final int? data_nameLocal_dataSchemaRev_;
+  final DateTime? data_nameLocal_changeAt_;
+  final String? data_nameLocal_cid_;
+  final String? data_nameLocal_changeBy_;
+  final DateTime? data_nameLocal_cloudAt_;
   @override
   String entityId;
 
@@ -112,6 +117,11 @@ class TestEntityState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     super.data_parentProp_cloudAt_,
+    this.data_nameLocal_dataSchemaRev_,
+    this.data_nameLocal_changeAt_,
+    this.data_nameLocal_cid_,
+    this.data_nameLocal_changeBy_,
+    this.data_nameLocal_cloudAt_,
   }) : super(entityId: entityId);
 
   factory TestEntityState.fromJson(Map<String, dynamic> json) =>

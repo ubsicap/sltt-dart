@@ -234,6 +234,26 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
           'data_parentProp_cloudAt_',
           (v) => v == null ? null : DateTime.parse(v as String),
         ),
+        data_nameLocal_dataSchemaRev_: $checkedConvert(
+          'data_nameLocal_dataSchemaRev_',
+          (v) => (v as num?)?.toInt(),
+        ),
+        data_nameLocal_changeAt_: $checkedConvert(
+          'data_nameLocal_changeAt_',
+          (v) => v == null ? null : DateTime.parse(v as String),
+        ),
+        data_nameLocal_cid_: $checkedConvert(
+          'data_nameLocal_cid_',
+          (v) => v as String?,
+        ),
+        data_nameLocal_changeBy_: $checkedConvert(
+          'data_nameLocal_changeBy_',
+          (v) => v as String?,
+        ),
+        data_nameLocal_cloudAt_: $checkedConvert(
+          'data_nameLocal_cloudAt_',
+          (v) => v == null ? null : DateTime.parse(v as String),
+        ),
       );
       return val;
     });
@@ -288,5 +308,12 @@ Map<String, dynamic> _$TestEntityStateToJson(
   'data_parentProp_cloudAt_': instance.data_parentProp_cloudAt_
       ?.toIso8601String(),
   'data_nameLocal': instance.data_nameLocal,
+  'data_nameLocal_dataSchemaRev_': instance.data_nameLocal_dataSchemaRev_,
+  'data_nameLocal_changeAt_': instance.data_nameLocal_changeAt_
+      ?.toIso8601String(),
+  'data_nameLocal_cid_': instance.data_nameLocal_cid_,
+  'data_nameLocal_changeBy_': instance.data_nameLocal_changeBy_,
+  'data_nameLocal_cloudAt_': instance.data_nameLocal_cloudAt_
+      ?.toIso8601String(),
   'entityId': instance.entityId,
 };

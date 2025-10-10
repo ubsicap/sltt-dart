@@ -36,7 +36,7 @@ void main() {
         'change_cid_orig_': ch.cid,
         'change_changeBy_orig_': ch.changeBy,
         'change_changeAt_orig_': changeAt,
-        'change_domainType': ch.domainType,
+        'change_storedAt_orig_': isA<String>(),
         'change_domainId': ch.domainId,
         'change_changeAt': changeAt,
         'change_cid': ch.cid,
@@ -56,6 +56,7 @@ void main() {
         map['data_${key}_cid_'] = ch.cid;
         map['data_${key}_changeBy_'] = ch.changeBy;
         map['data_${key}_cloudAt_'] = isCloudStorage ? isA<String>() : null;
+        map['data_${key}_dataSchemaRev_'] = null;
       }
 
       return map;
