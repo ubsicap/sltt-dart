@@ -343,6 +343,7 @@ class SyncManager {
             if (results.isError) {
               final error =
                   'Downsync processing error for project $projectId: '
+                  '${results.errorMessage}'
                   '${const JsonEncoder.withIndent('  ').convert(results.resultsSummary?.toJson())}';
               SlttLogger.logger.severe(error);
               return DownsyncResult(
