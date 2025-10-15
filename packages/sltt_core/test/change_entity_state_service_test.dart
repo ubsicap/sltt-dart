@@ -1768,6 +1768,19 @@ void main() {
             equals('Test Task Name'),
             reason: 'nameLocal field should be correctly serialized',
           );
+
+          // now see if TestEntityState has any additional (optional) fields
+          final jsonWithNullValues = testEntityState.toJsonBase()
+            ..removeWhere((key, value) => value != null);
+          // compare with null values from stateUpdates
+          final stateUpdatesWithNullValues = {...updates.stateUpdates}
+            ..removeWhere((key, value) => value != null);
+          expect(
+            jsonWithNullValues.keys.toList()..sort(),
+            equals(stateUpdatesWithNullValues.keys.toList()..sort()),
+            reason:
+                'TestEntityState should include all optional fields with null values',
+          );
         },
       );
     });

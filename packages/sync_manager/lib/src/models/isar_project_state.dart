@@ -80,4 +80,9 @@ class IsarProjectState extends BaseIsarEntityState {
   Map<String, dynamic> toJson() {
     return serializeWithUnknownFieldData(this, _$IsarProjectStateToJson);
   }
+
+  @override
+  Map<String, dynamic> toJsonBase() {
+    return _$IsarProjectStateToJson(this);
+  }
 }

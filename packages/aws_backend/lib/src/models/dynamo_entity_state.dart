@@ -66,5 +66,6 @@ class DynamoEntityState extends BaseEntityState {
   Map<String, dynamic> toJson() =>
       serializeWithUnknownFieldData(this, _$DynamoEntityStateToJson);
 
+  @override
   Map<String, dynamic> toJsonBase() => _$DynamoEntityStateToJson(this);
 }

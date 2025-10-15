@@ -76,4 +76,9 @@ class IsarDocumentState extends BaseIsarEntityState {
   Map<String, dynamic> toJson() {
     return serializeWithUnknownFieldData(this, _$IsarDocumentStateToJson);
   }
+
+  @override
+  Map<String, dynamic> toJsonBase() {
+    return _$IsarDocumentStateToJson(this);
+  }
 }

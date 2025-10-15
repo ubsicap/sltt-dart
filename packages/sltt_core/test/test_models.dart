@@ -139,4 +139,7 @@ class TestEntityState extends BaseEntityState {
       json.entries.where((entry) => entry.value != null),
     );
   }
+
+  @override
+  Map<String, dynamic> toJsonBase() => _$TestEntityStateToJson(this);
 }

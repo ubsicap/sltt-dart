@@ -167,6 +167,7 @@ abstract class BaseEntityState
 
   // Abstract methods to be implemented by concrete subclasses
   Map<String, dynamic> toJson();
+  Map<String, dynamic> toJsonBase();
 
   // Static helper methods for _orig_ field initialization
   static String normalizeOrigString(String? orig, String current) {

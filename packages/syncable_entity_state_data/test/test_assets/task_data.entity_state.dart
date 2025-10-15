@@ -75,6 +75,7 @@ class TaskDataEntityState extends BaseEntityState {
         );
   static TaskDataEntityState fromJsonBase(Map<String, dynamic> json) =>
       _$TaskDataEntityStateFromJson(json);
+  @override
   Map<String, dynamic> toJsonBase() => _$TaskDataEntityStateToJson(this);
   Map<String, dynamic> toJsonSafe() {
     final j = toJson();
