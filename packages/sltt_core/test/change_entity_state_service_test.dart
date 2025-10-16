@@ -1708,8 +1708,7 @@ void main() {
               'DEBUG: Action needed: Either add missing fields to BaseEntityState or update TestEntityState',
             );
             fail(
-              'FIELD DRIFT DETECTED: TestEntityState has unknown fields: ${testEntityState.unknownJson}. '
-              'The service generates fields that the model does not recognize.',
+              'FIELD DRIFT DETECTED: TestEntityState has unknown fields:\n${const JsonEncoder.withIndent(' ').convert(testEntityState.getUnknown())}',
             );
           }
 
