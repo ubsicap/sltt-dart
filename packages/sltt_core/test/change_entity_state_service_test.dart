@@ -664,15 +664,11 @@ void main() {
             'change_changeAt': newerTime.toIso8601String(),
             'change_cid': 'cid2',
             'change_changeBy': 'user2',
-            'change_dataSchemaRev': null,
-            'change_cloudAt': null,
             'change_storedAt': storedAtVal,
             'data_rank': '2',
             'data_rank_changeAt_': newerTime.toIso8601String(),
             'data_rank_cid_': 'cid2',
             'data_rank_changeBy_': 'user2',
-            'data_rank_cloudAt_': null,
-            'data_rank_dataSchemaRev_': null,
           }),
         );
         // Latest metadata should be updated since change is newer
@@ -817,8 +813,6 @@ void main() {
               'change_changeAt': '2023-01-01T00:01:00.000Z',
               'change_cid': 'cid6',
               'change_changeBy': 'user2',
-              'change_dataSchemaRev': null,
-              'change_cloudAt': null,
               'change_storedAt': storedAtVal3,
               'data_parentId': 'parent2',
               'data_nameLocal': 'New Name',
@@ -828,10 +822,6 @@ void main() {
               'data_nameLocal_cid_': 'cid6',
               'data_parentId_changeBy_': 'user2',
               'data_nameLocal_changeBy_': 'user2',
-              'data_parentId_cloudAt_': null,
-              'data_nameLocal_cloudAt_': null,
-              'data_parentId_dataSchemaRev_': null,
-              'data_nameLocal_dataSchemaRev_': null,
             }),
           );
         },
@@ -1065,7 +1055,6 @@ void main() {
             'entityId': 'entity2',
             'domainType': 'project',
             'entityType': 'task',
-            'change_dataSchemaRev': null,
             'change_domainId_orig_': 'project1',
             'change_cid_orig_': 'cid3',
             'change_changeBy_orig_': 'user1',
@@ -1075,7 +1064,6 @@ void main() {
             'change_changeAt': '2023-01-01T00:01:00.000Z',
             'change_cid': 'cid3',
             'change_changeBy': 'user1',
-            'change_cloudAt': null,
             'data_rank': '1',
             'data_parentId': 'parent2',
             'data_rank_changeAt_': '2023-01-01T00:01:00.000Z',
@@ -1084,16 +1072,10 @@ void main() {
             'data_parentId_cid_': 'cid3',
             'data_rank_changeBy_': 'user1',
             'data_parentId_changeBy_': 'user1',
-            'data_rank_cloudAt_': null,
-            'data_parentId_cloudAt_': null,
-            'data_rank_dataSchemaRev_': null,
-            'data_parentId_dataSchemaRev_': null,
             'data_parentProp': 'pList',
-            'data_parentProp_dataSchemaRev_': null,
             'data_parentProp_changeAt_': '2023-01-01T00:01:00.000Z',
             'data_parentProp_cid_': 'cid3',
             'data_parentProp_changeBy_': 'user1',
-            'data_parentProp_cloudAt_': null,
           }),
         );
       });
@@ -1335,8 +1317,8 @@ void main() {
               'stateChanged': true,
               'storageId': 'localId',
               'dataJson': jsonEncode({'rank': '2'}),
-              'cloudAt': null,
               'storedAt': storedAtVal12,
+              'cloudAt': null,
             }),
           );
           expect(
@@ -1351,14 +1333,10 @@ void main() {
               'change_changeAt': '2023-01-01T00:05:00.000Z',
               'change_cid': 'new-cid',
               'change_changeBy': 'user2',
-              'change_dataSchemaRev': null,
-              'change_cloudAt': null,
               'data_rank': '2',
               'data_rank_changeAt_': '2023-01-01T00:05:00.000Z',
               'data_rank_cid_': 'new-cid',
               'data_rank_changeBy_': 'user2',
-              'data_rank_cloudAt_': null,
-              'data_rank_dataSchemaRev_': null,
             }),
           );
         },
@@ -1572,14 +1550,11 @@ void main() {
           expect(
             updates.stateUpdates,
             equals({
-              'change_cloudAt': null,
               'change_storedAt': stateStoredAtVal,
               'data_rank': '2',
               'data_rank_changeAt_': newerFieldTime.toIso8601String(),
               'data_rank_cid_': 'mid-cid',
               'data_rank_changeBy_': 'user2',
-              'data_rank_cloudAt_': null,
-              'data_rank_dataSchemaRev_': null,
             }),
           );
         },
@@ -1674,10 +1649,17 @@ void main() {
               'storedAt should match cloudAt, but did not. storedAt=$parsed, cloudAt=$cloudAt',
         );
       });
+    });
 
+    group('getDataAndStateUpdatesOrOutdatedBys', () {
       test(
-        'should detect field drift and produce stateUpdates compatible with TestEntityState deserialization',
+        'should detect field-drift and produce stateUpdates compatible with TestEntityState deserialization',
         () {
+          final data = {
+            'nameLocal': 'Test Task Name',
+            'parentId': 'parent-drift-test',
+            'parentProp': 'pList',
+          };
           // Create a change log entry for a new entity with all required fields
           final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity-drift-test',
@@ -1688,11 +1670,7 @@ void main() {
             cid: 'cid-drift-test',
             storageId: '',
             changeBy: 'user1',
-            dataJson: jsonEncode({
-              'nameLocal': 'Test Task Name',
-              'parentId': 'parent-drift-test',
-              'parentProp': 'pList',
-            }),
+            dataJson: jsonEncode(data),
             operation: 'create',
             operationInfoJson: jsonEncode({}),
             stateChanged: true,
@@ -1700,22 +1678,24 @@ void main() {
             dataSchemaRev: 0,
           );
 
-          final updates = getUpdatesForChangeLogEntryAndEntityState(
-            changeLogEntry,
-            null, // No existing entity state
+          final updates = getDataAndStateUpdatesOrOutdatedBys(
+            changeLogEntry: changeLogEntry,
+            entityState: null, // No existing entity state
+            fieldChanges: data,
+            noOpFields: [],
             storageMode: 'save',
             storageType: 'cloud',
-            targetStorageId: 'targetStorageId',
+            cs: computeCloudAndStoredAt(changeLogEntry, 'cloud'),
           );
 
           // Debug: Print stateUpdates to understand what fields are being generated
           SlttLogger.logger.info(
-            'DEBUG: stateUpdates keys: ${updates.stateUpdates.keys.toList()..sort()}',
+            'DEBUG: stateUpdates keys: ${updates['stateUpdates'].keys.toList()..sort()}',
           );
 
           // Step 2: Deserialize stateUpdates back to TestEntityState
           final testEntityState = TestEntityState.fromJson(
-            updates.stateUpdates,
+            updates['stateUpdates'],
           );
 
           // Step 2 verification: Check if there are unknown fields
@@ -1744,15 +1724,20 @@ void main() {
           // Step 3 verification: The serialized version should contain the same fields and values
           // as the original stateUpdates (excluding dynamic timestamps that we handle separately)
           final originalStateUpdates = Map<String, dynamic>.from(
-            updates.stateUpdates,
+            updates['stateUpdates'],
           );
 
           // remove unknownJson for comparison
           serializedJson.remove('unknownJson');
 
+          // remove optional fields for field-drift detection
+          final strippedStateUpdates = Map<String, dynamic>.from(
+            originalStateUpdates,
+          )..removeWhere((key, value) => value == null);
+
           expect(
             serializedJson,
-            equals(originalStateUpdates),
+            equals(strippedStateUpdates),
             reason:
                 'Round-trip serialization should produce consistent results',
           );
@@ -1773,8 +1758,9 @@ void main() {
           final jsonWithNullValues = testEntityState.toJsonBase()
             ..removeWhere((key, value) => value != null);
           // compare with null values from stateUpdates
-          final stateUpdatesWithNullValues = {...updates.stateUpdates}
-            ..removeWhere((key, value) => value != null);
+          final stateUpdatesWithNullValues = <String, dynamic>{
+            ...updates['stateUpdates'],
+          }..removeWhere((key, value) => value != null);
           expect(
             jsonWithNullValues.keys.toList()..sort(),
             equals(stateUpdatesWithNullValues.keys.toList()..sort()),

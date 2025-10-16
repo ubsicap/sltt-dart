@@ -42,7 +42,7 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   // Compute cloud/stored pair once for this change processing invocation so
   // all downstream helpers use the exact same timestamps (avoids millisecond
   // differences from multiple DateTime.now() calls).
-  final CloudStoredPair cs = _computeCloudAndStoredAt(
+  final CloudStoredPair cs = computeCloudAndStoredAt(
     changeLogEntry,
     storageType,
   );
@@ -84,10 +84,10 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
 
   // Decide field-level updates and produce state updates
   final updates = getDataAndStateUpdatesOrOutdatedBys(
-    changeLogEntry,
-    entityState,
-    fieldChanges,
-    noOpFields,
+    changeLogEntry: changeLogEntry,
+    entityState: entityState,
+    fieldChanges: fieldChanges,
+    noOpFields: noOpFields,
     storageType: storageType,
     storageMode: storageMode,
     cs: cs,
@@ -98,6 +98,9 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
       <String, dynamic>{};
   final stateUpdates =
       (updates['stateUpdates'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+
+  // remove any null (field-detection) fields from stateUpdates
+  stateUpdates.removeWhere((key, value) => value == null);
   final outdatedBys = (updates['outdatedBys'] as List<String>? ?? <String>[]);
   final operation = (updates['operation'] as String? ?? '');
   final stateChanged = stateUpdates.isNotEmpty;
@@ -247,7 +250,7 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult({
   // Use provided cloud/stored pair (cs) if supplied so both values are
   // consistent for the current invocation with other helpers.
   final CloudStoredPair localCs =
-      cloudStoredPair ?? _computeCloudAndStoredAt(changeLogEntry, storageType);
+      cloudStoredPair ?? computeCloudAndStoredAt(changeLogEntry, storageType);
   final String computedStoredAt = localCs.storedAt;
 
   if (entityState.change_cid == changeLogCid) {
@@ -444,11 +447,11 @@ DateTime _toDateTime(dynamic v, DateTime defaultValue) {
 
 /// fieldUpdatesOrOutdatedBys(changeLogEntry: ChangeLogEntry, entityState: BaseEntityState, fieldChanges):
 /// returns { fieldUpdates: Map<String, dynamic>, outdatedBys: List<String> }
-Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
-  BaseChangeLogEntry changeLogEntry,
+Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys({
+  required BaseChangeLogEntry changeLogEntry,
   BaseEntityState? entityState,
-  Map<String, dynamic> fieldChanges,
-  List<String> noOpFields, { // List of fields that are no-ops
+  required Map<String, dynamic> fieldChanges,
+  required List<String> noOpFields,
   required String storageType,
   required String storageMode,
   CloudStoredPair? cs,
@@ -533,9 +536,28 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
   // Use provided cloud/stored pair (cs) if supplied to ensure the same
   // timestamps are used across the whole change processing invocation.
   final CloudStoredPair localCs =
-      cs ?? _computeCloudAndStoredAt(changeLogEntry, storageType);
+      cs ?? computeCloudAndStoredAt(changeLogEntry, storageType);
   final String? computedCloudAt = localCs.cloudAt;
   final String computedStoredAt = localCs.storedAt;
+
+  // add these in for field-drift detection, and remove them later if still null
+  final optionalStateFields = {'schemaVersion': null};
+  final optionalDataFields = {'deleted': null, 'rank': null};
+  final metaFields = [
+    'cid',
+    'changeBy',
+    'changeAt',
+    'dataSchemaRev',
+    'cloudAt',
+  ];
+
+  final optionalDataMetaFields = <String, dynamic>{};
+  // for each data field, add _meta_ fields for field-drift detection, remove later
+  for (final dataField in optionalDataFields.keys) {
+    for (final meta in metaFields) {
+      optionalDataMetaFields['data_${dataField}_${meta}_'] = null;
+    }
+  }
 
   return {
     // expose the computed values to callers
@@ -549,10 +571,11 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
         'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
         // _orig_ empty/default field_x_orig_ should inherit field_x values
         // TODO: fill in the actual values here instead of empty/default
-        'change_domainId_orig_': '',
-        'change_cid_orig_': '',
-        'change_changeBy_orig_': '',
-        'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
+        'change_domainId_orig_': changeLogEntry.domainId,
+        'change_cid_orig_': changeLogEntry.cid,
+        'change_changeBy_orig_': changeLogEntry.changeBy,
+        'change_changeAt_orig_': changeLogEntry.changeAt
+            .toUtc()
             .toIso8601String(),
         'change_storedAt_orig_': computedStoredAt,
       },
@@ -576,6 +599,12 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys(
         'change_cloudAt': computedCloudAt,
         'change_storedAt': computedStoredAt,
       },
+      // add optional state fields for field-drift detection, remove later
+      ...optionalStateFields.map((key, value) => MapEntry(key, value)),
+      // add optional data fields for field-drift detection, remove later
+      ...optionalDataFields.map((key, value) => MapEntry('data_$key', value)),
+      // for each data field, add _meta_ fields for field-drift detection, remove later
+      ...optionalDataMetaFields,
       // Transform field updates to use data_ prefix for entity state
       // update data_ field values
       ...fieldUpdates.map((key, value) => MapEntry('data_$key', value)),
@@ -627,7 +656,7 @@ class CloudStoredPair {
   CloudStoredPair(this.cloudAt, this.storedAt);
 }
 
-CloudStoredPair _computeCloudAndStoredAt(
+CloudStoredPair computeCloudAndStoredAt(
   BaseChangeLogEntry changeLogEntry,
   String storageType,
 ) {
