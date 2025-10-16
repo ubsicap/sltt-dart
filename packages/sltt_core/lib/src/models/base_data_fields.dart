@@ -26,5 +26,6 @@ class BaseDataFields implements CoreDataFields {
   factory BaseDataFields.fromJson(Map<String, dynamic> json) =>
       _$BaseDataFieldsFromJson(json);
 
-  Map<String, dynamic> toJson() => _$BaseDataFieldsToJson(this);
+  Map<String, dynamic> toJson() =>
+      _$BaseDataFieldsToJson(this)..removeWhere((key, value) => value == null);
 }

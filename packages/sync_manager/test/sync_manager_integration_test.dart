@@ -31,7 +31,6 @@ void main() {
         'entityId': ch.entityId,
         'domainType': ch.domainType,
         'entityType': ch.entityType,
-        'change_dataSchemaRev': null,
         'change_domainId_orig_': ch.domainId,
         'change_cid_orig_': ch.cid,
         'change_changeBy_orig_': ch.changeBy,
@@ -41,7 +40,7 @@ void main() {
         'change_changeAt': changeAt,
         'change_cid': ch.cid,
         'change_changeBy': ch.changeBy,
-        'change_cloudAt': isCloudStorage ? isA<String>() : null,
+        if (isCloudStorage) 'change_cloudAt': isA<String>(),
         'change_storedAt': isA<String>(),
       };
 
@@ -51,12 +50,14 @@ void main() {
       for (final entry in data.entries) {
         final key = entry.key;
         final value = entry.value;
+        if (value == null) continue;
         map['data_$key'] = value;
         map['data_${key}_changeAt_'] = changeAt;
         map['data_${key}_cid_'] = ch.cid;
         map['data_${key}_changeBy_'] = ch.changeBy;
-        map['data_${key}_cloudAt_'] = isCloudStorage ? isA<String>() : null;
-        map['data_${key}_dataSchemaRev_'] = null;
+        if (isCloudStorage) {
+          map['data_${key}_cloudAt_'] = isA<String>();
+        }
       }
 
       return map;
