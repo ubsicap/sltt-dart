@@ -1659,6 +1659,7 @@ void main() {
             'nameLocal': 'Test Task Name',
             'parentId': 'parent-drift-test',
             'parentProp': 'pList',
+            'nameOptionalField': 'optional value',
           };
           // Create a change log entry for a new entity with all required fields
           final changeLogEntry = TestChangeLogEntry(

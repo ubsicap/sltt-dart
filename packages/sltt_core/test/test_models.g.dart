@@ -254,6 +254,30 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
           'data_nameLocal_cloudAt_',
           (v) => v == null ? null : DateTime.parse(v as String),
         ),
+        data_nameOptionalField: $checkedConvert(
+          'data_nameOptionalField',
+          (v) => v as String?,
+        ),
+        data_nameOptionalField_dataSchemaRev_: $checkedConvert(
+          'data_nameOptionalField_dataSchemaRev_',
+          (v) => (v as num?)?.toInt(),
+        ),
+        data_nameOptionalField_changeAt_: $checkedConvert(
+          'data_nameOptionalField_changeAt_',
+          (v) => v == null ? null : DateTime.parse(v as String),
+        ),
+        data_nameOptionalField_cid_: $checkedConvert(
+          'data_nameOptionalField_cid_',
+          (v) => v as String?,
+        ),
+        data_nameOptionalField_changeBy_: $checkedConvert(
+          'data_nameOptionalField_changeBy_',
+          (v) => v as String?,
+        ),
+        data_nameOptionalField_cloudAt_: $checkedConvert(
+          'data_nameOptionalField_cloudAt_',
+          (v) => v == null ? null : DateTime.parse(v as String),
+        ),
       );
       return val;
     });
@@ -314,6 +338,15 @@ Map<String, dynamic> _$TestEntityStateToJson(
   'data_nameLocal_cid_': instance.data_nameLocal_cid_,
   'data_nameLocal_changeBy_': instance.data_nameLocal_changeBy_,
   'data_nameLocal_cloudAt_': instance.data_nameLocal_cloudAt_
+      ?.toIso8601String(),
+  'data_nameOptionalField': instance.data_nameOptionalField,
+  'data_nameOptionalField_dataSchemaRev_':
+      instance.data_nameOptionalField_dataSchemaRev_,
+  'data_nameOptionalField_changeAt_': instance.data_nameOptionalField_changeAt_
+      ?.toIso8601String(),
+  'data_nameOptionalField_cid_': instance.data_nameOptionalField_cid_,
+  'data_nameOptionalField_changeBy_': instance.data_nameOptionalField_changeBy_,
+  'data_nameOptionalField_cloudAt_': instance.data_nameOptionalField_cloudAt_
       ?.toIso8601String(),
   'entityId': instance.entityId,
 };

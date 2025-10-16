@@ -71,6 +71,12 @@ class TestEntityState extends BaseEntityState {
   final String? data_nameLocal_cid_;
   final String? data_nameLocal_changeBy_;
   final DateTime? data_nameLocal_cloudAt_;
+  final String? data_nameOptionalField;
+  final int? data_nameOptionalField_dataSchemaRev_;
+  final DateTime? data_nameOptionalField_changeAt_;
+  final String? data_nameOptionalField_cid_;
+  final String? data_nameOptionalField_changeBy_;
+  final DateTime? data_nameOptionalField_cloudAt_;
   @override
   String entityId;
 
@@ -122,6 +128,12 @@ class TestEntityState extends BaseEntityState {
     this.data_nameLocal_cid_,
     this.data_nameLocal_changeBy_,
     this.data_nameLocal_cloudAt_,
+    this.data_nameOptionalField,
+    this.data_nameOptionalField_dataSchemaRev_,
+    this.data_nameOptionalField_changeAt_,
+    this.data_nameOptionalField_cid_,
+    this.data_nameOptionalField_changeBy_,
+    this.data_nameOptionalField_cloudAt_,
   }) : super(entityId: entityId);
 
   factory TestEntityState.fromJson(Map<String, dynamic> json) =>
