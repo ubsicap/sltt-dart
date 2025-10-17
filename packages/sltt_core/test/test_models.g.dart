@@ -99,8 +99,8 @@ Json? _$JsonConverterToJson<Json, Value>(
 TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
     $checkedCreate('TestEntityState', json, ($checkedConvert) {
       final val = TestEntityState(
-        data_nameLocal: $checkedConvert('data_nameLocal', (v) => v as String),
         entityId: $checkedConvert('entityId', (v) => v as String),
+        data_nameLocal: $checkedConvert('data_nameLocal', (v) => v as String),
         entityType: $checkedConvert('entityType', (v) => v as String),
         domainType: $checkedConvert('domainType', (v) => v as String),
         schemaVersion: $checkedConvert(
@@ -119,17 +119,11 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
         ),
         change_storedAt: $checkedConvert(
           'change_storedAt',
-          (v) => _$JsonConverterFromJson<String, DateTime>(
-            v,
-            const UtcDateTimeConverter().fromJson,
-          ),
+          (v) => const UtcDateTimeConverter().fromJson(v as String),
         ),
         change_storedAt_orig_: $checkedConvert(
           'change_storedAt_orig_',
-          (v) => _$JsonConverterFromJson<String, DateTime>(
-            v,
-            const UtcDateTimeConverter().fromJson,
-          ),
+          (v) => const UtcDateTimeConverter().fromJson(v as String),
         ),
         change_changeAt_orig_: $checkedConvert(
           'change_changeAt_orig_',
@@ -331,6 +325,7 @@ Map<String, dynamic> _$TestEntityStateToJson(
   'data_parentProp_changeBy_': instance.data_parentProp_changeBy_,
   'data_parentProp_cloudAt_': instance.data_parentProp_cloudAt_
       ?.toIso8601String(),
+  'entityId': instance.entityId,
   'data_nameLocal': instance.data_nameLocal,
   'data_nameLocal_dataSchemaRev_': instance.data_nameLocal_dataSchemaRev_,
   'data_nameLocal_changeAt_': instance.data_nameLocal_changeAt_
@@ -348,5 +343,4 @@ Map<String, dynamic> _$TestEntityStateToJson(
   'data_nameOptionalField_changeBy_': instance.data_nameOptionalField_changeBy_,
   'data_nameOptionalField_cloudAt_': instance.data_nameOptionalField_cloudAt_
       ?.toIso8601String(),
-  'entityId': instance.entityId,
 };

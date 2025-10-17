@@ -31,32 +31,37 @@ void main() {
 
   group('TestEntityState serialization', () {
     test('round-trips unknownJson field', () {
+      final DateTime cloudAt = DateTime.now().toUtc();
+      final changeAt = DateTime.now().toUtc();
+      final storedAt = DateTime.now().toUtc();
       final state = TestEntityState(
         data_nameLocal: 'name',
         entityId: 'eid',
         entityType: 'project',
         domainType: 'dType',
         schemaVersion: 1,
+        change_storedAt: storedAt,
+        change_storedAt_orig_: storedAt,
         change_domainId: 'did',
         change_domainId_orig_: 'did',
-        change_changeAt: DateTime.now().toUtc(),
-        change_changeAt_orig_: DateTime.now().toUtc(),
+        change_changeAt: changeAt,
+        change_changeAt_orig_: changeAt,
         change_cid: 'cid',
         change_cid_orig_: 'cid',
         change_dataSchemaRev: 1,
-        change_cloudAt: DateTime.now().toUtc(),
+        change_cloudAt: cloudAt,
         change_changeBy: 'user',
         change_changeBy_orig_: 'user',
         data_parentId: 'pid',
         data_parentId_dataSchemaRev_: 1,
-        data_parentId_changeAt_: DateTime.now().toUtc(),
+        data_parentId_changeAt_: changeAt,
         data_parentId_cid_: 'cid',
         data_parentId_changeBy_: 'user',
-        data_parentId_cloudAt_: DateTime.now().toUtc(),
+        data_parentId_cloudAt_: cloudAt,
         // Add some parentProp data for testing
         data_parentProp: 'pList',
         data_parentProp_dataSchemaRev_: 1,
-        data_parentProp_changeAt_: DateTime.now().toUtc(),
+        data_parentProp_changeAt_: changeAt,
         data_parentProp_cid_: 'cid',
         data_parentProp_changeBy_: 'user',
         unknownJson: '',

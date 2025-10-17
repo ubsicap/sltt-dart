@@ -8,36 +8,41 @@ import 'test_models.dart';
 void main() {
   group('TestEntityState _orig_ field behavior', () {
     test('preserves unknown fields with valid _orig_ values', () {
+      final changeAtJson = DateTime.now().toIso8601String();
+      final storedAtJson = DateTime.now().toIso8601String();
+
       final rawJson = {
         'entityId': 'test-1',
         'entityType': 'task',
         'domainType': 'project',
+        'change_storedAt': storedAtJson,
         'change_domainId': 'd1',
-        'change_changeAt': DateTime.now().toIso8601String(),
+        'change_changeAt': changeAtJson,
         'change_cid': 'cid-t1',
         'change_changeBy': 'u1',
         'data_nameLocal': 'Test Task',
         'data_nameLocal_dataSchemaRev_': 1,
-        'data_nameLocal_changeAt_': DateTime.now().toIso8601String(),
+        'data_nameLocal_changeAt_': changeAtJson,
         'data_nameLocal_cid_': 'cid-name',
         'data_nameLocal_changeBy_': 'u1',
         'data_parentId': 'parent',
         'data_parentId_dataSchemaRev_': 0,
-        'data_parentId_changeAt_': DateTime.now().toIso8601String(),
+        'data_parentId_changeAt_': changeAtJson,
         'data_parentId_cid_': 'cid-parent',
         'data_parentId_changeBy_': 'u1',
         'data_parentProp': 'pList',
         'data_parentProp_dataSchemaRev_': 0,
-        'data_parentProp_changeAt_': DateTime.now().toIso8601String(),
+        'data_parentProp_changeAt_': changeAtJson,
         'data_parentProp_cid_': 'cid-parent',
         'data_parentProp_changeBy_': 'u1',
         // required orig_ fields set with same values
         'change_domainId_orig_': 'd1',
-        'change_changeAt_orig_': DateTime.now().toIso8601String(),
+        'change_changeAt_orig_': changeAtJson,
         'change_cid_orig_': 'cid-t1',
         'change_changeBy_orig_': 'u1',
         // add an unexpected field
         'surprise': 'gotcha',
+        'change_storedAt_orig_': storedAtJson,
       };
 
       final entity = TestEntityState.fromJson(rawJson);
@@ -49,27 +54,33 @@ void main() {
     test(
       'initializes _orig_ fields from current values when using empty/default values',
       () {
+        final changeAtJson = DateTime.parse(
+          '2024-01-01T10:00:00Z',
+        ).toUtc().toIso8601String();
+        final storedAtJson = DateTime.now().toUtc().toIso8601String();
+
         final rawJson = {
           'entityId': 'test-new',
           'entityType': 'task',
           'domainType': 'project',
+          'change_storedAt': storedAtJson,
           'change_domainId': 'd2',
-          'change_changeAt': '2024-01-01T10:00:00Z',
+          'change_changeAt': changeAtJson,
           'change_cid': 'cid-new',
           'change_changeBy': 'creator',
           'data_nameLocal': 'New Test Task',
           'data_nameLocal_dataSchemaRev_': 1,
-          'data_nameLocal_changeAt_': '2024-01-01T10:00:00Z',
+          'data_nameLocal_changeAt_': changeAtJson,
           'data_nameLocal_cid_': 'cid-name-new',
           'data_nameLocal_changeBy_': 'creator',
           'data_parentId': 'parent',
           'data_parentId_dataSchemaRev_': 0,
-          'data_parentId_changeAt_': '2024-01-01T10:00:00Z',
+          'data_parentId_changeAt_': changeAtJson,
           'data_parentId_cid_': 'cid-parent',
           'data_parentId_changeBy_': 'creator',
           'data_parentProp': 'pList',
           'data_parentProp_dataSchemaRev_': 0,
-          'data_parentProp_changeAt_': '2024-01-01T10:00:00Z',
+          'data_parentProp_changeAt_': changeAtJson,
           'data_parentProp_cid_': 'cid-parentprop-new',
           'data_parentProp_changeBy_': 'creator',
           // Note: using empty/default values to test that _orig_ fields get proper values
@@ -78,7 +89,8 @@ void main() {
               .toIso8601String(),
           'change_cid_orig_': '',
           'change_changeBy_orig_': '',
-          'change_storedAt_orig_': null,
+          'change_storedAt_orig_': BaseEntityState.defaultOrigDateTime()
+              .toIso8601String(),
           'surprise': 'new_entity',
         };
 
@@ -102,27 +114,31 @@ void main() {
     );
 
     test('preserves non-empty _orig_ field values', () {
+      final changeAtJson = DateTime.parse(
+        '2024-02-01T10:00:00Z',
+      ).toUtc().toIso8601String();
+      final storedAtJson = DateTime.now().toUtc().toIso8601String();
       final rawJson = {
         'entityId': 'test-updated',
         'entityType': 'task',
         'domainType': 'project',
         'change_domainId': 'd3-current',
-        'change_changeAt': '2024-02-01T10:00:00Z',
+        'change_changeAt': changeAtJson,
         'change_cid': 'cid-current',
         'change_changeBy': 'updater',
         'data_nameLocal': 'Updated Test Task',
         'data_nameLocal_dataSchemaRev_': 2,
-        'data_nameLocal_changeAt_': '2024-02-01T10:00:00Z',
+        'data_nameLocal_changeAt_': changeAtJson,
         'data_nameLocal_cid_': 'cid-name-current',
         'data_nameLocal_changeBy_': 'updater',
         'data_parentId': 'parent-current',
         'data_parentId_dataSchemaRev_': 0,
-        'data_parentId_changeAt_': '2024-02-01T10:00:00Z',
+        'data_parentId_changeAt_': changeAtJson,
         'data_parentId_cid_': 'cid-parent-current',
         'data_parentId_changeBy_': 'updater',
         'data_parentProp': 'pList',
         'data_parentProp_dataSchemaRev_': 0,
-        'data_parentProp_changeAt_': '2024-02-01T10:00:00Z',
+        'data_parentProp_changeAt_': changeAtJson,
         'data_parentProp_cid_': 'cid-parent-current',
         'data_parentProp_changeBy_': 'updater',
         // Note: providing specific _orig_ values that should be preserved
@@ -130,6 +146,7 @@ void main() {
         'change_changeAt_orig_': '2024-01-15T09:30:00Z',
         'change_cid_orig_': 'cid-original',
         'change_changeBy_orig_': 'creator',
+        'change_storedAt': storedAtJson,
         'change_storedAt_orig_': '2024-01-01T09:30:00Z',
         'surprise': 'updated_entity',
       };

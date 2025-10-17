@@ -27,6 +27,8 @@ class IsarTeamState extends BaseIsarEntityState {
     required super.entityId,
     required super.unknownJson,
     super.schemaVersion,
+    required super.change_storedAt,
+    required super.change_storedAt_orig_,
     required super.change_domainId,
     required super.change_domainId_orig_,
     required super.change_changeAt,

@@ -12,8 +12,10 @@ abstract class BaseEntityState
         CoreEntityStateDataFields,
         CoreChangeLogEntryFields,
         CoreChangeLogEntryOriginalFields {
-  // keep the public contract
+  /// implement entityId in sub-class to allow @index annotation
+  // String entityId;
 
+  // keep the public contract
   @override
   final String entityType;
   @override
@@ -98,7 +100,6 @@ abstract class BaseEntityState
   final DateTime? data_parentProp_cloudAt_;
 
   BaseEntityState({
-    required String entityId,
     required this.entityType,
     required this.domainType,
     this.schemaVersion,
@@ -107,8 +108,8 @@ abstract class BaseEntityState
     required String change_domainId_orig_,
     required this.change_changeAt,
     required DateTime change_changeAt_orig_,
-    DateTime? change_storedAt,
-    DateTime? change_storedAt_orig_,
+    required this.change_storedAt,
+    required DateTime change_storedAt_orig_,
     required this.change_cid,
     required String change_cid_orig_,
     this.change_dataSchemaRev,
@@ -148,13 +149,9 @@ abstract class BaseEntityState
          change_changeAt_orig_,
          change_changeAt,
        ),
-       change_storedAt = BaseEntityState.normalizeOrigDateTime(
-         change_storedAt,
-         DateTime.now().toUtc(),
-       ),
        change_storedAt_orig_ = BaseEntityState.normalizeOrigDateTime(
          change_storedAt_orig_,
-         change_storedAt ?? DateTime.now().toUtc(),
+         change_storedAt,
        ),
        change_cid_orig_ = BaseEntityState.normalizeOrigString(
          change_cid_orig_,

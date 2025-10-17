@@ -80,6 +80,8 @@ void main() {
         data_parentProp_cid_: 'cid-parentprop-new',
         data_parentProp_changeBy_: 'creator',
         data_parentProp_cloudAt_: DateTime.parse('2023-01-02T08:00:00Z'),
+        change_storedAt: DateTime.parse('2023-01-02T08:00:00Z'),
+        change_storedAt_orig_: DateTime.parse('2023-01-02T08:00:00Z'),
         unknownJson: '',
       );
       final json = state.toJson();
@@ -97,10 +99,13 @@ void main() {
 
     setUp(() {
       baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+      final storedAt = DateTime.now().toUtc().toIso8601String();
       final esJson = <String, dynamic>{
         'entityId': 'entity1',
         'entityType': 'task',
         'domainType': 'project',
+        'change_storedAt': storedAt,
+        'change_storedAt_orig_': storedAt,
         'change_domainId': 'project1',
         'change_domainId_orig_': 'project1',
         'change_changeAt': baseTime.toIso8601String(),
@@ -140,10 +145,13 @@ void main() {
 
       setUp(() {
         baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+        final storedAt = DateTime.now().toUtc().toIso8601String();
         entityState = TestEntityState.fromJson({
           'entityId': 'e1',
           'entityType': 'task',
           'domainType': 'project',
+          'change_storedAt': storedAt,
+          'change_storedAt_orig_': storedAt,
           'data_parentId': 'parent1',
           'data_parentProp': 'pList',
           'data_parentId_changeAt_': baseTime.toIso8601String(),
@@ -833,10 +841,14 @@ void main() {
         final olderTime = baseTime.subtract(const Duration(minutes: 5));
         final newerFieldTime = baseTime.add(const Duration(minutes: 2));
 
+        final storedAtJson = DateTime.now().toUtc().toIso8601String();
+
         final entityStateMixed = TestEntityState.fromJson({
           'entityId': 'entity1',
           'entityType': 'task',
           'domainType': 'project',
+          'change_storedAt': storedAtJson,
+          'change_storedAt_orig_': storedAtJson,
           'change_domainId': 'project1',
           'change_domainId_orig_': 'project1',
           'change_changeAt': baseTime.toIso8601String(),
@@ -1362,11 +1374,14 @@ void main() {
           final olderTime = baseTime.subtract(const Duration(minutes: 5));
           final newerFieldTime = baseTime.add(const Duration(minutes: 2));
 
+          final storedAtJson = DateTime.now().toUtc().toIso8601String();
           // Create entity state where latest is baseTime but rank field was updated more recently
           final entityStateWithNewerField = TestEntityState.fromJson({
             'entityId': 'entity1',
             'entityType': 'task',
             'domainType': 'project',
+            'change_storedAt': storedAtJson,
+            'change_storedAt_orig_': storedAtJson,
             'change_domainId': 'project1',
             'change_domainId_orig_': 'project1',
             'change_changeAt': baseTime
@@ -1459,11 +1474,15 @@ void main() {
             const Duration(minutes: 2),
           ); // Between olderTime and baseTime
 
+          final storedAtJson = DateTime.now().toUtc().toIso8601String();
+
           // Create entity state where latest is baseTime but rank field is older
           final entityStateWithOlderField = TestEntityState.fromJson({
             'entityId': 'entity1',
             'entityType': 'task',
             'domainType': 'project',
+            'change_storedAt': storedAtJson,
+            'change_storedAt_orig_': storedAtJson,
             'change_domainId': 'project1',
             'change_domainId_orig_': 'project1',
             'change_changeAt': baseTime

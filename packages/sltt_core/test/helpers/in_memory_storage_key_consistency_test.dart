@@ -37,6 +37,7 @@ void main() {
         'domainType': 'project',
         // change metadata (current and original) required by TestEntityState
         'change_storedAt': storedAt.toIso8601String(),
+        'change_storedAt_orig_': storedAt.toIso8601String(),
         'change_domainId': 'project-1',
         'change_domainId_orig_': 'project-1',
         'change_changeAt': '2023-01-01T00:00:00Z',

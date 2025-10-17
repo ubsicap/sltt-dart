@@ -428,6 +428,8 @@ IsarTeamState _isarTeamStateDeserialize(
     change_dataSchemaRev: reader.readLongOrNull(offsets[7]),
     change_domainId: reader.readString(offsets[8]),
     change_domainId_orig_: reader.readString(offsets[9]),
+    change_storedAt: reader.readDateTime(offsets[10]),
+    change_storedAt_orig_: reader.readDateTime(offsets[11]),
     data_deleted: reader.readBoolOrNull(offsets[12]),
     data_deleted_changeAt_: reader.readDateTimeOrNull(offsets[13]),
     data_deleted_changeBy_: reader.readStringOrNull(offsets[14]),
@@ -8051,6 +8053,14 @@ IsarTeamState _$IsarTeamStateFromJson(
       'schemaVersion',
       (v) => (v as num?)?.toInt(),
     ),
+    change_storedAt: $checkedConvert(
+      'change_storedAt',
+      (v) => const UtcDateTimeConverter().fromJson(v as String),
+    ),
+    change_storedAt_orig_: $checkedConvert(
+      'change_storedAt_orig_',
+      (v) => const UtcDateTimeConverter().fromJson(v as String),
+    ),
     change_domainId: $checkedConvert('change_domainId', (v) => v as String),
     change_domainId_orig_: $checkedConvert(
       'change_domainId_orig_',
@@ -8193,6 +8203,12 @@ Map<String, dynamic> _$IsarTeamStateToJson(
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
   'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),
+  'change_storedAt': const UtcDateTimeConverter().toJson(
+    instance.change_storedAt,
+  ),
+  'change_storedAt_orig_': const UtcDateTimeConverter().toJson(
+    instance.change_storedAt_orig_,
+  ),
   'change_cid': instance.change_cid,
   'change_cid_orig_': instance.change_cid_orig_,
   'change_dataSchemaRev': instance.change_dataSchemaRev,

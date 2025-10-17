@@ -25,6 +25,8 @@ class IsarDocumentState extends BaseIsarEntityState {
     required super.entityId,
     super.schemaVersion,
     required super.unknownJson,
+    required super.change_storedAt,
+    required super.change_storedAt_orig_,
     required super.change_domainId,
     required super.change_domainId_orig_,
     required super.change_changeAt,

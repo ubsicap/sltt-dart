@@ -65,6 +65,9 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
 /// This is similar to the existing EntityState but specifically for tests
 @JsonSerializable(includeIfNull: true, checked: true)
 class TestEntityState extends BaseEntityState {
+  @override
+  String entityId;
+
   final String data_nameLocal;
   final int? data_nameLocal_dataSchemaRev_;
   final DateTime? data_nameLocal_changeAt_;
@@ -77,12 +80,10 @@ class TestEntityState extends BaseEntityState {
   final String? data_nameOptionalField_cid_;
   final String? data_nameOptionalField_changeBy_;
   final DateTime? data_nameOptionalField_cloudAt_;
-  @override
-  String entityId;
 
   TestEntityState({
-    required this.data_nameLocal,
     required this.entityId,
+    required this.data_nameLocal,
     required super.entityType,
     required super.domainType,
     super.schemaVersion,
@@ -90,8 +91,8 @@ class TestEntityState extends BaseEntityState {
     required super.change_domainId,
     required super.change_domainId_orig_,
     required super.change_changeAt,
-    super.change_storedAt,
-    super.change_storedAt_orig_,
+    required super.change_storedAt,
+    required super.change_storedAt_orig_,
     required super.change_changeAt_orig_,
     required super.change_cid,
     required super.change_cid_orig_,
@@ -134,7 +135,7 @@ class TestEntityState extends BaseEntityState {
     this.data_nameOptionalField_cid_,
     this.data_nameOptionalField_changeBy_,
     this.data_nameOptionalField_cloudAt_,
-  }) : super(entityId: entityId);
+  });
 
   factory TestEntityState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(

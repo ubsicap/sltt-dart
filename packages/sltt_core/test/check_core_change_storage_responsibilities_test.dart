@@ -39,6 +39,7 @@ TestEntityState _mkEntityStateForChange(
     change_cloudAt: cloudAtOverride ?? change.cloudAt,
     data_parentId_cloudAt_: cloudAtOverride ?? change.cloudAt,
     data_parentProp_cloudAt_: cloudAtOverride ?? change.cloudAt,
+    change_storedAt_orig_: changeStoredAt,
   );
 }
 
@@ -228,6 +229,7 @@ void main() {
         change_domainId_orig_: '',
         change_changeAt: now,
         change_storedAt: differentTime, // mismatched
+        change_storedAt_orig_: differentTime,
         change_changeAt_orig_: DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
         change_cid: 'c5',
         change_cid_orig_: '',
@@ -285,6 +287,7 @@ void main() {
         change_domainId_orig_: '',
         change_changeAt: now,
         change_storedAt: now,
+        change_storedAt_orig_: now,
         change_changeAt_orig_: DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
         change_cid: 'c6',
         change_cid_orig_: '',
@@ -342,6 +345,7 @@ void main() {
         change_domainId_orig_: '',
         change_changeAt: now,
         change_storedAt: now, // matches change.storedAt
+        change_storedAt_orig_: now,
         change_changeAt_orig_: DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
         change_cid: 'c7',
         change_cid_orig_: '',
@@ -399,6 +403,7 @@ void main() {
         change_domainId_orig_: '',
         change_changeAt: now,
         change_storedAt: now, // matches change.storedAt
+        change_storedAt_orig_: now,
         change_cloudAt: now, // matches change.cloudAt
         change_changeAt_orig_: DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
         change_cid: 'c8',

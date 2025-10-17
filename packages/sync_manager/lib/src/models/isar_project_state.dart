@@ -26,6 +26,8 @@ class IsarProjectState extends BaseIsarEntityState {
     required super.domainType,
     required super.entityId,
     required super.unknownJson,
+    required super.change_storedAt,
+    required super.change_storedAt_orig_,
     this.data_nameLocal,
     this.data_nameLocal_dataSchemaRev_,
     this.data_nameLocal_changeAt_,

@@ -15,11 +15,13 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   BaseIsarEntityState({
     this.id = Isar.autoIncrement,
+    required this.entityId,
     required super.domainType,
-    required super.entityId,
     required super.entityType,
     super.schemaVersion,
     required super.unknownJson,
+    required super.change_storedAt,
+    required super.change_storedAt_orig_,
     required super.change_domainId,
     required super.change_domainId_orig_,
     required super.change_changeAt,
@@ -54,5 +56,5 @@ abstract class BaseIsarEntityState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     super.data_parentProp_cloudAt_,
-  }) : entityId = entityId;
+  });
 }
