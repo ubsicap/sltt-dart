@@ -252,7 +252,7 @@ void main() {
       );
 
       final storageId = await storage.getStorageId();
-      final storedAtChange1 = DateTime.now().toUtc().toIso8601String();
+      final storedAtChange1Json = DateTime.now().toUtc().toIso8601String();
       // Use updateChangeLogAndState to create both change and state
       final change = IsarChangeLogEntry.fromJson(changeData);
       final result = await storage.updateChangeLogAndState(
@@ -262,13 +262,14 @@ void main() {
           'seq': 1,
           'stateChanged': true,
           'storageId': storageId,
-          'storedAt': storedAtChange1,
+          'storedAt': storedAtChange1Json,
         },
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,
           'entityType': 'project',
-          'change_storedAt': storedAtChange1,
+          'change_storedAt': storedAtChange1Json,
+          'change_storedAt_orig_': storedAtChange1Json,
           'change_domainId': projectId,
           'change_changeAt': baseTime.toIso8601String(),
           'change_cid': change.cid,
@@ -344,6 +345,7 @@ void main() {
           'entityId': entityId,
           'entityType': 'document',
           'change_storedAt': storedAtChange2,
+          'change_storedAt_orig_': storedAtChange2,
           'change_domainId': projectId,
           'change_changeAt': baseTime.toIso8601String(),
           'change_cid': change.cid,
@@ -409,6 +411,7 @@ void main() {
           'entityId': entityId,
           'entityType': 'team',
           'change_storedAt': storedAtChange,
+          'change_storedAt_orig_': storedAtChange,
           'change_domainId': projectId,
           'change_changeAt': baseTime.toIso8601String(),
           'change_cid': change.cid,
@@ -886,7 +889,7 @@ void main() {
           operation: 'create',
         );
 
-        final storedAt = DateTime.now().toUtc().toIso8601String();
+        final storedAtJson = DateTime.now().toUtc().toIso8601String();
         final storageId = await storage.getStorageId();
         final change1 = IsarChangeLogEntry.fromJson(initialChange);
         final result1 = await storage.updateChangeLogAndState(
@@ -895,14 +898,15 @@ void main() {
           changeUpdates: {
             'seq': 1,
             'stateChanged': true,
-            'storedAt': storedAt,
+            'storedAt': storedAtJson,
             'storageId': storageId,
           },
           stateUpdates: {
             'domainType': 'project',
             'entityId': entityId,
             'entityType': 'project',
-            'change_storedAt': storedAt,
+            'change_storedAt': storedAtJson,
+            'change_storedAt_orig_': storedAtJson,
             'change_domainId': projectId,
             'change_changeAt': baseTime.toIso8601String(),
             'change_cid': change1.cid,
@@ -1023,7 +1027,7 @@ void main() {
       );
 
       final storageId = await storage.getStorageId();
-      final storedAt = DateTime.now().toUtc().toIso8601String();
+      final storedAtJson = DateTime.now().toUtc().toIso8601String();
       final change1 = IsarChangeLogEntry.fromJson(initialChange);
       await storage.updateChangeLogAndState(
         domainType: kDomainProject,
@@ -1032,13 +1036,14 @@ void main() {
           'seq': 1,
           'stateChanged': true,
           'storageId': storageId,
-          'storedAt': storedAt,
+          'storedAt': storedAtJson,
         },
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,
           'entityType': 'project',
-          'change_storedAt': storedAt,
+          'change_storedAt': storedAtJson,
+          'change_storedAt_orig_': storedAtJson,
           'change_domainId': projectId,
           'change_domainId_orig_': '',
           'change_changeAt': baseTime.toIso8601String(),
