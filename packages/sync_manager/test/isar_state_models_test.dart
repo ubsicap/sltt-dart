@@ -2,8 +2,7 @@ import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/isar_document_state.dart';
-import 'package:sync_manager/src/models/isar_project_state.dart';
-import 'package:sync_manager/src/models/isar_team_state.dart';
+import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -240,5 +239,138 @@ void main() {
       final unknown = jsonDecode(p.unknownJson) as Map<String, dynamic>;
       expect(unknown['surprise'], equals('updated_entity'));
     });
+  });
+
+  group('getDataAndStateUpdatesOrOutdatedBys', () {
+    test(
+      'IsarProjectState should detect field-drift and produce stateUpdates compatible with IsarPortionDataEntityState deserialization',
+      () {
+        final DateTime baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+        final baseData = BaseDataFields(
+          parentId: 'root',
+          parentProp: 'portions',
+          rank: 'aaaaz',
+        );
+
+        final projectDataJson = {
+          ...baseData.toJson(),
+          'nameLocal': 'Project Name',
+        };
+
+        // Create a change log entry for a new entity with all required fields
+        final changeLogEntry = IsarChangeLogEntry(
+          entityId: 'entity-drift-test',
+          entityType: kEntityTypeProject,
+          domainId: 'project1',
+          domainType: 'project',
+          changeAt: baseTime.add(const Duration(minutes: 1)),
+          cid: 'cid-drift-test',
+          storageId: '',
+          changeBy: 'user1',
+          dataJson: jsonEncode(jsonEncode(projectDataJson)),
+          operation: 'create',
+          operationInfoJson: jsonEncode({}),
+          stateChanged: true,
+          unknownJson: jsonEncode({}),
+          dataSchemaRev: 0,
+        );
+
+        final updates = getDataAndStateUpdatesOrOutdatedBys(
+          changeLogEntry: changeLogEntry,
+          entityState: null, // No existing entity state
+          fieldChanges: baseData.toJson(),
+          noOpFields: [],
+          storageMode: 'save',
+          storageType: 'cloud',
+          cs: computeCloudAndStoredAt(changeLogEntry, 'cloud'),
+        );
+
+        // Debug: Print stateUpdates to understand what fields are being generated
+        SlttLogger.logger.info(
+          'DEBUG: stateUpdates keys: ${updates['stateUpdates'].keys.toList()..sort()}',
+        );
+
+        // Step 2: Deserialize stateUpdates back to IsarProjectState
+        final testEntityState = IsarProjectState.fromJson(
+          updates['stateUpdates'],
+        );
+
+        // Step 2 verification: Check if there are unknown fields
+        if (testEntityState.unknownJson != '{}') {
+          SlttLogger.logger.info(
+            'DEBUG: Unknown fields detected: ${testEntityState.unknownJson}',
+          );
+          SlttLogger.logger.info(
+            'DEBUG: Action needed: Either add missing fields to BaseEntityState or update IsarPortionDataEntityState',
+          );
+          fail(
+            'FIELD DRIFT DETECTED: IsarPortionDataEntityState has unknown fields:\n${const JsonEncoder.withIndent(' ').convert(testEntityState.getUnknown())}',
+          );
+        }
+
+        expect(
+          testEntityState.unknownJson,
+          equals('{}'),
+          reason:
+              'IsarPortionDataEntityState should deserialize without unknown fields',
+        );
+
+        // Step 3: Round-trip serialize the entity state
+        final serializedJson = testEntityState.toJson();
+
+        // Step 3 verification: The serialized version should contain the same fields and values
+        // as the original stateUpdates (excluding dynamic timestamps that we handle separately)
+        final originalStateUpdates = Map<String, dynamic>.from(
+          updates['stateUpdates'],
+        );
+
+        // remove unknownJson for comparison
+        serializedJson.remove('unknownJson');
+
+        // remove optional fields for field-drift detection
+        final strippedStateUpdates = Map<String, dynamic>.from(
+          originalStateUpdates,
+        )..removeWhere((key, value) => value == null);
+
+        expect(
+          serializedJson.containsKey('id'),
+          isTrue,
+          reason: 'Serialized JSON should contain autoIncrement field "id"',
+        );
+        serializedJson.remove('id'); // autoIncrement field
+
+        expect(
+          serializedJson,
+          equals(strippedStateUpdates),
+          reason: 'Round-trip serialization should produce consistent results',
+        );
+
+        // Verify specific field was properly handled
+        expect(
+          testEntityState.data_nameLocal,
+          equals('Portion Name'),
+          reason: 'name field should be correctly deserialized',
+        );
+        expect(
+          serializedJson['data_name'],
+          equals('Portion Name'),
+          reason: 'name field should be correctly serialized',
+        );
+
+        // now see if IsarPortionDataEntityState has any additional (optional) fields
+        final jsonWithNullValues = testEntityState.toJsonBase()
+          ..removeWhere((key, value) => value != null);
+        // compare with null values from stateUpdates
+        final stateUpdatesWithNullValues = <String, dynamic>{
+          ...updates['stateUpdates'],
+        }..removeWhere((key, value) => value != null);
+        expect(
+          jsonWithNullValues.keys.toList()..sort(),
+          equals(stateUpdatesWithNullValues.keys.toList()..sort()),
+          reason:
+              'IsarPortionDataEntityState should include all optional fields with null values',
+        );
+      },
+    );
   });
 }
