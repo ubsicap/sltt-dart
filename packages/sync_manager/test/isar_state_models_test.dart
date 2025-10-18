@@ -9,29 +9,34 @@ import 'package:test/test.dart';
 void main() {
   group('preserves unknown fields', () {
     test('IsarProjectState.fromJson preserves unknown fields', () {
+      final changeAtJson = DateTime.now().toUtc().toIso8601String();
+      final storedAtJson = DateTime.now().toUtc().toIso8601String();
+
       final rawJson = {
         'id': 1,
         'entityId': 'proj-1',
         'entityType': 'project',
         'domainType': 'project',
         'schemaVersion': 1,
+        'change_storedAt': storedAtJson,
+        'change_storedAt_orig_': storedAtJson,
         'change_domainId': 'd1',
-        'change_changeAt': DateTime.now().toIso8601String(),
+        'change_changeAt': changeAtJson,
         'change_cid': 'cid-p1',
         'change_changeBy': 'u1',
         'data_parentId': 'parent',
         'data_parentId_dataSchemaRev_': 0,
-        'data_parentId_changeAt_': DateTime.now().toIso8601String(),
+        'data_parentId_changeAt_': changeAtJson,
         'data_parentId_cid_': 'cid-parent',
         'data_parentId_changeBy_': 'u1',
         'data_parentProp': 'pList',
         'data_parentProp_dataSchemaRev_': 0,
-        'data_parentProp_changeAt_': DateTime.now().toIso8601String(),
+        'data_parentProp_changeAt_': changeAtJson,
         'data_parentProp_cid_': 'cid-parent',
         'data_parentProp_changeBy_': 'u1',
         // required orig_ fields set by generator; include minimal defaults
         'change_domainId_orig_': 'd1',
-        'change_changeAt_orig_': DateTime.now().toIso8601String(),
+        'change_changeAt_orig_': changeAtJson,
         'change_cid_orig_': 'cid-p1',
         'change_changeBy_orig_': 'u1',
         // add an unexpected field
