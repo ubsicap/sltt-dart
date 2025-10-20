@@ -608,6 +608,79 @@ void main() {
 
         expect(operation, equals('outdated'));
       });
+
+      test('should calculate pUpdate for partial updates', () {
+        final latestTime = baseTime.add(const Duration(minutes: 60));
+        final tweenTime = baseTime.add(const Duration(minutes: 30));
+        final storedAt = DateTime.now().toUtc().toIso8601String();
+        final esJson = <String, dynamic>{
+          'entityId': 'entity1',
+          'entityType': 'task',
+          'domainType': 'project',
+          'change_storedAt': storedAt,
+          'change_storedAt_orig_': storedAt,
+          'change_domainId': 'project1',
+          'change_domainId_orig_': 'project1',
+          'change_changeAt': latestTime.toIso8601String(),
+          'change_changeAt_orig_': baseTime.toIso8601String(),
+          'change_cid': 'cid1',
+          'change_cid_orig_': 'cid1',
+          'change_changeBy': 'user1',
+          'change_changeBy_orig_': 'user1',
+          'data_parentId': 'parent1',
+          'data_parentProp': 'pList',
+          'data_parentId_dataSchemaRev_': 1,
+          'data_parentId_changeAt_': baseTime.toIso8601String(),
+          'data_parentId_cid_': 'cid1',
+          'data_parentId_changeBy_': 'user1',
+          'data_parentProp_dataSchemaRev_': 1,
+          'data_parentProp_changeAt_': baseTime.toIso8601String(),
+          'data_parentProp_cid_': 'cid1',
+          'data_parentProp_changeBy_': 'user1',
+          // Add some rank data for testing
+          'data_nameLocal': 'Test Task',
+          'data_nameLocal_dataSchemaRev_': 1,
+          'data_nameLocal_changeAt_': latestTime.toIso8601String(),
+          'data_nameLocal_cid_': 'cid1',
+          'data_nameLocal_changeBy_': 'user1',
+          'data_rank': '1',
+          'data_rank_dataSchemaRev_': 1,
+          'data_rank_changeAt_': baseTime.toIso8601String(),
+          'data_rank_cid_': 'cid1',
+          'data_rank_changeBy_': 'user1',
+          'unknownJson': '{}',
+        };
+        final entityStateMixed = TestEntityState.fromJson(esJson);
+
+        final changeLogEntry = TestChangeLogEntry(
+          entityId: 'entity1',
+          entityType: 'task',
+          domainId: 'project1',
+          domainType: 'project',
+          changeAt: tweenTime,
+          cid: 'cid2',
+          storageId: 'local',
+          changeBy: 'user1',
+          dataJson: jsonEncode({
+            'rank': '2', // Changed older date
+            'nameLocal': 'Test Task (should be outdated)',
+          }),
+          operation: 'update',
+          operationInfoJson: jsonEncode({}),
+          stateChanged: true,
+          unknownJson: jsonEncode({}),
+        );
+
+        final operation = calculateOperation(
+          changeLogEntry,
+          entityStateMixed,
+          {'rank': '2'},
+          [],
+          ['nameLocal'],
+        );
+
+        expect(operation, equals('pUpdate'));
+      });
     });
 
     group('getUpdatesForChangeLogEntryAndEntityState', () {
