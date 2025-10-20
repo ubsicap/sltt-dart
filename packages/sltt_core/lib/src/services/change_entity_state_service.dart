@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sltt_core/src/models/constants/change_operations.dart';
 
 class LastWriteWinsResult {
   /// may or may not be the same as the incoming changeLogEntryToWrite
@@ -65,8 +66,11 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   }
 
   // TODO: some errors we may want to save, at least for audit trail on cloud storage
-  // TODO: 'noOp'
-  if (['error', 'no-op', 'hold'].contains(changeLogEntry.operation)) {
+  if ([
+    kChangeOperationError,
+    kChangeOperationNoOp,
+    kChangeOperationHold,
+  ].contains(changeLogEntry.operation)) {
     return const GetUpdateResults(
       isDuplicate: false,
       stateUpdates: <String, dynamic>{},
@@ -569,8 +573,6 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys({
         'domainType': changeLogEntry.domainType,
         'entityType': changeLogEntry.entityType.toString().split('.').last,
         'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
-        // _orig_ empty/default field_x_orig_ should inherit field_x values
-        // TODO: fill in the actual values here instead of empty/default
         'change_domainId_orig_': changeLogEntry.domainId,
         'change_cid_orig_': changeLogEntry.cid,
         'change_changeBy_orig_': changeLogEntry.changeBy,

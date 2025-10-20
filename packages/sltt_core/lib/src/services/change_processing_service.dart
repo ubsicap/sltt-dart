@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sltt_core/src/models/constants/change_operations.dart';
 
 /// Result of processing changes through the change processing service
 class ChangeProcessingResult {
@@ -175,16 +176,16 @@ class ChangeProcessingService {
         try {
           final operation = changeData['operation'];
           final validIncomingSaveOperations = [
-            '',
-            'create',
-            'update',
-            'delete',
+            kChangeOperationNotYetDefined,
+            kChangeOperationCreate,
+            kChangeOperationUpdate,
+            kChangeOperationDelete,
           ];
           final validIncomingSyncOperations = [
-            'create',
-            'update',
-            'delete',
-            'no-op',
+            kChangeOperationCreate,
+            kChangeOperationUpdate,
+            kChangeOperationDelete,
+            kChangeOperationNoOp,
           ];
           if (storageMode == 'save' &&
               !validIncomingSaveOperations.contains(operation)) {
@@ -450,7 +451,8 @@ class ChangeProcessingService {
           // In sync mode, warn if we get unexpected state changes
           if (storageMode == 'sync' &&
               targetStorageId == changeLogEntry.storageId &&
-              updateResults.newChangeLogEntry.operation != 'no-op' &&
+              updateResults.newChangeLogEntry.operation !=
+                  kChangeOperationNoOp &&
               !result.isDuplicate &&
               result.stateUpdates.isNotEmpty) {
             SlttLogger.logger.warning(
@@ -616,15 +618,15 @@ class ChangeProcessingService {
   }) {
     final newOperation = updateResults.newChangeLogEntry.operation;
 
-    if (newOperation == 'create') {
+    if (newOperation == kChangeOperationCreate) {
       resultsSummary.created.add(updateResults.newChangeLogEntry.cid);
-    } else if (newOperation == 'update') {
+    } else if (newOperation == kChangeOperationUpdate) {
       resultsSummary.updated.add(updateResults.newChangeLogEntry.cid);
-    } else if (newOperation == 'delete') {
+    } else if (newOperation == kChangeOperationDelete) {
       resultsSummary.deleted.add(updateResults.newChangeLogEntry.cid);
-    } else if (newOperation == 'outdated') {
+    } else if (newOperation == kChangeOperationOutdated) {
       resultsSummary.outdated.add(updateResults.newChangeLogEntry.cid);
-    } else if (newOperation == 'no-op') {
+    } else if (newOperation == kChangeOperationNoOp) {
       resultsSummary.noOps.add(updateResults.newChangeLogEntry.cid);
     } else if (result.isDuplicate) {
       if (result.stateUpdates.isNotEmpty) {
@@ -632,7 +634,8 @@ class ChangeProcessingService {
       } else {
         resultsSummary.dups.add(changeLogEntry.cid);
       }
-    } else if (updateResults.newChangeLogEntry.operation == 'error') {
+    } else if (updateResults.newChangeLogEntry.operation ==
+        kChangeOperationError) {
       resultsSummary.errors.add({
         'cid': updateResults.newChangeLogEntry.cid,
         'info': updateResults.newChangeLogEntry.getOperationInfo(),
@@ -648,7 +651,7 @@ class ChangeProcessingService {
     }
 
     // Add operation info if present and not an error
-    if (updateResults.newChangeLogEntry.operation != 'error' &&
+    if (updateResults.newChangeLogEntry.operation != kChangeOperationError &&
         updateResults.newChangeLogEntry.getOperationInfo().isNotEmpty) {
       resultsSummary.info.add({
         'cid': updateResults.newChangeLogEntry.cid,
