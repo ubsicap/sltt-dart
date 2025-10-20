@@ -299,7 +299,7 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult({
 }
 
 /// calculateOperation(changeLogEntry: ChangeLogEntry, entityState: BaseEntityState):
-/// returns { operation: string } 'noOp', 'outdated', 'create', 'update', or 'delete'
+/// returns { operation: string } 'noOp', 'outdated', 'create', 'update', 'pUpdate', or 'delete'
 /// Determines the operation type based on the change log entry and current entity state.
 String calculateOperation(
   BaseChangeLogEntry changeLogEntry,
@@ -312,12 +312,12 @@ String calculateOperation(
 
   // If the base entity state is null, we assume it's a create operation
   if (entityState == null) {
-    return 'create';
+    return kChangeOperationCreate;
   }
 
   // If the operation is 'delete', we return 'delete'
   if (changeData['deleted'] == true) {
-    return 'delete';
+    return kChangeOperationDelete;
   }
 
   // If there are no pre-computed field changes, analyze the change log entry directly
@@ -328,7 +328,7 @@ String calculateOperation(
         .isNotEmpty;
 
     if (!hasDataChanges) {
-      return 'noOp';
+      return kChangeOperationNoOp;
     }
 
     final entityJson = entityState.toJson();
@@ -364,23 +364,27 @@ String calculateOperation(
     }
 
     if (!hasActualChanges) {
-      return 'noOp';
+      return kChangeOperationNoOp;
     }
 
     if (isOutdated) {
-      return 'outdated';
+      return kChangeOperationOutdated;
     }
 
-    return 'update';
+    return kChangeOperationUpdate;
   }
 
   // If there are outdated fields, we return 'outdated'
   if (outdatedBys.isNotEmpty) {
-    return 'outdated';
+    if (fieldChanges.isNotEmpty) {
+      return kChangeOperationPartialUpdate;
+    } else {
+      return kChangeOperationOutdated;
+    }
   }
 
   // Otherwise, we assume it's an update operation
-  return 'update';
+  return kChangeOperationUpdate;
 }
 
 class GetFieldChangesOrNoOpResult {

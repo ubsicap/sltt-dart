@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:sltt_core/src/logging.dart';
+import 'package:sltt_core/src/models/constants/change_operations.dart';
 import 'package:sltt_core/src/services/change_entity_state_service.dart';
 import 'package:test/test.dart';
 
@@ -835,105 +836,108 @@ void main() {
         },
       );
 
-      test('should include only non-outdated, non-noop fields in output data', () {
-        // Build an entity where rank is newer (so incoming rank is outdated), parentId is older (so it should update),
-        // and nameLocal matches existing (no-op).
-        final olderTime = baseTime.subtract(const Duration(minutes: 5));
-        final newerFieldTime = baseTime.add(const Duration(minutes: 2));
+      test(
+        'should include only non-outdated, non-noop fields in output data - partial update (pUpdate)',
+        () {
+          // Build an entity where rank is newer (so incoming rank is outdated), parentId is older (so it should update),
+          // and nameLocal matches existing (no-op).
+          final olderTime = baseTime.subtract(const Duration(minutes: 5));
+          final newerFieldTime = baseTime.add(const Duration(minutes: 2));
 
-        final storedAtJson = DateTime.now().toUtc().toIso8601String();
+          final storedAtJson = DateTime.now().toUtc().toIso8601String();
 
-        final entityStateMixed = TestEntityState.fromJson({
-          'entityId': 'entity1',
-          'entityType': 'task',
-          'domainType': 'project',
-          'change_storedAt': storedAtJson,
-          'change_storedAt_orig_': storedAtJson,
-          'change_domainId': 'project1',
-          'change_domainId_orig_': 'project1',
-          'change_changeAt': baseTime.toIso8601String(),
-          'change_changeAt_orig_': baseTime.toIso8601String(),
-          'change_cid': 'latest-cid',
-          'change_cid_orig_': 'latest-cid',
-          'change_changeBy': 'user1',
-          'change_changeBy_orig_': 'user1',
-          // parentId was last updated well before incoming change
-          'data_parentId': 'parent1',
-          'data_parentId_dataSchemaRev_': 1,
-          'data_parentId_changeAt_': olderTime.toIso8601String(),
-          'data_parentId_cid_': 'cid1',
-          'data_parentId_changeBy_': 'user1',
-          // parentProp matches incoming (no-op)
-          'data_parentProp': 'pList',
-          'data_parentProp_dataSchemaRev_': 1,
-          'data_parentProp_changeAt_': baseTime.toIso8601String(),
-          'data_parentProp_cid_': 'cid-name',
-          'data_parentProp_changeBy_': 'user1',
-          // rank was updated after incoming change -> incoming rank should be outdated
-          'data_rank': '9',
-          'data_rank_dataSchemaRev_': 1,
-          'data_rank_changeAt_': newerFieldTime.toIso8601String(),
-          'data_rank_cid_': 'field-cid',
-          'data_rank_changeBy_': 'user1',
-          // nameLocal already matches incoming
-          'data_nameLocal': 'Same Name',
-          'data_nameLocal_dataSchemaRev': 1,
-          'data_nameLocal_changeAt_': baseTime.toIso8601String(),
-          'data_nameLocal_cid_': 'cid-name',
-          'data_nameLocal_changeBy_': 'user1',
-          'unknownJson': '{}',
-        });
+          final entityStateMixed = TestEntityState.fromJson({
+            'entityId': 'entity1',
+            'entityType': 'task',
+            'domainType': 'project',
+            'change_storedAt': storedAtJson,
+            'change_storedAt_orig_': storedAtJson,
+            'change_domainId': 'project1',
+            'change_domainId_orig_': 'project1',
+            'change_changeAt': baseTime.toIso8601String(),
+            'change_changeAt_orig_': baseTime.toIso8601String(),
+            'change_cid': 'latest-cid',
+            'change_cid_orig_': 'latest-cid',
+            'change_changeBy': 'user1',
+            'change_changeBy_orig_': 'user1',
+            // parentId was last updated well before incoming change
+            'data_parentId': 'parent1',
+            'data_parentId_dataSchemaRev_': 1,
+            'data_parentId_changeAt_': olderTime.toIso8601String(),
+            'data_parentId_cid_': 'cid1',
+            'data_parentId_changeBy_': 'user1',
+            // parentProp matches incoming (no-op)
+            'data_parentProp': 'pList',
+            'data_parentProp_dataSchemaRev_': 1,
+            'data_parentProp_changeAt_': baseTime.toIso8601String(),
+            'data_parentProp_cid_': 'cid-name',
+            'data_parentProp_changeBy_': 'user1',
+            // rank was updated after incoming change -> incoming rank should be outdated
+            'data_rank': '9',
+            'data_rank_dataSchemaRev_': 1,
+            'data_rank_changeAt_': newerFieldTime.toIso8601String(),
+            'data_rank_cid_': 'field-cid',
+            'data_rank_changeBy_': 'user1',
+            // nameLocal already matches incoming
+            'data_nameLocal': 'Same Name',
+            'data_nameLocal_dataSchemaRev': 1,
+            'data_nameLocal_changeAt_': baseTime.toIso8601String(),
+            'data_nameLocal_cid_': 'cid-name',
+            'data_nameLocal_changeBy_': 'user1',
+            'unknownJson': '{}',
+          });
 
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity1',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: baseTime, // between olderTime and newerFieldTime
-          cid: 'cid7',
-          storageId: '',
-          changeBy: 'user2',
-          dataJson: jsonEncode({
-            'rank': '1',
-            'parentId': 'parent2',
-            'parentProp': 'pList',
-            'nameLocal': 'Same Name',
-          }),
-          operation: 'update',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
-
-        final updates = getUpdatesForChangeLogEntryAndEntityState(
-          changeLogEntry,
-          entityStateMixed,
-          storageMode: 'save',
-          storageType: 'local',
-          targetStorageId: 'localId',
-        );
-
-        // rank should be outdated, nameLocal no-op, parentId should be applied
-        final storedAtVal4 = assertAndGetStoredAt(
-          updates.changeUpdates,
-          'storedAt',
-        );
-        expect(
-          updates.changeUpdates,
-          equals({
-            'operation': 'outdated',
-            'operationInfoJson': jsonEncode({
-              'outdatedBys': ['rank'],
-              'noOpFields': ['parentProp', 'nameLocal'],
+          final changeLogEntry = TestChangeLogEntry(
+            entityId: 'entity1',
+            entityType: 'task',
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: baseTime, // between olderTime and newerFieldTime
+            cid: 'cid7',
+            storageId: '',
+            changeBy: 'user2',
+            dataJson: jsonEncode({
+              'rank': '1',
+              'parentId': 'parent2',
+              'parentProp': 'pList',
+              'nameLocal': 'Same Name',
             }),
-            'stateChanged': true,
-            'storageId': 'localId',
-            'cloudAt': null,
-            'dataJson': jsonEncode({'parentId': 'parent2'}),
-            'storedAt': storedAtVal4,
-          }),
-        );
-      });
+            operation: kChangeOperationNotYetDefined,
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            unknownJson: jsonEncode({}),
+          );
+
+          final updates = getUpdatesForChangeLogEntryAndEntityState(
+            changeLogEntry,
+            entityStateMixed,
+            storageMode: 'save',
+            storageType: 'local',
+            targetStorageId: 'localId',
+          );
+
+          // rank should be outdated, nameLocal no-op, parentId should be applied
+          final storedAtVal4 = assertAndGetStoredAt(
+            updates.changeUpdates,
+            'storedAt',
+          );
+          expect(
+            updates.changeUpdates,
+            equals({
+              'operation': 'pUpdate',
+              'operationInfoJson': jsonEncode({
+                'outdatedBys': ['rank'],
+                'noOpFields': ['parentProp', 'nameLocal'],
+              }),
+              'stateChanged': true,
+              'storageId': 'localId',
+              'cloudAt': null,
+              'dataJson': jsonEncode({'parentId': 'parent2'}),
+              'storedAt': storedAtVal4,
+            }),
+          );
+        },
+      );
 
       test('should reject older changes', () {
         // Create a change log entry with older field changes
