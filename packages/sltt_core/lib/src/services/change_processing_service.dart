@@ -176,7 +176,7 @@ class ChangeProcessingService {
           final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
             changeData,
           );
-          if (changeLogEntry.operation == 'error') {
+          if (changeLogEntry.operation == kChangeOperationError) {
             // If deserialization failed, don't treat this as a fatal programming
             // error here. Allow the main processing loop to handle the entry so
             // that per-change errors are collected into the resultsSummary.
