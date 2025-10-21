@@ -640,7 +640,9 @@ void main() {
         );
         await syncManager.initialize();
         syncManager.configureCloudUrl(cloudBaseUrl);
-        final fullSyncResult = await syncManager.performFullSync();
+        final fullSyncResult = await syncManager.performFullSync(
+          domainIds: [projectId],
+        );
         expect(
           fullSyncResult.success,
           isTrue,
