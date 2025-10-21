@@ -887,7 +887,9 @@ void main() {
         await syncManager.initialize();
         syncManager.configureCloudUrl(cloudBaseUrl);
 
-        final fullSyncResult = await syncManager.performFullSync();
+        final fullSyncResult = await syncManager.performFullSync(
+          domainIds: [projectId],
+        );
 
         expect(
           fullSyncResult.success,
@@ -944,6 +946,8 @@ void main() {
             ),
             'latestSeq': totalsMap?['latestSeq'],
           }),
+          reason:
+              'After full sync, project $projectId should have 2 total local state changes',
         );
 
         // Verify downsynced project exists locally
