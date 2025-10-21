@@ -8,10 +8,13 @@ void main() {
   group('TaskDataEntityState serialization', () {
     late TaskDataEntityState state;
     setUp(() {
+      final changeAt = DateTime.utc(2025, 1, 2, 3, 4, 5);
+      final storedAt = DateTime.utc(2025, 1, 2, 3, 4, 15);
+
       state = TaskDataEntityState(
         entityId: 'E1',
         change_domainId: 'D1',
-        change_changeAt: DateTime.utc(2025, 1, 2, 3, 4, 5),
+        change_changeAt: changeAt,
         change_cid: 'CID123',
         change_changeBy: 'userA',
         data_parentId: 'PARENT',
@@ -25,6 +28,13 @@ void main() {
         data_parentProp_changeAt_: DateTime.utc(2025, 1, 1),
         data_parentProp_cid_: '',
         data_parentProp_changeBy_: '',
+        entityType: '',
+        change_domainId_orig_: '',
+        change_changeAt_orig_: changeAt,
+        change_storedAt: storedAt,
+        change_storedAt_orig_: storedAt,
+        change_cid_orig_: '',
+        change_changeBy_orig_: '',
       );
     });
 
@@ -35,7 +45,8 @@ void main() {
       expect(base.containsKey('data_parentId'), isTrue);
     });
 
-    test('toJson (unknown-field aware) matches toJsonBase for known fields', () {
+    test('toJson (unknown-field aware) matches toJsonBase for known fields',
+        () {
       final raw = state.toJson();
       final base = state.toJsonBase();
       for (final k in base.keys) {
@@ -43,7 +54,8 @@ void main() {
       }
     });
 
-    test('toJsonSafe ensures all required data_ fields present with defaults', () {
+    test('toJsonSafe ensures all required data_ fields present with defaults',
+        () {
       final safe = state.toJsonSafe();
       // All declared TaskData fields + core fields
       expect(safe['data_nameLocal'], 'Test Name');
@@ -60,7 +72,9 @@ void main() {
       expect(rebuilt.data_parentId, state.data_parentId);
     });
 
-    test('fromJson (unknown-field aware) round-trip with extra unknown field retained in unknownJson', () {
+    test(
+        'fromJson (unknown-field aware) round-trip with extra unknown field retained in unknownJson',
+        () {
       final map = state.toJsonBase();
       map['some_new_field'] = 'unexpected';
       final jsonStr = jsonEncode(map);

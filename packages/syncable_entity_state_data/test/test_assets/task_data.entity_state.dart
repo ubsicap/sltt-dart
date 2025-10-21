@@ -65,14 +65,14 @@ class TaskDataEntityState extends BaseEntityState {
     this.data_nameLocal_cid_,
     this.data_nameLocal_changeBy_,
     this.data_nameLocal_cloudAt_,
-  }) : super(
-          entityId: entityId,
-          entityType: 'task',
-          change_domainId_orig_: change_domainId,
-          change_changeAt_orig_: change_changeAt,
-          change_cid_orig_: change_cid,
-          change_changeBy_orig_: change_changeBy,
-        );
+    required super.entityType,
+    required super.change_domainId_orig_,
+    required super.change_changeAt_orig_,
+    required super.change_storedAt,
+    required super.change_storedAt_orig_,
+    required super.change_cid_orig_,
+    required super.change_changeBy_orig_,
+  });
   static TaskDataEntityState fromJsonBase(Map<String, dynamic> json) =>
       _$TaskDataEntityStateFromJson(json);
   @override
