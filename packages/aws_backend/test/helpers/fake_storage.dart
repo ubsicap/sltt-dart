@@ -110,6 +110,7 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     required Map<String, dynamic> changeUpdates,
     BaseEntityState? entityState,
     required Map<String, dynamic> stateUpdates,
+    required OperationCounts operationCounts,
     bool skipChangeLogWrite = false,
     bool skipStateWrite = false,
   }) async {

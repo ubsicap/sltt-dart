@@ -17,16 +17,49 @@ class LastWriteWinsResult {
   });
 }
 
+class OperationCounts {
+  final int create;
+  final int update;
+  final int delete;
+  final int noOp;
+  final int duplicate;
+  final int clouded;
+  final int outdated;
+  final int partialUpdate;
+  final int error;
+  final int hold;
+
+  OperationCounts({
+    this.create = 0,
+    this.update = 0,
+    this.delete = 0,
+    this.noOp = 0,
+    this.duplicate = 0,
+    this.clouded = 0,
+    this.outdated = 0,
+    this.partialUpdate = 0,
+    this.error = 0,
+    this.hold = 0,
+  });
+
+  @override
+  String toString() {
+    return 'OperationCounts(create: $create, update: $update, delete: $delete, noOp: $noOp, duplicate: $duplicate, clouded: $clouded, outdated: $outdated, partialUpdate: $partialUpdate, error: $error, hold: $hold)';
+  }
+}
+
 /// Result container for computing updates without constructing a new change-log entry
 class GetUpdateResults {
   final bool isDuplicate;
   final Map<String, dynamic> stateUpdates;
   final Map<String, dynamic> changeUpdates;
+  final OperationCounts operationCounts;
 
   const GetUpdateResults({
     required this.isDuplicate,
     required this.stateUpdates,
     required this.changeUpdates,
+    required this.operationCounts,
   });
 }
 
@@ -62,6 +95,10 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
       isDuplicate: true,
       stateUpdates: duplicateCheck.stateUpdates,
       changeUpdates: const <String, dynamic>{},
+      operationCounts: OperationCounts(
+        duplicate: duplicateCheck.stateUpdates.isEmpty ? 1 : 0,
+        clouded: duplicateCheck.stateUpdates.isNotEmpty ? 1 : 0,
+      ),
     );
   }
 
@@ -71,10 +108,15 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     kChangeOperationNoOp,
     kChangeOperationHold,
   ].contains(changeLogEntry.operation)) {
-    return const GetUpdateResults(
+    return GetUpdateResults(
       isDuplicate: false,
       stateUpdates: <String, dynamic>{},
       changeUpdates: <String, dynamic>{},
+      operationCounts: OperationCounts(
+        error: changeLogEntry.operation == kChangeOperationError ? 1 : 0,
+        hold: changeLogEntry.operation == kChangeOperationHold ? 1 : 0,
+        noOp: changeLogEntry.operation == kChangeOperationNoOp ? 1 : 0,
+      ),
     );
   }
 
@@ -154,6 +196,20 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     isDuplicate: false,
     stateUpdates: stateUpdates,
     changeUpdates: changeLogEntryUpdates,
+    operationCounts: OperationCounts(
+      create: operation == kChangeOperationCreate ? 1 : 0,
+      update:
+          [
+            kChangeOperationUpdate,
+            kChangeOperationPartialUpdate,
+          ].contains(operation)
+          ? 1
+          : 0,
+      partialUpdate: operation == kChangeOperationPartialUpdate ? 1 : 0,
+      outdated: operation == kChangeOperationOutdated ? 1 : 0,
+      delete: operation == kChangeOperationDelete ? 1 : 0,
+      noOp: operation == kChangeOperationNoOp ? 1 : 0,
+    ),
   );
 }
 

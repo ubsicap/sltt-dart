@@ -405,7 +405,9 @@ class ChangeProcessingService {
           final shouldSkipChangeLogWrite =
               result.isDuplicate ||
               changeUpdates.isEmpty ||
-              (targetStorageType == 'local' && changeLogEntry.cloudAt != null);
+              (targetStorageId ==
+                  changeLogEntry.storageId /* should already be saved */ );
+          final operationCounts = result.operationCounts;
 
           final updateResults = await storage.updateChangeLogAndState(
             domainType: changeLogEntry.domainType,
@@ -413,6 +415,7 @@ class ChangeProcessingService {
             changeUpdates: changeUpdates,
             entityState: entityState,
             stateUpdates: result.stateUpdates,
+            operationCounts: operationCounts,
             skipChangeLogWrite: shouldSkipChangeLogWrite,
             skipStateWrite: result.stateUpdates.isEmpty,
           );

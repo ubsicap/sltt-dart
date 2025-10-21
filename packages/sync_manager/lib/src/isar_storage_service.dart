@@ -167,6 +167,7 @@ class IsarStorageService extends BaseStorageService {
     required String domainType,
     required BaseChangeLogEntry changeLogEntry,
     required Map<String, dynamic> changeUpdates,
+    required OperationCounts operationCounts,
     BaseEntityState? entityState,
     required Map<String, dynamic> stateUpdates,
     bool skipChangeLogWrite = false,
@@ -282,72 +283,12 @@ class IsarStorageService extends BaseStorageService {
 
       if (!skipStateWrite) {
         // Upsert entity-type sync state counters (created/updated/deleted)
-        try {
-          final existingEntityTypeSyncStates = await _isar
-              .isarEntityTypeSyncStates
-              .where()
-              .entityTypeDomainIdEqualTo(
-                changeLogEntry.entityType,
-                newChange.domainId,
-              )
-              .findFirst();
-
-          final op = newChange.operation;
-          SlttLogger.logger.fine(
-            'updateChangeLogAndState - Upserting entity-type sync state for entityType=${changeLogEntry.entityType} entityId=${newChange.entityId} domainId=${newChange.domainId} op=$op existing=${existingEntityTypeSyncStates != null}',
-          );
-          if (existingEntityTypeSyncStates != null) {
-            // Explicitly increment counters on the existing record so the
-            // stored counts reflect the actual number of ops performed.
-            final newEt = IsarEntityTypeSyncState(
-              id: existingEntityTypeSyncStates.id,
-              entityType: existingEntityTypeSyncStates.entityType,
-              domainId: existingEntityTypeSyncStates.domainId,
-              domainType: existingEntityTypeSyncStates.domainType,
-              storageId: _storageId,
-              storageType: getStorageType(),
-              cid: newChange.cid,
-              changeAt: newChange.changeAt,
-              seq: newChange.seq,
-              created:
-                  existingEntityTypeSyncStates.created +
-                  (op == 'create' ? 1 : 0),
-              updated:
-                  existingEntityTypeSyncStates.updated +
-                  (op == 'update' ? 1 : 0),
-              deleted:
-                  existingEntityTypeSyncStates.deleted +
-                  (op == 'delete' ? 1 : 0),
-              storedAt_orig_: existingEntityTypeSyncStates.storedAt_orig_,
-              storedAt: newChange.storedAt,
-            );
-            await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
-          } else {
-            // New record - initialize counters to 1 for the matching op, 0
-            // otherwise.
-            final newEt = IsarEntityTypeSyncState(
-              entityType: changeLogEntry.entityType,
-              domainId: newChange.domainId,
-              domainType: domainType,
-              storageId: _storageId,
-              storageType: getStorageType(),
-              cid: newChange.cid,
-              changeAt: newChange.changeAt,
-              seq: newChange.seq,
-              created: newChange.operation == 'create' ? 1 : 0,
-              updated: newChange.operation == 'update' ? 1 : 0,
-              deleted: newChange.operation == 'delete' ? 1 : 0,
-              // For new records set createdAt/updatedAt from storedAt when available
-              storedAt: newChange.storedAt ?? DateTime.now(),
-              storedAt_orig_: newChange.storedAt ?? DateTime.now(),
-            );
-            await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
-          }
-        } catch (e) {
-          SlttLogger.logger.warning(
-            '[$_logPrefix] Warning: failed to upsert entity-type sync state: $e',
-          );
-        }
+        await upsertEntityTypeSyncStates(
+          entityType: changeLogEntry.entityType,
+          operationCounts: operationCounts,
+          newChange: newChange,
+          domainType: domainType,
+        );
       }
     });
 
@@ -355,6 +296,73 @@ class IsarStorageService extends BaseStorageService {
       newChangeLogEntry: _convertToChangeLogEntry(newChange),
       newEntityState: newEntityState,
     );
+  }
+
+  Future<void> upsertEntityTypeSyncStates({
+    required String domainType,
+    required String entityType,
+    required IsarChangeLogEntry newChange,
+    required OperationCounts operationCounts,
+  }) async {
+    // Upsert entity-type sync state counters (created/updated/deleted)
+    try {
+      final existingEntityTypeSyncStates = await _isar.isarEntityTypeSyncStates
+          .where()
+          .entityTypeDomainIdEqualTo(entityType, newChange.domainId)
+          .findFirst();
+
+      SlttLogger.logger.fine(
+        'updateChangeLogAndState - Upserting entity-type sync state for entityType=$entityType entityId=${newChange.entityId} domainId=${newChange.domainId} existing=${existingEntityTypeSyncStates != null}\noperationCounts=$operationCounts',
+      );
+      if (existingEntityTypeSyncStates != null) {
+        // Explicitly increment counters on the existing record so the
+        // stored counts reflect the actual number of ops performed.
+        final newEt = IsarEntityTypeSyncState(
+          id: existingEntityTypeSyncStates.id,
+          entityType: existingEntityTypeSyncStates.entityType,
+          domainId: existingEntityTypeSyncStates.domainId,
+          domainType: existingEntityTypeSyncStates.domainType,
+          storageId: _storageId,
+          storageType: getStorageType(),
+          cid: newChange.cid,
+          changeAt: newChange.changeAt,
+          seq: newChange.seq,
+          created:
+              existingEntityTypeSyncStates.created + operationCounts.create,
+          updated:
+              existingEntityTypeSyncStates.updated + operationCounts.update,
+          deleted:
+              existingEntityTypeSyncStates.deleted + operationCounts.delete,
+          storedAt_orig_: existingEntityTypeSyncStates.storedAt_orig_,
+          storedAt: newChange.storedAt,
+        );
+        await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
+      } else {
+        // New record - initialize counters to 1 for the matching op, 0
+        // otherwise.
+        final newEt = IsarEntityTypeSyncState(
+          entityType: entityType,
+          domainId: newChange.domainId,
+          domainType: domainType,
+          storageId: _storageId,
+          storageType: getStorageType(),
+          cid: newChange.cid,
+          changeAt: newChange.changeAt,
+          seq: newChange.seq,
+          created: operationCounts.create,
+          updated: operationCounts.update,
+          deleted: operationCounts.delete,
+          // For new records set createdAt/updatedAt from storedAt when available
+          storedAt: newChange.storedAt ?? DateTime.now(),
+          storedAt_orig_: newChange.storedAt ?? DateTime.now(),
+        );
+        await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
+      }
+    } catch (e) {
+      SlttLogger.logger.warning(
+        '[$_logPrefix] Warning: failed to upsert entity-type sync state: $e',
+      );
+    }
   }
 
   /// AGENT: do not fix this. it's deprecated. Use ChangeProcessingService.storeChanges

@@ -264,6 +264,7 @@ void main() {
           'storageId': storageId,
           'storedAt': storedAtChange1Json,
         },
+        operationCounts: OperationCounts(create: 1),
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,
@@ -340,6 +341,7 @@ void main() {
           'storageId': storageId,
           'storedAt': storedAtChange2,
         },
+        operationCounts: OperationCounts(create: 1),
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,
@@ -406,6 +408,7 @@ void main() {
           'storageId': storageId,
           'storedAt': storedAtChange,
         },
+        operationCounts: OperationCounts(create: 1),
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,
@@ -898,6 +901,7 @@ void main() {
             'storedAt': storedAtJson,
             'storageId': storageId,
           },
+          operationCounts: OperationCounts(create: 1),
           stateUpdates: {
             'domainType': 'project',
             'entityId': entityId,
@@ -973,6 +977,7 @@ void main() {
             'storedAt': change2StoredAt,
             'storageId': storageId,
           },
+          operationCounts: OperationCounts(update: 1),
           entityState: currentState,
           stateUpdates: {
             'change_storedAt': change2StoredAt,
@@ -1035,6 +1040,7 @@ void main() {
           'storageId': storageId,
           'storedAt': storedAtJson,
         },
+        operationCounts: OperationCounts(create: 1),
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,
@@ -1092,6 +1098,7 @@ void main() {
           'storedAt': change2StoredAt,
           'storageId': storageId,
         },
+        operationCounts: OperationCounts(update: 1),
         entityState: currentState,
         stateUpdates: {
           'data_nameLocal': 'New Name',

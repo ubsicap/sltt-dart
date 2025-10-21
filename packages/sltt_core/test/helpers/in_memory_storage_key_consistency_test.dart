@@ -1,4 +1,4 @@
-import 'package:sltt_core/src/logging.dart';
+import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 import '../test_models.dart';
@@ -61,6 +61,7 @@ void main() {
         domainType: 'project',
         changeLogEntry: change,
         changeUpdates: {'storedAt': storedAt.toIso8601String()},
+        operationCounts: OperationCounts(),
         entityState: null,
         stateUpdates: stateUpdates,
       );

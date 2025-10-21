@@ -1,4 +1,4 @@
-import 'package:sltt_core/src/logging.dart';
+import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 import 'package:test/test.dart';
@@ -195,6 +195,7 @@ void main() {
           'storageId': storageId,
           'storedAt': storedAtChange1,
         },
+        operationCounts: OperationCounts(create: 1),
         stateUpdates: {
           'domainType': 'project',
           'entityType': 'task',
@@ -275,6 +276,7 @@ void main() {
           'storageId': storageId,
           'storedAt': storedAtChange2,
         },
+        operationCounts: OperationCounts(create: 1),
         stateUpdates: {
           'domainType': 'project',
           'entityType': 'task',
