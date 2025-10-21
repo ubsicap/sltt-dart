@@ -50,7 +50,9 @@ class DynamoEntityState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     super.data_parentProp_cloudAt_,
-  }) : super(entityId: entityId);
+    required super.change_storedAt,
+    required super.change_storedAt_orig_,
+  });
 
   factory DynamoEntityState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
