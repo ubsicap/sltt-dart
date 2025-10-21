@@ -42,7 +42,7 @@ void main() {
       });
 
       test('returns error for empty changes list', () async {
-        final result = await ChangeProcessingService.processChanges(
+        final result = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [],
           srcStorageType: 'local',
@@ -78,7 +78,7 @@ void main() {
               '{"nameLocal": "Test Task", "parentId": "root", "parentProp": "pList"}',
         };
 
-        final result = await ChangeProcessingService.processChanges(
+        final result = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [changeData],
           srcStorageType: 'local',
@@ -92,7 +92,7 @@ void main() {
           result.isSuccess,
           isTrue,
           reason:
-              'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
+              'storeChanges failed: ${result.errorMessage ?? "Unknown error"}',
         );
 
         final summary = result.resultsSummary!;
@@ -123,7 +123,7 @@ void main() {
               '{"nameLocal": "Test Task", "parentId": "root", "parentProp": "pList"}',
         };
 
-        final result = await ChangeProcessingService.processChanges(
+        final result = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [changeData],
           srcStorageType: 'local',
@@ -137,7 +137,7 @@ void main() {
           result.isSuccess,
           isTrue,
           reason:
-              'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
+              'storeChanges failed: ${result.errorMessage ?? "Unknown error"}',
         );
 
         final summary = result.resultsSummary!;
@@ -182,7 +182,7 @@ void main() {
               '{"nameLocal": "Test Task", "parentId": "root", "parentProp": "pList"}',
         };
 
-        final result = await ChangeProcessingService.processChanges(
+        final result = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [changeData],
           srcStorageType: 'local',
@@ -196,7 +196,7 @@ void main() {
           result.isSuccess,
           isTrue,
           reason:
-              'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
+              'storeChanges failed: ${result.errorMessage ?? "Unknown error"}',
         );
 
         final summary = result.resultsSummary!;
@@ -252,7 +252,7 @@ void main() {
           },
         ];
 
-        final result = await ChangeProcessingService.processChanges(
+        final result = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: changesData,
           srcStorageType: 'local',
@@ -266,7 +266,7 @@ void main() {
           result.isSuccess,
           isTrue,
           reason:
-              'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
+              'storeChanges failed: ${result.errorMessage ?? "Unknown error"}',
         );
 
         final summary = result.resultsSummary!;
@@ -311,7 +311,7 @@ void main() {
             'dataJson': 'invalid-json', // This will cause an error
           };
 
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             storageMode: 'save',
             changes: [changeData],
             srcStorageType: 'local',
@@ -354,7 +354,7 @@ void main() {
             'dataJson': 'invalid-json', // This will cause an error
           };
 
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             storageMode: 'sync',
             changes: [changeData],
             srcStorageType: 'cloud',
@@ -395,7 +395,7 @@ void main() {
           };
 
           // Explicitly override save mode default behavior
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             storageMode: 'save',
             changes: [changeData],
             srcStorageType: 'local',
@@ -509,7 +509,7 @@ void main() {
             ),
           ];
 
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             changes: payload,
             storage: svcStorage,
             srcStorageType: 'local',
@@ -523,7 +523,7 @@ void main() {
             result.isSuccess,
             isTrue,
             reason:
-                'processChanges failed: ${result.errorMessage ?? "Unknown error"}',
+                'storeChanges failed: ${result.errorMessage ?? "Unknown error"}',
           );
           final summary = result.resultsSummary!;
           expect(summary.storageType, isNotEmpty);
@@ -554,7 +554,7 @@ void main() {
             data: {'rank': '1', 'nameLocal': 'Test Task'},
           );
 
-          final seedRes = await ChangeProcessingService.processChanges(
+          final seedRes = await ChangeProcessingService.storeChanges(
             changes: [seed],
             storage: svcStorage,
             srcStorageType: 'local',
@@ -567,11 +567,11 @@ void main() {
             seedRes.isSuccess,
             isTrue,
             reason:
-                'Seed processChanges failed: ${seedRes.errorMessage ?? "Unknown error"}',
+                'Seed storeChanges failed: ${seedRes.errorMessage ?? "Unknown error"}',
           );
 
           final newer = baseTime.add(const Duration(minutes: 5));
-          final resp = await ChangeProcessingService.processChanges(
+          final resp = await ChangeProcessingService.storeChanges(
             changes: [
               changePayload(
                 domainId: project,
@@ -595,7 +595,7 @@ void main() {
             resp.isSuccess,
             isTrue,
             reason:
-                'processChanges failed: ${resp.errorMessage ?? "Unknown error"}',
+                'storeChanges failed: ${resp.errorMessage ?? "Unknown error"}',
           );
           final summary = resp.resultsSummary!;
           final cu =
@@ -636,7 +636,7 @@ void main() {
               'parentProp': 'pList',
             },
           );
-          final r2 = await ChangeProcessingService.processChanges(
+          final r2 = await ChangeProcessingService.storeChanges(
             changes: [p2],
             storage: svcStorage,
             srcStorageType: 'local',
@@ -649,7 +649,7 @@ void main() {
             r2.isSuccess,
             isTrue,
             reason:
-                'r2 processChanges failed: ${r2.errorMessage ?? "Unknown error"}',
+                'r2 storeChanges failed: ${r2.errorMessage ?? "Unknown error"}',
           );
           expect(r2.resultsSummary!.storageId, equals(serverStorageId));
 
@@ -666,7 +666,7 @@ void main() {
               'parentProp': 'pList',
             },
           );
-          final r3 = await ChangeProcessingService.processChanges(
+          final r3 = await ChangeProcessingService.storeChanges(
             changes: [p3],
             storage: svcStorage,
             srcStorageType: 'cloud',
@@ -679,7 +679,7 @@ void main() {
             r3.isSuccess,
             isTrue,
             reason:
-                'r3 processChanges failed: ${r3.errorMessage ?? "Unknown error"}\nresultsSummary: ${r3.resultsSummary}',
+                'r3 storeChanges failed: ${r3.errorMessage ?? "Unknown error"}\nresultsSummary: ${r3.resultsSummary}',
           );
           expect(r3.resultsSummary!.storageId, equals(serverStorageId));
         },
@@ -727,7 +727,7 @@ void main() {
                 '{"nameLocal": "Test Project", "parentId": "root", "parentProp": "pList"}',
           };
 
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             changes: [changeData],
             storage: cloudStorage,
             storageMode: 'save',
@@ -790,7 +790,7 @@ void main() {
                 '{"nameLocal": "Sync Project", "parentId": "root", "parentProp": "pList"}',
           };
 
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             changes: [changeData],
             storage: cloudStorage,
             storageMode: 'sync',
@@ -852,7 +852,7 @@ void main() {
                 '{"nameLocal": "Original Name", "parentId": "root", "parentProp": "pList"}',
           };
 
-          await ChangeProcessingService.processChanges(
+          await ChangeProcessingService.storeChanges(
             changes: [createData],
             storage: cloudStorage,
             storageMode: 'save',
@@ -884,7 +884,7 @@ void main() {
                 '{"nameLocal": "Updated Name", "parentId": "root", "parentProp": "pList"}',
           };
 
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             changes: [updateData],
             storage: cloudStorage,
             storageMode: 'sync',
@@ -949,7 +949,7 @@ void main() {
           };
 
           final storageType = cloudStorage.getStorageType();
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             changes: [changeData],
             storage: cloudStorage,
             storageMode: 'save',
@@ -1000,7 +1000,7 @@ void main() {
           };
 
           final storageType = cloudStorage.getStorageType();
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             changes: [changeData],
             storage: cloudStorage,
             storageMode: 'save',
@@ -1050,7 +1050,7 @@ void main() {
                 '{"nameLocal": "Local Project", "parentId": "root", "parentProp": "pList"}',
           };
 
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             changes: [changeData],
             storage: localStorage,
             storageMode: 'save',
@@ -1115,7 +1115,7 @@ void main() {
                   '{"nameLocal": "Sync Local Project", "parentId": "root", "parentProp": "pList"}',
             };
 
-            final result = await ChangeProcessingService.processChanges(
+            final result = await ChangeProcessingService.storeChanges(
               changes: [changeData],
               storage: localStorage,
               storageMode: 'sync',
@@ -1191,7 +1191,7 @@ void main() {
                 '{"nameLocal": "Test Project", "parentId": "root", "parentProp": "pList"}',
           };
           final storageType = localStorage.getStorageType();
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             changes: [changeData],
             storage: localStorage,
             storageMode: 'save',
@@ -1238,7 +1238,7 @@ void main() {
           };
 
           final storageType = localStorage.getStorageType();
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             changes: [changeData],
             storage: localStorage,
             storageMode: 'save',
@@ -1289,7 +1289,7 @@ void main() {
                 '{"nameLocal": "Original Local", "parentId": "root", "parentProp": "pList"}',
           };
 
-          await ChangeProcessingService.processChanges(
+          await ChangeProcessingService.storeChanges(
             changes: [createData],
             storage: localStorage,
             storageMode: 'save',
@@ -1321,7 +1321,7 @@ void main() {
                 '{"nameLocal": "Updated from Cloud", "parentId": "root", "parentProp": "pList"}',
           };
 
-          final result = await ChangeProcessingService.processChanges(
+          final result = await ChangeProcessingService.storeChanges(
             changes: [updateData],
             storage: localStorage,
             storageMode: 'sync',
@@ -1389,7 +1389,7 @@ void main() {
                 '{"nameLocal": "Cross Storage Test", "parentId": "root", "parentProp": "pList"}',
           };
 
-          final cloudResult = await ChangeProcessingService.processChanges(
+          final cloudResult = await ChangeProcessingService.storeChanges(
             changes: [changeData],
             storage: cloudStorage,
             storageMode: 'save',
@@ -1399,7 +1399,7 @@ void main() {
             includeStateUpdates: false,
           );
 
-          final localResult = await ChangeProcessingService.processChanges(
+          final localResult = await ChangeProcessingService.storeChanges(
             changes: [changeData],
             storage: localStorage,
             storageMode: 'save',
@@ -1485,7 +1485,7 @@ void main() {
                   '{"nameLocal": "Sync Cross Test", "parentId": "root", "parentProp": "pList"}',
             };
 
-            final cloudResult = await ChangeProcessingService.processChanges(
+            final cloudResult = await ChangeProcessingService.storeChanges(
               changes: [changeData],
               storage: cloudStorage,
               storageMode: 'sync',
@@ -1495,7 +1495,7 @@ void main() {
               includeStateUpdates: false,
             );
 
-            final localResult = await ChangeProcessingService.processChanges(
+            final localResult = await ChangeProcessingService.storeChanges(
               changes: [changeData],
               storage: localStorage,
               storageMode: 'sync',

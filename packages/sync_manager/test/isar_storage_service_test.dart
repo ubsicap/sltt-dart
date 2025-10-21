@@ -124,7 +124,7 @@ void main() {
       );
 
       // Create change via ChangeProcessingService to exercise full processing
-      final procResult = await ChangeProcessingService.processChanges(
+      final procResult = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [changeData],
         srcStorageType: 'local',
@@ -138,7 +138,7 @@ void main() {
         procResult.resultsSummary!.created,
         isNotEmpty,
         reason:
-            'processChanges did not report created cids: ${procResult.resultsSummary}',
+            'storeChanges did not report created cids: ${procResult.resultsSummary}',
       );
       final createdCid = procResult.resultsSummary!.created.first;
       final createdChange = await storage.getChange(
@@ -161,7 +161,7 @@ void main() {
         createdChangeNN.storedAt,
         isNotNull,
         reason:
-            'storedAt should be set by ChangeProcessingService/processChanges',
+            'storedAt should be set by ChangeProcessingService/storeChanges',
       );
       expect(createdChangeNN.storedAt, isA<DateTime>());
       // For local source/storage we do not expect a cloudAt timestamp
@@ -205,7 +205,7 @@ void main() {
           },
         );
         // Seed via ChangeProcessingService to get the same end-to-end behavior
-        final r = await ChangeProcessingService.processChanges(
+        final r = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [changeData],
           srcStorageType: 'local',
@@ -486,7 +486,7 @@ void main() {
 
       // Create a single change via canonical processing so both a change-log
       // entry and entity-type sync state counters are created.
-      final r = await ChangeProcessingService.processChanges(
+      final r = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [
           changePayload(
@@ -538,7 +538,7 @@ void main() {
       final projectId = 'proj-stats';
 
       // Create changes with different operations via ChangeProcessingService
-      final r1 = await ChangeProcessingService.processChanges(
+      final r1 = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [
           changePayload(
@@ -560,12 +560,12 @@ void main() {
         r1.resultsSummary!.created,
         isNotEmpty,
         reason:
-            'processChanges did not report created cids: ${r1.resultsSummary}',
+            'storeChanges did not report created cids: ${r1.resultsSummary}',
       );
 
       // Seed entity-2 so the subsequent 'update' operation is classified
       // as an update rather than a create.
-      final seed2 = await ChangeProcessingService.processChanges(
+      final seed2 = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [
           changePayload(
@@ -585,7 +585,7 @@ void main() {
       expect(seed2.isSuccess, isTrue, reason: seed2.errorMessage);
       expect(seed2.resultsSummary!.created, isNotEmpty);
 
-      final r2 = await ChangeProcessingService.processChanges(
+      final r2 = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [
           changePayload(
@@ -611,10 +611,10 @@ void main() {
             r2.resultsSummary!.updated.isNotEmpty,
         isTrue,
         reason:
-            'processChanges did not report created or updated cids: ${r2.resultsSummary}',
+            'storeChanges did not report created or updated cids: ${r2.resultsSummary}',
       );
 
-      final seed3 = await ChangeProcessingService.processChanges(
+      final seed3 = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [
           changePayload(
@@ -643,7 +643,7 @@ void main() {
         data: {'deleted': true, 'parentId': 'root', 'parentProp': 'pList'},
       );
 
-      final dr = await ChangeProcessingService.processChanges(
+      final dr = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [deletePayload],
         srcStorageType: 'local',
@@ -657,7 +657,7 @@ void main() {
         dr.resultsSummary!.deleted,
         equals([deletePayload['cid']]),
         reason:
-            'processChanges did not report deleted cids: ${dr.resultsSummary}',
+            'storeChanges did not report deleted cids: ${dr.resultsSummary}',
       );
 
       final expectedCid = deletePayload['cid'] as String;
@@ -671,7 +671,7 @@ void main() {
         persisted,
         isNotNull,
         reason:
-            'Persisted delete change was not found by payload cid ($expectedCid) or by processChanges results: ${dr.resultsSummary}',
+            'Persisted delete change was not found by payload cid ($expectedCid) or by storeChanges results: ${dr.resultsSummary}',
       );
       expect(persisted!.operation, equals('delete'));
 
@@ -735,7 +735,7 @@ void main() {
           data: {'deleted': true},
         ),
       ];
-      final r = await ChangeProcessingService.processChanges(
+      final r = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: payload,
         srcStorageType: 'local',
@@ -748,20 +748,17 @@ void main() {
       expect(
         r.resultsSummary?.created.length,
         equals(3),
-        reason:
-            'processChanges did not report created cids: ${r.resultsSummary}',
+        reason: 'storeChanges did not report created cids: ${r.resultsSummary}',
       );
       expect(
         r.resultsSummary?.updated.length,
         equals(1),
-        reason:
-            'processChanges did not report updated cids: ${r.resultsSummary}',
+        reason: 'storeChanges did not report updated cids: ${r.resultsSummary}',
       );
       expect(
         r.resultsSummary?.deleted.length,
         equals(1),
-        reason:
-            'processChanges did not report deleted cids: ${r.resultsSummary}',
+        reason: 'storeChanges did not report deleted cids: ${r.resultsSummary}',
       );
       final statsDyn = await storage.getStateStats(
         domainType: 'project',
@@ -820,7 +817,7 @@ void main() {
           entityId: 'entity-$i',
           changeAt: baseTime.add(Duration(minutes: i)),
         );
-        final r = await ChangeProcessingService.processChanges(
+        final r = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [payload],
           srcStorageType: 'local',
@@ -1131,7 +1128,7 @@ void main() {
           'parentProp': 'pList',
         },
       );
-      final r = await ChangeProcessingService.processChanges(
+      final r = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [changeData],
         srcStorageType: 'local',
@@ -1170,7 +1167,7 @@ void main() {
         operation: 'create',
       );
 
-      final r = await ChangeProcessingService.processChanges(
+      final r = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [changeData],
         srcStorageType: 'local',
@@ -1201,7 +1198,7 @@ void main() {
         operation: 'create',
       );
 
-      final r = await ChangeProcessingService.processChanges(
+      final r = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [changeData],
         srcStorageType: 'local',
@@ -1243,7 +1240,7 @@ void main() {
         },
         operation: 'create',
       );
-      final r1 = await ChangeProcessingService.processChanges(
+      final r1 = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [createPayload],
         srcStorageType: 'local',
@@ -1264,7 +1261,7 @@ void main() {
         operation: 'delete',
         addDefaultParentId: false,
       );
-      final r2 = await ChangeProcessingService.processChanges(
+      final r2 = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [deletePayload],
         srcStorageType: 'local',
@@ -1306,7 +1303,7 @@ void main() {
         operation: 'create',
       );
 
-      final r3 = await ChangeProcessingService.processChanges(
+      final r3 = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [changeData],
         srcStorageType: 'local',
@@ -1380,7 +1377,7 @@ void main() {
         operation: 'create',
       );
 
-      final seedRes = await ChangeProcessingService.processChanges(
+      final seedRes = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [payload],
         srcStorageType: 'local',

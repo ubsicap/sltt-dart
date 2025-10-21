@@ -59,7 +59,7 @@ void main() {
       SlttLogger.logger.info(
         'Processing payload with cid: ${payload['cid']}, entityId: ${payload['entityId']}',
       );
-      final r = await ChangeProcessingService.processChanges(
+      final r = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [payload],
         srcStorageType: 'local',
@@ -105,7 +105,7 @@ void main() {
       }),
     };
 
-    final r = await ChangeProcessingService.processChanges(
+    final r = await ChangeProcessingService.storeChanges(
       storageMode: 'save',
       changes: [payload],
       srcStorageType: 'local',
@@ -213,7 +213,7 @@ void main() {
         }),
       };
 
-      final r = await ChangeProcessingService.processChanges(
+      final r = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [payload],
         srcStorageType: 'local',
@@ -265,7 +265,7 @@ void main() {
       'operationInfoJson': '{}',
     };
 
-    final res = await ChangeProcessingService.processChanges(
+    final res = await ChangeProcessingService.storeChanges(
       storageMode: 'save',
       changes: [payload],
       srcStorageType: 'cloud',
@@ -304,7 +304,7 @@ void main() {
       'operationInfoJson': '{}',
     };
 
-    final res = await ChangeProcessingService.processChanges(
+    final res = await ChangeProcessingService.storeChanges(
       storageMode: 'sync',
       changes: [payload],
       srcStorageType: 'cloud',
@@ -342,7 +342,7 @@ void main() {
       'operationInfoJson': '{}',
     };
 
-    final res = await ChangeProcessingService.processChanges(
+    final res = await ChangeProcessingService.storeChanges(
       storageMode: 'sync',
       changes: [payload],
       srcStorageType: 'cloud',
@@ -381,7 +381,7 @@ void main() {
       operationInfoJson: '{}',
     );
 
-    final res = await ChangeProcessingService.processChanges(
+    final res = await ChangeProcessingService.storeChanges(
       storageMode: 'sync',
       changes: [change.toJson()],
       srcStorageType: 'cloud',

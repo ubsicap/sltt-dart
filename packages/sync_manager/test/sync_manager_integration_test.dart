@@ -134,7 +134,7 @@ void main() {
         operationInfoJson: '{}',
       );
 
-      final cloudSeedResult = await ChangeProcessingService.processChanges(
+      final cloudSeedResult = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [cloudSeedChange.toJson()],
         srcStorageType: srcStorageType,
@@ -217,7 +217,7 @@ void main() {
         operationInfoJson: '{}',
       );
 
-      final seedResult = await ChangeProcessingService.processChanges(
+      final seedResult = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
         changes: [change.toJson()],
         srcStorageType: srcStorageType,
@@ -441,7 +441,7 @@ void main() {
           operationInfoJson: '{}',
         );
 
-        final cloudSeed = await ChangeProcessingService.processChanges(
+        final cloudSeed = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [cloudChange.toJson()],
           srcStorageType: srcStorageType,
@@ -559,7 +559,7 @@ void main() {
           unknownJson: '{}',
           operationInfoJson: '{}',
         );
-        final localSeed = await ChangeProcessingService.processChanges(
+        final localSeed = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [localChange.toJson()],
           srcStorageType: srcStorageType,
@@ -725,7 +725,7 @@ void main() {
           operationInfoJson: '{}',
         );
 
-        final localSeed = await ChangeProcessingService.processChanges(
+        final localSeed = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [localChange.toJson()],
           srcStorageType: srcStorageType,
@@ -789,7 +789,7 @@ void main() {
           operationInfoJson: '{}',
         );
 
-        final cloudSeed = await ChangeProcessingService.processChanges(
+        final cloudSeed = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [cloudChange.toJson()],
           srcStorageType: srcStorageType,

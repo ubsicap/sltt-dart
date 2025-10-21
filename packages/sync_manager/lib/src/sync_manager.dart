@@ -329,7 +329,7 @@ class SyncManager {
             projectCursorChanges['$projectId/$cursor'] = incomingChanges;
 
             // Apply changes directly to state storage
-            final results = await ChangeProcessingService.processChanges(
+            final results = await ChangeProcessingService.storeChanges(
               storageMode: 'sync',
               changes: incomingChanges,
               srcStorageType: srcStorageType,

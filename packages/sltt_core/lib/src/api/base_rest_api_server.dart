@@ -1183,7 +1183,7 @@ abstract class BaseRestApiServer {
       }
 
       // Use the change processing service
-      final result = await ChangeProcessingService.processChanges(
+      final result = await ChangeProcessingService.storeChanges(
         storageMode: storageMode,
         returnErrorIfInResultsSummary: storageMode == 'save',
         changes: changes,

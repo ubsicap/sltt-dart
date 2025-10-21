@@ -104,8 +104,8 @@ class ChangeProcessingService {
   /// 380KB (~400KB) Maximum payload size for DynamoDB/APIGateway (in bytes)
   static const int dynamodbPayloadLimit = 380000;
 
-  /// Process a list of changes and return a summary of results
-  static Future<ChangeProcessingResult> processChanges({
+  /// Store a list of changes and return a summary of results
+  static Future<ChangeProcessingResult> storeChanges({
     /// `save` or `sync`
     required String storageMode,
 
@@ -130,7 +130,7 @@ class ChangeProcessingService {
   }) async {
     final storageType = storage.getStorageType();
     SlttLogger.logger.info(
-      '[ChangeProcessingService] Starting processChanges with storageType=$storageType, storageMode=$storageMode, srcStorageType=$srcStorageType, srcStorageId=$srcStorageId, changesCount=${changes.length}, includeChangeUpdates=$includeChangeUpdates, includeStateUpdates=$includeStateUpdates',
+      '[ChangeProcessingService] Starting storeChanges with storageType=$storageType, storageMode=$storageMode, srcStorageType=$srcStorageType, srcStorageId=$srcStorageId, changesCount=${changes.length}, includeChangeUpdates=$includeChangeUpdates, includeStateUpdates=$includeStateUpdates',
     );
     try {
       if (changes.isEmpty) {

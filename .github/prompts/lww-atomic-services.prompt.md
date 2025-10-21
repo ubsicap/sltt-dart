@@ -2,7 +2,7 @@ PROMPT1: remove support for `none` in `srcStorageType`. Always expect `cloud` or
 
 PROMPT2:
 
-add to POST api requestBody, api/help docs, processChanges api and related tests, to increase declarative context:
+add to POST api requestBody, api/help docs, storeChanges api and related tests, to increase declarative context:
 - `required String storageMode`: expect value to be `save` or `sync` where `sync` is for transferring already stored change log entries between storages, and `save` is for changes that have not yet been stored.
 - during `sync` we expect all incoming change log entries to have non-empty storageIds, else return error. during sync, change log entry data is preserved independent of current state.
 - during `save` we expect all incoming change log entries to have empty storageIds, else return error.  during save, change log entry data is a diff compared to current state.
