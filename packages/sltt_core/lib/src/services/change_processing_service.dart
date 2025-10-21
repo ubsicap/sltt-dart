@@ -167,36 +167,12 @@ class ChangeProcessingService {
 
       // Validate all changes before processing any changes
       final invalidStorageIds = <int>[];
-      final List<int> invalidOperations = [];
       final List<int> invalidStateChanged = [];
       final List<int> invalidSeqProvided = [];
       final List<int> invalidCloudAt = [];
       for (int i = 0; i < changes.length; i++) {
         final changeData = changes[i];
         try {
-          final operation = changeData['operation'];
-          final validIncomingSaveOperations = [
-            kChangeOperationNotYetDefined,
-            kChangeOperationCreate,
-            kChangeOperationUpdate,
-            kChangeOperationDelete,
-          ];
-          final validIncomingSyncOperations = [
-            kChangeOperationCreate,
-            kChangeOperationUpdate,
-            kChangeOperationDelete,
-            kChangeOperationNoOp,
-          ];
-          if (storageMode == 'save' &&
-              !validIncomingSaveOperations.contains(operation)) {
-            invalidOperations.add(i);
-            continue;
-          }
-          if (storageMode == 'sync' &&
-              !validIncomingSyncOperations.contains(operation)) {
-            invalidOperations.add(i);
-            continue;
-          }
           final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
             changeData,
           );
@@ -258,13 +234,6 @@ class ChangeProcessingService {
         return ChangeProcessingResult(
           errorMessage:
               'Changes [${invalidStorageIds.join(', ')}] in $storageMode mode must have $expectedState storageId',
-          errorCode: 400,
-        );
-      }
-      if (invalidOperations.isNotEmpty) {
-        return ChangeProcessingResult(
-          errorMessage:
-              'Changes [${invalidOperations.join(', ')}] have invalid operations for $storageMode mode',
           errorCode: 400,
         );
       }
