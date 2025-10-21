@@ -1,8 +1,7 @@
 import 'dart:convert';
 
-import 'package:sltt_core/src/logging.dart';
+import 'package:sltt_core/sltt_core.dart';
 import 'package:sltt_core/src/models/constants/change_operations.dart';
-import 'package:sltt_core/src/services/change_entity_state_service.dart';
 import 'package:test/test.dart';
 
 import 'test_models.dart';
@@ -476,167 +475,69 @@ void main() {
 
     group('calculateOperation', () {
       test('should calculate create operation for new entity', () {
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity2',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: baseTime.add(const Duration(minutes: 1)),
-          cid: 'cid2',
-          storageId: 'local',
-          changeBy: 'user1',
-          dataJson: jsonEncode({'rank': '1'}),
-          operation: 'create',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
+        final operation = calculateOperation(
+          entityState: null,
+          fieldUpdates: BaseDataFields(
+            parentId: 'parent1',
+            parentProp: 'pList',
+            rank: '1',
+          ).toJson(),
+          noOpFields: [],
+          outdatedBys: [],
         );
-
-        final operation = calculateOperation(changeLogEntry, null, {}, [], []);
-
         expect(operation, equals('create'));
       });
 
       test('should calculate update operation for existing entity', () {
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity1',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: baseTime.add(const Duration(minutes: 1)),
-          cid: 'cid2',
-          storageId: 'local',
-          changeBy: 'user1',
-          dataJson: jsonEncode({'rank': '2'}),
-          operation: 'update',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
-
         final operation = calculateOperation(
-          changeLogEntry,
-          entityState,
-          {},
-          [],
-          [],
+          entityState: entityState,
+          fieldUpdates: {'rank': '2'},
+          noOpFields: [],
+          outdatedBys: [],
         );
 
         expect(operation, equals('update'));
       });
 
       test('should calculate delete operation', () {
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity1',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: baseTime.add(const Duration(minutes: 1)),
-          cid: 'cid2',
-          storageId: 'local',
-          changeBy: 'user1',
-          dataJson: jsonEncode({'deleted': true}),
-          operation: 'delete',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
-
         final operation = calculateOperation(
-          changeLogEntry,
-          entityState,
-          {},
-          [],
-          [],
+          entityState: entityState,
+          fieldUpdates: {'deleted': true},
+          noOpFields: [],
+          outdatedBys: [],
         );
 
         expect(operation, equals('delete'));
       });
 
       test('should calculate noOp for no changes', () {
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity1',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: baseTime.add(const Duration(minutes: 1)),
-          cid: 'cid2',
-          storageId: 'local',
-          changeBy: 'user1',
-          dataJson: jsonEncode({'rank': '1'}), // Same as current
-          operation: 'update',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: false,
-          unknownJson: jsonEncode({}),
-        );
-
         final operation = calculateOperation(
-          changeLogEntry,
-          entityState,
-          {},
-          [],
-          [],
+          entityState: entityState,
+          fieldUpdates: {},
+          noOpFields: ['rank'],
+          outdatedBys: [],
         );
 
         expect(operation, equals('noOp'));
       });
 
       test('should calculate outdated for older changes', () {
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity1',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: baseTime.subtract(const Duration(minutes: 1)), // Older
-          cid: 'cid2',
-          storageId: 'local',
-          changeBy: 'user1',
-          dataJson: jsonEncode({'rank': '2'}),
-          operation: 'update',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
-
         final operation = calculateOperation(
-          changeLogEntry,
-          entityState,
-          {},
-          [],
-          [],
+          entityState: entityState,
+          fieldUpdates: {},
+          noOpFields: [],
+          outdatedBys: ['rank'],
         );
 
         expect(operation, equals('outdated'));
       });
 
       test('should calculate pUpdate for partial updates', () {
-        final tweenTime = baseTime.add(const Duration(minutes: 30));
-
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity1',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: tweenTime,
-          cid: 'cid2',
-          storageId: 'local',
-          changeBy: 'user1',
-          dataJson: jsonEncode({
-            'rank': '2', // Changed older date
-            'nameLocal': 'Test Task (should be outdated)',
-          }),
-          operation: 'update',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
-
         final operation = calculateOperation(
-          changeLogEntry,
-          entityState,
-          {'rank': '2'},
-          [],
-          ['nameLocal'],
+          entityState: entityState,
+          fieldUpdates: {'rank': '2'},
+          noOpFields: [],
+          outdatedBys: ['nameLocal'],
         );
 
         expect(operation, equals('pUpdate'));

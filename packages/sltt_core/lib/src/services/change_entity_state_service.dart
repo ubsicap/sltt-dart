@@ -97,11 +97,14 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     cs: cs,
   );
 
-  final changeDataUpdates =
-      (updates['changeDataUpdates'] as Map<String, dynamic>?) ??
-      <String, dynamic>{};
-  final stateUpdates =
-      (updates['stateUpdates'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+  final changeDataUpdates = {
+    ...(updates['changeDataUpdates'] as Map<String, dynamic>?) ??
+        <String, dynamic>{},
+  };
+  final stateUpdates = {
+    ...(updates['stateUpdates'] as Map<String, dynamic>?) ??
+        <String, dynamic>{},
+  };
 
   // remove any null (field-detection) fields from stateUpdates
   stateUpdates.removeWhere((key, value) => value == null);
@@ -301,86 +304,33 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult({
 /// calculateOperation(changeLogEntry: ChangeLogEntry, entityState: BaseEntityState):
 /// returns { operation: string } 'noOp', 'outdated', 'create', 'update', 'pUpdate', or 'delete'
 /// Determines the operation type based on the change log entry and current entity state.
-String calculateOperation(
-  BaseChangeLogEntry changeLogEntry,
+String calculateOperation({
   BaseEntityState? entityState,
-  Map<String, dynamic> fieldChanges, // Map of field changes
-  List<String> noOpFields, // List of fields that are no-ops
-  List<String> outdatedBys, // List of fields that are outdated
-) {
-  final changeData = changeLogEntry.getData();
-
+  required Map<String, dynamic> fieldUpdates, // Map of field updates
+  required List<String> noOpFields, // List of fields that are no-ops
+  required List<String> outdatedBys, // List of fields that are outdated
+}) {
   // If the base entity state is null, we assume it's a create operation
   if (entityState == null) {
     return kChangeOperationCreate;
   }
 
-  // If the operation is 'delete', we return 'delete'
-  if (changeData['deleted'] == true) {
+  if (fieldUpdates.isEmpty) {
+    if (outdatedBys.isNotEmpty) {
+      return kChangeOperationOutdated;
+    } else {
+      return kChangeOperationNoOp;
+    }
+  }
+
+  // If the operation is 'delete', data includes 'deleted' 'true'
+  if (fieldUpdates['deleted'] == true) {
     return kChangeOperationDelete;
   }
 
-  // If there are no pre-computed field changes, analyze the change log entry directly
-  if (fieldChanges.isEmpty && outdatedBys.isEmpty) {
-    // Check if the change log entry has actual data changes
-    final hasDataChanges = changeData.keys
-        .where((key) => !key.startsWith('_') && key != 'deleted')
-        .isNotEmpty;
-
-    if (!hasDataChanges) {
-      return kChangeOperationNoOp;
-    }
-
-    final entityJson = entityState.toJson();
-
-    // Check if the values are actually different
-    bool hasActualChanges = false;
-    bool isOutdated = false;
-
-    for (final key in changeData.keys) {
-      if (key.startsWith('_') || key == 'deleted') continue;
-
-      final entityFieldKey =
-          'data_$key'; // Change log has 'rank', entity has 'data_rank'
-      final entityValue = entityJson[entityFieldKey];
-      final changeValue = changeData[key];
-
-      // Check if value is different
-      if (stableStringify(entityValue) != stableStringify(changeValue)) {
-        hasActualChanges = true;
-
-        // Check if this change is outdated based on field timestamp
-        final fieldChangeAtData = entityJson['${entityFieldKey}_changeAt_'];
-        final fieldChangeAt = fieldChangeAtData is DateTime
-            ? fieldChangeAtData
-            : (fieldChangeAtData is String
-                  ? DateTime.tryParse(fieldChangeAtData)
-                  : null);
-        if (fieldChangeAt != null &&
-            !changeLogEntry.changeAt.isAfter(fieldChangeAt)) {
-          isOutdated = true;
-        }
-      }
-    }
-
-    if (!hasActualChanges) {
-      return kChangeOperationNoOp;
-    }
-
-    if (isOutdated) {
-      return kChangeOperationOutdated;
-    }
-
-    return kChangeOperationUpdate;
-  }
-
-  // If there are outdated fields, we return 'outdated'
+  // If there are outdated fields, we return 'pUpdate'
   if (outdatedBys.isNotEmpty) {
-    if (fieldChanges.isNotEmpty) {
-      return kChangeOperationPartialUpdate;
-    } else {
-      return kChangeOperationOutdated;
-    }
+    return kChangeOperationPartialUpdate;
   }
 
   // Otherwise, we assume it's an update operation
@@ -567,86 +517,87 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys({
     }
   }
 
+  final stateUpdates = {
+    if (entityState == null) ...{
+      'entityId': changeLogEntry.entityId,
+      'domainType': changeLogEntry.domainType,
+      'entityType': changeLogEntry.entityType.toString().split('.').last,
+      'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
+      'change_domainId_orig_': changeLogEntry.domainId,
+      'change_cid_orig_': changeLogEntry.cid,
+      'change_changeBy_orig_': changeLogEntry.changeBy,
+      'change_changeAt_orig_': changeLogEntry.changeAt
+          .toUtc()
+          .toIso8601String(),
+      'change_storedAt_orig_': computedStoredAt,
+    },
+    // latest metadata
+    // If there are any field updates, include the cloud/stored timestamps so
+    // callers can persist change_storedAt even when the incoming change is
+    // not newer than the entity's overall latest change. Only promote
+    // the latest-level change metadata when the incoming change is newer
+    // than the existing latest (isChangeNewerThanLatest).
+    if (fieldUpdates.isNotEmpty) ...{
+      if (isChangeNewerThanLatest) ...{
+        'domainType': changeLogEntry.domainType,
+        'change_domainId': changeLogEntry.domainId,
+        'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
+        'change_cid': changeLogEntry.cid,
+        'change_changeBy': changeLogEntry.changeBy,
+        'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
+      },
+      // Always set cloudAt/storedAt when applying field updates so downstream
+      // callers can persist change_storedAt even for partial-field updates.
+      'change_cloudAt': computedCloudAt,
+      'change_storedAt': computedStoredAt,
+    },
+    // add optional state fields for field-drift detection, remove later
+    ...optionalStateFields.map((key, value) => MapEntry(key, value)),
+    // add optional data fields for field-drift detection, remove later
+    ...optionalDataFields.map((key, value) => MapEntry('data_$key', value)),
+    // for each data field, add _meta_ fields for field-drift detection, remove later
+    ...optionalDataMetaFields,
+    // Transform field updates to use data_ prefix for entity state
+    // update data_ field values
+    ...fieldUpdates.map((key, value) => MapEntry('data_$key', value)),
+    // update data_ field-specific metadata
+    ...fieldUpdates.map(
+      (key, value) => MapEntry(
+        'data_${key}_changeAt_',
+        changeLogEntry.changeAt.toIso8601String(),
+      ),
+    ),
+    ...fieldUpdates.map(
+      (key, value) => MapEntry('data_${key}_cid_', changeLogEntry.cid),
+    ),
+    ...fieldUpdates.map(
+      (key, value) =>
+          MapEntry('data_${key}_changeBy_', changeLogEntry.changeBy),
+    ),
+    ...fieldUpdates.map(
+      (key, value) => MapEntry('data_${key}_cloudAt_', computedCloudAt),
+    ),
+    ...fieldUpdates.map(
+      (key, value) =>
+          MapEntry('data_${key}_dataSchemaRev_', changeLogEntry.dataSchemaRev),
+    ),
+  };
+
+  final operation = calculateOperation(
+    entityState: entityState,
+    fieldUpdates: fieldUpdates,
+    noOpFields: noOpFields,
+    outdatedBys: outdatedBys,
+  );
+
   return {
     // expose the computed values to callers
     'cloudAt': computedCloudAt,
     'storedAt': computedStoredAt,
-    'stateUpdates': {
-      if (entityState == null) ...{
-        'entityId': changeLogEntry.entityId,
-        'domainType': changeLogEntry.domainType,
-        'entityType': changeLogEntry.entityType.toString().split('.').last,
-        'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
-        'change_domainId_orig_': changeLogEntry.domainId,
-        'change_cid_orig_': changeLogEntry.cid,
-        'change_changeBy_orig_': changeLogEntry.changeBy,
-        'change_changeAt_orig_': changeLogEntry.changeAt
-            .toUtc()
-            .toIso8601String(),
-        'change_storedAt_orig_': computedStoredAt,
-      },
-      // latest metadata
-      // If there are any field updates, include the cloud/stored timestamps so
-      // callers can persist change_storedAt even when the incoming change is
-      // not newer than the entity's overall latest change. Only promote
-      // the latest-level change metadata when the incoming change is newer
-      // than the existing latest (isChangeNewerThanLatest).
-      if (fieldUpdates.isNotEmpty) ...{
-        if (isChangeNewerThanLatest) ...{
-          'domainType': changeLogEntry.domainType,
-          'change_domainId': changeLogEntry.domainId,
-          'change_changeAt': changeLogEntry.changeAt.toIso8601String(),
-          'change_cid': changeLogEntry.cid,
-          'change_changeBy': changeLogEntry.changeBy,
-          'change_dataSchemaRev': changeLogEntry.dataSchemaRev,
-        },
-        // Always set cloudAt/storedAt when applying field updates so downstream
-        // callers can persist change_storedAt even for partial-field updates.
-        'change_cloudAt': computedCloudAt,
-        'change_storedAt': computedStoredAt,
-      },
-      // add optional state fields for field-drift detection, remove later
-      ...optionalStateFields.map((key, value) => MapEntry(key, value)),
-      // add optional data fields for field-drift detection, remove later
-      ...optionalDataFields.map((key, value) => MapEntry('data_$key', value)),
-      // for each data field, add _meta_ fields for field-drift detection, remove later
-      ...optionalDataMetaFields,
-      // Transform field updates to use data_ prefix for entity state
-      // update data_ field values
-      ...fieldUpdates.map((key, value) => MapEntry('data_$key', value)),
-      // update data_ field-specific metadata
-      ...fieldUpdates.map(
-        (key, value) => MapEntry(
-          'data_${key}_changeAt_',
-          changeLogEntry.changeAt.toIso8601String(),
-        ),
-      ),
-      ...fieldUpdates.map(
-        (key, value) => MapEntry('data_${key}_cid_', changeLogEntry.cid),
-      ),
-      ...fieldUpdates.map(
-        (key, value) =>
-            MapEntry('data_${key}_changeBy_', changeLogEntry.changeBy),
-      ),
-      ...fieldUpdates.map(
-        (key, value) => MapEntry('data_${key}_cloudAt_', computedCloudAt),
-      ),
-      ...fieldUpdates.map(
-        (key, value) => MapEntry(
-          'data_${key}_dataSchemaRev_',
-          changeLogEntry.dataSchemaRev,
-        ),
-      ),
-    },
+    'stateUpdates': stateUpdates,
     'changeDataUpdates': fieldUpdates,
     'outdatedBys': outdatedBys,
-    'operation': calculateOperation(
-      changeLogEntry,
-      entityState,
-      fieldChanges,
-      noOpFields,
-      outdatedBys,
-    ),
+    'operation': operation,
   };
 }
 
