@@ -114,75 +114,6 @@ void main() {
         reason: 'Cloud server address should be available after startServer',
       );
       cloudBaseUrl = cloudAddress!;
-
-      // Seed the cloud storage with a test project __test_2 so downsync has data
-      final cloudSeedChange = IsarChangeLogEntry(
-        changeAt: DateTime.now(),
-        cid: generateCid(entityType: EntityType.project, userId: 'test'),
-        domainType: 'project',
-        domainId: '__test_2',
-        entityType: 'project',
-        operation: 'create',
-        entityId: '__test_2',
-        dataJson: stableStringify(
-          BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
-        ),
-        changeBy: 'test',
-        stateChanged: false,
-        storageId: '',
-        unknownJson: '{}',
-        operationInfoJson: '{}',
-      );
-
-      final cloudSeedResult = await ChangeProcessingService.storeChanges(
-        storageMode: 'save',
-        changes: [cloudSeedChange.toJson()],
-        srcStorageType: srcStorageType,
-        srcStorageId: srcStorageId,
-        storage: cloudStorage,
-        includeChangeUpdates: true,
-        includeStateUpdates: true,
-      );
-      expect(
-        cloudSeedResult.isSuccess,
-        isTrue,
-        reason:
-            'Seeding cloud storage with __test_2 should succeed: ${cloudSeedResult.errorMessage}',
-      );
-
-      // Verify storedAt was set on the persisted state. If the storage
-      // implementation also sets a cloudAt timestamp we expect storedAt == cloudAt.
-      final cloudSeedJson = cloudSeedResult.resultsSummary?.toJson();
-      if (cloudSeedJson != null) {
-        final stateUpdates = cloudSeedJson['stateUpdates'] as List?;
-        if (stateUpdates != null && stateUpdates.isNotEmpty) {
-          final state = stateUpdates.first['state'] as Map<String, dynamic>?;
-          expect(state, isNotNull);
-          expect(
-            state!.containsKey('change_storedAt'),
-            isTrue,
-            reason:
-                'cloud seed state must include change_storedAt: ${const JsonEncoder.withIndent(' ').convert(cloudSeedJson)}',
-          );
-          final storedAt = state['change_storedAt'] as String?;
-          expect(storedAt, isNotNull);
-          // If the changeUpdates reported a cloudAt, ensure storedAt equals it.
-          final changeUpdates = cloudSeedJson['changeUpdates'] as List?;
-          if (changeUpdates != null && changeUpdates.isNotEmpty) {
-            final cloudAt =
-                (changeUpdates.first['updates']
-                        as Map<String, dynamic>?)?['cloudAt']
-                    as String?;
-            if (cloudAt != null) {
-              expect(
-                storedAt,
-                equals(cloudAt),
-                reason: 'cloud storedAt should equal cloudAt',
-              );
-            }
-          }
-        }
-      }
     });
 
     tearDownAll(() async {
@@ -343,6 +274,7 @@ void main() {
     });
 
     test('downsync: cloud changes are applied to local', () async {
+      await seedCloudChange(srcStorageType, srcStorageId);
       final syncManager = SyncManager.instance;
       await syncManager.initialize();
       syncManager.configureCloudUrl(cloudBaseUrl);
@@ -975,3 +907,75 @@ void main() {
 /// LocalStorageService. This avoids pulling the full LocalStorageService
 /// interface into the test.
 // Test adapter removed: tests now use the real LocalStorageService.instance
+
+Future<void> seedCloudChange(String srcStorageType, String srcStorageId) async {
+  final cloudStorage = CloudStorageService.instance;
+  // Seed the cloud storage with a test project __test_2 so downsync has data
+  final cloudSeedChange = IsarChangeLogEntry(
+    changeAt: DateTime.now(),
+    cid: generateCid(entityType: EntityType.project, userId: 'test'),
+    domainType: 'project',
+    domainId: '__test_2',
+    entityType: 'project',
+    operation: 'create',
+    entityId: '__test_2',
+    dataJson: stableStringify(
+      BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
+    ),
+    changeBy: 'test',
+    stateChanged: false,
+    storageId: '',
+    unknownJson: '{}',
+    operationInfoJson: '{}',
+  );
+
+  final cloudSeedResult = await ChangeProcessingService.storeChanges(
+    storageMode: 'save',
+    changes: [cloudSeedChange.toJson()],
+    srcStorageType: srcStorageType,
+    srcStorageId: srcStorageId,
+    storage: cloudStorage,
+    includeChangeUpdates: true,
+    includeStateUpdates: true,
+  );
+  expect(
+    cloudSeedResult.isSuccess,
+    isTrue,
+    reason:
+        'Seeding cloud storage with __test_2 should succeed: ${cloudSeedResult.errorMessage}',
+  );
+
+  // Verify storedAt was set on the persisted state. If the storage
+  // implementation also sets a cloudAt timestamp we expect storedAt == cloudAt.
+  final cloudSeedJson = cloudSeedResult.resultsSummary?.toJson();
+  if (cloudSeedJson != null) {
+    final stateUpdates = cloudSeedJson['stateUpdates'] as List?;
+    if (stateUpdates != null && stateUpdates.isNotEmpty) {
+      final state = stateUpdates.first['state'] as Map<String, dynamic>?;
+      expect(state, isNotNull);
+      expect(
+        state!.containsKey('change_storedAt'),
+        isTrue,
+        reason:
+            'cloud seed state must include change_storedAt: ${const JsonEncoder.withIndent(' ').convert(cloudSeedJson)}',
+      );
+      final storedAt = state['change_storedAt'] as String?;
+      expect(storedAt, isNotNull);
+      // If the changeUpdates reported a cloudAt, ensure storedAt equals it.
+      final changeUpdates = cloudSeedJson['changeUpdates'] as List?;
+      if (changeUpdates != null && changeUpdates.isNotEmpty) {
+        final cloudAt =
+            (changeUpdates.first['updates']
+                    as Map<String, dynamic>?)?['cloudAt']
+                as String?;
+        if (cloudAt != null) {
+          expect(
+            storedAt,
+            equals(cloudAt),
+            reason: 'cloud storedAt should equal cloudAt',
+          );
+        }
+      }
+    }
+  }
+}
