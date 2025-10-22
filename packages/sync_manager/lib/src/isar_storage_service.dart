@@ -551,8 +551,7 @@ class IsarStorageService extends BaseStorageService {
         totalDeletes++;
       }
 
-      map['total'] =
-          (map['creates'] ?? 0) + (map['updates'] ?? 0) + (map['deletes'] ?? 0);
+      map['total'] += 1;
 
       // latest per-type changeAt/seq
       final ca = c.changeAt.toUtc();
@@ -590,7 +589,10 @@ class IsarStorageService extends BaseStorageService {
       creates: totalCreates,
       updates: totalUpdates,
       deletes: totalDeletes,
-      total: totalCreates + totalUpdates + totalDeletes,
+      total: perType.values.fold<int>(
+        0,
+        (prev, element) => prev + (element['total'] as int? ?? 0),
+      ),
       latestChangeAt:
           mostRecentChangeAt?.toIso8601String() ?? '1970-01-01T00:00:00Z',
       latestSeq: mostRecentSeq,

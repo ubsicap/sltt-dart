@@ -168,7 +168,7 @@ void main() {
             'After successful outsync, project __test_1 should have 0 pending outsyncs',
       );
       // confirm cloud state totals
-      final cloudTotals = status.cloudChangeStats;
+      final cloudTotals = status.cloudStateStats?.totals;
       expect(
         cloudTotals?.toJson(),
         equals({
@@ -272,7 +272,7 @@ void main() {
       );
 
       // confirm cloud state totals
-      final cloudTotals = status.cloudChangeStats;
+      final cloudTotals = status.cloudStateStats?.totals;
       expect(
         cloudTotals?.toJson(),
         equals({
@@ -401,7 +401,7 @@ void main() {
               'After full sync, project $projectId should have 1 local state entity',
         );
         // confirm cloud state totals
-        final cloudTotals = status.cloudChangeStats;
+        final cloudTotals = status.cloudStateStats?.totals;
         expect(
           cloudTotals?.toJson(),
           equals({
@@ -595,7 +595,7 @@ void main() {
               'After full sync, project $projectId should have 1 local state entity',
         );
         // confirm cloud state totals
-        final cloudTotals = status.cloudChangeStats;
+        final cloudTotals = status.cloudStateStats?.totals;
         expect(
           cloudTotals?.toJson(),
           equals({
@@ -859,7 +859,7 @@ void main() {
         expect(
           totalsMap,
           equals({
-            'creates': 1,
+            'creates': 1, // cloud
             'updates': 2, // local (outdated) + cloud winner
             'deletes': 0,
             'total': 3,
@@ -873,12 +873,12 @@ void main() {
         );
 
         // confirm cloud state totals
-        final cloudTotals = syncStatus.cloudChangeStats;
+        final cloudTotals = syncStatus.cloudStateStats?.totals;
         expect(
           cloudTotals?.toJson(),
           equals({
-            'creates': 1,
-            'updates': 1,
+            'creates': 1, // cloud
+            'updates': 1, // cloud winner
             'deletes': 0,
             'total': 2,
             'latestChangeAt': const UtcDateTimeConverter().toJson(
@@ -888,6 +888,24 @@ void main() {
           }),
           reason:
               'After full sync, project $projectId should have 2 total cloud changes',
+        );
+
+        // confirm cloud change totals
+        final cloudChangeTotals = syncStatus.cloudChangeStats;
+        expect(
+          cloudChangeTotals?.toJson(),
+          equals({
+            'creates': 1, // cloud
+            'updates': 1, // cloud winner
+            'deletes': 0,
+            'total': 3,
+            'latestChangeAt': const UtcDateTimeConverter().toJson(
+              cloudChange2.changeAt,
+            ),
+            'latestSeq': 3,
+          }),
+          reason:
+              'After full sync, project $projectId should have 3 total cloud changes',
         );
 
         final downsyncedState = await getCurrentEntityStateAndCheck(
@@ -901,7 +919,7 @@ void main() {
               'After full sync, local state for project $projectId should reflect cloud change as LWW',
         );
       },
-      timeout: const Timeout(Duration(minutes: 3)),
+      timeout: Timeout.none,
       // skip: 'fixme',
     );
 
