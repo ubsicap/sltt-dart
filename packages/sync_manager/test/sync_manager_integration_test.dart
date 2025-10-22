@@ -917,7 +917,7 @@ void main() {
 
         // Save first cloud change that contains 'nameLocal' field that local can overwrite
         // next cloud change will update 'rank', which will be later than local rank change
-        final cloudChange1 = await saveCloudChange(
+        await saveCloudChange(
           srcStorageType: srcStorageType,
           srcStorageId: srcStorageId,
           domainId: projectId,
