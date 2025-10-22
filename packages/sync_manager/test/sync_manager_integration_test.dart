@@ -249,6 +249,8 @@ void main() {
         reason:
             'Local storage should contain the cloud test project __test_2 after downsync',
       );
+
+      await getCurrentEntityStateAndCheck(local, '__test_2');
     });
 
     test(
@@ -297,7 +299,7 @@ void main() {
           localSeed.isSuccess,
           isTrue,
           reason:
-              'Seeding local storage for full sync should succeed: ${localSeed.errorMessage}',
+              'Saving local storage for full sync should succeed: ${localSeed.errorMessage}',
         );
         await syncManager.initialize();
         syncManager.configureCloudUrl(cloudBaseUrl);
@@ -350,27 +352,9 @@ void main() {
               'After full sync, project $projectId should have 1 local state entity',
         );
 
-        // expect cloudAt to be updated on the local state
-        final localState =
-            await local.getCurrentEntityState(
-                  entityType: 'project',
-                  entityId: projectId,
-                  domainType: 'project',
-                  domainId: projectId,
-                )
-                as IsarProjectState;
-
-        expect(
-          localState,
-          isNotNull,
-          reason:
-              'Local state for project $projectId should exist after full sync',
-        );
-        expect(
-          localState.change_cloudAt,
-          isNotNull,
-          reason:
-              'After full sync, local state for project $projectId should have change_cloudAt set',
+        IsarProjectState localState = await getCurrentEntityStateAndCheck(
+          local,
+          projectId,
         );
 
         // verify expected nameLocal state
@@ -532,20 +516,9 @@ void main() {
               'After full sync, project $projectId should have 0 pending local-origin changes',
         );
         // expect cloudAt to be updated on the local state
-        final localState =
-            await local.getCurrentEntityState(
-                  entityType: 'project',
-                  entityId: projectId,
-                  domainType: 'project',
-                  domainId: projectId,
-                )
-                as IsarProjectState;
-
-        expect(
-          localState,
-          isNotNull,
-          reason:
-              'Local state for project $projectId should exist after full sync',
+        final localState = await getCurrentEntityStateAndCheck(
+          local,
+          projectId,
         );
         expect(
           localState.change_cloudAt,
@@ -571,7 +544,6 @@ void main() {
       () async {
         final syncManager = SyncManager.instance;
         final local = LocalStorageService.instance;
-        final cloud = CloudStorageService.instance;
         final expectedNameLocalUpdate = 'Edited by local-full';
 
         const projectId = '__test_full_cloud_local_outdated';
@@ -611,47 +583,34 @@ void main() {
           includeChangeUpdates: true,
           includeStateUpdates: true,
         );
-        expect(
-          localSave.isSuccess,
-          isTrue,
-          reason:
-              'Saving local storage for full sync should succeed: ${localSave.errorMessage}',
-        );
-
-        expect(
-          localSave.resultsSummary?.toJson(),
-          equals({
-            'storageType': 'local',
-            'storageId': await local.getStorageId(),
-            'stateUpdates': isA<List<Map<String, dynamic>>>(),
-            'changeUpdates': isA<List<Map<String, dynamic>>>(),
-            'created': [localChange.cid],
-            'updated': [],
-            'deleted': [],
-            'outdated': [],
-            'noOps': [],
-            'clouded': [],
-            'dups': [],
-            'unknowns': [],
-            'info': isA<List<Map<String, dynamic>>>(),
-            'errors': [],
-            'unprocessed': [],
-          }),
-          reason: 'Saving local storage should process 1 change',
+        await verifyLocalChangeSaved(
+          localSaveResult: localSave,
+          localChange: localChange,
+          local: local,
+          expectedChangeUpdates: [
+            {
+              'cid': localChange.cid,
+              'updates': {
+                'operation': localChange.operation,
+                'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
+                'stateChanged': true,
+                'storageId': await local.getStorageId(),
+                'cloudAt': null,
+                'storedAt': isA<String>(),
+                'dataJson': localChange.dataJson,
+              },
+            },
+          ],
+          expectedStateUpdates: expectedStateFromChange(localChange),
         );
 
         // Save a cloud change that should be downsynced
-        final cloudChange = IsarChangeLogEntry(
-          changeAt: DateTime.now(),
-          cid: generateCid(
-            entityType: EntityType.project,
-            userId: 'cloud-full',
-          ),
-          domainType: 'project',
+        final cloudChange = await saveCloudChange(
+          srcStorageType: srcStorageType,
+          srcStorageId: srcStorageId,
           domainId: projectId,
-          entityType: 'project',
-          operation: 'create',
           entityId: projectId,
+          changeAt: DateTime.now(),
           dataJson: stableStringify({
             ...BaseDataFields(
               parentId: 'root',
@@ -659,27 +618,7 @@ void main() {
             ).toJson(),
             'nameLocal': 'Edited by cloud-full',
           }),
-          changeBy: 'cloud-full',
-          stateChanged: false,
-          storageId: '',
-          unknownJson: '{}',
-          operationInfoJson: '{}',
-        );
-
-        final cloudSave = await ChangeProcessingService.storeChanges(
-          storageMode: 'save',
-          changes: [cloudChange.toJson()],
-          srcStorageType: srcStorageType,
-          srcStorageId: srcStorageId,
-          storage: cloud,
-          includeChangeUpdates: true,
-          includeStateUpdates: true,
-        );
-        expect(
-          cloudSave.isSuccess,
-          isTrue,
-          reason:
-              'Saving cloud storage for full sync should succeed: ${cloudSave.errorMessage}',
+          userId: 'cloud-full',
         );
 
         await syncManager.initialize();
@@ -748,17 +687,15 @@ void main() {
               'After full sync, project $projectId should have 2 total local state changes',
         );
 
-        // Verify downsynced project exists locally
-        final downsyncedState = await local.getCurrentEntityState(
-          domainType: 'project',
-          domainId: projectId,
-          entityType: 'project',
-          entityId: projectId,
+        final downsyncedState = await getCurrentEntityStateAndCheck(
+          local,
+          projectId,
         );
         expect(
-          downsyncedState,
-          isNotNull,
-          reason: 'Downsynced project should exist in local storage',
+          downsyncedState.data_nameLocal,
+          equals('Edited by cloud-full'),
+          reason:
+              'After full sync, local state for project $projectId should reflect cloud change as LWW',
         );
       },
       timeout: const Timeout(Duration(minutes: 3)),
@@ -1069,6 +1006,33 @@ void main() {
   });
 }
 
+Future<IsarProjectState> getCurrentEntityStateAndCheck(
+  LocalStorageService local,
+  String projectId,
+) async {
+  final localState =
+      await local.getCurrentEntityState(
+            entityType: 'project',
+            entityId: projectId,
+            domainType: 'project',
+            domainId: projectId,
+          )
+          as IsarProjectState;
+
+  expect(
+    localState,
+    isNotNull,
+    reason: 'Local state for project $projectId should exist after full sync',
+  );
+  expect(
+    localState.change_cloudAt,
+    isNotNull,
+    reason:
+        'After full sync, local state for project $projectId should have change_cloudAt set',
+  );
+  return localState;
+}
+
 Future<void> verifyLocalChangeSaved({
   required ChangeProcessingResult localSaveResult,
   required IsarChangeLogEntry localChange,
@@ -1188,7 +1152,7 @@ Map<String, dynamic> expectedStateFromChange(
   return map;
 }
 
-Future<void> saveCloudChange({
+Future<IsarChangeLogEntry> saveCloudChange({
   required String srcStorageType,
   required String srcStorageId,
   required String domainId,
@@ -1198,7 +1162,7 @@ Future<void> saveCloudChange({
   required String userId,
 }) async {
   final cloudStorage = CloudStorageService.instance;
-  final cloudSeedChange = IsarChangeLogEntry(
+  final cloudSaveChange = IsarChangeLogEntry(
     changeAt: changeAt,
     cid: generateCid(entityType: EntityType.project, userId: 'test'),
     domainType: 'project',
@@ -1214,9 +1178,9 @@ Future<void> saveCloudChange({
     operationInfoJson: '{}',
   );
 
-  final cloudSeedResult = await ChangeProcessingService.storeChanges(
+  final cloudSaveResult = await ChangeProcessingService.storeChanges(
     storageMode: 'save',
-    changes: [cloudSeedChange.toJson()],
+    changes: [cloudSaveChange.toJson()],
     srcStorageType: srcStorageType,
     srcStorageId: srcStorageId,
     storage: cloudStorage,
@@ -1224,47 +1188,47 @@ Future<void> saveCloudChange({
     includeStateUpdates: true,
   );
   expect(
-    cloudSeedResult.isSuccess,
+    cloudSaveResult.isSuccess,
     isTrue,
     reason:
-        'Saving cloud storage with __test_2 should succeed: ${cloudSeedResult.errorMessage}',
+        'Saving cloud storage with __test_2 should succeed: ${cloudSaveResult.errorMessage}',
   );
 
   final cloudStateUpdates = [
     {
-      'cid': cloudSeedChange.cid,
-      'state': expectedStateFromChange(cloudSeedChange, isCloudStorage: true),
+      'cid': cloudSaveChange.cid,
+      'state': expectedStateFromChange(cloudSaveChange, isCloudStorage: true),
     },
   ];
   final cloudChangeUpdates = [
     {
-      'cid': cloudSeedChange.cid,
+      'cid': cloudSaveChange.cid,
       'updates': {
-        'operation': cloudSeedChange.operation,
+        'operation': cloudSaveChange.operation,
         'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
         'stateChanged': true,
         'storageId': await cloudStorage.getStorageId(),
         'cloudAt': isA<String>(),
         'storedAt': isA<String>(),
-        'dataJson': cloudSeedChange.dataJson,
+        'dataJson': cloudSaveChange.dataJson,
       },
     },
   ];
   final cloudInfo = [
     {
-      'cid': cloudSeedChange.cid,
-      'operation': cloudSeedChange.operation,
+      'cid': cloudSaveChange.cid,
+      'operation': cloudSaveChange.operation,
       'info': {'outdatedBys': [], 'noOpFields': []},
     },
   ];
   expect(
-    cloudSeedResult.resultsSummary?.toJson(),
+    cloudSaveResult.resultsSummary?.toJson(),
     equals({
       'storageType': 'cloud',
       'storageId': await cloudStorage.getStorageId(),
       'stateUpdates': cloudStateUpdates,
       'changeUpdates': cloudChangeUpdates,
-      'created': [cloudSeedChange.cid],
+      'created': [cloudSaveChange.cid],
       'updated': [],
       'deleted': [],
       'outdated': [],
@@ -1281,7 +1245,7 @@ Future<void> saveCloudChange({
 
   // Verify storedAt was set on the persisted state. If the storage
   // implementation also sets a cloudAt timestamp we expect storedAt == cloudAt.
-  final cloudSeedJson = cloudSeedResult.resultsSummary?.toJson();
+  final cloudSeedJson = cloudSaveResult.resultsSummary?.toJson();
   if (cloudSeedJson != null) {
     final stateUpdates = cloudSeedJson['stateUpdates'] as List?;
     if (stateUpdates != null && stateUpdates.isNotEmpty) {
@@ -1312,4 +1276,5 @@ Future<void> saveCloudChange({
       }
     }
   }
+  return cloudSaveChange;
 }
