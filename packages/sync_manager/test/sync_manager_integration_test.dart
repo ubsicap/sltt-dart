@@ -299,7 +299,7 @@ void main() {
             'Local storage should contain the cloud test project $projectId after downsync',
       );
 
-      await getCurrentEntityStateAndCheck(local, projectId);
+      await getCurrentEntityStateAndCheckCloudAt(local, projectId);
     });
 
     test(
@@ -418,10 +418,8 @@ void main() {
               'After full sync, project $projectId should have 1 total cloud changes',
         );
 
-        IsarProjectState localState = await getCurrentEntityStateAndCheck(
-          local,
-          projectId,
-        );
+        IsarProjectState localState =
+            await getCurrentEntityStateAndCheckCloudAt(local, projectId);
 
         // verify expected nameLocal state
         expect(
@@ -619,7 +617,7 @@ void main() {
               'After full sync, project $projectId should have 0 pending local-origin changes',
         );
         // expect cloudAt to be updated on the local state
-        final localState = await getCurrentEntityStateAndCheck(
+        final localState = await getCurrentEntityStateAndCheckCloudAt(
           local,
           projectId,
         );
@@ -908,7 +906,7 @@ void main() {
               'After full sync, project $projectId should have 3 total cloud changes',
         );
 
-        final downsyncedState = await getCurrentEntityStateAndCheck(
+        final downsyncedState = await getCurrentEntityStateAndCheckCloudAt(
           local,
           projectId,
         );
@@ -1227,7 +1225,7 @@ void main() {
   });
 }
 
-Future<IsarProjectState> getCurrentEntityStateAndCheck(
+Future<IsarProjectState> getCurrentEntityStateAndCheckCloudAt(
   LocalStorageService local,
   String projectId,
 ) async {
