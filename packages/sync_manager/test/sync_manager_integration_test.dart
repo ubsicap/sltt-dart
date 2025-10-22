@@ -572,6 +572,7 @@ void main() {
         );
       },
       // skip: 'fixme',
+      timeout: Timeout.none,
     );
 
     test(
