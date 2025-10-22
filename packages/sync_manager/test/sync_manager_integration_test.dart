@@ -74,7 +74,7 @@ void main() {
       await MultiServerLauncher.instance.stopServer(StorageType.cloud);
     });
 
-    test('outsync: save local changes > outsync to cloud', () async {
+    test('outsync [create]: save local changes > outsync to cloud', () async {
       final syncManager = SyncManager.instance;
       final local = LocalStorageService.instance;
       final localStorageId = await local.getStorageId();
@@ -186,7 +186,7 @@ void main() {
       );
     });
 
-    test('downsync: save cloud changes > downsync to local', () async {
+    test('downsync [create]: save cloud changes > downsync to local', () async {
       final cloud = CloudStorageService.instance;
       final cloudStorageId = await cloud.getStorageId();
       final projectId = '__test_2';
@@ -303,7 +303,7 @@ void main() {
     });
 
     test(
-      'full sync: save local changes > outsync to cloud > downsync same',
+      'full sync [create]: save local changes > outsync to cloud > downsync same',
       () async {
         final syncManager = SyncManager.instance;
         final local = LocalStorageService.instance;
@@ -436,7 +436,7 @@ void main() {
     );
 
     test(
-      'full sync: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
+      'full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
       () async {
         final syncManager = SyncManager.instance;
         final local = LocalStorageService.instance;
@@ -643,7 +643,7 @@ void main() {
     );
 
     test(
-      'full sync: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
+      'full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
       () async {
         final syncManager = SyncManager.instance;
         final local = LocalStorageService.instance;
