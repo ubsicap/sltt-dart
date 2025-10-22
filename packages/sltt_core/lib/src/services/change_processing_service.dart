@@ -405,6 +405,9 @@ class ChangeProcessingService {
           final shouldSkipChangeLogWrite =
               result.isDuplicate ||
               changeUpdates.isEmpty ||
+              targetStorageType == 'local' &&
+                  storageMode ==
+                      'sync' /* for now, don't store incoming sync changes in the local change log */ ||
               (targetStorageId ==
                   changeLogEntry.storageId /* should already be saved */ );
           final operationCounts = result.operationCounts;

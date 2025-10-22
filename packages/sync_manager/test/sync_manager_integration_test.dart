@@ -565,7 +565,7 @@ void main() {
               'After full sync, project $projectId should have 1 local state entity',
         );
         expect(
-          pendingLocalChanges,
+          pendingLocalChanges.map((c) => c.toJson()),
           isEmpty,
           reason:
               'After full sync, project $projectId should have 0 pending local-origin changes',
