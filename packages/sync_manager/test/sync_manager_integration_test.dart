@@ -309,6 +309,8 @@ void main() {
         final syncManager = SyncManager.instance;
         final local = LocalStorageService.instance;
 
+        final expectedNameLocalUpdate = 'Edited by local-full';
+
         const projectId = '__test_full_cloud_local_create_update';
         final localChange = IsarChangeLogEntry(
           changeAt: DateTime.now(),
@@ -326,7 +328,7 @@ void main() {
               parentId: 'root',
               parentProp: 'projects',
             ).toJson(),
-            'nameLocal': 'Edited by local-full',
+            'nameLocal': expectedNameLocalUpdate,
           }),
           changeBy: 'local-full',
           stateChanged: false,
@@ -401,12 +403,14 @@ void main() {
         );
 
         // expect cloudAt to be updated on the local state
-        final localState = await local.getCurrentEntityState(
-          entityType: 'project',
-          entityId: projectId,
-          domainType: 'project',
-          domainId: projectId,
-        );
+        final localState =
+            await local.getCurrentEntityState(
+                  entityType: 'project',
+                  entityId: projectId,
+                  domainType: 'project',
+                  domainId: projectId,
+                )
+                as IsarProjectState;
 
         expect(
           localState,
@@ -415,10 +419,18 @@ void main() {
               'Local state for project $projectId should exist after full sync',
         );
         expect(
-          localState?.change_cloudAt,
+          localState.change_cloudAt,
           isNotNull,
           reason:
               'After full sync, local state for project $projectId should have change_cloudAt set',
+        );
+
+        // verify expected nameLocal state
+        expect(
+          localState.data_nameLocal,
+          equals(expectedNameLocalUpdate),
+          reason:
+              'After full sync, local state for project $projectId should reflect last write wins local edit',
         );
       },
       // skip: 'fixme',
@@ -436,6 +448,7 @@ void main() {
         final cloudChangeAt = DateTime.now().subtract(
           const Duration(minutes: 1),
         );
+        const expectedNameLocalUpdate = 'Edited by local-full';
         await seedCloudChange(
           srcStorageType: srcStorageType,
           srcStorageId: srcStorageId,
@@ -471,7 +484,7 @@ void main() {
               parentId: 'root',
               parentProp: 'projects',
             ).toJson(),
-            'nameLocal': 'Edited by local-full',
+            'nameLocal': expectedNameLocalUpdate,
           }),
           changeBy: 'local-full',
           stateChanged: false,
@@ -499,7 +512,7 @@ void main() {
             'change_cid': localChange.cid,
             'change_changeBy': 'local-full',
             'change_storedAt': isNotNull,
-            'data_nameLocal': 'Edited by local-full',
+            'data_nameLocal': expectedNameLocalUpdate,
             'data_nameLocal_changeAt_': localChange.changeAt.toIso8601String(),
             'data_nameLocal_cid_': localChange.cid,
             'data_nameLocal_changeBy_': 'local-full',
@@ -515,7 +528,7 @@ void main() {
                 'storageId': await local.getStorageId(),
                 'cloudAt': null,
                 'storedAt': isA<String>(),
-                'dataJson': '{"nameLocal":"Edited by local-full"}',
+                'dataJson': '{"nameLocal":"$expectedNameLocalUpdate"}',
               },
             },
           ],
@@ -571,12 +584,14 @@ void main() {
               'After full sync, project $projectId should have 0 pending local-origin changes',
         );
         // expect cloudAt to be updated on the local state
-        final localState = await local.getCurrentEntityState(
-          entityType: 'project',
-          entityId: projectId,
-          domainType: 'project',
-          domainId: projectId,
-        );
+        final localState =
+            await local.getCurrentEntityState(
+                  entityType: 'project',
+                  entityId: projectId,
+                  domainType: 'project',
+                  domainId: projectId,
+                )
+                as IsarProjectState;
 
         expect(
           localState,
@@ -585,10 +600,18 @@ void main() {
               'Local state for project $projectId should exist after full sync',
         );
         expect(
-          localState?.change_cloudAt,
+          localState.change_cloudAt,
           isNotNull,
           reason:
               'After full sync, local state for project $projectId should have change_cloudAt set',
+        );
+
+        // verify expected nameLocal state
+        expect(
+          localState.data_nameLocal,
+          equals(expectedNameLocalUpdate),
+          reason:
+              'After full sync, local state for project $projectId should reflect last write wins local edit',
         );
       },
       // skip: 'fixme',
@@ -601,6 +624,7 @@ void main() {
         final syncManager = SyncManager.instance;
         final local = LocalStorageService.instance;
         final cloud = CloudStorageService.instance;
+        final expectedNameLocalUpdate = 'Edited by local-full';
 
         const projectId = '__test_full_cloud_local_outdated';
 
@@ -621,7 +645,7 @@ void main() {
               parentId: 'root',
               parentProp: 'projects',
             ).toJson(),
-            'nameLocal': 'Edited by local-full',
+            'nameLocal': expectedNameLocalUpdate,
           }),
           changeBy: 'local-full',
           stateChanged: false,
