@@ -455,18 +455,10 @@ void main() {
           userId: 'cloud-full',
           operation: 'create',
           fnGetExpectedChangeUpdates: (cloudSaveChange) => [
-            {
-              'cid': cloudSaveChange.cid,
-              'updates': {
-                'operation': cloudSaveChange.operation,
-                'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
-                'stateChanged': true,
-                'storageId': cloudStorageId,
-                'cloudAt': isA<String>(),
-                'storedAt': isA<String>(),
-                'dataJson': cloudSaveChange.dataJson,
-              },
-            },
+            expectedChangeUpdatesFromCreateChange(
+              createChange: cloudSaveChange,
+              storageId: cloudStorageId,
+            ),
           ],
           fnGetExpectedStateUpdates: (change) =>
               expectedStateFromChange(change, isCloudStorage: true),
@@ -663,18 +655,10 @@ void main() {
           userId: 'cloud-full',
           operation: kChangeOperationCreate,
           fnGetExpectedChangeUpdates: (cloudSaveChange) => [
-            {
-              'cid': cloudSaveChange.cid,
-              'updates': {
-                'operation': cloudSaveChange.operation,
-                'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
-                'stateChanged': true,
-                'storageId': cloudStorageId,
-                'cloudAt': isA<String>(),
-                'storedAt': isA<String>(),
-                'dataJson': cloudSaveChange.dataJson,
-              },
-            },
+            expectedChangeUpdatesFromCreateChange(
+              createChange: cloudSaveChange,
+              storageId: cloudStorageId,
+            ),
           ],
           fnGetExpectedStateUpdates: (change) =>
               expectedStateFromChange(change, isCloudStorage: true),
