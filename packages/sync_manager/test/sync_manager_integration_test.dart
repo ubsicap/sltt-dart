@@ -570,6 +570,26 @@ void main() {
           reason:
               'After full sync, project $projectId should have 0 pending local-origin changes',
         );
+        // expect cloudAt to be updated on the local state
+        final localState = await local.getCurrentEntityState(
+          entityType: 'project',
+          entityId: projectId,
+          domainType: 'project',
+          domainId: projectId,
+        );
+
+        expect(
+          localState,
+          isNotNull,
+          reason:
+              'Local state for project $projectId should exist after full sync',
+        );
+        expect(
+          localState?.change_cloudAt,
+          isNotNull,
+          reason:
+              'After full sync, local state for project $projectId should have change_cloudAt set',
+        );
       },
       // skip: 'fixme',
       timeout: Timeout.none,
