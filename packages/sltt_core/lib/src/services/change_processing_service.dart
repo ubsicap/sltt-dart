@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/models/constants/change_operations.dart';
 
 /// Result of processing changes through the change processing service
 class ChangeProcessingResult {
@@ -63,12 +62,10 @@ class ChangeProcessingService {
     if (!skipStateWrite) {
       // If entityState includes change-side timestamps, validate they match
       // or are present as expected (do not mutate).
-      final esJson = entityStateToPut.toJson();
-      final esStored = esJson['change_storedAt'] as String?;
-      final changeStoredAt = changeToPut.storedAt?.toUtc().toIso8601String();
-      if (!skipChangeLogWrite && esStored != changeStoredAt) {
+      if (!skipChangeLogWrite &&
+          entityStateToPut.change_storedAt != changeToPut.storedAt) {
         throw ArgumentError(
-          'entityState.change_storedAt ($esStored) does not match change.storedAt ($changeStoredAt)',
+          'entityState.change_storedAt (${entityStateToPut.change_storedAt}) does not match change.storedAt (${changeToPut.storedAt})',
         );
       }
       if (storage.getStorageType() == 'cloud' &&
