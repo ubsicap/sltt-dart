@@ -167,9 +167,20 @@ void main() {
         reason:
             'After successful outsync, project __test_1 should have 0 pending outsyncs',
       );
+      // confirm cloud state totals
+      final cloudTotals = status.cloudChangeStats;
       expect(
-        status.cloudChangeStats?.toJson(),
-        equals(isNotNull),
+        cloudTotals?.toJson(),
+        equals({
+          'creates': 1,
+          'updates': 0,
+          'deletes': 0,
+          'total': 1,
+          'latestChangeAt': const UtcDateTimeConverter().toJson(
+            change.changeAt,
+          ),
+          'latestSeq': 1,
+        }),
         reason:
             'After successful outsync, project __test_1 should have change logs in the cloud',
       );
@@ -179,7 +190,7 @@ void main() {
       final cloud = CloudStorageService.instance;
       final cloudStorageId = await cloud.getStorageId();
       final projectId = '__test_2';
-      await saveCloudChange(
+      final cloudChange = await saveCloudChange(
         srcStorageType: srcStorageType,
         srcStorageId: srcStorageId,
         domainId: projectId,
@@ -258,6 +269,24 @@ void main() {
         }),
         reason:
             'getSyncStatus should report local state stats for __test_2 after downsync',
+      );
+
+      // confirm cloud state totals
+      final cloudTotals = status.cloudChangeStats;
+      expect(
+        cloudTotals?.toJson(),
+        equals({
+          'creates': 1,
+          'updates': 0,
+          'deletes': 0,
+          'total': 1,
+          'latestChangeAt': const UtcDateTimeConverter().toJson(
+            cloudChange.changeAt,
+          ),
+          'latestSeq': 1,
+        }),
+        reason:
+            'After full sync, project $projectId should have 1 total cloud changes',
       );
 
       // Verify local storage has received changes for __test_2 and report status via SyncManager
@@ -345,7 +374,7 @@ void main() {
           reason: 'Downsync should include the cloud project change',
         );
         // Verify outsynced project has no pending local-origin changes
-        final localStatus = await syncManager.getSyncStatus(projectId);
+        final status = await syncManager.getSyncStatus(projectId);
         final pendingLocalChanges = await local.getChangesWithCursor(
           domainType: 'project',
           domainId: projectId,
@@ -357,7 +386,7 @@ void main() {
               'After full sync, project $projectId should have 0 pending local-origin changes',
         );
         expect(
-          localStatus.localStateStats?.totals.toJson(),
+          status.localStateStats?.totals.toJson(),
           equals({
             'creates': 1,
             'updates': 0,
@@ -370,6 +399,23 @@ void main() {
           }),
           reason:
               'After full sync, project $projectId should have 1 local state entity',
+        );
+        // confirm cloud state totals
+        final cloudTotals = status.cloudChangeStats;
+        expect(
+          cloudTotals?.toJson(),
+          equals({
+            'creates': 1,
+            'updates': 0,
+            'deletes': 0,
+            'total': 1,
+            'latestChangeAt': const UtcDateTimeConverter().toJson(
+              localChange.changeAt,
+            ),
+            'latestSeq': 1,
+          }),
+          reason:
+              'After full sync, project $projectId should have 1 total cloud changes',
         );
 
         IsarProjectState localState = await getCurrentEntityStateAndCheck(
@@ -528,13 +574,30 @@ void main() {
           reason: 'Downsync should include the cloud project change',
         );
         // Verify outsynced project has no pending local-origin changes
-        final localStatus = await syncManager.getSyncStatus(projectId);
+        final status = await syncManager.getSyncStatus(projectId);
         final pendingLocalChanges = await local.getChangesWithCursor(
           domainType: 'project',
           domainId: projectId,
         );
         expect(
-          localStatus.localStateStats?.totals.toJson(),
+          status.localStateStats?.totals.toJson(),
+          equals({
+            'creates': 1, // from cloud
+            'updates': 1, // from local
+            'deletes': 0,
+            'total': 2,
+            'latestChangeAt': const UtcDateTimeConverter().toJson(
+              localChange.changeAt,
+            ),
+            'latestSeq': 2,
+          }),
+          reason:
+              'After full sync, project $projectId should have 1 local state entity',
+        );
+        // confirm cloud state totals
+        final cloudTotals = status.cloudChangeStats;
+        expect(
+          cloudTotals?.toJson(),
           equals({
             'creates': 1,
             'updates': 1,
@@ -546,8 +609,9 @@ void main() {
             'latestSeq': 2,
           }),
           reason:
-              'After full sync, project $projectId should have 1 local state entity',
+              'After full sync, project $projectId should have 2 total cloud changes',
         );
+
         expect(
           pendingLocalChanges.map((c) => c.toJson()),
           isEmpty,
@@ -806,6 +870,24 @@ void main() {
           }),
           reason:
               'After full sync, project $projectId should have 3 total local state changes',
+        );
+
+        // confirm cloud state totals
+        final cloudTotals = syncStatus.cloudChangeStats;
+        expect(
+          cloudTotals?.toJson(),
+          equals({
+            'creates': 1,
+            'updates': 1,
+            'deletes': 0,
+            'total': 2,
+            'latestChangeAt': const UtcDateTimeConverter().toJson(
+              cloudChange2.changeAt,
+            ),
+            'latestSeq': 2,
+          }),
+          reason:
+              'After full sync, project $projectId should have 2 total cloud changes',
         );
 
         final downsyncedState = await getCurrentEntityStateAndCheck(
