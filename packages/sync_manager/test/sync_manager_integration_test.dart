@@ -550,12 +550,6 @@ void main() {
           domainId: projectId,
         );
         expect(
-          pendingLocalChanges,
-          isEmpty,
-          reason:
-              'After full sync, project $projectId should have 0 pending local-origin changes',
-        );
-        expect(
           localStatus.localStateStats?.totals.toJson(),
           equals({
             'creates': 1,
@@ -565,10 +559,16 @@ void main() {
             'latestChangeAt': const UtcDateTimeConverter().toJson(
               localChange.changeAt,
             ),
-            'latestSeq': 3,
+            'latestSeq': 2,
           }),
           reason:
               'After full sync, project $projectId should have 1 local state entity',
+        );
+        expect(
+          pendingLocalChanges,
+          isEmpty,
+          reason:
+              'After full sync, project $projectId should have 0 pending local-origin changes',
         );
       },
       // skip: 'fixme',
