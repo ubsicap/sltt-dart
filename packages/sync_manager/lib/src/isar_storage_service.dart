@@ -6,6 +6,7 @@ import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_entity_type_state.dart';
 import 'package:sync_manager/src/models/isar_storage_state.dart';
+import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:sync_manager/sync_manager.dart';
 
 import 'models/isar_change_log_entry.dart' as client;
@@ -73,6 +74,7 @@ class IsarStorageService extends BaseStorageService {
     // start from a clean registry so re-initialization doesn't duplicate
     // entries.
     _entityStateRegistry.clear();
+    registerIsarChangeLogSerializableGroup();
     if (registerStorageGroups != null) {
       registerStorageGroups(_entityStateRegistry, _isar);
     } else {
