@@ -439,7 +439,7 @@ class ChangeProcessingService {
           }
 
           // Categorize the result
-          _categorizeChangeResult(
+          categorizeChangeResult(
             resultsSummary: resultsSummary,
             updateResults: updateResults,
             result: result,
@@ -580,7 +580,7 @@ class ChangeProcessingService {
   }
 
   /// Categorize the change result into appropriate response buckets
-  static void _categorizeChangeResult({
+  static void categorizeChangeResult({
     required ChangeProcessingSummary resultsSummary,
     required UpdateChangeLogAndStateResult updateResults,
     required GetUpdateResults result,
