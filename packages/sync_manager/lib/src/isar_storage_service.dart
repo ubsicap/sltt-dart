@@ -317,6 +317,20 @@ class IsarStorageService extends BaseStorageService {
       if (existingEntityTypeSyncStates != null) {
         // Explicitly increment counters on the existing record so the
         // stored counts reflect the actual number of ops performed.
+
+        late final DateTime latestChangeAt;
+        late final String latestCid;
+        late final int latestSeq;
+        if (newChange.changeAt.isAfter(existingEntityTypeSyncStates.changeAt)) {
+          latestChangeAt = newChange.changeAt;
+          latestCid = newChange.cid;
+          latestSeq = newChange.seq;
+        } else {
+          latestChangeAt = existingEntityTypeSyncStates.changeAt;
+          latestCid = existingEntityTypeSyncStates.cid;
+          latestSeq = existingEntityTypeSyncStates.seq;
+        }
+
         final newEt = IsarEntityTypeSyncState(
           id: existingEntityTypeSyncStates.id,
           entityType: existingEntityTypeSyncStates.entityType,
@@ -324,9 +338,9 @@ class IsarStorageService extends BaseStorageService {
           domainType: existingEntityTypeSyncStates.domainType,
           storageId: _storageId,
           storageType: getStorageType(),
-          cid: newChange.cid,
-          changeAt: newChange.changeAt,
-          seq: newChange.seq,
+          cid: latestCid,
+          changeAt: latestChangeAt,
+          seq: latestSeq,
           created:
               existingEntityTypeSyncStates.created + operationCounts.create,
           updated:

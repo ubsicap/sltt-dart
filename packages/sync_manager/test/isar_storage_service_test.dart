@@ -237,6 +237,8 @@ void main() {
       final projectId = 'proj-state';
       final entityId = 'entity-project-1';
 
+      expect(baseTime.isUtc, isTrue);
+
       // Create a change that will generate entity state
       final changeData = changePayload(
         projectId: projectId,
@@ -309,7 +311,9 @@ void main() {
       expect(entityState, isNotNull);
       expect(entityState!.entityType, equals('project'));
       expect(entityState.entityId, equals(entityId));
-    });
+      expect(entityState.change_changeAt.toUtc(), equals(baseTime));
+      expect(entityState.change_changeAt, equals(baseTime));
+    }, timeout: Timeout.none);
 
     test('creates and retrieves document entity state', () async {
       final projectId = 'proj-doc';

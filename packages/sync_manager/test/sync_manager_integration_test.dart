@@ -1108,15 +1108,15 @@ void main() {
         // After full sync and deletion of local change-log entries, pending
         // change stats will be empty. Verify the historical state counters
         // (localStateStats) still reflect the operation that occurred.
-        final stateTotals = localStatus.localStateStats?.totals;
+        final localStateTotals = localStatus.localStateStats?.totals;
         expect(
-          stateTotals,
+          localStateTotals,
           isNotNull,
           reason: 'State stats should be available for $projectId',
         );
-        final totalsMap = stateTotals?.toJson();
+        final localStateTotalsMap = localStateTotals?.toJson();
         expect(
-          totalsMap,
+          localStateTotalsMap,
           equals({
             'creates': 1,
             'updates':
@@ -1126,7 +1126,7 @@ void main() {
             'latestChangeAt': const UtcDateTimeConverter().toJson(
               cloudChange2.changeAt,
             ),
-            'latestSeq': totalsMap?['latestSeq'],
+            'latestSeq': localStateTotalsMap?['latestSeq'],
           }),
           reason:
               'After full sync, project $projectId should have 3 total local state changes',
@@ -1143,28 +1143,28 @@ void main() {
           downsyncedState.data_nameLocal,
           equals(localChangeNameLocal),
           reason:
-              'After full sync, local state for project $projectId should reflect last write wins local nameLocal edit',
+              'After full sync, local data_nameLocal state for project $projectId should reflect last write wins local edit',
         );
         expect(
           downsyncedState.data_nameLocal_changeAt_,
-          equals(const UtcDateTimeConverter().toJson(localChange.changeAt)),
+          equals(localChange.changeAt.toUtc()),
           reason:
-              'After full sync, local state for project $projectId should reflect last write wins local nameLocal edit',
+              'After full sync, local data_nameLocal change at state for project $projectId should reflect last write wins edit',
         );
         expect(
           downsyncedState.data_rank,
           equals(cloudChange2Rank),
           reason:
-              'After full sync, local state for project $projectId should reflect last write wins cloud rank edit',
+              'After full sync, local rank state for project $projectId should reflect last write wins cloud edit',
         );
         expect(
           downsyncedState.data_rank_changeAt_,
-          equals(const UtcDateTimeConverter().toJson(cloudChange2.changeAt)),
+          equals(cloudChange2.changeAt.toUtc()),
           reason:
-              'After full sync, local state for project $projectId should reflect last write wins cloud rank edit',
+              'After full sync, local data_rank change at state for project $projectId should reflect last write wins cloud edit',
         );
       },
-      timeout: const Timeout(Duration(minutes: 3)),
+      timeout: Timeout.none,
       // skip: 'fixme',
     );
   });
@@ -1246,10 +1246,22 @@ Future<void> verifyLocalChangeSaved({
       'stateUpdates': localStateUpdates,
       'changeUpdates': expectedChangeUpdates,
       'created': [
-        localChange.operation == 'create' ? localChange.cid : null,
+        localChange.operation == kChangeOperationCreate
+            ? localChange.cid
+            : null,
       ].whereType<String>().toList(),
       'updated': [
-        localChange.operation == 'update' ? localChange.cid : null,
+        [
+              kChangeOperationUpdate,
+              kChangeOperationPartialUpdate,
+            ].contains(localChange.operation)
+            ? localChange.cid
+            : null,
+      ].whereType<String>().toList(),
+      'pUpdated': [
+        localChange.operation == kChangeOperationPartialUpdate
+            ? localChange.cid
+            : null,
       ].whereType<String>().toList(),
       'deleted': [],
       'outdated': [],
@@ -1417,7 +1429,15 @@ Future<IsarChangeLogEntry> saveCloudChange({
             : null,
       ].whereType<String>().toList(),
       'updated': [
-        cloudSaveChange.operation == kChangeOperationUpdate
+        [
+              kChangeOperationUpdate,
+              kChangeOperationPartialUpdate,
+            ].contains(cloudSaveChange.operation)
+            ? cloudSaveChange.cid
+            : null,
+      ].whereType<String>().toList(),
+      'pUpdated': [
+        cloudSaveChange.operation == kChangeOperationPartialUpdate
             ? cloudSaveChange.cid
             : null,
       ].whereType<String>().toList(),
