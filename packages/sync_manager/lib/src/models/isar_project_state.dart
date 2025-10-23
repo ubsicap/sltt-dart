@@ -4,14 +4,19 @@ import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
 
-import 'base_isar_entity_state.dart';
-
 part 'isar_project_state.g.dart';
 
 /// Isar collection for project entity state storage
 @Collection()
 @JsonSerializable(includeIfNull: true, checked: true)
-class IsarProjectState extends BaseIsarEntityState {
+class IsarProjectState extends BaseEntityState {
+  Id id = Isar.autoIncrement;
+
+  /// Primary key - entityId with entity type abbreviation
+  @override
+  @Index(unique: true)
+  final String entityId;
+
   // Project-specific fields
   String? data_nameLocal;
   int? data_nameLocal_dataSchemaRev_;
@@ -21,10 +26,10 @@ class IsarProjectState extends BaseIsarEntityState {
   DateTime? data_nameLocal_cloudAt_;
 
   IsarProjectState({
-    super.id,
+    this.id = Isar.autoIncrement,
     super.entityType = 'project',
     required super.domainType,
-    required super.entityId,
+    required this.entityId,
     required super.unknownJson,
     required super.change_storedAt,
     required super.change_storedAt_orig_,
