@@ -176,7 +176,10 @@ void main() {
       expect(retrievedChange, isNotNull);
       expect(retrievedChange!.seq, equals(createdChangeNN.seq));
       expect(retrievedChange.entityId, equals('entity-1'));
-    });
+      expect(baseTime.isUtc, isTrue);
+      expect(retrievedChange.changeAt.toUtc(), equals(baseTime));
+      expect(retrievedChange.changeAt, equals(baseTime));
+    }, timeout: Timeout.none);
 
     test('returns null for non-existent change', () async {
       final result = await storage.getChange(
