@@ -6,6 +6,7 @@ import 'package:sync_manager/sync_manager.dart';
 void main(List<String> args) async {
   final launcher = MultiServerLauncher.instance;
   final syncManager = SyncManager.instance;
+  SlttLogger.init(level: SlttLogLevel.info);
 
   if (args.isEmpty) {
     SlttLogger.logger.info(
