@@ -270,6 +270,7 @@ class ChangeProcessingService {
         changeUpdates: [],
         created: [],
         updated: [],
+        pUpdated: [],
         deleted: [],
         outdated: [],
         noOps: [],
@@ -594,6 +595,9 @@ class ChangeProcessingService {
       resultsSummary.created.add(updateResults.newChangeLogEntry.cid);
     } else if (newOperation == kChangeOperationUpdate) {
       resultsSummary.updated.add(updateResults.newChangeLogEntry.cid);
+    } else if (newOperation == kChangeOperationPartialUpdate) {
+      resultsSummary.updated.add(updateResults.newChangeLogEntry.cid);
+      resultsSummary.pUpdated.add(updateResults.newChangeLogEntry.cid);
     } else if (newOperation == kChangeOperationDelete) {
       resultsSummary.deleted.add(updateResults.newChangeLogEntry.cid);
     } else if (newOperation == kChangeOperationOutdated) {

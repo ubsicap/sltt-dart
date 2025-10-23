@@ -24,6 +24,9 @@ class ChangeProcessingSummary {
   /// A list of updated entity IDs
   List<String> updated;
 
+  /// A list of partially updated entity IDs (subset of updated)
+  List<String> pUpdated;
+
   /// A list of deleted entity IDs
   List<String> deleted;
 
@@ -68,6 +71,7 @@ class ChangeProcessingSummary {
     required this.changeUpdates,
     required this.created,
     required this.updated,
+    required this.pUpdated,
     required this.deleted,
     required this.outdated,
     required this.noOps,
@@ -88,6 +92,6 @@ class ChangeProcessingSummary {
 
   @override
   String toString() {
-    return 'ChangeProcessingSummary(storageType: $storageType, storageId: $storageId, created: $created, updated: $updated, deleted: $deleted, noOps: $noOps, clouded: $clouded, dups: $dups, unknowns: $unknowns, info: $info, errors: $errors, unprocessed: $unprocessed, stateUpdates: $stateUpdates, changeUpdates: $changeUpdates)';
+    return 'ChangeProcessingSummary(storageType: $storageType, storageId: $storageId, created: $created, updated: $updated, pUpdated: $pUpdated, deleted: $deleted, noOps: $noOps, clouded: $clouded, dups: $dups, unknowns: $unknowns, info: $info, errors: $errors, unprocessed: $unprocessed, stateUpdates: $stateUpdates, changeUpdates: $changeUpdates)';
   }
 }

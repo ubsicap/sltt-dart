@@ -1810,6 +1810,7 @@ void main() {
         changeUpdates: [],
         created: [],
         updated: [],
+        pUpdated: [],
         deleted: [],
         outdated: [],
         noOps: [],
@@ -1864,6 +1865,33 @@ void main() {
             contains(entry.cid),
           );
         });
+      });
+
+      test('partial update goes to both updated and pUpdated', () {
+        final summary = emptySummary();
+        final entry = entry0(op: 'pUpdate');
+        final updateResults = (
+          newChangeLogEntry: entry,
+          newEntityState: state0(),
+        );
+        final result = GetUpdateResults(
+          isDuplicate: false,
+          stateUpdates: const {},
+          changeUpdates: const {},
+          operationCounts: OperationCounts(),
+        );
+
+        ChangeProcessingService.categorizeChangeResult(
+          resultsSummary: summary,
+          updateResults: updateResults,
+          result: result,
+          changeLogEntry: entry,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+
+        expect(summary.updated, contains(entry.cid));
+        expect(summary.pUpdated, contains(entry.cid));
       });
 
       test('duplicate classification -> clouded vs dups', () {
