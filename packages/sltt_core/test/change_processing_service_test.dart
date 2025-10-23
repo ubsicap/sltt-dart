@@ -1743,5 +1743,247 @@ void main() {
         expect(result.errorMessage, contains('changeBy'));
       });
     });
+
+    group('- categorizeChangeResult tests', () {
+      TestChangeLogEntry entry0({
+        String op = 'update',
+        Map<String, dynamic>? opInfo,
+        Map<String, dynamic>? unknown,
+        String cidPrefix = 'cid-cat-',
+      }) {
+        final now = DateTime.parse('2024-01-01T00:00:00Z');
+        return TestChangeLogEntry(
+          cid: '$cidPrefix${generateCid(entityType: EntityType.unknown)}',
+          entityId: 'entity-1',
+          entityType: 'unknown',
+          domainId: '__test__',
+          domainType: 'project',
+          changeAt: now,
+          storedAt: now,
+          changeBy: 'tester',
+          dataJson: jsonEncode({'rank': '1'}),
+          operation: op,
+          operationInfoJson: jsonEncode(opInfo ?? {}),
+          stateChanged: true,
+          unknownJson: jsonEncode(unknown ?? {}),
+          dataSchemaRev: 1,
+          cloudAt: now,
+          schemaVersion: 1,
+          seq: 1,
+          storageId: 'local',
+        );
+      }
+
+      TestEntityState state0({String entityId = 'entity-1'}) {
+        final now = DateTime.parse('2024-01-01T00:00:00Z');
+        return TestEntityState(
+          entityId: entityId,
+          data_nameLocal: 'n',
+          entityType: 'unknown',
+          domainType: 'project',
+          unknownJson: '{}',
+          change_domainId: '__test__',
+          change_domainId_orig_: '__test__',
+          change_changeAt: now.toUtc(),
+          change_storedAt: now.toUtc(),
+          change_storedAt_orig_: now.toUtc(),
+          change_changeAt_orig_: now.toUtc(),
+          change_cid: 'cid',
+          change_cid_orig_: 'cid',
+          change_changeBy: 'tester',
+          change_changeBy_orig_: 'tester',
+          data_parentId: 'root',
+          data_parentId_changeAt_: now.toUtc(),
+          data_parentId_cid_: 'cid',
+          data_parentId_changeBy_: 'tester',
+          data_parentProp: 'pList',
+          data_parentProp_changeAt_: now.toUtc(),
+          data_parentProp_cid_: 'cid',
+          data_parentProp_changeBy_: 'tester',
+        );
+      }
+
+      ChangeProcessingSummary emptySummary() => ChangeProcessingSummary(
+        storageType: 'local',
+        storageId: 'S1',
+        stateUpdates: [],
+        changeUpdates: [],
+        created: [],
+        updated: [],
+        deleted: [],
+        outdated: [],
+        noOps: [],
+        clouded: [],
+        dups: [],
+        unknowns: [],
+        info: [],
+        errors: [],
+        unprocessed: [],
+      );
+
+      test('classifies by operation (create/update/delete/outdated/noOp)', () {
+        final ops = <String, String>{
+          'create': 'created',
+          'update': 'updated',
+          'delete': 'deleted',
+          'outdated': 'outdated',
+          'noOp': 'noOps',
+        };
+
+        ops.forEach((op, bucket) {
+          final summary = emptySummary();
+          final entry = entry0(op: op);
+          final updateResults = (
+            newChangeLogEntry: entry,
+            newEntityState: state0(),
+          );
+          final result = GetUpdateResults(
+            isDuplicate: false,
+            stateUpdates: const {},
+            changeUpdates: const {},
+            operationCounts: OperationCounts(),
+          );
+
+          ChangeProcessingService.categorizeChangeResult(
+            resultsSummary: summary,
+            updateResults: updateResults,
+            result: result,
+            changeLogEntry: entry,
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+
+          expect(
+            {
+              'created': summary.created,
+              'updated': summary.updated,
+              'deleted': summary.deleted,
+              'outdated': summary.outdated,
+              'noOps': summary.noOps,
+            }[bucket]!,
+            contains(entry.cid),
+          );
+        });
+      });
+
+      test('duplicate classification -> clouded vs dups', () {
+        // When operation is not a known bucket and isDuplicate=true
+        final entry1 = entry0(op: '');
+        final entry2 = entry0(op: '');
+
+        // Case 1: stateUpdates present -> clouded
+        final summary1 = emptySummary();
+        ChangeProcessingService.categorizeChangeResult(
+          resultsSummary: summary1,
+          updateResults: (newChangeLogEntry: entry1, newEntityState: state0()),
+          result: GetUpdateResults(
+            isDuplicate: true,
+            stateUpdates: const {'change_cloudAt': 't'},
+            changeUpdates: const {},
+            operationCounts: OperationCounts(),
+          ),
+          changeLogEntry: entry1,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(summary1.clouded, contains(entry1.cid));
+
+        // Case 2: no stateUpdates -> dups
+        final summary2 = emptySummary();
+        ChangeProcessingService.categorizeChangeResult(
+          resultsSummary: summary2,
+          updateResults: (newChangeLogEntry: entry2, newEntityState: state0()),
+          result: GetUpdateResults(
+            isDuplicate: true,
+            stateUpdates: const {},
+            changeUpdates: const {},
+            operationCounts: OperationCounts(),
+          ),
+          changeLogEntry: entry2,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(summary2.dups, contains(entry2.cid));
+      });
+
+      test('unknowns and info are appended', () {
+        final entry = entry0(
+          op: 'update',
+          opInfo: {'note': 'keep'},
+          unknown: {'extra': true},
+        );
+        final summary = emptySummary();
+
+        ChangeProcessingService.categorizeChangeResult(
+          resultsSummary: summary,
+          updateResults: (newChangeLogEntry: entry, newEntityState: state0()),
+          result: GetUpdateResults(
+            isDuplicate: false,
+            stateUpdates: const {},
+            changeUpdates: const {},
+            operationCounts: OperationCounts(),
+          ),
+          changeLogEntry: entry,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+
+        expect(summary.unknowns, isNotEmpty);
+        expect(summary.unknowns.first['cid'], entry.cid);
+        expect(summary.unknowns.first['unknown'], containsPair('extra', true));
+        expect(summary.info, isNotEmpty);
+        expect(summary.info.first['cid'], entry.cid);
+        expect(summary.info.first['operation'], 'update');
+      });
+
+      test('errors bucket when operation==error', () {
+        final entry = entry0(op: 'error', opInfo: {'msg': 'bad'});
+        final summary = emptySummary();
+        ChangeProcessingService.categorizeChangeResult(
+          resultsSummary: summary,
+          updateResults: (newChangeLogEntry: entry, newEntityState: state0()),
+          result: GetUpdateResults(
+            isDuplicate: false,
+            stateUpdates: const {},
+            changeUpdates: const {},
+            operationCounts: OperationCounts(),
+          ),
+          changeLogEntry: entry,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(summary.errors, isNotEmpty);
+        expect(summary.errors.first['cid'], entry.cid);
+      });
+
+      test('includes changeUpdates/stateUpdates when requested', () {
+        final entry = entry0(op: 'update');
+        final summary = emptySummary();
+        final changeUpdates = {'operation': 'update', 'dataJson': '{"x":1}'};
+        final stateUpdates = {'data_rank': '2'};
+
+        ChangeProcessingService.categorizeChangeResult(
+          resultsSummary: summary,
+          updateResults: (newChangeLogEntry: entry, newEntityState: state0()),
+          result: GetUpdateResults(
+            isDuplicate: false,
+            stateUpdates: stateUpdates,
+            changeUpdates: changeUpdates,
+            operationCounts: OperationCounts(),
+          ),
+          changeLogEntry: entry,
+          includeChangeUpdates: true,
+          includeStateUpdates: true,
+        );
+
+        expect(summary.changeUpdates, isNotEmpty);
+        expect(summary.changeUpdates.first['cid'], entry.cid);
+        expect(summary.changeUpdates.first['updates'], changeUpdates);
+
+        expect(summary.stateUpdates, isNotEmpty);
+        expect(summary.stateUpdates.first['cid'], entry.cid);
+        expect(summary.stateUpdates.first['state'], stateUpdates);
+      });
+    });
   });
 }
