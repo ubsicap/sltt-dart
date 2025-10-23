@@ -2,6 +2,25 @@ import 'dart:io';
 
 import 'package:logging/logging.dart';
 
+const String kSlttLogLevelAll = 'ALL';
+const String kSlttLogLevelFine = 'FINE';
+const String kSlttLogLevelInfo = 'INFO';
+const String kSlttLogLevelWarning = 'WARNING';
+const String kSlttLogLevelSevere = 'SEVERE';
+const String kSlttLogLevelOff = 'OFF';
+
+enum SlttLogLevel {
+  all(value: kSlttLogLevelAll),
+  fine(value: kSlttLogLevelFine),
+  info(value: kSlttLogLevelInfo),
+  warning(value: kSlttLogLevelWarning),
+  severe(value: kSlttLogLevelSevere),
+  off(value: kSlttLogLevelOff);
+
+  final String value;
+  const SlttLogLevel({required this.value});
+}
+
 /// Simple project-wide logger wrapper.
 /// Default level is WARNING to keep test output quiet. Set the
 /// environment variable `SLTT_LOG_LEVEL` to one of: ALL, FINE, INFO, WARNING, SEVERE
@@ -14,7 +33,7 @@ class SlttLogger {
 
   static bool _initialized = false;
 
-  static void init({Level level = Level.WARNING}) {
+  static void init({SlttLogLevel level = SlttLogLevel.warning}) {
     // Prefer SLTT_LOG_LEVEL env var, then an explicit argument (default WARNING)
     // Read the environment in a try/catch because
     // some test runners restrict access to Platform.environment.
@@ -26,7 +45,7 @@ class SlttLogger {
       // ignore environment access errors
     }
 
-    Logger.root.level = envLevel ?? level;
+    Logger.root.level = envLevel ?? _levelFromName(level.value);
     // Root level is now controlled via Logger.root.level above.
 
     // Only add a handler once.
