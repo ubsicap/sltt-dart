@@ -17,44 +17,44 @@ abstract class BaseChangeLogEntry
   set cid(String value);
 
   @override
-  String storageId;
+  final String storageId;
 
   @override
-  String domainType;
+  final String domainType;
 
   @override
-  String domainId;
+  final String domainId;
 
   @override
-  String entityType;
+  final String entityType;
 
   @override
-  String operation;
+  final String operation;
 
   @override
   String operationInfoJson = '{}';
 
   @override
-  bool stateChanged;
+  final bool stateChanged;
 
   @override
-  DateTime changeAt;
+  final DateTime changeAt;
 
   @override
-  String entityId;
+  final String entityId;
 
   String dataJson = '{}';
 
   int? dataSchemaRev = 0;
 
   @override
-  DateTime? cloudAt;
+  final DateTime? cloudAt;
 
   @override
-  DateTime? storedAt;
+  final DateTime? storedAt;
 
   @override
-  String changeBy;
+  final String changeBy;
 
   int? schemaVersion = 0;
 
