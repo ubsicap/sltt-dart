@@ -131,10 +131,7 @@ class IsarStorageService extends BaseStorageService {
     // Try to find an existing SelfSyncState with the reserved root domainId.
     // If present, reuse its storageId. Otherwise create and persist a new one.
     try {
-      final existing = await _isar.isarStorageStates
-          .filter()
-          .storageTypeEqualTo('local')
-          .findFirst();
+      final existing = await _isar.isarStorageStates.where().findFirst();
 
       if (existing != null && existing.storageId.isNotEmpty) {
         _storageId = existing.storageId;
@@ -146,7 +143,7 @@ class IsarStorageService extends BaseStorageService {
       final now = DateTime.now().toUtc();
       final storageState = IsarStorageState(
         storageId: newId,
-        storageType: 'local',
+        storageType: getStorageType(),
         createdAt: now,
         updatedAt: now,
       );
