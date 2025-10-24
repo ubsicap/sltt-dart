@@ -48,11 +48,9 @@ abstract class BaseChangeLogEntry
   int? dataSchemaRev = 0;
 
   @override
-  @UtcDateTimeConverter()
   DateTime? cloudAt;
 
   @override
-  @UtcDateTimeConverter()
   DateTime? storedAt;
 
   @override
@@ -123,12 +121,14 @@ abstract class BaseChangeLogEntry
     required this.dataJson,
     this.operationInfoJson = '{}',
     this.dataSchemaRev,
-    this.cloudAt,
-    this.storedAt,
+    DateTime? cloudAt,
+    DateTime? storedAt,
     required this.changeBy,
     this.schemaVersion,
     this.unknownJson = '{}',
-  }) : changeAt = changeAt.toUtc();
+  }) : changeAt = changeAt.toUtc(),
+       storedAt = storedAt?.toUtc(),
+       cloudAt = cloudAt?.toUtc();
 }
 
 mixin Serializable {

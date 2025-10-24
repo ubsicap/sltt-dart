@@ -3194,17 +3194,11 @@ IsarChangeLogEntry _$IsarChangeLogEntryFromJson(
     dataJson: $checkedConvert('dataJson', (v) => v as String),
     cloudAt: $checkedConvert(
       'cloudAt',
-      (v) => _$JsonConverterFromJson<String, DateTime>(
-        v,
-        const UtcDateTimeConverter().fromJson,
-      ),
+      (v) => v == null ? null : DateTime.parse(v as String),
     ),
     storedAt: $checkedConvert(
       'storedAt',
-      (v) => _$JsonConverterFromJson<String, DateTime>(
-        v,
-        const UtcDateTimeConverter().fromJson,
-      ),
+      (v) => v == null ? null : DateTime.parse(v as String),
     ),
     changeBy: $checkedConvert('changeBy', (v) => v as String),
     storageId: $checkedConvert('storageId', (v) => v as String),
@@ -3240,27 +3234,11 @@ Map<String, dynamic> _$IsarChangeLogEntryToJson(IsarChangeLogEntry instance) =>
       'entityId': instance.entityId,
       'dataJson': instance.dataJson,
       'dataSchemaRev': instance.dataSchemaRev,
-      'cloudAt': _$JsonConverterToJson<String, DateTime>(
-        instance.cloudAt,
-        const UtcDateTimeConverter().toJson,
-      ),
-      'storedAt': _$JsonConverterToJson<String, DateTime>(
-        instance.storedAt,
-        const UtcDateTimeConverter().toJson,
-      ),
+      'cloudAt': instance.cloudAt?.toIso8601String(),
+      'storedAt': instance.storedAt?.toIso8601String(),
       'changeBy': instance.changeBy,
       'schemaVersion': instance.schemaVersion,
       'unknownJson': instance.unknownJson,
       'seq': instance.seq,
       'cid': instance.cid,
     };
-
-Value? _$JsonConverterFromJson<Json, Value>(
-  Object? json,
-  Value? Function(Json json) fromJson,
-) => json == null ? null : fromJson(json as Json);
-
-Json? _$JsonConverterToJson<Json, Value>(
-  Value? value,
-  Json? Function(Value value) toJson,
-) => value == null ? null : toJson(value);
