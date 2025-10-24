@@ -18,12 +18,12 @@ class IsarProjectState extends BaseEntityState {
   final String entityId;
 
   // Project-specific fields
-  String? data_nameLocal;
-  int? data_nameLocal_dataSchemaRev_;
-  DateTime? data_nameLocal_changeAt_;
-  String? data_nameLocal_cid_;
-  String? data_nameLocal_changeBy_;
-  DateTime? data_nameLocal_cloudAt_;
+  final String? data_nameLocal;
+  final int? data_nameLocal_dataSchemaRev_;
+  final DateTime? data_nameLocal_changeAt_;
+  final String? data_nameLocal_cid_;
+  final String? data_nameLocal_changeBy_;
+  final DateTime? data_nameLocal_cloudAt_;
 
   IsarProjectState({
     this.id = Isar.autoIncrement,
@@ -74,7 +74,7 @@ class IsarProjectState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     super.data_parentProp_cloudAt_,
-  }) : data_nameLocal_changeAt_ = data_nameLocal_changeAt_!.toUtc();
+  }) : data_nameLocal_changeAt_ = data_nameLocal_changeAt_?.toUtc();
 
   factory IsarProjectState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(

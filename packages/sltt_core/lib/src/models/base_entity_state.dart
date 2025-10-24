@@ -118,7 +118,7 @@ abstract class BaseEntityState
     required String change_changeBy_orig_,
     this.data_rank_dataSchemaRev_,
     this.data_rank,
-    this.data_rank_changeAt_,
+    DateTime? data_rank_changeAt_,
     this.data_rank_cid_,
     this.data_rank_changeBy_,
     this.data_rank_cloudAt_,
@@ -161,7 +161,8 @@ abstract class BaseEntityState
        change_changeBy_orig_ = BaseEntityState.normalizeOrigString(
          change_changeBy_orig_,
          change_changeBy,
-       );
+       ),
+       data_rank_changeAt_ = data_rank_changeAt_?.toUtc();
 
   // Abstract methods to be implemented by concrete subclasses
   Map<String, dynamic> toJson();
