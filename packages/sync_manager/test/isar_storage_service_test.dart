@@ -8,8 +8,11 @@ import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 import 'package:sync_manager/src/models/isar_storage_state.dart';
+import 'package:sync_manager/src/models/isar_task_state.dart';
 import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:test/test.dart';
+
+import '../../sltt_core/test/utils/test_datetime.dart';
 
 void main() {
   late IsarStorageService storage;
@@ -63,7 +66,7 @@ void main() {
       'entityType': entityType,
       'entityId': entityId,
       'changeBy': 'tester',
-      'changeAt': changeAt.toUtc().toIso8601String(),
+      'changeAt': changeAt.toIso8601String(),
       'cid': generateCid(
         entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown,
       ),
@@ -1129,12 +1132,13 @@ void main() {
     test('handles entity creation with minimal data', () async {
       final projectId = 'proj-minimal';
       final entityId = 'entity-minimal';
+      final localChangeAt = DateTime.parse('2024-01-01T12:00:00');
 
       final changeData = changePayload(
         projectId: projectId,
         entityType: 'task',
         entityId: entityId,
-        changeAt: baseTime,
+        changeAt: localChangeAt,
         storageId: '',
         data: {
           'nameLocal': 'Test Project',
@@ -1162,6 +1166,29 @@ void main() {
       expect(change!.seq, greaterThan(0));
       expect(change.domainId, equals(projectId));
       expect(change.entityId, equals(entityId));
+      expect(change.changeAt, equals(localChangeAt.toUtc()));
+      expect(change.storedAt, equals(change.storedAt?.toUtc()));
+      // TODO: use cloud storage to test cloudAt
+      expect(change.cloudAt, equals(change.cloudAt?.toUtc()));
+
+      expectAllDateTimeFieldsAreUtc(change.toJson());
+
+      final state =
+          await storage.getCurrentEntityState(
+                domainType: 'project',
+                domainId: projectId,
+                entityType: 'task',
+                entityId: entityId,
+              )
+              as IsarTaskState;
+
+      expect(state, isNotNull);
+      expect(state.change_changeAt, equals(localChangeAt.toUtc()));
+      expect(state.change_storedAt, equals(state.change_storedAt.toUtc()));
+
+      expectAllDateTimeFieldsAreUtc(state.toJson());
+
+      expect(state.data_nameLocal_changeAt_, equals(localChangeAt.toUtc()));
     });
 
     test('project/project matching ids succeeds', () async {
@@ -1308,11 +1335,13 @@ void main() {
         'metadata': List.generate(100, (i) => 'item-$i'),
       };
 
+      final localChangeAt = DateTime.parse('2023-01-01T00:00:00');
+
       final changeData = changePayload(
         projectId: projectId,
         entityType: 'task',
         entityId: entityId,
-        changeAt: baseTime,
+        changeAt: localChangeAt,
         data: largeData,
         operation: 'create',
       );
@@ -1337,6 +1366,7 @@ void main() {
       );
       expect(retrieved, isNotNull);
       expect(retrieved!.entityId, equals(entityId));
+      expect(retrieved.changeAt, equals(localChangeAt.toUtc()));
     });
   });
 
@@ -1364,6 +1394,10 @@ void main() {
 
         expect(existing, isNotNull);
         expect(existing!.storageId, equals(id1));
+        expect(existing.createdAt.isUtc, isTrue);
+        expect(existing.updatedAt.isUtc, isTrue);
+        expect(existing.createdAt, equals(existing.updatedAt));
+        expect(existing.storageType, storage.getStorageType());
 
         await isar.close();
 
@@ -1506,7 +1540,7 @@ void main() {
     });
 
     test('can create and retrieve CursorSyncState directly in Isar', () async {
-      final now = DateTime.now().toUtc();
+      final now = DateTime.now();
       final cursor = CursorSyncState(
         domainId: 'cursor-domain',
         domainType: 'cursor',
@@ -1539,6 +1573,9 @@ void main() {
 
       expect(found, isNotNull);
       expect(found!.domainId, equals('cursor-domain'));
+      expect(found.storedAt, equals(now.toUtc()));
+      expect(found.changeAt, equals(now.toUtc()));
+      expect(found.seq, equals(1));
 
       await isar.close();
 

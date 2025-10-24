@@ -14,7 +14,8 @@ class IsarStorageState {
     this.id = Isar.autoIncrement,
     required this.storageId,
     required this.storageType,
-    required this.createdAt,
-    required this.updatedAt,
-  });
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : createdAt = createdAt.toUtc(),
+       updatedAt = updatedAt.toUtc();
 }
