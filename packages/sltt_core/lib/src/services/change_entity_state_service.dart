@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/models/constants/change_operations.dart';
 
 class LastWriteWinsResult {
   /// may or may not be the same as the incoming changeLogEntryToWrite
