@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sltt_core/src/models/constants/change_operations.dart';
 import 'package:test/test.dart';
 
 import 'test_models.dart';
+import 'utils/test_datetime.dart';
 
 void main() {
   // Initialize project logger with default level (WARNING). Tests can call
@@ -1612,19 +1612,23 @@ void main() {
       test(
         'should detect field-drift and produce stateUpdates compatible with TestEntityState deserialization',
         () {
+          // TODO: could be made own test
           final data = {
             'nameLocal': 'Test Task Name',
             'parentId': 'parent-drift-test',
             'parentProp': 'pList',
             'nameOptionalField': 'optional value',
           };
+
+          final changeAt = DateTime.parse('2023-01-01T00:10:00');
+
           // Create a change log entry for a new entity with all required fields
           final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity-drift-test',
             entityType: 'task',
             domainId: 'project1',
             domainType: 'project',
-            changeAt: baseTime.add(const Duration(minutes: 1)),
+            changeAt: changeAt,
             cid: 'cid-drift-test',
             storageId: '',
             changeBy: 'user1',
@@ -1706,10 +1710,17 @@ void main() {
             reason: 'nameLocal field should be correctly deserialized',
           );
           expect(
+            testEntityState.data_nameLocal_changeAt_,
+            equals(changeAt.toUtc()),
+          );
+          expect(
             serializedJson['data_nameLocal'],
             equals('Test Task Name'),
             reason: 'nameLocal field should be correctly serialized',
           );
+
+          // test to make sure all dateTime fields are utc
+          expectAllDateTimeFieldsAreUtc(serializedJson);
 
           // now see if TestEntityState has any additional (optional) fields
           final jsonWithNullValues = testEntityState.toJsonBase()

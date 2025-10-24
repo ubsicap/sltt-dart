@@ -5,6 +5,8 @@ import 'package:sync_manager/src/models/isar_document_state.dart';
 import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
+import '../../sltt_core/test/utils/test_datetime.dart';
+
 void main() {
   group('preserves unknown fields', () {
     test('IsarProjectState.fromJson preserves unknown fields', () {
@@ -279,10 +281,10 @@ void main() {
     test(
       'IsarProjectState should detect field-drift and produce stateUpdates compatible with IsarPortionDataEntityState deserialization',
       () {
-        final DateTime baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+        final DateTime baseTime = DateTime.parse('2023-01-01T00:00:00');
         final baseData = BaseDataFields(
           parentId: 'root',
-          parentProp: 'portions',
+          parentProp: 'projects',
           rank: 'aaaaz',
         );
 
@@ -291,13 +293,15 @@ void main() {
           'nameLocal': 'Project Name',
         };
 
+        final changeAt = baseTime.add(const Duration(minutes: 1));
+
         // Create a change log entry for a new entity with all required fields
         final changeLogEntry = IsarChangeLogEntry(
           entityId: 'entity-drift-test',
           entityType: kEntityTypeProject,
           domainId: 'project1',
           domainType: 'project',
-          changeAt: baseTime.add(const Duration(minutes: 1)),
+          changeAt: changeAt,
           cid: 'cid-drift-test',
           storageId: '',
           changeBy: 'user1',
@@ -390,6 +394,14 @@ void main() {
           equals('Project Name'),
           reason: 'name field should be correctly serialized',
         );
+        expect(
+          testEntityState.data_nameLocal_changeAt_,
+          equals(changeAt.toUtc()),
+          reason: 'name_changeAt_ should match change log entry changeAt',
+        );
+
+        // test to make sure all dateTime fields are utc
+        expectAllDateTimeFieldsAreUtc(serializedJson);
 
         // now see if IsarPortionDataEntityState has any additional (optional) fields
         final jsonWithNullValues = testEntityState.toJsonBase()

@@ -33,10 +33,8 @@ abstract class BaseEntityState
   @override
   final DateTime change_changeAt_orig_;
   @override
-  @UtcDateTimeConverter()
   final DateTime change_storedAt;
   @override
-  @UtcDateTimeConverter()
   final DateTime change_storedAt_orig_;
   @override
   final String change_cid;
@@ -104,12 +102,12 @@ abstract class BaseEntityState
     required this.domainType,
     this.schemaVersion,
     required String unknownJson,
+    required DateTime change_storedAt,
+    required DateTime change_storedAt_orig_,
     required this.change_domainId,
     required String change_domainId_orig_,
     required DateTime change_changeAt,
     required DateTime change_changeAt_orig_,
-    required this.change_storedAt,
-    required DateTime change_storedAt_orig_,
     required this.change_cid,
     required String change_cid_orig_,
     this.change_dataSchemaRev,
@@ -141,6 +139,11 @@ abstract class BaseEntityState
     required this.data_parentProp_changeBy_,
     this.data_parentProp_cloudAt_,
   }) : unknownJson = JsonUtils.normalize(unknownJson),
+       change_storedAt = change_storedAt.toUtc(),
+       change_storedAt_orig_ = BaseEntityState.normalizeOrigDateTime(
+         change_storedAt_orig_,
+         change_storedAt,
+       ).toUtc(),
        change_domainId_orig_ = BaseEntityState.normalizeOrigString(
          change_domainId_orig_,
          change_domainId,
@@ -149,11 +152,7 @@ abstract class BaseEntityState
        change_changeAt_orig_ = BaseEntityState.normalizeOrigDateTime(
          change_changeAt_orig_,
          change_changeAt,
-       ),
-       change_storedAt_orig_ = BaseEntityState.normalizeOrigDateTime(
-         change_storedAt_orig_,
-         change_storedAt,
-       ),
+       ).toUtc(),
        change_cid_orig_ = BaseEntityState.normalizeOrigString(
          change_cid_orig_,
          change_cid,

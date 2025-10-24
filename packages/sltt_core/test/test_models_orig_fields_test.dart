@@ -55,9 +55,10 @@ void main() {
       'initializes _orig_ fields from current values when using empty/default values',
       () {
         final changeAtJson = DateTime.parse(
-          '2024-01-01T10:00:00Z',
-        ).toUtc().toIso8601String();
-        final storedAtJson = DateTime.now().toUtc().toIso8601String();
+          '2024-01-01T10:00:00',
+        ).toIso8601String();
+        final changeAt = DateTime.parse(changeAtJson);
+        final storedAtJson = DateTime.now().toIso8601String();
 
         final rawJson = {
           'entityId': 'test-new',
@@ -98,14 +99,28 @@ void main() {
 
         // Verify _orig_ fields are set from current values
         expect(entity.change_domainId_orig_, equals('d2'));
-        expect(
-          entity.change_changeAt_orig_,
-          equals(DateTime.parse('2024-01-01T10:00:00Z')),
-        );
+        expect(entity.change_changeAt_orig_, equals(changeAt.toUtc()));
         expect(entity.change_cid_orig_, equals('cid-new'));
         expect(entity.change_changeBy_orig_, equals('creator'));
         // change_storedAt_orig_ should be set from current values (no cloudAt provided)
         expect(entity.change_storedAt_orig_, isA<DateTime>());
+
+        // make sure all _orig_ date times are in UTC
+        final dateTimeOrigs = entity
+            .toJson()
+            .entries
+            .where((e) => e.key.endsWith('_orig_'))
+            .whereType<MapEntry<String, String>>()
+            .map((e) => MapEntry(e.key, DateTime.parse(e.value)))
+            .toList();
+
+        for (final entry in dateTimeOrigs) {
+          expect(
+            entry.value.isUtc,
+            isTrue,
+            reason: '${entry.key} is not in UTC',
+          );
+        }
 
         // Verify unknown fields still work
         final unknown = jsonDecode(entity.unknownJson) as Map<String, dynamic>;
