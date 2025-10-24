@@ -1514,6 +1514,7 @@ void main() {
         storageType: 'local',
         cid: 'cid-1',
         changeAt: now,
+        storedAt: now,
         seq: 1,
       );
 

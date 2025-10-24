@@ -23,13 +23,13 @@ abstract class SyncState {
   /// Sequence number of the last change that was synced
   final int seq;
 
+  /// Local datetime when this sync state was last updated
+  /// expect to always be set, either by default or from deserialization
+  final DateTime storedAt;
+
   /// Local datetime when this sync state was created
   /// expect to always be set, either by default or from deserialization
   final DateTime? storedAt_orig_;
-
-  /// Local datetime when this sync state was last updated
-  /// expect to always be set, either by default or from deserialization
-  final DateTime? storedAt;
 
   SyncState({
     required this.domainId,
@@ -37,10 +37,11 @@ abstract class SyncState {
     required this.storageId,
     required this.storageType,
     required this.cid,
-    required this.changeAt,
+    required DateTime changeAt,
     required this.seq,
+    required DateTime storedAt,
     DateTime? storedAt_orig_,
-    DateTime? storedAt,
-  }) : storedAt_orig_ = storedAt_orig_ ?? storedAt ?? DateTime.now(),
-       storedAt = storedAt ?? DateTime.now();
+  }) : changeAt = changeAt.toUtc(),
+       storedAt = storedAt.toUtc(),
+       storedAt_orig_ = storedAt_orig_ ?? storedAt;
 }

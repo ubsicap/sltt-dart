@@ -153,7 +153,7 @@ IsarEntityTypeSyncState _isarEntityTypeSyncStateDeserialize(
     seq: reader.readLong(offsets[7]),
     storageId: reader.readString(offsets[8]),
     storageType: reader.readString(offsets[9]),
-    storedAt: reader.readDateTimeOrNull(offsets[10]),
+    storedAt: reader.readDateTime(offsets[10]),
     storedAt_orig_: reader.readDateTimeOrNull(offsets[11]),
     updated: reader.readLong(offsets[12]),
   );
@@ -188,7 +188,7 @@ P _isarEntityTypeSyncStateDeserializeProp<P>(
     case 9:
       return (reader.readString(offset)) as P;
     case 10:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 11:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 12:
@@ -2015,33 +2015,7 @@ extension IsarEntityTypeSyncStateQueryFilter
     IsarEntityTypeSyncState,
     QAfterFilterCondition
   >
-  storedAtIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNull(property: r'storedAt'),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  storedAtIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNotNull(property: r'storedAt'),
-      );
-    });
-  }
-
-  QueryBuilder<
-    IsarEntityTypeSyncState,
-    IsarEntityTypeSyncState,
-    QAfterFilterCondition
-  >
-  storedAtEqualTo(DateTime? value) {
+  storedAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.equalTo(property: r'storedAt', value: value),
@@ -2054,7 +2028,7 @@ extension IsarEntityTypeSyncStateQueryFilter
     IsarEntityTypeSyncState,
     QAfterFilterCondition
   >
-  storedAtGreaterThan(DateTime? value, {bool include = false}) {
+  storedAtGreaterThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(
@@ -2071,7 +2045,7 @@ extension IsarEntityTypeSyncStateQueryFilter
     IsarEntityTypeSyncState,
     QAfterFilterCondition
   >
-  storedAtLessThan(DateTime? value, {bool include = false}) {
+  storedAtLessThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.lessThan(
@@ -2089,8 +2063,8 @@ extension IsarEntityTypeSyncStateQueryFilter
     QAfterFilterCondition
   >
   storedAtBetween(
-    DateTime? lower,
-    DateTime? upper, {
+    DateTime lower,
+    DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -2862,7 +2836,7 @@ extension IsarEntityTypeSyncStateQueryProperty
     });
   }
 
-  QueryBuilder<IsarEntityTypeSyncState, DateTime?, QQueryOperations>
+  QueryBuilder<IsarEntityTypeSyncState, DateTime, QQueryOperations>
   storedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'storedAt');

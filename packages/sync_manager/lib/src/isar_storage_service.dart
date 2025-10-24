@@ -320,7 +320,10 @@ class IsarStorageService extends BaseStorageService {
         late final DateTime latestChangeAt;
         late final String latestCid;
         late final int latestSeq;
-        if (newChange.changeAt.isAfter(existingEntityTypeSyncStates.changeAt)) {
+        if (newChange.changeAt.isAfter(existingEntityTypeSyncStates.changeAt) ||
+            newChange.changeAt.isAtSameMomentAs(
+              existingEntityTypeSyncStates.changeAt,
+            )) {
           latestChangeAt = newChange.changeAt;
           latestCid = newChange.cid;
           latestSeq = newChange.seq;
@@ -346,8 +349,8 @@ class IsarStorageService extends BaseStorageService {
               existingEntityTypeSyncStates.updated + operationCounts.update,
           deleted:
               existingEntityTypeSyncStates.deleted + operationCounts.delete,
+          storedAt: newChange.storedAt!,
           storedAt_orig_: existingEntityTypeSyncStates.storedAt_orig_,
-          storedAt: newChange.storedAt,
         );
         await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
       } else {

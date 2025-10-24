@@ -23,7 +23,7 @@ class CursorSyncState extends SyncState {
     required super.cid,
     required super.changeAt,
     required super.seq,
+    required super.storedAt,
     super.storedAt_orig_,
-    super.storedAt,
   });
 }

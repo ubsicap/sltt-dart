@@ -117,7 +117,7 @@ CursorSyncState _cursorSyncStateDeserialize(
     seq: reader.readLong(offsets[4]),
     storageId: reader.readString(offsets[5]),
     storageType: reader.readString(offsets[6]),
-    storedAt: reader.readDateTimeOrNull(offsets[7]),
+    storedAt: reader.readDateTime(offsets[7]),
     storedAt_orig_: reader.readDateTimeOrNull(offsets[8]),
   );
   return object;
@@ -145,7 +145,7 @@ P _cursorSyncStateDeserializeProp<P>(
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 8:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:
@@ -1117,25 +1117,7 @@ extension CursorSyncStateQueryFilter
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  storedAtIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNull(property: r'storedAt'),
-      );
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  storedAtIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNotNull(property: r'storedAt'),
-      );
-    });
-  }
-
-  QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  storedAtEqualTo(DateTime? value) {
+  storedAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.equalTo(property: r'storedAt', value: value),
@@ -1144,7 +1126,7 @@ extension CursorSyncStateQueryFilter
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  storedAtGreaterThan(DateTime? value, {bool include = false}) {
+  storedAtGreaterThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(
@@ -1157,7 +1139,7 @@ extension CursorSyncStateQueryFilter
   }
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
-  storedAtLessThan(DateTime? value, {bool include = false}) {
+  storedAtLessThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.lessThan(
@@ -1171,8 +1153,8 @@ extension CursorSyncStateQueryFilter
 
   QueryBuilder<CursorSyncState, CursorSyncState, QAfterFilterCondition>
   storedAtBetween(
-    DateTime? lower,
-    DateTime? upper, {
+    DateTime lower,
+    DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -1649,8 +1631,7 @@ extension CursorSyncStateQueryProperty
     });
   }
 
-  QueryBuilder<CursorSyncState, DateTime?, QQueryOperations>
-  storedAtProperty() {
+  QueryBuilder<CursorSyncState, DateTime, QQueryOperations> storedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'storedAt');
     });

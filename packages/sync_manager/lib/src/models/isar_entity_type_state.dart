@@ -31,7 +31,7 @@ class IsarEntityTypeSyncState extends SyncState {
     required this.created,
     required this.updated,
     required this.deleted,
+    required super.storedAt,
     super.storedAt_orig_,
-    super.storedAt,
   });
 }
