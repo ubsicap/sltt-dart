@@ -37,9 +37,9 @@ abstract class BaseChangeLogEntry
   @override
   bool stateChanged;
 
+  final DateTime _changeAt;
   @override
-  @UtcDateTimeConverter()
-  DateTime changeAt;
+  DateTime get changeAt => _changeAt;
 
   @override
   String entityId;
@@ -119,7 +119,7 @@ abstract class BaseChangeLogEntry
     required this.entityType,
     required this.operation,
     required this.stateChanged,
-    required this.changeAt,
+    required DateTime changeAt,
     required this.entityId,
     required this.dataJson,
     this.operationInfoJson = '{}',
@@ -129,45 +129,7 @@ abstract class BaseChangeLogEntry
     required this.changeBy,
     this.schemaVersion,
     this.unknownJson = '{}',
-  });
-
-  // Convenience constructor: accept Maps and encode to JSON strings
-  BaseChangeLogEntry.fromJsonWithMaps({
-    required String storageId,
-    required String domainType,
-    required String domainId,
-    required String entityType,
-    required String operation,
-    required bool stateChanged,
-    Map<String, dynamic> operationInfo = const {},
-    required DateTime changeAt,
-    required String entityId,
-    required Map<String, dynamic> data,
-    int? dataSchemaRev,
-    DateTime? cloudAt,
-    DateTime? storedAt,
-    required String changeBy,
-    required String cid,
-    int? schemaVersion,
-    Map<String, dynamic> unknown = const {},
-  }) : this(
-         storageId: storageId,
-         domainType: domainType,
-         domainId: domainId,
-         entityType: entityType,
-         operation: operation,
-         stateChanged: stateChanged,
-         changeAt: changeAt,
-         entityId: entityId,
-         dataJson: jsonEncode(data),
-         operationInfoJson: jsonEncode(operationInfo),
-         dataSchemaRev: dataSchemaRev,
-         cloudAt: cloudAt,
-         storedAt: storedAt,
-         changeBy: changeBy,
-         schemaVersion: schemaVersion,
-         unknownJson: jsonEncode(unknown),
-       );
+  }) : _changeAt = changeAt.toUtc();
 }
 
 mixin Serializable {

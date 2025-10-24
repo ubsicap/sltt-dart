@@ -6,57 +6,52 @@ part of 'test_models.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-TestChangeLogEntry _$TestChangeLogEntryFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('TestChangeLogEntry', json, ($checkedConvert) {
-      final val = TestChangeLogEntry(
-        cid: $checkedConvert('cid', (v) => v as String),
-        entityId: $checkedConvert('entityId', (v) => v as String),
-        entityType: $checkedConvert('entityType', (v) => v as String),
-        domainId: $checkedConvert('domainId', (v) => v as String),
-        domainType: $checkedConvert('domainType', (v) => v as String),
-        changeAt: $checkedConvert(
-          'changeAt',
-          (v) => const UtcDateTimeConverter().fromJson(v as String),
-        ),
-        storedAt: $checkedConvert(
-          'storedAt',
-          (v) => _$JsonConverterFromJson<String, DateTime>(
-            v,
-            const UtcDateTimeConverter().fromJson,
-          ),
-        ),
-        storageId: $checkedConvert('storageId', (v) => v as String? ?? ''),
-        changeBy: $checkedConvert('changeBy', (v) => v as String),
-        dataJson: $checkedConvert('dataJson', (v) => v as String),
-        operation: $checkedConvert('operation', (v) => v as String),
-        operationInfoJson: $checkedConvert(
-          'operationInfoJson',
-          (v) => v as String? ?? '{}',
-        ),
-        stateChanged: $checkedConvert('stateChanged', (v) => v as bool),
-        unknownJson: $checkedConvert(
-          'unknownJson',
-          (v) => v as String? ?? '{}',
-        ),
-        dataSchemaRev: $checkedConvert(
-          'dataSchemaRev',
-          (v) => (v as num?)?.toInt(),
-        ),
-        cloudAt: $checkedConvert(
-          'cloudAt',
-          (v) => _$JsonConverterFromJson<String, DateTime>(
-            v,
-            const UtcDateTimeConverter().fromJson,
-          ),
-        ),
-        schemaVersion: $checkedConvert(
-          'schemaVersion',
-          (v) => (v as num?)?.toInt(),
-        ),
-        seq: $checkedConvert('seq', (v) => (v as num?)?.toInt() ?? 0),
-      );
-      return val;
-    });
+TestChangeLogEntry _$TestChangeLogEntryFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('TestChangeLogEntry', json, ($checkedConvert) {
+  final val = TestChangeLogEntry(
+    cid: $checkedConvert('cid', (v) => v as String),
+    entityId: $checkedConvert('entityId', (v) => v as String),
+    entityType: $checkedConvert('entityType', (v) => v as String),
+    domainId: $checkedConvert('domainId', (v) => v as String),
+    domainType: $checkedConvert('domainType', (v) => v as String),
+    changeAt: $checkedConvert('changeAt', (v) => DateTime.parse(v as String)),
+    storedAt: $checkedConvert(
+      'storedAt',
+      (v) => _$JsonConverterFromJson<String, DateTime>(
+        v,
+        const UtcDateTimeConverter().fromJson,
+      ),
+    ),
+    storageId: $checkedConvert('storageId', (v) => v as String? ?? ''),
+    changeBy: $checkedConvert('changeBy', (v) => v as String),
+    dataJson: $checkedConvert('dataJson', (v) => v as String),
+    operation: $checkedConvert('operation', (v) => v as String),
+    operationInfoJson: $checkedConvert(
+      'operationInfoJson',
+      (v) => v as String? ?? '{}',
+    ),
+    stateChanged: $checkedConvert('stateChanged', (v) => v as bool),
+    unknownJson: $checkedConvert('unknownJson', (v) => v as String? ?? '{}'),
+    dataSchemaRev: $checkedConvert(
+      'dataSchemaRev',
+      (v) => (v as num?)?.toInt(),
+    ),
+    cloudAt: $checkedConvert(
+      'cloudAt',
+      (v) => _$JsonConverterFromJson<String, DateTime>(
+        v,
+        const UtcDateTimeConverter().fromJson,
+      ),
+    ),
+    schemaVersion: $checkedConvert(
+      'schemaVersion',
+      (v) => (v as num?)?.toInt(),
+    ),
+    seq: $checkedConvert('seq', (v) => (v as num?)?.toInt() ?? 0),
+  );
+  return val;
+});
 
 Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
     <String, dynamic>{
@@ -67,7 +62,7 @@ Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
       'operation': instance.operation,
       'operationInfoJson': instance.operationInfoJson,
       'stateChanged': instance.stateChanged,
-      'changeAt': const UtcDateTimeConverter().toJson(instance.changeAt),
+      'changeAt': instance.changeAt.toIso8601String(),
       'entityId': instance.entityId,
       'dataJson': instance.dataJson,
       'dataSchemaRev': instance.dataSchemaRev,
