@@ -3177,60 +3177,55 @@ extension IsarChangeLogEntryQueryProperty
 // JsonSerializableGenerator
 // **************************************************************************
 
-IsarChangeLogEntry _$IsarChangeLogEntryFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('IsarChangeLogEntry', json, ($checkedConvert) {
-      final val = IsarChangeLogEntry(
-        cid: $checkedConvert('cid', (v) => v as String),
-        seq: $checkedConvert(
-          'seq',
-          (v) => (v as num?)?.toInt() ?? Isar.autoIncrement,
-        ),
-        domainId: $checkedConvert('domainId', (v) => v as String),
-        entityType: $checkedConvert('entityType', (v) => v as String),
-        operation: $checkedConvert('operation', (v) => v as String),
-        changeAt: $checkedConvert(
-          'changeAt',
-          (v) => const UtcDateTimeConverter().fromJson(v as String),
-        ),
-        entityId: $checkedConvert('entityId', (v) => v as String),
-        dataJson: $checkedConvert('dataJson', (v) => v as String),
-        cloudAt: $checkedConvert(
-          'cloudAt',
-          (v) => _$JsonConverterFromJson<String, DateTime>(
-            v,
-            const UtcDateTimeConverter().fromJson,
-          ),
-        ),
-        storedAt: $checkedConvert(
-          'storedAt',
-          (v) => _$JsonConverterFromJson<String, DateTime>(
-            v,
-            const UtcDateTimeConverter().fromJson,
-          ),
-        ),
-        changeBy: $checkedConvert('changeBy', (v) => v as String),
-        storageId: $checkedConvert('storageId', (v) => v as String),
-        domainType: $checkedConvert('domainType', (v) => v as String),
-        stateChanged: $checkedConvert('stateChanged', (v) => v as bool),
-        operationInfoJson: $checkedConvert(
-          'operationInfoJson',
-          (v) => v as String? ?? '{}',
-        ),
-        unknownJson: $checkedConvert(
-          'unknownJson',
-          (v) => v as String? ?? '{}',
-        ),
-        dataSchemaRev: $checkedConvert(
-          'dataSchemaRev',
-          (v) => (v as num?)?.toInt(),
-        ),
-        schemaVersion: $checkedConvert(
-          'schemaVersion',
-          (v) => (v as num?)?.toInt(),
-        ),
-      );
-      return val;
-    });
+IsarChangeLogEntry _$IsarChangeLogEntryFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('IsarChangeLogEntry', json, ($checkedConvert) {
+  final val = IsarChangeLogEntry(
+    cid: $checkedConvert('cid', (v) => v as String),
+    seq: $checkedConvert(
+      'seq',
+      (v) => (v as num?)?.toInt() ?? Isar.autoIncrement,
+    ),
+    domainId: $checkedConvert('domainId', (v) => v as String),
+    entityType: $checkedConvert('entityType', (v) => v as String),
+    operation: $checkedConvert('operation', (v) => v as String),
+    changeAt: $checkedConvert('changeAt', (v) => DateTime.parse(v as String)),
+    entityId: $checkedConvert('entityId', (v) => v as String),
+    dataJson: $checkedConvert('dataJson', (v) => v as String),
+    cloudAt: $checkedConvert(
+      'cloudAt',
+      (v) => _$JsonConverterFromJson<String, DateTime>(
+        v,
+        const UtcDateTimeConverter().fromJson,
+      ),
+    ),
+    storedAt: $checkedConvert(
+      'storedAt',
+      (v) => _$JsonConverterFromJson<String, DateTime>(
+        v,
+        const UtcDateTimeConverter().fromJson,
+      ),
+    ),
+    changeBy: $checkedConvert('changeBy', (v) => v as String),
+    storageId: $checkedConvert('storageId', (v) => v as String),
+    domainType: $checkedConvert('domainType', (v) => v as String),
+    stateChanged: $checkedConvert('stateChanged', (v) => v as bool),
+    operationInfoJson: $checkedConvert(
+      'operationInfoJson',
+      (v) => v as String? ?? '{}',
+    ),
+    unknownJson: $checkedConvert('unknownJson', (v) => v as String? ?? '{}'),
+    dataSchemaRev: $checkedConvert(
+      'dataSchemaRev',
+      (v) => (v as num?)?.toInt(),
+    ),
+    schemaVersion: $checkedConvert(
+      'schemaVersion',
+      (v) => (v as num?)?.toInt(),
+    ),
+  );
+  return val;
+});
 
 Map<String, dynamic> _$IsarChangeLogEntryToJson(IsarChangeLogEntry instance) =>
     <String, dynamic>{
@@ -3241,7 +3236,7 @@ Map<String, dynamic> _$IsarChangeLogEntryToJson(IsarChangeLogEntry instance) =>
       'operation': instance.operation,
       'operationInfoJson': instance.operationInfoJson,
       'stateChanged': instance.stateChanged,
-      'changeAt': const UtcDateTimeConverter().toJson(instance.changeAt),
+      'changeAt': instance.changeAt.toIso8601String(),
       'entityId': instance.entityId,
       'dataJson': instance.dataJson,
       'dataSchemaRev': instance.dataSchemaRev,

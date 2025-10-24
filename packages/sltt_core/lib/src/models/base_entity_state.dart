@@ -106,7 +106,7 @@ abstract class BaseEntityState
     required String unknownJson,
     required this.change_domainId,
     required String change_domainId_orig_,
-    required this.change_changeAt,
+    required DateTime change_changeAt,
     required DateTime change_changeAt_orig_,
     required this.change_storedAt,
     required DateTime change_storedAt_orig_,
@@ -145,6 +145,7 @@ abstract class BaseEntityState
          change_domainId_orig_,
          change_domainId,
        ),
+       change_changeAt = change_changeAt.toUtc(),
        change_changeAt_orig_ = BaseEntityState.normalizeOrigDateTime(
          change_changeAt_orig_,
          change_changeAt,
