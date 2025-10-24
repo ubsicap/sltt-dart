@@ -1284,6 +1284,8 @@ class CloudStorageService extends IsarStorageService {
 
   CloudStorageService._() : super('cloud_storage', 'CloudStorage');
 
+  CloudStorageService(super._databaseName, super._logPrefix);
+
   @override
   String getStorageType() => 'cloud';
 

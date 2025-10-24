@@ -19,7 +19,7 @@ void main() {
   setUp(() async {
     testDbName =
         'test_seq_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1 << 31)}';
-    storage = IsarStorageService(testDbName, 'SeqTest');
+    storage = CloudStorageService(testDbName, 'SeqTest');
     await storage.initialize();
   });
 
