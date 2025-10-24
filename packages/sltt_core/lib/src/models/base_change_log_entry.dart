@@ -37,9 +37,8 @@ abstract class BaseChangeLogEntry
   @override
   bool stateChanged;
 
-  final DateTime _changeAt;
   @override
-  DateTime get changeAt => _changeAt;
+  DateTime changeAt;
 
   @override
   String entityId;
@@ -129,7 +128,7 @@ abstract class BaseChangeLogEntry
     required this.changeBy,
     this.schemaVersion,
     this.unknownJson = '{}',
-  }) : _changeAt = changeAt.toUtc();
+  }) : changeAt = changeAt.toUtc();
 }
 
 mixin Serializable {
