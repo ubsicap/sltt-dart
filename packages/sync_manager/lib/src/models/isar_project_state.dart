@@ -35,7 +35,7 @@ class IsarProjectState extends BaseEntityState {
     required super.change_storedAt_orig_,
     this.data_nameLocal,
     this.data_nameLocal_dataSchemaRev_,
-    this.data_nameLocal_changeAt_,
+    DateTime? data_nameLocal_changeAt_,
     this.data_nameLocal_cid_,
     this.data_nameLocal_changeBy_,
     this.data_nameLocal_cloudAt_,
@@ -74,7 +74,7 @@ class IsarProjectState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     super.data_parentProp_cloudAt_,
-  });
+  }) : data_nameLocal_changeAt_ = data_nameLocal_changeAt_!.toUtc();
 
   factory IsarProjectState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
