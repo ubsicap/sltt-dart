@@ -243,14 +243,14 @@ void main() {
       final projectId = 'proj-state';
       final entityId = 'entity-project-1';
 
-      expect(baseTime.isUtc, isTrue);
+      final localChangeAt = DateTime.parse('2023-01-01T01:00:00');
 
       // Create a change that will generate entity state
       final changeData = changePayload(
         projectId: projectId,
         entityType: 'project',
         entityId: entityId,
-        changeAt: baseTime,
+        changeAt: localChangeAt,
         data: {
           'nameLocal': 'Test Project',
           'parentId': 'root',
@@ -280,7 +280,7 @@ void main() {
           'change_storedAt': storedAtChange1Json,
           'change_storedAt_orig_': storedAtChange1Json,
           'change_domainId': projectId,
-          'change_changeAt': baseTime.toIso8601String(),
+          'change_changeAt': localChangeAt.toIso8601String(),
           'change_cid': change.cid,
           'change_changeBy': 'tester',
           'change_domainId_orig_': '', // Empty string for string orig fields
@@ -290,12 +290,12 @@ void main() {
           'change_changeBy_orig_': '', // Empty string for string orig fields
           'data_nameLocal': 'Test Project',
           'data_parentId': 'root',
-          'data_parentId_changeAt_': baseTime.toIso8601String(),
+          'data_parentId_changeAt_': localChangeAt.toIso8601String(),
           'data_parentId_cid_': change.cid,
           'data_parentId_changeBy_': 'tester',
           'data_parentProp': 'pList',
           'data_parentProp_dataSchemaRev_': 0,
-          'data_parentProp_changeAt_': baseTime.toIso8601String(),
+          'data_parentProp_changeAt_': localChangeAt.toIso8601String(),
           'data_parentProp_cid_': change.cid,
           'data_parentProp_changeBy_': 'tester',
           // parentProp meta fields added above
@@ -317,8 +317,9 @@ void main() {
       expect(entityState, isNotNull);
       expect(entityState!.entityType, equals('project'));
       expect(entityState.entityId, equals(entityId));
-      expect(entityState.change_changeAt.toUtc(), equals(baseTime));
-      expect(entityState.change_changeAt, equals(baseTime));
+      expect(entityState.change_changeAt, equals(localChangeAt.toUtc()));
+
+      expectAllDateTimeFieldsAreUtc(entityState.toJson());
     }, timeout: Timeout.none);
 
     test('creates and retrieves document entity state', () async {
