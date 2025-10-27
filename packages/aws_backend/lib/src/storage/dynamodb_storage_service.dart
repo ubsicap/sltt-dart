@@ -117,9 +117,6 @@ class DynamoDBStorageService extends BaseStorageService {
           domainId: newChange.domainId,
         );
       }
-      final now = DateTime.now().toUtc();
-      newChange.cloudAt ??= now;
-      newChange.storedAt ??= now;
       await _putChangeLogEntry(newChange);
     }
 
