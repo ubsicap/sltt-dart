@@ -1,5 +1,7 @@
 **Agent Instruction:**
 
+- prefer running commands with cmd.exe instead of powershell pwsh.
+- Whenever pwsh is used, don't use '&&' since that is not a valid statement separator
 - first try running `dart test [options]` rather than using special scripts to run tests.
   - if isar complains about missing native library, remind user to source the setup script, eg. `./setup_test_env.sh` before running `dart test` to ensure the Isar native library is available.
 - Always keep the `/api/help` documentation in sync with the actual API handlers implemented in `lib/src/api/base_rest_api_server.dart` (`_handleApiDocs`).
