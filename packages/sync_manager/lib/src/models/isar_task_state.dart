@@ -29,10 +29,10 @@ class IsarTaskState extends BaseIsarEntityState {
     required super.change_storedAt,
     required super.change_storedAt_orig_,
     required this.data_nameLocal,
-    required this.data_nameLocal_changeAt_,
+    required DateTime data_nameLocal_changeAt_,
     required this.data_nameLocal_cid_,
     required this.data_nameLocal_changeBy_,
-    this.data_nameLocal_cloudAt_,
+    DateTime? data_nameLocal_cloudAt_,
     this.data_nameLocal_dataSchemaRev_,
     super.schemaVersion,
     required super.change_domainId,
@@ -69,7 +69,8 @@ class IsarTaskState extends BaseIsarEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     super.data_parentProp_cloudAt_,
-  });
+  }) : data_nameLocal_changeAt_ = data_nameLocal_changeAt_.toUtc(),
+       data_nameLocal_cloudAt_ = data_nameLocal_cloudAt_?.toUtc();
 
   factory IsarTaskState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
