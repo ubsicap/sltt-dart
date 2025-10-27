@@ -368,37 +368,37 @@ void main() {
 
       // Use toJsonBase() to check for any missing fields
       final jsonBase = entry.toJsonBase();
-      for (final entry in jsonBase.entries) {
+      for (final kv in jsonBase.entries) {
         expect(
-          entry.value,
+          kv.value,
           isNotNull,
           reason:
-              'Field ${entry.key} should not be null. If it is a DateTime, please test that has been converted to utc below',
+              'Field ${kv.key} should not be null. If it is a DateTime, please test that has been converted to utc below',
         );
         expect(
-          entry.key,
+          kv.key,
           isIn(knownTaskStateFields),
           reason:
-              'Field ${entry.key} is not a known TaskState field. Update the expected value checks and knownTaskStateFields accordingly.',
+              'Field ${kv.key} is not a known TaskState field. Update the expected value checks and knownTaskStateFields accordingly.',
         );
         expect(
-          entry.value,
-          equals(jsonAfterRetrieve[entry.key]),
+          kv.value,
+          equals(jsonAfterRetrieve[kv.key]),
           reason:
-              'Field ${entry.key} does not match after retrieval from database.',
+              'Field ${kv.key} does not match after retrieval from database.',
         );
-        processedAllFields.add(entry.key);
-        if (entry.value is! String) continue;
+        processedAllFields.add(kv.key);
+        if (kv.value is! String) continue;
         // Parse to see if it's a datetime field, if so make sure it's a known datetime field
-        final maybeDateTime = DateTime.tryParse(entry.value);
+        final maybeDateTime = DateTime.tryParse(kv.value);
         if (maybeDateTime != null) {
-          processedDateTimeFields.add(entry.key);
-          expect(entry.key, isIn(knownDateTimeFields));
+          processedDateTimeFields.add(kv.key);
+          expect(kv.key, isIn(knownDateTimeFields));
           expect(
             maybeDateTime.isUtc,
             isTrue,
             reason:
-                'Field ${entry.key} should be UTC DateTime string, got ${entry.value}',
+                'Field ${kv.key} should be UTC DateTime string, got ${kv.value}',
           );
         }
       }
