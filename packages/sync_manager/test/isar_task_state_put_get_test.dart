@@ -18,7 +18,7 @@ void main() {
       if (dbFile.existsSync()) {
         dbFile.deleteSync();
       }
-      final lockFile = File('$testDbPath/$testDbName.isar.lock');
+      final lockFile = File('$testDbPath/$testDbName.isar-lck');
       if (lockFile.existsSync()) {
         lockFile.deleteSync();
       }

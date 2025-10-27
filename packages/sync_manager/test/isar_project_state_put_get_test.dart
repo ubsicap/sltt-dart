@@ -18,7 +18,7 @@ void main() {
       if (dbFile.existsSync()) {
         dbFile.deleteSync();
       }
-      final lockFile = File('$testDbPath/$testDbName.isar.lock');
+      final lockFile = File('$testDbPath/$testDbName.isar-lck');
       if (lockFile.existsSync()) {
         lockFile.deleteSync();
       }
@@ -326,7 +326,8 @@ void main() {
 
       // Store to database
       await isar.writeTxn(() async {
-        await isar.isarProjectStates.put(entry);
+        final newId = await isar.isarProjectStates.put(entry);
+        expect(entry.id, newId, reason: 'Entry id should match stored id');
       });
 
       // Retrieve from database
