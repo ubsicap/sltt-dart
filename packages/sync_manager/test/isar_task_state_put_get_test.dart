@@ -5,75 +5,6 @@ import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/isar_task_state.dart';
 import 'package:test/test.dart';
 
-const knownDateTimeFields = {
-  'change_changeAt',
-  'change_changeAt_orig_',
-  'change_storedAt',
-  'change_storedAt_orig_',
-  'change_cloudAt',
-  'data_nameLocal_changeAt_',
-  'data_nameLocal_cloudAt_',
-  'data_rank_changeAt_',
-  'data_rank_cloudAt_',
-  'data_deleted_changeAt_',
-  'data_deleted_cloudAt_',
-  'data_parentId_changeAt_',
-  'data_parentId_cloudAt_',
-  'data_parentProp_changeAt_',
-  'data_parentProp_cloudAt_',
-};
-
-const knownTaskStateFields = {
-  'id',
-  'entityId',
-  'entityType',
-  'domainType',
-  'unknownJson',
-  'schemaVersion',
-  'change_domainId',
-  'change_domainId_orig_',
-  'change_changeAt',
-  'change_changeAt_orig_',
-  'change_storedAt',
-  'change_storedAt_orig_',
-  'change_cid',
-  'change_cid_orig_',
-  'change_dataSchemaRev',
-  'change_cloudAt',
-  'change_changeBy',
-  'change_changeBy_orig_',
-  'data_nameLocal',
-  'data_nameLocal_dataSchemaRev_',
-  'data_nameLocal_changeAt_',
-  'data_nameLocal_cid_',
-  'data_nameLocal_changeBy_',
-  'data_nameLocal_cloudAt_',
-  'data_rank',
-  'data_rank_dataSchemaRev_',
-  'data_rank_changeAt_',
-  'data_rank_cid_',
-  'data_rank_changeBy_',
-  'data_rank_cloudAt_',
-  'data_deleted',
-  'data_deleted_dataSchemaRev_',
-  'data_deleted_changeAt_',
-  'data_deleted_cid_',
-  'data_deleted_changeBy_',
-  'data_deleted_cloudAt_',
-  'data_parentId',
-  'data_parentId_dataSchemaRev_',
-  'data_parentId_changeAt_',
-  'data_parentId_cid_',
-  'data_parentId_changeBy_',
-  'data_parentId_cloudAt_',
-  'data_parentProp',
-  'data_parentProp_dataSchemaRev_',
-  'data_parentProp_changeAt_',
-  'data_parentProp_cid_',
-  'data_parentProp_changeBy_',
-  'data_parentProp_cloudAt_',
-};
-
 void main() {
   late Isar isar;
   const testDbName = 'isar_task_state_put_get_test';
@@ -103,17 +34,76 @@ void main() {
 
   tearDown(() async {
     await isar.close();
-
-    // Clean up database files
-    final dbFile = File('$testDbPath/$testDbName.isar');
-    if (dbFile.existsSync()) {
-      dbFile.deleteSync();
-    }
-    final lockFile = File('$testDbPath/$testDbName.isar.lock');
-    if (lockFile.existsSync()) {
-      lockFile.deleteSync();
-    }
   });
+
+  const knownDateTimeFields = {
+    'change_changeAt',
+    'change_changeAt_orig_',
+    'change_storedAt',
+    'change_storedAt_orig_',
+    'change_cloudAt',
+    'data_nameLocal_changeAt_',
+    'data_nameLocal_cloudAt_',
+    'data_rank_changeAt_',
+    'data_rank_cloudAt_',
+    'data_deleted_changeAt_',
+    'data_deleted_cloudAt_',
+    'data_parentId_changeAt_',
+    'data_parentId_cloudAt_',
+    'data_parentProp_changeAt_',
+    'data_parentProp_cloudAt_',
+  };
+
+  const knownTaskStateFields = {
+    'id',
+    'entityId',
+    'entityType',
+    'domainType',
+    'unknownJson',
+    'schemaVersion',
+    'change_domainId',
+    'change_domainId_orig_',
+    'change_changeAt',
+    'change_changeAt_orig_',
+    'change_storedAt',
+    'change_storedAt_orig_',
+    'change_cid',
+    'change_cid_orig_',
+    'change_dataSchemaRev',
+    'change_cloudAt',
+    'change_changeBy',
+    'change_changeBy_orig_',
+    'data_nameLocal',
+    'data_nameLocal_dataSchemaRev_',
+    'data_nameLocal_changeAt_',
+    'data_nameLocal_cid_',
+    'data_nameLocal_changeBy_',
+    'data_nameLocal_cloudAt_',
+    'data_rank',
+    'data_rank_dataSchemaRev_',
+    'data_rank_changeAt_',
+    'data_rank_cid_',
+    'data_rank_changeBy_',
+    'data_rank_cloudAt_',
+    'data_deleted',
+    'data_deleted_dataSchemaRev_',
+    'data_deleted_changeAt_',
+    'data_deleted_cid_',
+    'data_deleted_changeBy_',
+    'data_deleted_cloudAt_',
+    'data_parentId',
+    'data_parentId_dataSchemaRev_',
+    'data_parentId_changeAt_',
+    'data_parentId_cid_',
+    'data_parentId_changeBy_',
+    'data_parentId_cloudAt_',
+    'data_parentProp',
+    'data_parentProp_dataSchemaRev_',
+    'data_parentProp_changeAt_',
+    'data_parentProp_cid_',
+    'data_parentProp_changeBy_',
+    'data_parentProp_cloudAt_',
+  };
 
   /// Helper to verify all DateTime fields are UTC
   void expectAllDateTimeFieldsUtc(

@@ -5,28 +5,6 @@ import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 import 'package:test/test.dart';
 
-const knownDateTimeFields = {'changeAt', 'storedAt', 'cloudAt'};
-const knownChangeLogEntryFields = {
-  'seq',
-  'changeAt',
-  'storedAt',
-  'cloudAt',
-  'changeBy',
-  'cid',
-  'dataJson',
-  'domainId',
-  'domainType',
-  'entityId',
-  'entityType',
-  'operation',
-  'operationInfoJson',
-  'schemaVersion',
-  'stateChanged',
-  'storageId',
-  'unknownJson',
-  'dataSchemaRev',
-};
-
 void main() {
   late Isar isar;
   const testDbName = 'isar_change_log_entry_put_get_test';
@@ -53,6 +31,59 @@ void main() {
       name: testDbName,
     );
   });
+
+  tearDown(() async {
+    await isar.close();
+  });
+
+  const knownDateTimeFields = {'changeAt', 'storedAt', 'cloudAt'};
+  const knownChangeLogEntryFields = {
+    'seq',
+    'changeAt',
+    'storedAt',
+    'cloudAt',
+    'changeBy',
+    'cid',
+    'dataJson',
+    'domainId',
+    'domainType',
+    'entityId',
+    'entityType',
+    'operation',
+    'operationInfoJson',
+    'schemaVersion',
+    'stateChanged',
+    'storageId',
+    'unknownJson',
+    'dataSchemaRev',
+  };
+
+  /// Helper to verify all DateTime fields are UTC
+  void expectAllDateTimeFieldsUtc(
+    IsarChangeLogEntry entry, {
+    required DateTime expectedChangeAt,
+    required DateTime expectedCloudAt,
+    required DateTime expectedStoredAt,
+    String context = '',
+  }) {
+    final prefix = context.isEmpty ? '' : '$context: ';
+
+    expect(
+      entry.changeAt,
+      equals(expectedChangeAt.toUtc()),
+      reason: '${prefix}changeAt should be UTC',
+    );
+    expect(
+      entry.cloudAt,
+      equals(expectedCloudAt.toUtc()),
+      reason: '${prefix}cloudAt should be UTC',
+    );
+    expect(
+      entry.storedAt,
+      equals(expectedStoredAt.toUtc()),
+      reason: '${prefix}storedAt should be UTC',
+    );
+  }
 
   group('IsarChangeLogEntry DateTime UTC Conversion', () {
     test('stores and retrieves with all DateTime fields converted to UTC', () async {
@@ -103,20 +134,12 @@ void main() {
       );
 
       // Test that instance DateTime fields are UTC before storing
-      expect(
-        entry.changeAt,
-        equals(localChangeAt.toUtc()),
-        reason: 'changeAt should be UTC',
-      );
-      expect(
-        entry.cloudAt,
-        equals(localCloudAt.toUtc()),
-        reason: 'cloudAt should be UTC',
-      );
-      expect(
-        entry.storedAt,
-        equals(localStoredAt.toUtc()),
-        reason: 'storedAt should be UTC',
+      expectAllDateTimeFieldsUtc(
+        entry,
+        expectedChangeAt: localChangeAt,
+        expectedCloudAt: localCloudAt,
+        expectedStoredAt: localStoredAt,
+        context: 'Before storing',
       );
 
       // Store to database
@@ -137,20 +160,12 @@ void main() {
       );
 
       // Test all retrieved DateTime fields are UTC
-      expect(
-        retrieved!.changeAt,
-        equals(localChangeAt.toUtc()),
-        reason: 'Retrieved changeAt should be UTC',
-      );
-      expect(
-        retrieved.cloudAt,
-        equals(localCloudAt.toUtc()),
-        reason: 'Retrieved cloudAt should be UTC',
-      );
-      expect(
-        retrieved.storedAt,
-        equals(localStoredAt.toUtc()),
-        reason: 'Retrieved storedAt should be UTC',
+      expectAllDateTimeFieldsUtc(
+        retrieved!,
+        expectedChangeAt: localChangeAt,
+        expectedCloudAt: localCloudAt,
+        expectedStoredAt: localStoredAt,
+        context: 'After retrieval',
       );
 
       // Test that re-serialized toJson() has all UTC DateTime strings
