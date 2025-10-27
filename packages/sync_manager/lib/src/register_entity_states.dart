@@ -5,7 +5,6 @@ import 'isar_entity_state_storage_group.dart';
 import 'models/isar_document_state.dart';
 import 'models/isar_project_state.dart';
 import 'models/isar_task_state.dart';
-import 'models/isar_team_state.dart';
 
 /// Schemas required by Isar initialization. Kept separate from registration
 /// so calling code can open Isar with all necessary schemas before
@@ -13,7 +12,6 @@ import 'models/isar_team_state.dart';
 final List<CollectionSchema> entityStateSchemas = [
   IsarProjectStateSchema,
   IsarDocumentStateSchema,
-  IsarTeamStateSchema,
   IsarTaskStateSchema,
 ];
 
@@ -103,49 +101,6 @@ void registerAllIsarEntityStateStorageGroups(
           },
       deleteByDomain: ({required domainId, required domainType}) async =>
           await isar.isarDocumentStates
-              .filter()
-              .change_domainIdEqualTo(domainId)
-              .deleteAll(),
-    ),
-  );
-  registry.register(
-    IsarEntityStateStorageGroup<IsarTeamState>(
-      entityType: EntityType.team,
-      fromJson: IsarTeamState.fromJson,
-      put: (state) async =>
-          await isar.isarTeamStates.put(state as IsarTeamState),
-      collection: (Isar db) => db.isarTeamStates,
-      findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
-          .isarTeamStates
-          .filter()
-          .change_domainIdEqualTo(projectId)
-          .and()
-          .entityIdEqualTo(entityId)
-          .findFirst(),
-      findByDomainWithPagination:
-          ({
-            required String domainId,
-            String? cursor,
-            int? limit,
-            String? parentId,
-            String? parentProp,
-          }) async {
-            var query = isar.isarTeamStates.filter().change_domainIdEqualTo(
-              domainId,
-            );
-            if (parentId != null) {
-              query = query.and().data_parentIdEqualTo(parentId);
-            }
-            if (parentProp != null) {
-              query = query.and().data_parentPropEqualTo(parentProp);
-            }
-            if (cursor != null) {
-              query = query.and().entityIdGreaterThan(cursor);
-            }
-            return await query.sortByEntityId().limit(limit ?? 100).findAll();
-          },
-      deleteByDomain: ({required domainId, required domainType}) async =>
-          await isar.isarTeamStates
               .filter()
               .change_domainIdEqualTo(domainId)
               .deleteAll(),

@@ -50,63 +50,6 @@ void main() {
       expect(p.entityId, equals('proj-1'));
     });
 
-    test('IsarTeamState.fromJson preserves unknown fields', () {
-      final changeAtJson = DateTime.now().toUtc().toIso8601String();
-      final storedAtJson = DateTime.now().toUtc().toIso8601String();
-      final rawJson = {
-        'id': 2,
-        'entityId': 'team-1',
-        'entityType': 'team',
-        'domainType': 'project',
-        'schemaVersion': 1,
-        'change_storedAt': storedAtJson,
-        'change_storedAt_orig_': storedAtJson,
-        'change_domainId': 'd1',
-        'change_changeAt': changeAtJson,
-        'change_cid': 'cid-t1',
-        'change_changeBy': 'u2',
-        'data_rank': '0',
-        'data_parentId': '',
-        'data_parentId_dataSchemaRev_': 0,
-        'data_parentId_changeAt_': changeAtJson,
-        'data_parentId_cid_': 'cid-p',
-        'data_parentId_changeBy_': 'u2',
-        'data_parentProp': 'pList',
-        'data_parentProp_dataSchemaRev_': 0,
-        'data_parentProp_changeAt_': changeAtJson,
-        'data_parentProp_cid_': 'cid-p',
-        'data_parentProp_changeBy_': 'u2',
-        // required orig_ fields
-        'change_domainId_orig_': 'd1',
-        'change_changeAt_orig_': changeAtJson,
-        'change_cid_orig_': 'cid-t1',
-        'change_changeBy_orig_': 'u2',
-        // required non-nullable team-specific fields
-        'name': 'Team Name',
-        'nameChangeAt': changeAtJson,
-        'nameCid': 'cid-name',
-        'nameChangeBy': 'u2',
-        'description': 'desc',
-        'descriptionChangeAt': changeAtJson,
-        'descriptionCid': 'cid-desc',
-        'descriptionChangeBy': 'u2',
-        'leadId': 'lead-1',
-        'leadIdChangeAt': changeAtJson,
-        'leadIdCid': 'cid-lead',
-        'leadIdChangeBy': 'u2',
-        'settings': '{}',
-        'settingsChangeAt': changeAtJson,
-        'settingsCid': 'cid-settings',
-        'settingsChangeBy': 'u2',
-        'surprise_team': 'wow',
-      };
-
-      final t = IsarTeamState.fromJson(rawJson);
-      final unknown = jsonDecode(t.unknownJson) as Map<String, dynamic>;
-      expect(unknown['surprise_team'], equals('wow'));
-      expect(t.entityId, equals('team-1'));
-    });
-
     test('IsarDocumentState.fromJson preserves unknown fields', () {
       final changeAtJson = DateTime.now().toUtc().toIso8601String();
       final storedAtJson = DateTime.now().toUtc().toIso8601String();
