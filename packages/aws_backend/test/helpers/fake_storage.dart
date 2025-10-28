@@ -45,7 +45,6 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     required String entityType,
     String? cursor,
     int? limit,
-    bool includeMetadata = false,
     String? parentId,
     String? parentProp,
   }) async {

@@ -137,7 +137,6 @@ abstract class BaseStorageService {
     required String entityType,
     String? cursor,
     int? limit,
-    bool includeMetadata = false,
     String? parentId,
     String? parentProp,
   });
@@ -145,8 +144,8 @@ abstract class BaseStorageService {
   Future<Map<String, dynamic>> getEntityState({
     required String domainType,
     required String domainId,
+    required String entityType,
     required String entityId,
-    bool includeMetadata = false,
   });
 
   String getStorageType();

@@ -945,8 +945,8 @@ class IsarStorageService extends BaseStorageService {
   Future<Map<String, dynamic>> getEntityState({
     required String domainType,
     required String domainId,
+    required String entityType,
     required String entityId,
-    bool includeMetadata = false,
   }) async {
     // Search all registered storage groups for the entity
     final entityTypes = _entityStateRegistry.registeredEntityTypes();
@@ -1100,7 +1100,6 @@ class IsarStorageService extends BaseStorageService {
     required String entityType,
     String? cursor,
     int? limit,
-    bool includeMetadata = false,
     String? parentId,
     String? parentProp,
   }) async {
@@ -1231,38 +1230,6 @@ class IsarStorageService extends BaseStorageService {
       await _isar.isarEntityTypeSyncStates.deleteAll(etsIdsToDelete);
     });
   }
-
-  // STUBBED HELPER METHODS FOR PAGINATION - TO BE IMPLEMENTED LATER
-  /*
-  Future<Map<String, dynamic>> _getProjectStatesWithPagination(
-    String projectId,
-    int limit,
-    String? cursor,
-    bool includeMetadata,
-  ) async {
-    final query = _isar.isarProjectStates.filter().change_domainIdEqualTo(projectId);
-
-    final queryWithCursor = cursor != null
-        ? query.entityIdGreaterThan(cursor)
-        : query;
-
-    final entities = await queryWithCursor
-        .sortByEntityId()
-        .limit(limit + 1)
-        .findAll();
-
-    final hasMore = entities.length > limit;
-    final resultEntities = hasMore ? entities.take(limit).toList() : entities;
-
-    return {
-      'items': resultEntities
-          .map((e) => _projectStateToMap(e, includeMetadata))
-          .toList(),
-      'hasMore': hasMore,
-      'nextCursor': hasMore ? resultEntities.last.entityId : null,
-    };
-  }
-  */
 }
 
 // Singleton wrappers for each storage type

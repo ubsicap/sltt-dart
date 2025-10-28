@@ -105,7 +105,6 @@ void main() {
         parentId: 'some-parent-id',
         limit: 50,
         cursor: 'some-cursor',
-        includeMetadata: true,
       );
 
       expect(result['items'], isEmpty);

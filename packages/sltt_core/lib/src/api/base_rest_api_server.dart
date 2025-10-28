@@ -584,7 +584,6 @@ abstract class BaseRestApiServer {
             {'name': 'entityType', 'type': 'string', 'required': true},
             {'name': 'cursor', 'type': 'string', 'required': false},
             {'name': 'limit', 'type': 'integer', 'required': false},
-            {'name': 'includeMetadata', 'type': 'boolean', 'required': false},
             {
               'name': 'parentId',
               'type': 'string',
@@ -1390,7 +1389,7 @@ abstract class BaseRestApiServer {
     }
   }
 
-  /// Get entity state with pagination and optional metadata
+  /// Get entity state with pagination
   Future<Response> _handleGetEntityStates(Request request) async {
     try {
       final resolved = _resolveDomainCollection(request);
@@ -1414,7 +1413,6 @@ abstract class BaseRestApiServer {
       final queryParams = request.url.queryParameters;
       final cursor = queryParams['cursor'];
       final limitStr = queryParams['limit'];
-      final fieldMetadataStr = queryParams['field_metadata'];
       final parentId = queryParams['parentId'];
       final parentProp = queryParams['parentProp'];
 
@@ -1434,9 +1432,6 @@ abstract class BaseRestApiServer {
         }
       }
 
-      // Parse field_metadata parameter
-      final includeFieldMetadata = fieldMetadataStr?.toLowerCase() == 'true';
-
       // Get entity state data
       final stateData = await storage.getEntityStates(
         domainType: domainType,
@@ -1444,7 +1439,6 @@ abstract class BaseRestApiServer {
         entityType: decodedEntityType,
         cursor: cursor,
         limit: limit,
-        includeMetadata: includeFieldMetadata,
         parentId: parentId,
         parentProp: parentProp,
       );
@@ -1456,7 +1450,6 @@ abstract class BaseRestApiServer {
           'items': stateData['items'],
           'cursor': stateData['nextCursor'],
           'hasMore': stateData['hasMore'],
-          'fieldMetadata': includeFieldMetadata,
           'timestamp': DateTime.now().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
@@ -1497,6 +1490,7 @@ abstract class BaseRestApiServer {
       final stateData = await storage.getEntityState(
         domainType: domainType,
         domainId: projectId,
+        entityType: entityType,
         entityId: entityId,
       );
 

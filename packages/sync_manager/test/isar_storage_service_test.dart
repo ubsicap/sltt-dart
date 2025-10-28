@@ -778,7 +778,6 @@ void main() {
         domainType: kDomainProject,
         domainId: 'non-existent',
         entityType: 'project',
-        includeMetadata: true,
       );
 
       expect(result['items'], isA<List>());
@@ -793,7 +792,6 @@ void main() {
         domainType: kDomainProject,
         domainId: 'test-project',
         entityType: 'project',
-        includeMetadata: true,
       );
 
       expect(result, isA<Map<String, dynamic>>());

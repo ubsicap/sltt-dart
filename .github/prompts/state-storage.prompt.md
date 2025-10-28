@@ -99,7 +99,6 @@ The next thing we need to do is to set up the entity state storage collections.
     - provides a json response with a list of supported entityTypes
   - GET /api/projects/{projectId}/entities/{entityType}/state
     - paginated
-    - support query &field_metadata=true (by default false)
        - include in the response metadata needed for conflict resolution or serializing/deserializing the full state of a state collection
          - orig{field}, {field}ChangeAt, {field}ChangeBy, etc...
 2) add tests for the new endpoints

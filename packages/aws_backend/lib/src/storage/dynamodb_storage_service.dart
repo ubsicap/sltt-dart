@@ -407,7 +407,6 @@ class DynamoDBStorageService extends BaseStorageService {
     required String entityType,
     String? cursor,
     int? limit,
-    bool includeMetadata = false,
     String? parentId,
     String? parentProp,
   }) async {
@@ -453,9 +452,6 @@ class DynamoDBStorageService extends BaseStorageService {
       final json = _decodeItem(item as Map<String, dynamic>);
       if (parentId != null && json['data_parentId'] != parentId) continue;
       if (parentProp != null && json['data_parentProp'] != parentProp) continue;
-      if (!includeMetadata) {
-        json.removeWhere((key, _) => key.startsWith('change_'));
-      }
       results.add(json);
     }
 
@@ -470,22 +466,19 @@ class DynamoDBStorageService extends BaseStorageService {
   Future<Map<String, dynamic>> getEntityState({
     required String domainType,
     required String domainId,
+    required String entityType,
     required String entityId,
-    bool includeMetadata = false,
   }) async {
     final state = await getCurrentEntityState(
       domainType: domainType,
       domainId: domainId,
-      entityType: 'unknown',
+      entityType: entityType,
       entityId: entityId,
     );
 
     if (state == null) return {};
 
     final json = state.toJson();
-    if (!includeMetadata) {
-      json.removeWhere((key, _) => key.startsWith('change_'));
-    }
     return json;
   }
 

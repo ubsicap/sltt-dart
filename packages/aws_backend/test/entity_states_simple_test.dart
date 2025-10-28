@@ -94,31 +94,6 @@ void main() {
     );
 
     test(
-      'GET /api/projects/{projectId}/entities/{entityType}/state with metadata parameter',
-      () async {
-        SlttLogger.logger.info(
-          '🧪 Testing entity states endpoint with field_metadata=true...',
-        );
-
-        final response = await http.get(
-          Uri.parse(
-            '$baseUrl/api/projects/$testProjectId/entities/document/state?field_metadata=true',
-          ),
-        );
-
-        expect(response.statusCode, equals(200));
-
-        final data = jsonDecode(response.body);
-        expect(data, isA<Map<String, dynamic>>());
-
-        SlttLogger.logger.info('✅ Metadata parameter test passed!');
-        SlttLogger.logger.info(
-          '   Response structure valid for metadata request',
-        );
-      },
-    );
-
-    test(
       'GET /api/projects/{projectId}/entities/invalid_type/state returns 400',
       () async {
         SlttLogger.logger.info(

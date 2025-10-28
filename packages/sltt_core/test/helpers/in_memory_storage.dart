@@ -308,7 +308,6 @@ class InMemoryStorage implements BaseStorageService {
     required String entityType,
     String? cursor,
     int? limit,
-    bool includeMetadata = false,
     String? parentId,
     String? parentProp,
   }) async {
@@ -353,7 +352,7 @@ class InMemoryStorage implements BaseStorageService {
     required String domainType,
     required String domainId,
     required String entityId,
-    bool includeMetadata = false,
+    required String entityType,
   }) async {
     // Scan states map for the specific entity within the domain
     final states =
