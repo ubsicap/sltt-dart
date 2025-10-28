@@ -942,7 +942,7 @@ class IsarStorageService extends BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getEntityState({
+  Future<Map<String, dynamic>> getEntityStateAlt({
     required String domainType,
     required String domainId,
     required String entityType,

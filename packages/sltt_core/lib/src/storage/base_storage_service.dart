@@ -141,7 +141,7 @@ abstract class BaseStorageService {
     String? parentProp,
   });
 
-  Future<Map<String, dynamic>> getEntityState({
+  Future<Map<String, dynamic>> getEntityStateAlt({
     required String domainType,
     required String domainId,
     required String entityType,
