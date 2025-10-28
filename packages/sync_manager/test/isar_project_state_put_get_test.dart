@@ -1,8 +1,6 @@
-import 'dart:io';
-
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sync_manager/src/models/isar_project_state.dart';
+import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -12,17 +10,7 @@ void main() {
 
   setUp(() async {
     // Delete database if it exists
-    final dir = Directory(testDbPath);
-    if (dir.existsSync()) {
-      final dbFile = File('$testDbPath/$testDbName.isar');
-      if (dbFile.existsSync()) {
-        dbFile.deleteSync();
-      }
-      final lockFile = File('$testDbPath/$testDbName.isar-lck');
-      if (lockFile.existsSync()) {
-        lockFile.deleteSync();
-      }
-    }
+    await IsarStorageService.deleteDatabaseFiles(testDbName);
 
     // Create Isar instance with IsarProjectState schema
     isar = await Isar.open(
@@ -195,8 +183,8 @@ void main() {
     );
   }
 
-  group('IsarProjectState DateTime UTC Conversion', () {
-    test('stores and retrieves with all DateTime fields converted to UTC', () async {
+  group('put to and get from storage - IsarProjectState', () {
+    test('stores and retrieves with all expected fields - IsarProjectState', () async {
       // Create individual local (non-UTC) DateTimes for testing - each field gets unique value
       final localChangeAt = DateTime.now(); // Local time
       final localCloudAt = DateTime.now().subtract(const Duration(hours: 1));
