@@ -843,6 +843,44 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
+          'path':
+              '/api/state/{domainCollection}/{domainId}/{entityCollection}/{entityId}',
+          'description': 'Get specific entity state by entity ID',
+          'parameters': [
+            {'name': 'domainCollection', 'type': 'string', 'required': true},
+            {'name': 'domainId', 'type': 'string', 'required': true},
+            {'name': 'entityCollection', 'type': 'string', 'required': true},
+            {'name': 'entityId', 'type': 'string', 'required': true},
+          ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'projectId': {
+                'type': 'string',
+                'description': 'The domain/project identifier',
+              },
+              'entityType': {
+                'type': 'string',
+                'description': 'The entity type',
+              },
+              'entityId': {
+                'type': 'string',
+                'description': 'The entity identifier',
+              },
+              'state': {
+                'type': 'object',
+                'description': 'The current entity state data',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
+              },
+            },
+          },
+        },
+        {
+          'method': 'GET',
           'path': '/api/domains',
           'description': 'Get list of supported domains and their collections',
           'response': {
