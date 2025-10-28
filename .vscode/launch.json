@@ -13,7 +13,7 @@
             "cwd": "${workspaceFolder}",
             "args": ["start-all"]
         },
-                {
+        {
             "name": "Sync Manager Server Runner - Start Local",
             "type": "dart",
             "request": "launch",
