@@ -20,6 +20,7 @@ class IsarStorageService extends BaseStorageService {
   bool _initialized = false;
   late String _storageId;
   late String _dbPath;
+  late String _dbDirectory;
 
   final IsarEntityStateStorageRegistry _entityStateRegistry =
       IsarEntityStateStorageRegistry();
@@ -27,7 +28,13 @@ class IsarStorageService extends BaseStorageService {
   IsarEntityStateStorageRegistry get entityStateRegistry =>
       _entityStateRegistry;
 
-  IsarStorageService(this._databaseName, this._logPrefix);
+  IsarStorageService(
+    this._databaseName,
+    this._logPrefix, {
+    String? dbDirectory,
+  }) {
+    _dbDirectory = dbDirectory ?? './isar_db';
+  }
 
   get databaseName => _databaseName;
   get logPrefix => _logPrefix;
@@ -44,7 +51,7 @@ class IsarStorageService extends BaseStorageService {
     if (_initialized) return;
 
     // Create local directory for database
-    final dir = Directory('./isar_db');
+    final dir = Directory(_dbDirectory);
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }

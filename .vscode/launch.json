@@ -98,6 +98,22 @@
             },
             "console": "terminal"
         },
+        {
+            "name": "Start/Inspect Local Storage Server for Isar file",
+            "type": "dart",
+            "request": "launch",
+            "program": "packages/sync_manager/bin/run_local_server_with_inspector.dart",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--db-path",
+                "${input:isarDbPath}",
+                "--port",
+                "${input:port}",
+                "--inspector",
+                "true"
+            ],
+            "console": "terminal"
+        },
     ],
     "inputs": [
         {
@@ -131,6 +147,12 @@
             "id": "awsSecretAccessKey",
             "description": "AWS Secret Access Key",
             "type": "promptString"
+        },
+        {
+            "id": "isarDbPath",
+            "description": "Path to Isar Database File (.isar)",
+            "type": "promptString",
+            "default": "./isar_db/local_storage.isar"
         }
     ]
 }
