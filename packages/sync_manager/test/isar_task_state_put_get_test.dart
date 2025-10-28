@@ -228,7 +228,10 @@ void main() {
         reason: 'Test DateTime should be local',
       );
 
-      final cid = generateCid(entityType: EntityType.task);
+      final cidOrig = generateCid(
+        entityType: EntityType.task,
+        userId: 'test-user-1',
+      );
 
       // Create IsarTaskState with all optional fields filled
       final entry = IsarTaskState(
@@ -243,43 +246,61 @@ void main() {
         change_changeAt_orig_: localChangeAt,
         change_storedAt: localStoredAt,
         change_storedAt_orig_: localStoredAt,
-        change_cid: cid,
-        change_cid_orig_: cid,
-        change_dataSchemaRev: 1,
+        change_cid: generateCid(
+          entityType: EntityType.task,
+          userId: 'test-user-5',
+        ),
+        change_cid_orig_: cidOrig,
+        change_dataSchemaRev: 5,
         change_cloudAt: localCloudAt,
-        change_changeBy: 'test-user',
-        change_changeBy_orig_: 'test-user',
+        change_changeBy: 'test-user-5',
+        change_changeBy_orig_: 'test-user-1',
         // Task-specific fields
         data_nameLocal: 'Test Task',
-        data_nameLocal_dataSchemaRev_: 1,
+        data_nameLocal_dataSchemaRev_: 2,
         data_nameLocal_changeAt_: localDataNameLocalChangeAt,
-        data_nameLocal_cid_: cid,
-        data_nameLocal_changeBy_: 'test-user',
+        data_nameLocal_cid_: generateCid(
+          entityType: EntityType.task,
+          userId: 'test-user-2',
+        ),
+        data_nameLocal_changeBy_: 'test-user-2',
         data_nameLocal_cloudAt_: localDataNameLocalCloudAt,
         // Common data fields
         data_rank: '100',
-        data_rank_dataSchemaRev_: 1,
+        data_rank_dataSchemaRev_: 3,
         data_rank_changeAt_: localDataRankChangeAt,
-        data_rank_cid_: cid,
-        data_rank_changeBy_: 'test-user',
+        data_rank_cid_: generateCid(
+          entityType: EntityType.task,
+          userId: 'test-user-3',
+        ),
+        data_rank_changeBy_: 'test-user-3',
         data_rank_cloudAt_: localDataRankCloudAt,
         data_deleted: false,
-        data_deleted_dataSchemaRev_: 1,
+        data_deleted_dataSchemaRev_: 4,
         data_deleted_changeAt_: localDataDeletedChangeAt,
-        data_deleted_cid_: cid,
-        data_deleted_changeBy_: 'test-user',
+        data_deleted_cid_: generateCid(
+          entityType: EntityType.task,
+          userId: 'test-user-4',
+        ),
+        data_deleted_changeBy_: 'test-user-4',
         data_deleted_cloudAt_: localDataDeletedCloudAt,
         data_parentId: 'root',
-        data_parentId_dataSchemaRev_: 1,
+        data_parentId_dataSchemaRev_: 5,
         data_parentId_changeAt_: localDataParentIdChangeAt,
-        data_parentId_cid_: cid,
-        data_parentId_changeBy_: 'test-user',
+        data_parentId_cid_: generateCid(
+          entityType: EntityType.task,
+          userId: 'test-user-5',
+        ),
+        data_parentId_changeBy_: 'test-user-5',
         data_parentId_cloudAt_: localDataParentIdCloudAt,
         data_parentProp: 'pList',
-        data_parentProp_dataSchemaRev_: 1,
+        data_parentProp_dataSchemaRev_: 5,
         data_parentProp_changeAt_: localDataParentPropChangeAt,
-        data_parentProp_cid_: cid,
-        data_parentProp_changeBy_: 'test-user',
+        data_parentProp_cid_: generateCid(
+          entityType: EntityType.task,
+          userId: 'test-user-5',
+        ),
+        data_parentProp_changeBy_: 'test-user-5',
         data_parentProp_cloudAt_: localDataParentPropCloudAt,
       );
 
