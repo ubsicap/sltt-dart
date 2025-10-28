@@ -36,6 +36,7 @@ void main() {
       final storedAt = DateTime.now().toUtc();
       final state = TestEntityState(
         data_nameLocal: 'name',
+        data_nameLocal_changeAt_: changeAt,
         entityId: 'eid',
         entityType: 'project',
         domainType: 'dType',

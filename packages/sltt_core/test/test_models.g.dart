@@ -207,7 +207,7 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
         ),
         data_nameLocal_changeAt_: $checkedConvert(
           'data_nameLocal_changeAt_',
-          (v) => v == null ? null : DateTime.parse(v as String),
+          (v) => DateTime.parse(v as String),
         ),
         data_nameLocal_cid_: $checkedConvert(
           'data_nameLocal_cid_',

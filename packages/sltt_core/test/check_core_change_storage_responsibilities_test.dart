@@ -14,6 +14,7 @@ TestEntityState _mkEntityStateForChange(
   final changeStoredAt = storedAtOverride ?? change.storedAt ?? now;
   return TestEntityState(
     data_nameLocal: 'test',
+    data_nameLocal_changeAt_: change.changeAt,
     entityId: change.entityId,
     entityType: change.entityType,
     domainType: change.domainType,
@@ -221,6 +222,7 @@ void main() {
 
       final entityStateWithMismatchedStoredAt = TestEntityState(
         data_nameLocal: 'test',
+        data_nameLocal_changeAt_: now,
         entityId: 'e5',
         entityType: 'document',
         domainType: 'project',
@@ -279,6 +281,7 @@ void main() {
 
       final entityStateWithoutMatchingCloudAt = TestEntityState(
         data_nameLocal: 'test',
+        data_nameLocal_changeAt_: now,
         entityId: 'e6',
         entityType: 'document',
         domainType: 'project',
@@ -337,6 +340,7 @@ void main() {
 
       final validEntityState = TestEntityState(
         data_nameLocal: 'test',
+        data_nameLocal_changeAt_: now,
         entityId: 'e7',
         entityType: 'document',
         domainType: 'project',
@@ -395,6 +399,7 @@ void main() {
 
       final validEntityState = TestEntityState(
         data_nameLocal: 'test',
+        data_nameLocal_changeAt_: now,
         entityId: 'e8',
         entityType: 'document',
         domainType: 'project',

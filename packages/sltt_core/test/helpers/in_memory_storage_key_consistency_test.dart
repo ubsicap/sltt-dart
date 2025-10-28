@@ -33,6 +33,7 @@ void main() {
       final stateUpdates = {
         'entityId': 'entity-1',
         'data_nameLocal': 'Persisted Task',
+        'data_nameLocal_changeAt_': '2023-01-02T00:00:00Z',
         'entityType': 'task',
         'domainType': 'project',
         // change metadata (current and original) required by TestEntityState

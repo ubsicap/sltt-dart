@@ -1846,6 +1846,7 @@ void main() {
         return TestEntityState(
           entityId: entityId,
           data_nameLocal: 'n',
+          data_nameLocal_changeAt_: now.toUtc(),
           entityType: 'unknown',
           domainType: 'project',
           unknownJson: '{}',

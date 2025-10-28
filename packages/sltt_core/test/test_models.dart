@@ -125,17 +125,22 @@ class TestEntityState extends BaseEntityState {
     required super.data_parentProp_changeBy_,
     super.data_parentProp_cloudAt_,
     this.data_nameLocal_dataSchemaRev_,
-    this.data_nameLocal_changeAt_,
+    required DateTime data_nameLocal_changeAt_,
     this.data_nameLocal_cid_,
     this.data_nameLocal_changeBy_,
-    this.data_nameLocal_cloudAt_,
+    DateTime? data_nameLocal_cloudAt_,
     this.data_nameOptionalField,
     this.data_nameOptionalField_dataSchemaRev_,
-    this.data_nameOptionalField_changeAt_,
+    DateTime? data_nameOptionalField_changeAt_,
     this.data_nameOptionalField_cid_,
     this.data_nameOptionalField_changeBy_,
-    this.data_nameOptionalField_cloudAt_,
-  });
+    DateTime? data_nameOptionalField_cloudAt_,
+  }) : data_nameLocal_changeAt_ = data_nameLocal_changeAt_.toUtc(),
+       data_nameLocal_cloudAt_ = data_nameLocal_cloudAt_?.toUtc(),
+       data_nameOptionalField_changeAt_ = data_nameOptionalField_changeAt_
+           ?.toUtc(),
+       data_nameOptionalField_cloudAt_ = data_nameOptionalField_cloudAt_
+           ?.toUtc();
 
   factory TestEntityState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(

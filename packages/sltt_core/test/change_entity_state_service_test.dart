@@ -43,6 +43,7 @@ void main() {
     test('TestEntityState serializes and deserializes correctly', () {
       final state = TestEntityState(
         data_nameLocal: 'TaskName',
+        data_nameLocal_changeAt_: DateTime.parse('2023-01-02T00:00:00Z'),
         entityId: 'e2',
         entityType: 'task',
         domainType: 'project',
