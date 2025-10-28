@@ -62,7 +62,7 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final entry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'test-project',
@@ -107,7 +107,7 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final entry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'test-project',
@@ -166,7 +166,7 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final entry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'test-project',
@@ -215,7 +215,7 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final entry1 =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'test-project',
@@ -232,7 +232,7 @@ void main() {
             );
 
         final entry2 =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'test-project',
@@ -1571,20 +1571,23 @@ void main() {
       late TestChangeLogEntry testChangeLogEntry;
 
       setUp(() {
-        testChangeLogEntry = TestChangeLogEntry(
-          cid: 'test-cid-123',
-          entityId: 'test-entity',
-          entityType: 'project',
-          domainId: 'test-domain',
-          domainType: 'project',
-          changeAt: DateTime.now().toUtc(),
-          changeBy: 'test-user',
-          dataJson:
-              '{"nameLocal": "Test", "parentId": "root", "parentProp": "pList"}',
-          operation: 'create',
-          stateChanged: true,
-          unknownJson: '{}',
-        );
+        testChangeLogEntry =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+              factory: TestChangeLogEntry.new,
+              cid: 'test-cid-123',
+              entityId: 'test-entity',
+              entityType: 'project',
+              domainId: 'test-domain',
+              domainType: 'project',
+              changeAt: DateTime.now().toUtc(),
+              changeBy: 'test-user',
+              data: {
+                'nameLocal': 'Test',
+                'parentId': 'root',
+                'parentProp': 'pList',
+              },
+              operation: 'create',
+            );
       });
 
       test('should return null when unknownJson is empty in save mode', () {
@@ -1612,20 +1615,29 @@ void main() {
       test(
         'should return error when unknownJson is not empty in save mode for cloud storage',
         () {
-          final changeWithUnknown = TestChangeLogEntry(
-            cid: 'test-cid-456',
-            entityId: 'test-entity',
-            entityType: 'project',
-            domainId: 'test-domain',
-            domainType: 'project',
-            changeAt: DateTime.now().toUtc(),
-            changeBy: 'test-user',
-            dataJson:
-                '{"nameLocal": "Test", "parentId": "root", "parentProp": "pList"}',
-            operation: 'create',
-            stateChanged: true,
-            unknownJson: '{"unknownField": "should be rejected"}',
-          );
+          final changeWithUnknown =
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int
+              >(
+                factory: TestChangeLogEntry.new,
+                cid: 'test-cid-456',
+                entityId: 'test-entity',
+                entityType: 'project',
+                domainId: 'test-domain',
+                domainType: 'project',
+                changeAt: DateTime.now().toUtc(),
+                changeBy: 'test-user',
+                data: {
+                  'nameLocal': 'Test',
+                  'parentId': 'root',
+                  'parentProp': 'pList',
+                },
+                operation: 'create',
+              );
+          changeWithUnknown.setUnknownMap({
+            'unknownField': 'should be rejected',
+          });
 
           final result = ChangeProcessingService.validateUnknownJson(
             changeLogEntry: changeWithUnknown,
@@ -1650,20 +1662,29 @@ void main() {
       test(
         'should return error when unknownJson is not empty in save mode for local storage',
         () {
-          final changeWithUnknown = TestChangeLogEntry(
-            cid: 'test-cid-789',
-            entityId: 'test-entity',
-            entityType: 'project',
-            domainId: 'test-domain',
-            domainType: 'project',
-            changeAt: DateTime.now().toUtc(),
-            changeBy: 'test-user',
-            dataJson:
-                '{"nameLocal": "Test", "parentId": "root", "parentProp": "pList"}',
-            operation: 'create',
-            stateChanged: true,
-            unknownJson: '{"unknownField": "should be rejected"}',
-          );
+          final changeWithUnknown =
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int
+              >(
+                factory: TestChangeLogEntry.new,
+                cid: 'test-cid-789',
+                entityId: 'test-entity',
+                entityType: 'project',
+                domainId: 'test-domain',
+                domainType: 'project',
+                changeAt: DateTime.now().toUtc(),
+                changeBy: 'test-user',
+                data: {
+                  'nameLocal': 'Test',
+                  'parentId': 'root',
+                  'parentProp': 'pList',
+                },
+                operation: 'create',
+              );
+          changeWithUnknown.setUnknownMap({
+            'unknownField': 'should be rejected',
+          });
 
           final result = ChangeProcessingService.validateUnknownJson(
             changeLogEntry: changeWithUnknown,
@@ -1686,20 +1707,26 @@ void main() {
       );
 
       test('should return null when unknownJson is not empty in sync mode', () {
-        final changeWithUnknown = TestChangeLogEntry(
-          cid: 'test-cid-999',
-          entityId: 'test-entity',
-          entityType: 'project',
-          domainId: 'test-domain',
-          domainType: 'project',
-          changeAt: DateTime.now().toUtc(),
-          changeBy: 'test-user',
-          dataJson:
-              '{"nameLocal": "Test", "parentId": "root", "parentProp": "pList"}',
-          operation: 'create',
-          stateChanged: true,
-          unknownJson: '{"unknownField": "allowed in sync mode"}',
-        );
+        final changeWithUnknown =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+              factory: TestChangeLogEntry.new,
+              cid: 'test-cid-999',
+              entityId: 'test-entity',
+              entityType: 'project',
+              domainId: 'test-domain',
+              domainType: 'project',
+              changeAt: DateTime.now().toUtc(),
+              changeBy: 'test-user',
+              data: {
+                'nameLocal': 'Test',
+                'parentId': 'root',
+                'parentProp': 'pList',
+              },
+              operation: 'create',
+            );
+        changeWithUnknown.setUnknownMap({
+          'unknownField': 'allowed in sync mode',
+        });
 
         final result = ChangeProcessingService.validateUnknownJson(
           changeLogEntry: changeWithUnknown,
@@ -1712,21 +1739,27 @@ void main() {
       });
 
       test('should include known fields in error message', () {
-        final changeWithUnknown = TestChangeLogEntry(
-          cid: 'test-cid-known-fields',
-          entityId: 'test-entity',
-          entityType: 'project',
-          domainId: 'test-domain',
-          domainType: 'project',
-          changeAt: DateTime.now().toUtc(),
-          changeBy: 'test-user',
-          dataJson:
-              '{"nameLocal": "Test", "parentId": "root", "parentProp": "pList"}',
-          operation: 'create',
-          stateChanged: true,
-          unknownJson: '{"unknownField1": "value1", "unknownField2": "value2"}',
-        );
-
+        final changeWithUnknown =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+              factory: TestChangeLogEntry.new,
+              cid: 'test-cid-known-fields',
+              entityId: 'test-entity',
+              entityType: 'project',
+              domainId: 'test-domain',
+              domainType: 'project',
+              changeAt: DateTime.now().toUtc(),
+              changeBy: 'test-user',
+              data: {
+                'nameLocal': 'Test',
+                'parentId': 'root',
+                'parentProp': 'pList',
+              },
+              operation: 'create',
+            );
+        changeWithUnknown.setUnknownMap({
+          'unknownField1': 'value1',
+          'unknownField2': 'value2',
+        });
         final result = ChangeProcessingService.validateUnknownJson(
           changeLogEntry: changeWithUnknown,
           storageType: 'cloud',

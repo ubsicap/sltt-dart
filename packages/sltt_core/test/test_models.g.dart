@@ -20,7 +20,7 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(
       'storedAt',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
-    storageId: $checkedConvert('storageId', (v) => v as String? ?? ''),
+    storageId: $checkedConvert('storageId', (v) => v as String),
     changeBy: $checkedConvert('changeBy', (v) => v as String),
     dataJson: $checkedConvert('dataJson', (v) => v as String),
     operation: $checkedConvert('operation', (v) => v as String),

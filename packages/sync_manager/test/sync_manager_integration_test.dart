@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 // helper removed; tests now use LocalStorageService.instance for seeding
 
@@ -80,23 +81,22 @@ void main() {
       final localStorageId = await local.getStorageId();
 
       final changeBy = 'test';
-      final change = IsarChangeLogEntry(
-        changeAt: DateTime.now(),
-        cid: generateCid(entityType: EntityType.project, userId: changeBy),
-        domainType: 'project',
-        domainId: '__test_1',
-        entityType: 'project',
-        operation: 'create',
-        entityId: '__test_1',
-        dataJson: stableStringify(
-          BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
-        ),
-        changeBy: changeBy,
-        stateChanged: false,
-        storageId: '',
-        unknownJson: '{}',
-        operationInfoJson: '{}',
-      );
+      final change =
+          ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+            factory: IsarChangeLogEntry.new,
+            domainType: 'project',
+            domainId: '__test_1',
+            entityType: 'project',
+            entityId: '__test_1',
+            changeBy: changeBy,
+            changeAt: DateTime.now(),
+            cid: generateCid(entityType: EntityType.project, userId: changeBy),
+            data: BaseDataFields(
+              parentId: 'root',
+              parentProp: 'projects',
+            ).toJson(),
+            operation: 'create',
+          );
 
       final localSaveResult = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
@@ -303,30 +303,24 @@ void main() {
         final expectedNameLocalUpdate = 'Edited by local-full';
 
         const projectId = '__test_full_cloud_local_create_update';
-        final localChange = IsarChangeLogEntry(
-          changeAt: DateTime.now(),
-          cid: generateCid(
-            entityType: EntityType.project,
-            userId: 'local-full',
-          ),
-          domainType: 'project',
-          domainId: projectId,
-          entityType: 'project',
-          operation: 'create',
-          entityId: projectId,
-          dataJson: stableStringify({
-            ...BaseDataFields(
-              parentId: 'root',
-              parentProp: 'projects',
-            ).toJson(),
-            'nameLocal': expectedNameLocalUpdate,
-          }),
-          changeBy: 'local-full',
-          stateChanged: false,
-          storageId: '',
-          unknownJson: '{}',
-          operationInfoJson: '{}',
-        );
+        final localChange =
+            ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+              factory: IsarChangeLogEntry.new,
+              domainType: 'project',
+              domainId: projectId,
+              entityType: 'project',
+              entityId: projectId,
+              changeBy: 'local-full',
+              changeAt: DateTime.now(),
+              data: {
+                ...BaseDataFields(
+                  parentId: 'root',
+                  parentProp: 'projects',
+                ).toJson(),
+                'nameLocal': expectedNameLocalUpdate,
+              },
+              operation: 'create',
+            );
         final localSeed = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [localChange.toJson()],
@@ -467,30 +461,24 @@ void main() {
         syncManager.configureCloudUrl(cloudBaseUrl);
         await syncManager.downsyncFromCloud(domainIds: [projectId]);
         final localChangeAt = DateTime.now().toUtc();
-        final localChange = IsarChangeLogEntry(
-          changeAt: localChangeAt,
-          cid: generateCid(
-            entityType: EntityType.project,
-            userId: 'local-full',
-          ),
-          domainType: 'project',
-          domainId: projectId,
-          entityType: 'project',
-          operation: 'update',
-          entityId: projectId,
-          dataJson: stableStringify({
-            ...BaseDataFields(
-              parentId: 'root',
-              parentProp: 'projects',
-            ).toJson(),
-            'nameLocal': expectedNameLocalUpdate,
-          }),
-          changeBy: 'local-full',
-          stateChanged: false,
-          storageId: '',
-          unknownJson: '{}',
-          operationInfoJson: '{}',
-        );
+        final localChange =
+            ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+              factory: IsarChangeLogEntry.new,
+              domainType: 'project',
+              domainId: projectId,
+              entityType: 'project',
+              entityId: projectId,
+              changeBy: 'local-full',
+              changeAt: localChangeAt,
+              data: {
+                ...BaseDataFields(
+                  parentId: 'root',
+                  parentProp: 'projects',
+                ).toJson(),
+                'nameLocal': expectedNameLocalUpdate,
+              },
+              operation: 'update',
+            );
         final localSeed = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
           changes: [localChange.toJson()],
@@ -669,30 +657,24 @@ void main() {
         await syncManager.downsyncFromCloud(domainIds: [projectId]);
 
         // Save a local change that should be outsynced
-        final localChange = IsarChangeLogEntry(
-          changeAt: DateTime.now().toUtc(),
-          cid: generateCid(
-            entityType: EntityType.project,
-            userId: 'local-full',
-          ),
-          domainType: 'project',
-          domainId: projectId,
-          entityType: 'project',
-          operation: kChangeOperationUpdate,
-          entityId: projectId,
-          dataJson: stableStringify({
-            ...BaseDataFields(
-              parentId: 'root',
-              parentProp: 'projects',
-            ).toJson(),
-            'nameLocal': expectedOutdatedNameLocalUpdate,
-          }),
-          changeBy: 'local-full',
-          stateChanged: false,
-          storageId: '',
-          unknownJson: '{}',
-          operationInfoJson: '{}',
-        );
+        final localChange =
+            ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+              factory: IsarChangeLogEntry.new,
+              domainType: 'project',
+              domainId: projectId,
+              entityType: 'project',
+              operation: kChangeOperationUpdate,
+              entityId: projectId,
+              changeBy: 'local-full',
+              changeAt: DateTime.now().toUtc(),
+              data: {
+                ...BaseDataFields(
+                  parentId: 'root',
+                  parentProp: 'projects',
+                ).toJson(),
+                'nameLocal': expectedOutdatedNameLocalUpdate,
+              },
+            );
 
         final localSave = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
@@ -948,31 +930,25 @@ void main() {
         await syncManager.downsyncFromCloud(domainIds: [projectId]);
 
         // Save a local change that should be outsynced
-        final localChange = IsarChangeLogEntry(
-          changeAt: localChangeAt,
-          cid: generateCid(
-            entityType: EntityType.project,
-            userId: 'local-full',
-          ),
-          domainType: 'project',
-          domainId: projectId,
-          entityType: 'project',
-          operation: 'update',
-          entityId: projectId,
-          dataJson: stableStringify({
-            ...BaseDataFields(
-              parentId: 'root',
-              parentProp: 'projects',
-              rank: localChangeRank, // should lose
-            ).toJson(),
-            'nameLocal': localChangeNameLocal, // should win
-          }),
-          changeBy: 'local-full',
-          stateChanged: false,
-          storageId: '',
-          unknownJson: '{}',
-          operationInfoJson: '{}',
-        );
+        final localChange =
+            ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+              factory: IsarChangeLogEntry.new,
+              domainType: 'project',
+              domainId: projectId,
+              entityType: 'project',
+              operation: 'update',
+              entityId: projectId,
+              changeBy: 'local-full',
+              changeAt: localChangeAt,
+              data: {
+                ...BaseDataFields(
+                  parentId: 'root',
+                  parentProp: 'projects',
+                  rank: localChangeRank, // should lose
+                ).toJson(),
+                'nameLocal': localChangeNameLocal, // should win
+              },
+            );
 
         final localSeed = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
@@ -1368,21 +1344,19 @@ Future<IsarChangeLogEntry> saveCloudChange({
   fnGetExpectedStateUpdates,
 }) async {
   final cloudStorage = CloudStorageService.instance;
-  final cloudSaveChange = IsarChangeLogEntry(
-    changeAt: changeAt,
-    cid: generateCid(entityType: EntityType.project, userId: userId),
-    domainType: 'project',
-    domainId: domainId,
-    entityType: 'project',
-    operation: operation,
-    entityId: entityId,
-    dataJson: dataJson,
-    changeBy: userId,
-    stateChanged: false,
-    storageId: '',
-    unknownJson: '{}',
-    operationInfoJson: '{}',
-  );
+  final cloudSaveChange =
+      ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+        factory: IsarChangeLogEntry.new,
+        domainType: 'project',
+        domainId: domainId,
+        entityType: 'project',
+        entityId: entityId,
+        changeBy: userId,
+        changeAt: changeAt,
+        cid: generateCid(entityType: EntityType.project, userId: userId),
+        data: jsonDecode(dataJson) as Map<String, dynamic>,
+        operation: operation,
+      );
 
   final cloudSaveResult = await ChangeProcessingService.storeChanges(
     storageMode: 'save',

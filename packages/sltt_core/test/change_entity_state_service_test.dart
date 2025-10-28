@@ -317,7 +317,10 @@ void main() {
         'should not report empty change log entry operation for save mode',
         () {
           final entry =
-              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int
+              >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
                 domainId: 'd1',
@@ -569,7 +572,7 @@ void main() {
         // Create a change log entry with newer field changes
         final newerTime = baseTime.add(const Duration(minutes: 5));
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -691,7 +694,10 @@ void main() {
         () {
           // incoming has rank same as existing (no-op), parentId changed and nameLocal new
           final changeLogEntry =
-              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int
+              >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
                 domainId: 'project1',
@@ -727,11 +733,11 @@ void main() {
               'operation': 'update',
               'operationInfoJson': jsonEncode({
                 'outdatedBys': [],
-                'noOpFields': ['rank', 'parentProp'],
+                'noOpFields': ['parentProp', 'rank'],
               }),
               'stateChanged': true,
               'storageId': 'localId',
-              'dataJson': jsonEncode({
+              'dataJson': stableStringify({
                 'parentId': 'parent2',
                 'nameLocal': 'New Name',
               }),
@@ -816,7 +822,10 @@ void main() {
           });
 
           final changeLogEntry =
-              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int
+              >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
                 domainId: 'project1',
@@ -853,7 +862,7 @@ void main() {
               'operation': 'pUpdate',
               'operationInfoJson': jsonEncode({
                 'outdatedBys': ['rank'],
-                'noOpFields': ['parentProp', 'nameLocal'],
+                'noOpFields': ['nameLocal', 'parentProp'],
               }),
               'stateChanged': true,
               'storageId': 'localId',
@@ -869,7 +878,7 @@ void main() {
         // Create a change log entry with older field changes
         final olderTime = baseTime.subtract(const Duration(minutes: 5));
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -913,7 +922,7 @@ void main() {
 
       test('should handle new entity creation', () {
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -949,7 +958,7 @@ void main() {
             'stateChanged': true,
             'storageId': 'localId',
             'cloudAt': null,
-            'dataJson': jsonEncode({
+            'dataJson': stableStringify({
               'rank': '1',
               'parentId': 'parent2',
               'parentProp': 'pList',
@@ -1016,7 +1025,7 @@ void main() {
 
       test('should populate nameLocal from change data', () {
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -1074,7 +1083,7 @@ void main() {
 
       test('should handle entity deletion', () {
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -1209,7 +1218,10 @@ void main() {
           // Test the case where incoming change is newer than the latest timestamp
           final newerTime = baseTime.add(const Duration(minutes: 5));
           final changeLogEntry =
-              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int
+              >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
                 domainId: 'project1',
@@ -1334,7 +1346,10 @@ void main() {
           });
 
           final changeLogEntry =
-              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int
+              >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
                 domainId: 'project1',
@@ -1432,7 +1447,10 @@ void main() {
           });
 
           final changeLogEntry =
-              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int
+              >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
                 domainId: 'project1',
@@ -1496,7 +1514,7 @@ void main() {
 
       test('should add storedAt for local storage changes', () {
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -1599,7 +1617,10 @@ void main() {
 
           // Create a change log entry for a new entity with all required fields
           final changeLogEntry =
-              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int
+              >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
                 domainId: 'project1',

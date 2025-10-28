@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:sltt_core/sltt_core.dart';
 
 /// Service providing factory methods for creating change log entries with
@@ -50,7 +48,7 @@ class ChangeLogEntryFactoryService {
   ///
   /// Example usage:
   /// ```dart
-  /// final entry = ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+  /// final entry = ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
   ///   factory: TestChangeLogEntry.new,
   ///   domainType: 'project',
   ///   domainId: 'proj-123',
@@ -61,7 +59,7 @@ class ChangeLogEntryFactoryService {
   ///   data: {'nameLocal': 'My Task', 'parentId': 'root', 'parentProp': 'pList'},
   /// );
   /// ```
-  static T forChangeSave<T extends BaseChangeLogEntry>({
+  static T forChangeSave<T extends BaseChangeLogEntry, TSeq extends int>({
     required T Function({
       required String cid,
       required String entityId,
@@ -70,7 +68,7 @@ class ChangeLogEntryFactoryService {
       required String domainType,
       required DateTime changeAt,
       DateTime? storedAt,
-      String storageId,
+      required String storageId,
       required String changeBy,
       required String dataJson,
       required String operation,
@@ -80,7 +78,7 @@ class ChangeLogEntryFactoryService {
       int? dataSchemaRev,
       DateTime? cloudAt,
       int? schemaVersion,
-      int seq,
+      TSeq seq,
     })
     factory,
     required String domainType,
@@ -107,7 +105,7 @@ class ChangeLogEntryFactoryService {
     final finalChangeAt = changeAt ?? DateTime.now();
 
     // Encode data as JSON string
-    final dataJson = jsonEncode(data);
+    final dataJson = stableStringify(data);
 
     return factory(
       cid: effectiveCid,

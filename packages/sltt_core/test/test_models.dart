@@ -30,7 +30,7 @@ class TestChangeLogEntry extends BaseChangeLogEntry {
     required super.domainType,
     required super.changeAt,
     super.storedAt,
-    super.storageId = '',
+    required super.storageId,
     required super.changeBy,
     required super.dataJson,
     required super.operation,

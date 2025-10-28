@@ -9,7 +9,7 @@ void main() {
       final oneMsAgo = DateTime.now().subtract(const Duration(milliseconds: 1));
 
       final entry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-123',
@@ -59,7 +59,7 @@ void main() {
       final changeAt = DateTime.parse('2023-06-15T10:30:00Z');
 
       final entry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
             factory: TestChangeLogEntry.new,
             cid: customCid,
             domainType: 'project',
@@ -83,7 +83,7 @@ void main() {
       final localTime = DateTime.parse('2023-06-15T10:30:00'); // No timezone
 
       final entry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-789',
@@ -102,7 +102,7 @@ void main() {
       final now = DateTime.now();
 
       final taskEntry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-1',
@@ -114,7 +114,7 @@ void main() {
           );
 
       final projectEntry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-2',
@@ -135,7 +135,7 @@ void main() {
 
     test('handles empty data map', () {
       final entry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-empty',
@@ -152,7 +152,7 @@ void main() {
 
     test('properly encodes complex data structures', () {
       final entry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-complex',
