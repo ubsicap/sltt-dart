@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sync_manager/src/models/isar_document_state.dart';
 import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
@@ -66,7 +65,6 @@ void main() {
         'change_cid': 'cid-d1',
         'change_changeBy': 'u3',
         'data_title': 'Title',
-        'data_contentLength': 123,
         'data_parentId': '',
         'data_parentId_dataSchemaRev_': 0,
         'data_parentId_changeAt_': changeAtJson,

@@ -14,9 +14,10 @@ part 'isar_document_state.g.dart';
 class IsarDocumentState extends BaseIsarEntityState {
   // Document-specific fields
   String? data_title;
-  int? data_contentLength;
   DateTime? data_title_changeAt_;
   String? data_title_cid_;
+  String? data_title_changeBy_;
+  DateTime? data_title_cloudAt_;
 
   IsarDocumentState({
     super.id,
@@ -60,12 +61,14 @@ class IsarDocumentState extends BaseIsarEntityState {
     required super.data_parentProp_changeAt_,
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
-    super.data_parentProp_cloudAt_,
+    required super.data_parentProp_cloudAt_,
     this.data_title,
-    this.data_contentLength,
-    this.data_title_changeAt_,
+    DateTime? data_title_changeAt_,
+    DateTime? data_title_cloudAt_,
     this.data_title_cid_,
-  });
+    this.data_title_changeBy_,
+  }) : data_title_changeAt_ = data_title_changeAt_?.toUtc(),
+       data_title_cloudAt_ = data_title_cloudAt_?.toUtc();
 
   factory IsarDocumentState.fromJson(Map<String, dynamic> json) =>
       deserializeWithUnknownFieldData(
