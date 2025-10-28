@@ -756,7 +756,7 @@ void main() {
           );
 
           // Verify state was updated
-          final state = await cloudStorage.getCurrentEntityState(
+          final state = await cloudStorage.getEntityState(
             domainType: 'project',
             domainId: 'test-project',
             entityType: 'task',
@@ -819,7 +819,7 @@ void main() {
           );
 
           // Verify state was updated
-          final state = await cloudStorage.getCurrentEntityState(
+          final state = await cloudStorage.getEntityState(
             domainType: 'project',
             domainId: 'test-project',
             entityType: 'task',
@@ -913,7 +913,7 @@ void main() {
           );
 
           // Verify final state reflects the update
-          final state = await cloudStorage.getCurrentEntityState(
+          final state = await cloudStorage.getEntityState(
             domainType: 'project',
             domainId: 'test-project',
             entityType: 'task',
@@ -1079,7 +1079,7 @@ void main() {
           );
 
           // Verify state was updated
-          final state = await localStorage.getCurrentEntityState(
+          final state = await localStorage.getEntityState(
             domainType: 'project',
             domainId: 'test-project',
             entityType: 'task',
@@ -1157,7 +1157,7 @@ void main() {
             );
 
             // Verify state was updated
-            final state = await localStorage.getCurrentEntityState(
+            final state = await localStorage.getEntityState(
               domainType: 'project',
               domainId: 'test-project',
               entityType: 'task',
@@ -1351,7 +1351,7 @@ void main() {
         );
 
         // State should always be updated regardless of storage mode
-        final state = await localStorage.getCurrentEntityState(
+        final state = await localStorage.getEntityState(
           domainType: 'project',
           domainId: 'test-project',
           entityType: 'task',
@@ -1434,13 +1434,13 @@ void main() {
           );
 
           // Both should store state
-          final cloudState = await cloudStorage.getCurrentEntityState(
+          final cloudState = await cloudStorage.getEntityState(
             domainType: 'project',
             domainId: 'test-project',
             entityType: 'task',
             entityId: 'test-project-entity-cross',
           );
-          final localState = await localStorage.getCurrentEntityState(
+          final localState = await localStorage.getEntityState(
             domainType: 'project',
             domainId: 'test-project',
             entityType: 'task',
@@ -1541,13 +1541,13 @@ void main() {
             );
 
             // Both should always store/update state
-            final cloudState = await cloudStorage.getCurrentEntityState(
+            final cloudState = await cloudStorage.getEntityState(
               domainType: 'project',
               domainId: 'test-project',
               entityType: 'task',
               entityId: 'test-project-entity-sync-cross',
             );
-            final localState = await localStorage.getCurrentEntityState(
+            final localState = await localStorage.getEntityState(
               domainType: 'project',
               domainId: 'test-project',
               entityType: 'task',

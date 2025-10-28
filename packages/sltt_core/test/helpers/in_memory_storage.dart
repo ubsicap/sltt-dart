@@ -32,7 +32,7 @@ class InMemoryStorage implements BaseStorageService {
   Future<String> ensureStorageId() async => storageId;
 
   @override
-  Future<BaseEntityState?> getCurrentEntityState({
+  Future<BaseEntityState?> getEntityState({
     required String domainType,
     required String domainId,
     required String entityType,

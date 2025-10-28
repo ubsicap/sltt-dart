@@ -336,7 +336,7 @@ class ChangeProcessingService {
           }
 
           // Get current entity state
-          final entityState = await storage.getCurrentEntityState(
+          final entityState = await storage.getEntityState(
             domainType: changeLogEntry.domainType,
             domainId: changeLogEntry.domainId,
             entityType: changeLogEntry.entityType.toString(),

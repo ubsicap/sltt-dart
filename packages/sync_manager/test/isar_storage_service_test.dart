@@ -307,7 +307,7 @@ void main() {
       expect(result.newEntityState.entityId, equals(entityId));
 
       // Retrieve the entity state
-      final entityState = await storage.getCurrentEntityState(
+      final entityState = await storage.getEntityState(
         domainType: 'project',
         domainId: projectId,
         entityType: 'project',
@@ -381,7 +381,7 @@ void main() {
         },
       );
 
-      final entityState = await storage.getCurrentEntityState(
+      final entityState = await storage.getEntityState(
         domainType: 'project',
         domainId: projectId,
         entityType: 'document',
@@ -394,7 +394,7 @@ void main() {
     });
 
     test('returns null for non-existent entity state', () async {
-      final result = await storage.getCurrentEntityState(
+      final result = await storage.getEntityState(
         domainType: 'project',
         domainId: 'non-existent-project',
         entityType: 'project',
@@ -404,7 +404,7 @@ void main() {
     });
 
     test('handles unknown entity type gracefully', () async {
-      final result = await storage.getCurrentEntityState(
+      final result = await storage.getEntityState(
         domainType: 'project',
         domainId: 'test-project',
         entityType: 'unknown',
@@ -883,7 +883,7 @@ void main() {
         );
 
         final change2 = IsarChangeLogEntry.fromJson(newerChange);
-        final currentState = await storage.getCurrentEntityState(
+        final currentState = await storage.getEntityState(
           domainType: 'project',
           domainId: projectId,
           entityType: 'project',
@@ -926,7 +926,7 @@ void main() {
         expect(result.newChangeLogEntry.seq, equals(2));
 
         // Verify the state was updated with newer change
-        final finalState = await storage.getCurrentEntityState(
+        final finalState = await storage.getEntityState(
           domainType: 'project',
           domainId: projectId,
           entityType: 'project',
@@ -1010,7 +1010,7 @@ void main() {
       );
 
       final change2 = IsarChangeLogEntry.fromJson(updateChange);
-      final currentState = await storage.getCurrentEntityState(
+      final currentState = await storage.getEntityState(
         domainType: kDomainProject,
         domainId: projectId,
         entityType: kEntityTypeProject,
@@ -1036,7 +1036,7 @@ void main() {
       );
 
       // Verify the entity still exists and can be retrieved
-      final finalState = await storage.getCurrentEntityState(
+      final finalState = await storage.getEntityState(
         domainType: kDomainProject,
         domainId: projectId,
         entityType: kEntityTypeProject,
@@ -1093,7 +1093,7 @@ void main() {
       expectAllDateTimeFieldsAreUtc(change.toJson());
 
       final state =
-          await storage.getCurrentEntityState(
+          await storage.getEntityState(
                 domainType: 'project',
                 domainId: projectId,
                 entityType: 'task',
@@ -1369,7 +1369,7 @@ void main() {
       );
 
       // The seeded entity state is for a 'task' (see payload above).
-      final entityState = await storage.getCurrentEntityState(
+      final entityState = await storage.getEntityState(
         domainType: 'project',
         domainId: domainId,
         entityType: 'task',
@@ -1418,7 +1418,7 @@ void main() {
       );
 
       // Verify entity state removed
-      final afterState = await storage.getCurrentEntityState(
+      final afterState = await storage.getEntityState(
         domainType: 'project',
         domainId: domainId,
         entityType: 'task',

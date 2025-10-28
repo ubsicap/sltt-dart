@@ -92,7 +92,7 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
   }
 
   @override
-  Future<BaseEntityState?> getCurrentEntityState({
+  Future<BaseEntityState?> getEntityState({
     required String domainType,
     required String domainId,
     required String entityType,

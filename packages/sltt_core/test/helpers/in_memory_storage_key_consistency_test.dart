@@ -67,7 +67,7 @@ void main() {
       );
 
       expect(res.newEntityState, isNotNull);
-      final persisted = await storage.getCurrentEntityState(
+      final persisted = await storage.getEntityState(
         domainType: 'project',
         domainId: 'project-1',
         entityType: 'task',

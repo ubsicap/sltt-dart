@@ -156,7 +156,7 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<BaseEntityState?> getCurrentEntityState({
+  Future<BaseEntityState?> getEntityState({
     required String domainType,
     required String domainId,
     required String entityType,
@@ -469,7 +469,7 @@ class DynamoDBStorageService extends BaseStorageService {
     required String entityType,
     required String entityId,
   }) async {
-    final state = await getCurrentEntityState(
+    final state = await getEntityState(
       domainType: domainType,
       domainId: domainId,
       entityType: entityType,

@@ -1175,7 +1175,7 @@ Future<IsarProjectState> getCurrentEntityStateAndCheckCloudAt(
   String projectId,
 ) async {
   final localState =
-      await local.getCurrentEntityState(
+      await local.getEntityState(
             entityType: 'project',
             entityId: projectId,
             domainType: 'project',

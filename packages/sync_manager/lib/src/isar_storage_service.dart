@@ -910,7 +910,7 @@ class IsarStorageService extends BaseStorageService {
 
   /// Get the current state of an entity for field-level comparison
   @override
-  Future<BaseEntityState?> getCurrentEntityState({
+  Future<BaseEntityState?> getEntityState({
     required String domainType,
     required String domainId,
     required String entityType,
@@ -927,7 +927,7 @@ class IsarStorageService extends BaseStorageService {
 
     if (entityTypeEnum == EntityType.unknown) {
       SlttLogger.logger.warning(
-        'getCurrentEntityState - Unknown entity type: "$entityType"',
+        'getEntityState - Unknown entity type: "$entityType"',
       );
       return null;
     }

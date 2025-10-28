@@ -76,14 +76,7 @@ abstract class BaseStorageService {
   });
 
   /// Get the current state of an entity for field-level comparison.
-  ///
-  /// Storage implementations should override this method to provide entity lookup.
-  /// This is used by the field-level change detection to determine what fields
-  /// have actually changed.
-  ///
-  /// Returns the most recent change entry for the specified entity, or null if
-  /// the entity doesn't exist.
-  Future<BaseEntityState?> getCurrentEntityState({
+  Future<BaseEntityState?> getEntityState({
     required String domainType,
     required String domainId,
     required String entityType,
