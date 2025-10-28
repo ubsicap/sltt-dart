@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
@@ -87,8 +86,7 @@ void main() {
 
   setUp(() async {
     // Create unique database name for each test (use microseconds + random)
-    testDbName =
-        'test_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(1 << 31)}';
+    testDbName = 'isar_storage_service_test';
     storage = IsarStorageService(testDbName, 'Test');
     await storage.deleteDatabase();
     await storage.initialize();

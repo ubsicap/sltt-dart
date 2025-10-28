@@ -8,7 +8,7 @@ void main() {
   // Use a unique database name per test run to avoid unique-index collisions
   // from prior runs when the same static name is reused.
   final testDbName =
-      'test_get_entity_states_${DateTime.now().microsecondsSinceEpoch}';
+      'isar_storage_get_entity_states_test';
 
   setUpAll(() async {
     isarChangeLogEntryFactoryRegistration;
