@@ -264,7 +264,7 @@ void main() {
         change_dataSchemaRev: 6,
         change_cloudAt: localCloudAt,
         change_changeBy: 'test-user-6',
-        change_changeBy_orig_: 'test-user',
+        change_changeBy_orig_: 'test-user-1',
         // Project-specific fields
         data_nameLocal: 'Test Project',
         data_nameLocal_dataSchemaRev_: 2,
