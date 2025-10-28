@@ -348,28 +348,6 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getEntityStateAlt({
-    required String domainType,
-    required String domainId,
-    required String entityId,
-    required String entityType,
-  }) async {
-    // Scan states map for the specific entity within the domain
-    final states =
-        _statesByDomainType[domainType] ?? const <String, TestEntityState>{};
-    final prefix = '$domainId|';
-    for (final entry in states.entries) {
-      if (entry.key.startsWith(prefix)) {
-        final parts = entry.key.split('|');
-        if (parts.length == 3 && parts[2] == entityId) {
-          return entry.value.toJson();
-        }
-      }
-    }
-    return <String, dynamic>{};
-  }
-
-  @override
   Future<void> testResetDomainStorage({
     required String domainType,
     required String domainId,

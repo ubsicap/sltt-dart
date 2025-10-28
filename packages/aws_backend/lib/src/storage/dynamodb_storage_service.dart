@@ -463,26 +463,6 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<Map<String, dynamic>> getEntityStateAlt({
-    required String domainType,
-    required String domainId,
-    required String entityType,
-    required String entityId,
-  }) async {
-    final state = await getEntityState(
-      domainType: domainType,
-      domainId: domainId,
-      entityType: entityType,
-      entityId: entityId,
-    );
-
-    if (state == null) return {};
-
-    final json = state.toJson();
-    return json;
-  }
-
-  @override
   Future<void> testResetDomainStorage({
     required String domainType,
     required String domainId,

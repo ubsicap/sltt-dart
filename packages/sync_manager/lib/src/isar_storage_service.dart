@@ -941,28 +941,6 @@ class IsarStorageService extends BaseStorageService {
     return await storageGroup.findByDomainAndEntity(_isar, domainId, entityId);
   }
 
-  @override
-  Future<Map<String, dynamic>> getEntityStateAlt({
-    required String domainType,
-    required String domainId,
-    required String entityType,
-    required String entityId,
-  }) async {
-    // Search all registered storage groups for the entity
-    final entityTypes = _entityStateRegistry.registeredEntityTypes();
-    for (final et in entityTypes) {
-      final group = _entityStateRegistry.get(et);
-      if (group == null) continue;
-      final state = await group.findByDomainAndEntity(
-        _isar,
-        domainId,
-        entityId,
-      );
-      if (state != null) return state.toJson();
-    }
-    return <String, dynamic>{};
-  }
-
   /// Delete all changes - useful for testing cleanup
   Future<int> deleteAllChanges() async {
     final allChanges = await _isar.isarChangeLogEntrys.where().findAll();

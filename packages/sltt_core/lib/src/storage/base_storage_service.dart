@@ -134,13 +134,6 @@ abstract class BaseStorageService {
     String? parentProp,
   });
 
-  Future<Map<String, dynamic>> getEntityStateAlt({
-    required String domainType,
-    required String domainId,
-    required String entityType,
-    required String entityId,
-  });
-
   String getStorageType();
 
   /// Retrieve the persisted storageId for this storage backend/instance.

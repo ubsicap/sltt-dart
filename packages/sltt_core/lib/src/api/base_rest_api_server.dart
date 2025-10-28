@@ -1525,7 +1525,7 @@ abstract class BaseRestApiServer {
       }
 
       // Get entity state data
-      final stateData = await storage.getEntityStateAlt(
+      final stateData = await storage.getEntityState(
         domainType: domainType,
         domainId: projectId,
         entityType: entityType,
