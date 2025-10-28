@@ -10,6 +10,7 @@ export 'src/models/change_processing_summary.dart';
 export 'src/models/constants/change_operations.dart';
 export 'src/models/entity_type.dart';
 export 'src/models/enums.dart';
+export 'src/models/project_data_fields.dart';
 export 'src/models/serializable_group.dart';
 export 'src/server/server_urls.dart';
 export 'src/services/base_change_log_entry_service.dart';

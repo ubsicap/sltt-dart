@@ -4,6 +4,7 @@ import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 import 'helpers/in_memory_storage.dart';
+import 'test_data_fields.dart';
 import 'test_models.dart';
 
 void main() {
@@ -62,7 +63,11 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final entry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              TestDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'test-project',
@@ -70,11 +75,11 @@ void main() {
               entityId: 'test-project-task-1',
               changeBy: 'tester',
               changeAt: baseTime,
-              data: {
-                'nameLocal': 'Test Task',
-                'parentId': 'root',
-                'parentProp': 'pList',
-              },
+              data: TestDataFields(
+                nameLocal: 'Test Task',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
               operation: 'create',
             );
 
@@ -107,7 +112,11 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final entry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'test-project',
@@ -115,11 +124,11 @@ void main() {
               entityId: 'test-project-task-change-updates',
               changeBy: 'tester',
               changeAt: baseTime,
-              data: {
-                'nameLocal': 'Test Task',
-                'parentId': 'root',
-                'parentProp': 'pList',
-              },
+              data: ProjectDataFields(
+                nameLocal: 'Test Task',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
               operation: 'create',
             );
 
@@ -166,7 +175,11 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final entry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'test-project',
@@ -174,11 +187,11 @@ void main() {
               entityId: 'test-project-task-state-updates',
               changeBy: 'tester',
               changeAt: baseTime,
-              data: {
-                'nameLocal': 'Test Task',
-                'parentId': 'root',
-                'parentProp': 'pList',
-              },
+              data: ProjectDataFields(
+                nameLocal: 'Test Task',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
               operation: 'create',
             );
 
@@ -215,7 +228,11 @@ void main() {
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
         final entry1 =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'test-project',
@@ -223,16 +240,20 @@ void main() {
               entityId: 'test-project-task-multi-1',
               changeBy: 'tester',
               changeAt: baseTime,
-              data: {
-                'nameLocal': 'Task 1',
-                'parentId': 'root',
-                'parentProp': 'pList',
-              },
+              data: ProjectDataFields(
+                nameLocal: 'Task 1',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
               operation: 'create',
             );
 
         final entry2 =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'test-project',
@@ -240,11 +261,11 @@ void main() {
               entityId: 'test-project-task-multi-2',
               changeBy: 'tester',
               changeAt: baseTime.add(const Duration(minutes: 1)),
-              data: {
-                'nameLocal': 'Task 2',
-                'parentId': 'root',
-                'parentProp': 'pList',
-              },
+              data: ProjectDataFields(
+                nameLocal: 'Task 2',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
               operation: 'create',
             );
 
@@ -1572,7 +1593,11 @@ void main() {
 
       setUp(() {
         testChangeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
               factory: TestChangeLogEntry.new,
               cid: 'test-cid-123',
               entityId: 'test-entity',
@@ -1581,11 +1606,11 @@ void main() {
               domainType: 'project',
               changeAt: DateTime.now().toUtc(),
               changeBy: 'test-user',
-              data: {
-                'nameLocal': 'Test',
-                'parentId': 'root',
-                'parentProp': 'pList',
-              },
+              data: ProjectDataFields(
+                nameLocal: 'Test',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
               operation: 'create',
             );
       });
@@ -1618,7 +1643,8 @@ void main() {
           final changeWithUnknown =
               ChangeLogEntryFactoryService.forChangeSave<
                 TestChangeLogEntry,
-                int
+                int,
+                ProjectDataFields
               >(
                 factory: TestChangeLogEntry.new,
                 cid: 'test-cid-456',
@@ -1628,11 +1654,11 @@ void main() {
                 domainType: 'project',
                 changeAt: DateTime.now().toUtc(),
                 changeBy: 'test-user',
-                data: {
-                  'nameLocal': 'Test',
-                  'parentId': 'root',
-                  'parentProp': 'pList',
-                },
+                data: ProjectDataFields(
+                  nameLocal: 'Test',
+                  parentId: 'root',
+                  parentProp: 'pList',
+                ),
                 operation: 'create',
               );
           changeWithUnknown.setUnknownMap({
@@ -1665,7 +1691,8 @@ void main() {
           final changeWithUnknown =
               ChangeLogEntryFactoryService.forChangeSave<
                 TestChangeLogEntry,
-                int
+                int,
+                ProjectDataFields
               >(
                 factory: TestChangeLogEntry.new,
                 cid: 'test-cid-789',
@@ -1675,11 +1702,11 @@ void main() {
                 domainType: 'project',
                 changeAt: DateTime.now().toUtc(),
                 changeBy: 'test-user',
-                data: {
-                  'nameLocal': 'Test',
-                  'parentId': 'root',
-                  'parentProp': 'pList',
-                },
+                data: ProjectDataFields(
+                  nameLocal: 'Test',
+                  parentId: 'root',
+                  parentProp: 'pList',
+                ),
                 operation: 'create',
               );
           changeWithUnknown.setUnknownMap({
@@ -1708,7 +1735,11 @@ void main() {
 
       test('should return null when unknownJson is not empty in sync mode', () {
         final changeWithUnknown =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
               factory: TestChangeLogEntry.new,
               cid: 'test-cid-999',
               entityId: 'test-entity',
@@ -1717,11 +1748,11 @@ void main() {
               domainType: 'project',
               changeAt: DateTime.now().toUtc(),
               changeBy: 'test-user',
-              data: {
-                'nameLocal': 'Test',
-                'parentId': 'root',
-                'parentProp': 'pList',
-              },
+              data: ProjectDataFields(
+                nameLocal: 'Test',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
               operation: 'create',
             );
         changeWithUnknown.setUnknownMap({
@@ -1740,7 +1771,11 @@ void main() {
 
       test('should include known fields in error message', () {
         final changeWithUnknown =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
               factory: TestChangeLogEntry.new,
               cid: 'test-cid-known-fields',
               entityId: 'test-entity',
@@ -1749,11 +1784,11 @@ void main() {
               domainType: 'project',
               changeAt: DateTime.now().toUtc(),
               changeBy: 'test-user',
-              data: {
-                'nameLocal': 'Test',
-                'parentId': 'root',
-                'parentProp': 'pList',
-              },
+              data: ProjectDataFields(
+                nameLocal: 'Test',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
               operation: 'create',
             );
         changeWithUnknown.setUnknownMap({

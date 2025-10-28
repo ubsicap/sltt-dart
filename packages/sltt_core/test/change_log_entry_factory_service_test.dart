@@ -1,6 +1,7 @@
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
+import 'test_data_fields.dart';
 import 'test_models.dart';
 
 void main() {
@@ -9,18 +10,22 @@ void main() {
       final oneMsAgo = DateTime.now().subtract(const Duration(milliseconds: 1));
 
       final entry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+          ChangeLogEntryFactoryService.forChangeSave<
+            TestChangeLogEntry,
+            int,
+            TestDataFields
+          >(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-123',
             entityType: 'task',
             entityId: 'task-1',
             changeBy: 'user-1',
-            data: {
-              'nameLocal': 'My Task',
-              'parentId': 'root',
-              'parentProp': 'pList',
-            },
+            data: TestDataFields(
+              nameLocal: 'My Task',
+              parentId: 'root',
+              parentProp: 'pList',
+            ),
           );
 
       // Verify all save mode defaults are set correctly
@@ -59,7 +64,11 @@ void main() {
       final changeAt = DateTime.parse('2023-06-15T10:30:00Z');
 
       final entry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+          ChangeLogEntryFactoryService.forChangeSave<
+            TestChangeLogEntry,
+            int,
+            TestDataFields
+          >(
             factory: TestChangeLogEntry.new,
             cid: customCid,
             domainType: 'project',
@@ -68,7 +77,11 @@ void main() {
             entityId: 'proj-sub-1',
             changeBy: 'user-2',
             changeAt: changeAt,
-            data: {'nameLocal': 'Sub Project'},
+            data: TestDataFields(
+              nameLocal: 'Sub Project',
+              parentId: 'root',
+              parentProp: 'pList',
+            ),
             operation: operation,
             dataSchemaRev: 5,
           );
@@ -83,7 +96,11 @@ void main() {
       final localTime = DateTime.parse('2023-06-15T10:30:00'); // No timezone
 
       final entry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+          ChangeLogEntryFactoryService.forChangeSave<
+            TestChangeLogEntry,
+            int,
+            TestDataFields
+          >(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-789',
@@ -91,7 +108,11 @@ void main() {
             entityId: 'task-2',
             changeBy: 'user-3',
             changeAt: localTime,
-            data: {'nameLocal': 'Test'},
+            data: TestDataFields(
+              nameLocal: 'Test',
+              parentId: 'root',
+              parentProp: 'pList',
+            ),
           );
 
       // Verify time was normalized to UTC
@@ -102,7 +123,11 @@ void main() {
       final now = DateTime.now();
 
       final taskEntry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+          ChangeLogEntryFactoryService.forChangeSave<
+            TestChangeLogEntry,
+            int,
+            TestDataFields
+          >(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-1',
@@ -110,11 +135,19 @@ void main() {
             entityId: 'task-1',
             changeBy: 'user-1',
             changeAt: now,
-            data: {'nameLocal': 'Task'},
+            data: TestDataFields(
+              nameLocal: 'Task',
+              parentId: 'parent1',
+              parentProp: 'pList',
+            ),
           );
 
       final projectEntry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+          ChangeLogEntryFactoryService.forChangeSave<
+            TestChangeLogEntry,
+            int,
+            TestDataFields
+          >(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-2',
@@ -122,7 +155,11 @@ void main() {
             entityId: 'proj-2',
             changeBy: 'user-1',
             changeAt: now,
-            data: {'nameLocal': 'Project'},
+            data: TestDataFields(
+              nameLocal: 'Project',
+              parentId: 'parent2',
+              parentProp: 'pList',
+            ),
           );
 
       // CIDs should be different
@@ -135,7 +172,11 @@ void main() {
 
     test('handles empty data map', () {
       final entry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+          ChangeLogEntryFactoryService.forChangeSave<
+            TestChangeLogEntry,
+            int,
+            BaseDataFields
+          >(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-empty',
@@ -143,16 +184,23 @@ void main() {
             entityId: 'task-empty',
             changeBy: 'user-1',
             changeAt: DateTime.now(),
-            data: {},
+            data: BaseDataFields(parentId: 'parent1', parentProp: 'pList'),
           );
 
-      expect(entry.dataJson, equals('{}'));
-      expect(entry.getData(), isEmpty);
+      expect(entry.dataJson, contains('parentId'));
+      expect(entry.dataJson, contains('parentProp'));
+      final data = entry.getData();
+      expect(data['parentId'], equals('parent1'));
+      expect(data['parentProp'], equals('pList'));
     });
 
     test('properly encodes complex data structures', () {
       final entry =
-          ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+          ChangeLogEntryFactoryService.forChangeSave<
+            TestChangeLogEntry,
+            int,
+            TestDataFields
+          >(
             factory: TestChangeLogEntry.new,
             domainType: 'project',
             domainId: 'proj-complex',
@@ -160,21 +208,18 @@ void main() {
             entityId: 'task-complex',
             changeBy: 'user-1',
             changeAt: DateTime.now(),
-            data: {
-              'nameLocal': 'Complex Task',
-              'metadata': {
-                'tags': ['urgent', 'review'],
-                'priority': 5,
-              },
-              'deleted': false,
-            },
+            data: TestDataFields(
+              nameLocal: 'Complex Task',
+              parentId: 'parent1',
+              parentProp: 'pList',
+              deleted: false,
+            ),
           );
 
       final data = entry.getData();
       expect(data['nameLocal'], equals('Complex Task'));
-      expect(data['metadata'], isA<Map>());
-      expect(data['metadata']['tags'], equals(['urgent', 'review']));
-      expect(data['metadata']['priority'], equals(5));
+      expect(data['parentId'], equals('parent1'));
+      expect(data['parentProp'], equals('pList'));
       expect(data['deleted'], equals(false));
     });
   });

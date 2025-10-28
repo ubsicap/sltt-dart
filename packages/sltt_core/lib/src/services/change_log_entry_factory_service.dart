@@ -11,6 +11,11 @@ class ChangeLogEntryFactoryService {
   /// Save mode is used when a client is creating new changes locally that
   /// have not yet been assigned storage metadata like sequence numbers.
   ///
+  /// Type Parameters:
+  /// - `T`: The concrete change log entry type (extends BaseChangeLogEntry)
+  /// - `TSeq`: The sequence number type (extends int, e.g., int or Isar's Id)
+  /// - `TData`: The data fields type (extends BaseDataFields)
+  ///
   /// Default values for save mode:
   /// - `storageId`: empty string (not yet assigned)
   /// - `operation`: 'update'
@@ -31,7 +36,7 @@ class ChangeLogEntryFactoryService {
   /// - `entityId`: Entity identifier
   /// - `changeBy`: User identifier who made the change
   /// - `changeAt`: When the change was made (will be normalized to UTC)
-  /// - `data`: Change data payload as a map
+  /// - `data`: Change data payload as a BaseDataFields object (or subclass)
   ///
   /// Optional parameters that can override defaults:
   /// - `cid`: Change ID (generated if not provided)
@@ -48,7 +53,7 @@ class ChangeLogEntryFactoryService {
   ///
   /// Example usage:
   /// ```dart
-  /// final entry = ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+  /// final entry = ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int, BaseDataFields>(
   ///   factory: TestChangeLogEntry.new,
   ///   domainType: 'project',
   ///   domainId: 'proj-123',
@@ -56,10 +61,14 @@ class ChangeLogEntryFactoryService {
   ///   entityId: 'task-1',
   ///   changeBy: 'user-1',
   ///   changeAt: DateTime.now(),
-  ///   data: {'nameLocal': 'My Task', 'parentId': 'root', 'parentProp': 'pList'},
+  ///   data: BaseDataFields(parentId: 'root', parentProp: 'pList'),
   /// );
   /// ```
-  static T forChangeSave<T extends BaseChangeLogEntry, TSeq extends int>({
+  static T forChangeSave<
+    T extends BaseChangeLogEntry,
+    TSeq extends int,
+    TData extends BaseDataFields
+  >({
     required T Function({
       required String cid,
       required String entityId,
@@ -86,7 +95,7 @@ class ChangeLogEntryFactoryService {
     required String entityType,
     required String entityId,
     required String changeBy,
-    required Map<String, dynamic> data,
+    required TData data,
     DateTime? changeAt,
     String? cid,
     String operation = kChangeOperationNotYetDefined,
@@ -104,8 +113,8 @@ class ChangeLogEntryFactoryService {
 
     final finalChangeAt = changeAt ?? DateTime.now();
 
-    // Encode data as JSON string
-    final dataJson = stableStringify(data);
+    // Encode data as JSON string by calling toJson() on the BaseDataFields object
+    final dataJson = stableStringify(data.toJson());
 
     return factory(
       cid: effectiveCid,

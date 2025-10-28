@@ -82,7 +82,11 @@ void main() {
 
       final changeBy = 'test';
       final change =
-          ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+          ChangeLogEntryFactoryService.forChangeSave<
+            IsarChangeLogEntry,
+            Id,
+            BaseDataFields
+          >(
             factory: IsarChangeLogEntry.new,
             domainType: 'project',
             domainId: '__test_1',
@@ -91,10 +95,7 @@ void main() {
             changeBy: changeBy,
             changeAt: DateTime.now(),
             cid: generateCid(entityType: EntityType.project, userId: changeBy),
-            data: BaseDataFields(
-              parentId: 'root',
-              parentProp: 'projects',
-            ).toJson(),
+            data: BaseDataFields(parentId: 'root', parentProp: 'projects'),
             operation: 'create',
           );
 
@@ -304,7 +305,11 @@ void main() {
 
         const projectId = '__test_full_cloud_local_create_update';
         final localChange =
-            ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              IsarChangeLogEntry,
+              Id,
+              ProjectDataFields
+            >(
               factory: IsarChangeLogEntry.new,
               domainType: 'project',
               domainId: projectId,
@@ -312,13 +317,11 @@ void main() {
               entityId: projectId,
               changeBy: 'local-full',
               changeAt: DateTime.now(),
-              data: {
-                ...BaseDataFields(
-                  parentId: 'root',
-                  parentProp: 'projects',
-                ).toJson(),
-                'nameLocal': expectedNameLocalUpdate,
-              },
+              data: ProjectDataFields(
+                parentId: 'root',
+                parentProp: 'projects',
+                nameLocal: expectedNameLocalUpdate,
+              ),
               operation: 'create',
             );
         final localSeed = await ChangeProcessingService.storeChanges(
@@ -462,7 +465,11 @@ void main() {
         await syncManager.downsyncFromCloud(domainIds: [projectId]);
         final localChangeAt = DateTime.now().toUtc();
         final localChange =
-            ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              IsarChangeLogEntry,
+              Id,
+              ProjectDataFields
+            >(
               factory: IsarChangeLogEntry.new,
               domainType: 'project',
               domainId: projectId,
@@ -470,13 +477,11 @@ void main() {
               entityId: projectId,
               changeBy: 'local-full',
               changeAt: localChangeAt,
-              data: {
-                ...BaseDataFields(
-                  parentId: 'root',
-                  parentProp: 'projects',
-                ).toJson(),
-                'nameLocal': expectedNameLocalUpdate,
-              },
+              data: ProjectDataFields(
+                parentId: 'root',
+                parentProp: 'projects',
+                nameLocal: expectedNameLocalUpdate,
+              ),
               operation: 'update',
             );
         final localSeed = await ChangeProcessingService.storeChanges(
@@ -658,7 +663,11 @@ void main() {
 
         // Save a local change that should be outsynced
         final localChange =
-            ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              IsarChangeLogEntry,
+              Id,
+              ProjectDataFields
+            >(
               factory: IsarChangeLogEntry.new,
               domainType: 'project',
               domainId: projectId,
@@ -667,13 +676,11 @@ void main() {
               entityId: projectId,
               changeBy: 'local-full',
               changeAt: DateTime.now().toUtc(),
-              data: {
-                ...BaseDataFields(
-                  parentId: 'root',
-                  parentProp: 'projects',
-                ).toJson(),
-                'nameLocal': expectedOutdatedNameLocalUpdate,
-              },
+              data: ProjectDataFields(
+                parentId: 'root',
+                parentProp: 'projects',
+                nameLocal: expectedOutdatedNameLocalUpdate,
+              ),
             );
 
         final localSave = await ChangeProcessingService.storeChanges(
@@ -931,7 +938,11 @@ void main() {
 
         // Save a local change that should be outsynced
         final localChange =
-            ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              IsarChangeLogEntry,
+              Id,
+              ProjectDataFields
+            >(
               factory: IsarChangeLogEntry.new,
               domainType: 'project',
               domainId: projectId,
@@ -940,14 +951,12 @@ void main() {
               entityId: projectId,
               changeBy: 'local-full',
               changeAt: localChangeAt,
-              data: {
-                ...BaseDataFields(
-                  parentId: 'root',
-                  parentProp: 'projects',
-                  rank: localChangeRank, // should lose
-                ).toJson(),
-                'nameLocal': localChangeNameLocal, // should win
-              },
+              data: ProjectDataFields(
+                parentId: 'root',
+                parentProp: 'projects',
+                rank: localChangeRank, // should lose
+                nameLocal: localChangeNameLocal, // should win
+              ),
             );
 
         final localSeed = await ChangeProcessingService.storeChanges(
@@ -1345,7 +1354,11 @@ Future<IsarChangeLogEntry> saveCloudChange({
 }) async {
   final cloudStorage = CloudStorageService.instance;
   final cloudSaveChange =
-      ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id>(
+      ChangeLogEntryFactoryService.forChangeSave<
+        IsarChangeLogEntry,
+        Id,
+        ProjectDataFields
+      >(
         factory: IsarChangeLogEntry.new,
         domainType: 'project',
         domainId: domainId,
@@ -1354,7 +1367,7 @@ Future<IsarChangeLogEntry> saveCloudChange({
         changeBy: userId,
         changeAt: changeAt,
         cid: generateCid(entityType: EntityType.project, userId: userId),
-        data: jsonDecode(dataJson) as Map<String, dynamic>,
+        data: ProjectDataFields.fromJson(jsonDecode(dataJson)),
         operation: operation,
       );
 

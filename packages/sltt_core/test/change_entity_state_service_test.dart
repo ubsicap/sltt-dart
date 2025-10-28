@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
+import 'test_data_fields.dart';
 import 'test_models.dart';
 import 'utils/test_datetime.dart';
 
@@ -319,7 +320,8 @@ void main() {
           final entry =
               ChangeLogEntryFactoryService.forChangeSave<
                 TestChangeLogEntry,
-                int
+                int,
+                TestDataFields
               >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
@@ -329,7 +331,11 @@ void main() {
                 changeBy: 'user1',
                 changeAt: baseTime,
                 cid: 'c1',
-                data: {'data_nameLocal': 'Task 1'},
+                data: TestDataFields(
+                  nameLocal: 'Task 1',
+                  parentId: 'parent1',
+                  parentProp: 'pList',
+                ),
                 operation: '',
               );
 
@@ -572,7 +578,11 @@ void main() {
         // Create a change log entry with newer field changes
         final newerTime = baseTime.add(const Duration(minutes: 5));
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              BaseDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -581,7 +591,11 @@ void main() {
               changeBy: 'user2',
               changeAt: newerTime,
               cid: 'cid2',
-              data: {'rank': '2'},
+              data: BaseDataFields(
+                parentId: 'parent1',
+                parentProp: 'pList',
+                rank: '2',
+              ),
               operation: 'update',
             );
         final updates = getUpdatesForChangeLogEntryAndEntityState(
@@ -629,7 +643,7 @@ void main() {
             'operation': 'update',
             'operationInfoJson': jsonEncode({
               'outdatedBys': [],
-              'noOpFields': [],
+              'noOpFields': ['parentId', 'parentProp'],
             }),
             'stateChanged': true,
             'storageId': 'localId',
@@ -696,7 +710,8 @@ void main() {
           final changeLogEntry =
               ChangeLogEntryFactoryService.forChangeSave<
                 TestChangeLogEntry,
-                int
+                int,
+                TestDataFields
               >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
@@ -706,12 +721,12 @@ void main() {
                 changeBy: 'user2',
                 changeAt: baseTime.add(const Duration(minutes: 1)),
                 cid: 'cid6',
-                data: {
-                  'rank': '1',
-                  'parentId': 'parent2',
-                  'parentProp': 'pList',
-                  'nameLocal': 'New Name',
-                },
+                data: TestDataFields(
+                  nameLocal: 'New Name',
+                  parentId: 'parent2',
+                  parentProp: 'pList',
+                  rank: '1',
+                ),
                 operation: 'update',
               );
 
@@ -824,7 +839,8 @@ void main() {
           final changeLogEntry =
               ChangeLogEntryFactoryService.forChangeSave<
                 TestChangeLogEntry,
-                int
+                int,
+                TestDataFields
               >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
@@ -834,12 +850,12 @@ void main() {
                 changeBy: 'user2',
                 changeAt: baseTime, // between olderTime and newerFieldTime
                 cid: 'cid7',
-                data: {
-                  'rank': '1',
-                  'parentId': 'parent2',
-                  'parentProp': 'pList',
-                  'nameLocal': 'Same Name',
-                },
+                data: TestDataFields(
+                  nameLocal: 'Same Name',
+                  parentId: 'parent2',
+                  parentProp: 'pList',
+                  rank: '1',
+                ),
                 operation: kChangeOperationNotYetDefined,
               );
 
@@ -878,7 +894,11 @@ void main() {
         // Create a change log entry with older field changes
         final olderTime = baseTime.subtract(const Duration(minutes: 5));
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              BaseDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -887,7 +907,11 @@ void main() {
               changeBy: 'user2',
               changeAt: olderTime,
               cid: 'cid2',
-              data: {'rank': '3'},
+              data: BaseDataFields(
+                parentId: 'parent1',
+                parentProp: 'pList',
+                rank: '3',
+              ),
               operation: 'update',
             );
 
@@ -909,7 +933,7 @@ void main() {
             'operation': 'outdated',
             'operationInfoJson': jsonEncode({
               'outdatedBys': ['rank'],
-              'noOpFields': [],
+              'noOpFields': ['parentId', 'parentProp'],
             }),
             'stateChanged': false,
             'storageId': 'localId',
@@ -922,7 +946,11 @@ void main() {
 
       test('should handle new entity creation', () {
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              BaseDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -931,7 +959,11 @@ void main() {
               changeBy: 'user1',
               changeAt: baseTime.add(const Duration(minutes: 1)),
               cid: 'cid3',
-              data: {'rank': '1', 'parentId': 'parent2', 'parentProp': 'pList'},
+              data: BaseDataFields(
+                parentId: 'parent2',
+                parentProp: 'pList',
+                rank: '1',
+              ),
               operation: 'create',
             );
 
@@ -1025,7 +1057,11 @@ void main() {
 
       test('should populate nameLocal from change data', () {
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              TestDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -1034,11 +1070,11 @@ void main() {
               changeBy: 'user1',
               changeAt: baseTime.add(const Duration(minutes: 1)),
               cid: 'cid5',
-              data: {
-                'nameLocal': 'Localized Name',
-                'parentId': 'parent3',
-                'parentProp': 'pList',
-              },
+              data: TestDataFields(
+                nameLocal: 'Localized Name',
+                parentId: 'parent3',
+                parentProp: 'pList',
+              ),
               operation: 'create',
             );
 
@@ -1083,7 +1119,11 @@ void main() {
 
       test('should handle entity deletion', () {
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              BaseDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -1092,7 +1132,11 @@ void main() {
               changeBy: 'user1',
               changeAt: baseTime.add(const Duration(minutes: 1)),
               cid: 'cid4',
-              data: {'deleted': true},
+              data: BaseDataFields(
+                parentId: 'parent1',
+                parentProp: 'pList',
+                deleted: true,
+              ),
               operation: 'delete',
             );
 
@@ -1114,7 +1158,7 @@ void main() {
             'operation': 'delete',
             'operationInfoJson': jsonEncode({
               'outdatedBys': [],
-              'noOpFields': [],
+              'noOpFields': ['parentId', 'parentProp'],
             }),
             'stateChanged': true,
             'storageId': 'localId',
@@ -1220,7 +1264,8 @@ void main() {
           final changeLogEntry =
               ChangeLogEntryFactoryService.forChangeSave<
                 TestChangeLogEntry,
-                int
+                int,
+                BaseDataFields
               >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
@@ -1230,7 +1275,11 @@ void main() {
                 changeBy: 'user2',
                 changeAt: newerTime, // Newer than latest in entity state
                 cid: 'new-cid',
-                data: {'rank': '2'},
+                data: BaseDataFields(
+                  parentId: 'parent1',
+                  parentProp: 'pList',
+                  rank: '2',
+                ),
                 operation: 'update',
               );
 
@@ -1252,7 +1301,7 @@ void main() {
               'operation': 'update',
               'operationInfoJson': jsonEncode({
                 'outdatedBys': [],
-                'noOpFields': [],
+                'noOpFields': ['parentId', 'parentProp'],
               }),
               'stateChanged': true,
               'storageId': 'localId',
@@ -1348,7 +1397,8 @@ void main() {
           final changeLogEntry =
               ChangeLogEntryFactoryService.forChangeSave<
                 TestChangeLogEntry,
-                int
+                int,
+                BaseDataFields
               >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
@@ -1359,7 +1409,11 @@ void main() {
                 changeAt:
                     olderTime, // Older than latest, will be rejected at field level too
                 cid: 'old-cid',
-                data: {'rank': '0'},
+                data: BaseDataFields(
+                  parentId: 'parent1',
+                  parentProp: 'pList',
+                  rank: '0',
+                ),
                 operation: 'update',
               );
 
@@ -1381,7 +1435,7 @@ void main() {
               'operation': 'outdated',
               'operationInfoJson': jsonEncode({
                 'outdatedBys': ['rank'],
-                'noOpFields': [],
+                'noOpFields': ['parentId', 'parentProp'],
               }),
               'stateChanged': false,
               'storageId': 'localId',
@@ -1449,7 +1503,8 @@ void main() {
           final changeLogEntry =
               ChangeLogEntryFactoryService.forChangeSave<
                 TestChangeLogEntry,
-                int
+                int,
+                BaseDataFields
               >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
@@ -1460,7 +1515,11 @@ void main() {
                 changeAt:
                     newerFieldTime, // Older than latest, but newer than field
                 cid: 'mid-cid',
-                data: {'rank': '2'},
+                data: BaseDataFields(
+                  parentId: 'parent1',
+                  parentProp: 'pList',
+                  rank: '2',
+                ),
                 operation: 'update',
               );
 
@@ -1482,7 +1541,7 @@ void main() {
               'operation': 'update',
               'operationInfoJson': jsonEncode({
                 'outdatedBys': [],
-                'noOpFields': [],
+                'noOpFields': ['parentId', 'parentProp'],
               }),
               'stateChanged': true,
               'storageId': 'localId',
@@ -1514,7 +1573,11 @@ void main() {
 
       test('should add storedAt for local storage changes', () {
         final changeLogEntry =
-            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry, int>(
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              BaseDataFields
+            >(
               factory: TestChangeLogEntry.new,
               domainType: 'project',
               domainId: 'project1',
@@ -1523,7 +1586,11 @@ void main() {
               changeBy: 'user1',
               changeAt: baseTime.add(const Duration(minutes: 1)),
               cid: 'cid-store-1',
-              data: {'rank': '1'},
+              data: BaseDataFields(
+                parentId: 'parent1',
+                parentProp: 'pList',
+                rank: '1',
+              ),
               operation: 'update',
             );
 
@@ -1606,12 +1673,12 @@ void main() {
         'should detect field-drift and produce stateUpdates compatible with TestEntityState deserialization',
         () {
           // TODO: could be made own test
-          final data = {
-            'nameLocal': 'Test Task Name',
-            'parentId': 'parent-drift-test',
-            'parentProp': 'pList',
-            'nameOptionalField': 'optional value',
-          };
+          final data = TestDataFields(
+            nameLocal: 'Test Task Name',
+            parentId: 'parent-drift-test',
+            parentProp: 'pList',
+            nameOptionalField: 'optional value',
+          );
 
           final changeAt = DateTime.parse('2023-01-01T00:10:00');
 
@@ -1619,7 +1686,8 @@ void main() {
           final changeLogEntry =
               ChangeLogEntryFactoryService.forChangeSave<
                 TestChangeLogEntry,
-                int
+                int,
+                TestDataFields
               >(
                 factory: TestChangeLogEntry.new,
                 domainType: 'project',
@@ -1637,7 +1705,7 @@ void main() {
           final updates = getDataAndStateUpdatesOrOutdatedBys(
             changeLogEntry: changeLogEntry,
             entityState: null, // No existing entity state
-            fieldChanges: data,
+            fieldChanges: data.toJson(),
             noOpFields: [],
             storageMode: 'save',
             storageType: 'cloud',
