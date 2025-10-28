@@ -316,21 +316,19 @@ void main() {
       test(
         'should not report empty change log entry operation for save mode',
         () {
-          final entry = TestChangeLogEntry(
-            entityId: 'e1',
-            entityType: 'task',
-            domainId: 'd1',
-            domainType: 'project',
-            changeAt: baseTime,
-            cid: 'c1',
-            storageId: 'local',
-            changeBy: 'user1',
-            dataJson: jsonEncode({'data_nameLocal': 'Task 1'}),
-            operation: '',
-            operationInfoJson: jsonEncode({}),
-            stateChanged: true,
-            unknownJson: jsonEncode({}),
-          );
+          final entry =
+              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+                factory: TestChangeLogEntry.new,
+                domainType: 'project',
+                domainId: 'd1',
+                entityType: 'task',
+                entityId: 'e1',
+                changeBy: 'user1',
+                changeAt: baseTime,
+                cid: 'c1',
+                data: {'data_nameLocal': 'Task 1'},
+                operation: '',
+              );
 
           final warnings = getAdditionalWarnings(
             operation: 'update',
@@ -570,21 +568,19 @@ void main() {
       test('should handle field-level conflict resolution', () {
         // Create a change log entry with newer field changes
         final newerTime = baseTime.add(const Duration(minutes: 5));
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity1',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: newerTime,
-          cid: 'cid2',
-          storageId: '',
-          changeBy: 'user2',
-          dataJson: jsonEncode({'rank': '2'}),
-          operation: 'update',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
+        final changeLogEntry =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'project1',
+              entityType: 'task',
+              entityId: 'entity1',
+              changeBy: 'user2',
+              changeAt: newerTime,
+              cid: 'cid2',
+              data: {'rank': '2'},
+              operation: 'update',
+            );
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
           entityState,
@@ -694,26 +690,24 @@ void main() {
         'should record noOpFields and only include changed fields in change data',
         () {
           // incoming has rank same as existing (no-op), parentId changed and nameLocal new
-          final changeLogEntry = TestChangeLogEntry(
-            storageId: '',
-            entityId: 'entity1',
-            entityType: 'task',
-            domainId: 'project1',
-            domainType: 'project',
-            changeAt: baseTime.add(const Duration(minutes: 1)),
-            cid: 'cid6',
-            changeBy: 'user2',
-            dataJson: jsonEncode({
-              'rank': '1',
-              'parentId': 'parent2',
-              'parentProp': 'pList',
-              'nameLocal': 'New Name',
-            }),
-            operation: 'update',
-            operationInfoJson: jsonEncode({}),
-            stateChanged: true,
-            unknownJson: jsonEncode({}),
-          );
+          final changeLogEntry =
+              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+                factory: TestChangeLogEntry.new,
+                domainType: 'project',
+                domainId: 'project1',
+                entityType: 'task',
+                entityId: 'entity1',
+                changeBy: 'user2',
+                changeAt: baseTime.add(const Duration(minutes: 1)),
+                cid: 'cid6',
+                data: {
+                  'rank': '1',
+                  'parentId': 'parent2',
+                  'parentProp': 'pList',
+                  'nameLocal': 'New Name',
+                },
+                operation: 'update',
+              );
 
           final updates = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
@@ -821,26 +815,24 @@ void main() {
             'unknownJson': '{}',
           });
 
-          final changeLogEntry = TestChangeLogEntry(
-            entityId: 'entity1',
-            entityType: 'task',
-            domainId: 'project1',
-            domainType: 'project',
-            changeAt: baseTime, // between olderTime and newerFieldTime
-            cid: 'cid7',
-            storageId: '',
-            changeBy: 'user2',
-            dataJson: jsonEncode({
-              'rank': '1',
-              'parentId': 'parent2',
-              'parentProp': 'pList',
-              'nameLocal': 'Same Name',
-            }),
-            operation: kChangeOperationNotYetDefined,
-            operationInfoJson: jsonEncode({}),
-            stateChanged: true,
-            unknownJson: jsonEncode({}),
-          );
+          final changeLogEntry =
+              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+                factory: TestChangeLogEntry.new,
+                domainType: 'project',
+                domainId: 'project1',
+                entityType: 'task',
+                entityId: 'entity1',
+                changeBy: 'user2',
+                changeAt: baseTime, // between olderTime and newerFieldTime
+                cid: 'cid7',
+                data: {
+                  'rank': '1',
+                  'parentId': 'parent2',
+                  'parentProp': 'pList',
+                  'nameLocal': 'Same Name',
+                },
+                operation: kChangeOperationNotYetDefined,
+              );
 
           final updates = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
@@ -876,21 +868,19 @@ void main() {
       test('should reject older changes', () {
         // Create a change log entry with older field changes
         final olderTime = baseTime.subtract(const Duration(minutes: 5));
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity1',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: olderTime,
-          cid: 'cid2',
-          storageId: '',
-          changeBy: 'user2',
-          dataJson: jsonEncode({'rank': '3'}),
-          operation: 'update',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
+        final changeLogEntry =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'project1',
+              entityType: 'task',
+              entityId: 'entity1',
+              changeBy: 'user2',
+              changeAt: olderTime,
+              cid: 'cid2',
+              data: {'rank': '3'},
+              operation: 'update',
+            );
 
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
@@ -922,25 +912,19 @@ void main() {
       });
 
       test('should handle new entity creation', () {
-        final changeLogEntry = TestChangeLogEntry(
-          storageId: '',
-          entityId: 'entity2',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: baseTime.add(const Duration(minutes: 1)),
-          cid: 'cid3',
-          changeBy: 'user1',
-          dataJson: jsonEncode({
-            'rank': '1',
-            'parentId': 'parent2',
-            'parentProp': 'pList',
-          }),
-          operation: 'create',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
+        final changeLogEntry =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'project1',
+              entityType: 'task',
+              entityId: 'entity2',
+              changeBy: 'user1',
+              changeAt: baseTime.add(const Duration(minutes: 1)),
+              cid: 'cid3',
+              data: {'rank': '1', 'parentId': 'parent2', 'parentProp': 'pList'},
+              operation: 'create',
+            );
 
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
@@ -1031,25 +1015,23 @@ void main() {
       });
 
       test('should populate nameLocal from change data', () {
-        final changeLogEntry = TestChangeLogEntry(
-          storageId: '',
-          entityId: 'entity3',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: baseTime.add(const Duration(minutes: 1)),
-          cid: 'cid5',
-          changeBy: 'user1',
-          dataJson: jsonEncode({
-            'nameLocal': 'Localized Name',
-            'parentId': 'parent3',
-            'parentProp': 'pList',
-          }),
-          operation: 'create',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
+        final changeLogEntry =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'project1',
+              entityType: 'task',
+              entityId: 'entity3',
+              changeBy: 'user1',
+              changeAt: baseTime.add(const Duration(minutes: 1)),
+              cid: 'cid5',
+              data: {
+                'nameLocal': 'Localized Name',
+                'parentId': 'parent3',
+                'parentProp': 'pList',
+              },
+              operation: 'create',
+            );
 
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
@@ -1091,21 +1073,19 @@ void main() {
       });
 
       test('should handle entity deletion', () {
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity1',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: baseTime.add(const Duration(minutes: 1)),
-          cid: 'cid4',
-          storageId: '',
-          changeBy: 'user1',
-          dataJson: jsonEncode({'deleted': true}),
-          operation: 'delete',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
+        final changeLogEntry =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'project1',
+              entityType: 'task',
+              entityId: 'entity1',
+              changeBy: 'user1',
+              changeAt: baseTime.add(const Duration(minutes: 1)),
+              cid: 'cid4',
+              data: {'deleted': true},
+              operation: 'delete',
+            );
 
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
@@ -1228,21 +1208,19 @@ void main() {
         () {
           // Test the case where incoming change is newer than the latest timestamp
           final newerTime = baseTime.add(const Duration(minutes: 5));
-          final changeLogEntry = TestChangeLogEntry(
-            storageId: '',
-            entityId: 'entity1',
-            entityType: 'task',
-            domainId: 'project1',
-            domainType: 'project',
-            changeAt: newerTime, // Newer than latest in entity state
-            cid: 'new-cid',
-            changeBy: 'user2',
-            dataJson: jsonEncode({'rank': '2'}),
-            operation: 'update',
-            operationInfoJson: jsonEncode({}),
-            stateChanged: true,
-            unknownJson: jsonEncode({}),
-          );
+          final changeLogEntry =
+              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+                factory: TestChangeLogEntry.new,
+                domainType: 'project',
+                domainId: 'project1',
+                entityType: 'task',
+                entityId: 'entity1',
+                changeBy: 'user2',
+                changeAt: newerTime, // Newer than latest in entity state
+                cid: 'new-cid',
+                data: {'rank': '2'},
+                operation: 'update',
+              );
 
           final updates = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
@@ -1355,21 +1333,20 @@ void main() {
             'unknownJson': '{}',
           });
 
-          final changeLogEntry = TestChangeLogEntry(
-            entityId: 'entity1',
-            entityType: 'task',
-            domainId: 'project1',
-            domainType: 'project',
-            changeAt:
-                olderTime, // Older than latest, will be rejected at field level too
-            cid: 'old-cid',
-            changeBy: 'user0',
-            dataJson: jsonEncode({'rank': '0'}),
-            operation: 'update',
-            operationInfoJson: jsonEncode({}),
-            stateChanged: true,
-            unknownJson: jsonEncode({}),
-          );
+          final changeLogEntry =
+              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+                factory: TestChangeLogEntry.new,
+                domainType: 'project',
+                domainId: 'project1',
+                entityType: 'task',
+                entityId: 'entity1',
+                changeBy: 'user0',
+                changeAt:
+                    olderTime, // Older than latest, will be rejected at field level too
+                cid: 'old-cid',
+                data: {'rank': '0'},
+                operation: 'update',
+              );
 
           final updates = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
@@ -1454,20 +1431,20 @@ void main() {
             'unknownJson': '{}',
           });
 
-          final changeLogEntry = TestChangeLogEntry(
-            entityId: 'entity1',
-            entityType: 'task',
-            domainId: 'project1',
-            domainType: 'project',
-            changeAt: newerFieldTime, // Older than latest, but newer than field
-            cid: 'mid-cid',
-            changeBy: 'user2',
-            dataJson: jsonEncode({'rank': '2'}),
-            operation: 'update',
-            operationInfoJson: jsonEncode({}),
-            stateChanged: true,
-            unknownJson: jsonEncode({}),
-          );
+          final changeLogEntry =
+              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+                factory: TestChangeLogEntry.new,
+                domainType: 'project',
+                domainId: 'project1',
+                entityType: 'task',
+                entityId: 'entity1',
+                changeBy: 'user2',
+                changeAt:
+                    newerFieldTime, // Older than latest, but newer than field
+                cid: 'mid-cid',
+                data: {'rank': '2'},
+                operation: 'update',
+              );
 
           final updates = getUpdatesForChangeLogEntryAndEntityState(
             changeLogEntry,
@@ -1518,21 +1495,19 @@ void main() {
       );
 
       test('should add storedAt for local storage changes', () {
-        final changeLogEntry = TestChangeLogEntry(
-          entityId: 'entity1',
-          entityType: 'task',
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: baseTime.add(const Duration(minutes: 1)),
-          cid: 'cid-store-1',
-          storageId: '',
-          changeBy: 'user1',
-          dataJson: jsonEncode({'rank': '1'}),
-          operation: 'update',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-        );
+        final changeLogEntry =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'project1',
+              entityType: 'task',
+              entityId: 'entity1',
+              changeBy: 'user1',
+              changeAt: baseTime.add(const Duration(minutes: 1)),
+              cid: 'cid-store-1',
+              data: {'rank': '1'},
+              operation: 'update',
+            );
 
         final updates = getUpdatesForChangeLogEntryAndEntityState(
           changeLogEntry,
@@ -1623,22 +1598,20 @@ void main() {
           final changeAt = DateTime.parse('2023-01-01T00:10:00');
 
           // Create a change log entry for a new entity with all required fields
-          final changeLogEntry = TestChangeLogEntry(
-            entityId: 'entity-drift-test',
-            entityType: 'task',
-            domainId: 'project1',
-            domainType: 'project',
-            changeAt: changeAt,
-            cid: 'cid-drift-test',
-            storageId: '',
-            changeBy: 'user1',
-            dataJson: jsonEncode(data),
-            operation: 'create',
-            operationInfoJson: jsonEncode({}),
-            stateChanged: true,
-            unknownJson: jsonEncode({}),
-            dataSchemaRev: 0,
-          );
+          final changeLogEntry =
+              ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+                factory: TestChangeLogEntry.new,
+                domainType: 'project',
+                domainId: 'project1',
+                entityType: 'task',
+                entityId: 'entity-drift-test',
+                changeBy: 'user1',
+                changeAt: changeAt,
+                cid: 'cid-drift-test',
+                data: data,
+                operation: 'create',
+                dataSchemaRev: 0,
+              );
 
           final updates = getDataAndStateUpdatesOrOutdatedBys(
             changeLogEntry: changeLogEntry,

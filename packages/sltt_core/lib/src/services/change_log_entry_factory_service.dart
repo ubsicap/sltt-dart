@@ -127,6 +127,7 @@ class ChangeLogEntryFactoryService {
       unknownJson: '{}',
       dataSchemaRev: dataSchemaRev,
       schemaVersion: schemaVersion,
+      // seq: allow each sub-class to have their own default for seq
     );
   }
 }

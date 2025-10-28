@@ -61,26 +61,26 @@ void main() {
         await storage.initialize();
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
-        final changeData = {
-          'domainId': 'test-project',
-          'domainType': 'project',
-          'entityType': 'task',
-          'entityId': 'test-project-task-1',
-          'changeBy': 'tester',
-          'changeAt': baseTime.toUtc().toIso8601String(),
-          'cid': generateCid(entityType: EntityType.task),
-          'storageId': '', // Empty for save mode
-          'operation': 'create',
-          'operationInfoJson': '{}',
-          'stateChanged': true,
-          'unknownJson': '{}',
-          'dataJson':
-              '{"nameLocal": "Test Task", "parentId": "root", "parentProp": "pList"}',
-        };
+        final entry =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'task',
+              entityId: 'test-project-task-1',
+              changeBy: 'tester',
+              changeAt: baseTime,
+              data: {
+                'nameLocal': 'Test Task',
+                'parentId': 'root',
+                'parentProp': 'pList',
+              },
+              operation: 'create',
+            );
 
         final result = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
-          changes: [changeData],
+          changes: [entry.toJson()],
           srcStorageType: 'local',
           srcStorageId: 'local',
           storage: storage,
@@ -106,26 +106,26 @@ void main() {
         await storage.initialize();
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
-        final changeData = {
-          'domainId': 'test-project',
-          'domainType': 'project',
-          'entityType': 'task',
-          'entityId': 'test-project-task-change-updates',
-          'changeBy': 'tester',
-          'changeAt': baseTime.toUtc().toIso8601String(),
-          'cid': generateCid(entityType: EntityType.task),
-          'storageId': '', // Empty for save mode
-          'operation': 'create',
-          'operationInfoJson': '{}',
-          'stateChanged': true,
-          'unknownJson': '{}',
-          'dataJson':
-              '{"nameLocal": "Test Task", "parentId": "root", "parentProp": "pList"}',
-        };
+        final entry =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'task',
+              entityId: 'test-project-task-change-updates',
+              changeBy: 'tester',
+              changeAt: baseTime,
+              data: {
+                'nameLocal': 'Test Task',
+                'parentId': 'root',
+                'parentProp': 'pList',
+              },
+              operation: 'create',
+            );
 
         final result = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
-          changes: [changeData],
+          changes: [entry.toJson()],
           srcStorageType: 'local',
           srcStorageId: 'local',
           storage: storage,
@@ -165,26 +165,26 @@ void main() {
         await storage.initialize();
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
-        final changeData = {
-          'domainId': 'test-project',
-          'domainType': 'project',
-          'entityType': 'task',
-          'entityId': 'test-project-task-state-updates',
-          'changeBy': 'tester',
-          'changeAt': baseTime.toUtc().toIso8601String(),
-          'cid': generateCid(entityType: EntityType.task),
-          'storageId': '', // Empty for save mode
-          'operation': 'create',
-          'operationInfoJson': '{}',
-          'stateChanged': true,
-          'unknownJson': '{}',
-          'dataJson':
-              '{"nameLocal": "Test Task", "parentId": "root", "parentProp": "pList"}',
-        };
+        final entry =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'task',
+              entityId: 'test-project-task-state-updates',
+              changeBy: 'tester',
+              changeAt: baseTime,
+              data: {
+                'nameLocal': 'Test Task',
+                'parentId': 'root',
+                'parentProp': 'pList',
+              },
+              operation: 'create',
+            );
 
         final result = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
-          changes: [changeData],
+          changes: [entry.toJson()],
           srcStorageType: 'local',
           srcStorageId: 'local',
           storage: storage,
@@ -214,43 +214,41 @@ void main() {
         await storage.initialize();
         final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
 
-        final changesData = [
-          {
-            'domainId': 'test-project',
-            'domainType': 'project',
-            'entityType': 'task',
-            'entityId': 'test-project-task-multi-1',
-            'changeBy': 'tester',
-            'changeAt': baseTime.toUtc().toIso8601String(),
-            'cid': generateCid(entityType: EntityType.task),
-            'storageId': '', // Empty for save mode
-            'operation': 'create',
-            'operationInfoJson': '{}',
-            'stateChanged': true,
-            'unknownJson': '{}',
-            'dataJson':
-                '{"nameLocal": "Task 1", "parentId": "root", "parentProp": "pList"}',
-          },
-          {
-            'domainId': 'test-project',
-            'domainType': 'project',
-            'entityType': 'task',
-            'entityId': 'test-project-task-multi-2',
-            'changeBy': 'tester',
-            'changeAt': baseTime
-                .add(const Duration(minutes: 1))
-                .toUtc()
-                .toIso8601String(),
-            'cid': generateCid(entityType: EntityType.task),
-            'storageId': '', // Empty for save mode
-            'operation': 'create',
-            'operationInfoJson': '{}',
-            'stateChanged': true,
-            'unknownJson': '{}',
-            'dataJson':
-                '{"nameLocal": "Task 2", "parentId": "root", "parentProp": "pList"}',
-          },
-        ];
+        final entry1 =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'task',
+              entityId: 'test-project-task-multi-1',
+              changeBy: 'tester',
+              changeAt: baseTime,
+              data: {
+                'nameLocal': 'Task 1',
+                'parentId': 'root',
+                'parentProp': 'pList',
+              },
+              operation: 'create',
+            );
+
+        final entry2 =
+            ChangeLogEntryFactoryService.forChangeSave<TestChangeLogEntry>(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'task',
+              entityId: 'test-project-task-multi-2',
+              changeBy: 'tester',
+              changeAt: baseTime.add(const Duration(minutes: 1)),
+              data: {
+                'nameLocal': 'Task 2',
+                'parentId': 'root',
+                'parentProp': 'pList',
+              },
+              operation: 'create',
+            );
+
+        final changesData = [entry1.toJson(), entry2.toJson()];
 
         final result = await ChangeProcessingService.storeChanges(
           storageMode: 'save',
