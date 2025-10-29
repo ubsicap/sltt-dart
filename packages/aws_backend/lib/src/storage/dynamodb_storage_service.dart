@@ -340,40 +340,65 @@ class DynamoDBStorageService extends BaseStorageService {
   }) async {
     await initialize();
 
-    final pkPrefix = _statePrimaryKeyPrefix(
-      domainType: domainType,
-      domainId: domainId,
-    );
+    // Query all EntityTypeSyncState records for this domain
+    final pk = 'ETSS#$domainType#$domainId';
 
     final response = await _dynamoRequest('Query', {
       'TableName': tableName,
-      'KeyConditionExpression': 'begins_with(pk, :pk)',
+      'KeyConditionExpression': 'pk = :pk',
       'ExpressionAttributeValues': {
-        ':pk': {'S': pkPrefix},
+        ':pk': {'S': pk},
       },
-      'Select': 'COUNT',
     });
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to compute state stats: ${response.body}');
+      throw Exception('Failed to get state stats: ${response.body}');
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final count = (body['Count'] as int?) ?? 0;
+    final items = (body['Items'] as List<dynamic>?) ?? <dynamic>[];
+
+    // Build per-entity-type statistics
+    final entityTypes = <String, EntityTypeSummary>{};
+    var totalCreates = 0;
+    var totalUpdates = 0;
+    var totalDeletes = 0;
+    var latestChangeAt = DateTime.fromMillisecondsSinceEpoch(0);
+    var latestSeq = -1;
+
+    for (final item in items) {
+      // Deserialize DynamoEntityTypeSyncState from DynamoDB item
+      final state = DynamoEntityTypeSyncState.fromJson(_decodeItem(item));
+
+      entityTypes[state.entityType] = EntityTypeSummary(
+        creates: state.created,
+        updates: state.updated,
+        deletes: state.deleted,
+        total: state.totalOperations,
+        latestChangeAt: state.changeAt.toIso8601String(),
+        latestSeq: state.seq,
+      );
+
+      totalCreates += state.created;
+      totalUpdates += state.updated;
+      totalDeletes += state.deleted;
+
+      if (state.changeAt.isAfter(latestChangeAt)) {
+        latestChangeAt = state.changeAt;
+        latestSeq = state.seq;
+      }
+    }
 
     final totals = EntityTypeSummary(
-      creates: 0,
-      updates: 0,
-      deletes: 0,
-      total: count,
-      latestChangeAt: '1970-01-01T00:00:00Z',
-      latestSeq: -1,
+      creates: totalCreates,
+      updates: totalUpdates,
+      deletes: totalDeletes,
+      total: totalCreates + totalUpdates + totalDeletes,
+      latestChangeAt: latestChangeAt.toIso8601String(),
+      latestSeq: latestSeq,
     );
 
-    return EntityTypeStats(
-      entityTypes: const <String, EntityTypeSummary>{},
-      totals: totals,
-    );
+    return EntityTypeStats(entityTypes: entityTypes, totals: totals);
   }
 
   @override
