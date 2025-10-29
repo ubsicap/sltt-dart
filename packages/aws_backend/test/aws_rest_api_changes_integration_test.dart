@@ -8,7 +8,9 @@ import 'package:test/test.dart';
 
 void main() {
   final baseUrl = Uri.parse(
-    Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl,
+    'http://localhost:8080' ??
+        Platform.environment['CLOUD_BASE_URL'] ??
+        kCloudDevUrl,
   );
 
   setUpAll(() {
@@ -40,6 +42,12 @@ void main() {
           parentProp: 'parentProp',
         );
         final projectId = '__test_project_post_minimal_valid_payload__';
+        // delete project if it exists
+        await http.delete(
+          baseUrl.replace(
+            path: '/api/storage/__test/reset/projects/$projectId',
+          ),
+        );
 
         final change =
             ChangeLogEntryFactoryService.forChangeSave<
