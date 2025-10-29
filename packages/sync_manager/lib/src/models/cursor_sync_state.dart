@@ -1,8 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:isar_community/isar.dart';
-
-import 'sync_state.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 part 'cursor_sync_state.g.dart';
 

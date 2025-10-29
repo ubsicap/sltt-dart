@@ -12,6 +12,7 @@ export 'src/models/entity_type.dart';
 export 'src/models/enums.dart';
 export 'src/models/project_data_fields.dart';
 export 'src/models/serializable_group.dart';
+export 'src/models/sync_state.dart';
 export 'src/server/server_urls.dart';
 export 'src/services/base_change_log_entry_service.dart';
 export 'src/services/base_entity_state_service.dart';
