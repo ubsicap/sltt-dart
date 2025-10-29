@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 import 'helpers/fake_storage.dart';
 
 void main() {
-  group('AwsRestApiServer additional unit routes', () {
+  group('offline - AwsRestApiServer additional unit routes', () {
     late AwsRestApiServer server;
     late Router router;
 

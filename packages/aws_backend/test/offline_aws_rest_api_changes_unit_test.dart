@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 import 'helpers/fake_storage.dart';
 
 void main() {
-  group('AwsRestApiServer POST /api/changes validation', () {
+  group('offline - AwsRestApiServer POST /api/changes validation', () {
     late AwsRestApiServer server;
     late Router router;
 
@@ -100,7 +100,7 @@ void main() {
     });
   });
 
-  group('AwsRestApiServer POST /api/changes semantics', () {
+  group('offline - AwsRestApiServer POST /api/changes semantics', () {
     late AwsRestApiServer server;
     late Router router;
 

@@ -9,7 +9,7 @@ import 'helpers/fake_storage.dart';
 // Fake storage implementation is provided in helpers/fake_storage.dart
 
 void main() {
-  group('AwsRestApiServer basic routes', () {
+  group('offline - AwsRestApiServer basic routes', () {
     late AwsRestApiServer server;
     late Router router;
 
