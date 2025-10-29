@@ -18,7 +18,11 @@ void main() {
         body: 'not-a-json',
         headers: {'Content-Type': 'application/json'},
       );
-      expect(resp.statusCode, anyOf([400, 422]));
+      expect(
+        resp.statusCode,
+        anyOf([400, 422]),
+        reason: 'Should return 400 or 422 for invalid JSON, got ${resp.body}',
+      );
     }, tags: ['internet', 'integration']);
 
     test(
