@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
@@ -43,32 +42,10 @@ void main() {
         // delete project if it exists
         await resetTestProject(baseUrl, projectId);
 
-        final change =
-            ChangeLogEntryFactoryService.forChangeSave<
-              DynamoChangeLogEntry,
-              int,
-              BaseDataFields
-            >(
-              factory: DynamoChangeLogEntry.new,
-              domainType: 'project',
-              domainId: projectId,
-              entityType: 'project',
-              entityId: projectId,
-              changeBy: 'userId',
-              data: projectData,
-            );
-
-        final request = CreateChangesRequest(
-          changes: [change],
-          srcStorageType: 'cloud',
-          srcStorageId: 'test',
-          storageMode: 'save',
-        );
-        final payload = jsonEncode(request.toJson());
-        final resp = await http.post(
-          baseUrl.replace(path: '/api/changes'),
-          body: payload,
-          headers: {'Content-Type': 'application/json'},
+        final resp = await saveProjectChange(
+          baseUrl,
+          projectId,
+          projectData: projectData,
         );
         expect(resp.statusCode, anyOf([200, 201]), reason: 'Got ${resp.body}');
       },
