@@ -57,7 +57,7 @@
                 "AWS_SECRET_ACCESS_KEY": "${input:awsSecretAccessKey}",
                 "AWS_REGION": "us-east-1",
                 "DYNAMODB_REGION": "us-east-1",
-                "DYNAMODB_TABLE": "sltt-backend-changes-dev",
+                "DYNAMODB_TABLE": "sltt-backend-changes-states-dev",
                 "STAGE": "dev",
                 "USE_CLOUD_STORAGE": "true",
                 "LOCAL_DEBUGGER": "true"
