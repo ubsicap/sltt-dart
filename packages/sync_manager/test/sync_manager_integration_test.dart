@@ -177,9 +177,7 @@ void main() {
           'updates': 0,
           'deletes': 0,
           'total': 1,
-          'latestChangeAt': const UtcDateTimeConverter().toJson(
-            change.changeAt,
-          ),
+          'latestChangeAt': change.changeAt.toUtc().toIso8601String(),
           'latestSeq': 1,
         }),
         reason:
