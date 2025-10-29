@@ -8,6 +8,7 @@ import 'package:sltt_core/sltt_core.dart';
 
 import '../models/dynamo_change_log_entry.dart';
 import '../models/dynamo_entity_state.dart';
+import '../models/dynamo_entity_type_sync_state.dart';
 import '../models/dynamo_serialization.dart';
 
 /// DynamoDB implementation of [BaseStorageService].
@@ -149,6 +150,14 @@ class DynamoDBStorageService extends BaseStorageService {
 
       if (!skipStateWrite) {
         await _putEntityState(newState);
+
+        // Upsert entity type sync state counters
+        await upsertEntityTypeSyncStates(
+          domainType: domainType,
+          entityType: newChange.entityType,
+          newChange: newChange,
+          operationCounts: operationCounts,
+        );
       }
     }
 
@@ -460,6 +469,121 @@ class DynamoDBStorageService extends BaseStorageService {
       'nextCursor': body['LastEvaluatedKey']?['sk']?['S'],
       'hasMore': body['LastEvaluatedKey'] != null,
     };
+  }
+
+  @override
+  Future<void> upsertEntityTypeSyncStates({
+    required String domainType,
+    required String entityType,
+    required BaseChangeLogEntry newChange,
+    required OperationCounts operationCounts,
+  }) async {
+    await initialize();
+
+    // Cast to DynamoChangeLogEntry to access seq field
+    final dynamoChange = newChange as DynamoChangeLogEntry;
+
+    // Create a partition key for entity type sync state
+    // Format: ETSS#domainType#domainId
+    final pk = 'ETSS#$domainType#${dynamoChange.domainId}';
+    // Sort key is the entity type
+    final sk = entityType;
+
+    try {
+      // First, try to get the existing entity type sync state
+      final getResponse = await _dynamoRequest('GetItem', {
+        'TableName': tableName,
+        'Key': {
+          'pk': {'S': pk},
+          'sk': {'S': sk},
+        },
+      });
+
+      final body = jsonDecode(getResponse.body);
+      final existingItem = body['Item'];
+
+      late final DateTime latestChangeAt;
+      late final String latestCid;
+      late final int latestSeq;
+      late final int created;
+      late final int updated;
+      late final int deleted;
+      // ignore: non_constant_identifier_names
+      late final DateTime storedAt_orig_;
+
+      if (existingItem != null) {
+        // Decode existing state
+        final existingState = DynamoEntityTypeSyncState.fromJson(
+          _decodeItem(existingItem),
+        );
+
+        // Determine latest change metadata
+        if (dynamoChange.changeAt.isAfter(existingState.changeAt) ||
+            dynamoChange.changeAt.isAtSameMomentAs(existingState.changeAt)) {
+          latestChangeAt = dynamoChange.changeAt;
+          latestCid = dynamoChange.cid;
+          latestSeq = dynamoChange.seq;
+        } else {
+          latestChangeAt = existingState.changeAt;
+          latestCid = existingState.cid;
+          latestSeq = existingState.seq;
+        }
+
+        // Increment counters
+        created = existingState.created + operationCounts.create;
+        updated = existingState.updated + operationCounts.update;
+        deleted = existingState.deleted + operationCounts.delete;
+        storedAt_orig_ = existingState.storedAt_orig_ ?? existingState.storedAt;
+      } else {
+        // New record - initialize with current change metadata
+        latestChangeAt = dynamoChange.changeAt;
+        latestCid = dynamoChange.cid;
+        latestSeq = dynamoChange.seq;
+        created = operationCounts.create;
+        updated = operationCounts.update;
+        deleted = operationCounts.delete;
+        storedAt_orig_ = dynamoChange.storedAt ?? DateTime.now().toUtc();
+      }
+
+      // Create the updated entity type sync state
+      final newState = DynamoEntityTypeSyncState(
+        entityType: entityType,
+        domainId: dynamoChange.domainId,
+        domainType: domainType,
+        storageId: await getStorageId(),
+        storageType: getStorageType(),
+        cid: latestCid,
+        changeAt: latestChangeAt,
+        seq: latestSeq,
+        created: created,
+        updated: updated,
+        deleted: deleted,
+        storedAt: dynamoChange.storedAt ?? DateTime.now().toUtc(),
+        storedAt_orig_: storedAt_orig_,
+      );
+
+      // Put the updated state back to DynamoDB
+      final item = <String, dynamic>{
+        'pk': {'S': pk},
+        'sk': {'S': sk},
+        ..._encodeJson(newState.toJson()),
+      };
+
+      final putResponse = await _dynamoRequest('PutItem', {
+        'TableName': tableName,
+        'Item': item,
+      });
+
+      if (putResponse.statusCode != 200) {
+        throw Exception(
+          'Failed to upsert entity type sync state: ${putResponse.body}',
+        );
+      }
+    } catch (e) {
+      SlttLogger.logger.warning(
+        '[DynamoDB] Warning: failed to upsert entity-type sync state: $e',
+      );
+    }
   }
 
   @override

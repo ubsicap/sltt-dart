@@ -145,6 +145,30 @@ abstract class BaseStorageService {
   /// Should be invoked during initialize().
   Future<String> ensureStorageId();
 
+  /// Upsert entity type sync state counters (created/updated/deleted) for tracking.
+  ///
+  /// This method updates or creates entity type sync state records that track
+  /// per-entity-type operation counts and latest sync metadata. Implementations
+  /// should:
+  /// - Update existing records by incrementing counters based on operationCounts
+  /// - Create new records if no existing state is found
+  /// - Update sync metadata (cid, changeAt, seq) to reflect the latest change
+  /// - Use the latest changeAt if newChange is more recent than existing state
+  ///
+  /// For in-memory storage implementations, this can be a no-op.
+  ///
+  /// Parameters:
+  /// - [domainType]: The type of domain (e.g., 'project', 'team')
+  /// - [entityType]: The entity type being tracked (e.g., 'document', 'portion')
+  /// - [newChange]: The change log entry being processed
+  /// - [operationCounts]: Counts of operations (create/update/delete) to add
+  Future<void> upsertEntityTypeSyncStates({
+    required String domainType,
+    required String entityType,
+    required BaseChangeLogEntry newChange,
+    required OperationCounts operationCounts,
+  });
+
   /// For testing: reset storage for a specific domainId (e.g. '__test_1')
   Future<void> testResetDomainStorage({
     required String domainType,

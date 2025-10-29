@@ -355,4 +355,14 @@ class InMemoryStorage implements BaseStorageService {
     // TODO: implement testResetDomainStorage
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> upsertEntityTypeSyncStates({
+    required String domainType,
+    required String entityType,
+    required BaseChangeLogEntry newChange,
+    required OperationCounts operationCounts,
+  }) async {
+    // No-op for in-memory storage - entity type sync states can be gotten from its cache
+  }
 }

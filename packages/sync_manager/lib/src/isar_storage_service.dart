@@ -304,21 +304,25 @@ class IsarStorageService extends BaseStorageService {
     );
   }
 
+  @override
   Future<void> upsertEntityTypeSyncStates({
     required String domainType,
     required String entityType,
-    required IsarChangeLogEntry newChange,
+    required BaseChangeLogEntry newChange,
     required OperationCounts operationCounts,
   }) async {
+    // Cast to IsarChangeLogEntry to access seq field
+    final isarChange = newChange as client.IsarChangeLogEntry;
+
     // Upsert entity-type sync state counters (created/updated/deleted)
     try {
       final existingEntityTypeSyncStates = await _isar.isarEntityTypeSyncStates
           .where()
-          .entityTypeDomainIdEqualTo(entityType, newChange.domainId)
+          .entityTypeDomainIdEqualTo(entityType, isarChange.domainId)
           .findFirst();
 
       SlttLogger.logger.fine(
-        'updateChangeLogAndState - Upserting entity-type sync state for entityType=$entityType entityId=${newChange.entityId} domainId=${newChange.domainId} existing=${existingEntityTypeSyncStates != null}\noperationCounts=$operationCounts',
+        'updateChangeLogAndState - Upserting entity-type sync state for entityType=$entityType entityId=${isarChange.entityId} domainId=${isarChange.domainId} existing=${existingEntityTypeSyncStates != null}\noperationCounts=$operationCounts',
       );
       if (existingEntityTypeSyncStates != null) {
         // Explicitly increment counters on the existing record so the
@@ -327,13 +331,15 @@ class IsarStorageService extends BaseStorageService {
         late final DateTime latestChangeAt;
         late final String latestCid;
         late final int latestSeq;
-        if (newChange.changeAt.isAfter(existingEntityTypeSyncStates.changeAt) ||
-            newChange.changeAt.isAtSameMomentAs(
+        if (isarChange.changeAt.isAfter(
+              existingEntityTypeSyncStates.changeAt,
+            ) ||
+            isarChange.changeAt.isAtSameMomentAs(
               existingEntityTypeSyncStates.changeAt,
             )) {
-          latestChangeAt = newChange.changeAt;
-          latestCid = newChange.cid;
-          latestSeq = newChange.seq;
+          latestChangeAt = isarChange.changeAt;
+          latestCid = isarChange.cid;
+          latestSeq = isarChange.seq;
         } else {
           latestChangeAt = existingEntityTypeSyncStates.changeAt;
           latestCid = existingEntityTypeSyncStates.cid;
@@ -356,7 +362,7 @@ class IsarStorageService extends BaseStorageService {
               existingEntityTypeSyncStates.updated + operationCounts.update,
           deleted:
               existingEntityTypeSyncStates.deleted + operationCounts.delete,
-          storedAt: newChange.storedAt!,
+          storedAt: isarChange.storedAt!,
           storedAt_orig_: existingEntityTypeSyncStates.storedAt_orig_,
         );
         await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
@@ -365,19 +371,19 @@ class IsarStorageService extends BaseStorageService {
         // otherwise.
         final newEt = IsarEntityTypeSyncState(
           entityType: entityType,
-          domainId: newChange.domainId,
+          domainId: isarChange.domainId,
           domainType: domainType,
           storageId: _storageId,
           storageType: getStorageType(),
-          cid: newChange.cid,
-          changeAt: newChange.changeAt,
-          seq: newChange.seq,
+          cid: isarChange.cid,
+          changeAt: isarChange.changeAt,
+          seq: isarChange.seq,
           created: operationCounts.create,
           updated: operationCounts.update,
           deleted: operationCounts.delete,
           // For new records set createdAt/updatedAt from storedAt when available
-          storedAt: newChange.storedAt ?? DateTime.now(),
-          storedAt_orig_: newChange.storedAt ?? DateTime.now(),
+          storedAt: isarChange.storedAt ?? DateTime.now(),
+          storedAt_orig_: isarChange.storedAt ?? DateTime.now(),
         );
         await _isar.isarEntityTypeSyncStates.putByEntityTypeDomainId(newEt);
       }
