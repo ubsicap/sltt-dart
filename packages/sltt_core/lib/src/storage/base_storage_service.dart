@@ -181,7 +181,7 @@ abstract class BaseStorageService {
 /// Return type for updateChangeLogAndState: a tuple of change log entry and entity state.
 typedef UpdateChangeLogAndStateResult = ({
   BaseChangeLogEntry newChangeLogEntry,
-  BaseEntityState newEntityState,
+  BaseEntityState? newEntityState,
 });
 
 // Stats types are implemented in separate files under src/storage/stats/

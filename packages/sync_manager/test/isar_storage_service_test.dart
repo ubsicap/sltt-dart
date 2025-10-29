@@ -302,7 +302,7 @@ void main() {
       );
 
       expect(result.newChangeLogEntry.seq, equals(1));
-      expect(result.newEntityState.entityId, equals(entityId));
+      expect(result.newEntityState?.entityId, equals(entityId));
 
       // Retrieve the entity state
       final entityState = await storage.getEntityState(
@@ -866,7 +866,7 @@ void main() {
           '1 - Initial change result: ${result1.newChangeLogEntry.toJson()}',
         );
         SlttLogger.logger.fine(
-          '1 - Initial state result: ${result1.newEntityState.toJson()}',
+          '1 - Initial state result: ${result1.newEntityState?.toJson()}',
         );
 
         // Apply a newer change to nameLocal
@@ -918,7 +918,7 @@ void main() {
           '3 - Update result: ${result.newChangeLogEntry.toJson()}',
         );
         SlttLogger.logger.fine(
-          '3 - Update state result: ${result.newEntityState.toJson()}',
+          '3 - Update state result: ${result.newEntityState?.toJson()}',
         );
 
         expect(result.newChangeLogEntry.seq, equals(2));

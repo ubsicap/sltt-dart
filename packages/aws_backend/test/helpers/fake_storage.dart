@@ -113,6 +113,10 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     bool skipChangeLogWrite = false,
     bool skipStateWrite = false,
   }) async {
+    if (skipChangeLogWrite && skipStateWrite) {
+      return (newChangeLogEntry: changeLogEntry, newEntityState: null);
+    }
+
     // Build merged change JSON and ensure required metadata for tests
     final mergedChangeJson = <String, dynamic>{
       ...changeLogEntry.toJson(),
