@@ -57,6 +57,14 @@ file bootstrap 2>nul || echo Bootstrap file created (file command not available 
 echo.
 echo ✅ Successfully built bootstrap for Linux x64
 echo.
+echo Restoring Windows packages...
+dart pub get >nul 2>&1
+if %errorlevel% equ 0 (
+    echo ✅ Windows packages restored
+) else (
+    echo ⚠️  Warning: Failed to restore Windows packages. Run 'dart pub get' manually.
+)
+echo.
 echo To verify no Isar dependencies are included:
 echo   docker run --rm -v "%cd%":/workspace -w /workspace alpine:latest ldd bootstrap 2^>^/dev^/null ^| grep -i isar ^|^| echo "No Isar libraries linked"
 echo.
