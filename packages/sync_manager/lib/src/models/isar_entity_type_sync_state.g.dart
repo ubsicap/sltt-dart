@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'isar_entity_type_state.dart';
+part of 'isar_entity_type_sync_state.dart';
 
 // **************************************************************************
 // IsarCollectionGenerator

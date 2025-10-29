@@ -3,7 +3,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
-part 'isar_entity_type_state.g.dart';
+part 'isar_entity_type_sync_state.g.dart';
 
 /// Track latest sync state per entity type for a given domain
 @collection
