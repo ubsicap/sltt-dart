@@ -20,9 +20,8 @@ void main() {
 
   group('Integration POST /api/changes', () {
     test('POST invalid JSON returns 400', () async {
-      final uri = baseUrl.replace(path: '/api/changes');
       final resp = await http.post(
-        uri,
+        baseUrl.replace(path: '/api/changes'),
         body: 'not-a-json',
         headers: {'Content-Type': 'application/json'},
       );
@@ -36,7 +35,6 @@ void main() {
     test(
       'POST minimal valid payload returns 200 or 201',
       () async {
-        final uri = baseUrl.replace(path: '/api/changes');
         final projectData = BaseDataFields(
           parentId: 'parentId',
           parentProp: 'parentProp',
@@ -62,13 +60,13 @@ void main() {
 
         final request = CreateChangesRequest(
           changes: [change],
-          srcStorageType: 'local',
+          srcStorageType: 'cloud',
           srcStorageId: 'test',
           storageMode: 'save',
         );
         final payload = jsonEncode(request.toJson());
         final resp = await http.post(
-          uri,
+          baseUrl.replace(path: '/api/changes'),
           body: payload,
           headers: {'Content-Type': 'application/json'},
         );
