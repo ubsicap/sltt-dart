@@ -1,3 +1,4 @@
+import 'package:aws_backend/src/models/portion_translation.entity_state.dynamo.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'dynamo_change_log_entry.dart';
@@ -19,6 +20,17 @@ final bool _dynamoSerializationRegistration = (() {
     if (entityType == EntityType.unknown) {
       continue;
     }
+    if (entityType == EntityType.portion) {
+      // Portions are not stored as entity states.
+      registerEntityStateFactory(
+        entityType,
+        (json) => DynamoPortionDataEntityState.fromJson(json),
+        (json) => DynamoPortionDataEntityState.fromJsonBase(json),
+        (state) => (state as DynamoPortionDataEntityState).toJson(),
+        (state) => (state as DynamoPortionDataEntityState).toJsonBase(),
+      );
+    }
+    // default handler (especially for tests)
     registerEntityStateFactory(
       entityType,
       (json) => DynamoEntityState.fromJson(json),
