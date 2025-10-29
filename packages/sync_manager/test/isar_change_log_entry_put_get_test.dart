@@ -1,8 +1,6 @@
-import 'dart:io';
-
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sync_manager/src/models/isar_change_log_entry.dart';
+import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -12,17 +10,7 @@ void main() {
 
   setUp(() async {
     // Delete database if it exists
-    final dir = Directory(testDbPath);
-    if (dir.existsSync()) {
-      final dbFile = File('$testDbPath/$testDbName.isar');
-      if (dbFile.existsSync()) {
-        dbFile.deleteSync();
-      }
-      final lockFile = File('$testDbPath/$testDbName.isar-lck');
-      if (lockFile.existsSync()) {
-        lockFile.deleteSync();
-      }
-    }
+    await IsarStorageService.deleteDatabaseFiles(testDbName);
 
     // Create Isar instance with IsarChangeLogEntry schema
     isar = await Isar.open(
