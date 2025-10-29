@@ -129,6 +129,14 @@ DynamoEntityState _$DynamoEntityStateFromJson(Map<String, dynamic> json) =>
           'data_parentProp_cloudAt_',
           (v) => v == null ? null : DateTime.parse(v as String),
         ),
+        change_storedAt: $checkedConvert(
+          'change_storedAt',
+          (v) => DateTime.parse(v as String),
+        ),
+        change_storedAt_orig_: $checkedConvert(
+          'change_storedAt_orig_',
+          (v) => DateTime.parse(v as String),
+        ),
       );
       return val;
     });
@@ -144,6 +152,8 @@ Map<String, dynamic> _$DynamoEntityStateToJson(
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
   'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),
+  'change_storedAt': instance.change_storedAt.toIso8601String(),
+  'change_storedAt_orig_': instance.change_storedAt_orig_.toIso8601String(),
   'change_cid': instance.change_cid,
   'change_cid_orig_': instance.change_cid_orig_,
   'change_dataSchemaRev': instance.change_dataSchemaRev,
