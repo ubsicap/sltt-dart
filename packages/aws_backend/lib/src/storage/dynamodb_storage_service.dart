@@ -476,39 +476,49 @@ class DynamoDBStorageService extends BaseStorageService {
   Future<List<String>> getAllDomainIds({required String domainType}) async {
     await initialize();
 
-    // Use Query on entity type sync state records (ETSS) instead of Scan
-    // This is much more efficient than scanning the entire table
+    // Use Scan with filter to find all ETSS records for this domain type
+    // ETSS records are created for each entity type in each domain
     final domainIds = <String>{};
-
-    // Query ETSS records (entity states) to find all domains
     final etssPkPrefix =
         '\$$_servicePrefix#etss#domainType_$domainType#domainId_';
 
-    final response = await _dynamoRequest('Query', {
-      'TableName': tableName,
-      'KeyConditionExpression': 'begins_with(pk, :pkPrefix)',
-      'ExpressionAttributeValues': {
-        ':pkPrefix': {'S': etssPkPrefix},
-      },
-      'ProjectionExpression': 'pk',
-    });
+    Map<String, dynamic>? exclusiveStartKey;
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to list domains: ${response.body}');
-    }
+    do {
+      final scanPayload = <String, dynamic>{
+        'TableName': tableName,
+        'FilterExpression': 'begins_with(pk, :pkPrefix)',
+        'ExpressionAttributeValues': {
+          ':pkPrefix': {'S': etssPkPrefix},
+        },
+        'ProjectionExpression': 'pk',
+      };
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
-
-    for (final raw in items) {
-      final pk = (raw as Map<String, dynamic>)['pk']?['S'] as String?;
-      if (pk == null) continue;
-      // Parse ElectroDB format: $sltt#etss#domainType_X#domainId_Y
-      final domainIdMatch = RegExp(r'domainId_([^#]+)').firstMatch(pk);
-      if (domainIdMatch != null) {
-        domainIds.add(domainIdMatch.group(1)!);
+      if (exclusiveStartKey != null) {
+        scanPayload['ExclusiveStartKey'] = exclusiveStartKey;
       }
-    }
+
+      final response = await _dynamoRequest('Scan', scanPayload);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to list domains: ${response.body}');
+      }
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
+
+      for (final raw in items) {
+        final pk = (raw as Map<String, dynamic>)['pk']?['S'] as String?;
+        if (pk == null) continue;
+        // Parse ElectroDB format: $sltt#etss#domainType_X#domainId_Y
+        final domainIdMatch = RegExp(r'domainId_([^#]+)').firstMatch(pk);
+        if (domainIdMatch != null) {
+          domainIds.add(domainIdMatch.group(1)!);
+        }
+      }
+
+      exclusiveStartKey = body['LastEvaluatedKey'] as Map<String, dynamic>?;
+    } while (exclusiveStartKey != null);
 
     final sorted = domainIds.toList()..sort();
     return sorted;
