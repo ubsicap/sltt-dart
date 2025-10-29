@@ -476,14 +476,21 @@ class DynamoDBStorageService extends BaseStorageService {
   Future<List<String>> getAllDomainIds({required String domainType}) async {
     await initialize();
 
-    final pkPrefix = _statePrimaryKeyDomainTypePrefix(domainType: domainType);
-    final response = await _dynamoRequest('Scan', {
+    // Use Query on entity type sync state records (ETSS) instead of Scan
+    // This is much more efficient than scanning the entire table
+    final domainIds = <String>{};
+
+    // Query ETSS records (entity states) to find all domains
+    final etssPkPrefix =
+        '\$$_servicePrefix#etss#domainType_$domainType#domainId_';
+
+    final response = await _dynamoRequest('Query', {
       'TableName': tableName,
-      'ProjectionExpression': 'pk',
-      'FilterExpression': 'begins_with(pk, :pk)',
+      'KeyConditionExpression': 'begins_with(pk, :pkPrefix)',
       'ExpressionAttributeValues': {
-        ':pk': {'S': pkPrefix},
+        ':pkPrefix': {'S': etssPkPrefix},
       },
+      'ProjectionExpression': 'pk',
     });
 
     if (response.statusCode != 200) {
@@ -493,11 +500,10 @@ class DynamoDBStorageService extends BaseStorageService {
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
 
-    final domainIds = <String>{};
     for (final raw in items) {
       final pk = (raw as Map<String, dynamic>)['pk']?['S'] as String?;
       if (pk == null) continue;
-      // Parse ElectroDB format: $sltt#state#domainType_X#domainId_Y#...
+      // Parse ElectroDB format: $sltt#etss#domainType_X#domainId_Y
       final domainIdMatch = RegExp(r'domainId_([^#]+)').firstMatch(pk);
       if (domainIdMatch != null) {
         domainIds.add(domainIdMatch.group(1)!);
@@ -1126,12 +1132,6 @@ class DynamoDBStorageService extends BaseStorageService {
   ///
   /// Format: `seq_00000012345` (padded to 19 digits)
   String _changeGsiSortKey(int seq) => 'seq_${seq.toString().padLeft(19, '0')}';
-
-  /// Generates primary key prefix for all entity states of a domain type (for scanning).
-  ///
-  /// Format: `$sltt#state#domainType_X`
-  String _statePrimaryKeyDomainTypePrefix({required String domainType}) =>
-      '\$$_servicePrefix#state#domainType_$domainType';
 
   /// Generates primary key domain prefix for entity states.
   ///
