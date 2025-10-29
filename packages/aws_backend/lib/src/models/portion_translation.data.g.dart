@@ -8,20 +8,25 @@ part of 'portion_translation.data.dart';
 
 PortionTranslationData _$PortionTranslationDataFromJson(
   Map<String, dynamic> json,
-) => PortionTranslationData(
-  name: json['name'] as String,
-  visibility: json['visibility'] as String,
-  parentId: json['parentId'] as String,
-  parentProp: json['parentProp'] as String,
-  rank: json['rank'] as String?,
-);
+) => $checkedCreate('PortionTranslationData', json, ($checkedConvert) {
+  final val = PortionTranslationData(
+    name: $checkedConvert('name', (v) => v as String),
+    visibility: $checkedConvert('visibility', (v) => v as String),
+    parentId: $checkedConvert('parentId', (v) => v as String),
+    parentProp: $checkedConvert('parentProp', (v) => v as String),
+    rank: $checkedConvert('rank', (v) => v as String?),
+  );
+  $checkedConvert('deleted', (v) => val.deleted = v as bool?);
+  return val;
+});
 
 Map<String, dynamic> _$PortionTranslationDataToJson(
   PortionTranslationData instance,
 ) => <String, dynamic>{
+  'parentId': instance.parentId,
+  'parentProp': instance.parentProp,
+  'rank': instance.rank,
+  'deleted': instance.deleted,
   'name': instance.name,
   'visibility': instance.visibility,
-  'parentProp': instance.parentProp,
-  'parentId': instance.parentId,
-  'rank': instance.rank,
 };

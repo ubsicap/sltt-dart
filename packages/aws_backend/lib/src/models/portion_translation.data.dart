@@ -1,23 +1,20 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 part 'portion_translation.data.g.dart';
 
-@JsonSerializable(includeIfNull: true)
+@JsonSerializable(includeIfNull: true, checked: true)
 // @SyncableEntityStateData(entityType: kEntityTypePortion)
-class PortionTranslationData {
+class PortionTranslationData extends BaseDataFields {
   final String name;
   final String visibility;
-  // TODO: extend from CoreData with parentId and parentProp
-  final String parentProp;
-  final String parentId;
-  final String? rank;
 
   PortionTranslationData({
     required this.name,
     required this.visibility,
-    required this.parentId,
-    required this.parentProp,
-    required this.rank,
+    required super.parentId,
+    required super.parentProp,
+    required super.rank,
   });
 
   factory PortionTranslationData.fromJson(Map<String, dynamic> json) =>
