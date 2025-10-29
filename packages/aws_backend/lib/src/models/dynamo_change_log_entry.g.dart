@@ -11,7 +11,7 @@ DynamoChangeLogEntry _$DynamoChangeLogEntryFromJson(
 ) => $checkedCreate('DynamoChangeLogEntry', json, ($checkedConvert) {
   final val = DynamoChangeLogEntry(
     cid: $checkedConvert('cid', (v) => v as String),
-    seq: $checkedConvert('seq', (v) => (v as num).toInt()),
+    seq: $checkedConvert('seq', (v) => (v as num?)?.toInt() ?? -1),
     storageId: $checkedConvert('storageId', (v) => v as String),
     domainType: $checkedConvert('domainType', (v) => v as String),
     domainId: $checkedConvert('domainId', (v) => v as String),

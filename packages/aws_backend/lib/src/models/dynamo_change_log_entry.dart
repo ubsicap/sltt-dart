@@ -39,7 +39,7 @@ class DynamoChangeLogEntry extends BaseChangeLogEntry {
 
   DynamoChangeLogEntry({
     required this.cid,
-    required this.seq,
+    this.seq = -1 /* auto increment placeholder */,
     required super.storageId,
     required super.domainType,
     required super.domainId,
