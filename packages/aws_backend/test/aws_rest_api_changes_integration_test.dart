@@ -6,11 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
+import 'helpers/test_utils.dart';
+
 void main() {
   final baseUrl = Uri.parse(
-    'http://localhost:8080' ??
-        Platform.environment['CLOUD_BASE_URL'] ??
-        kCloudDevUrl,
+    Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl,
   );
 
   setUpAll(() {
@@ -43,11 +43,7 @@ void main() {
         );
         final projectId = '__test_project_post_minimal_valid_payload__';
         // delete project if it exists
-        await http.delete(
-          baseUrl.replace(
-            path: '/api/storage/__test/reset/projects/$projectId',
-          ),
-        );
+        await resetTestProject(baseUrl, projectId);
 
         final change =
             ChangeLogEntryFactoryService.forChangeSave<
