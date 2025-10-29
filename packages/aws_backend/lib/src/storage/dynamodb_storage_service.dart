@@ -213,7 +213,7 @@ class DynamoDBStorageService extends BaseStorageService {
             entityType: entityType,
           ),
         },
-        'sk': {'S': entityId},
+        'sk': {'S': _stateSortKey(entityId: entityId)},
       },
     });
 
@@ -961,7 +961,7 @@ class DynamoDBStorageService extends BaseStorageService {
           entityType: state.entityType,
         ),
       },
-      'sk': {'S': _stateSortKey(state.entityId)},
+      'sk': {'S': _stateSortKey(entityId: state.entityId)},
       ..._encodeJson(state.toJson()),
     };
 
@@ -1164,7 +1164,8 @@ class DynamoDBStorageService extends BaseStorageService {
   /// Generates sort key for entity states.
   ///
   /// Format: `$states#state#entityId_abc123`
-  String _stateSortKey(String entityId) => '\$states#state#entityId_$entityId';
+  String _stateSortKey({required String entityId}) =>
+      '\$states#state#entityId_$entityId';
 
   /// Generates primary key for entity type sync state (change log or entity state).
   ///
