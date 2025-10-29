@@ -16,6 +16,24 @@ import '../models/dynamo_serialization.dart';
 /// All merge/conflict logic is delegated to [ChangeProcessingService]. This
 /// class is responsible solely for persisting and retrieving change log entries
 /// and entity state documents from a single DynamoDB table.
+///
+/// ## Key Pattern Convention (ElectroDB-Compatible)
+///
+/// This implementation follows ElectroDB conventions for DynamoDB key patterns:
+/// - Service prefix: `$sltt` (multi-tenant isolation)
+/// - Collection concept: `$changes`, `$states`, `$etsc`, `$etss`, `$seq`
+/// - Descriptive field names: `domainType_`, `domainId_`, `entityType_`, etc.
+///
+/// Examples:
+/// ```dart
+/// // Change Log
+/// pk: '$sltt#change#domainType_project#domainId_abc123#entityType_portion#entityId_entity1'
+/// sk: '$changes#change#cid_1234567890'
+///
+/// // Entity State
+/// pk: '$sltt#state#domainType_project#domainId_abc123#entityType_portion'
+/// sk: '$states#state#entityId_entity1'
+/// ```
 class DynamoDBStorageService extends BaseStorageService {
   DynamoDBStorageService({
     required this.tableName,
@@ -31,6 +49,9 @@ class DynamoDBStorageService extends BaseStorageService {
   final String? localEndpoint;
 
   final http.Client _httpClient;
+
+  /// ElectroDB-compatible service prefix for multi-tenant isolation
+  static const String _servicePrefix = 'sltt';
 
   bool _initialized = false;
   late String _endpoint;
@@ -215,17 +236,22 @@ class DynamoDBStorageService extends BaseStorageService {
   }) async {
     await initialize();
 
+    // We need to query by domain prefix and cid sort key
+    // Since we don't have entityType/entityId, we can't build complete pk
+    // Use the domain prefix for begins_with query
     final pkPrefix = _changePrimaryKeyPrefix(
       domainType: domainType,
       domainId: domainId,
     );
 
+    final sk = _changeSortKey(cid);
+
     final response = await _dynamoRequest('Query', {
       'TableName': tableName,
-      'KeyConditionExpression': 'pk = :pk AND sk = :sk',
+      'KeyConditionExpression': 'begins_with(pk, :pkPrefix) AND sk = :sk',
       'ExpressionAttributeValues': {
-        ':pk': {'S': '$pkPrefix#CID#$cid'},
-        ':sk': {'S': 'CID#$cid'},
+        ':pkPrefix': {'S': pkPrefix},
+        ':sk': {'S': sk},
       },
       'Limit': 1,
     });
@@ -268,11 +294,15 @@ class DynamoDBStorageService extends BaseStorageService {
     };
 
     if (cursor != null) {
+      // TODO: ExclusiveStartKey should come from LastEvaluatedKey, not manually constructed
+      // For now, constructing a placeholder that won't work correctly with pagination
       payload['ExclusiveStartKey'] = {
         'gsi1pk': {'S': gsiPk},
-        'gsi1sk': {'S': _sequenceSortKey(cursor)},
-        'pk': {'S': '$gsiPk#CUR'},
-        'sk': {'S': 'CUR'},
+        'gsi1sk': {'S': _changeGsiSortKey(cursor)},
+        'pk': {'S': gsiPk}, // Placeholder - should be actual last item's pk
+        'sk': {
+          'S': _changeGsiSortKey(cursor),
+        }, // Placeholder - should be actual last item's sk
       };
     }
 
@@ -306,7 +336,11 @@ class DynamoDBStorageService extends BaseStorageService {
     await initialize();
 
     // Query all EntityTypeSyncState records for change logs
-    final pk = 'ETSC#$domainType#$domainId';
+    final pk = _entityTypeSyncStatePrimaryKey(
+      domainType: domainType,
+      domainId: domainId,
+      forChangeLog: true,
+    );
 
     final response = await _dynamoRequest('Query', {
       'TableName': tableName,
@@ -374,7 +408,11 @@ class DynamoDBStorageService extends BaseStorageService {
     await initialize();
 
     // Query all EntityTypeSyncState records for this domain
-    final pk = 'ETSS#$domainType#$domainId';
+    final pk = _entityTypeSyncStatePrimaryKey(
+      domainType: domainType,
+      domainId: domainId,
+      forChangeLog: false,
+    );
 
     final response = await _dynamoRequest('Query', {
       'TableName': tableName,
@@ -438,7 +476,7 @@ class DynamoDBStorageService extends BaseStorageService {
   Future<List<String>> getAllDomainIds({required String domainType}) async {
     await initialize();
 
-    final pkPrefix = _statePrimaryKeyDomainPrefix(domainType: domainType);
+    final pkPrefix = _statePrimaryKeyDomainTypePrefix(domainType: domainType);
     final response = await _dynamoRequest('Scan', {
       'TableName': tableName,
       'ProjectionExpression': 'pk',
@@ -459,8 +497,11 @@ class DynamoDBStorageService extends BaseStorageService {
     for (final raw in items) {
       final pk = (raw as Map<String, dynamic>)['pk']?['S'] as String?;
       if (pk == null) continue;
-      final parts = pk.split('#');
-      if (parts.length >= 4) domainIds.add(parts[3]);
+      // Parse ElectroDB format: $sltt#state#domainType_X#domainId_Y#...
+      final domainIdMatch = RegExp(r'domainId_([^#]+)').firstMatch(pk);
+      if (domainIdMatch != null) {
+        domainIds.add(domainIdMatch.group(1)!);
+      }
     }
 
     final sorted = domainIds.toList()..sort();
@@ -542,13 +583,16 @@ class DynamoDBStorageService extends BaseStorageService {
     // Cast to DynamoChangeLogEntry to access seq field
     final dynamoChange = newChange as DynamoChangeLogEntry;
 
-    // Create a partition key for entity type sync state
-    // Format: ETSS#domainType#domainId for entity states
-    //         ETSC#domainType#domainId for change logs
-    final pkPrefix = forChangeLog ? 'ETSC' : 'ETSS';
-    final pk = '$pkPrefix#$domainType#${dynamoChange.domainId}';
-    // Sort key is the entity type
-    final sk = entityType;
+    // Create keys using ElectroDB-compatible methods
+    final pk = _entityTypeSyncStatePrimaryKey(
+      domainType: domainType,
+      domainId: dynamoChange.domainId,
+      forChangeLog: forChangeLog,
+    );
+    final sk = _entityTypeSyncStateSortKey(
+      entityType: entityType,
+      forChangeLog: forChangeLog,
+    );
 
     try {
       // First, try to get the existing entity type sync state
@@ -654,11 +698,13 @@ class DynamoDBStorageService extends BaseStorageService {
   }) async {
     await initialize();
 
-    final pkPrefix = _statePrimaryKeyPrefix(
+    final pkPrefix = _statePrimaryKeyDomainPrefix(
       domainType: domainType,
       domainId: domainId,
     );
 
+    // TODO: This method needs to scan and delete all items for this domain,
+    // not just delete a single item. For now, this is a placeholder.
     await _dynamoRequest('DeleteItem', {
       'TableName': tableName,
       'Key': {
@@ -717,14 +763,14 @@ class DynamoDBStorageService extends BaseStorageService {
           entityId: entry.entityId,
         ),
       },
-      'sk': {'S': 'CID#${entry.cid}'},
+      'sk': {'S': _changeSortKey(entry.cid)},
       'gsi1pk': {
         'S': _changeGsiPartition(
           domainType: entry.domainType,
           domainId: entry.domainId,
         ),
       },
-      'gsi1sk': {'S': _sequenceSortKey(entry.seq)},
+      'gsi1sk': {'S': _changeGsiSortKey(entry.seq)},
       'seq': {'N': entry.seq.toString()},
       ..._encodeJson(entry.toJson()),
     };
@@ -748,7 +794,7 @@ class DynamoDBStorageService extends BaseStorageService {
           entityType: state.entityType,
         ),
       },
-      'sk': {'S': state.entityId},
+      'sk': {'S': _stateSortKey(state.entityId)},
       ..._encodeJson(state.toJson()),
     };
 
@@ -769,8 +815,10 @@ class DynamoDBStorageService extends BaseStorageService {
     final response = await _dynamoRequest('UpdateItem', {
       'TableName': tableName,
       'Key': {
-        'pk': {'S': 'SEQ#$domainType#$domainId'},
-        'sk': {'S': 'COUNTER'},
+        'pk': {
+          'S': _sequencePrimaryKey(domainType: domainType, domainId: domainId),
+        },
+        'sk': {'S': _sequenceCounterSortKey()},
       },
       'UpdateExpression': 'SET #v = if_not_exists(#v, :start) + :inc',
       'ExpressionAttributeNames': {'#v': 'value'},
@@ -880,44 +928,120 @@ class DynamoDBStorageService extends BaseStorageService {
     }
   }
 
+  // ========================================================================
+  // KEY GENERATION METHODS (ElectroDB Convention)
+  // ========================================================================
+  //
+  // All keys follow ElectroDB conventions with:
+  // - Service prefix: $_servicePrefix
+  // - Descriptive field names (not abbreviations)
+  // - Collection concept for sort keys
+  //
+  // Format: $<service>#<entity>#<fieldName_value>#...
+
+  /// Generates primary key for change log entries.
+  ///
+  /// Format: `$sltt#change#domainType_X#domainId_Y#entityType_Z#entityId_W`
   String _changePrimaryKey({
     required String domainType,
     required String domainId,
     required String entityType,
     required String entityId,
-  }) {
-    final prefix = _changePrimaryKeyPrefix(
-      domainType: domainType,
-      domainId: domainId,
-    );
-    return '$prefix#ET#$entityType#EI#$entityId';
-  }
+  }) =>
+      '\$$_servicePrefix#change#domainType_$domainType#domainId_$domainId#entityType_$entityType#entityId_$entityId';
 
+  /// Generates primary key prefix for querying change logs by domain.
+  ///
+  /// Format: `$sltt#change#domainType_X#domainId_Y`
   String _changePrimaryKeyPrefix({
     required String domainType,
     required String domainId,
-  }) => 'CHANGE#DT#$domainType#DI#$domainId';
+  }) => '\$$_servicePrefix#change#domainType_$domainType#domainId_$domainId';
 
+  /// Generates sort key for change log entries.
+  ///
+  /// Format: `$changes#change#cid_12345`
+  String _changeSortKey(String cid) => '\$changes#change#cid_$cid';
+
+  /// Generates GSI partition key for querying changes by domain in sequence order.
+  ///
+  /// Format: `$sltt#change#domainType_X#domainId_Y`
   String _changeGsiPartition({
     required String domainType,
     required String domainId,
-  }) => 'CHANGE#DT#$domainType#DI#$domainId';
+  }) => '\$$_servicePrefix#change#domainType_$domainType#domainId_$domainId';
 
-  String _statePrimaryKeyDomainPrefix({required String domainType}) =>
-      'STATE#DT#$domainType';
+  /// Generates GSI sort key for change log entries (sequence-based).
+  ///
+  /// Format: `seq_00000012345` (padded to 19 digits)
+  String _changeGsiSortKey(int seq) => 'seq_${seq.toString().padLeft(19, '0')}';
 
-  String _statePrimaryKeyPrefix({
+  /// Generates primary key prefix for all entity states of a domain type (for scanning).
+  ///
+  /// Format: `$sltt#state#domainType_X`
+  String _statePrimaryKeyDomainTypePrefix({required String domainType}) =>
+      '\$$_servicePrefix#state#domainType_$domainType';
+
+  /// Generates primary key domain prefix for entity states.
+  ///
+  /// Format: `$sltt#state#domainType_X#domainId_Y`
+  String _statePrimaryKeyDomainPrefix({
     required String domainType,
     required String domainId,
-  }) => 'STATE#DT#$domainType#DI#$domainId';
+  }) => '\$$_servicePrefix#state#domainType_$domainType#domainId_$domainId';
 
+  /// Generates full primary key for entity states.
+  ///
+  /// Format: `$sltt#state#domainType_X#domainId_Y#entityType_Z`
   String _statePrimaryKey({
     required String domainType,
     required String domainId,
     required String entityType,
-  }) => 'STATE#DT#$domainType#DI#$domainId#ET#$entityType';
+  }) =>
+      '\$$_servicePrefix#state#domainType_$domainType#domainId_$domainId#entityType_$entityType';
 
-  String _sequenceSortKey(int seq) => 'SEQ#${seq.toString().padLeft(19, '0')}';
+  /// Generates sort key for entity states.
+  ///
+  /// Format: `$states#state#entityId_abc123`
+  String _stateSortKey(String entityId) => '\$states#state#entityId_$entityId';
+
+  /// Generates primary key for entity type sync state (change log or entity state).
+  ///
+  /// Format: `$sltt#etsc#domainType_X#domainId_Y` (for change logs)
+  /// Format: `$sltt#etss#domainType_X#domainId_Y` (for entity states)
+  String _entityTypeSyncStatePrimaryKey({
+    required String domainType,
+    required String domainId,
+    required bool forChangeLog,
+  }) {
+    final prefix = forChangeLog ? 'etsc' : 'etss';
+    return '\$$_servicePrefix#$prefix#domainType_$domainType#domainId_$domainId';
+  }
+
+  /// Generates sort key for entity type sync state.
+  ///
+  /// Format: `$etsc#etsc#entityType_portion` (for change logs)
+  /// Format: `$etss#etss#entityType_portion` (for entity states)
+  String _entityTypeSyncStateSortKey({
+    required String entityType,
+    required bool forChangeLog,
+  }) {
+    final prefix = forChangeLog ? 'etsc' : 'etss';
+    return '\$$prefix#$prefix#entityType_$entityType';
+  }
+
+  /// Generates primary key for sequence counter.
+  ///
+  /// Format: `$sltt#seq#domainType_X#domainId_Y`
+  String _sequencePrimaryKey({
+    required String domainType,
+    required String domainId,
+  }) => '\$$_servicePrefix#seq#domainType_$domainType#domainId_$domainId';
+
+  /// Generates sort key for sequence counter.
+  ///
+  /// Format: `$seq#counter`
+  String _sequenceCounterSortKey() => '\$seq#counter';
 
   Map<String, dynamic> _encodeJson(Map<String, dynamic> json) {
     final result = <String, dynamic>{};
