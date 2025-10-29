@@ -163,6 +163,8 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
         mergedState['change_changeBy'] ?? newChange.changeBy;
     mergedState['change_changeBy_orig_'] =
         mergedState['change_changeBy_orig_'] ?? newChange.changeBy;
+    mergedState['change_storedAt'] =
+        mergedState['change_storedAt'] ?? now.toIso8601String();
 
     // Minimal data_* required fields
     mergedState['data_parentId'] = mergedState['data_parentId'] ?? '';
@@ -192,6 +194,17 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     );
 
     return (newChangeLogEntry: newChange, newEntityState: newState);
+  }
+
+  @override
+  Future<void> upsertEntityTypeSyncStates({
+    required String domainType,
+    required String entityType,
+    required BaseChangeLogEntry newChange,
+    required OperationCounts operationCounts,
+    bool forChangeLog = false,
+  }) async {
+    // No-op for fake storage
   }
 
   @override

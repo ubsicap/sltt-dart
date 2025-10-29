@@ -119,6 +119,15 @@ class DynamoDBStorageService extends BaseStorageService {
         );
       }
       await _putChangeLogEntry(newChange);
+
+      // Upsert entity type sync state counters for change log
+      await upsertEntityTypeSyncStates(
+        domainType: domainType,
+        entityType: newChange.entityType,
+        newChange: newChange,
+        operationCounts: operationCounts,
+        forChangeLog: true,
+      );
     }
 
     late final DynamoEntityState newState;
@@ -296,41 +305,65 @@ class DynamoDBStorageService extends BaseStorageService {
   }) async {
     await initialize();
 
-    final gsiPk = _changeGsiPartition(
-      domainType: domainType,
-      domainId: domainId,
-    );
+    // Query all EntityTypeSyncState records for change logs
+    final pk = 'ETSC#$domainType#$domainId';
 
     final response = await _dynamoRequest('Query', {
       'TableName': tableName,
-      'IndexName': 'GSI1',
-      'KeyConditionExpression': 'gsi1pk = :pk',
+      'KeyConditionExpression': 'pk = :pk',
       'ExpressionAttributeValues': {
-        ':pk': {'S': gsiPk},
+        ':pk': {'S': pk},
       },
-      'Select': 'COUNT',
     });
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to compute change stats: ${response.body}');
+      throw Exception('Failed to get change stats: ${response.body}');
     }
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final count = (body['Count'] as int?) ?? 0;
+    final items = (body['Items'] as List<dynamic>?) ?? <dynamic>[];
+
+    // Build per-entity-type statistics
+    final entityTypes = <String, EntityTypeSummary>{};
+    var totalCreates = 0;
+    var totalUpdates = 0;
+    var totalDeletes = 0;
+    var latestChangeAt = DateTime.fromMillisecondsSinceEpoch(0);
+    var latestSeq = -1;
+
+    for (final item in items) {
+      // Deserialize DynamoEntityTypeSyncState from DynamoDB item
+      final state = DynamoEntityTypeSyncState.fromJson(_decodeItem(item));
+
+      entityTypes[state.entityType] = EntityTypeSummary(
+        creates: state.created,
+        updates: state.updated,
+        deletes: state.deleted,
+        total: state.totalOperations,
+        latestChangeAt: state.changeAt.toIso8601String(),
+        latestSeq: state.seq,
+      );
+
+      totalCreates += state.created;
+      totalUpdates += state.updated;
+      totalDeletes += state.deleted;
+
+      if (state.changeAt.isAfter(latestChangeAt)) {
+        latestChangeAt = state.changeAt;
+        latestSeq = state.seq;
+      }
+    }
 
     final totals = EntityTypeSummary(
-      creates: 0,
-      updates: 0,
-      deletes: 0,
-      total: count,
-      latestChangeAt: '1970-01-01T00:00:00Z',
-      latestSeq: -1,
+      creates: totalCreates,
+      updates: totalUpdates,
+      deletes: totalDeletes,
+      total: totalCreates + totalUpdates + totalDeletes,
+      latestChangeAt: latestChangeAt.toIso8601String(),
+      latestSeq: latestSeq,
     );
 
-    return EntityTypeStats(
-      entityTypes: const <String, EntityTypeSummary>{},
-      totals: totals,
-    );
+    return EntityTypeStats(entityTypes: entityTypes, totals: totals);
   }
 
   @override
@@ -502,6 +535,7 @@ class DynamoDBStorageService extends BaseStorageService {
     required String entityType,
     required BaseChangeLogEntry newChange,
     required OperationCounts operationCounts,
+    bool forChangeLog = false,
   }) async {
     await initialize();
 
@@ -509,8 +543,10 @@ class DynamoDBStorageService extends BaseStorageService {
     final dynamoChange = newChange as DynamoChangeLogEntry;
 
     // Create a partition key for entity type sync state
-    // Format: ETSS#domainType#domainId
-    final pk = 'ETSS#$domainType#${dynamoChange.domainId}';
+    // Format: ETSS#domainType#domainId for entity states
+    //         ETSC#domainType#domainId for change logs
+    final pkPrefix = forChangeLog ? 'ETSC' : 'ETSS';
+    final pk = '$pkPrefix#$domainType#${dynamoChange.domainId}';
     // Sort key is the entity type
     final sk = entityType;
 

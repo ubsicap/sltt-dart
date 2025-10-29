@@ -162,11 +162,13 @@ abstract class BaseStorageService {
   /// - [entityType]: The entity type being tracked (e.g., 'document', 'portion')
   /// - [newChange]: The change log entry being processed
   /// - [operationCounts]: Counts of operations (create/update/delete) to add
+  /// - [forChangeLog]: If true, track for change log stats; if false, track for entity state stats
   Future<void> upsertEntityTypeSyncStates({
     required String domainType,
     required String entityType,
     required BaseChangeLogEntry newChange,
     required OperationCounts operationCounts,
+    bool forChangeLog = false,
   });
 
   /// For testing: reset storage for a specific domainId (e.g. '__test_1')

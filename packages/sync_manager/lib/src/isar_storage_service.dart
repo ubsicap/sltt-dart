@@ -310,6 +310,7 @@ class IsarStorageService extends BaseStorageService {
     required String entityType,
     required BaseChangeLogEntry newChange,
     required OperationCounts operationCounts,
+    bool forChangeLog = false,
   }) async {
     // Cast to IsarChangeLogEntry to access seq field
     final isarChange = newChange as client.IsarChangeLogEntry;

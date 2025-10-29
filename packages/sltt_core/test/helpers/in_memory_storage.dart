@@ -362,6 +362,7 @@ class InMemoryStorage implements BaseStorageService {
     required String entityType,
     required BaseChangeLogEntry newChange,
     required OperationCounts operationCounts,
+    bool forChangeLog = false,
   }) async {
     // No-op for in-memory storage - entity type sync states can be gotten from its cache
   }
