@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
+import 'package:aws_backend/src/models/portion_translation.data.dart';
 import 'package:aws_backend/src/models/portion_translation.entity_state.dynamo.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
@@ -14,37 +15,38 @@ void main() {
         () {
           final DateTime localTime = DateTime.parse('2023-01-01T00:00:00');
           final localChangeAt = localTime.add(const Duration(minutes: 1));
-          final data = {
-            'name': 'Portion Name',
-            'visibility': '{}',
-            'parentId': 'root',
-            'parentProp': 'portions',
-            'rank': 'aaaaz',
-          };
+          final data = PortionTranslationData(
+            name: 'Portion Name',
+            visibility: '{}',
+            parentId: 'root',
+            parentProp: 'portions',
+            rank: 'aaaaz',
+          );
 
           // Create a change log entry for a new entity with all required fields
-          final changeLogEntry = DynamoChangeLogEntry(
-            entityId: 'entity-drift-test',
-            entityType: kEntityTypePortion,
-            domainId: 'project1',
-            domainType: 'project',
-            changeAt: localChangeAt,
-            cid: 'cid-drift-test',
-            storageId: '',
-            changeBy: 'user1',
-            dataJson: jsonEncode(data),
-            operation: 'create',
-            operationInfoJson: jsonEncode({}),
-            stateChanged: true,
-            unknownJson: jsonEncode({}),
-            dataSchemaRev: 0,
-            seq: 1,
-          );
+          final changeLogEntry =
+              ChangeLogEntryFactoryService.forChangeSave<
+                DynamoChangeLogEntry,
+                int,
+                PortionTranslationData
+              >(
+                factory: DynamoChangeLogEntry.new,
+                entityId: 'entity-drift-test',
+                entityType: kEntityTypePortion,
+                domainId: 'project1',
+                domainType: 'project',
+                changeAt: localChangeAt,
+                cid: 'cid-drift-test',
+                changeBy: 'user1',
+                data: data,
+                operation: 'create',
+                dataSchemaRev: 0,
+              );
 
           final updates = getDataAndStateUpdatesOrOutdatedBys(
             changeLogEntry: changeLogEntry,
             entityState: null, // No existing entity state
-            fieldChanges: data,
+            fieldChanges: data.toJson(),
             noOpFields: [],
             storageMode: 'save',
             storageType: 'cloud',

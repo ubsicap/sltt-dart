@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
@@ -223,41 +224,39 @@ void main() {
       'IsarProjectState should detect field-drift and produce stateUpdates compatible with IsarPortionDataEntityState deserialization',
       () {
         final DateTime baseTime = DateTime.parse('2023-01-01T00:00:00');
-        final baseData = BaseDataFields(
+        final data = ProjectDataFields(
           parentId: 'root',
           parentProp: 'projects',
           rank: 'aaaaz',
+          nameLocal: 'Project Name',
         );
-
-        final projectDataJson = {
-          ...baseData.toJson(),
-          'nameLocal': 'Project Name',
-        };
 
         final changeAt = baseTime.add(const Duration(minutes: 1));
 
         // Create a change log entry for a new entity with all required fields
-        final changeLogEntry = IsarChangeLogEntry(
-          entityId: 'entity-drift-test',
-          entityType: kEntityTypeProject,
-          domainId: 'project1',
-          domainType: 'project',
-          changeAt: changeAt,
-          cid: 'cid-drift-test',
-          storageId: '',
-          changeBy: 'user1',
-          dataJson: jsonEncode(jsonEncode(projectDataJson)),
-          operation: 'create',
-          operationInfoJson: jsonEncode({}),
-          stateChanged: true,
-          unknownJson: jsonEncode({}),
-          dataSchemaRev: 0,
-        );
+        final changeLogEntry =
+            ChangeLogEntryFactoryService.forChangeSave<
+              IsarChangeLogEntry,
+              Id,
+              ProjectDataFields
+            >(
+              factory: IsarChangeLogEntry.new,
+              entityId: 'entity-drift-test',
+              entityType: kEntityTypeProject,
+              domainId: 'project1',
+              domainType: 'project',
+              changeAt: changeAt,
+              cid: 'cid-drift-test',
+              changeBy: 'user1',
+              data: data,
+              operation: 'create',
+              dataSchemaRev: 0,
+            );
 
         final updates = getDataAndStateUpdatesOrOutdatedBys(
           changeLogEntry: changeLogEntry,
           entityState: null, // No existing entity state
-          fieldChanges: projectDataJson,
+          fieldChanges: data.toJson(),
           noOpFields: [],
           storageMode: 'save',
           storageType: 'cloud',
