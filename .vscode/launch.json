@@ -99,6 +99,16 @@
             "console": "terminal"
         },
         {
+            "name": "Debug Current Dart Test (CLOUD_BASE_URL)",
+            "type": "dart",
+            "request": "launch",
+            "program": "${file}",
+            "env": {
+                "CLOUD_BASE_URL": "${input:cloudBaseUrl}"
+            },
+            "console": "terminal"
+        },
+        {
             "name": "Start/Inspect Local Storage Server for Isar file",
             "type": "dart",
             "request": "launch",
@@ -153,6 +163,12 @@
             "description": "Path to Isar Database File (.isar)",
             "type": "promptString",
             "default": "./isar_db/local_storage.isar"
+        },
+        {
+            "id": "cloudBaseUrl",
+            "description": "CLOUD_BASE_URL e.g. http://localhost:8080 (leave empty to use kCloudDevUrl default)",
+            "type": "promptString",
+            "default": ""
         }
     ]
 }
