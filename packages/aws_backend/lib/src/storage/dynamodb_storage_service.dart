@@ -698,20 +698,171 @@ class DynamoDBStorageService extends BaseStorageService {
   }) async {
     await initialize();
 
-    final pkPrefix = _statePrimaryKeyDomainPrefix(
+    // Safety check: only allow deletion of test domains
+    if (!domainId.startsWith('__test')) {
+      throw Exception(
+        'testResetDomainStorage can only delete test domains. '
+        'Domain ID must start with "__test" but got: $domainId',
+      );
+    }
+
+    // Collect all items to delete for this domain
+    final itemsToDelete = <Map<String, dynamic>>[];
+
+    // 1. Scan for change log entries
+    final changePkPrefix = _changePrimaryKeyPrefix(
       domainType: domainType,
       domainId: domainId,
     );
 
-    // TODO: This method needs to scan and delete all items for this domain,
-    // not just delete a single item. For now, this is a placeholder.
-    await _dynamoRequest('DeleteItem', {
-      'TableName': tableName,
-      'Key': {
-        'pk': {'S': pkPrefix},
-        'sk': {'S': domainId},
+    await _scanAndCollectItems(
+      filterExpression: 'begins_with(pk, :pkPrefix)',
+      expressionValues: {
+        ':pkPrefix': {'S': changePkPrefix},
       },
+      itemsToDelete: itemsToDelete,
+    );
+
+    // 2. Scan for entity states
+    final statePkPrefix = _statePrimaryKeyDomainPrefix(
+      domainType: domainType,
+      domainId: domainId,
+    );
+
+    await _scanAndCollectItems(
+      filterExpression: 'begins_with(pk, :pkPrefix)',
+      expressionValues: {
+        ':pkPrefix': {'S': statePkPrefix},
+      },
+      itemsToDelete: itemsToDelete,
+    );
+
+    // 3. Scan for entity type sync states (change logs)
+    final etscPk = _entityTypeSyncStatePrimaryKey(
+      domainType: domainType,
+      domainId: domainId,
+      forChangeLog: true,
+    );
+
+    await _scanAndCollectItems(
+      filterExpression: 'pk = :pk',
+      expressionValues: {
+        ':pk': {'S': etscPk},
+      },
+      itemsToDelete: itemsToDelete,
+    );
+
+    // 4. Scan for entity type sync states (entity states)
+    final etssPk = _entityTypeSyncStatePrimaryKey(
+      domainType: domainType,
+      domainId: domainId,
+      forChangeLog: false,
+    );
+
+    await _scanAndCollectItems(
+      filterExpression: 'pk = :pk',
+      expressionValues: {
+        ':pk': {'S': etssPk},
+      },
+      itemsToDelete: itemsToDelete,
+    );
+
+    // 5. Add sequence counter to delete list
+    final seqPk = _sequencePrimaryKey(
+      domainType: domainType,
+      domainId: domainId,
+    );
+    final seqSk = _sequenceCounterSortKey();
+
+    itemsToDelete.add({
+      'pk': {'S': seqPk},
+      'sk': {'S': seqSk},
     });
+
+    // 6. Batch delete all collected items
+    await _batchDeleteItems(itemsToDelete);
+  }
+
+  /// Helper method to scan and collect items for deletion
+  Future<void> _scanAndCollectItems({
+    required String filterExpression,
+    required Map<String, dynamic> expressionValues,
+    required List<Map<String, dynamic>> itemsToDelete,
+  }) async {
+    Map<String, dynamic>? exclusiveStartKey;
+
+    do {
+      final scanPayload = <String, dynamic>{
+        'TableName': tableName,
+        'FilterExpression': filterExpression,
+        'ExpressionAttributeValues': expressionValues,
+        'ProjectionExpression': 'pk, sk',
+      };
+
+      if (exclusiveStartKey != null) {
+        scanPayload['ExclusiveStartKey'] = exclusiveStartKey;
+      }
+
+      final response = await _dynamoRequest('Scan', scanPayload);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to scan items: ${response.body}');
+      }
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
+
+      for (final item in items) {
+        final itemMap = item as Map<String, dynamic>;
+        itemsToDelete.add({'pk': itemMap['pk'], 'sk': itemMap['sk']});
+      }
+
+      exclusiveStartKey = body['LastEvaluatedKey'] as Map<String, dynamic>?;
+    } while (exclusiveStartKey != null);
+  }
+
+  /// Helper method to batch delete items (max 25 per request)
+  Future<void> _batchDeleteItems(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
+
+    // DynamoDB BatchWriteItem supports max 25 items per request
+    const batchSize = 25;
+
+    for (var i = 0; i < items.length; i += batchSize) {
+      final batch = items.skip(i).take(batchSize).toList();
+
+      final deleteRequests = batch.map((item) {
+        return {
+          'DeleteRequest': {'Key': item},
+        };
+      }).toList();
+
+      final response = await _dynamoRequest('BatchWriteItem', {
+        'RequestItems': {tableName: deleteRequests},
+      });
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to batch delete items: ${response.body}');
+      }
+
+      // Handle unprocessed items (throttling, etc.)
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final unprocessed = body['UnprocessedItems'] as Map<String, dynamic>?;
+
+      if (unprocessed != null && unprocessed.isNotEmpty) {
+        // Retry unprocessed items after a brief delay
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        final unprocessedForTable =
+            unprocessed[tableName] as List<dynamic>? ?? <dynamic>[];
+        final retryItems = unprocessedForTable.map((req) {
+          final deleteReq = req as Map<String, dynamic>;
+          return deleteReq['DeleteRequest']['Key'] as Map<String, dynamic>;
+        }).toList();
+
+        await _batchDeleteItems(retryItems);
+      }
+    }
   }
 
   Map<String, dynamic> _buildInitialStateJson({
