@@ -20,7 +20,7 @@ void main() {
   group('Integration POST /api/changes', () {
     test('POST invalid JSON returns 400', () async {
       final resp = await http.post(
-        baseUrl.replace(path: '/api/changes'),
+        Uri.parse('$baseUrl/api/changes'),
         body: 'not-a-json',
         headers: {'Content-Type': 'application/json'},
       );
@@ -39,7 +39,7 @@ void main() {
           parentProp: 'parentProp',
         );
         final projectId = '__test_project_post_minimal_valid_payload__';
-        // delete project if it exists
+
         await resetTestProject(baseUrl, projectId);
 
         final resp = await saveProjectChange(
@@ -47,6 +47,7 @@ void main() {
           projectId,
           projectData: projectData,
         );
+
         expect(resp.statusCode, anyOf([200, 201]), reason: 'Got ${resp.body}');
       },
       tags: ['internet', 'integration'],

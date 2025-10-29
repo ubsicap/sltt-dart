@@ -20,7 +20,7 @@ Future<void> resetTestProject(
   String domainType = 'projects',
 }) async {
   await http.delete(
-    baseUrl.replace(path: '/api/storage/__test/reset/$domainType/$projectId'),
+    Uri.parse('$baseUrl/api/storage/__test/reset/$domainType/$projectId'),
   );
 }
 
@@ -83,8 +83,11 @@ Future<http.Response> saveProjectChange(
 
   final payload = jsonEncode(request.toJson());
 
+  final apiChangesPath = '${baseUrl.path}/api/changes';
+  final url = baseUrl.replace(path: apiChangesPath);
+
   return http.post(
-    baseUrl.replace(path: '/api/changes'),
+    url,
     body: payload,
     headers: {'Content-Type': 'application/json'},
   );
