@@ -166,10 +166,11 @@ void main() {
         'entityId': 'doc1',
         'operation': 'create',
         'storageId': 'test-storage',
-        'stateChanged': false,
+        'stateChanged': true, // TODO: allow false for storing errors etc...
         'changeBy': 'tester',
         'changeAt': DateTime.now().toUtc().toIso8601String(),
-        // missing seq
+        // missing seq in sync mode
+        'dataJson': jsonEncode({'foo': 'bar'}),
       };
       final payloadJson = {
         'changes': [change],
@@ -181,24 +182,38 @@ void main() {
 
       final resp = await post(payload);
       final body = jsonDecode(resp['body'] as String) as Map<String, dynamic>;
-      expect(resp['statusCode'], anyOf([200, 201]));
+      expect(
+        resp['statusCode'],
+        anyOf([400] /* [200, 201] */),
+        reason:
+            /* was 'Status code should be 200 or 201 even with errors in body, but got:\n$resp', */
+            'Status code should be 400 even with errors in body, but got:\n$resp',
+      );
 
-      final expectedError =
-          'CheckedFromJsonException\n'
-          'Could not create `DynamoChangeLogEntry`.\n'
-          'There is a problem with "seq".\n'
-          'type \'Null\' is not a subtype of type \'num\' in type cast';
+      // final oldExpectedError =
+      //     'CheckedFromJsonException\n'
+      //     'Could not create `DynamoChangeLogEntry`.\n'
+      //     'There is a problem with "seq".\n'
+      //     'type \'Null\' is not a subtype of type \'num\' in type cast';
 
-      expect(body['errors'], [
-        {
-          'cid': 'test-cid-1-HUon',
-          'info': {
-            'error': expectedError,
-            'errorStack': isA<String>(),
-            'json': change,
+      expect(
+        body['error'],
+        equals('Changes [0] in sync mode must include a valid positive seq'),
+
+        /* was:
+        body['errors'],
+        [
+          {
+            'cid': 'test-cid-1-HUon',
+            'info': {
+              'error': oldExpectedError,
+              'errorStack': isA<String>(),
+              'json': change,
+            },
           },
-        },
-      ]);
+        ],*/
+        reason: 'Should return error for default negative seq, but got:\n$body',
+      );
     });
   });
 }
