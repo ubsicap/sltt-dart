@@ -93,6 +93,21 @@
                 "panel": "shared"
             }
         },
+                {
+            "label": "Build/Generate Code (aws_backend)",
+            "type": "shell",
+            "command": "dart run build_runner build --delete-conflicting-outputs",
+            "options": {
+                "cwd": "${workspaceFolder}/packages/aws_backend"
+            },
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
         {
             "label": "Clean Build (Core)",
             "type": "shell",
