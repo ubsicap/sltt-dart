@@ -1222,6 +1222,27 @@ class IsarStorageService extends BaseStorageService {
       await _isar.isarEntityTypeSyncStates.deleteAll(etsIdsToDelete);
     });
   }
+
+  @override
+  Future<TEntityState> testStoreState<TEntityState extends BaseEntityState>({
+    required TEntityState entityState,
+  }) async {
+    final entityType = EntityType.tryFromString(entityState.entityType);
+    if (entityType == null) {
+      throw ArgumentError('Invalid entityType: ${entityState.entityType}');
+    }
+
+    final group = _entityStateRegistry.get(entityType);
+    if (group == null) {
+      throw StateError('No storage group registered for $entityType');
+    }
+
+    await _isar.writeTxn(() async {
+      await group.put(entityState);
+    });
+
+    return entityState;
+  }
 }
 
 // Singleton wrappers for each storage type

@@ -176,6 +176,15 @@ abstract class BaseStorageService {
     required String domainType,
     required String domainId,
   });
+
+  /// For testing: Store an entity state directly without updating change log or sync states.
+  ///
+  /// This is useful for testing entity state storage and retrieval in isolation.
+  /// The method accepts any BaseEntityState subtype and returns the stored state
+  /// with DateTimes normalized to UTC.
+  Future<TEntityState> testStoreState<TEntityState extends BaseEntityState>({
+    required TEntityState entityState,
+  });
 }
 
 /// Return type for updateChangeLogAndState: a tuple of change log entry and entity state.

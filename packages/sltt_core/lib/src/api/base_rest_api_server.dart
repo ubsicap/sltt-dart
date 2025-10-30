@@ -167,6 +167,7 @@ abstract class BaseRestApiServer {
       '/api/state/<domainCollection>/<domainId>/<entityCollection>/<entityId>',
       _handleGetEntityState,
     );
+    router.post('/api/storage/__test/state', _handleStorageTestStoreState);
     router.delete(
       '/api/storage/__test/reset/<domainCollection>/<domainId>',
       _handleStorageTestReset,
@@ -937,6 +938,93 @@ abstract class BaseRestApiServer {
             },
           },
         },
+        {
+          'method': 'POST',
+          'path': '/api/storage/__test/state',
+          'description':
+              'Test endpoint: Store entity state directly without updating change log or sync states',
+          'requestBody': {
+            'type': 'object',
+            'required': [
+              'entityId',
+              'entityType',
+              'domainType',
+              'change_domainId',
+            ],
+            'properties': {
+              'entityId': {
+                'type': 'string',
+                'description': 'Entity identifier',
+              },
+              'entityType': {'type': 'string', 'description': 'Type of entity'},
+              'domainType': {
+                'type': 'string',
+                'description': 'Domain type (e.g., "project")',
+              },
+              'change_domainId': {
+                'type': 'string',
+                'description':
+                    'Domain ID (must start with "__test" for safety)',
+              },
+              '... other entity state fields': {
+                'description':
+                    'All other fields from the entity state can be included',
+              },
+            },
+          },
+          'response': {
+            'type': 'object',
+            'properties': {
+              'message': {'type': 'string', 'description': 'Success message'},
+              'entityState': {
+                'type': 'object',
+                'description': 'The stored entity state',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
+              },
+            },
+          },
+        },
+        {
+          'method': 'DELETE',
+          'path': '/api/storage/__test/reset/{domainCollection}/{domainId}',
+          'description':
+              'Test endpoint: Reset/delete all storage data for a specific test domain',
+          'parameters': [
+            {
+              'name': 'domainCollection',
+              'type': 'string',
+              'required': true,
+              'description':
+                  'Domain collection type (e.g., "projects", "teams")',
+            },
+            {
+              'name': 'domainId',
+              'type': 'string',
+              'required': true,
+              'description':
+                  'Domain ID to reset (must start with "__test" for safety)',
+            },
+          ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'message': {'type': 'string', 'description': 'Success message'},
+              'domainId': {
+                'type': 'string',
+                'description': 'The domain ID that was reset',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
+              },
+            },
+          },
+        },
       ],
       'timestamp': DateTime.now().toIso8601String(),
     };
@@ -1537,7 +1625,7 @@ abstract class BaseRestApiServer {
           'projectId': projectId,
           'entityType': entityType,
           'entityId': entityId,
-          'state': stateData,
+          'state': stateData?.toJson(),
           'timestamp': DateTime.now().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
@@ -1590,6 +1678,73 @@ abstract class BaseRestApiServer {
       SlttLogger.logger.severe('Error in test reset: $e', e, stackTrace);
       return _errorResponse(
         'Failed to perform test reset: ${e.toString()}',
+        500,
+        stackTrace,
+      );
+    }
+  }
+
+  /// Test endpoint: Store entity state directly
+  Future<Response> _handleStorageTestStoreState(Request request) async {
+    try {
+      final bodyString = await request.readAsString();
+      if (bodyString.isEmpty) {
+        return _errorResponse('Request body is required', 400);
+      }
+
+      final body = jsonDecode(bodyString) as Map<String, dynamic>;
+
+      // Validate required fields
+      final entityId = body['entityId'] as String?;
+      final entityType = body['entityType'] as String?;
+      final domainType = body['domainType'] as String?;
+      final changeDomainId = body['change_domainId'] as String?;
+
+      if (entityId == null || entityId.isEmpty) {
+        return _errorResponse('entityId is required', 400);
+      }
+      if (entityType == null || entityType.isEmpty) {
+        return _errorResponse('entityType is required', 400);
+      }
+      if (domainType == null || domainType.isEmpty) {
+        return _errorResponse('domainType is required', 400);
+      }
+      if (changeDomainId == null || changeDomainId.isEmpty) {
+        return _errorResponse('change_domainId is required', 400);
+      }
+
+      // Only allow test domain IDs for safety
+      if (!changeDomainId.startsWith('__test')) {
+        return _errorResponse(
+          'Test store state is only allowed for __testXXX domain IDs',
+          403,
+        );
+      }
+
+      // Deserialize using the registered factory for the entity type
+      final entityState = deserializeEntityStateSafely(body);
+
+      // Store the state
+      final storedState = await storage.testStoreState(
+        entityState: entityState,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'Entity state stored successfully',
+          'entityState': storedState.toJson(),
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on FormatException catch (e) {
+      return _errorResponse('Invalid JSON format: ${e.message}', 400);
+    } on ArgumentError catch (e) {
+      return _errorResponse('$e', 400);
+    } catch (e, stackTrace) {
+      SlttLogger.logger.severe('Error storing test state: $e', e, stackTrace);
+      return _errorResponse(
+        'Failed to store test state: ${e.toString()}',
         500,
         stackTrace,
       );

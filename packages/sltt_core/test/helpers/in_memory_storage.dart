@@ -357,6 +357,24 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
+  Future<TEntityState> testStoreState<TEntityState extends BaseEntityState>({
+    required TEntityState entityState,
+  }) async {
+    final states = _statesByDomainType.putIfAbsent(
+      entityState.domainType,
+      () => {},
+    );
+    states[_key(
+          entityState.change_domainId,
+          entityState.entityType,
+          entityState.entityId,
+        )] =
+        entityState as TestEntityState;
+
+    return entityState;
+  }
+
+  @override
   Future<void> upsertEntityTypeSyncStates({
     required String domainType,
     required String entityType,

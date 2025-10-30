@@ -202,7 +202,8 @@ class DynamoDBStorageService extends BaseStorageService {
   /// - [entityState]: The complete entity state to store
   ///
   /// Returns the stored entity state (same instance).
-  Future<TEntityState> storeState<TEntityState extends BaseEntityState>({
+  @override
+  Future<TEntityState> testStoreState<TEntityState extends BaseEntityState>({
     required TEntityState entityState,
   }) async {
     await initialize();
@@ -243,7 +244,9 @@ class DynamoDBStorageService extends BaseStorageService {
     final item = payload['Item'] as Map<String, dynamic>?;
     if (item == null) return null;
 
-    return deserializeEntityStateSafely(_decodeItem(item));
+    final decodedItem = _decodeItem(item, excludeStorageKeys: true);
+
+    return deserializeEntityStateSafely(decodedItem);
   }
 
   @override
@@ -591,9 +594,13 @@ class DynamoDBStorageService extends BaseStorageService {
 
     final results = <Map<String, dynamic>>[];
     for (final item in items) {
-      final json = _decodeItem(item as Map<String, dynamic>);
+      final json = _decodeItem(
+        item as Map<String, dynamic>,
+        excludeStorageKeys: true,
+      );
       if (parentId != null && json['data_parentId'] != parentId) continue;
       if (parentProp != null && json['data_parentProp'] != parentProp) continue;
+
       results.add(json);
     }
 
@@ -1233,9 +1240,16 @@ class DynamoDBStorageService extends BaseStorageService {
     return result;
   }
 
-  Map<String, dynamic> _decodeItem(Map<String, dynamic> item) {
+  Map<String, dynamic> _decodeItem(
+    Map<String, dynamic> item, {
+    bool excludeStorageKeys = false,
+  }) {
     final result = <String, dynamic>{};
     for (final entry in item.entries) {
+      // Skip DynamoDB partition/sort keys if requested
+      if (excludeStorageKeys && (entry.key == 'pk' || entry.key == 'sk')) {
+        continue;
+      }
       result[entry.key] = _decodeValue(entry.value);
     }
     return result;
