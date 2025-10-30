@@ -7,7 +7,6 @@ import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 
 import '../models/dynamo_change_log_entry.dart';
-import '../models/dynamo_entity_state.dart';
 import '../models/dynamo_entity_type_sync_state.dart';
 import '../models/dynamo_serialization.dart';
 
@@ -151,9 +150,9 @@ class DynamoDBStorageService extends BaseStorageService {
       );
     }
 
-    late final DynamoEntityState newState;
+    late final BaseEntityState newState;
     if (skipStateWrite && entityState != null && stateUpdates.isEmpty) {
-      newState = entityState as DynamoEntityState;
+      newState = entityState;
     } else {
       final currentStateJson =
           entityState?.toJson() ??
@@ -176,7 +175,7 @@ class DynamoDBStorageService extends BaseStorageService {
         mergedStateJson['unknownJson'] as String?,
       );
 
-      newState = DynamoEntityState.fromJson(mergedStateJson);
+      newState = deserializeEntityStateSafely(mergedStateJson);
 
       if (!skipStateWrite) {
         await _putEntityState(newState);
@@ -192,6 +191,25 @@ class DynamoDBStorageService extends BaseStorageService {
     }
 
     return (newChangeLogEntry: newChange, newEntityState: newState);
+  }
+
+  /// Stores an entity state without updating change log or sync states.
+  ///
+  /// This is a simplified version of updateChangeLogAndState that only handles
+  /// entity state storage. Useful for testing or direct state manipulation.
+  ///
+  /// Parameters:
+  /// - [entityState]: The complete entity state to store
+  ///
+  /// Returns the stored entity state (same instance).
+  Future<TEntityState> storeState<TEntityState extends BaseEntityState>({
+    required TEntityState entityState,
+  }) async {
+    await initialize();
+
+    await _putEntityState(entityState);
+
+    return entityState;
   }
 
   @override
@@ -225,7 +243,7 @@ class DynamoDBStorageService extends BaseStorageService {
     final item = payload['Item'] as Map<String, dynamic>?;
     if (item == null) return null;
 
-    return DynamoEntityState.fromJson(_decodeItem(item));
+    return deserializeEntityStateSafely(_decodeItem(item));
   }
 
   @override
@@ -952,7 +970,9 @@ class DynamoDBStorageService extends BaseStorageService {
     }
   }
 
-  Future<void> _putEntityState(DynamoEntityState state) async {
+  Future<void> _putEntityState<TEntityState extends BaseEntityState>(
+    TEntityState state,
+  ) async {
     final item = <String, dynamic>{
       'pk': {
         'S': _statePrimaryKey(
