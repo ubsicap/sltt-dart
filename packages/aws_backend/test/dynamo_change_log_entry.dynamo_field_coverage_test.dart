@@ -1,0 +1,281 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
+import 'package:http/http.dart' as http;
+import 'package:sltt_core/sltt_core.dart';
+import 'package:test/test.dart';
+
+import 'helpers/test_utils.dart';
+
+void main() {
+  final baseUrl = Uri.parse(
+    Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl,
+  );
+  const testDomainId = '__test_change_log_entry_coverage';
+  const testDomainType = 'project';
+  const testDomainCollection = 'projects';
+
+  setUpAll(() {
+    // Register DynamoChangeLogEntry factory for deserialization
+    dynamoChangeLogEntryFactoryRegistration;
+  });
+
+  const knownDateTimeFields = {'changeAt', 'storedAt', 'cloudAt'};
+  const knownChangeLogEntryFields = {
+    'seq',
+    'changeAt',
+    'storedAt',
+    'cloudAt',
+    'changeBy',
+    'cid',
+    'dataJson',
+    'domainId',
+    'domainType',
+    'entityId',
+    'entityType',
+    'operation',
+    'operationInfoJson',
+    'schemaVersion',
+    'stateChanged',
+    'storageId',
+    'unknownJson',
+    'dataSchemaRev',
+  };
+
+  /// Helper to verify all DateTime fields are UTC
+  void expectAllDateTimeFieldsUtc(
+    DynamoChangeLogEntry entry, {
+    required DateTime expectedChangeAt,
+    required DateTime expectedCloudAt,
+    required DateTime expectedStoredAt,
+    String context = '',
+  }) {
+    final prefix = context.isEmpty ? '' : '$context: ';
+
+    expect(
+      entry.changeAt,
+      equals(expectedChangeAt.toUtc()),
+      reason: '${prefix}changeAt should be UTC',
+    );
+    expect(
+      entry.cloudAt,
+      equals(expectedCloudAt.toUtc()),
+      reason: '${prefix}cloudAt should be UTC',
+    );
+    expect(
+      entry.storedAt,
+      equals(expectedStoredAt.toUtc()),
+      reason: '${prefix}storedAt should be UTC',
+    );
+  }
+
+  group('DynamoChangeLogEntry DateTime UTC Conversion', () {
+    test('stores and retrieves with all DateTime fields converted to UTC', () async {
+      // Reset test data to ensure clean state
+      await resetTestProject(baseUrl, testDomainId);
+
+      // Create local (non-UTC) DateTimes for testing
+      final localChangeAt = DateTime.now(); // Local time
+      final localCloudAt = DateTime.now().subtract(const Duration(hours: 1));
+      final localStoredAt = DateTime.now().subtract(
+        const Duration(minutes: 30),
+      );
+
+      expect(
+        localChangeAt.isUtc,
+        isFalse,
+        reason: 'Test DateTime should be local',
+      );
+      expect(
+        localCloudAt.isUtc,
+        isFalse,
+        reason: 'Test DateTime should be local',
+      );
+      expect(
+        localStoredAt.isUtc,
+        isFalse,
+        reason: 'Test DateTime should be local',
+      );
+
+      final testCid = generateCid(entityType: EntityType.project);
+
+      // Create DynamoChangeLogEntry with all optional fields filled
+      final entry = DynamoChangeLogEntry(
+        cid: testCid,
+        domainId: testDomainId,
+        domainType: testDomainType,
+        entityType: 'project',
+        entityId: 'test-entity-1',
+        operation: 'create',
+        changeAt: localChangeAt,
+        changeBy: 'test-user',
+        storageId: 'cloud-storage',
+        dataJson:
+            '{"nameLocal": "Test Project", "parentId": "root", "parentProp": "pList"}',
+        stateChanged: true,
+        // Optional fields
+        cloudAt: localCloudAt,
+        storedAt: localStoredAt,
+        operationInfoJson: '{"source": "test"}',
+        unknownJson: '{}',
+        dataSchemaRev: 1,
+        schemaVersion: 2,
+        seq: 1,
+      );
+
+      // Test that instance DateTime fields are UTC before storing
+      expectAllDateTimeFieldsUtc(
+        entry,
+        expectedChangeAt: localChangeAt,
+        expectedCloudAt: localCloudAt,
+        expectedStoredAt: localStoredAt,
+        context: 'Before storing',
+      );
+
+      // Store the change using HTTP API
+      final storeUrl = baseUrl.replace(
+        path: '${baseUrl.path}/api/storage/__test/change',
+      );
+      final storeResponse = await http.post(
+        storeUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(entry.toJson()),
+      );
+
+      expect(
+        storeResponse.statusCode,
+        equals(200),
+        reason: 'Failed to store change: ${storeResponse.body}',
+      );
+
+      final storeResponseJson =
+          jsonDecode(storeResponse.body) as Map<String, dynamic>;
+      final storedChangeJson =
+          storeResponseJson['change'] as Map<String, dynamic>;
+      final storedChange = DynamoChangeLogEntry.fromJson(storedChangeJson);
+
+      // Verify the stored change is returned and has UTC DateTimes
+      expect(storedChange, isA<DynamoChangeLogEntry>());
+      expectAllDateTimeFieldsUtc(
+        storedChange,
+        expectedChangeAt: localChangeAt,
+        expectedCloudAt: localCloudAt,
+        expectedStoredAt: localStoredAt,
+        context: 'After storeChange',
+      );
+
+      // Retrieve the change using GET API
+      final getUrl = baseUrl.replace(
+        path: '${baseUrl.path}/api/changes/$testDomainCollection/$testDomainId',
+      );
+      final getResponse = await http.get(getUrl);
+
+      expect(
+        getResponse.statusCode,
+        equals(200),
+        reason: 'Failed to get changes: ${getResponse.body}',
+      );
+
+      final getResponseJson =
+          jsonDecode(getResponse.body) as Map<String, dynamic>;
+      final changes = getResponseJson['changes'] as List<dynamic>;
+
+      expect(changes, isNotEmpty, reason: 'Should have at least one change');
+
+      // Find our test change by cid
+      final retrievedChangeJson =
+          changes.firstWhere(
+                (c) => (c as Map<String, dynamic>)['cid'] == testCid,
+                orElse: () => throw Exception('Test change not found'),
+              )
+              as Map<String, dynamic>;
+
+      final retrieved = DynamoChangeLogEntry.fromJson(retrievedChangeJson);
+
+      // Verify we got the change back
+      expect(retrieved, isA<DynamoChangeLogEntry>());
+
+      // Verify all DateTime fields are still UTC after retrieval
+      expectAllDateTimeFieldsUtc(
+        retrieved,
+        expectedChangeAt: localChangeAt,
+        expectedCloudAt: localCloudAt,
+        expectedStoredAt: localStoredAt,
+        context: 'After getChanges',
+      );
+
+      // Test that re-serialized toJson() has all UTC DateTime strings
+      final jsonAfterRetrieve = retrieved.toJson();
+
+      // Expected value checks
+      expect(retrieved.cid, equals(entry.cid));
+      expect(retrieved.domainId, equals(entry.domainId));
+      expect(retrieved.domainType, equals(entry.domainType));
+      expect(retrieved.entityType, equals(entry.entityType));
+      expect(retrieved.entityId, equals(entry.entityId));
+      expect(retrieved.operation, equals(entry.operation));
+      expect(retrieved.changeBy, equals(entry.changeBy));
+      expect(retrieved.storageId, equals(entry.storageId));
+      expect(retrieved.dataJson, equals(entry.dataJson));
+      expect(retrieved.stateChanged, equals(entry.stateChanged));
+      expect(retrieved.operationInfoJson, equals(entry.operationInfoJson));
+      expect(retrieved.unknownJson, equals(entry.unknownJson));
+      expect(retrieved.dataSchemaRev, equals(entry.dataSchemaRev));
+      expect(retrieved.schemaVersion, equals(entry.schemaVersion));
+      expect(retrieved.seq, equals(entry.seq));
+
+      final processedDateTimeFields = <String>{};
+      final processedAllFields = <String>{};
+
+      // Use toJsonBase() to check for any missing fields
+      final jsonBase = entry.toJsonBase();
+      for (final kv in jsonBase.entries) {
+        expect(
+          kv.value,
+          isNotNull,
+          reason:
+              'Field ${kv.key} should not be null. If it is a DateTime, please test that has been converted to utc below',
+        );
+        expect(
+          kv.key,
+          isIn(knownChangeLogEntryFields),
+          reason:
+              'Field ${kv.key} is not a known ChangeLogEntry field. Update the expected value checks and knownChangeLogEntryFields accordingly.',
+        );
+        expect(
+          kv.value,
+          equals(jsonAfterRetrieve[kv.key]),
+          reason:
+              'Field ${kv.key} does not match after retrieval from database.',
+        );
+        processedAllFields.add(kv.key);
+        if (kv.value is! String) continue;
+        // parse to see if it's a datetime field, if so make sure it's a known datetime field
+        final maybeDateTime = DateTime.tryParse(kv.value);
+        if (maybeDateTime != null) {
+          processedDateTimeFields.add(kv.key);
+          expect(kv.key, isIn(knownDateTimeFields));
+          expect(
+            maybeDateTime.isUtc,
+            isTrue,
+            reason:
+                'Field ${kv.key} should be UTC DateTime string, got ${kv.value}',
+          );
+        }
+      }
+      // make sure all known datetime fields were processed
+      expect(
+        processedDateTimeFields,
+        equals(knownDateTimeFields),
+        reason: 'Not all known DateTime fields were processed.',
+      );
+      // make sure all known fields were processed
+      expect(
+        processedAllFields,
+        equals(knownChangeLogEntryFields),
+        reason: 'Not all known ChangeLogEntry fields were processed.',
+      );
+    });
+  });
+}

@@ -185,6 +185,15 @@ abstract class BaseStorageService {
   Future<TEntityState> testStoreState<TEntityState extends BaseEntityState>({
     required TEntityState entityState,
   });
+
+  /// For testing: Store a change log entry directly without any processing or side effects.
+  ///
+  /// This is useful for testing change log entry storage and retrieval in isolation.
+  /// The method accepts JSON and returns the stored entry with DateTimes normalized to UTC.
+  /// The JSON is deserialized using the storage-specific change log entry type.
+  Future<BaseChangeLogEntry> testStoreChangeFromJson({
+    required Map<String, dynamic> changeJson,
+  });
 }
 
 /// Return type for updateChangeLogAndState: a tuple of change log entry and entity state.

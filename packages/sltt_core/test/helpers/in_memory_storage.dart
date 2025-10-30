@@ -384,4 +384,12 @@ class InMemoryStorage implements BaseStorageService {
   }) async {
     // No-op for in-memory storage - entity type sync states can be gotten from its cache
   }
+
+  @override
+  Future<BaseChangeLogEntry> testStoreChangeFromJson({
+    required Object changeJson,
+  }) {
+    // TODO: implement testStoreChangeFromJson
+    throw UnimplementedError();
+  }
 }

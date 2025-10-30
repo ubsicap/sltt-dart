@@ -1243,6 +1243,19 @@ class IsarStorageService extends BaseStorageService {
 
     return entityState;
   }
+
+  @override
+  Future<BaseChangeLogEntry> testStoreChangeFromJson({
+    required Map<String, dynamic> changeJson,
+  }) async {
+    final change = IsarChangeLogEntry.fromJson(changeJson);
+
+    await _isar.writeTxn(() async {
+      await _isar.isarChangeLogEntrys.put(change);
+    });
+
+    return change;
+  }
 }
 
 // Singleton wrappers for each storage type

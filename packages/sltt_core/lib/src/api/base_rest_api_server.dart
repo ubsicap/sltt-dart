@@ -168,6 +168,7 @@ abstract class BaseRestApiServer {
       _handleGetEntityState,
     );
     router.post('/api/storage/__test/state', _handleStorageTestStoreState);
+    router.post('/api/storage/__test/change', _handleStorageTestStoreChange);
     router.delete(
       '/api/storage/__test/reset/<domainCollection>/<domainId>',
       _handleStorageTestReset,
@@ -989,6 +990,58 @@ abstract class BaseRestApiServer {
           },
         },
         {
+          'method': 'POST',
+          'path': '/api/storage/__test/change',
+          'description':
+              'Test endpoint: Store change log entry directly without side effects',
+          'requestBody': {
+            'type': 'object',
+            'required': [
+              'cid',
+              'domainId',
+              'domainType',
+              'entityId',
+              'entityType',
+            ],
+            'properties': {
+              'cid': {'type': 'string', 'description': 'Change ID'},
+              'domainId': {
+                'type': 'string',
+                'description':
+                    'Domain ID (must start with "__test" for safety)',
+              },
+              'domainType': {
+                'type': 'string',
+                'description': 'Domain type (e.g., "project")',
+              },
+              'entityId': {
+                'type': 'string',
+                'description': 'Entity identifier',
+              },
+              'entityType': {'type': 'string', 'description': 'Type of entity'},
+              '... other change log fields': {
+                'description':
+                    'All other fields from the change log entry can be included',
+              },
+            },
+          },
+          'response': {
+            'type': 'object',
+            'properties': {
+              'message': {'type': 'string', 'description': 'Success message'},
+              'change': {
+                'type': 'object',
+                'description': 'The stored change log entry',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
+              },
+            },
+          },
+        },
+        {
           'method': 'DELETE',
           'path': '/api/storage/__test/reset/{domainCollection}/{domainId}',
           'description':
@@ -1745,6 +1798,66 @@ abstract class BaseRestApiServer {
       SlttLogger.logger.severe('Error storing test state: $e', e, stackTrace);
       return _errorResponse(
         'Failed to store test state: ${e.toString()}',
+        500,
+        stackTrace,
+      );
+    }
+  }
+
+  /// Test endpoint: Store change log entry directly
+  Future<Response> _handleStorageTestStoreChange(Request request) async {
+    try {
+      final bodyString = await request.readAsString();
+      if (bodyString.isEmpty) {
+        return _errorResponse('Request body is required', 400);
+      }
+
+      final body = jsonDecode(bodyString) as Map<String, dynamic>;
+
+      // Validate required fields
+      final cid = body['cid'] as String?;
+      final domainId = body['domainId'] as String?;
+      final domainType = body['domainType'] as String?;
+
+      if (cid == null || cid.isEmpty) {
+        return _errorResponse('cid is required', 400);
+      }
+      if (domainId == null || domainId.isEmpty) {
+        return _errorResponse('domainId is required', 400);
+      }
+      if (domainType == null || domainType.isEmpty) {
+        return _errorResponse('domainType is required', 400);
+      }
+
+      // Only allow test domain IDs for safety
+      if (!domainId.startsWith('__test')) {
+        return _errorResponse(
+          'Test store change is only allowed for __testXXX domain IDs',
+          403,
+        );
+      }
+
+      // Store the change (storage will deserialize to appropriate type)
+      final storedChange = await storage.testStoreChangeFromJson(
+        changeJson: body,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'Change log entry stored successfully',
+          'change': storedChange.toJson(),
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on FormatException catch (e) {
+      return _errorResponse('Invalid JSON format: ${e.message}', 400);
+    } on ArgumentError catch (e) {
+      return _errorResponse('$e', 400);
+    } catch (e, stackTrace) {
+      SlttLogger.logger.severe('Error storing test change: $e', e, stackTrace);
+      return _errorResponse(
+        'Failed to store test change: ${e.toString()}',
         500,
         stackTrace,
       );

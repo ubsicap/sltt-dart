@@ -213,6 +213,27 @@ class DynamoDBStorageService extends BaseStorageService {
     return entityState;
   }
 
+  /// For testing: Store a change log entry directly without any processing or side effects.
+  ///
+  /// This is a simplified version that only handles change log storage.
+  /// Useful for testing change log entry storage and retrieval.
+  ///
+  /// Parameters:
+  /// - [changeJson]: The complete change log entry JSON to store
+  ///
+  /// Returns the stored change log entry.
+  @override
+  Future<BaseChangeLogEntry> testStoreChangeFromJson({
+    required Map<String, dynamic> changeJson,
+  }) async {
+    await initialize();
+
+    final change = DynamoChangeLogEntry.fromJson(changeJson);
+    await _putChangeLogEntry(change);
+
+    return change;
+  }
+
   @override
   Future<BaseEntityState?> getEntityState({
     required String domainType,
@@ -286,7 +307,10 @@ class DynamoDBStorageService extends BaseStorageService {
     if (items == null || items.isEmpty) return null;
 
     return DynamoChangeLogEntry.fromJson(
-      _decodeItem(items.first as Map<String, dynamic>),
+      _decodeItem(
+        items.first as Map<String, dynamic>,
+        excludeStorageKeys: true,
+      ),
     );
   }
 
@@ -343,7 +367,7 @@ class DynamoDBStorageService extends BaseStorageService {
     return items
         .map(
           (item) => DynamoChangeLogEntry.fromJson(
-            _decodeItem(item as Map<String, dynamic>),
+            _decodeItem(item as Map<String, dynamic>, excludeStorageKeys: true),
           ),
         )
         .toList();
@@ -1246,8 +1270,12 @@ class DynamoDBStorageService extends BaseStorageService {
   }) {
     final result = <String, dynamic>{};
     for (final entry in item.entries) {
-      // Skip DynamoDB partition/sort keys if requested
-      if (excludeStorageKeys && (entry.key == 'pk' || entry.key == 'sk')) {
+      // Skip DynamoDB partition/sort keys and GSI keys if requested
+      if (excludeStorageKeys &&
+          (entry.key == 'pk' ||
+              entry.key == 'sk' ||
+              entry.key == 'gsi1pk' ||
+              entry.key == 'gsi1sk')) {
         continue;
       }
       result[entry.key] = _decodeValue(entry.value);
