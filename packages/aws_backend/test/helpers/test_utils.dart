@@ -59,17 +59,70 @@ Future<http.Response> saveProjectChange(
       projectData ??
       BaseDataFields(parentId: 'parentId', parentProp: 'parentProp');
 
+  return saveChange<BaseDataFields>(
+    baseUrl,
+    domainType: 'project',
+    domainId: projectId,
+    entityType: 'project',
+    entityId: projectId,
+    data: data,
+    changeBy: changeBy,
+    srcStorageType: srcStorageType,
+    srcStorageId: srcStorageId,
+  );
+}
+
+/// Generic helper function to save any entity change to the API.
+///
+/// Creates and posts a change log entry to the `/api/changes` endpoint.
+///
+/// Parameters:
+/// - [baseUrl]: The base URL of the API server
+/// - [domainType]: The domain type (e.g., 'project')
+/// - [domainId]: The domain ID (should start with `__test` for tests)
+/// - [entityType]: The entity type (e.g., 'portion', 'document')
+/// - [entityId]: The entity ID
+/// - [data]: The entity data fields
+/// - [changeBy]: The user making the change (defaults to 'userId')
+/// - [srcStorageType]: Source storage type (defaults to 'cloud')
+/// - [srcStorageId]: Source storage ID (defaults to 'test')
+///
+/// Returns the HTTP response from the POST request.
+///
+/// Example:
+/// ```dart
+/// final response = await saveChange<PortionDataFields>(
+///   baseUrl,
+///   domainType: 'project',
+///   domainId: '__test_project__',
+///   entityType: 'portion',
+///   entityId: 'portion-1',
+///   data: PortionDataFields(name: 'Test', parentId: 'root', parentProp: 'portions'),
+/// );
+/// expect(response.statusCode, anyOf([200, 201]));
+/// ```
+Future<http.Response> saveChange<TData extends BaseDataFields>(
+  Uri baseUrl, {
+  required String domainType,
+  required String domainId,
+  required String entityType,
+  required String entityId,
+  required TData data,
+  String changeBy = 'userId',
+  String srcStorageType = 'cloud',
+  String srcStorageId = 'test',
+}) async {
   final change =
       ChangeLogEntryFactoryService.forChangeSave<
         DynamoChangeLogEntry,
         int,
-        BaseDataFields
+        TData
       >(
         factory: DynamoChangeLogEntry.new,
-        domainType: 'project',
-        domainId: projectId,
-        entityType: 'project',
-        entityId: projectId,
+        domainType: domainType,
+        domainId: domainId,
+        entityType: entityType,
+        entityId: entityId,
         changeBy: changeBy,
         data: data,
       );
@@ -83,11 +136,8 @@ Future<http.Response> saveProjectChange(
 
   final payload = jsonEncode(request.toJson());
 
-  final apiChangesPath = '${baseUrl.path}/api/changes';
-  final url = baseUrl.replace(path: apiChangesPath);
-
   return http.post(
-    url,
+    Uri.parse('$baseUrl/api/changes'),
     body: payload,
     headers: {'Content-Type': 'application/json'},
   );
