@@ -331,23 +331,21 @@ class DynamoDBStorageService extends BaseStorageService {
     final payload = <String, dynamic>{
       'TableName': tableName,
       'IndexName': 'GSI1',
-      'KeyConditionExpression': 'gsi1pk = :pk',
-      'ExpressionAttributeValues': {
-        ':pk': {'S': gsiPk},
-      },
       'ScanIndexForward': true,
     };
 
     if (cursor != null) {
-      // TODO: ExclusiveStartKey should come from LastEvaluatedKey, not manually constructed
-      // For now, constructing a placeholder that won't work correctly with pagination
-      payload['ExclusiveStartKey'] = {
-        'gsi1pk': {'S': gsiPk},
-        'gsi1sk': {'S': _changeGsiSortKey(cursor)},
-        'pk': {'S': gsiPk}, // Placeholder - should be actual last item's pk
-        'sk': {
-          'S': _changeGsiSortKey(cursor),
-        }, // Placeholder - should be actual last item's sk
+      // Use a range condition to get changes AFTER the cursor (exclusive)
+      payload['KeyConditionExpression'] = 'gsi1pk = :pk AND gsi1sk > :sk';
+      payload['ExpressionAttributeValues'] = {
+        ':pk': {'S': gsiPk},
+        ':sk': {'S': _changeGsiSortKey(cursor)},
+      };
+    } else {
+      // No cursor, get all changes
+      payload['KeyConditionExpression'] = 'gsi1pk = :pk';
+      payload['ExpressionAttributeValues'] = {
+        ':pk': {'S': gsiPk},
       };
     }
 

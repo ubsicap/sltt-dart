@@ -269,6 +269,14 @@ void main() {
           final change = DynamoChangeLogEntry.fromJson(itemJson);
 
           final dataJson = jsonDecode(change.dataJson) as Map<String, dynamic>;
+          final expectedSeq = i + 1;
+
+          // First validate sequence number
+          expect(
+            change.seq,
+            equals(expectedSeq),
+            reason: 'First page item at index $i should have seq $expectedSeq',
+          );
 
           expect(
             change.changeBy,
@@ -329,6 +337,14 @@ void main() {
 
           final dataJson = jsonDecode(change.dataJson) as Map<String, dynamic>;
           final expectedUserNum = i + 3; // Third user onwards
+          final expectedSeq = i + 3; // Third sequence number onwards
+
+          // First validate sequence number
+          expect(
+            change.seq,
+            equals(expectedSeq),
+            reason: 'Second page item at index $i should have seq $expectedSeq',
+          );
 
           expect(
             change.changeBy,
