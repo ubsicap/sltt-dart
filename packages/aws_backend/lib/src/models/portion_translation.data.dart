@@ -20,5 +20,6 @@ class PortionTranslationData extends BaseDataFields {
   factory PortionTranslationData.fromJson(Map<String, dynamic> json) =>
       _$PortionTranslationDataFromJson(json);
 
+  @override
   Map<String, dynamic> toJson() => _$PortionTranslationDataToJson(this);
 }
