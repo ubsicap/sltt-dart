@@ -608,7 +608,7 @@ abstract class BaseRestApiServer {
                 'items': {'type': 'object'},
               },
               'hasMore': {'type': 'boolean'},
-              'nextCursor': {'type': 'string'},
+              'cursor': {'type': 'string'},
             },
           },
         },
