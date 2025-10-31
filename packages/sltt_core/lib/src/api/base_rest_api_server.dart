@@ -731,63 +731,6 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/projects/{projectId}/changes',
-          'description':
-              'Get all changes for a project with optional pagination',
-          'parameters': [
-            {
-              'name': 'projectId',
-              'type': 'string',
-              'required': true,
-              'description': 'Project identifier',
-            },
-            {
-              'name': 'cursor',
-              'type': 'integer',
-              'required': false,
-              'description': 'Starting sequence number (exclusive)',
-            },
-            {
-              'name': 'limit',
-              'type': 'integer',
-              'required': false,
-              'description': 'Maximum number of results (1-1000)',
-            },
-          ],
-          'response': {
-            ...paginationResponseSchema,
-            'properties': {
-              ...paginationResponseSchema['properties'] as Map<String, dynamic>,
-              'changes': {
-                'type': 'array',
-                'items': changeObjectSchema,
-                'description': 'List of changes for the specified project',
-              },
-            },
-          },
-        },
-        {
-          'method': 'GET',
-          'path': '/api/projects/{projectId}/changes/{seq}',
-          'description': 'Get specific change by sequence number for a project',
-          'parameters': [
-            {
-              'name': 'projectId',
-              'type': 'string',
-              'required': true,
-              'description': 'Project identifier',
-            },
-            {
-              'name': 'seq',
-              'type': 'integer',
-              'required': true,
-              'description': 'Change sequence number',
-            },
-          ],
-          'response': changeObjectSchema,
-        },
-        {
-          'method': 'GET',
           'path': '/api/projects/{projectId}/stats',
           'description':
               'Get statistics about changes and entity types for a project',
