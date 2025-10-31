@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 // helper removed; tests now use LocalStorageService.instance for seeding
@@ -186,10 +187,9 @@ void main() {
     });
 
     test('downsync [create]: save cloud changes > downsync to local', () async {
-      final cloud = CloudStorageService.instance;
-      final cloudStorageId = await cloud.getStorageId();
       final projectId = '__test_2';
-      final cloudChange = await saveCloudChange(
+      final cloudChange = await saveCloudChangeViaHttp(
+        cloudBaseUrl: cloudBaseUrl,
         srcStorageType: srcStorageType,
         srcStorageId: srcStorageId,
         domainId: projectId,
@@ -200,14 +200,6 @@ void main() {
         ),
         userId: 'test',
         operation: 'create',
-        fnGetExpectedChangeUpdates: (cloudSaveChange) => [
-          expectedChangeUpdatesFromCreateChange(
-            createChange: cloudSaveChange,
-            storageId: cloudStorageId,
-          ),
-        ],
-        fnGetExpectedStateUpdates: (change) =>
-            expectedStateFromChange(change, isCloudStorage: true),
       );
       final syncManager = SyncManager.instance;
       await syncManager.initialize();
@@ -425,8 +417,6 @@ void main() {
       () async {
         final syncManager = SyncManager.instance;
         final local = LocalStorageService.instance;
-        final cloud = CloudStorageService.instance;
-        final cloudStorageId = await cloud.getStorageId();
 
         // seed cloud first then local so local lww change wins
         const projectId = '__test_full_cloud_local_lww';
@@ -434,7 +424,8 @@ void main() {
           const Duration(minutes: 1),
         );
         const expectedNameLocalUpdate = 'Edited by local-full';
-        await saveCloudChange(
+        await saveCloudChangeViaHttp(
+          cloudBaseUrl: cloudBaseUrl,
           srcStorageType: srcStorageType,
           srcStorageId: srcStorageId,
           domainId: projectId,
@@ -449,14 +440,6 @@ void main() {
           }),
           userId: 'cloud-full',
           operation: 'create',
-          fnGetExpectedChangeUpdates: (cloudSaveChange) => [
-            expectedChangeUpdatesFromCreateChange(
-              createChange: cloudSaveChange,
-              storageId: cloudStorageId,
-            ),
-          ],
-          fnGetExpectedStateUpdates: (change) =>
-              expectedStateFromChange(change, isCloudStorage: true),
         );
         await syncManager.initialize();
         syncManager.configureCloudUrl(cloudBaseUrl);
@@ -620,8 +603,6 @@ void main() {
       () async {
         final syncManager = SyncManager.instance;
         final local = LocalStorageService.instance;
-        final cloud = CloudStorageService.instance;
-        final cloudStorageId = await cloud.getStorageId();
         final expectedOutdatedNameLocalUpdate =
             'Expected outdated edit by local-full';
         final expectedNameLocalAfterDownsync =
@@ -630,7 +611,8 @@ void main() {
         const projectId = '__test_full_cloud_local_outdated';
 
         // Save a cloud change that should be downsynced
-        await saveCloudChange(
+        await saveCloudChangeViaHttp(
+          cloudBaseUrl: cloudBaseUrl,
           srcStorageType: srcStorageType,
           srcStorageId: srcStorageId,
           domainId: projectId,
@@ -645,14 +627,6 @@ void main() {
           }),
           userId: 'cloud-full',
           operation: kChangeOperationCreate,
-          fnGetExpectedChangeUpdates: (cloudSaveChange) => [
-            expectedChangeUpdatesFromCreateChange(
-              createChange: cloudSaveChange,
-              storageId: cloudStorageId,
-            ),
-          ],
-          fnGetExpectedStateUpdates: (change) =>
-              expectedStateFromChange(change, isCloudStorage: true),
         );
 
         await syncManager.initialize();
@@ -724,7 +698,8 @@ void main() {
         );
 
         // Save a cloud change that trumps local change
-        final cloudChange2 = await saveCloudChange(
+        final cloudChange2 = await saveCloudChangeViaHttp(
+          cloudBaseUrl: cloudBaseUrl,
           srcStorageType: srcStorageType,
           srcStorageId: srcStorageId,
           domainId: projectId,
@@ -739,35 +714,6 @@ void main() {
           }),
           userId: 'cloud-full',
           operation: 'update',
-          fnGetExpectedChangeUpdates: (cloudSaveChange) => [
-            {
-              'cid': cloudSaveChange.cid,
-              'updates': {
-                'operation': cloudSaveChange.operation,
-                'operationInfoJson':
-                    '{"outdatedBys":[],"noOpFields":["parentId","parentProp"]}',
-                'stateChanged': true,
-                'storageId': cloudStorageId,
-                'cloudAt': isA<String>(),
-                'storedAt': isA<String>(),
-                'dataJson': '{"nameLocal":"$expectedNameLocalAfterDownsync"}',
-              },
-            },
-          ],
-          fnGetExpectedStateUpdates: (change) => {
-            'domainType': 'project',
-            'change_domainId': projectId,
-            'change_changeAt': change.changeAt.toIso8601String(),
-            'change_cid': change.cid,
-            'change_changeBy': change.changeBy,
-            'change_storedAt': isNotNull,
-            'change_cloudAt': isNotNull,
-            'data_nameLocal': expectedNameLocalAfterDownsync,
-            'data_nameLocal_changeAt_': change.changeAt.toIso8601String(),
-            'data_nameLocal_cid_': change.cid,
-            'data_nameLocal_changeBy_': change.changeBy,
-            'data_nameLocal_cloudAt_': isNotNull,
-          },
         );
 
         final fullSyncResult = await syncManager.performFullSync(
@@ -889,8 +835,6 @@ void main() {
       () async {
         final syncManager = SyncManager.instance;
         final local = LocalStorageService.instance;
-        final cloud = CloudStorageService.instance;
-        final cloudStorageId = await cloud.getStorageId();
 
         const projectId = '__test_full_cloud_local_pUpdate';
         final cloudChangeAt1 = DateTime.parse('2024-01-01T12:00:00Z');
@@ -904,7 +848,8 @@ void main() {
 
         // Save first cloud change that contains 'nameLocal' field that local can overwrite
         // next cloud change will update 'rank', which will be later than local rank change
-        await saveCloudChange(
+        await saveCloudChangeViaHttp(
+          cloudBaseUrl: cloudBaseUrl,
           srcStorageType: srcStorageType,
           srcStorageId: srcStorageId,
           domainId: projectId,
@@ -920,14 +865,6 @@ void main() {
           }),
           userId: 'cloud-full',
           operation: 'create',
-          fnGetExpectedChangeUpdates: (cloudSaveChange) => [
-            expectedChangeUpdatesFromCreateChange(
-              createChange: cloudSaveChange,
-              storageId: cloudStorageId,
-            ),
-          ],
-          fnGetExpectedStateUpdates: (change) =>
-              expectedStateFromChange(change, isCloudStorage: true),
         );
 
         await syncManager.initialize();
@@ -1005,7 +942,8 @@ void main() {
         );
 
         // Save second cloud change that contains 'rank' field that should overwrite local change
-        final cloudChange2 = await saveCloudChange(
+        final cloudChange2 = await saveCloudChangeViaHttp(
+          cloudBaseUrl: cloudBaseUrl,
           srcStorageType: srcStorageType,
           srcStorageId: srcStorageId,
           domainId: projectId,
@@ -1020,35 +958,6 @@ void main() {
           }),
           userId: 'cloud-full',
           operation: 'update',
-          fnGetExpectedChangeUpdates: (cloudSaveChange) => [
-            {
-              'cid': cloudSaveChange.cid,
-              'updates': {
-                'operation': cloudSaveChange.operation,
-                'operationInfoJson':
-                    '{"outdatedBys":[],"noOpFields":["parentId","parentProp"]}',
-                'stateChanged': true,
-                'storageId': cloudStorageId,
-                'cloudAt': isA<String>(),
-                'storedAt': isA<String>(),
-                'dataJson': '{"rank":"$cloudChange2Rank"}',
-              },
-            },
-          ],
-          fnGetExpectedStateUpdates: (change) => {
-            'domainType': 'project',
-            'change_domainId': projectId,
-            'change_changeAt': change.changeAt.toIso8601String(),
-            'change_cid': change.cid,
-            'change_changeBy': change.changeBy,
-            'change_storedAt': isNotNull,
-            'change_cloudAt': isNotNull,
-            'data_rank': cloudChange2Rank,
-            'data_rank_changeAt_': change.changeAt.toIso8601String(),
-            'data_rank_cid_': change.cid,
-            'data_rank_cloudAt_': isNotNull,
-            'data_rank_changeBy_': change.changeBy,
-          },
         );
 
         final fullSyncResult = await syncManager.performFullSync(
@@ -1265,31 +1174,6 @@ Future<void> verifyLocalChangeSaved({
 /// interface into the test.
 // Test adapter removed: tests now use the real LocalStorageService.instance
 
-Map<String, dynamic> expectedChangeUpdatesFromCreateChange({
-  required IsarChangeLogEntry createChange,
-  required String storageId,
-}) {
-  if (createChange.operation != kChangeOperationCreate) {
-    throw ArgumentError.value(
-      createChange.operation,
-      'createChange.operation',
-      'Expected create operation in ${createChange.toJson()}',
-    );
-  }
-  return {
-    'cid': createChange.cid,
-    'updates': {
-      'operation': createChange.operation,
-      'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
-      'stateChanged': true,
-      'storageId': storageId,
-      'cloudAt': isA<String>(),
-      'storedAt': isA<String>(),
-      'dataJson': createChange.dataJson,
-    },
-  };
-}
-
 // Helper to construct the expected flattened state map that the
 // ChangeProcessingService produces when upserting entity state. The
 // service expands the JSON fields in change.dataJson into flattened
@@ -1336,7 +1220,10 @@ Map<String, dynamic> expectedStateFromChange(
   return map;
 }
 
-Future<IsarChangeLogEntry> saveCloudChange({
+/// Save a cloud change via HTTP POST to /api/changes endpoint.
+/// This allows tests to work with both local in-process servers and remote AWS endpoints.
+Future<IsarChangeLogEntry> saveCloudChangeViaHttp({
+  required String cloudBaseUrl,
   required String srcStorageType,
   required String srcStorageId,
   required String domainId,
@@ -1345,12 +1232,7 @@ Future<IsarChangeLogEntry> saveCloudChange({
   required String dataJson,
   required String userId,
   required String operation,
-  required List<Map<String, dynamic>> Function(IsarChangeLogEntry)
-  fnGetExpectedChangeUpdates,
-  required Map<String, dynamic> Function(IsarChangeLogEntry)
-  fnGetExpectedStateUpdates,
 }) async {
-  final cloudStorage = CloudStorageService.instance;
   final cloudSaveChange =
       ChangeLogEntryFactoryService.forChangeSave<
         IsarChangeLogEntry,
@@ -1369,108 +1251,32 @@ Future<IsarChangeLogEntry> saveCloudChange({
         operation: operation,
       );
 
-  final cloudSaveResult = await ChangeProcessingService.storeChanges(
-    storageMode: 'save',
-    changes: [cloudSaveChange.toJson()],
+  final request = CreateChangesRequest(
+    changes: [cloudSaveChange],
     srcStorageType: srcStorageType,
     srcStorageId: srcStorageId,
-    storage: cloudStorage,
-    includeChangeUpdates: true,
-    includeStateUpdates: true,
+    storageMode: 'save',
   );
+
+  final response = await http.post(
+    Uri.parse('$cloudBaseUrl/api/changes'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode(request.toJson()),
+  );
+
   expect(
-    cloudSaveResult.isSuccess,
-    isTrue,
+    response.statusCode,
+    anyOf([200, 201]),
     reason:
-        'Saving cloud storage with __test_2 should succeed: ${cloudSaveResult.errorMessage}',
+        'Saving cloud change via HTTP should succeed, got ${response.statusCode}: ${response.body}',
   );
 
-  final cloudStateUpdates = [
-    {
-      'cid': cloudSaveChange.cid,
-      'state': fnGetExpectedStateUpdates(cloudSaveChange),
-    },
-  ];
-  final cloudChangeUpdates = fnGetExpectedChangeUpdates(cloudSaveChange);
-  final cloudInfo = [
-    {
-      'cid': cloudSaveChange.cid,
-      'operation': cloudSaveChange.operation,
-      'info': jsonDecode(
-        cloudChangeUpdates.first['updates']!['operationInfoJson'],
-      ),
-    },
-  ];
+  final responseBody = jsonDecode(response.body) as Map<String, dynamic>;
   expect(
-    cloudSaveResult.resultsSummary?.toJson(),
-    equals({
-      'storageType': 'cloud',
-      'storageId': await cloudStorage.getStorageId(),
-      'stateUpdates': cloudStateUpdates,
-      'changeUpdates': cloudChangeUpdates,
-      'created': [
-        cloudSaveChange.operation == kChangeOperationCreate
-            ? cloudSaveChange.cid
-            : null,
-      ].whereType<String>().toList(),
-      'updated': [
-        [
-              kChangeOperationUpdate,
-              kChangeOperationPartialUpdate,
-            ].contains(cloudSaveChange.operation)
-            ? cloudSaveChange.cid
-            : null,
-      ].whereType<String>().toList(),
-      'pUpdated': [
-        cloudSaveChange.operation == kChangeOperationPartialUpdate
-            ? cloudSaveChange.cid
-            : null,
-      ].whereType<String>().toList(),
-      'deleted': [],
-      'outdated': [],
-      'noOps': [],
-      'clouded': [],
-      'dups': [],
-      'unknowns': [],
-      'info': cloudInfo,
-      'errors': [],
-      'unprocessed': [],
-    }),
-    reason: 'Saving cloud storage should process 1 change',
+    responseBody['errors'],
+    isEmpty,
+    reason: 'Cloud change save should have no errors: ${response.body}',
   );
 
-  // Verify storedAt was set on the persisted state. If the storage
-  // implementation also sets a cloudAt timestamp we expect storedAt == cloudAt.
-  final cloudSeedJson = cloudSaveResult.resultsSummary?.toJson();
-  if (cloudSeedJson != null) {
-    final stateUpdates = cloudSeedJson['stateUpdates'] as List?;
-    if (stateUpdates != null && stateUpdates.isNotEmpty) {
-      final state = stateUpdates.first['state'] as Map<String, dynamic>?;
-      expect(state, isNotNull);
-      expect(
-        state!.containsKey('change_storedAt'),
-        isTrue,
-        reason:
-            'cloud seed state must include change_storedAt: ${const JsonEncoder.withIndent(' ').convert(cloudSeedJson)}',
-      );
-      final storedAt = state['change_storedAt'] as String?;
-      expect(storedAt, isNotNull);
-      // If the changeUpdates reported a cloudAt, ensure storedAt equals it.
-      final changeUpdates = cloudSeedJson['changeUpdates'] as List?;
-      if (changeUpdates != null && changeUpdates.isNotEmpty) {
-        final cloudAt =
-            (changeUpdates.first['updates']
-                    as Map<String, dynamic>?)?['cloudAt']
-                as String?;
-        if (cloudAt != null) {
-          expect(
-            storedAt,
-            equals(cloudAt),
-            reason: 'cloud storedAt should equal cloudAt',
-          );
-        }
-      }
-    }
-  }
   return cloudSaveChange;
 }
