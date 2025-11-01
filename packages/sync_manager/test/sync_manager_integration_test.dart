@@ -420,7 +420,9 @@ Future<void> testDownsyncCreate({
   syncManager.configureCloudUrl(cloudBaseUrl);
 
   // Trigger downsync; the cloud server should start with a __test_downsync_create project
-  final downsyncResult = await syncManager.downsyncFromCloud();
+  final downsyncResult = await syncManager.downsyncFromCloud(
+    domainIds: [projectId],
+  );
 
   expect(
     downsyncResult.success,
@@ -1292,8 +1294,14 @@ Future<void> resetTestProject(
   String projectId, {
   String domainType = 'projects',
 }) async {
-  await http.delete(
+  final result = await http.delete(
     Uri.parse('$baseUrl/api/storage/__test/reset/$domainType/$projectId'),
+  );
+  expect(
+    result.statusCode,
+    equals(200),
+    reason:
+        'Resetting test project $projectId should return HTTP 200, but got ${result.statusCode}: ${result.body}',
   );
 }
 
