@@ -406,7 +406,6 @@ class DynamoDBStorageService extends BaseStorageService {
     var totalUpdates = 0;
     var totalDeletes = 0;
     var latestChangeAt = DateTime.fromMillisecondsSinceEpoch(0);
-    var latestSeq = -1;
 
     for (final item in items) {
       // Deserialize DynamoEntityTypeSyncState from DynamoDB item
@@ -427,15 +426,25 @@ class DynamoDBStorageService extends BaseStorageService {
 
       if (state.changeAt.isAfter(latestChangeAt)) {
         latestChangeAt = state.changeAt;
-        latestSeq = state.seq;
       }
     }
+
+    // Query actual changes to get the true latest seq and total count
+    // This includes all changes, not just those categorized as create/update/delete
+    // Use the sequence counter to get the latest seq (it's always one ahead)
+    final latestSeq =
+        await _nextSequence(domainType: domainType, domainId: domainId) - 1;
+
+    // Total changes is the latest seq (assuming seq starts at 1 and increments by 1)
+    final totalChanges = latestSeq > 0 ? latestSeq : 0;
 
     final totals = EntityTypeSummary(
       creates: totalCreates,
       updates: totalUpdates,
       deletes: totalDeletes,
-      total: totalCreates + totalUpdates + totalDeletes,
+      total: totalChanges > 0
+          ? totalChanges
+          : totalCreates + totalUpdates + totalDeletes,
       latestChangeAt: latestChangeAt.toIso8601String(),
       latestSeq: latestSeq,
     );
