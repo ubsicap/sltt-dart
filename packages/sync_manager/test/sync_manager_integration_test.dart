@@ -746,8 +746,6 @@ Future<void> testFullSyncUpdate({
       'data_nameLocal_changeBy_': 'local-full',
     },
   );
-  await syncManager.initialize();
-  syncManager.configureCloudUrl(cloudBaseUrl);
   final fullSyncResult = await syncManager.performFullSync(
     domainIds: [projectId],
   );
