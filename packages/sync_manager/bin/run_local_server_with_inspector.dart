@@ -92,12 +92,12 @@ void main(List<String> args) async {
   print('📊 Database: ${storage.databasePath}');
   print('');
   print('Available endpoints:');
-  print('   GET  /health                           - Health check');
-  print('   GET  /api/help                         - API documentation');
-  print('   POST /api/changes                      - Create changes');
-  print('   GET  /api/projects                     - List all projects');
-  print('   GET  /api/projects/{id}/changes        - Get project changes');
-  print('   GET  /api/projects/{id}/entity-states  - Get entity states');
+  print('   GET  /health                            - Health check');
+  print('   GET  /api/help                          - API documentation');
+  print('   POST /api/changes                       - Create changes');
+  print('   GET  /api/projects                      - List all projects');
+  print('   GET  /api/changes/projects/{id}         - Get project changes');
+  print('   GET  /api/state/projects/{id}/portions  - Get entity states');
   print('');
   print('Press CTRL+C to stop the server');
   print('');
