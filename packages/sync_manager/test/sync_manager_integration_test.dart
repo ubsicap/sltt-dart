@@ -147,6 +147,7 @@ void runIntegrationTests({
       cloudBaseUrl: cloudBaseUrl(),
       srcStorageId: srcStorageId(),
       srcStorageType: srcStorageType(),
+      useDynamoDb: useDynamoDb,
     );
   });
 
@@ -166,6 +167,7 @@ void runIntegrationTests({
         cloudBaseUrl: cloudBaseUrl(),
         srcStorageId: srcStorageId(),
         srcStorageType: srcStorageType(),
+        useDynamoDb: useDynamoDb,
       );
     },
     timeout: Timeout.none,
@@ -220,10 +222,18 @@ Future<void> testOutsyncCreate({
   required String cloudBaseUrl,
   required String srcStorageId,
   required String srcStorageType,
+  bool useDynamoDb = false,
 }) async {
   final syncManager = SyncManager.instance;
   final local = LocalStorageService.instance;
   final localStorageId = await local.getStorageId();
+
+  const projectId = '__test_outsync_create';
+
+  // Reset project if using DynamoDB
+  if (useDynamoDb) {
+    await resetTestProject(cloudBaseUrl, projectId);
+  }
 
   final changeBy = 'test';
   final change =
@@ -234,9 +244,9 @@ Future<void> testOutsyncCreate({
       >(
         factory: IsarChangeLogEntry.new,
         domainType: 'project',
-        domainId: '__test_1',
+        domainId: projectId,
         entityType: 'project',
-        entityId: '__test_1',
+        entityId: projectId,
         changeBy: changeBy,
         changeAt: DateTime.now(),
         cid: generateCid(entityType: EntityType.project, userId: changeBy),
@@ -298,7 +308,7 @@ Future<void> testOutsyncCreate({
     reason: 'Outsync summary should only include the local-origin change cid',
   );
   // Use SyncManager.getSyncStatus to confirm the project has no pending outsyncs
-  final status = await syncManager.getSyncStatus('__test_1');
+  final status = await syncManager.getSyncStatus(projectId);
   expect(
     status.localChangeStats?.totals.toJson(),
     equals({
@@ -310,7 +320,7 @@ Future<void> testOutsyncCreate({
       'latestSeq': -1,
     }),
     reason:
-        'After successful outsync, project __test_1 should have 0 pending outsyncs',
+        'After successful outsync, project $projectId should have 0 pending outsyncs',
   );
   // confirm cloud state totals
   final cloudTotals = status.cloudStateStats?.totals;
@@ -325,7 +335,7 @@ Future<void> testOutsyncCreate({
       'latestSeq': 1,
     }),
     reason:
-        'After successful outsync, project __test_1 should have change logs in the cloud',
+        'After successful outsync, project $projectId should have change logs in the cloud',
   );
 }
 
@@ -336,7 +346,7 @@ Future<void> testDownsyncCreate({
   required String srcStorageType,
   bool useDynamoDb = false,
 }) async {
-  final projectId = '__test_2';
+  final projectId = '__test_downsync_create';
 
   // Reset project if using DynamoDB
   if (useDynamoDb) {
@@ -360,7 +370,7 @@ Future<void> testDownsyncCreate({
   await syncManager.initialize();
   syncManager.configureCloudUrl(cloudBaseUrl);
 
-  // Trigger downsync; the cloud server should start with a __test_2 project
+  // Trigger downsync; the cloud server should start with a __test_downsync_create project
   final downsyncResult = await syncManager.downsyncFromCloud();
 
   expect(
@@ -387,7 +397,7 @@ Future<void> testDownsyncCreate({
         'Downsynced change payloads must include cloudAt to mark cloud origin, but got: $downsyncedChanges',
   );
 
-  final status = await syncManager.getSyncStatus('__test_2');
+  final status = await syncManager.getSyncStatus('__test_downsync_create');
   // After downsync we expect local state stats to be available for the project
   final totalsObj = status.localStateStats?.totals;
   final totals = totalsObj?.toJson();
@@ -405,7 +415,7 @@ Future<void> testDownsyncCreate({
       'latestSeq': totals?['latestSeq'],
     }),
     reason:
-        'getSyncStatus should report local state stats for __test_2 after downsync',
+        'getSyncStatus should report local state stats for __test_downsync_create after downsync',
   );
 
   // confirm cloud state totals
@@ -426,7 +436,7 @@ Future<void> testDownsyncCreate({
         'After full sync, project $projectId should have 1 total cloud changes',
   );
 
-  // Verify local storage has received changes for __test_2 and report status via SyncManager
+  // Verify local storage has received changes for __test_downsync_create and report status via SyncManager
   final local = LocalStorageService.instance;
   final projects = await local.getAllDomainIds(domainType: 'project');
   expect(
@@ -444,13 +454,20 @@ Future<void> testFullSyncCreate({
   required String cloudBaseUrl,
   required String srcStorageId,
   required String srcStorageType,
+  bool useDynamoDb = false,
 }) async {
   final syncManager = SyncManager.instance;
   final local = LocalStorageService.instance;
 
   final expectedNameLocalUpdate = 'Edited by local-full';
 
-  const projectId = '__test_full_cloud_local_create_update';
+  const projectId = '__test_full_sync_create';
+
+  // Reset project if using DynamoDB
+  if (useDynamoDb) {
+    await resetTestProject(cloudBaseUrl, projectId);
+  }
+
   final localChange =
       ChangeLogEntryFactoryService.forChangeSave<
         IsarChangeLogEntry,
