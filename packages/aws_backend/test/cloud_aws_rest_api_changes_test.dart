@@ -403,5 +403,99 @@ void main() {
       tags: ['internet', 'integration'],
       timeout: Timeout.none,
     );
+
+    test(
+      'POST with client-provided seq value ignores it and assigns new seq',
+      () async {
+        final projectId = '__test_seq_always_bump__';
+        await resetTestProject(baseUrl, projectId);
+
+        // Create first change normally to establish seq=1
+        final resp1 = await saveProjectChange(
+          baseUrl,
+          projectId,
+          projectData: BaseDataFields(
+            parentId: 'root',
+            parentProp: 'projects',
+            rank: 'rank1',
+          ),
+          changeBy: 'user1',
+        );
+        expect(resp1.statusCode, anyOf([200, 201]));
+
+        // Create second change with explicit seq=999 in sync mode
+        // The server should ignore this and assign seq=2 from its own counter
+        final change2 = DynamoChangeLogEntry(
+          storageId: 'test-storage-id',
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'project',
+          entityId: projectId,
+          operation: 'update',
+          stateChanged: true,
+          changeBy: 'user2',
+          changeAt: DateTime.now().toUtc(),
+          cid: generateCid(entityType: EntityType.project, userId: 'user2'),
+          dataJson: jsonEncode({'rank': 'rank2'}),
+          seq: 999, // This should be ignored by the server
+        );
+
+        final request2 = CreateChangesRequest(
+          changes: [change2],
+          srcStorageType: 'cloud',
+          srcStorageId: 'test',
+          storageMode: 'sync', // Use sync mode (not save mode)
+        );
+
+        final resp2 = await http.post(
+          Uri.parse('$baseUrl/api/changes'),
+          body: jsonEncode(request2.toJson()),
+          headers: {'Content-Type': 'application/json'},
+        );
+        expect(
+          resp2.statusCode,
+          anyOf([200, 201]),
+          reason: 'Got ${resp2.body}',
+        );
+
+        // Get all changes for the project
+        final getResp = await http.get(
+          Uri.parse('$baseUrl/api/changes/projects/$projectId'),
+          headers: {'Accept': 'application/json'},
+        );
+        expect(getResp.statusCode, equals(200));
+
+        final body = jsonDecode(getResp.body) as Map<String, dynamic>;
+        expect(body['changes'], isA<List>());
+        final items = body['changes'] as List;
+
+        // Should have exactly 2 changes
+        expect(items.length, equals(2));
+
+        // Verify first change has seq=1
+        final change1Json = items[0] as Map<String, dynamic>;
+        final change1 = DynamoChangeLogEntry.fromJson(change1Json);
+        expect(
+          change1.seq,
+          equals(1),
+          reason:
+              'First change should have seq=1 (assigned by server), got ${change1.seq}',
+        );
+        expect(change1.changeBy, equals('user1'));
+
+        // Verify second change has seq=2 (not 999)
+        final change2Json = items[1] as Map<String, dynamic>;
+        final change2Result = DynamoChangeLogEntry.fromJson(change2Json);
+        expect(
+          change2Result.seq,
+          equals(2),
+          reason:
+              'Second change should have seq=2 (assigned by server from its own counter, ignoring client-provided seq=999), got ${change2Result.seq}',
+        );
+        expect(change2Result.changeBy, equals('user2'));
+      },
+      tags: ['internet', 'integration'],
+      timeout: Timeout.none,
+    );
   });
 }

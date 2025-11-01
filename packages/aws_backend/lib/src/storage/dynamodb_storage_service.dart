@@ -132,12 +132,12 @@ class DynamoDBStorageService extends BaseStorageService {
     final newChange = DynamoChangeLogEntry.fromJson(mergedChangeJson);
 
     if (!skipChangeLogWrite) {
-      if (newChange.seq <= 0) {
-        newChange.seq = await _nextSequence(
-          domainType: domainType,
-          domainId: newChange.domainId,
-        );
-      }
+      // Always assign a new sequence number from DynamoDB's atomic counter
+      // The client-provided seq value (if any) is ignored
+      newChange.seq = await _nextSequence(
+        domainType: domainType,
+        domainId: newChange.domainId,
+      );
       await _putChangeLogEntry(newChange);
 
       // Upsert entity type sync state counters for change log
