@@ -770,9 +770,23 @@ class DynamoDBStorageService extends BaseStorageService {
     }
 
     // Collect all items to delete for this domain
+    // Use a Set with composite keys to ensure uniqueness
+    final itemKeys = <String>{};
     final itemsToDelete = <Map<String, dynamic>>[];
 
-    // 1. Scan for change log entries
+    // 1. Query GSI for change log entries (this is the most efficient way)
+    final changeGsiPk = _changeGsiPartition(
+      domainType: domainType,
+      domainId: domainId,
+    );
+
+    await _queryGsiAndCollectItems(
+      gsiPk: changeGsiPk,
+      itemKeys: itemKeys,
+      itemsToDelete: itemsToDelete,
+    );
+
+    // 2. Scan for any change log entries not caught by GSI (fallback)
     final changePkPrefix = _changePrimaryKeyPrefix(
       domainType: domainType,
       domainId: domainId,
@@ -783,10 +797,11 @@ class DynamoDBStorageService extends BaseStorageService {
       expressionValues: {
         ':pkPrefix': {'S': changePkPrefix},
       },
+      itemKeys: itemKeys,
       itemsToDelete: itemsToDelete,
     );
 
-    // 2. Scan for entity states
+    // 3. Scan for entity states
     final statePkPrefix = _statePrimaryKeyDomainPrefix(
       domainType: domainType,
       domainId: domainId,
@@ -797,10 +812,11 @@ class DynamoDBStorageService extends BaseStorageService {
       expressionValues: {
         ':pkPrefix': {'S': statePkPrefix},
       },
+      itemKeys: itemKeys,
       itemsToDelete: itemsToDelete,
     );
 
-    // 3. Scan for entity type sync states (change logs)
+    // 4. Scan for entity type sync states (change logs)
     final etscPk = _entityTypeSyncStatePrimaryKey(
       domainType: domainType,
       domainId: domainId,
@@ -812,10 +828,11 @@ class DynamoDBStorageService extends BaseStorageService {
       expressionValues: {
         ':pk': {'S': etscPk},
       },
+      itemKeys: itemKeys,
       itemsToDelete: itemsToDelete,
     );
 
-    // 4. Scan for entity type sync states (entity states)
+    // 5. Scan for entity type sync states (entity states)
     final etssPk = _entityTypeSyncStatePrimaryKey(
       domainType: domainType,
       domainId: domainId,
@@ -827,29 +844,91 @@ class DynamoDBStorageService extends BaseStorageService {
       expressionValues: {
         ':pk': {'S': etssPk},
       },
+      itemKeys: itemKeys,
       itemsToDelete: itemsToDelete,
     );
 
-    // 5. Add sequence counter to delete list
+    // 6. Add sequence counter to delete list
     final seqPk = _sequencePrimaryKey(
       domainType: domainType,
       domainId: domainId,
     );
     final seqSk = _sequenceCounterSortKey();
 
-    itemsToDelete.add({
-      'pk': {'S': seqPk},
-      'sk': {'S': seqSk},
-    });
+    final seqCompositeKey = '$seqPk#$seqSk';
+    if (!itemKeys.contains(seqCompositeKey)) {
+      itemKeys.add(seqCompositeKey);
+      itemsToDelete.add({
+        'pk': {'S': seqPk},
+        'sk': {'S': seqSk},
+      });
+    }
 
-    // 6. Batch delete all collected items
+    // 7. Batch delete all collected items
     await _batchDeleteItems(itemsToDelete);
+  }
+
+  /// Helper method to query GSI and collect items for deletion
+  Future<void> _queryGsiAndCollectItems({
+    required String gsiPk,
+    required Set<String> itemKeys,
+    required List<Map<String, dynamic>> itemsToDelete,
+  }) async {
+    Map<String, dynamic>? lastEvaluatedKey;
+
+    do {
+      final payload = <String, dynamic>{
+        'TableName': tableName,
+        'IndexName': 'GSI1',
+        'KeyConditionExpression': 'gsi1pk = :pk',
+        'ExpressionAttributeValues': {
+          ':pk': {'S': gsiPk},
+        },
+        'ProjectionExpression': 'pk, sk',
+      };
+
+      if (lastEvaluatedKey != null) {
+        payload['ExclusiveStartKey'] = lastEvaluatedKey;
+      }
+
+      final response = await _dynamoRequest('Query', payload);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to query GSI: ${response.body}');
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final items = data['Items'] as List<dynamic>? ?? [];
+
+      for (final item in items) {
+        final itemMap = item as Map<String, dynamic>;
+        final pk = itemMap['pk'];
+        final sk = itemMap['sk'];
+
+        if (pk != null && sk != null) {
+          // Use composite key to ensure uniqueness
+          final pkValue = pk['S'] as String?;
+          final skValue = sk['S'] as String?;
+
+          if (pkValue != null && skValue != null) {
+            final compositeKey = '$pkValue#$skValue';
+            if (!itemKeys.contains(compositeKey)) {
+              itemKeys.add(compositeKey);
+              itemsToDelete.add({'pk': pk, 'sk': sk});
+            }
+          }
+        }
+      }
+
+      lastEvaluatedKey = data['LastEvaluatedKey'] as Map<String, dynamic>?;
+    } while (lastEvaluatedKey != null);
   }
 
   /// Helper method to scan and collect items for deletion
   Future<void> _scanAndCollectItems({
     required String filterExpression,
     required Map<String, dynamic> expressionValues,
+    required Set<String> itemKeys,
     required List<Map<String, dynamic>> itemsToDelete,
   }) async {
     Map<String, dynamic>? exclusiveStartKey;
@@ -877,7 +956,22 @@ class DynamoDBStorageService extends BaseStorageService {
 
       for (final item in items) {
         final itemMap = item as Map<String, dynamic>;
-        itemsToDelete.add({'pk': itemMap['pk'], 'sk': itemMap['sk']});
+        final pk = itemMap['pk'];
+        final sk = itemMap['sk'];
+
+        if (pk != null && sk != null) {
+          // Use composite key to ensure uniqueness
+          final pkValue = pk['S'] as String?;
+          final skValue = sk['S'] as String?;
+
+          if (pkValue != null && skValue != null) {
+            final compositeKey = '$pkValue#$skValue';
+            if (!itemKeys.contains(compositeKey)) {
+              itemKeys.add(compositeKey);
+              itemsToDelete.add({'pk': pk, 'sk': sk});
+            }
+          }
+        }
       }
 
       exclusiveStartKey = body['LastEvaluatedKey'] as Map<String, dynamic>?;
