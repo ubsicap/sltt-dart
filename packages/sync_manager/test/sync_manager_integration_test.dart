@@ -23,7 +23,7 @@ void main() {
   final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] != 'false';
 
   // Group 1: Tests with Isar-backed cloud storage (in-process)
-  group('SyncManager integration (Isar cloud)', () {
+  group('[isar] SyncManager integration (Isar cloud)', () {
     late String cloudBaseUrl;
     late String srcStorageId;
     late String srcStorageType;
@@ -81,26 +81,32 @@ void main() {
       await MultiServerLauncher.instance.stopServer(StorageType.cloud);
     });
 
-    test('outsync [create]: save local changes > outsync to cloud', () async {
-      await testOutsyncCreate(
-        cloudBaseUrl: cloudBaseUrl,
-        srcStorageId: srcStorageId,
-        srcStorageType: srcStorageType,
-        useDynamoDb: false,
-      );
-    });
-
-    test('downsync [create]: save cloud changes > downsync to local', () async {
-      await testDownsyncCreate(
-        cloudBaseUrl: cloudBaseUrl,
-        srcStorageId: srcStorageId,
-        srcStorageType: srcStorageType,
-        useDynamoDb: false,
-      );
-    });
+    test(
+      '[isar] outsync [create]: save local changes > outsync to cloud',
+      () async {
+        await testOutsyncCreate(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useDynamoDb: false,
+        );
+      },
+    );
 
     test(
-      'full sync [create]: save local changes > outsync to cloud > downsync same',
+      '[isar] downsync [create]: save cloud changes > downsync to local',
+      () async {
+        await testDownsyncCreate(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useDynamoDb: false,
+        );
+      },
+    );
+
+    test(
+      '[isar] full sync [create]: save local changes > outsync to cloud > downsync same',
       () async {
         await testFullSyncCreate(
           cloudBaseUrl: cloudBaseUrl,
@@ -113,7 +119,7 @@ void main() {
     );
 
     test(
-      'full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
+      '[isar] full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
       () async {
         await testFullSyncUpdate(
           cloudBaseUrl: cloudBaseUrl,
@@ -126,7 +132,7 @@ void main() {
     );
 
     test(
-      'full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
+      '[isar] full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
       () async {
         await testFullSyncOutdated(
           cloudBaseUrl: cloudBaseUrl,
@@ -139,7 +145,7 @@ void main() {
     );
 
     test(
-      'full sync [pUpdate]: cloud save > downsync > local save [rank, nameLocal] > cloud save [rank] > upsync - pUpdate nameLocal > downsynced cloud changes',
+      '[isar] full sync [partialUpdate]: cloud save > downsync > local save [rank, nameLocal] > cloud save [rank] > upsync - pUpdate nameLocal > downsynced cloud changes',
       () async {
         await testFullSyncPartialUpdate(
           cloudBaseUrl: cloudBaseUrl,
@@ -154,7 +160,7 @@ void main() {
 
   // Group 2: Tests with DynamoDB-backed cloud storage (HTTP)
   group(
-    'SyncManager integration (DynamoDB cloud)',
+    '[dynamodb] SyncManager integration (DynamoDB cloud)',
     () {
       late String cloudBaseUrl;
       late String srcStorageId;
@@ -180,22 +186,28 @@ void main() {
         await local.initialize();
 
         // Use cloud URL from environment or default to dev
-        cloudBaseUrl = Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl;
+        cloudBaseUrl =
+            'http://localhost:8080' ??
+            Platform.environment['CLOUD_BASE_URL'] ??
+            kCloudDevUrl;
         srcStorageId = 'test-storage';
         srcStorageType = 'cloud';
       });
 
-      test('outsync [create]: save local changes > outsync to cloud', () async {
-        await testOutsyncCreate(
-          cloudBaseUrl: cloudBaseUrl,
-          srcStorageId: srcStorageId,
-          srcStorageType: srcStorageType,
-          useDynamoDb: true,
-        );
-      });
+      test(
+        '[dynamodb] outsync [create]: save local changes > outsync to cloud',
+        () async {
+          await testOutsyncCreate(
+            cloudBaseUrl: cloudBaseUrl,
+            srcStorageId: srcStorageId,
+            srcStorageType: srcStorageType,
+            useDynamoDb: true,
+          );
+        },
+      );
 
       test(
-        'downsync [create]: save cloud changes > downsync to local',
+        '[dynamodb] downsync [create]: save cloud changes > downsync to local',
         () async {
           await testDownsyncCreate(
             cloudBaseUrl: cloudBaseUrl,
@@ -207,7 +219,7 @@ void main() {
       );
 
       test(
-        'full sync [create]: save local changes > outsync to cloud > downsync same',
+        '[dynamodb] full sync [create]: save local changes > outsync to cloud > downsync same',
         () async {
           await testFullSyncCreate(
             cloudBaseUrl: cloudBaseUrl,
@@ -220,7 +232,7 @@ void main() {
       );
 
       test(
-        'full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
+        '[dynamodb] full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
         () async {
           await testFullSyncUpdate(
             cloudBaseUrl: cloudBaseUrl,
@@ -233,7 +245,7 @@ void main() {
       );
 
       test(
-        'full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
+        '[dynamodb] full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
         () async {
           await testFullSyncOutdated(
             cloudBaseUrl: cloudBaseUrl,
@@ -246,7 +258,7 @@ void main() {
       );
 
       test(
-        'full sync [pUpdate]: cloud save > downsync > local save [rank, nameLocal] > cloud save [rank] > upsync - pUpdate nameLocal > downsynced cloud changes',
+        '[dynamodb] full sync [pUpdate]: cloud save > downsync > local save [rank, nameLocal] > cloud save [rank] > upsync - pUpdate nameLocal > downsynced cloud changes',
         () async {
           await testFullSyncPartialUpdate(
             cloudBaseUrl: cloudBaseUrl,
