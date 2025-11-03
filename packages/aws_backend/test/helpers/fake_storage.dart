@@ -215,5 +215,6 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
   Future<void> testResetDomainStorage({
     required String domainType,
     required String domainId,
+    bool isAdminReset = false,
   }) async {}
 }

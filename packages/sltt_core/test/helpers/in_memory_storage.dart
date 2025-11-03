@@ -351,6 +351,7 @@ class InMemoryStorage implements BaseStorageService {
   Future<void> testResetDomainStorage({
     required String domainType,
     required String domainId,
+    bool isAdminReset = false,
   }) {
     // TODO: implement testResetDomainStorage
     throw UnimplementedError();

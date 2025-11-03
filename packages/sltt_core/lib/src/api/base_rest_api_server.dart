@@ -174,6 +174,11 @@ abstract class BaseRestApiServer {
       _handleStorageTestReset,
     );
 
+    router.delete(
+      '/api/admin/storage/reset/<domainCollection>/<domainId>',
+      _handleAdminStorageDomainReset,
+    );
+
     // Handle OPTIONS requests for CORS
     router.options('/<path|.*>', _handleOptions);
 
@@ -191,7 +196,7 @@ abstract class BaseRestApiServer {
     return Response.ok(
       jsonEncode({
         'status': 'healthy',
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
         'server': serverName,
         'storageType': storageTypeDescription,
       }),
@@ -1022,7 +1027,7 @@ abstract class BaseRestApiServer {
           },
         },
       ],
-      'timestamp': DateTime.now().toIso8601String(),
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
     };
 
     return Response.ok(
@@ -1399,7 +1404,7 @@ abstract class BaseRestApiServer {
           'projectId': domainId,
           'changeStats': changeStatsJson,
           'entityTypeStats': entityTypeStatsJson,
-          'timestamp': DateTime.now().toIso8601String(),
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
           'storageType': storageTypeDescription,
         }),
         headers: {'Content-Type': 'application/json'},
@@ -1472,7 +1477,7 @@ abstract class BaseRestApiServer {
             'deletes': totalDeletes,
           },
           'entityTypeStats': entityTypeTotals,
-          'timestamp': DateTime.now().toIso8601String(),
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
           'storageType': storageTypeDescription,
         }),
         headers: {'Content-Type': 'application/json'},
@@ -1572,7 +1577,7 @@ abstract class BaseRestApiServer {
           'items': stateData['items'],
           'cursor': stateData['nextCursor'],
           'hasMore': stateData['hasMore'],
-          'timestamp': DateTime.now().toIso8601String(),
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -1622,7 +1627,7 @@ abstract class BaseRestApiServer {
           'entityType': entityType,
           'entityId': entityId,
           'state': stateData?.toJson(),
-          'timestamp': DateTime.now().toIso8601String(),
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -1658,6 +1663,65 @@ abstract class BaseRestApiServer {
       await storage.testResetDomainStorage(
         domainType: domainType,
         domainId: domainId,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'message': 'All data for domainId "$domainId" has been deleted',
+          'domainId': domainId,
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on ArgumentError catch (e) {
+      return _errorResponse('$e', 400);
+    } catch (e, stackTrace) {
+      SlttLogger.logger.severe('Error in test reset: $e', e, stackTrace);
+      return _errorResponse(
+        'Failed to perform test reset: ${e.toString()}',
+        500,
+        stackTrace,
+      );
+    }
+  }
+
+  Future<Response> _handleAdminStorageDomainReset(Request request) async {
+    try {
+      final resolved = _resolveDomainCollection(request);
+      if (resolved['error'] != null) {
+        return _errorResponse(resolved['error'] as String, 400);
+      }
+      final domainType = resolved['domainType'] as String;
+      final domainId = _extractDomainId(request);
+      if (domainId == null || domainId.isEmpty) {
+        return _errorResponse('Domain ID is required', 400);
+      }
+
+      final now = DateTime.now();
+      // check to see that confirm is a timestamp within the past minute
+      final confirm = request.url.queryParameters['confirm'];
+      if (confirm == null || confirm.isEmpty) {
+        return _errorResponse(
+          'Admin reset requires confirm=DateTime.now() query parameter',
+          403,
+        );
+      }
+      final confirmTime = DateTime.tryParse(confirm);
+      if (confirmTime == null ||
+          confirmTime.isBefore(now.subtract(const Duration(minutes: 1)))) {
+        final offBy = confirmTime != null
+            ? now.difference(confirmTime).inSeconds.abs().toString()
+            : 'unknown';
+        return _errorResponse(
+          'Admin reset requires confirm=DateTime.now() query parameter (off by $offBy seconds)',
+          403,
+        );
+      }
+
+      await storage.testResetDomainStorage(
+        domainType: domainType,
+        domainId: domainId,
+        isAdminReset: true,
       );
 
       return Response.ok(

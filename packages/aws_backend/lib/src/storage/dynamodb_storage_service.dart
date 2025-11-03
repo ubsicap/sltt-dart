@@ -769,11 +769,12 @@ class DynamoDBStorageService extends BaseStorageService {
   Future<void> testResetDomainStorage({
     required String domainType,
     required String domainId,
+    bool isAdminReset = false,
   }) async {
     await initialize();
 
     // Safety check: only allow deletion of test domains
-    if (!domainId.startsWith('__test')) {
+    if (!isAdminReset && !domainId.startsWith('__test')) {
       throw Exception(
         'testResetDomainStorage can only delete test domains. '
         'Domain ID must start with "__test" but got: $domainId',

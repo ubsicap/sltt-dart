@@ -175,6 +175,7 @@ abstract class BaseStorageService {
   Future<void> testResetDomainStorage({
     required String domainType,
     required String domainId,
+    bool isAdminReset = false,
   });
 
   /// For testing: Store an entity state directly without updating change log or sync states.

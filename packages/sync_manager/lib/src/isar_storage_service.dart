@@ -1158,6 +1158,7 @@ class IsarStorageService extends BaseStorageService {
   Future<void> testResetDomainStorage({
     required String domainType,
     required String domainId,
+    bool isAdminReset = false,
   }) {
     if (domainId.isEmpty) {
       throw ArgumentError('domainId cannot be empty');
@@ -1165,7 +1166,7 @@ class IsarStorageService extends BaseStorageService {
     if (domainType.isEmpty) {
       throw ArgumentError('domainType cannot be empty');
     }
-    if (domainId.startsWith('__test') == false) {
+    if (!isAdminReset && !domainId.startsWith('__test')) {
       throw ArgumentError(
         'For safety, domainId must start with "__test" to prevent accidental data loss',
       );
