@@ -186,10 +186,7 @@ void main() {
         await local.initialize();
 
         // Use cloud URL from environment or default to dev
-        cloudBaseUrl =
-            'http://localhost:8080' ??
-            Platform.environment['CLOUD_BASE_URL'] ??
-            kCloudDevUrl;
+        cloudBaseUrl = Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl;
         srcStorageId = 'test-storage';
         srcStorageType = 'cloud';
       });
