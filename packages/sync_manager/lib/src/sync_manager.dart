@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
@@ -16,7 +17,8 @@ class SyncManager {
   late final IsarStorageService _localStorage;
 
   // API endpoints - defaults to AWS dev cloud, can be overridden for testing
-  String _cloudStorageUrl = kCloudDevUrl;
+  String _cloudStorageUrl =
+      Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl;
 
   bool _initialized = false;
 
