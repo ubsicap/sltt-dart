@@ -1574,7 +1574,7 @@ abstract class BaseRestApiServer {
         jsonEncode({
           'projectId': projectId,
           'entityType': decodedEntityType,
-          'items': stateData['items'],
+          'items': jsonDecode(stableStringify(stateData['items'])),
           'cursor': stateData['nextCursor'],
           'hasMore': stateData['hasMore'],
           'timestamp': DateTime.now().toUtc().toIso8601String(),
