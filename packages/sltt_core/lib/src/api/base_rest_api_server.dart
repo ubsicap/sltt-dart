@@ -1162,7 +1162,7 @@ abstract class BaseRestApiServer {
       final responseData = <String, dynamic>{
         'storageId': storageId,
         'storageType': storageType,
-        'changes': changes.map((c) => c.toJson()).toList(),
+        'changes': changes.map((c) => jsonDecode(stableStringify(c.toJson()))).toList(),
         'count': changes.length,
         'timestamp': DateTime.now().toUtc().toIso8601String(),
       };
