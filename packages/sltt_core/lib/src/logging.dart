@@ -66,8 +66,8 @@ class SlttLogger {
     }
   }
 
-  static void setLevel(Level level) {
-    Logger.root.level = level;
+  static void setLevel(SlttLogLevel level) {
+    Logger.root.level = _levelFromName(level.value);
   }
 
   static Logger get logger => _logger;
