@@ -1051,7 +1051,7 @@ abstract class BaseRestApiServer {
         jsonEncode({
           'items': items,
           'count': items.length,
-          'timestamp': DateTime.now().toIso8601String(),
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -1164,7 +1164,7 @@ abstract class BaseRestApiServer {
         'storageType': storageType,
         'changes': changes.map((c) => c.toJson()).toList(),
         'count': changes.length,
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
       };
 
       responseData['hasMore'] = false;
@@ -1728,7 +1728,7 @@ abstract class BaseRestApiServer {
         jsonEncode({
           'message': 'All data for domainId "$domainId" has been deleted',
           'domainId': domainId,
-          'timestamp': DateTime.now().toIso8601String(),
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -1793,7 +1793,7 @@ abstract class BaseRestApiServer {
         jsonEncode({
           'message': 'Entity state stored successfully',
           'entityState': storedState.toJson(),
-          'timestamp': DateTime.now().toIso8601String(),
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -1853,7 +1853,7 @@ abstract class BaseRestApiServer {
         jsonEncode({
           'message': 'Change log entry stored successfully',
           'change': storedChange.toJson(),
-          'timestamp': DateTime.now().toIso8601String(),
+          'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -1912,7 +1912,7 @@ abstract class BaseRestApiServer {
 
     final errorBody = <String, dynamic>{
       'error': message,
-      'timestamp': DateTime.now().toIso8601String(),
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
       'server': serverName,
     };
 
