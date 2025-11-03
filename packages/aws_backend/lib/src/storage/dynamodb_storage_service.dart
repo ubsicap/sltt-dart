@@ -405,7 +405,7 @@ class DynamoDBStorageService extends BaseStorageService {
     var totalCreates = 0;
     var totalUpdates = 0;
     var totalDeletes = 0;
-    var latestChangeAt = DateTime.fromMillisecondsSinceEpoch(0);
+    var latestChangeAt = DateTime.fromMillisecondsSinceEpoch(0).toUtc();
 
     for (final item in items) {
       // Deserialize DynamoEntityTypeSyncState from DynamoDB item
@@ -431,9 +431,11 @@ class DynamoDBStorageService extends BaseStorageService {
 
     // Query actual changes to get the true latest seq and total count
     // This includes all changes, not just those categorized as create/update/delete
-    // Use the sequence counter to get the latest seq (it's always one ahead)
-    final latestSeq =
-        await _bumpSeq(domainType: domainType, domainId: domainId) - 1;
+    // Use the sequence counter to get the latest seq
+    final latestSeq = await _getLatestSeq(
+      domainType: domainType,
+      domainId: domainId,
+    );
 
     // Total changes is the latest seq (assuming seq starts at 1 and increments by 1)
     final totalChanges = latestSeq > 0 ? latestSeq : 0;
@@ -486,7 +488,7 @@ class DynamoDBStorageService extends BaseStorageService {
     var totalCreates = 0;
     var totalUpdates = 0;
     var totalDeletes = 0;
-    var latestChangeAt = DateTime.fromMillisecondsSinceEpoch(0);
+    var latestChangeAt = DateTime.fromMillisecondsSinceEpoch(0).toUtc();
     var latestSeq = -1;
 
     for (final item in items) {
@@ -1125,6 +1127,37 @@ class DynamoDBStorageService extends BaseStorageService {
     if (response.statusCode != 200) {
       throw Exception('Failed to store entity state: ${response.body}');
     }
+  }
+
+  /// Gets the current sequence counter value without incrementing it.
+  /// Returns 0 if the counter doesn't exist yet.
+  Future<int> _getLatestSeq({
+    required String domainType,
+    required String domainId,
+  }) async {
+    final response = await _dynamoRequest('GetItem', {
+      'TableName': tableName,
+      'Key': {
+        'pk': {
+          'S': _sequencePrimaryKey(domainType: domainType, domainId: domainId),
+        },
+        'sk': {'S': _sequenceCounterSortKey()},
+      },
+      'ProjectionExpression': '#v',
+      'ExpressionAttributeNames': {'#v': 'value'},
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to get sequence: ${response.body}');
+    }
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final item = body['Item'] as Map<String, dynamic>?;
+
+    if (item == null) return 0;
+
+    final value = item['value']?['N'] as String?;
+    return int.tryParse(value ?? '0') ?? 0;
   }
 
   Future<int> _bumpSeq({
