@@ -134,7 +134,7 @@ class DynamoDBStorageService extends BaseStorageService {
     if (!skipChangeLogWrite) {
       // Always assign a new sequence number from DynamoDB's atomic counter
       // The client-provided seq value (if any) is ignored
-      newChange.seq = await _nextSequence(
+      newChange.seq = await _bumpSeq(
         domainType: domainType,
         domainId: newChange.domainId,
       );
@@ -433,7 +433,7 @@ class DynamoDBStorageService extends BaseStorageService {
     // This includes all changes, not just those categorized as create/update/delete
     // Use the sequence counter to get the latest seq (it's always one ahead)
     final latestSeq =
-        await _nextSequence(domainType: domainType, domainId: domainId) - 1;
+        await _bumpSeq(domainType: domainType, domainId: domainId) - 1;
 
     // Total changes is the latest seq (assuming seq starts at 1 and increments by 1)
     final totalChanges = latestSeq > 0 ? latestSeq : 0;
@@ -1127,7 +1127,7 @@ class DynamoDBStorageService extends BaseStorageService {
     }
   }
 
-  Future<int> _nextSequence({
+  Future<int> _bumpSeq({
     required String domainType,
     required String domainId,
   }) async {
