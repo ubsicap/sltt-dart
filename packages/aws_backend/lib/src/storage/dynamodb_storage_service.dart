@@ -689,8 +689,9 @@ class DynamoDBStorageService extends BaseStorageService {
       // Apply post-query filters if not using GSI2 or if needed
       if (!useGsi2) {
         if (parentId != null && json['data_parentId'] != parentId) continue;
-        if (parentProp != null && json['data_parentProp'] != parentProp)
+        if (parentProp != null && json['data_parentProp'] != parentProp) {
           continue;
+        }
       }
 
       if (storedAfter != null) {
