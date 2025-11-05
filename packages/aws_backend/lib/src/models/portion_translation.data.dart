@@ -3,7 +3,7 @@ import 'package:sltt_core/sltt_core.dart';
 
 part 'portion_translation.data.g.dart';
 
-@JsonSerializable(includeIfNull: true, checked: true)
+@JsonSerializable(includeIfNull: false, checked: true)
 // @SyncableEntityStateData(entityType: kEntityTypePortion)
 class PortionTranslationData extends BaseDataFields {
   final String name;

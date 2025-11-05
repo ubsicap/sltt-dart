@@ -25,8 +25,8 @@ Map<String, dynamic> _$PortionTranslationDataToJson(
 ) => <String, dynamic>{
   'parentId': instance.parentId,
   'parentProp': instance.parentProp,
-  'rank': instance.rank,
-  'deleted': instance.deleted,
+  'rank': ?instance.rank,
+  'deleted': ?instance.deleted,
   'name': instance.name,
   'visibility': instance.visibility,
 };
