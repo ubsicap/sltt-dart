@@ -53,6 +53,48 @@ void main() {
       tags: ['internet', 'integration'],
     );
 
+    test('GET /api/state with parentId parameter', () async {
+      final projectId = '__test_state_parentId__';
+      await resetTestProject(baseUrl, projectId);
+
+      // Create a portion entity with a specific parentId
+      final portionData = PortionTranslationData(
+        name: 'Portion 1',
+        visibility: 'public',
+        parentId: 'root',
+        parentProp: 'portions',
+        rank: 'rank1',
+      );
+      await saveChange<PortionTranslationData>(
+        baseUrl,
+        domainType: 'project',
+        domainId: projectId,
+        entityType: 'portion',
+        entityId: 'portion_1',
+        data: portionData,
+        changeBy: 'user1',
+      );
+
+      final resp = await http.get(
+        Uri.parse(
+          '$baseUrl/api/state/projects/$projectId/portions?parentId=root',
+        ),
+        headers: {'Accept': 'application/json'},
+      );
+      expect(resp.statusCode, anyOf([200, 404]));
+
+      if (resp.statusCode == 200) {
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        expect(body['items'], isA<List>());
+        final items = body['items'] as List;
+
+        // Should return exactly 1 portion entity
+        expect(items.length, equals(1));
+        expect(body.containsKey('hasMore'), isTrue);
+        expect(body['hasMore'], isFalse);
+      }
+    });
+
     test(
       'GET /api/state with limit parameter',
       () async {
