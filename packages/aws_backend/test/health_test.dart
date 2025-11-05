@@ -20,10 +20,5 @@ void main() {
     expect(data['server'], anyOf(['AWS Lambda API', 'Debug AWS Backend']));
     expect(data['storageType'], equals('AWS DynamoDB'));
     expect(data['timestamp'], isA<String>());
-
-    print('✅ Health endpoint test passed!');
-    print('   Server: ${data['server']}');
-    print('   Status: ${data['status']}');
-    print('   Storage: ${data['storageType']}');
   }, tags: ['internet', 'integration']);
 }
