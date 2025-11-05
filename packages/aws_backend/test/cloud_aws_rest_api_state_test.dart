@@ -330,13 +330,6 @@ void main() {
             jsonDecode(filteredResp.body) as Map<String, dynamic>;
         final filteredItems = filteredBody['items'] as List;
 
-        for (final item in filteredItems) {
-          final itemMap = item as Map<String, dynamic>;
-          final storedAt = itemMap['change_storedAt'] as String;
-          final isAfter =
-              storedAt.compareTo(betweenBatches.toIso8601String()) > 0;
-        }
-
         // Verify that the data itself is correct (timestamps are properly separated)
         // Count items that were stored after the cutoff
         int itemsAfterCutoff = 0;
@@ -347,7 +340,6 @@ void main() {
             itemsAfterCutoff++;
           }
         }
-
 
         // The FilterExpression should filter server-side, but verify the data is correct
         expect(
