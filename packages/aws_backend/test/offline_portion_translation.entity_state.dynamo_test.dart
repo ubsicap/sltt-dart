@@ -46,7 +46,8 @@ void main() {
           final updates = getDataAndStateUpdatesOrOutdatedBys(
             changeLogEntry: changeLogEntry,
             entityState: null, // No existing entity state
-            fieldChanges: data.toJson(),
+            fieldChanges: data.toJson()
+              ..removeWhere((key, value) => value == null),
             noOpFields: [],
             storageMode: 'save',
             storageType: 'cloud',
@@ -146,6 +147,25 @@ void main() {
           // now see if DynamoPortionDataEntityState has any additional (optional) fields
           final jsonWithNullValues = testEntityState.toJsonBase()
             ..removeWhere((key, value) => value != null);
+
+          // for any null values in jsonWithNullValues,
+          // make sure there are no corresponding data values in stateUpdates for those keys
+          jsonWithNullValues.forEach((key, value) {
+            updates['stateUpdates'].forEach((stateKey, stateValue) {
+              if (key == stateKey ||
+                  !key.endsWith('_') &&
+                      stateKey.endsWith('_') &&
+                      stateKey.startsWith(key)) {
+                expect(
+                  stateValue,
+                  isNull,
+                  reason:
+                      'Field "$key" has "null" value but stateUpdates["$stateKey"] has non-null value ($stateValue) in IsarPortionDataEntityState',
+                );
+              }
+            });
+          });
+
           // compare with null values from stateUpdates
           final stateUpdatesWithNullValues = <String, dynamic>{
             ...updates['stateUpdates'],
