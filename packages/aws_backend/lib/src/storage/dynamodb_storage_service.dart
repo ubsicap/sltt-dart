@@ -32,6 +32,8 @@ import '../models/dynamo_serialization.dart';
 /// // Entity State
 /// pk: '$sltt#state#domainType_project#domainId_abc123#entityType_portion'
 /// sk: '$states#state#entityId_entity1'
+/// gsi2pk: '$sltt#state#domainType_project#domainId_abc123#entityType_portion#parentId_parent1'
+/// gsi2sk: 'parentProp_tasks' or 'parentProp_tasks#rank_001'
 /// ```
 class DynamoDBStorageService extends BaseStorageService {
   DynamoDBStorageService({
@@ -591,26 +593,77 @@ class DynamoDBStorageService extends BaseStorageService {
   }) async {
     await initialize();
 
-    final pk = _statePrimaryKey(
-      domainType: domainType,
-      domainId: domainId,
-      entityType: entityType,
-    );
+    // Determine whether to use GSI2 or main table query
+    final useGsi2 = parentId != null && parentId.isNotEmpty;
 
     final payload = <String, dynamic>{
       'TableName': tableName,
-      'KeyConditionExpression': 'pk = :pk',
-      'ExpressionAttributeValues': {
-        ':pk': {'S': pk},
-      },
       'ScanIndexForward': true,
     };
 
-    if (cursor != null) {
-      payload['ExclusiveStartKey'] = {
-        'pk': {'S': pk},
-        'sk': {'S': cursor},
+    if (useGsi2) {
+      // Query via GSI2 for efficient parent-based filtering
+      payload['IndexName'] = 'GSI2';
+
+      final gsi2pk = _stateGsi2Partition(
+        domainType: domainType,
+        domainId: domainId,
+        entityType: entityType,
+        parentId: parentId,
+      );
+
+      if (parentProp != null && parentProp.isNotEmpty) {
+        // Filter by parentProp using begins_with on GSI2 sort key
+        final skPrefix = 'parentProp_$parentProp';
+        payload['KeyConditionExpression'] =
+            'gsi2pk = :pk AND begins_with(gsi2sk, :skPrefix)';
+        payload['ExpressionAttributeValues'] = {
+          ':pk': {'S': gsi2pk},
+          ':skPrefix': {'S': skPrefix},
+        };
+      } else {
+        // Query all items for this parent
+        payload['KeyConditionExpression'] = 'gsi2pk = :pk';
+        payload['ExpressionAttributeValues'] = {
+          ':pk': {'S': gsi2pk},
+        };
+      }
+
+      if (cursor != null) {
+        // Cursor for GSI2 needs pk, sk, gsi2pk, gsi2sk
+        // We'll use the cursor as gsi2sk value and reconstruct the full key
+        payload['ExclusiveStartKey'] = {
+          'pk': {
+            'S': _statePrimaryKey(
+              domainType: domainType,
+              domainId: domainId,
+              entityType: entityType,
+            ),
+          },
+          'sk': {'S': cursor}, // cursor should encode the sk value
+          'gsi2pk': {'S': gsi2pk},
+          'gsi2sk': {'S': cursor}, // For simplicity, use cursor as gsi2sk
+        };
+      }
+    } else {
+      // Query via main table (no parent filter or empty parentId)
+      final pk = _statePrimaryKey(
+        domainType: domainType,
+        domainId: domainId,
+        entityType: entityType,
+      );
+
+      payload['KeyConditionExpression'] = 'pk = :pk';
+      payload['ExpressionAttributeValues'] = {
+        ':pk': {'S': pk},
       };
+
+      if (cursor != null) {
+        payload['ExclusiveStartKey'] = {
+          'pk': {'S': pk},
+          'sk': {'S': cursor},
+        };
+      }
     }
 
     if (limit != null) {
@@ -632,8 +685,13 @@ class DynamoDBStorageService extends BaseStorageService {
         item as Map<String, dynamic>,
         excludeStorageKeys: true,
       );
-      if (parentId != null && json['data_parentId'] != parentId) continue;
-      if (parentProp != null && json['data_parentProp'] != parentProp) continue;
+
+      // Apply post-query filters if not using GSI2 or if needed
+      if (!useGsi2) {
+        if (parentId != null && json['data_parentId'] != parentId) continue;
+        if (parentProp != null && json['data_parentProp'] != parentProp)
+          continue;
+      }
 
       if (storedAfter != null) {
         final storedAtStr = json['change_storedAt'] as String?;
@@ -648,9 +706,20 @@ class DynamoDBStorageService extends BaseStorageService {
       results.add(json);
     }
 
+    // Return the appropriate cursor based on which index was used
+    String? nextCursor;
+    if (body['LastEvaluatedKey'] != null) {
+      final lastKey = body['LastEvaluatedKey'] as Map<String, dynamic>;
+      if (useGsi2) {
+        nextCursor = lastKey['gsi2sk']?['S'] as String?;
+      } else {
+        nextCursor = lastKey['sk']?['S'] as String?;
+      }
+    }
+
     return {
       'items': results,
-      'nextCursor': body['LastEvaluatedKey']?['sk']?['S'],
+      'nextCursor': nextCursor,
       'hasMore': body['LastEvaluatedKey'] != null,
     };
   }
@@ -1119,6 +1188,14 @@ class DynamoDBStorageService extends BaseStorageService {
   Future<void> _putEntityState<TEntityState extends BaseEntityState>(
     TEntityState state,
   ) async {
+    // Extract parentId, parentProp, and rank from state for GSI2
+    final stateJson = state.toJson();
+    final parentId = stateJson['data_parentId'] as String? ?? '';
+    final parentProp = stateJson['data_parentProp'] as String? ?? '';
+
+    // Extract rank from data_rank if present
+    final rank = stateJson['data_rank']?.toString();
+
     final item = <String, dynamic>{
       'pk': {
         'S': _statePrimaryKey(
@@ -1128,7 +1205,16 @@ class DynamoDBStorageService extends BaseStorageService {
         ),
       },
       'sk': {'S': _stateSortKey(entityId: state.entityId)},
-      ..._encodeJson(state.toJson()),
+      'gsi2pk': {
+        'S': _stateGsi2Partition(
+          domainType: state.domainType,
+          domainId: state.change_domainId,
+          entityType: state.entityType,
+          parentId: parentId,
+        ),
+      },
+      'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, rank: rank)},
+      ..._encodeJson(stateJson),
     };
 
     final response = await _dynamoRequest('PutItem', {
@@ -1273,6 +1359,8 @@ class DynamoDBStorageService extends BaseStorageService {
         {'AttributeName': 'sk', 'AttributeType': 'S'},
         {'AttributeName': 'gsi1pk', 'AttributeType': 'S'},
         {'AttributeName': 'gsi1sk', 'AttributeType': 'S'},
+        {'AttributeName': 'gsi2pk', 'AttributeType': 'S'},
+        {'AttributeName': 'gsi2sk', 'AttributeType': 'S'},
       ],
       'BillingMode': 'PAY_PER_REQUEST',
       'GlobalSecondaryIndexes': [
@@ -1281,6 +1369,14 @@ class DynamoDBStorageService extends BaseStorageService {
           'KeySchema': [
             {'AttributeName': 'gsi1pk', 'KeyType': 'HASH'},
             {'AttributeName': 'gsi1sk', 'KeyType': 'RANGE'},
+          ],
+          'Projection': {'ProjectionType': 'ALL'},
+        },
+        {
+          'IndexName': 'GSI2',
+          'KeySchema': [
+            {'AttributeName': 'gsi2pk', 'KeyType': 'HASH'},
+            {'AttributeName': 'gsi2sk', 'KeyType': 'RANGE'},
           ],
           'Projection': {'ProjectionType': 'ALL'},
         },
@@ -1364,6 +1460,28 @@ class DynamoDBStorageService extends BaseStorageService {
   String _stateSortKey({required String entityId}) =>
       '\$states#state#entityId_$entityId';
 
+  /// Generates GSI2 partition key for entity states (for querying by parent).
+  ///
+  /// Format: `$sltt#state#domainType_X#domainId_Y#entityType_Z#parentId_W`
+  String _stateGsi2Partition({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String parentId,
+  }) =>
+      '\$$_servicePrefix#state#domainType_$domainType#domainId_$domainId#entityType_$entityType#parentId_$parentId';
+
+  /// Generates GSI2 sort key for entity states (for sorting by parentProp and rank).
+  ///
+  /// Format: `parentProp_P` (when rank is null/missing)
+  ///         `parentProp_P#rank_R` (when rank exists)
+  String _stateGsi2SortKey({required String parentProp, String? rank}) {
+    if (rank != null && rank.isNotEmpty) {
+      return 'parentProp_$parentProp#rank_$rank';
+    }
+    return 'parentProp_$parentProp';
+  }
+
   /// Generates primary key for entity type sync state (change log or entity state).
   ///
   /// Format: `$sltt#etsc#domainType_X#domainId_Y` (for change logs)
@@ -1421,7 +1539,9 @@ class DynamoDBStorageService extends BaseStorageService {
           (entry.key == 'pk' ||
               entry.key == 'sk' ||
               entry.key == 'gsi1pk' ||
-              entry.key == 'gsi1sk')) {
+              entry.key == 'gsi1sk' ||
+              entry.key == 'gsi2pk' ||
+              entry.key == 'gsi2sk')) {
         continue;
       }
       result[entry.key] = _decodeValue(entry.value);
