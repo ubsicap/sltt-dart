@@ -75,9 +75,28 @@ void main() {
         changeBy: 'user1',
       );
 
+      // create another portion with different parentId, use portion_1,
+      // even though portions don't own other portions, this is just for testing
+      final otherPortionData = PortionTranslationData(
+        name: 'Portion 2',
+        visibility: '[]',
+        parentId: 'portion_1',
+        parentProp: 'portions',
+        rank: 'rank2',
+      );
+      await saveChange<PortionTranslationData>(
+        baseUrl,
+        domainType: 'project',
+        domainId: projectId,
+        entityType: 'portion',
+        entityId: 'portion_2',
+        data: otherPortionData,
+        changeBy: 'user2',
+      );
+
       final resp = await http.get(
         Uri.parse(
-          '$baseUrl/api/state/projects/$projectId/portions?parentId=root',
+          '$baseUrl/api/state/projects/$projectId/portions?parentId=${portionData.parentId}',
         ),
         headers: {'Accept': 'application/json'},
       );
@@ -85,6 +104,25 @@ void main() {
 
       if (resp.statusCode == 200) {
         final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        expect(body['items'], isA<List>());
+        final items = body['items'] as List;
+
+        // Should return exactly 1 portion entity
+        expect(items.length, equals(1));
+        expect(body.containsKey('hasMore'), isTrue);
+        expect(body['hasMore'], isFalse);
+      }
+
+      // now test with parentId=portion_1
+      final resp2 = await http.get(
+        Uri.parse(
+          '$baseUrl/api/state/projects/$projectId/portions?parentId=${otherPortionData.parentId}',
+        ),
+        headers: {'Accept': 'application/json'},
+      );
+      expect(resp2.statusCode, anyOf([200, 404]));
+      if (resp2.statusCode == 200) {
+        final body = jsonDecode(resp2.body) as Map<String, dynamic>;
         expect(body['items'], isA<List>());
         final items = body['items'] as List;
 
