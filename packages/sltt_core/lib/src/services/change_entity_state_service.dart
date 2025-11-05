@@ -409,6 +409,16 @@ GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
   BaseEntityState? entityState,
 ) {
   final changeData = changeLogEntry.getData();
+  // Reject encoded null values in change data. Consumers currently expect
+  // concrete values; encoded JSON nulls can cause ambiguous semantics and
+  // are not supported yet. Fail fast so callers can sanitize upstream.
+  for (final entry in changeData.entries) {
+    if (entry.value == null) {
+      throw Exception(
+        'Null data values are not yet supported (field: ${entry.key})',
+      );
+    }
+  }
   final fieldChanges = <String, dynamic>{};
   final noOpFields = <String>[];
   // The changeData is the incoming field data directly
@@ -469,6 +479,15 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys({
   required String storageMode,
   CloudStoredPair? cs,
 }) {
+  // Reject null values in fieldChanges. Null data values are not supported yet
+  // and should be handled upstream by callers that construct change data.
+  for (final entry in fieldChanges.entries) {
+    if (entry.value == null) {
+      throw Exception(
+        'Null data values are not yet supported (field: ${entry.key})',
+      );
+    }
+  }
   final fieldUpdates = <String, dynamic>{};
   final outdatedBys = <String>[];
 

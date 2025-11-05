@@ -141,6 +141,90 @@ void main() {
       };
       entityState = TestEntityState.fromJson(esJson);
     });
+
+    group('getFieldChangesOrNoOps', () {
+      test('throws when change data contains null value', () {
+        final entry = TestChangeLogEntry(
+          cid: 'cid-null-1',
+          entityId: 'e-null',
+          entityType: 'task',
+          domainId: 'd1',
+          domainType: 'project',
+          changeAt: DateTime.now().toUtc(),
+          storageId: 'local',
+          changeBy: 'tester',
+          dataJson: jsonEncode({'aField': null}),
+          operation: 'update',
+          stateChanged: true,
+        );
+
+        expect(
+          () => getFieldChangesOrNoOps(entry, null),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is Exception &&
+                  e.toString().contains(
+                    'Null data values are not yet supported',
+                  ),
+            ),
+          ),
+        );
+      });
+
+      test(
+        'returns all incoming fields as changes when entityState is null',
+        () {
+          final entry = TestChangeLogEntry(
+            cid: 'cid-ok-1',
+            entityId: 'e2',
+            entityType: 'task',
+            domainId: 'd1',
+            domainType: 'project',
+            changeAt: DateTime.now().toUtc(),
+            storageId: 'local',
+            changeBy: 'tester',
+            dataJson: jsonEncode({'aField': 'value', 'bField': 2}),
+            operation: 'update',
+            stateChanged: true,
+          );
+
+          final result = getFieldChangesOrNoOps(entry, null);
+          expect(result.fieldChanges.length, equals(2));
+          expect(result.noOpFields, isEmpty);
+        },
+      );
+
+      test(
+        'classifies fields as noOp when equal to existing entity values',
+        () {
+          // create a change where aField equals entityState.data_aField
+          final esJson = entityState.toJson();
+          esJson['data_testField'] = 'same';
+          final existing = TestEntityState.fromJson(esJson);
+
+          final entry = TestChangeLogEntry(
+            cid: 'cid-noop-1',
+            entityId: existing.entityId,
+            entityType: 'task',
+            domainId: existing.domainType,
+            domainType: 'project',
+            changeAt: DateTime.now().toUtc(),
+            storageId: 'local',
+            changeBy: 'tester',
+            dataJson: jsonEncode({'testField': 'same'}),
+            operation: 'update',
+            stateChanged: true,
+          );
+
+          final result = getFieldChangesOrNoOps(entry, existing);
+          expect(result.fieldChanges, isEmpty);
+          expect(result.noOpFields, contains('testField'));
+        },
+      );
+    });
+
+    // ...existing code...
     group('getAdditionalWarnings', () {
       late DateTime baseTime;
       late TestEntityState entityState;
@@ -1670,6 +1754,41 @@ void main() {
     });
 
     group('getDataAndStateUpdatesOrOutdatedBys', () {
+      test('throws when fieldChanges has null', () {
+        final entry = TestChangeLogEntry(
+          cid: 'cid-null-2',
+          entityId: 'e-null2',
+          entityType: 'task',
+          domainId: 'd1',
+          domainType: 'project',
+          changeAt: DateTime.now().toUtc(),
+          storageId: 'local',
+          changeBy: 'tester',
+          dataJson: jsonEncode({'aField': 'x'}),
+          operation: 'update',
+          stateChanged: true,
+        );
+
+        expect(
+          () => getDataAndStateUpdatesOrOutdatedBys(
+            changeLogEntry: entry,
+            entityState: entityState,
+            fieldChanges: {'aField': null},
+            noOpFields: <String>[],
+            storageType: 'local',
+            storageMode: 'save',
+          ),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is Exception &&
+                  e.toString().contains(
+                    'Null data values are not yet supported',
+                  ),
+            ),
+          ),
+        );
+      });
       test(
         'should detect field-drift and produce stateUpdates compatible with TestEntityState deserialization',
         () {
