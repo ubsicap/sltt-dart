@@ -263,6 +263,14 @@ class ApiChangesNetworkTestSuite {
             _testGetStateWithSeededData(),
         'filters by parentId when parameter is provided': () =>
             _testGetStateWithParentIdFilter(),
+        'filters by storedAfter timestamp': () =>
+            _testGetStateWithStoredAfterFilter(),
+        'storedAfter + pagination returns correct filtered page': () =>
+            _testGetStateStoredAfterPagination(),
+        'storedAfter with old timestamp returns all items': () =>
+            _testGetStateStoredAfterOldTimestamp(),
+        'storedAfter with future timestamp returns empty': () =>
+            _testGetStateStoredAfterFutureTimestamp(),
       },
     };
   }
@@ -1020,6 +1028,311 @@ class ApiChangesNetworkTestSuite {
       nonExistentJson['items'],
       isEmpty,
       reason: 'Should return empty list for non-existent parentId',
+    );
+  }
+
+  Future<void> _testGetStateWithStoredAfterFilter() async {
+    final baseUrl = await resolveBaseUrl();
+    final projectId = '__test_state_stored_after__';
+
+    // Reset test project
+    await HttpClient()
+        .deleteUrl(
+          baseUrl.replace(
+            path: '/api/storage/__test/reset/projects/$projectId',
+          ),
+        )
+        .then((req) => req.close());
+
+    // Create first batch of 3 tasks
+    for (int i = 1; i <= 3; i++) {
+      await seedChange(
+        changePayload(
+          domainId: projectId,
+          entityType: 'task',
+          entityId: 'task_$i',
+          changeAt: DateTime.now().toUtc(),
+          data: {
+            'nameLocal': 'Task $i',
+            'visibility': 'public',
+            'rank': 'rank$i',
+          },
+        ),
+      );
+    }
+
+    // Wait to ensure timestamp separation
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Record timestamp between batches
+    final betweenBatches = DateTime.now().toUtc();
+
+    // Wait again to ensure separation
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Create second batch of 3 tasks
+    for (int i = 4; i <= 6; i++) {
+      await seedChange(
+        changePayload(
+          domainId: projectId,
+          entityType: 'task',
+          entityId: 'task_$i',
+          changeAt: DateTime.now().toUtc(),
+          data: {
+            'nameLocal': 'Task $i',
+            'visibility': 'public',
+            'rank': 'rank$i',
+          },
+        ),
+      );
+    }
+
+    // Test 1: Get all states without storedAfter filter
+    final allStatesUri = baseUrl.replace(
+      path: '/api/state/projects/$projectId/tasks',
+    );
+    final allStatesReq = await HttpClient().getUrl(allStatesUri);
+    final allStatesRes = await allStatesReq.close();
+    final allStatesBody = await allStatesRes.transform(utf8.decoder).join();
+    expect(allStatesRes.statusCode, 200, reason: allStatesBody);
+    final allStatesJson = jsonDecode(allStatesBody) as Map<String, dynamic>;
+    expect(allStatesJson['items'], isA<List>());
+    expect(
+      (allStatesJson['items'] as List).length,
+      equals(6),
+      reason: 'Should have all 6 tasks',
+    );
+
+    // Test 2: Get only states stored after the between-batches timestamp
+    final filteredUri = baseUrl.replace(
+      path: '/api/state/projects/$projectId/tasks',
+      queryParameters: {'storedAfter': betweenBatches.toIso8601String()},
+    );
+    final filteredReq = await HttpClient().getUrl(filteredUri);
+    final filteredRes = await filteredReq.close();
+    final filteredBody = await filteredRes.transform(utf8.decoder).join();
+    expect(filteredRes.statusCode, 200, reason: filteredBody);
+    final filteredJson = jsonDecode(filteredBody) as Map<String, dynamic>;
+    final filteredItems = filteredJson['items'] as List;
+
+    // Should only return the second batch (tasks 4-6)
+    expect(
+      filteredItems.length,
+      equals(3),
+      reason: 'Should only return tasks stored after the cutoff timestamp',
+    );
+
+    // Verify the returned items are from the second batch. Entity IDs are
+    // namespaced by the server ("<projectId>-<entityId>"), so check the
+    // suffix to be compatible with both in-memory and production storages.
+    final returnedEntityIds = filteredItems
+        .map((item) => (item as Map<String, dynamic>)['entityId'] as String)
+        .toSet();
+
+    bool hasSuffix(String suffix) =>
+        returnedEntityIds.any((id) => id.endsWith(suffix));
+
+    expect(hasSuffix('task_4'), isTrue);
+    expect(hasSuffix('task_5'), isTrue);
+    expect(hasSuffix('task_6'), isTrue);
+    expect(hasSuffix('task_1'), isFalse);
+    expect(hasSuffix('task_2'), isFalse);
+    expect(hasSuffix('task_3'), isFalse);
+  }
+
+  Future<void> _testGetStateStoredAfterPagination() async {
+    final baseUrl = await resolveBaseUrl();
+    final projectId = '__test_state_stored_after_page__';
+
+    // Reset test project
+    await HttpClient()
+        .deleteUrl(
+          baseUrl.replace(
+            path: '/api/storage/__test/reset/projects/$projectId',
+          ),
+        )
+        .then((req) => req.close());
+
+    // Create first batch of 3 tasks
+    for (int i = 1; i <= 3; i++) {
+      await seedChange(
+        changePayload(
+          domainId: projectId,
+          entityType: 'task',
+          entityId: 'task_$i',
+          changeAt: DateTime.now().toUtc(),
+          data: {
+            'nameLocal': 'Task $i',
+            'visibility': 'public',
+            'rank': 'rank$i',
+          },
+        ),
+      );
+    }
+
+    // Wait to ensure timestamp separation
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Record timestamp between batches
+    final betweenBatches = DateTime.now().toUtc();
+
+    // Wait again to ensure separation
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Create second batch of 3 tasks
+    for (int i = 4; i <= 6; i++) {
+      await seedChange(
+        changePayload(
+          domainId: projectId,
+          entityType: 'task',
+          entityId: 'task_$i',
+          changeAt: DateTime.now().toUtc(),
+          data: {
+            'nameLocal': 'Task $i',
+            'visibility': 'public',
+            'rank': 'rank$i',
+          },
+        ),
+      );
+    }
+
+    // Test: Get filtered states with pagination (limit=2)
+    final paginatedUri = baseUrl.replace(
+      path: '/api/state/projects/$projectId/tasks',
+      queryParameters: {
+        'storedAfter': betweenBatches.toIso8601String(),
+        'limit': '2',
+      },
+    );
+    final paginatedReq = await HttpClient().getUrl(paginatedUri);
+    final paginatedRes = await paginatedReq.close();
+    final paginatedBody = await paginatedRes.transform(utf8.decoder).join();
+    expect(paginatedRes.statusCode, 200, reason: paginatedBody);
+    final paginatedJson = jsonDecode(paginatedBody) as Map<String, dynamic>;
+    final paginatedItems = paginatedJson['items'] as List;
+
+    // Should respect limit parameter
+    expect(
+      paginatedItems.length,
+      equals(2),
+      reason: 'Should respect limit parameter',
+    );
+
+    // The presence of additional pages may vary between storage backends
+    // (for example, the in-memory test storage does not implement real
+    // pagination semantics). Assert the limit is respected and, if the
+    // backend indicates more pages, ensure a cursor is present.
+    expect(paginatedJson['hasMore'], isA<bool>());
+    if (paginatedJson['hasMore'] == true) {
+      expect(paginatedJson.containsKey('cursor'), isTrue);
+    }
+  }
+
+  Future<void> _testGetStateStoredAfterOldTimestamp() async {
+    final baseUrl = await resolveBaseUrl();
+    final projectId = '__test_state_stored_after_old__';
+
+    // Reset test project
+    await HttpClient()
+        .deleteUrl(
+          baseUrl.replace(
+            path: '/api/storage/__test/reset/projects/$projectId',
+          ),
+        )
+        .then((req) => req.close());
+
+    final beforeCreation = DateTime.now().toUtc().subtract(
+      const Duration(days: 1),
+    );
+
+    // Create 3 tasks
+    for (int i = 1; i <= 3; i++) {
+      await seedChange(
+        changePayload(
+          domainId: projectId,
+          entityType: 'task',
+          entityId: 'task_$i',
+          changeAt: DateTime.now().toUtc(),
+          data: {
+            'nameLocal': 'Task $i',
+            'visibility': 'public',
+            'rank': 'rank$i',
+          },
+        ),
+      );
+    }
+
+    // Test: Filter with old timestamp (should return all items)
+    final oldFilterUri = baseUrl.replace(
+      path: '/api/state/projects/$projectId/tasks',
+      queryParameters: {'storedAfter': beforeCreation.toIso8601String()},
+    );
+    final oldFilterReq = await HttpClient().getUrl(oldFilterUri);
+    final oldFilterRes = await oldFilterReq.close();
+    final oldFilterBody = await oldFilterRes.transform(utf8.decoder).join();
+    expect(oldFilterRes.statusCode, 200, reason: oldFilterBody);
+    final oldFilterJson = jsonDecode(oldFilterBody) as Map<String, dynamic>;
+    final oldFilterItems = oldFilterJson['items'] as List;
+
+    expect(
+      oldFilterItems.length,
+      equals(3),
+      reason: 'Old timestamp should return all items',
+    );
+  }
+
+  Future<void> _testGetStateStoredAfterFutureTimestamp() async {
+    final baseUrl = await resolveBaseUrl();
+    final projectId = '__test_state_stored_after_future__';
+
+    // Reset test project
+    await HttpClient()
+        .deleteUrl(
+          baseUrl.replace(
+            path: '/api/storage/__test/reset/projects/$projectId',
+          ),
+        )
+        .then((req) => req.close());
+
+    // Create 3 tasks
+    for (int i = 1; i <= 3; i++) {
+      await seedChange(
+        changePayload(
+          domainId: projectId,
+          entityType: 'task',
+          entityId: 'task_$i',
+          changeAt: DateTime.now().toUtc(),
+          data: {
+            'nameLocal': 'Task $i',
+            'visibility': 'public',
+            'rank': 'rank$i',
+          },
+        ),
+      );
+    }
+
+    // Test: Filter with future timestamp (should return no items)
+    final futureTimestamp = DateTime.now().toUtc().add(
+      const Duration(seconds: 10),
+    );
+    final futureFilterUri = baseUrl.replace(
+      path: '/api/state/projects/$projectId/tasks',
+      queryParameters: {'storedAfter': futureTimestamp.toIso8601String()},
+    );
+    final futureFilterReq = await HttpClient().getUrl(futureFilterUri);
+    final futureFilterRes = await futureFilterReq.close();
+    final futureFilterBody = await futureFilterRes
+        .transform(utf8.decoder)
+        .join();
+    expect(futureFilterRes.statusCode, 200, reason: futureFilterBody);
+    final futureFilterJson =
+        jsonDecode(futureFilterBody) as Map<String, dynamic>;
+    final futureFilterItems = futureFilterJson['items'] as List;
+
+    expect(
+      futureFilterItems.length,
+      equals(0),
+      reason: 'Future timestamp should return no items',
     );
   }
 }

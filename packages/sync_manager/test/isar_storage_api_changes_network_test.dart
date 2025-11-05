@@ -225,31 +225,10 @@ void main() {
       });
     });
 
-    group('GET /api/state', () {
-      late ApiChangesNetworkTestSuite suite;
-      late Map<String, Future<void> Function()> stateTests;
-
-      setUp(() async {
-        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
-        final testGroups = suite.getTestGroups();
-        stateTests = testGroups['GET /api/state']!;
-      });
-
-      test('returns empty list for entityCollection with no states', () async {
-        await stateTests['returns empty list for entityCollection with no states']!();
-      });
-
-      test(
-        'returns seeded entity state by entityCollection and entityId',
-        () async {
-          await stateTests['returns seeded entity state by entityCollection and entityId']!();
-        },
-      );
-
-      test('filters by parentId when parameter is provided', () async {
-        await stateTests['filters by parentId when parameter is provided']!();
-      });
-    });
+    // GET /api/state tests are exercised in the dedicated
+    // `isar_storage_api_state_network_test.dart` runner to avoid running
+    // duplicate state tests across multiple test files. See that file for
+    // the per-backend state tests which call into the shared suite.
 
     // The returnErrorIfInResultsSummary behaviors are covered by the
     // 'POST /api/changes' group above which calls the centralized suite
@@ -263,6 +242,8 @@ void main() {
       // Flatten all test names from the suite
       final suiteTestNames = <String>{};
       for (final groupEntry in allSuiteTests.entries) {
+        // skip state tests as they are run in a different file
+        if (groupEntry.key == 'GET /api/state') continue;
         for (final testName in groupEntry.value.keys) {
           suiteTestNames.add(testName);
         }
@@ -285,9 +266,8 @@ void main() {
         'srcStorageType: local, srcStorageId: matches server storage id',
         'srcStorageType: local, srcStorageId: different from server',
         'srcStorageType: cloud, srcStorageId: cloud',
-        'returns empty list for entityCollection with no states',
-        'returns seeded entity state by entityCollection and entityId',
-        'filters by parentId when parameter is provided',
+        // State-specific tests are exercised in
+        // `isar_storage_api_state_network_test.dart` to avoid duplication.
       };
 
       // Sort both sets for consistent comparison

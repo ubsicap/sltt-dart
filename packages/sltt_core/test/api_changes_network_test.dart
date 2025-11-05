@@ -207,6 +207,22 @@ void main() {
           await stateTests['returns seeded entity state by entityCollection and entityId']!();
         },
       );
+
+      test('filters by storedAfter timestamp', () async {
+        await stateTests['filters by storedAfter timestamp']!();
+      });
+
+      test('storedAfter + pagination returns correct filtered page', () async {
+        await stateTests['storedAfter + pagination returns correct filtered page']!();
+      });
+
+      test('storedAfter with old timestamp returns all items', () async {
+        await stateTests['storedAfter with old timestamp returns all items']!();
+      });
+
+      test('storedAfter with future timestamp returns empty', () async {
+        await stateTests['storedAfter with future timestamp returns empty']!();
+      });
     });
 
     test('verifies all suite tests are being run', () async {
@@ -241,6 +257,10 @@ void main() {
         'returns empty list for entityCollection with no states',
         'returns seeded entity state by entityCollection and entityId',
         'filters by parentId when parameter is provided',
+        'filters by storedAfter timestamp',
+        'storedAfter + pagination returns correct filtered page',
+        'storedAfter with old timestamp returns all items',
+        'storedAfter with future timestamp returns empty',
       };
 
       // Check that we have the same number of tests
