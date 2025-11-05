@@ -41,6 +41,7 @@ void registerAllIsarEntityStateStorageGroups(
             int? limit,
             String? parentId,
             String? parentProp,
+            DateTime? storedAfter,
           }) async {
             var query = isar.isarProjectStates.filter().change_domainIdEqualTo(
               domainId,
@@ -50,6 +51,9 @@ void registerAllIsarEntityStateStorageGroups(
             }
             if (parentProp != null) {
               query = query.and().data_parentPropEqualTo(parentProp);
+            }
+            if (storedAfter != null) {
+              query = query.and().change_storedAtGreaterThan(storedAfter);
             }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
@@ -84,6 +88,7 @@ void registerAllIsarEntityStateStorageGroups(
             int? limit,
             String? parentId,
             String? parentProp,
+            DateTime? storedAfter,
           }) async {
             var query = isar.isarDocumentStates.filter().change_domainIdEqualTo(
               domainId,
@@ -93,6 +98,9 @@ void registerAllIsarEntityStateStorageGroups(
             }
             if (parentProp != null) {
               query = query.and().data_parentPropEqualTo(parentProp);
+            }
+            if (storedAfter != null) {
+              query = query.and().change_storedAtGreaterThan(storedAfter);
             }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);
@@ -127,6 +135,7 @@ void registerAllIsarEntityStateStorageGroups(
             int? limit,
             String? parentId,
             String? parentProp,
+            DateTime? storedAfter,
           }) async {
             var query = isar.isarTaskStates.filter().change_domainIdEqualTo(
               domainId,
@@ -136,6 +145,9 @@ void registerAllIsarEntityStateStorageGroups(
             }
             if (parentProp != null) {
               query = query.and().data_parentPropEqualTo(parentProp);
+            }
+            if (storedAfter != null) {
+              query = query.and().change_storedAtGreaterThan(storedAfter);
             }
             if (cursor != null) {
               query = query.and().entityIdGreaterThan(cursor);

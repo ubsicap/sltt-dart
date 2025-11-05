@@ -132,6 +132,7 @@ abstract class BaseStorageService {
     int? limit,
     String? parentId,
     String? parentProp,
+    DateTime? storedAfter,
   });
 
   String getStorageType();

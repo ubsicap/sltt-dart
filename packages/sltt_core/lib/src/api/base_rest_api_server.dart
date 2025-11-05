@@ -604,6 +604,14 @@ abstract class BaseRestApiServer {
               'description':
                   'Filter entities by an arbitrary parent property extracted from change.dataJson',
             },
+            {
+              'name': 'storedAfter',
+              'type': 'string',
+              'format': 'ISO8601',
+              'required': false,
+              'description':
+                  'Filter entities stored after the specified timestamp',
+            },
           ],
           'response': {
             'type': 'object',
@@ -1162,7 +1170,9 @@ abstract class BaseRestApiServer {
       final responseData = <String, dynamic>{
         'storageId': storageId,
         'storageType': storageType,
-        'changes': changes.map((c) => jsonDecode(stableStringify(c.toJson()))).toList(),
+        'changes': changes
+            .map((c) => jsonDecode(stableStringify(c.toJson())))
+            .toList(),
         'count': changes.length,
         'timestamp': DateTime.now().toUtc().toIso8601String(),
       };
@@ -1542,6 +1552,17 @@ abstract class BaseRestApiServer {
       final limitStr = queryParams['limit'];
       final parentId = queryParams['parentId'];
       final parentProp = queryParams['parentProp'];
+      final storedAfterStr = queryParams['storedAfter'];
+      DateTime? storedAfter;
+      if (storedAfterStr != null && storedAfterStr.isNotEmpty) {
+        storedAfter = DateTime.tryParse(storedAfterStr);
+        if (storedAfter == null) {
+          return _errorResponse(
+            'Invalid storedAfter format: must be a valid ISO8601 string',
+            400,
+          );
+        }
+      }
 
       // Parse limit parameter
       int limit = 100; // Default limit
@@ -1568,6 +1589,7 @@ abstract class BaseRestApiServer {
         limit: limit,
         parentId: parentId,
         parentProp: parentProp,
+        storedAfter: storedAfter?.toUtc(),
       );
 
       return Response.ok(

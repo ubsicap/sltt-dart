@@ -310,6 +310,7 @@ class InMemoryStorage implements BaseStorageService {
     int? limit,
     String? parentId,
     String? parentProp,
+    DateTime? storedAfter,
   }) async {
     final states = _statesByDomainType[domainType] ?? {};
     var results = states.entries
@@ -333,6 +334,17 @@ class InMemoryStorage implements BaseStorageService {
       results = results
           .where((state) => state['data_parentProp'] == parentProp)
           .toList();
+    }
+
+    // Filter by storedAfter if provided
+    if (storedAfter != null) {
+      results = results.where((state) {
+        final storedAtStr = state['change_storedAt'] as String?;
+        if (storedAtStr == null) return false;
+        final storedAt = DateTime.tryParse(storedAtStr);
+        if (storedAt == null) return false;
+        return storedAt.isAfter(storedAfter);
+      }).toList();
     }
 
     results = results.take(limit ?? 100).toList();

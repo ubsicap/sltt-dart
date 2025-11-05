@@ -47,6 +47,7 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     int? limit,
     String? parentId,
     String? parentProp,
+    DateTime? storedAfter,
   }) async {
     return {
       'items': <Map<String, dynamic>>[],

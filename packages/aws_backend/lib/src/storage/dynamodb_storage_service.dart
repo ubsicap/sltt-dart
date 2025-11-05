@@ -587,6 +587,7 @@ class DynamoDBStorageService extends BaseStorageService {
     int? limit,
     String? parentId,
     String? parentProp,
+    DateTime? storedAfter,
   }) async {
     await initialize();
 
@@ -633,6 +634,16 @@ class DynamoDBStorageService extends BaseStorageService {
       );
       if (parentId != null && json['data_parentId'] != parentId) continue;
       if (parentProp != null && json['data_parentProp'] != parentProp) continue;
+
+      if (storedAfter != null) {
+        final storedAtStr = json['change_storedAt'] as String?;
+        if (storedAtStr != null) {
+          final storedAt = DateTime.tryParse(storedAtStr);
+          if (storedAt == null || !storedAt.isAfter(storedAfter.toUtc())) {
+            continue;
+          }
+        }
+      }
 
       results.add(json);
     }
