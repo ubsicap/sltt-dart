@@ -274,9 +274,6 @@ void main() {
 
         // Record timestamp between batches
         final betweenBatches = DateTime.now().toUtc();
-        print(
-          'DEBUG: betweenBatches timestamp: ${betweenBatches.toIso8601String()}',
-        );
 
         // Wait again to ensure separation
         await Future.delayed(const Duration(seconds: 1));
@@ -333,17 +330,11 @@ void main() {
             jsonDecode(filteredResp.body) as Map<String, dynamic>;
         final filteredItems = filteredBody['items'] as List;
 
-        // Debug: Print all storedAt timestamps
-        print('DEBUG: Filtered items count: ${filteredItems.length}');
-        print('DEBUG: Cutoff timestamp: ${betweenBatches.toIso8601String()}');
         for (final item in filteredItems) {
           final itemMap = item as Map<String, dynamic>;
           final storedAt = itemMap['change_storedAt'] as String;
           final isAfter =
               storedAt.compareTo(betweenBatches.toIso8601String()) > 0;
-          print(
-            'DEBUG: entityId=${itemMap['entityId']}, change_storedAt=$storedAt, isAfter=$isAfter',
-          );
         }
 
         // Verify that the data itself is correct (timestamps are properly separated)
@@ -357,9 +348,6 @@ void main() {
           }
         }
 
-        print(
-          'DEBUG: Items that SHOULD be returned (after cutoff): $itemsAfterCutoff',
-        );
 
         // The FilterExpression should filter server-side, but verify the data is correct
         expect(
