@@ -1052,11 +1052,7 @@ class ApiChangesNetworkTestSuite {
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
-          data: {
-            'nameLocal': 'Task $i',
-            'visibility': 'public',
-            'rank': 'rank$i',
-          },
+          data: {'nameLocal': 'Task $i', 'visibility': '[]', 'rank': 'rank$i'},
         ),
       );
     }
@@ -1078,11 +1074,7 @@ class ApiChangesNetworkTestSuite {
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
-          data: {
-            'nameLocal': 'Task $i',
-            'visibility': 'public',
-            'rank': 'rank$i',
-          },
+          data: {'nameLocal': 'Task $i', 'visibility': '[]', 'rank': 'rank$i'},
         ),
       );
     }
@@ -1161,11 +1153,7 @@ class ApiChangesNetworkTestSuite {
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
-          data: {
-            'nameLocal': 'Task $i',
-            'visibility': 'public',
-            'rank': 'rank$i',
-          },
+          data: {'nameLocal': 'Task $i', 'visibility': '[]', 'rank': 'rank$i'},
         ),
       );
     }
@@ -1187,11 +1175,7 @@ class ApiChangesNetworkTestSuite {
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
-          data: {
-            'nameLocal': 'Task $i',
-            'visibility': 'public',
-            'rank': 'rank$i',
-          },
+          data: {'nameLocal': 'Task $i', 'visibility': '[]', 'rank': 'rank$i'},
         ),
       );
     }
@@ -1253,11 +1237,7 @@ class ApiChangesNetworkTestSuite {
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
-          data: {
-            'nameLocal': 'Task $i',
-            'visibility': 'public',
-            'rank': 'rank$i',
-          },
+          data: {'nameLocal': 'Task $i', 'visibility': '[]', 'rank': 'rank$i'},
         ),
       );
     }
@@ -1302,11 +1282,7 @@ class ApiChangesNetworkTestSuite {
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
-          data: {
-            'nameLocal': 'Task $i',
-            'visibility': 'public',
-            'rank': 'rank$i',
-          },
+          data: {'nameLocal': 'Task $i', 'visibility': '[]', 'rank': 'rank$i'},
         ),
       );
     }

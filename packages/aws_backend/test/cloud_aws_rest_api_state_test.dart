@@ -60,7 +60,7 @@ void main() {
       // Create a portion entity with a specific parentId
       final portionData = PortionTranslationData(
         name: 'Portion 1',
-        visibility: 'public',
+        visibility: '[]',
         parentId: 'root',
         parentProp: 'portions',
         rank: 'rank1',
@@ -105,7 +105,7 @@ void main() {
         for (int i = 1; i <= 5; i++) {
           final portionData = PortionTranslationData(
             name: 'Portion $i',
-            visibility: 'public',
+            visibility: '[]',
             parentId: 'root',
             parentProp: 'portions',
             rank: 'rank$i',
@@ -178,7 +178,7 @@ void main() {
         for (int i = 1; i <= 6; i++) {
           final portionData = PortionTranslationData(
             name: 'Portion $i',
-            visibility: 'public',
+            visibility: '[]',
             parentId: 'root',
             parentProp: 'portions',
             rank: 'rank$i',
@@ -295,7 +295,7 @@ void main() {
         for (int i = 1; i <= 3; i++) {
           final portionData = PortionTranslationData(
             name: 'Portion $i',
-            visibility: 'public',
+            visibility: '[]',
             parentId: 'root',
             parentProp: 'portions',
             rank: 'rank$i',
@@ -324,7 +324,7 @@ void main() {
         for (int i = 4; i <= 6; i++) {
           final portionData = PortionTranslationData(
             name: 'Portion $i',
-            visibility: 'public',
+            visibility: '[]',
             parentId: 'root',
             parentProp: 'portions',
             rank: 'rank$i',
