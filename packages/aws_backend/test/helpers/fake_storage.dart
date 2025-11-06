@@ -1,7 +1,7 @@
 import 'package:aws_backend/aws_backend.dart';
 import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
 import 'package:aws_backend/src/models/dynamo_entity_state.dart';
-import 'package:aws_backend/src/models/dynamo_serialization.dart';
+import 'package:aws_backend/src/models/dynamo_entity_state_serialization_registry.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 class FakeDynamoDBStorageService extends DynamoDBStorageService {

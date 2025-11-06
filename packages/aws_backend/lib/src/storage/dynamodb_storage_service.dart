@@ -7,8 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 
 import '../models/dynamo_change_log_entry.dart';
+import '../models/dynamo_entity_state_serialization_registry.dart';
 import '../models/dynamo_entity_type_sync_state.dart';
-import '../models/dynamo_serialization.dart';
 
 /// DynamoDB implementation of [BaseStorageService].
 ///
