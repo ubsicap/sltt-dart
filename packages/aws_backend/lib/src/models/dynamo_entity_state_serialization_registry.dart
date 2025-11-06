@@ -1,3 +1,4 @@
+import 'package:aws_backend/src/models/passage_translation.entity_state.dynamo.dart';
 import 'package:aws_backend/src/models/portion_translation.entity_state.dynamo.dart';
 import 'package:sltt_core/sltt_core.dart';
 
@@ -28,6 +29,14 @@ final bool _dynamoSerializationRegistration = (() {
         (json) => DynamoPortionDataEntityState.fromJsonBase(json),
         (state) => (state as DynamoPortionDataEntityState).toJson(),
         (state) => (state as DynamoPortionDataEntityState).toJsonBase(),
+      );
+    } else if (entityType == EntityType.passage) {
+      registerEntityStateFactory(
+        entityType,
+        (json) => DynamoPassageDataEntityState.fromJson(json),
+        (json) => DynamoPassageDataEntityState.fromJsonBase(json),
+        (state) => (state as DynamoPassageDataEntityState).toJson(),
+        (state) => (state as DynamoPassageDataEntityState).toJsonBase(),
       );
     }
     // default handler (especially for tests)
