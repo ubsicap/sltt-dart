@@ -1,8 +1,12 @@
 import 'dart:io';
 
+import 'package:isar_community/isar.dart';
 import 'package:path/path.dart' as path;
+import 'package:sltt_core/src/models/base_entity_state.dart';
 import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/localhost_rest_api_server.dart';
+import 'package:sync_manager/src/models/passage_translation.entity_state.isar.dart';
+import 'package:sync_manager/src/models/portion_translation.entity_state.isar.dart';
 
 void main(List<String> args) async {
   String? dbPath;
@@ -76,7 +80,23 @@ void main(List<String> args) async {
   );
 
   // Initialize storage with inspector enabled
-  await storage.initialize(inspector: inspector);
+  // if dbPath has sltt-standalone-app in its path, switch to using
+  // its schemas:
+  late final List<CollectionSchema<BaseEntityState>>?
+  providedEntityStateSchemas;
+  if (dbPath.contains('sltt-standalone-app')) {
+    providedEntityStateSchemas = [
+      IsarPortionDataEntityStateSchema,
+      IsarPassageDataEntityStateSchema,
+      // Add any other schemas specific to sltt-standalone-app here
+    ];
+  } else {
+    providedEntityStateSchemas = null;
+  }
+  await storage.initialize(
+    providedEntityStateSchemas: providedEntityStateSchemas,
+    inspector: inspector,
+  );
 
   // Start the server
   await server.start(port: port);
