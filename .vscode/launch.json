@@ -109,7 +109,7 @@
             "console": "terminal"
         },
         {
-            "name": "Start/Inspect Local Storage Server for Isar file",
+            "name": "Start/Inspect Local Storage Server for Isar file (sltt-dart schema)",
             "type": "dart",
             "request": "launch",
             "program": "packages/sync_manager/bin/run_local_server_with_inspector.dart",
