@@ -9,7 +9,7 @@ part 'passage_translation.data.g.dart';
 
 /**
  * Fields to Serialize/Deserialize for PassageTranslation entity state storage
- * 
+ *
  * visibility and name +
  *final PassageType type;
   final Difficulty difficulty;
@@ -22,7 +22,7 @@ part 'passage_translation.data.g.dart';
 // @SyncableEntityStateData(entityType: kEntityTypePassage)
 class PassageTranslationData extends BaseDataFields {
   final String name;
-  final String visibility;
+  final List<String> visibility;
   final String type;
   final String difficulty;
   final List<String> references;

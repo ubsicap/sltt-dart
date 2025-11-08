@@ -450,6 +450,7 @@ IsarDocumentState _isarDocumentStateDeserialize(
     data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[35]),
     data_title: reader.readStringOrNull(offsets[36]),
     data_title_changeAt_: reader.readDateTimeOrNull(offsets[37]),
+    data_title_changeBy_: reader.readStringOrNull(offsets[38]),
     data_title_cid_: reader.readStringOrNull(offsets[39]),
     data_title_cloudAt_: reader.readDateTimeOrNull(offsets[40]),
     domainType: reader.readString(offsets[41]),
@@ -459,7 +460,6 @@ IsarDocumentState _isarDocumentStateDeserialize(
     schemaVersion: reader.readLongOrNull(offsets[44]),
     unknownJson: reader.readString(offsets[45]),
   );
-  object.data_title_changeBy_ = reader.readStringOrNull(offsets[38]);
   return object;
 }
 
@@ -8071,10 +8071,10 @@ IsarDocumentState _$IsarDocumentStateFromJson(
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
     data_title_cid_: $checkedConvert('data_title_cid_', (v) => v as String?),
-  );
-  $checkedConvert(
-    'data_title_changeBy_',
-    (v) => val.data_title_changeBy_ = v as String?,
+    data_title_changeBy_: $checkedConvert(
+      'data_title_changeBy_',
+      (v) => v as String?,
+    ),
   );
   return val;
 });

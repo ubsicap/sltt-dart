@@ -11,7 +11,10 @@ PassageTranslationData _$PassageTranslationDataFromJson(
 ) => $checkedCreate('PassageTranslationData', json, ($checkedConvert) {
   final val = PassageTranslationData(
     name: $checkedConvert('name', (v) => v as String),
-    visibility: $checkedConvert('visibility', (v) => v as String),
+    visibility: $checkedConvert(
+      'visibility',
+      (v) => (v as List<dynamic>).map((e) => e as String).toList(),
+    ),
     type: $checkedConvert('type', (v) => v as String),
     difficulty: $checkedConvert('difficulty', (v) => v as String),
     references: $checkedConvert(

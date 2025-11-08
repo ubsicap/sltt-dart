@@ -381,7 +381,7 @@ const IsarPassageDataEntityStateSchema = CollectionSchema(
     r'data_visibility': PropertySchema(
       id: 72,
       name: r'data_visibility',
-      type: IsarType.string,
+      type: IsarType.stringList,
     ),
     r'data_visibility_changeAt_': PropertySchema(
       id: 73,
@@ -547,6 +547,12 @@ int _isarPassageDataEntityStateEstimateSize(
   bytesCount += 3 + object.data_type_changeBy_.length * 3;
   bytesCount += 3 + object.data_type_cid_.length * 3;
   bytesCount += 3 + object.data_visibility.length * 3;
+  {
+    for (var i = 0; i < object.data_visibility.length; i++) {
+      final value = object.data_visibility[i];
+      bytesCount += value.length * 3;
+    }
+  }
   bytesCount += 3 + object.data_visibility_changeBy_.length * 3;
   bytesCount += 3 + object.data_visibility_cid_.length * 3;
   bytesCount += 3 + object.domainType.length * 3;
@@ -634,7 +640,7 @@ void _isarPassageDataEntityStateSerialize(
   writer.writeString(offsets[69], object.data_type_cid_);
   writer.writeDateTime(offsets[70], object.data_type_cloudAt_);
   writer.writeLong(offsets[71], object.data_type_dataSchemaRev_);
-  writer.writeString(offsets[72], object.data_visibility);
+  writer.writeStringList(offsets[72], object.data_visibility);
   writer.writeDateTime(offsets[73], object.data_visibility_changeAt_);
   writer.writeString(offsets[74], object.data_visibility_changeBy_);
   writer.writeString(offsets[75], object.data_visibility_cid_);
@@ -726,7 +732,7 @@ IsarPassageDataEntityState _isarPassageDataEntityStateDeserialize(
     data_type_cid_: reader.readString(offsets[69]),
     data_type_cloudAt_: reader.readDateTimeOrNull(offsets[70]),
     data_type_dataSchemaRev_: reader.readLongOrNull(offsets[71]),
-    data_visibility: reader.readString(offsets[72]),
+    data_visibility: reader.readStringList(offsets[72]) ?? [],
     data_visibility_changeAt_: reader.readDateTime(offsets[73]),
     data_visibility_changeBy_: reader.readString(offsets[74]),
     data_visibility_cid_: reader.readString(offsets[75]),
@@ -894,7 +900,7 @@ P _isarPassageDataEntityStateDeserializeProp<P>(
     case 71:
       return (reader.readLongOrNull(offset)) as P;
     case 72:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 73:
       return (reader.readDateTime(offset)) as P;
     case 74:
@@ -11134,7 +11140,7 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityEqualTo(String value, {bool caseSensitive = true}) {
+  data_visibilityElementEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.equalTo(
@@ -11151,7 +11157,7 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityGreaterThan(
+  data_visibilityElementGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -11173,7 +11179,7 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityLessThan(
+  data_visibilityElementLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -11195,7 +11201,7 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityBetween(
+  data_visibilityElementBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -11221,7 +11227,7 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityStartsWith(String value, {bool caseSensitive = true}) {
+  data_visibilityElementStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.startsWith(
@@ -11238,7 +11244,7 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityEndsWith(String value, {bool caseSensitive = true}) {
+  data_visibilityElementEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.endsWith(
@@ -11255,7 +11261,7 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityContains(String value, {bool caseSensitive = true}) {
+  data_visibilityElementContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.contains(
@@ -11272,7 +11278,7 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityMatches(String pattern, {bool caseSensitive = true}) {
+  data_visibilityElementMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.matches(
@@ -11289,7 +11295,7 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityIsEmpty() {
+  data_visibilityElementIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.equalTo(property: r'data_visibility', value: ''),
@@ -11302,10 +11308,93 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityIsNotEmpty() {
+  data_visibilityElementIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(property: r'data_visibility', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'data_visibility', length, true, length, true);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'data_visibility', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'data_visibility', 0, false, 999999, true);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityLengthLessThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'data_visibility', 0, true, length, include);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityLengthGreaterThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'data_visibility',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'data_visibility',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
       );
     });
   }
@@ -14435,28 +14524,6 @@ extension IsarPassageDataEntityStateQuerySortBy
     IsarPassageDataEntityState,
     QAfterSortBy
   >
-  sortByData_visibility() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'data_visibility', Sort.asc);
-    });
-  }
-
-  QueryBuilder<
-    IsarPassageDataEntityState,
-    IsarPassageDataEntityState,
-    QAfterSortBy
-  >
-  sortByData_visibilityDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'data_visibility', Sort.desc);
-    });
-  }
-
-  QueryBuilder<
-    IsarPassageDataEntityState,
-    IsarPassageDataEntityState,
-    QAfterSortBy
-  >
   sortByData_visibility_changeAt_() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_visibility_changeAt_', Sort.asc);
@@ -16231,28 +16298,6 @@ extension IsarPassageDataEntityStateQuerySortThenBy
     IsarPassageDataEntityState,
     QAfterSortBy
   >
-  thenByData_visibility() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'data_visibility', Sort.asc);
-    });
-  }
-
-  QueryBuilder<
-    IsarPassageDataEntityState,
-    IsarPassageDataEntityState,
-    QAfterSortBy
-  >
-  thenByData_visibilityDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'data_visibility', Sort.desc);
-    });
-  }
-
-  QueryBuilder<
-    IsarPassageDataEntityState,
-    IsarPassageDataEntityState,
-    QAfterSortBy
-  >
   thenByData_visibility_changeAt_() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_visibility_changeAt_', Sort.asc);
@@ -17379,12 +17424,9 @@ extension IsarPassageDataEntityStateQueryWhereDistinct
     IsarPassageDataEntityState,
     QDistinct
   >
-  distinctByData_visibility({bool caseSensitive = true}) {
+  distinctByData_visibility() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(
-        r'data_visibility',
-        caseSensitive: caseSensitive,
-      );
+      return query.addDistinctBy(r'data_visibility');
     });
   }
 
@@ -18022,7 +18064,7 @@ extension IsarPassageDataEntityStateQueryProperty
     });
   }
 
-  QueryBuilder<IsarPassageDataEntityState, String, QQueryOperations>
+  QueryBuilder<IsarPassageDataEntityState, List<String>, QQueryOperations>
   data_visibilityProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'data_visibility');
@@ -18203,7 +18245,10 @@ IsarPassageDataEntityState _$IsarPassageDataEntityStateFromJson(
       'data_name_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
-    data_visibility: $checkedConvert('data_visibility', (v) => v as String),
+    data_visibility: $checkedConvert(
+      'data_visibility',
+      (v) => (v as List<dynamic>).map((e) => e as String).toList(),
+    ),
     data_visibility_dataSchemaRev_: $checkedConvert(
       'data_visibility_dataSchemaRev_',
       (v) => (v as num?)?.toInt(),

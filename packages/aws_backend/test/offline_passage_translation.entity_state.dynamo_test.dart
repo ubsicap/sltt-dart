@@ -17,7 +17,7 @@ void main() {
           final localChangeAt = localTime.add(const Duration(minutes: 1));
           final data = PassageTranslationData(
             name: 'Passage Name',
-            visibility: '{}',
+            visibility: ['user1', 'user2'],
             type: 'typeA',
             difficulty: 'easy',
             references: ['ref1', 'ref2'],

@@ -101,7 +101,10 @@ DynamoPortionDataEntityState _$DynamoPortionDataEntityStateFromJson(
       'data_name_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
-    data_visibility: $checkedConvert('data_visibility', (v) => v as String),
+    data_visibility: $checkedConvert(
+      'data_visibility',
+      (v) => (v as List<dynamic>).map((e) => e as String).toList(),
+    ),
     data_visibility_dataSchemaRev_: $checkedConvert(
       'data_visibility_dataSchemaRev_',
       (v) => (v as num?)?.toInt(),

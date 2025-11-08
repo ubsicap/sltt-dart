@@ -11,7 +11,10 @@ PortionTranslationData _$PortionTranslationDataFromJson(
 ) => $checkedCreate('PortionTranslationData', json, ($checkedConvert) {
   final val = PortionTranslationData(
     name: $checkedConvert('name', (v) => v as String),
-    visibility: $checkedConvert('visibility', (v) => v as String),
+    visibility: $checkedConvert(
+      'visibility',
+      (v) => (v as List<dynamic>).map((e) => e as String).toList(),
+    ),
     parentId: $checkedConvert('parentId', (v) => v as String),
     parentProp: $checkedConvert('parentProp', (v) => v as String),
     rank: $checkedConvert('rank', (v) => v as String?),

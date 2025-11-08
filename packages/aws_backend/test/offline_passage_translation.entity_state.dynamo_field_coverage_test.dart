@@ -412,7 +412,7 @@ void main() {
         ),
         data_name_changeBy_: 'test-user-2',
         data_name_cloudAt_: localDataNameCloudAt,
-        data_visibility: '{}',
+        data_visibility: ['test-user-7'],
         data_visibility_dataSchemaRev_: 7,
         data_visibility_changeAt_: localDataVisibilityChangeAt,
         data_visibility_cid_: generateCid(

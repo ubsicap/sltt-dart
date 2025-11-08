@@ -17,7 +17,7 @@ class DynamoPortionDataEntityState extends BaseEntityState {
   final String? data_name_cid_;
   final String data_name_changeBy_;
   final DateTime? data_name_cloudAt_;
-  final String data_visibility;
+  final List<String> data_visibility;
   final int? data_visibility_dataSchemaRev_;
   final DateTime data_visibility_changeAt_;
   final String data_visibility_cid_;
@@ -89,7 +89,7 @@ class DynamoPortionDataEntityState extends BaseEntityState {
   Map<String, dynamic> toJsonSafe() {
     final j = toJson();
     j.putIfAbsent('data_name', () => '');
-    j.putIfAbsent('data_visibility', () => '');
+    j.putIfAbsent('data_visibility', () => <String>[]);
     return j;
   }
 

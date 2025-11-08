@@ -17,7 +17,7 @@ void main() {
           final localChangeAt = localTime.add(const Duration(minutes: 1));
           final data = PortionTranslationData(
             name: 'Portion Name',
-            visibility: '{}',
+            visibility: ['user1', 'user2'],
             parentId: 'root',
             parentProp: 'portions',
             rank: 'aaaaz',

@@ -7,7 +7,7 @@ part 'portion_translation.data.g.dart';
 // @SyncableEntityStateData(entityType: kEntityTypePortion)
 class PortionTranslationData extends BaseDataFields {
   final String name;
-  final String visibility;
+  final List<String> visibility;
 
   PortionTranslationData({
     required this.name,

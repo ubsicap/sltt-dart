@@ -231,7 +231,7 @@ const IsarPortionDataEntityStateSchema = CollectionSchema(
     r'data_visibility': PropertySchema(
       id: 42,
       name: r'data_visibility',
-      type: IsarType.string,
+      type: IsarType.stringList,
     ),
     r'data_visibility_changeAt_': PropertySchema(
       id: 43,
@@ -371,6 +371,12 @@ int _isarPortionDataEntityStateEstimateSize(
     }
   }
   bytesCount += 3 + object.data_visibility.length * 3;
+  {
+    for (var i = 0; i < object.data_visibility.length; i++) {
+      final value = object.data_visibility[i];
+      bytesCount += value.length * 3;
+    }
+  }
   bytesCount += 3 + object.data_visibility_changeBy_.length * 3;
   bytesCount += 3 + object.data_visibility_cid_.length * 3;
   bytesCount += 3 + object.domainType.length * 3;
@@ -428,7 +434,7 @@ void _isarPortionDataEntityStateSerialize(
   writer.writeString(offsets[39], object.data_rank_cid_);
   writer.writeDateTime(offsets[40], object.data_rank_cloudAt_);
   writer.writeLong(offsets[41], object.data_rank_dataSchemaRev_);
-  writer.writeString(offsets[42], object.data_visibility);
+  writer.writeStringList(offsets[42], object.data_visibility);
   writer.writeDateTime(offsets[43], object.data_visibility_changeAt_);
   writer.writeString(offsets[44], object.data_visibility_changeBy_);
   writer.writeString(offsets[45], object.data_visibility_cid_);
@@ -490,7 +496,7 @@ IsarPortionDataEntityState _isarPortionDataEntityStateDeserialize(
     data_rank_cid_: reader.readStringOrNull(offsets[39]),
     data_rank_cloudAt_: reader.readDateTimeOrNull(offsets[40]),
     data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[41]),
-    data_visibility: reader.readString(offsets[42]),
+    data_visibility: reader.readStringList(offsets[42]) ?? [],
     data_visibility_changeAt_: reader.readDateTime(offsets[43]),
     data_visibility_changeBy_: reader.readString(offsets[44]),
     data_visibility_cid_: reader.readString(offsets[45]),
@@ -598,7 +604,7 @@ P _isarPortionDataEntityStateDeserializeProp<P>(
     case 41:
       return (reader.readLongOrNull(offset)) as P;
     case 42:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 43:
       return (reader.readDateTime(offset)) as P;
     case 44:
@@ -6652,7 +6658,7 @@ extension IsarPortionDataEntityStateQueryFilter
     IsarPortionDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityEqualTo(String value, {bool caseSensitive = true}) {
+  data_visibilityElementEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.equalTo(
@@ -6669,7 +6675,7 @@ extension IsarPortionDataEntityStateQueryFilter
     IsarPortionDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityGreaterThan(
+  data_visibilityElementGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -6691,7 +6697,7 @@ extension IsarPortionDataEntityStateQueryFilter
     IsarPortionDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityLessThan(
+  data_visibilityElementLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -6713,7 +6719,7 @@ extension IsarPortionDataEntityStateQueryFilter
     IsarPortionDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityBetween(
+  data_visibilityElementBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -6739,7 +6745,7 @@ extension IsarPortionDataEntityStateQueryFilter
     IsarPortionDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityStartsWith(String value, {bool caseSensitive = true}) {
+  data_visibilityElementStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.startsWith(
@@ -6756,7 +6762,7 @@ extension IsarPortionDataEntityStateQueryFilter
     IsarPortionDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityEndsWith(String value, {bool caseSensitive = true}) {
+  data_visibilityElementEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.endsWith(
@@ -6773,7 +6779,7 @@ extension IsarPortionDataEntityStateQueryFilter
     IsarPortionDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityContains(String value, {bool caseSensitive = true}) {
+  data_visibilityElementContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.contains(
@@ -6790,7 +6796,7 @@ extension IsarPortionDataEntityStateQueryFilter
     IsarPortionDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityMatches(String pattern, {bool caseSensitive = true}) {
+  data_visibilityElementMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.matches(
@@ -6807,7 +6813,7 @@ extension IsarPortionDataEntityStateQueryFilter
     IsarPortionDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityIsEmpty() {
+  data_visibilityElementIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.equalTo(property: r'data_visibility', value: ''),
@@ -6820,10 +6826,93 @@ extension IsarPortionDataEntityStateQueryFilter
     IsarPortionDataEntityState,
     QAfterFilterCondition
   >
-  data_visibilityIsNotEmpty() {
+  data_visibilityElementIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(property: r'data_visibility', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPortionDataEntityState,
+    IsarPortionDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'data_visibility', length, true, length, true);
+    });
+  }
+
+  QueryBuilder<
+    IsarPortionDataEntityState,
+    IsarPortionDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'data_visibility', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<
+    IsarPortionDataEntityState,
+    IsarPortionDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'data_visibility', 0, false, 999999, true);
+    });
+  }
+
+  QueryBuilder<
+    IsarPortionDataEntityState,
+    IsarPortionDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityLengthLessThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'data_visibility', 0, true, length, include);
+    });
+  }
+
+  QueryBuilder<
+    IsarPortionDataEntityState,
+    IsarPortionDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityLengthGreaterThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'data_visibility',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPortionDataEntityState,
+    IsarPortionDataEntityState,
+    QAfterFilterCondition
+  >
+  data_visibilityLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'data_visibility',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
       );
     });
   }
@@ -9331,28 +9420,6 @@ extension IsarPortionDataEntityStateQuerySortBy
     IsarPortionDataEntityState,
     QAfterSortBy
   >
-  sortByData_visibility() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'data_visibility', Sort.asc);
-    });
-  }
-
-  QueryBuilder<
-    IsarPortionDataEntityState,
-    IsarPortionDataEntityState,
-    QAfterSortBy
-  >
-  sortByData_visibilityDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'data_visibility', Sort.desc);
-    });
-  }
-
-  QueryBuilder<
-    IsarPortionDataEntityState,
-    IsarPortionDataEntityState,
-    QAfterSortBy
-  >
   sortByData_visibility_changeAt_() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_visibility_changeAt_', Sort.asc);
@@ -10505,28 +10572,6 @@ extension IsarPortionDataEntityStateQuerySortThenBy
     IsarPortionDataEntityState,
     QAfterSortBy
   >
-  thenByData_visibility() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'data_visibility', Sort.asc);
-    });
-  }
-
-  QueryBuilder<
-    IsarPortionDataEntityState,
-    IsarPortionDataEntityState,
-    QAfterSortBy
-  >
-  thenByData_visibilityDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'data_visibility', Sort.desc);
-    });
-  }
-
-  QueryBuilder<
-    IsarPortionDataEntityState,
-    IsarPortionDataEntityState,
-    QAfterSortBy
-  >
   thenByData_visibility_changeAt_() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_visibility_changeAt_', Sort.asc);
@@ -11290,12 +11335,9 @@ extension IsarPortionDataEntityStateQueryWhereDistinct
     IsarPortionDataEntityState,
     QDistinct
   >
-  distinctByData_visibility({bool caseSensitive = true}) {
+  distinctByData_visibility() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(
-        r'data_visibility',
-        caseSensitive: caseSensitive,
-      );
+      return query.addDistinctBy(r'data_visibility');
     });
   }
 
@@ -11723,7 +11765,7 @@ extension IsarPortionDataEntityStateQueryProperty
     });
   }
 
-  QueryBuilder<IsarPortionDataEntityState, String, QQueryOperations>
+  QueryBuilder<IsarPortionDataEntityState, List<String>, QQueryOperations>
   data_visibilityProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'data_visibility');
@@ -11904,7 +11946,10 @@ IsarPortionDataEntityState _$IsarPortionDataEntityStateFromJson(
       'data_name_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
-    data_visibility: $checkedConvert('data_visibility', (v) => v as String),
+    data_visibility: $checkedConvert(
+      'data_visibility',
+      (v) => (v as List<dynamic>).map((e) => e as String).toList(),
+    ),
     data_visibility_dataSchemaRev_: $checkedConvert(
       'data_visibility_dataSchemaRev_',
       (v) => (v as num?)?.toInt(),
