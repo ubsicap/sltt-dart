@@ -65,13 +65,13 @@ void main() {
         parentProp: 'portions',
         rank: 'rank1',
       );
-      await saveChange<PortionTranslationData>(
+      await saveChanges<PortionTranslationData>(
         baseUrl,
         domainType: 'project',
         domainId: projectId,
         entityType: 'portion',
         entityId: 'portion_1',
-        data: portionData,
+        changesToSave: [portionData],
         changeBy: 'user1',
       );
 
@@ -84,13 +84,13 @@ void main() {
         parentProp: 'portions',
         rank: 'rank2',
       );
-      await saveChange<PortionTranslationData>(
+      await saveChanges<PortionTranslationData>(
         baseUrl,
         domainType: 'project',
         domainId: projectId,
         entityType: 'portion',
         entityId: 'portion_2',
-        data: otherPortionData,
+        changesToSave: [otherPortionData],
         changeBy: 'user2',
       );
 
@@ -148,13 +148,13 @@ void main() {
             parentProp: 'portions',
             rank: 'rank$i',
           );
-          await saveChange<PortionTranslationData>(
+          await saveChanges<PortionTranslationData>(
             baseUrl,
             domainType: 'project',
             domainId: projectId,
             entityType: 'portion',
             entityId: 'portion_$i',
-            data: portionData,
+            changesToSave: [portionData],
             changeBy: 'user$i',
           );
         }
@@ -221,13 +221,13 @@ void main() {
             parentProp: 'portions',
             rank: 'rank$i',
           );
-          await saveChange<PortionTranslationData>(
+          await saveChanges<PortionTranslationData>(
             baseUrl,
             domainType: 'project',
             domainId: projectId,
             entityType: 'portion',
             entityId: 'portion_$i',
-            data: portionData,
+            changesToSave: [portionData],
             changeBy: 'user$i',
           );
         }
@@ -338,13 +338,13 @@ void main() {
             parentProp: 'portions',
             rank: 'rank$i',
           );
-          await saveChange<PortionTranslationData>(
+          await saveChanges<PortionTranslationData>(
             baseUrl,
             domainType: 'project',
             domainId: projectId,
             entityType: 'portion',
             entityId: 'portion_$i',
-            data: portionData,
+            changesToSave: [portionData],
             changeBy: 'user$i',
           );
         }
@@ -367,13 +367,13 @@ void main() {
             parentProp: 'portions',
             rank: 'rank$i',
           );
-          await saveChange<PortionTranslationData>(
+          await saveChanges<PortionTranslationData>(
             baseUrl,
             domainType: 'project',
             domainId: projectId,
             entityType: 'portion',
             entityId: 'portion_$i',
-            data: portionData,
+            changesToSave: [portionData],
             changeBy: 'user$i',
           );
         }

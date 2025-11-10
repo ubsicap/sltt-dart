@@ -59,13 +59,13 @@ Future<http.Response> saveProjectChange(
       projectData ??
       BaseDataFields(parentId: 'parentId', parentProp: 'parentProp');
 
-  return saveChange<BaseDataFields>(
+  return saveChanges<BaseDataFields>(
     baseUrl,
     domainType: 'project',
     domainId: projectId,
     entityType: 'project',
     entityId: projectId,
-    data: data,
+    changesToSave: [data],
     changeBy: changeBy,
     srcStorageType: srcStorageType,
     srcStorageId: srcStorageId,
@@ -101,34 +101,38 @@ Future<http.Response> saveProjectChange(
 /// );
 /// expect(response.statusCode, anyOf([200, 201]));
 /// ```
-Future<http.Response> saveChange<TData extends BaseDataFields>(
+Future<http.Response> saveChanges<TData extends BaseDataFields>(
   Uri baseUrl, {
   required String domainType,
   required String domainId,
   required String entityType,
   required String entityId,
-  required TData data,
+  required List<TData> changesToSave,
   String changeBy = 'userId',
   String srcStorageType = 'cloud',
   String srcStorageId = 'test',
 }) async {
-  final change =
-      ChangeLogEntryFactoryService.forChangeSave<
-        DynamoChangeLogEntry,
-        int,
-        TData
-      >(
-        factory: DynamoChangeLogEntry.new,
-        domainType: domainType,
-        domainId: domainId,
-        entityType: entityType,
-        entityId: entityId,
-        changeBy: changeBy,
-        data: data,
-      );
+  final changes = changesToSave
+      .map(
+        (TData data) =>
+            ChangeLogEntryFactoryService.forChangeSave<
+              DynamoChangeLogEntry,
+              int,
+              TData
+            >(
+              factory: DynamoChangeLogEntry.new,
+              domainType: domainType,
+              domainId: domainId,
+              entityType: entityType,
+              entityId: entityId,
+              changeBy: changeBy,
+              data: data,
+            ),
+      )
+      .toList();
 
   final request = CreateChangesRequest(
-    changes: [change],
+    changes: changes,
     srcStorageType: srcStorageType,
     srcStorageId: srcStorageId,
     storageMode: 'save',
