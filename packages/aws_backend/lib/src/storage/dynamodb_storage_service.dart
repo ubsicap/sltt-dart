@@ -263,7 +263,8 @@ class DynamoDBStorageService extends BaseStorageService {
       throw Exception('Failed to fetch entity state: ${response.body}');
     }
 
-    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    final payload =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final item = payload['Item'] as Map<String, dynamic>?;
     if (item == null) return null;
 
@@ -304,7 +305,8 @@ class DynamoDBStorageService extends BaseStorageService {
       throw Exception('Failed to fetch change: ${response.body}');
     }
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final items = body['Items'] as List<dynamic>?;
     if (items == null || items.isEmpty) return null;
 
@@ -361,7 +363,8 @@ class DynamoDBStorageService extends BaseStorageService {
       throw Exception('Failed to fetch changes: ${response.body}');
     }
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
 
     return items
@@ -399,7 +402,8 @@ class DynamoDBStorageService extends BaseStorageService {
       throw Exception('Failed to get change stats: ${response.body}');
     }
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final items = (body['Items'] as List<dynamic>?) ?? <dynamic>[];
 
     // Build per-entity-type statistics
@@ -482,7 +486,8 @@ class DynamoDBStorageService extends BaseStorageService {
       throw Exception('Failed to get state stats: ${response.body}');
     }
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final items = (body['Items'] as List<dynamic>?) ?? <dynamic>[];
 
     // Build per-entity-type statistics
@@ -560,7 +565,8 @@ class DynamoDBStorageService extends BaseStorageService {
         throw Exception('Failed to list domains: ${response.body}');
       }
 
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final body =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
 
       for (final raw in items) {
@@ -676,7 +682,8 @@ class DynamoDBStorageService extends BaseStorageService {
       throw Exception('Failed to fetch entity states: ${response.body}');
     }
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
 
     final results = <Map<String, dynamic>>[];
@@ -990,7 +997,8 @@ class DynamoDBStorageService extends BaseStorageService {
         throw Exception('Failed to query GSI: ${response.body}');
       }
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final items = data['Items'] as List<dynamic>? ?? [];
 
       for (final item in items) {
@@ -1044,7 +1052,8 @@ class DynamoDBStorageService extends BaseStorageService {
         throw Exception('Failed to scan items: ${response.body}');
       }
 
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final body =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
 
       for (final item in items) {
@@ -1096,7 +1105,8 @@ class DynamoDBStorageService extends BaseStorageService {
       }
 
       // Handle unprocessed items (throttling, etc.)
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final body =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final unprocessed = body['UnprocessedItems'] as Map<String, dynamic>?;
 
       if (unprocessed != null && unprocessed.isNotEmpty) {
@@ -1250,7 +1260,8 @@ class DynamoDBStorageService extends BaseStorageService {
       throw Exception('Failed to get sequence: ${response.body}');
     }
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final item = body['Item'] as Map<String, dynamic>?;
 
     if (item == null) return 0;
@@ -1284,7 +1295,8 @@ class DynamoDBStorageService extends BaseStorageService {
       throw Exception('Failed to increment sequence: ${response.body}');
     }
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final value = body['Attributes']?['value']?['N'] as String?;
     return int.tryParse(value ?? '0') ?? 0;
   }

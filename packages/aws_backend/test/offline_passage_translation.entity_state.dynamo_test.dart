@@ -16,7 +16,7 @@ void main() {
           final DateTime localTime = DateTime.parse('2023-01-01T00:00:00');
           final localChangeAt = localTime.add(const Duration(minutes: 1));
           final data = PassageTranslationData(
-            name: 'Passage Name',
+            name: 'Σ Passage Name',
             visibility: ['user1', 'user2'],
             type: 'typeA',
             difficulty: 'easy',
@@ -103,7 +103,7 @@ void main() {
 
           expect(
             testEntityState.data_name,
-            equals('Passage Name'),
+            equals('Σ Passage Name'),
             reason: 'name field should be correctly deserialized',
           );
           expect(
@@ -129,7 +129,7 @@ void main() {
           );
           expect(
             serializedJson['data_name'],
-            equals('Passage Name'),
+            equals('Σ Passage Name'),
             reason: 'name field should be correctly serialized',
           );
 

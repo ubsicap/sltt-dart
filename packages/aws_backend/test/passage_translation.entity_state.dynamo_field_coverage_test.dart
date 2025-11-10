@@ -418,7 +418,7 @@ void main() {
           change_cloudAt: localCloudAt,
           change_changeBy: 'test-user-7',
           change_changeBy_orig_: 'test-user-1',
-          data_name: 'Passage 1',
+          data_name: 'Σ Passage 1',
           data_name_dataSchemaRev_: 7,
           data_name_changeAt_: localDataNameChangeAt,
           data_name_cid_: generateCid(
