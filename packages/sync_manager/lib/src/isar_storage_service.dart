@@ -789,7 +789,7 @@ class IsarStorageService extends BaseStorageService {
   /// Static helper that deletes on-disk Isar files for a given database
   /// name. This is useful from tests and tooling where you don't have an
   /// initialized IsarStorageService instance.
-  static Future<void> deleteDatabaseFiles(
+  static Future<bool> deleteDatabaseFiles(
     String databaseName, {
     String dirPath = './isar_db',
   }) async {
@@ -801,7 +801,7 @@ class IsarStorageService extends BaseStorageService {
     final end = DateTime.now().add(timeout);
 
     final dir = Directory(dirPath);
-    if (!await dir.exists()) return;
+    if (!await dir.exists()) return false;
 
     final isarFile = File('$dirPath/$databaseName.isar');
     final isarLck = File('$dirPath/$databaseName.isar-lck');
@@ -848,11 +848,14 @@ class IsarStorageService extends BaseStorageService {
       SlttLogger.logger.warning(
         '[test-utils] Failed to delete Isar files for $databaseName within ${timeout.inSeconds}s; files may be locked by another process',
       );
+      return false;
     } else {
       SlttLogger.logger.fine(
         '[test-utils] Deleted Isar files for $databaseName',
       );
+      return true;
     }
+    return false;
   }
 
   // Cursor-based pagination and filtering
