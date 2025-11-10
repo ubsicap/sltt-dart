@@ -46,6 +46,31 @@ void main() {
       rank: 'r$i',
     );
 
+    test('POST single passage change', () async {
+      final data = makePassage(0);
+      final sw = Stopwatch()..start();
+      final resp = await saveChanges<PassageTranslationData>(
+        baseUrl,
+        domainType: domainType,
+        domainId: projectId,
+        entityType: 'passage',
+        entityId: 'passage_single',
+        changesToSave: [data],
+        changeBy: 'bench-user',
+        srcStorageType: 'cloud',
+        srcStorageId: 'bench',
+      );
+      sw.stop();
+      expect(
+        resp.statusCode,
+        anyOf([200, 201]),
+        reason: 'Single change failed: ${resp.statusCode} ${resp.body}',
+      );
+      print(
+        'Benchmark: single POST of 1 PassageTranslationData change took ${sw.elapsedMilliseconds} ms',
+      );
+    });
+
     test('POST 100 passage changes in single batch (saveChanges list)', () async {
       final batch = List.generate(100, makePassage);
       final sw = Stopwatch()..start();
