@@ -58,7 +58,7 @@ void main() {
         'data_parentProp_changeBy_': 'tester',
       };
 
-      final res = await storage.updateChangeLogAndState(
+      final res = await storage.updateChangeLogAndStates(
         domainType: 'project',
         changeLogEntry: change,
         changeUpdates: {'storedAt': storedAt.toIso8601String()},

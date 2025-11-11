@@ -169,7 +169,7 @@ class IsarStorageService extends BaseStorageService {
   }
 
   @override
-  Future<UpdateChangeLogAndStateResult> updateChangeLogAndState({
+  Future<UpdateChangeLogAndStateResult> updateChangeLogAndStates({
     required String domainType,
     required BaseChangeLogEntry changeLogEntry,
     required Map<String, dynamic> changeUpdates,

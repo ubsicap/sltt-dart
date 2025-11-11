@@ -261,7 +261,7 @@ void main() {
       final storedAtChange1Json = DateTime.now().toUtc().toIso8601String();
       // Use updateChangeLogAndState to create both change and state
       final change = IsarChangeLogEntry.fromJson(changeData);
-      final result = await storage.updateChangeLogAndState(
+      final result = await storage.updateChangeLogAndStates(
         domainType: 'project',
         changeLogEntry: change,
         changeUpdates: {
@@ -341,7 +341,7 @@ void main() {
       final storedAtChange2 = DateTime.now().toUtc().toIso8601String();
 
       final change = IsarChangeLogEntry.fromJson(changeData);
-      await storage.updateChangeLogAndState(
+      await storage.updateChangeLogAndStates(
         domainType: 'project',
         changeLogEntry: change,
         changeUpdates: {
@@ -819,7 +819,7 @@ void main() {
         final storedAtJson = DateTime.now().toUtc().toIso8601String();
         final storageId = await storage.getStorageId();
         final change1 = IsarChangeLogEntry.fromJson(initialChange);
-        final result1 = await storage.updateChangeLogAndState(
+        final result1 = await storage.updateChangeLogAndStates(
           domainType: 'project',
           changeLogEntry: change1,
           changeUpdates: {
@@ -896,7 +896,7 @@ void main() {
         );
 
         final change2StoredAt = DateTime.now().toUtc().toIso8601String();
-        final result = await storage.updateChangeLogAndState(
+        final result = await storage.updateChangeLogAndStates(
           domainType: 'project',
           changeLogEntry: change2,
           changeUpdates: {
@@ -958,7 +958,7 @@ void main() {
       final storageId = await storage.getStorageId();
       final storedAtJson = DateTime.now().toUtc().toIso8601String();
       final change1 = IsarChangeLogEntry.fromJson(initialChange);
-      await storage.updateChangeLogAndState(
+      await storage.updateChangeLogAndStates(
         domainType: kDomainProject,
         changeLogEntry: change1,
         changeUpdates: {
@@ -1016,7 +1016,7 @@ void main() {
       );
 
       final change2StoredAt = DateTime.now().toUtc().toIso8601String();
-      await storage.updateChangeLogAndState(
+      await storage.updateChangeLogAndStates(
         domainType: 'project',
         changeLogEntry: change2,
         changeUpdates: {

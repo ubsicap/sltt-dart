@@ -7,8 +7,7 @@ void main() {
   late final IsarStorageService storage;
   // Use a unique database name per test run to avoid unique-index collisions
   // from prior runs when the same static name is reused.
-  final testDbName =
-      'isar_storage_get_entity_states_test';
+  final testDbName = 'isar_storage_get_entity_states_test';
 
   setUpAll(() async {
     isarChangeLogEntryFactoryRegistration;
@@ -186,7 +185,7 @@ void main() {
       final storageId = await storage.getStorageId();
 
       final storedAtChange1 = now.toIso8601String();
-      await storage.updateChangeLogAndState(
+      await storage.updateChangeLogAndStates(
         domainType: 'project',
         changeLogEntry: IsarChangeLogEntry.fromJson(change1),
         changeUpdates: {
@@ -267,7 +266,7 @@ void main() {
       final storedAtChange2 = now
           .add(const Duration(seconds: 1))
           .toIso8601String();
-      await storage.updateChangeLogAndState(
+      await storage.updateChangeLogAndStates(
         domainType: 'project',
         changeLogEntry: IsarChangeLogEntry.fromJson(change2),
         changeUpdates: {

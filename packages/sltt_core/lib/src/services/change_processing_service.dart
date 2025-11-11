@@ -322,7 +322,7 @@ class ChangeProcessingService {
                   changeLogEntry.storageId /* should already be saved */ );
           final operationCounts = result.operationCounts;
 
-          final updateResults = await storage.updateChangeLogAndState(
+          final updateResults = await storage.updateChangeLogAndStates(
             domainType: changeLogEntry.domainType,
             changeLogEntry: changeLogEntry,
             changeUpdates: changeUpdates,
