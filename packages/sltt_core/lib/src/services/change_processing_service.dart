@@ -163,102 +163,14 @@ class ChangeProcessingService {
       }
 
       // Validate all changes before processing any changes
-      final invalidStorageIds = <int>[];
-      final List<int> invalidStateChanged = [];
-      final List<int> invalidSeqProvided = [];
-      final List<int> invalidCloudAt = [];
-      for (int i = 0; i < changes.length; i++) {
-        final changeData = changes[i];
-        try {
-          final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
-            changeData,
-          );
-          if (changeLogEntry.operation == kChangeOperationError) {
-            // If deserialization failed, don't treat this as a fatal programming
-            // error here. Allow the main processing loop to handle the entry so
-            // that per-change errors are collected into the resultsSummary.
-            // This ensures sync-mode requests can return 200 with errors in the
-            // summary (returnErrorIfInResultsSummary=false) instead of a
-            // top-level HTTP 400.
-            continue;
-          }
+      final preValidationResult = await _preValidateChanges(
+        changes: changes,
+        storageMode: storageMode,
+        srcStorageType: srcStorageType,
+      );
 
-          // Validate other storageMode issues
-          if (storageMode == 'sync') {
-            if (srcStorageType == 'cloud' && changeLogEntry.cloudAt == null) {
-              invalidCloudAt.add(i);
-            }
-            if (changeLogEntry.storageId.trim().isEmpty) {
-              invalidStorageIds.add(i);
-            }
-            if (changeLogEntry.stateChanged == false) {
-              invalidStateChanged.add(i);
-            }
-            if (changeLogEntry.seq <= 0) {
-              // syncing assumes seq has already been provided
-              invalidSeqProvided.add(i);
-            }
-          } else if (storageMode == 'save') {
-            // validateChangeLogEntryDataJson may be async (test validators),
-            // so await it to ensure exceptions are caught by the surrounding
-            // try/catch and reported in the resultsSummary rather than
-            // bubbling as an unhandled exception.
-            await validateChangeLogEntryDataJson(changeLogEntry);
-            if (changeLogEntry.cloudAt != null) {
-              invalidCloudAt.add(i);
-            }
-            if (changeLogEntry.storageId.trim().isNotEmpty) {
-              invalidStorageIds.add(i);
-            }
-            if (changeLogEntry.stateChanged == true) {
-              invalidStateChanged.add(i);
-            }
-            // Reject positive caller-provided seq values in save mode: callers must not
-            // supply a positive seq when asking the server to 'save' a change. The
-            // storage is responsible for assigning its own auto-increment seq.
-            if (changeLogEntry.seq > 0) {
-              invalidSeqProvided.add(i);
-            }
-          }
-        } catch (e) {
-          // If we can't deserialize, we'll catch this in the main loop
-          continue;
-        }
-      }
-
-      if (invalidStorageIds.isNotEmpty) {
-        final expectedState = storageMode == 'sync' ? 'non-empty' : 'empty';
-        return ChangeProcessingResult(
-          errorMessage:
-              'Changes [${invalidStorageIds.join(', ')}] in $storageMode mode must have $expectedState storageId',
-          errorCode: 400,
-        );
-      }
-      if (invalidStateChanged.isNotEmpty) {
-        final expectedState = storageMode == 'sync'
-            ? 'true'
-            : 'false or omitted';
-        return ChangeProcessingResult(
-          errorMessage:
-              'Changes [${invalidStateChanged.join(', ')}] in $storageMode mode must have stateChanged=$expectedState',
-          errorCode: 400,
-        );
-      }
-      if (invalidSeqProvided.isNotEmpty) {
-        if (storageMode == 'sync') {
-          return ChangeProcessingResult(
-            errorMessage:
-                'Changes [${invalidSeqProvided.join(', ')}] in sync mode must include a valid positive seq',
-            errorCode: 400,
-          );
-        }
-        if (storageMode == 'save') {
-          return ChangeProcessingResult(
-            errorMessage:
-                'Changes [${invalidSeqProvided.join(', ')}] in save mode must not include a caller-provided seq:',
-            errorCode: 400,
-          );
-        }
+      if (preValidationResult != null) {
+        return preValidationResult;
       }
 
       final targetStorageType = storage.getStorageType();
@@ -663,5 +575,111 @@ class ChangeProcessingService {
       );
       SlttLogger.logger.warning(st.toString());
     }
+  }
+
+  /// Pre-validate all changes before processing
+  /// Returns a ChangeProcessingResult with error details if validation fails, null otherwise
+  static Future<ChangeProcessingResult?> _preValidateChanges({
+    required List<Map<String, dynamic>> changes,
+    required String storageMode,
+    required String srcStorageType,
+  }) async {
+    final invalidStorageIds = <int>[];
+    final List<int> invalidStateChanged = [];
+    final List<int> invalidSeqProvided = [];
+    final List<int> invalidCloudAt = [];
+    for (int i = 0; i < changes.length; i++) {
+      final changeData = changes[i];
+      try {
+        final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
+          changeData,
+        );
+        if (changeLogEntry.operation == kChangeOperationError) {
+          // If deserialization failed, don't treat this as a fatal programming
+          // error here. Allow the main processing loop to handle the entry so
+          // that per-change errors are collected into the resultsSummary.
+          // This ensures sync-mode requests can return 200 with errors in the
+          // summary (returnErrorIfInResultsSummary=false) instead of a
+          // top-level HTTP 400.
+          continue;
+        }
+
+        // Validate other storageMode issues
+        if (storageMode == 'sync') {
+          if (srcStorageType == 'cloud' && changeLogEntry.cloudAt == null) {
+            invalidCloudAt.add(i);
+          }
+          if (changeLogEntry.storageId.trim().isEmpty) {
+            invalidStorageIds.add(i);
+          }
+          if (changeLogEntry.stateChanged == false) {
+            invalidStateChanged.add(i);
+          }
+          if (changeLogEntry.seq <= 0) {
+            // syncing assumes seq has already been provided
+            invalidSeqProvided.add(i);
+          }
+        } else if (storageMode == 'save') {
+          // validateChangeLogEntryDataJson may be async (test validators),
+          // so await it to ensure exceptions are caught by the surrounding
+          // try/catch and reported in the resultsSummary rather than
+          // bubbling as an unhandled exception.
+          await validateChangeLogEntryDataJson(changeLogEntry);
+          if (changeLogEntry.cloudAt != null) {
+            invalidCloudAt.add(i);
+          }
+          if (changeLogEntry.storageId.trim().isNotEmpty) {
+            invalidStorageIds.add(i);
+          }
+          if (changeLogEntry.stateChanged == true) {
+            invalidStateChanged.add(i);
+          }
+          // Reject positive caller-provided seq values in save mode: callers must not
+          // supply a positive seq when asking the server to 'save' a change. The
+          // storage is responsible for assigning its own auto-increment seq.
+          if (changeLogEntry.seq > 0) {
+            invalidSeqProvided.add(i);
+          }
+        }
+      } catch (e) {
+        // If we can't deserialize, we'll catch this in the main loop
+        continue;
+      }
+    }
+
+    if (invalidStorageIds.isNotEmpty) {
+      final expectedState = storageMode == 'sync' ? 'non-empty' : 'empty';
+      return ChangeProcessingResult(
+        errorMessage:
+            'Changes [${invalidStorageIds.join(', ')}] in $storageMode mode must have $expectedState storageId',
+        errorCode: 400,
+      );
+    }
+    if (invalidStateChanged.isNotEmpty) {
+      final expectedState = storageMode == 'sync' ? 'true' : 'false or omitted';
+      return ChangeProcessingResult(
+        errorMessage:
+            'Changes [${invalidStateChanged.join(', ')}] in $storageMode mode must have stateChanged=$expectedState',
+        errorCode: 400,
+      );
+    }
+    if (invalidSeqProvided.isNotEmpty) {
+      if (storageMode == 'sync') {
+        return ChangeProcessingResult(
+          errorMessage:
+              'Changes [${invalidSeqProvided.join(', ')}] in sync mode must include a valid positive seq',
+          errorCode: 400,
+        );
+      }
+      if (storageMode == 'save') {
+        return ChangeProcessingResult(
+          errorMessage:
+              'Changes [${invalidSeqProvided.join(', ')}] in save mode must not include a caller-provided seq:',
+          errorCode: 400,
+        );
+      }
+    }
+
+    return null; // No validation errors
   }
 }
