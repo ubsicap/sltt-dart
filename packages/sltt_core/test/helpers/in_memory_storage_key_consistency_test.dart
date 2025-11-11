@@ -58,8 +58,7 @@ void main() {
         'data_parentProp_changeBy_': 'tester',
       };
 
-      final res = await storage.updateChangeLogAndStates(
-        domainType: 'project',
+      final req = ChangeLogAndStateRequest(
         changeLogEntry: change,
         changeUpdates: {'storedAt': storedAt.toIso8601String()},
         operationCounts: OperationCounts(),
@@ -67,7 +66,12 @@ void main() {
         stateUpdates: stateUpdates,
       );
 
-      expect(res.newEntityState, isNotNull);
+      final res = await storage.updateChangeLogAndStates(
+        domainType: 'project',
+        requests: [req],
+      );
+
+      expect(res.newEntityStates.first, isNotNull);
       final persisted = await storage.getEntityState(
         domainType: 'project',
         domainId: 'project-1',

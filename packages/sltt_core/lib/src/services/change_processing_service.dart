@@ -322,8 +322,7 @@ class ChangeProcessingService {
                   changeLogEntry.storageId /* should already be saved */ );
           final operationCounts = result.operationCounts;
 
-          final updateResults = await storage.updateChangeLogAndStates(
-            domainType: changeLogEntry.domainType,
+          final request = ChangeLogAndStateRequest(
             changeLogEntry: changeLogEntry,
             changeUpdates: changeUpdates,
             entityState: entityState,
@@ -331,6 +330,15 @@ class ChangeProcessingService {
             operationCounts: operationCounts,
             skipChangeLogWrite: shouldSkipChangeLogWrite,
             skipStateWrite: result.stateUpdates.isEmpty,
+          );
+
+          final batchResults = await storage.updateChangeLogAndStates(
+            domainType: changeLogEntry.domainType,
+            requests: [request],
+          );
+          final updateResults = (
+            newChangeLogEntry: batchResults.newChangeLogEntries.first,
+            newEntityState: batchResults.newEntityStates.first,
           );
 
           // In sync mode, warn if we get unexpected state changes

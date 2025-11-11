@@ -46,7 +46,30 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<UpdateChangeLogAndStateResult> updateChangeLogAndStates({
+  Future<UpdateChangeLogAndStatesResult> updateChangeLogAndStates({
+    required String domainType,
+    required List<ChangeLogAndStateRequest> requests,
+  }) async {
+    final outChanges = <BaseChangeLogEntry>[];
+    final outStates = <BaseEntityState?>[];
+    for (var req in requests) {
+      final res = await _updateOneChangeLogAndState(
+        domainType: domainType,
+        changeLogEntry: req.changeLogEntry,
+        changeUpdates: req.changeUpdates,
+        entityState: req.entityState,
+        stateUpdates: req.stateUpdates,
+        operationCounts: req.operationCounts,
+        skipChangeLogWrite: req.skipChangeLogWrite,
+        skipStateWrite: req.skipStateWrite,
+      );
+      outChanges.add(res.newChangeLogEntry);
+      outStates.add(res.newEntityState);
+    }
+    return (newChangeLogEntries: outChanges, newEntityStates: outStates);
+  }
+
+  Future<UpdateChangeLogAndStateResult> _updateOneChangeLogAndState({
     required String domainType,
     required BaseChangeLogEntry changeLogEntry,
     required Map<String, dynamic> changeUpdates,

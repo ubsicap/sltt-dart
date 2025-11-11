@@ -169,7 +169,32 @@ class IsarStorageService extends BaseStorageService {
   }
 
   @override
-  Future<UpdateChangeLogAndStateResult> updateChangeLogAndStates({
+  Future<UpdateChangeLogAndStatesResult> updateChangeLogAndStates({
+    required String domainType,
+    required List<ChangeLogAndStateRequest> requests,
+  }) async {
+    // Minimal batch wrapper: process sequentially using existing single-item logic
+    final outChanges = <BaseChangeLogEntry>[];
+    final outStates = <BaseEntityState?>[];
+    for (var req in requests) {
+      final res = await _updateOneChangeLogAndState(
+        domainType: domainType,
+        changeLogEntry: req.changeLogEntry,
+        changeUpdates: req.changeUpdates,
+        operationCounts: req.operationCounts,
+        entityState: req.entityState,
+        stateUpdates: req.stateUpdates,
+        skipChangeLogWrite: req.skipChangeLogWrite,
+        skipStateWrite: req.skipStateWrite,
+      );
+      outChanges.add(res.newChangeLogEntry);
+      outStates.add(res.newEntityState);
+    }
+    return (newChangeLogEntries: outChanges, newEntityStates: outStates);
+  }
+
+  // Extracted from previous implementation: processes a single item
+  Future<UpdateChangeLogAndStateResult> _updateOneChangeLogAndState({
     required String domainType,
     required BaseChangeLogEntry changeLogEntry,
     required Map<String, dynamic> changeUpdates,
@@ -855,7 +880,7 @@ class IsarStorageService extends BaseStorageService {
       );
       return true;
     }
-    return false;
+    // Removed unreachable return false (dead code) after refactor.
   }
 
   // Cursor-based pagination and filtering

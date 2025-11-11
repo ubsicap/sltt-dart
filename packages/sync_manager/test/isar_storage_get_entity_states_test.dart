@@ -185,8 +185,7 @@ void main() {
       final storageId = await storage.getStorageId();
 
       final storedAtChange1 = now.toIso8601String();
-      await storage.updateChangeLogAndStates(
-        domainType: 'project',
+      final req = ChangeLogAndStateRequest(
         changeLogEntry: IsarChangeLogEntry.fromJson(change1),
         changeUpdates: {
           'stateChanged': true,
@@ -223,6 +222,11 @@ void main() {
           'data_parentProp_changeBy_': 'tester',
           'data_nameLocal': 'Task 1',
         },
+      );
+
+      await storage.updateChangeLogAndStates(
+        domainType: 'project',
+        requests: [req],
       );
 
       SlttLogger.logger.fine('DEBUG: stateUpdates for task-2 -> ');
@@ -266,8 +270,7 @@ void main() {
       final storedAtChange2 = now
           .add(const Duration(seconds: 1))
           .toIso8601String();
-      await storage.updateChangeLogAndStates(
-        domainType: 'project',
+      final req2 = ChangeLogAndStateRequest(
         changeLogEntry: IsarChangeLogEntry.fromJson(change2),
         changeUpdates: {
           'stateChanged': true,
@@ -314,6 +317,11 @@ void main() {
           'data_parentProp_changeBy_': 'tester',
           'data_nameLocal': 'Task 2',
         },
+      );
+
+      await storage.updateChangeLogAndStates(
+        domainType: 'project',
+        requests: [req2],
       );
 
       // Query for parentProp == 'pList'

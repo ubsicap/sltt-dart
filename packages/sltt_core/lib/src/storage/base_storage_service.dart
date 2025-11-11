@@ -30,6 +30,30 @@ class StorageServiceDefaults {
   }
 }
 
+/// Request object that groups all parameters for a single change+state update.
+///
+/// Storage implementations should process a list of these requests in order
+/// to perform batch or sequential updates.
+class ChangeLogAndStateRequest {
+  final BaseChangeLogEntry changeLogEntry;
+  final Map<String, dynamic> changeUpdates;
+  final BaseEntityState? entityState;
+  final Map<String, dynamic> stateUpdates;
+  final OperationCounts operationCounts;
+  final bool skipChangeLogWrite;
+  final bool skipStateWrite;
+
+  ChangeLogAndStateRequest({
+    required this.changeLogEntry,
+    required this.changeUpdates,
+    this.entityState,
+    required this.stateUpdates,
+    required this.operationCounts,
+    this.skipChangeLogWrite = false,
+    this.skipStateWrite = false,
+  });
+}
+
 /// Abstract base class for all storage service implementations.
 ///
 /// This interface defines the contract that all storage services must implement,
@@ -64,15 +88,11 @@ abstract class BaseStorageService {
   /// Close and cleanup the storage service
   Future<void> close();
 
-  Future<UpdateChangeLogAndStateResult> updateChangeLogAndStates({
+  /// Process a list of change+state update requests. Implementations may
+  /// process them sequentially or in bulk depending on backend capabilities.
+  Future<UpdateChangeLogAndStatesResult> updateChangeLogAndStates({
     required String domainType,
-    required BaseChangeLogEntry changeLogEntry,
-    required Map<String, dynamic> changeUpdates,
-    BaseEntityState? entityState,
-    required Map<String, dynamic> stateUpdates,
-    required OperationCounts operationCounts,
-    bool skipChangeLogWrite = false,
-    bool skipStateWrite = false,
+    required List<ChangeLogAndStateRequest> requests,
   });
 
   /// Get the current state of an entity for field-level comparison.
@@ -198,7 +218,13 @@ abstract class BaseStorageService {
   });
 }
 
-/// Return type for updateChangeLogAndState: a tuple of change log entry and entity state.
+/// Return type for updateChangeLogAndStates: lists of change log entries and entity states.
+typedef UpdateChangeLogAndStatesResult = ({
+  List<BaseChangeLogEntry> newChangeLogEntries,
+  List<BaseEntityState?> newEntityStates,
+});
+
+/// Legacy return type for single-item processing (deprecated, use UpdateChangeLogAndStatesResult)
 typedef UpdateChangeLogAndStateResult = ({
   BaseChangeLogEntry newChangeLogEntry,
   BaseEntityState? newEntityState,

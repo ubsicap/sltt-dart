@@ -261,8 +261,7 @@ void main() {
       final storedAtChange1Json = DateTime.now().toUtc().toIso8601String();
       // Use updateChangeLogAndState to create both change and state
       final change = IsarChangeLogEntry.fromJson(changeData);
-      final result = await storage.updateChangeLogAndStates(
-        domainType: 'project',
+      final req = ChangeLogAndStateRequest(
         changeLogEntry: change,
         changeUpdates: {
           'seq': 1,
@@ -271,6 +270,7 @@ void main() {
           'storedAt': storedAtChange1Json,
         },
         operationCounts: OperationCounts(create: 1),
+        entityState: null,
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,
@@ -299,6 +299,15 @@ void main() {
           // parentProp meta fields added above
           'unknownJson': '{}',
         },
+      );
+
+      final batch = await storage.updateChangeLogAndStates(
+        domainType: 'project',
+        requests: [req],
+      );
+      final result = (
+        newChangeLogEntry: batch.newChangeLogEntries.first,
+        newEntityState: batch.newEntityStates.first,
       );
 
       expect(result.newChangeLogEntry.seq, equals(1));
@@ -341,8 +350,7 @@ void main() {
       final storedAtChange2 = DateTime.now().toUtc().toIso8601String();
 
       final change = IsarChangeLogEntry.fromJson(changeData);
-      await storage.updateChangeLogAndStates(
-        domainType: 'project',
+      final req2 = ChangeLogAndStateRequest(
         changeLogEntry: change,
         changeUpdates: {
           'seq': 1,
@@ -351,6 +359,7 @@ void main() {
           'storedAt': storedAtChange2,
         },
         operationCounts: OperationCounts(create: 1),
+        entityState: null,
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,
@@ -377,6 +386,11 @@ void main() {
           'data_parentProp_changeBy_': 'tester',
           'unknownJson': '{}',
         },
+      );
+
+      await storage.updateChangeLogAndStates(
+        domainType: 'project',
+        requests: [req2],
       );
 
       final entityState = await storage.getEntityState(
@@ -819,8 +833,7 @@ void main() {
         final storedAtJson = DateTime.now().toUtc().toIso8601String();
         final storageId = await storage.getStorageId();
         final change1 = IsarChangeLogEntry.fromJson(initialChange);
-        final result1 = await storage.updateChangeLogAndStates(
-          domainType: 'project',
+        final req1 = ChangeLogAndStateRequest(
           changeLogEntry: change1,
           changeUpdates: {
             'seq': 1,
@@ -829,6 +842,7 @@ void main() {
             'storageId': storageId,
           },
           operationCounts: OperationCounts(create: 1),
+          entityState: null,
           stateUpdates: {
             'domainType': 'project',
             'entityId': entityId,
@@ -862,11 +876,9 @@ void main() {
           },
         );
 
-        SlttLogger.logger.fine(
-          '1 - Initial change result: ${result1.newChangeLogEntry.toJson()}',
-        );
-        SlttLogger.logger.fine(
-          '1 - Initial state result: ${result1.newEntityState?.toJson()}',
+        await storage.updateChangeLogAndStates(
+          domainType: 'project',
+          requests: [req1],
         );
 
         // Apply a newer change to nameLocal
@@ -896,8 +908,7 @@ void main() {
         );
 
         final change2StoredAt = DateTime.now().toUtc().toIso8601String();
-        final result = await storage.updateChangeLogAndStates(
-          domainType: 'project',
+        final req2 = ChangeLogAndStateRequest(
           changeLogEntry: change2,
           changeUpdates: {
             'stateChanged': true,
@@ -912,6 +923,15 @@ void main() {
             'data_nameLocal_changeAt_': newerTime.toIso8601String(),
             'data_nameLocal_cid_': change2.cid,
           },
+        );
+
+        final batch2 = await storage.updateChangeLogAndStates(
+          domainType: 'project',
+          requests: [req2],
+        );
+        final result = (
+          newChangeLogEntry: batch2.newChangeLogEntries.first,
+          newEntityState: batch2.newEntityStates.first,
         );
 
         SlttLogger.logger.fine(
@@ -958,8 +978,7 @@ void main() {
       final storageId = await storage.getStorageId();
       final storedAtJson = DateTime.now().toUtc().toIso8601String();
       final change1 = IsarChangeLogEntry.fromJson(initialChange);
-      await storage.updateChangeLogAndStates(
-        domainType: kDomainProject,
+      final reqA = ChangeLogAndStateRequest(
         changeLogEntry: change1,
         changeUpdates: {
           'seq': 1,
@@ -968,6 +987,7 @@ void main() {
           'storedAt': storedAtJson,
         },
         operationCounts: OperationCounts(create: 1),
+        entityState: null,
         stateUpdates: {
           'domainType': 'project',
           'entityId': entityId,
@@ -997,6 +1017,11 @@ void main() {
         },
       );
 
+      await storage.updateChangeLogAndStates(
+        domainType: kDomainProject,
+        requests: [reqA],
+      );
+
       // Update only one field
       final updateChange = changePayload(
         projectId: projectId,
@@ -1016,8 +1041,7 @@ void main() {
       );
 
       final change2StoredAt = DateTime.now().toUtc().toIso8601String();
-      await storage.updateChangeLogAndStates(
-        domainType: 'project',
+      final reqB = ChangeLogAndStateRequest(
         changeLogEntry: change2,
         changeUpdates: {
           'seq': 2,
@@ -1031,6 +1055,11 @@ void main() {
           'data_nameLocal': 'New Name',
           'change_storedAt': change2StoredAt,
         },
+      );
+
+      await storage.updateChangeLogAndStates(
+        domainType: 'project',
+        requests: [reqB],
       );
 
       // Verify the entity still exists and can be retrieved

@@ -104,7 +104,30 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
   }
 
   @override
-  Future<UpdateChangeLogAndStateResult> updateChangeLogAndStates({
+  Future<UpdateChangeLogAndStatesResult> updateChangeLogAndStates({
+    required String domainType,
+    required List<ChangeLogAndStateRequest> requests,
+  }) async {
+    final outChanges = <BaseChangeLogEntry>[];
+    final outStates = <BaseEntityState?>[];
+    for (var req in requests) {
+      final single = await _updateOneChangeLogAndState(
+        domainType: domainType,
+        changeLogEntry: req.changeLogEntry,
+        changeUpdates: req.changeUpdates,
+        entityState: req.entityState,
+        stateUpdates: req.stateUpdates,
+        operationCounts: req.operationCounts,
+        skipChangeLogWrite: req.skipChangeLogWrite,
+        skipStateWrite: req.skipStateWrite,
+      );
+      outChanges.add(single.newChangeLogEntry);
+      outStates.add(single.newEntityState);
+    }
+    return (newChangeLogEntries: outChanges, newEntityStates: outStates);
+  }
+
+  Future<UpdateChangeLogAndStateResult> _updateOneChangeLogAndState({
     required String domainType,
     required BaseChangeLogEntry changeLogEntry,
     required Map<String, dynamic> changeUpdates,
