@@ -208,6 +208,8 @@ void registerIsarPassageDataEntityStateStorageGroup(
           put: (state) async => await isar.isarPassageDataEntityStates.put(
             state as IsarPassageDataEntityState,
           ),
+          putAll: (states) async => await isar.isarPassageDataEntityStates
+              .putAll(states.cast<IsarPassageDataEntityState>()),
           collection: (isar) => isar.isarPassageDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarPassageDataEntityStates

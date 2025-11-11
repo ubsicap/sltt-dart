@@ -129,6 +129,8 @@ void registerIsarPortionDataEntityStateStorageGroup(
           put: (state) async => await isar.isarPortionDataEntityStates.put(
             state as IsarPortionDataEntityState,
           ),
+          putAll: (states) async => await isar.isarPortionDataEntityStates
+              .putAll(states.cast<IsarPortionDataEntityState>()),
           collection: (isar) => isar.isarPortionDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarPortionDataEntityStates

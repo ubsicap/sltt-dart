@@ -120,102 +120,443 @@ class DynamoDBStorageService extends BaseStorageService {
   }) async {
     await initialize();
 
+    // Phase 1: Process all requests and prepare items
     final outChanges = <BaseChangeLogEntry>[];
     final outStates = <BaseEntityState?>[];
+    final changeItemsToPut = <Map<String, dynamic>>[];
+    final stateItemsToPut = <Map<String, dynamic>>[];
+    final syncStatesToUpsert =
+        <
+          ({
+            String entityType,
+            DynamoChangeLogEntry change,
+            OperationCounts operationCounts,
+            bool forChangeLog,
+          })
+        >[];
+
     for (var req in requests) {
-      final single = await _updateOneChangeLogAndState(
-        domainType: domainType,
-        changeLogEntry: req.changeLogEntry,
-        changeUpdates: req.changeUpdates,
-        entityState: req.entityState,
-        stateUpdates: req.stateUpdates,
-        operationCounts: req.operationCounts,
-        skipChangeLogWrite: req.skipChangeLogWrite,
-        skipStateWrite: req.skipStateWrite,
-      );
-      outChanges.add(single.newChangeLogEntry);
-      outStates.add(single.newEntityState);
+      // Merge change log entry with updates
+      final mergedChangeJson = <String, dynamic>{
+        ...req.changeLogEntry.toJson(),
+        ...req.changeUpdates,
+      }..removeWhere((key, value) => value == null);
+
+      final newChange = DynamoChangeLogEntry.fromJson(mergedChangeJson);
+
+      if (!req.skipChangeLogWrite) {
+        // Assign sequence number
+        newChange.seq = await _bumpSeq(
+          domainType: domainType,
+          domainId: newChange.domainId,
+        );
+
+        // Prepare change log item for batch put
+        changeItemsToPut.add(_buildChangeLogItem(newChange));
+
+        // Queue sync state update for change log
+        syncStatesToUpsert.add((
+          entityType: newChange.entityType,
+          change: newChange,
+          operationCounts: req.operationCounts,
+          forChangeLog: true,
+        ));
+      }
+
+      outChanges.add(newChange);
+
+      // Process entity state
+      late final BaseEntityState newState;
+      if (req.skipStateWrite &&
+          req.entityState != null &&
+          req.stateUpdates.isEmpty) {
+        newState = req.entityState!;
+      } else {
+        final currentStateJson =
+            req.entityState?.toJson() ??
+            _buildInitialStateJson(
+              domainType: domainType,
+              domainId: newChange.domainId,
+              entityType: newChange.entityType,
+              entityId: newChange.entityId,
+              change: newChange,
+            );
+        final mergedStateJson = <String, dynamic>{
+          ...currentStateJson,
+          ...req.stateUpdates,
+        }..removeWhere((key, value) => value == null);
+
+        mergedStateJson['entityId'] = newChange.entityId;
+        mergedStateJson['entityType'] = newChange.entityType;
+        mergedStateJson['domainType'] = domainType;
+        mergedStateJson['unknownJson'] = JsonUtils.normalize(
+          mergedStateJson['unknownJson'] as String?,
+        );
+
+        newState = deserializeEntityStateSafely(mergedStateJson);
+
+        if (!req.skipStateWrite) {
+          // Prepare entity state item for batch put
+          stateItemsToPut.add(_buildEntityStateItem(newState));
+
+          // Queue sync state update for entity state
+          syncStatesToUpsert.add((
+            entityType: newChange.entityType,
+            change: newChange,
+            operationCounts: req.operationCounts,
+            forChangeLog: false,
+          ));
+        }
+      }
+
+      outStates.add(newState);
     }
+
+    // Phase 2: Batch write change log entries
+    if (changeItemsToPut.isNotEmpty) {
+      await _batchPutItems(changeItemsToPut);
+    }
+
+    // Phase 3: Batch write entity states
+    if (stateItemsToPut.isNotEmpty) {
+      await _batchPutItems(stateItemsToPut);
+    }
+
+    // Phase 4: Batch upsert entity type sync states
+    if (syncStatesToUpsert.isNotEmpty) {
+      await _batchUpsertEntityTypeSyncStates(
+        domainType: domainType,
+        syncStates: syncStatesToUpsert,
+      );
+    }
+
     return (newChangeLogEntries: outChanges, newEntityStates: outStates);
   }
 
-  Future<UpdateChangeLogAndStateResult> _updateOneChangeLogAndState({
-    required String domainType,
-    required BaseChangeLogEntry changeLogEntry,
-    required Map<String, dynamic> changeUpdates,
-    BaseEntityState? entityState,
-    required Map<String, dynamic> stateUpdates,
-    required OperationCounts operationCounts,
-    bool skipChangeLogWrite = false,
-    bool skipStateWrite = false,
-  }) async {
-    final mergedChangeJson = <String, dynamic>{
-      ...changeLogEntry.toJson(),
-      ...changeUpdates,
-    }..removeWhere((key, value) => value == null);
+  /// Builds a DynamoDB item for a change log entry.
+  Map<String, dynamic> _buildChangeLogItem(DynamoChangeLogEntry entry) {
+    return {
+      'pk': {
+        'S': _changePrimaryKey(
+          domainType: entry.domainType,
+          domainId: entry.domainId,
+          entityType: entry.entityType,
+          entityId: entry.entityId,
+        ),
+      },
+      'sk': {'S': _changeSortKey(entry.cid)},
+      'gsi1pk': {
+        'S': _changeGsiPartition(
+          domainType: entry.domainType,
+          domainId: entry.domainId,
+        ),
+      },
+      'gsi1sk': {'S': _changeGsiSortKey(entry.seq)},
+      'seq': {'N': entry.seq.toString()},
+      ..._encodeJson(entry.toJson()),
+    };
+  }
 
-    final newChange = DynamoChangeLogEntry.fromJson(mergedChangeJson);
+  /// Builds a DynamoDB item for an entity state.
+  Map<String, dynamic> _buildEntityStateItem<
+    TEntityState extends BaseEntityState
+  >(TEntityState state) {
+    final stateJson = state.toJson();
+    final parentId = stateJson['data_parentId'] as String? ?? '';
+    final parentProp = stateJson['data_parentProp'] as String? ?? '';
+    final rank = stateJson['data_rank']?.toString();
 
-    if (!skipChangeLogWrite) {
-      // Always assign a new sequence number from DynamoDB's atomic counter
-      // The client-provided seq value (if any) is ignored
-      newChange.seq = await _bumpSeq(
-        domainType: domainType,
-        domainId: newChange.domainId,
-      );
-      await _putChangeLogEntry(newChange);
+    return {
+      'pk': {
+        'S': _statePrimaryKey(
+          domainType: state.domainType,
+          domainId: state.change_domainId,
+          entityType: state.entityType,
+        ),
+      },
+      'sk': {'S': _stateSortKey(entityId: state.entityId)},
+      'gsi2pk': {
+        'S': _stateGsi2Partition(
+          domainType: state.domainType,
+          domainId: state.change_domainId,
+          entityType: state.entityType,
+          parentId: parentId,
+        ),
+      },
+      'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, rank: rank)},
+      ..._encodeJson(stateJson),
+    };
+  }
 
-      // Upsert entity type sync state counters for change log
-      await upsertEntityTypeSyncStates(
-        domainType: domainType,
-        entityType: newChange.entityType,
-        newChange: newChange,
-        operationCounts: operationCounts,
-        forChangeLog: true,
-      );
+  /// Batch puts items to DynamoDB (max 25 per request).
+  Future<void> _batchPutItems(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
+
+    // DynamoDB BatchWriteItem supports max 25 items per request
+    const batchSize = 25;
+
+    for (var i = 0; i < items.length; i += batchSize) {
+      final batch = items.skip(i).take(batchSize).toList();
+
+      final putRequests = batch.map((item) {
+        return {
+          'PutRequest': {'Item': item},
+        };
+      }).toList();
+
+      final response = await _dynamoRequest('BatchWriteItem', {
+        'RequestItems': {tableName: putRequests},
+      });
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to batch put items: ${response.body}');
+      }
+
+      // Handle unprocessed items (throttling, etc.)
+      final body =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      final unprocessed = body['UnprocessedItems'] as Map<String, dynamic>?;
+
+      if (unprocessed != null && unprocessed.isNotEmpty) {
+        // Retry unprocessed items after a brief delay
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        final unprocessedForTable =
+            unprocessed[tableName] as List<dynamic>? ?? <dynamic>[];
+        final retryItems = unprocessedForTable.map((req) {
+          final putReq = req as Map<String, dynamic>;
+          return putReq['PutRequest']['Item'] as Map<String, dynamic>;
+        }).toList();
+
+        await _batchPutItems(retryItems);
+      }
     }
+  }
 
-    late final BaseEntityState newState;
-    if (skipStateWrite && entityState != null && stateUpdates.isEmpty) {
-      newState = entityState;
-    } else {
-      final currentStateJson =
-          entityState?.toJson() ??
-          _buildInitialStateJson(
-            domainType: domainType,
-            domainId: newChange.domainId,
-            entityType: newChange.entityType,
-            entityId: newChange.entityId,
-            change: newChange,
-          );
-      final mergedStateJson = <String, dynamic>{
-        ...currentStateJson,
-        ...stateUpdates,
-      }..removeWhere((key, value) => value == null);
+  /// Batch upserts entity type sync states.
+  ///
+  /// Note: DynamoDB doesn't support batch conditional updates, so we still need
+  /// to fetch existing states first, then batch write the updates.
+  Future<void> _batchUpsertEntityTypeSyncStates({
+    required String domainType,
+    required List<
+      ({
+        String entityType,
+        DynamoChangeLogEntry change,
+        OperationCounts operationCounts,
+        bool forChangeLog,
+      })
+    >
+    syncStates,
+  }) async {
+    if (syncStates.isEmpty) return;
 
-      mergedStateJson['entityId'] = newChange.entityId;
-      mergedStateJson['entityType'] = newChange.entityType;
-      mergedStateJson['domainType'] = domainType;
-      mergedStateJson['unknownJson'] = JsonUtils.normalize(
-        mergedStateJson['unknownJson'] as String?,
-      );
+    // Group by (entityType, forChangeLog) to aggregate operation counts
+    final grouped =
+        <
+          String,
+          ({
+            String entityType,
+            DynamoChangeLogEntry latestChange,
+            int creates,
+            int updates,
+            int deletes,
+            bool forChangeLog,
+          })
+        >{};
 
-      newState = deserializeEntityStateSafely(mergedStateJson);
+    for (final syncState in syncStates) {
+      final key = '${syncState.entityType}#${syncState.forChangeLog}';
+      final existing = grouped[key];
 
-      if (!skipStateWrite) {
-        await _putEntityState(newState);
+      if (existing == null) {
+        grouped[key] = (
+          entityType: syncState.entityType,
+          latestChange: syncState.change,
+          creates: syncState.operationCounts.create,
+          updates: syncState.operationCounts.update,
+          deletes: syncState.operationCounts.delete,
+          forChangeLog: syncState.forChangeLog,
+        );
+      } else {
+        // Keep the latest change
+        final latestChange =
+            syncState.change.changeAt.isAfter(existing.latestChange.changeAt)
+            ? syncState.change
+            : existing.latestChange;
 
-        // Upsert entity type sync state counters
-        await upsertEntityTypeSyncStates(
-          domainType: domainType,
-          entityType: newChange.entityType,
-          newChange: newChange,
-          operationCounts: operationCounts,
+        grouped[key] = (
+          entityType: existing.entityType,
+          latestChange: latestChange,
+          creates: existing.creates + syncState.operationCounts.create,
+          updates: existing.updates + syncState.operationCounts.update,
+          deletes: existing.deletes + syncState.operationCounts.delete,
+          forChangeLog: existing.forChangeLog,
         );
       }
     }
 
-    return (newChangeLogEntry: newChange, newEntityState: newState);
+    // Batch get existing sync states
+    final keysToGet = <Map<String, dynamic>>[];
+    for (final entry in grouped.values) {
+      final pk = _entityTypeSyncStatePrimaryKey(
+        domainType: domainType,
+        domainId: entry.latestChange.domainId,
+        forChangeLog: entry.forChangeLog,
+      );
+      final sk = _entityTypeSyncStateSortKey(
+        entityType: entry.entityType,
+        forChangeLog: entry.forChangeLog,
+      );
+      keysToGet.add({
+        'pk': {'S': pk},
+        'sk': {'S': sk},
+      });
+    }
+
+    final existingStates = await _batchGetItems(keysToGet);
+    final existingByKey = <String, DynamoEntityTypeSyncState>{};
+    for (final item in existingStates) {
+      final state = DynamoEntityTypeSyncState.fromJson(_decodeItem(item));
+      final key =
+          '${state.entityType}#${item['pk']['S'].toString().contains('etsc')}';
+      existingByKey[key] = state;
+    }
+
+    // Prepare batch puts
+    final itemsToPut = <Map<String, dynamic>>[];
+    final storageId = await getStorageId();
+
+    for (final entry in grouped.entries) {
+      final key = entry.key;
+      final data = entry.value;
+      final existing = existingByKey[key];
+
+      late final DateTime latestChangeAt;
+      late final String latestCid;
+      late final int latestSeq;
+      late final int created;
+      late final int updated;
+      late final int deleted;
+      // ignore: non_constant_identifier_names
+      late final DateTime storedAt_orig_;
+
+      if (existing != null) {
+        // Determine latest change metadata
+        if (data.latestChange.changeAt.isAfter(existing.changeAt) ||
+            data.latestChange.changeAt.isAtSameMomentAs(existing.changeAt)) {
+          latestChangeAt = data.latestChange.changeAt;
+          latestCid = data.latestChange.cid;
+          latestSeq = data.latestChange.seq;
+        } else {
+          latestChangeAt = existing.changeAt;
+          latestCid = existing.cid;
+          latestSeq = existing.seq;
+        }
+
+        created = existing.created + data.creates;
+        updated = existing.updated + data.updates;
+        deleted = existing.deleted + data.deletes;
+        storedAt_orig_ = existing.storedAt_orig_ ?? existing.storedAt;
+      } else {
+        latestChangeAt = data.latestChange.changeAt;
+        latestCid = data.latestChange.cid;
+        latestSeq = data.latestChange.seq;
+        created = data.creates;
+        updated = data.updates;
+        deleted = data.deletes;
+        storedAt_orig_ = data.latestChange.storedAt ?? DateTime.now().toUtc();
+      }
+
+      final newState = DynamoEntityTypeSyncState(
+        entityType: data.entityType,
+        domainId: data.latestChange.domainId,
+        domainType: domainType,
+        storageId: storageId,
+        storageType: getStorageType(),
+        cid: latestCid,
+        changeAt: latestChangeAt,
+        seq: latestSeq,
+        created: created,
+        updated: updated,
+        deleted: deleted,
+        storedAt: data.latestChange.storedAt ?? DateTime.now().toUtc(),
+        storedAt_orig_: storedAt_orig_,
+      );
+
+      final pk = _entityTypeSyncStatePrimaryKey(
+        domainType: domainType,
+        domainId: data.latestChange.domainId,
+        forChangeLog: data.forChangeLog,
+      );
+      final sk = _entityTypeSyncStateSortKey(
+        entityType: data.entityType,
+        forChangeLog: data.forChangeLog,
+      );
+
+      itemsToPut.add({
+        'pk': {'S': pk},
+        'sk': {'S': sk},
+        ..._encodeJson(newState.toJson()),
+      });
+    }
+
+    // Batch put all sync states
+    if (itemsToPut.isNotEmpty) {
+      await _batchPutItems(itemsToPut);
+    }
+  }
+
+  /// Batch gets items from DynamoDB (max 100 per request).
+  Future<List<Map<String, dynamic>>> _batchGetItems(
+    List<Map<String, dynamic>> keys,
+  ) async {
+    if (keys.isEmpty) return [];
+
+    final results = <Map<String, dynamic>>[];
+
+    // DynamoDB BatchGetItem supports max 100 items per request
+    const batchSize = 100;
+
+    for (var i = 0; i < keys.length; i += batchSize) {
+      final batch = keys.skip(i).take(batchSize).toList();
+
+      final response = await _dynamoRequest('BatchGetItem', {
+        'RequestItems': {
+          tableName: {'Keys': batch},
+        },
+      });
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to batch get items: ${response.body}');
+      }
+
+      final body =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      final responses = body['Responses'] as Map<String, dynamic>?;
+      if (responses != null && responses.containsKey(tableName)) {
+        final items = responses[tableName] as List<dynamic>? ?? [];
+        results.addAll(items.cast<Map<String, dynamic>>());
+      }
+
+      // Handle unprocessed keys (throttling, etc.)
+      final unprocessed = body['UnprocessedKeys'] as Map<String, dynamic>?;
+      if (unprocessed != null && unprocessed.isNotEmpty) {
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        final unprocessedForTable =
+            unprocessed[tableName] as Map<String, dynamic>?;
+        if (unprocessedForTable != null) {
+          final retryKeys = unprocessedForTable['Keys'] as List<dynamic>? ?? [];
+          final retryResults = await _batchGetItems(
+            retryKeys.cast<Map<String, dynamic>>(),
+          );
+          results.addAll(retryResults);
+        }
+      }
+    }
+
+    return results;
   }
 
   /// Stores an entity state without updating change log or sync states.

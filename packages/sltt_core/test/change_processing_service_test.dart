@@ -296,6 +296,68 @@ void main() {
         expect(summary.created, isA<List>());
         expect(summary.created.length, equals(2));
       });
+
+      test('returns error when batch contains mixed domainTypes', () async {
+        await storage.initialize();
+        final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+
+        final entry1 =
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'proj-1',
+              entityType: 'task',
+              entityId: 'proj-1-task-1',
+              changeBy: 'tester',
+              changeAt: baseTime,
+              data: ProjectDataFields(
+                nameLocal: 'Task A',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
+              operation: 'create',
+            );
+
+        // Same structure but different domainType to trigger prevalidation error
+        final entry2 =
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
+              factory: TestChangeLogEntry.new,
+              domainType: 'other',
+              domainId: 'other-1',
+              entityType: 'task',
+              entityId: 'other-1-task-1',
+              changeBy: 'tester',
+              changeAt: baseTime.add(const Duration(minutes: 1)),
+              data: ProjectDataFields(
+                nameLocal: 'Task B',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
+              operation: 'create',
+            );
+
+        final result = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [entry1.toJson(), entry2.toJson()],
+          srcStorageType: 'local',
+          srcStorageId: 'local',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+
+        expect(result.isError, isTrue);
+        expect(result.errorCode, equals(400));
+        expect(result.errorMessage, contains('same domainType'));
+      });
     });
 
     group('- returnErrorIfInResultsSummary tests', () {

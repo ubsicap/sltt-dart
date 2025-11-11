@@ -34,6 +34,7 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   final EntityType entityType;
   final T Function(Map<String, dynamic>) fromJson;
   final Future<void> Function(BaseEntityState) put;
+  final Future<void> Function(List<BaseEntityState>) putAll;
   // schema removed - declare schema list separately in register_entity_states
   final IsarCollection<T> Function(Isar) collection;
   final Future<T?> Function(Isar, String, String) findByDomainAndEntity;
@@ -66,6 +67,7 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
     required this.entityType,
     required this.fromJson,
     required this.put,
+    required this.putAll,
     required this.collection,
     required this.findByDomainAndEntity,
     required this.findByDomainWithPagination,

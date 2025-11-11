@@ -194,7 +194,18 @@ class ChangeProcessingService {
         unprocessed: [], // TODO: changes that couldn't be processed
       );
 
-      // Process all changes
+      // Phase 1: Collect all change requests with their associated metadata
+      final requests = <ChangeLogAndStateRequest>[];
+      final requestMetadata =
+          <
+            ({
+              int changeIndex,
+              BaseChangeLogEntry changeLogEntry,
+              BaseEntityState? entityState,
+              GetUpdateResults result,
+            })
+          >[];
+
       for (int i = 0; i < changes.length; i++) {
         final changeData = changes[i];
 
@@ -202,12 +213,6 @@ class ChangeProcessingService {
           final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
             changeData,
           );
-
-          // Defensive storage responsibility checks may be enforced by storage
-          // implementations after they deserialize incoming JSON into model
-          // objects. Provide a shared static helper so storage can call it to
-          // validate invariants (without mutating the objects). This helps
-          // keep validation consistent across storage implementations.
 
           SlttLogger.logger.fine(
             '[${storage.getStorageType()}] DEBUG: Deserialized changeLogEntry: cid=${changeLogEntry.cid}, unknownJson=${changeLogEntry.getUnknown()}',
@@ -303,7 +308,6 @@ class ChangeProcessingService {
             return payloadCheckResult;
           }
 
-          // Update storage with the change and state
           // Debug: log computed stateUpdates for diagnosis
           SlttLogger.logger.fine(
             '[${storage.getStorageType()}] DEBUG: computed stateUpdates for CID ${changeLogEntry.cid}: ${result.stateUpdates}',
@@ -332,42 +336,13 @@ class ChangeProcessingService {
             skipStateWrite: result.stateUpdates.isEmpty,
           );
 
-          final batchResults = await storage.updateChangeLogAndStates(
-            domainType: changeLogEntry.domainType,
-            requests: [request],
-          );
-          final updateResults = (
-            newChangeLogEntry: batchResults.newChangeLogEntries.first,
-            newEntityState: batchResults.newEntityStates.first,
-          );
-
-          // In sync mode, warn if we get unexpected state changes
-          if (storageMode == 'sync' &&
-              targetStorageId == changeLogEntry.storageId &&
-              updateResults.newChangeLogEntry.operation !=
-                  kChangeOperationNoOp &&
-              !result.isDuplicate &&
-              result.stateUpdates.isNotEmpty) {
-            SlttLogger.logger.warning(
-              '[${storage.getStorageType()}] WARNING: Sync mode resulted in state change for CID ${changeLogEntry.cid}. '
-              'Operation: ${updateResults.newChangeLogEntry.operation}. '
-              'This may indicate a data inconsistency worth investigating.'
-              'ChangeLogEntry: $changeLogEntry'
-              'Previous state: $entityState'
-              'New state: ${updateResults.newEntityState}.'
-              'State updates: ${result.stateUpdates}',
-            );
-          }
-
-          // Categorize the result
-          categorizeChangeResult(
-            resultsSummary: resultsSummary,
-            updateResults: updateResults,
-            result: result,
+          requests.add(request);
+          requestMetadata.add((
+            changeIndex: i,
             changeLogEntry: changeLogEntry,
-            includeChangeUpdates: includeChangeUpdates,
-            includeStateUpdates: includeStateUpdates,
-          );
+            entityState: entityState,
+            result: result,
+          ));
         } catch (e, stackTrace) {
           // Handle individual change processing errors
           resultsSummary.errors.add({
@@ -375,6 +350,56 @@ class ChangeProcessingService {
             'error': e.toString(),
             'stackTrace': stackTrace.toString(),
           });
+        }
+      }
+
+      // Phase 2: Process all requests as a batch (if any valid requests collected)
+      if (requests.isNotEmpty) {
+        // Pre-validation enforces a single domainType for the whole batch,
+        // so process all requests together as a single batch. Use the
+        // first request's domainType as the batch domainType.
+        final domainType = requests.first.changeLogEntry.domainType;
+
+        final batchResults = await storage.updateChangeLogAndStates(
+          domainType: domainType,
+          requests: requests,
+        );
+
+        // Phase 3: Categorize results for each request in the batch
+        for (int i = 0; i < requests.length; i++) {
+          final metadata = requestMetadata[i];
+          final updateResults = (
+            newChangeLogEntry: batchResults.newChangeLogEntries[i],
+            newEntityState: batchResults.newEntityStates[i],
+          );
+
+          // In sync mode, warn if we get unexpected state changes
+          if (storageMode == 'sync' &&
+              targetStorageId == metadata.changeLogEntry.storageId &&
+              updateResults.newChangeLogEntry.operation !=
+                  kChangeOperationNoOp &&
+              !metadata.result.isDuplicate &&
+              metadata.result.stateUpdates.isNotEmpty) {
+            SlttLogger.logger.warning(
+              '[${storage.getStorageType()}] WARNING: Sync mode resulted in state change for CID ${metadata.changeLogEntry.cid}. '
+              'Operation: ${updateResults.newChangeLogEntry.operation}. '
+              'This may indicate a data inconsistency worth investigating.'
+              'ChangeLogEntry: ${metadata.changeLogEntry}'
+              'Previous state: ${metadata.entityState}'
+              'New state: ${updateResults.newEntityState}.'
+              'State updates: ${metadata.result.stateUpdates}',
+            );
+          }
+
+          // Categorize the result
+          categorizeChangeResult(
+            resultsSummary: resultsSummary,
+            updateResults: updateResults,
+            result: metadata.result,
+            changeLogEntry: metadata.changeLogEntry,
+            includeChangeUpdates: includeChangeUpdates,
+            includeStateUpdates: includeStateUpdates,
+          );
         }
       }
 
@@ -596,6 +621,10 @@ class ChangeProcessingService {
     final List<int> invalidStateChanged = [];
     final List<int> invalidSeqProvided = [];
     final List<int> invalidCloudAt = [];
+    // Track the set of domainTypes found in the incoming batch so we can
+    // enforce that all changes in a single call to storeChanges share the
+    // same domainType (simplifies batch storage implementations).
+    final domainTypes = <String>{};
     for (int i = 0; i < changes.length; i++) {
       final changeData = changes[i];
       try {
@@ -611,6 +640,12 @@ class ChangeProcessingService {
           // top-level HTTP 400.
           continue;
         }
+
+        // Record domainType for later batch-level validation. We only collect
+        // domainTypes for successfully-deserialized entries (i.e. not
+        // kChangeOperationError) so that partial deserialization failures do
+        // not prevent the domainType check from running on the valid entries.
+        domainTypes.add(changeLogEntry.domainType);
 
         // Validate other storageMode issues
         if (storageMode == 'sync') {
@@ -686,6 +721,17 @@ class ChangeProcessingService {
           errorCode: 400,
         );
       }
+    }
+
+    // Enforce that all successfully-deserialized changes in this batch share
+    // the same domainType. This simplifies batch storage implementations
+    // which expect a single domainType per batch.
+    if (domainTypes.length > 1) {
+      return ChangeProcessingResult(
+        errorMessage:
+            'All changes in a single request to storeChanges must have the same domainType. Found domainTypes: ${domainTypes.join(', ')}',
+        errorCode: 400,
+      );
     }
 
     return null; // No validation errors

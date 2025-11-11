@@ -26,6 +26,8 @@ void registerAllIsarEntityStateStorageGroups(
       fromJson: IsarProjectState.fromJson,
       put: (state) async =>
           await isar.isarProjectStates.put(state as IsarProjectState),
+      putAll: (states) async =>
+          await isar.isarProjectStates.putAll(states.cast<IsarProjectState>()),
       collection: (Isar db) => db.isarProjectStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarProjectStates
@@ -73,6 +75,9 @@ void registerAllIsarEntityStateStorageGroups(
       fromJson: IsarDocumentState.fromJson,
       put: (state) async =>
           await isar.isarDocumentStates.put(state as IsarDocumentState),
+      putAll: (states) async => await isar.isarDocumentStates.putAll(
+        states.cast<IsarDocumentState>(),
+      ),
       collection: (Isar db) => db.isarDocumentStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarDocumentStates
@@ -120,6 +125,8 @@ void registerAllIsarEntityStateStorageGroups(
       fromJson: IsarTaskState.fromJson,
       put: (state) async =>
           await isar.isarTaskStates.put(state as IsarTaskState),
+      putAll: (states) async =>
+          await isar.isarTaskStates.putAll(states.cast<IsarTaskState>()),
       collection: (Isar db) => db.isarTaskStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarTaskStates
