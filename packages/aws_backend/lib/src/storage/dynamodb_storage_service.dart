@@ -638,6 +638,50 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
+  Future<Map<String, BaseEntityState?>> batchGetEntityState({
+    required List<
+      ({String domainType, String domainId, String entityType, String entityId})
+    >
+    keys,
+  }) async {
+    await initialize();
+    if (keys.isEmpty) return <String, BaseEntityState?>{};
+
+    // Build DynamoDB keys (pk/sk) for each requested state
+    final dynamoKeys = <Map<String, dynamic>>[];
+    for (final k in keys) {
+      dynamoKeys.add({
+        'pk': {
+          'S': _statePrimaryKey(
+            domainType: k.domainType,
+            domainId: k.domainId,
+            entityType: k.entityType,
+          ),
+        },
+        'sk': {'S': _stateSortKey(entityId: k.entityId)},
+      });
+    }
+
+    // Batch get (Dynamo limits 100 per request handled internally)
+    final items = await _batchGetItems(dynamoKeys);
+    final out = <String, BaseEntityState?>{};
+
+    // Decode found items and map by entityId
+    for (final item in items) {
+      final decoded = _decodeItem(item, excludeStorageKeys: true);
+      final state = deserializeEntityStateSafely(decoded);
+      out[state.entityId] = state;
+    }
+
+    // Ensure all requested entityIds present; fill missing with null
+    for (final k in keys) {
+      out.putIfAbsent(k.entityId, () => null);
+    }
+
+    return out;
+  }
+
+  @override
   Future<BaseChangeLogEntry?> getChange({
     required String domainType,
     required String domainId,

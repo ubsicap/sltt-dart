@@ -48,6 +48,8 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   })
   findByDomainWithPagination;
 
+  final Future<List<T>> Function(Isar, List<String>) getAllByEntityId;
+
   final StreamSubscription<void> Function({
     required String domainType,
     required String domainId,
@@ -71,6 +73,7 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
     required this.collection,
     required this.findByDomainAndEntity,
     required this.findByDomainWithPagination,
+    required this.getAllByEntityId,
     required this.deleteByDomain,
     this.lazyListenToEntityChanges,
   });

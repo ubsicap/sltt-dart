@@ -46,6 +46,25 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
+  Future<Map<String, BaseEntityState?>> batchGetEntityState({
+    required List<
+      ({String domainType, String domainId, String entityType, String entityId})
+    >
+    keys,
+  }) async {
+    final result = <String, BaseEntityState?>{};
+    for (final key in keys) {
+      result[key.entityId] = await getEntityState(
+        domainType: key.domainType,
+        domainId: key.domainId,
+        entityType: key.entityType,
+        entityId: key.entityId,
+      );
+    }
+    return result;
+  }
+
+  @override
   Future<UpdateChangeLogAndStatesResult> updateChangeLogAndStates({
     required String domainType,
     required List<ChangeLogAndStateRequest> requests,

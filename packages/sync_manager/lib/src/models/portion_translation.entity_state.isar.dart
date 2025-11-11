@@ -168,6 +168,11 @@ void registerIsarPortionDataEntityStateStorageGroup(
                     .limit(limit ?? 100)
                     .findAll();
               },
+          getAllByEntityId: (isar, entityIds) async {
+            final results = await isar.isarPortionDataEntityStates
+                .getAllByEntityId(entityIds);
+            return results.whereType<IsarPortionDataEntityState>().toList();
+          },
           deleteByDomain: ({required domainId, required domainType}) async =>
               await isar.isarPortionDataEntityStates
                   .filter()

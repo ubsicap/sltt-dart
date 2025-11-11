@@ -103,6 +103,24 @@ abstract class BaseStorageService {
     required String entityId,
   });
 
+  /// Batch version of getEntityState.
+  ///
+  /// Given a list of keys (domainType, domainId, entityType, entityId),
+  /// returns a map keyed by entityId with nullable BaseEntityState values.
+  ///
+  /// Notes:
+  /// Storage backends should override with a
+  ///   more efficient bulk implementation when supported.
+  /// - The returned map is keyed by entityId. Callers should ensure that the
+  ///   entityIds in the provided keys list are unique within the batch to avoid
+  ///   key collisions.
+  Future<Map<String, BaseEntityState?>> batchGetEntityState({
+    required List<
+      ({String domainType, String domainId, String entityType, String entityId})
+    >
+    keys,
+  });
+
   /// Get a specific change by sequence number
   Future<BaseChangeLogEntry?> getChange({
     required String domainType,

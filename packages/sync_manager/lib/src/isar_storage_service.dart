@@ -582,6 +582,91 @@ class IsarStorageService extends BaseStorageService {
     return change != null ? _convertToChangeLogEntry(change) : null;
   }
 
+  @override
+  Future<Map<String, BaseEntityState?>> batchGetEntityState({
+    required List<
+      ({String domainType, String domainId, String entityType, String entityId})
+    >
+    keys,
+  }) async {
+    if (keys.isEmpty) return <String, BaseEntityState?>{};
+
+    // Group keys by entityType to leverage per-collection batch queries
+    final grouped =
+        <
+          String,
+          List<
+            ({
+              String domainType,
+              String domainId,
+              String entityType,
+              String entityId,
+            })
+          >
+        >{};
+    for (final k in keys) {
+      grouped.putIfAbsent(k.entityType, () => []).add(k);
+    }
+
+    final out = <String, BaseEntityState?>{};
+
+    // For each entityType, use getAllByEntityId for efficient batch retrieval
+    for (final entry in grouped.entries) {
+      final entityTypeString = entry.key;
+      final items = entry.value;
+
+      final entityTypeEnum = EntityType.values.firstWhere(
+        (e) => e.value == entityTypeString,
+        orElse: () => EntityType.unknown,
+      );
+      final storageGroup = _entityStateRegistry.get(entityTypeEnum);
+
+      if (storageGroup == null) {
+        // Unknown type: fall back to individual retrieval
+        for (final k in items) {
+          final state = await _getSingleState(
+            domainType: k.domainType,
+            domainId: k.domainId,
+            entityType: k.entityType,
+            entityId: k.entityId,
+          );
+          out[k.entityId] = state;
+        }
+        continue;
+      }
+
+      // Use getAllByEntityId for efficient batch retrieval
+      final entityIds = items.map((k) => k.entityId).toList();
+      final results = await storageGroup.getAllByEntityId(_isar, entityIds);
+
+      // Map results by entityId
+      for (final state in results) {
+        out[state.entityId] = state;
+      }
+
+      // Ensure all requested ids present; fill missing with null
+      for (final k in items) {
+        out.putIfAbsent(k.entityId, () => null);
+      }
+    }
+    return out;
+  }
+
+  Future<BaseEntityState?> _getSingleState({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+  }) async {
+    final entityTypeEnum = EntityType.values.firstWhere(
+      (e) => e.value == entityType,
+      orElse: () => EntityType.unknown,
+    );
+    final storageGroup = _entityStateRegistry.get(entityTypeEnum);
+    if (storageGroup == null) return null;
+    return await storageGroup.findByDomainAndEntity(_isar, domainId, entityId);
+  }
+
   /// Delete multiple changes by sequence numbers.
   ///
   /// Used for cleanup after successful outsync operations.
