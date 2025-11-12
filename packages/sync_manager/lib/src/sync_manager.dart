@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 
 import 'isar_storage_service.dart';
 
@@ -120,16 +121,20 @@ class SyncManager {
 
   // Outsync changes from outsyncs to cloud storage
   Future<OutsyncResult> outsyncToCloud({List<String>? domainIds}) async {
+    late final List<IsarChangeLogEntry> changesToSync;
     try {
       SlttLogger.logger.info('[SyncManager] Starting outsync to cloud...');
 
-      // Get changes for sync (excludes outdated changes)
-      final changesToSync = await _localStorage.getChangesForSync();
+      // Get changes for sync
+      changesToSync = await _localStorage.getChangesForSync(
+        limit: 12 /* batch writes 12 changes + 12 state updates */,
+      );
 
       if (changesToSync.isEmpty) {
         SlttLogger.logger.fine('[SyncManager] No changes to outsync');
         return OutsyncResult(
           success: true,
+          changesRequested: changesToSync,
           changeSummary: null,
           deletedLocalChanges: [],
           message: 'No changes to sync',
@@ -177,6 +182,7 @@ class SyncManager {
           return OutsyncResult(
             success: true,
             message: 'Successfully outsynced ${cidsSynced.length} changes',
+            changesRequested: changesToSync,
             changeSummary: summary,
             deletedLocalChanges: cidsSynced,
           );
@@ -191,6 +197,7 @@ class SyncManager {
           return OutsyncResult(
             success: false,
             message: message,
+            changesRequested: changesToSync,
             changeSummary: summary,
             deletedLocalChanges: [],
             error: error,
@@ -209,6 +216,7 @@ class SyncManager {
       return OutsyncResult(
         success: false,
         changeSummary: null,
+        changesRequested: changesToSync,
         deletedLocalChanges: [],
         message: 'Outsync failed: $e',
         error: e.toString(), // Capture original error
@@ -440,6 +448,7 @@ class SyncManager {
     // Use the already computed deleted local sequences from outsync result
     final finalOutsyncResult = OutsyncResult(
       success: outsyncResult.success,
+      changesRequested: outsyncResult.changesRequested,
       changeSummary: outsyncResult.changeSummary,
       deletedLocalChanges: outsyncResult.deletedLocalChanges,
       message: outsyncResult.message,
@@ -529,6 +538,7 @@ class SyncManager {
 // Result classes
 class OutsyncResult {
   final bool success;
+  final List<IsarChangeLogEntry> changesRequested;
   ChangeProcessingSummary? changeSummary;
   final List<String> deletedLocalChanges;
   final String message;
@@ -537,6 +547,7 @@ class OutsyncResult {
 
   OutsyncResult({
     required this.success,
+    required this.changesRequested,
     required this.changeSummary,
     required this.deletedLocalChanges,
     required this.message,
