@@ -87,7 +87,7 @@ class DynamoDBStorageService extends BaseStorageService {
     }
 
     if (useLocalDynamoDB) {
-      await _createTableIfNotExists();
+      await createTableIfNotExists();
     }
 
     await ensureStorageId();
@@ -1717,6 +1717,12 @@ class DynamoDBStorageService extends BaseStorageService {
     String operation,
     Map<String, dynamic> payload,
   ) async {
+    // Ensure initialization has run so `_endpoint` and headers are populated.
+    // Some callers may invoke low-level operations without explicitly
+    // calling `initialize()` (or there may be a race). Defensively ensure
+    // initialization here to avoid a LateInitializationError on `_endpoint`.
+    if (!_initialized) await initialize();
+
     final uri = Uri.parse(_endpoint);
     final body = jsonEncode(payload);
 
@@ -1766,7 +1772,7 @@ class DynamoDBStorageService extends BaseStorageService {
     return http.Response.fromStream(streamed);
   }
 
-  Future<void> _createTableIfNotExists() async {
+  Future<void> createTableIfNotExists() async {
     final describe = await _dynamoRequest('DescribeTable', {
       'TableName': tableName,
     });

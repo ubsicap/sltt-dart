@@ -16,13 +16,15 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     ensureDynamoSerializersRegistered();
   }
 
+  @override
+  Future<void> createTableIfNotExists() async {
+    // No-op for fake storage
+  }
+
   final String _storageId = 'test-storage';
 
   @override
   String getStorageType() => 'cloud';
-
-  @override
-  Future<void> initialize() async {}
 
   @override
   Future<void> close() async {}
@@ -104,6 +106,27 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
   }
 
   @override
+  Future<Map<String, BaseEntityState?>> batchGetEntityState({
+    required List<
+      ({String domainType, String domainId, String entityType, String entityId})
+    >
+    keys,
+  }) async {
+    Map<String, BaseEntityState?> results = {};
+    for (var key in keys) {
+      final result = await getEntityState(
+        domainType: key.domainType,
+        domainId: key.domainId,
+        entityType: key.entityType,
+        entityId: key.entityId,
+      );
+      results['${key.domainType}|${key.domainId}|${key.entityType}|${key.entityId}'] =
+          result;
+    }
+    return results;
+  }
+
+  @override
   Future<UpdateChangeLogAndStatesResult> updateChangeLogAndStates({
     required String domainType,
     required List<ChangeLogAndStateRequest> requests,
@@ -111,7 +134,7 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     final outChanges = <BaseChangeLogEntry>[];
     final outStates = <BaseEntityState?>[];
     for (var req in requests) {
-      final single = await _updateOneChangeLogAndState(
+      final single = await updateOneChangeLogAndState(
         domainType: domainType,
         changeLogEntry: req.changeLogEntry,
         changeUpdates: req.changeUpdates,
@@ -127,7 +150,7 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     return (newChangeLogEntries: outChanges, newEntityStates: outStates);
   }
 
-  Future<UpdateChangeLogAndStateResult> _updateOneChangeLogAndState({
+  Future<UpdateChangeLogAndStateResult> updateOneChangeLogAndState({
     required String domainType,
     required BaseChangeLogEntry changeLogEntry,
     required Map<String, dynamic> changeUpdates,
