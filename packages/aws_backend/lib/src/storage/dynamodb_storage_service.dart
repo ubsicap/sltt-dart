@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
@@ -1487,40 +1488,91 @@ class DynamoDBStorageService extends BaseStorageService {
     // DynamoDB BatchWriteItem supports max 25 items per request
     const batchSize = 25;
 
+    // Retry configuration
+    const int maxAttempts = 6; // exponential backoff attempts
+    const int baseDelayMs = 100; // initial backoff
+    final rand = Random();
+
     for (var i = 0; i < items.length; i += batchSize) {
       final batch = items.skip(i).take(batchSize).toList();
 
-      final deleteRequests = batch.map((item) {
-        return {
-          'DeleteRequest': {'Key': item},
-        };
-      }).toList();
+      // We'll loop and retry any unprocessed items or throttled responses
+      List<Map<String, dynamic>> toDelete = batch;
+      int attempt = 0;
+      int delayMs = baseDelayMs;
 
-      final response = await _dynamoRequest('BatchWriteItem', {
-        'RequestItems': {tableName: deleteRequests},
-      });
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to batch delete items: ${response.body}');
-      }
-
-      // Handle unprocessed items (throttling, etc.)
-      final body =
-          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-      final unprocessed = body['UnprocessedItems'] as Map<String, dynamic>?;
-
-      if (unprocessed != null && unprocessed.isNotEmpty) {
-        // Retry unprocessed items after a brief delay
-        await Future.delayed(const Duration(milliseconds: 100));
-
-        final unprocessedForTable =
-            unprocessed[tableName] as List<dynamic>? ?? <dynamic>[];
-        final retryItems = unprocessedForTable.map((req) {
-          final deleteReq = req as Map<String, dynamic>;
-          return deleteReq['DeleteRequest']['Key'] as Map<String, dynamic>;
+      while (toDelete.isNotEmpty) {
+        final deleteRequests = toDelete.map((item) {
+          return {
+            'DeleteRequest': {'Key': item},
+          };
         }).toList();
 
-        await _batchDeleteItems(retryItems);
+        final response = await _dynamoRequest('BatchWriteItem', {
+          'RequestItems': {tableName: deleteRequests},
+        });
+
+        // Successful HTTP response
+        if (response.statusCode == 200) {
+          final body =
+              jsonDecode(utf8.decode(response.bodyBytes))
+                  as Map<String, dynamic>;
+
+          final unprocessed = body['UnprocessedItems'] as Map<String, dynamic>?;
+
+          if (unprocessed != null && unprocessed.isNotEmpty) {
+            final unprocessedForTable =
+                unprocessed[tableName] as List<dynamic>? ?? <dynamic>[];
+            final retryItems = unprocessedForTable.map((req) {
+              final deleteReq = req as Map<String, dynamic>;
+              return deleteReq['DeleteRequest']['Key'] as Map<String, dynamic>;
+            }).toList();
+
+            attempt++;
+            if (attempt > maxAttempts) {
+              throw Exception(
+                'Failed to batch delete items after $attempt attempts; '
+                'remaining=${retryItems.length}; lastResponse=${response.body}',
+              );
+            }
+
+            // Backoff with jitter
+            final jitter = rand.nextInt(100);
+            await Future.delayed(Duration(milliseconds: delayMs + jitter));
+            delayMs = (delayMs * 2).clamp(baseDelayMs, 30 * 1000);
+            toDelete = retryItems.cast<Map<String, dynamic>>();
+            continue; // retry loop
+          }
+
+          // No unprocessed items - batch succeeded
+          break;
+        }
+
+        // Non-200 response - try to detect throttling and retry with backoff
+        final bodyStr = utf8.decode(response.bodyBytes);
+        bool isThrottling = false;
+        try {
+          final parsed = jsonDecode(bodyStr) as Map<String, dynamic>;
+          final type = parsed['__type']?.toString() ?? '';
+          if (type.contains('Throttling') ||
+              type.contains('ProvisionedThroughputExceededException')) {
+            isThrottling = true;
+          }
+        } catch (_) {
+          // ignore parse errors
+        }
+
+        attempt++;
+        if (isThrottling && attempt <= maxAttempts) {
+          final jitter = rand.nextInt(100);
+          await Future.delayed(Duration(milliseconds: delayMs + jitter));
+          delayMs = (delayMs * 2).clamp(baseDelayMs, 30 * 1000);
+          // retry same toDelete list
+          continue;
+        }
+
+        // If we've exhausted retries or it's not a throttling error, fail with the last response
+        throw Exception('Failed to batch delete items: ${response.body}');
       }
     }
   }
