@@ -1525,45 +1525,6 @@ class DynamoDBStorageService extends BaseStorageService {
     }
   }
 
-  Map<String, dynamic> _buildInitialStateJson({
-    required String domainType,
-    required String domainId,
-    required String entityType,
-    required String entityId,
-    required BaseChangeLogEntry change,
-  }) {
-    final changeAt = change.changeAt.toUtc().toIso8601String();
-    final changeBy = change.changeBy;
-    final cid = change.cid;
-
-    return {
-      'entityId': entityId,
-      'entityType': entityType,
-      'domainType': domainType,
-      'unknownJson': JsonUtils.normalize('{}'),
-      'change_domainId': domainId,
-      'change_domainId_orig_': domainId,
-      'change_changeAt': changeAt,
-      'change_changeAt_orig_': changeAt,
-      'change_cid': cid,
-      'change_cid_orig_': cid,
-      'change_changeBy': changeBy,
-      'change_changeBy_orig_': changeBy,
-      'change_storedAt':
-          change.storedAt?.toUtc().toIso8601String() ??
-          change.cloudAt?.toUtc().toIso8601String() ??
-          changeAt,
-      'data_parentId': '',
-      'data_parentId_changeAt_': changeAt,
-      'data_parentId_changeBy_': changeBy,
-      'data_parentId_cid_': cid,
-      'data_parentProp': '',
-      'data_parentProp_changeAt_': changeAt,
-      'data_parentProp_changeBy_': changeBy,
-      'data_parentProp_cid_': cid,
-    };
-  }
-
   Future<void> _putChangeLogEntry(DynamoChangeLogEntry entry) async {
     final item = <String, dynamic>{
       'pk': {
