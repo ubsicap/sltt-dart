@@ -13,6 +13,18 @@ class InMemoryStorage implements BaseStorageService {
   InMemoryStorage({required this.storageType, String? storageId})
     : storageId = storageId ?? BaseStorageService.generateShortStorageId();
 
+  @override
+  int get batchPutChangesLimit => 1000;
+
+  @override
+  BaseEntityState createEntityStateFromJson({
+    required String entityType,
+    required Map<String, dynamic> json,
+  }) {
+    final normalized = <String, dynamic>{...json, 'entityType': entityType};
+    return TestEntityState.fromJson(normalized);
+  }
+
   String _key(String projectId, String entityType, String entityId) =>
       '$projectId|$entityType|$entityId';
 

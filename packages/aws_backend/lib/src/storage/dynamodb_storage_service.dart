@@ -60,6 +60,10 @@ class DynamoDBStorageService extends BaseStorageService {
 
   String? _storageId;
 
+  /// Maximum number of change log entries that can be processed in a single batch. Leave room for state updates in the same batch (max 25 items total).
+  @override
+  int get batchPutChangesLimit => 12;
+
   @override
   Future<void> initialize() async {
     if (_initialized) return;

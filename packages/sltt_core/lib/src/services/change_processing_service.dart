@@ -194,186 +194,260 @@ class ChangeProcessingService {
         unprocessed: [], // TODO: changes that couldn't be processed
       );
 
-      // Phase 1: Collect all change requests with their associated metadata
-      final requests = <ChangeLogAndStateRequest>[];
-      final requestMetadata =
-          <
-            ({
-              int changeIndex,
-              BaseChangeLogEntry changeLogEntry,
-              BaseEntityState? entityState,
-              GetUpdateResults result,
-            })
-          >[];
+      final batchSize = storage.batchPutChangesLimit;
+      if (batchSize <= 0) {
+        throw StateError(
+          'Storage batchPutChangesLimit must be positive (got $batchSize)',
+        );
+      }
 
-      for (int i = 0; i < changes.length; i++) {
-        final changeData = changes[i];
+      final entityStateCache = <String, BaseEntityState?>{};
 
-        try {
-          final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
-            changeData,
-          );
+      for (int batchStart = 0; batchStart < changes.length;) {
+        // Reset cache each batch so concurrent writers don't cause us to reuse
+        // stale entity state snapshots across batch boundaries.
+        entityStateCache.clear();
+        final batchEnd = (batchStart + batchSize) > changes.length
+            ? changes.length
+            : batchStart + batchSize;
 
-          SlttLogger.logger.fine(
-            '[${storage.getStorageType()}] DEBUG: Deserialized changeLogEntry: cid=${changeLogEntry.cid}, unknownJson=${changeLogEntry.getUnknown()}',
-          );
+        final pendingContexts = <_PendingChangeContext>[];
+        for (int i = batchStart; i < batchEnd; i++) {
+          final changeData = changes[i];
 
-          // Validate that unknownJson is empty when required
-          final unknownValidationResult = validateUnknownJson(
-            changeLogEntry: changeLogEntry,
-            storageType: targetStorageType,
-            storageMode: storageMode,
-            changeIndex: i,
-          );
+          try {
+            final changeLogEntry = deserializeChangeLogEntryUsingRegistry(
+              changeData,
+            );
 
-          if (unknownValidationResult != null) {
-            return unknownValidationResult;
-          }
+            SlttLogger.logger.fine(
+              '[${storage.getStorageType()}] DEBUG: Deserialized changeLogEntry: cid=${changeLogEntry.cid}, unknownJson=${changeLogEntry.getUnknown()}',
+            );
 
-          // Basic validation of operation states based on storage mode
-          final validationResult = _validateChangeOperation(
-            changeLogEntry: changeLogEntry,
-            storageMode: storageMode,
-            changeIndex: i,
-          );
+            final unknownValidationResult = validateUnknownJson(
+              changeLogEntry: changeLogEntry,
+              storageType: targetStorageType,
+              storageMode: storageMode,
+              changeIndex: i,
+            );
 
-          if (validationResult != null) {
-            return validationResult;
-          }
-          // validate that domainId and entityId match if their types match
-          if (changeLogEntry.domainType != 'unknown' &&
-              changeLogEntry.domainType == changeLogEntry.entityType) {
-            if (changeLogEntry.domainId != changeLogEntry.entityId) {
+            if (unknownValidationResult != null) {
+              return unknownValidationResult;
+            }
+
+            final validationResult = _validateChangeOperation(
+              changeLogEntry: changeLogEntry,
+              storageMode: storageMode,
+              changeIndex: i,
+            );
+
+            if (validationResult != null) {
+              return validationResult;
+            }
+
+            if (changeLogEntry.domainType != 'unknown' &&
+                changeLogEntry.domainType == changeLogEntry.entityType &&
+                changeLogEntry.domainId != changeLogEntry.entityId) {
               return ChangeProcessingResult(
                 errorMessage:
                     'Domain (${changeLogEntry.domainType}) ID (${changeLogEntry.domainId}) and Entity (${changeLogEntry.entityType}) ID (${changeLogEntry.entityId}) must match for ${changeLogEntry.cid}',
                 errorCode: 400,
               );
             }
-          }
 
-          // Get current entity state
-          final entityState = await storage.getEntityState(
-            domainType: changeLogEntry.domainType,
-            domainId: changeLogEntry.domainId,
-            entityType: changeLogEntry.entityType.toString(),
-            entityId: changeLogEntry.entityId,
-          );
-
-          // Debug: log the current entity state for diagnosis
-          try {
-            SlttLogger.logger.fine(
-              '[${storage.getStorageType()}] DEBUG: entityState for CID ${changeLogEntry.cid}: ${entityState?.toJson()}',
+            pendingContexts.add(
+              _PendingChangeContext(
+                changeIndex: i,
+                changeLogEntry: changeLogEntry,
+              ),
             );
-          } catch (e, st) {
-            // Log failure to serialize entity state for debug purposes
-            SlttLogger.logger.fine(
-              '[${storage.getStorageType()}] DEBUG: failed to serialize entityState for CID ${changeLogEntry.cid}: $e',
-            );
-            SlttLogger.logger.fine(st.toString());
+          } catch (e, stackTrace) {
+            resultsSummary.errors.add({
+              'changeIndex': i,
+              'error': e.toString(),
+              'stackTrace': stackTrace.toString(),
+            });
           }
-
-          // Use enhanced change detection method
-          final result = getUpdatesForChangeLogEntryAndEntityState(
-            changeLogEntry,
-            entityState,
-            storageMode: storageMode,
-            storageType: targetStorageType,
-            targetStorageId: targetStorageId,
-          );
-
-          // Debug: log detailed result info
-          try {
-            SlttLogger.logger.fine(
-              '[${storage.getStorageType()}] DEBUG: getUpdates result for CID ${changeLogEntry.cid}: isDuplicate=${result.isDuplicate} changeUpdates=${result.changeUpdates} stateUpdates=${result.stateUpdates}',
-            );
-          } catch (e, st) {
-            // Log debug printing failures
-            SlttLogger.logger.fine(
-              '[${storage.getStorageType()}] DEBUG: failed to print getUpdates result for CID ${changeLogEntry.cid}: $e',
-            );
-            SlttLogger.logger.fine(st.toString());
-          }
-
-          // Check payload size limits for save operations (sync operations preserve data)
-          final payloadCheckResult = _checkPayloadLimits(
-            storageMode: storageMode,
-            changeLogEntry: changeLogEntry,
-            entityState: entityState,
-            stateUpdates: result.stateUpdates,
-            changeIndex: i,
-          );
-
-          if (payloadCheckResult != null) {
-            return payloadCheckResult;
-          }
-
-          // Debug: log computed stateUpdates for diagnosis
-          SlttLogger.logger.fine(
-            '[${storage.getStorageType()}] DEBUG: computed stateUpdates for CID ${changeLogEntry.cid}: ${result.stateUpdates}',
-          );
-
-          // Ensure changeUpdates reflect the storage's identity in save mode
-          final changeUpdates = <String, dynamic>{...result.changeUpdates};
-
-          final shouldSkipChangeLogWrite =
-              result.isDuplicate ||
-              changeUpdates.isEmpty ||
-              targetStorageType == 'local' &&
-                  storageMode ==
-                      'sync' /* for now, don't store incoming sync changes in the local change log */ ||
-              (targetStorageId ==
-                  changeLogEntry.storageId /* should already be saved */ );
-          final operationCounts = result.operationCounts;
-
-          final request = ChangeLogAndStateRequest(
-            changeLogEntry: changeLogEntry,
-            changeUpdates: changeUpdates,
-            entityState: entityState,
-            stateUpdates: result.stateUpdates,
-            operationCounts: operationCounts,
-            skipChangeLogWrite: shouldSkipChangeLogWrite,
-            skipStateWrite: result.stateUpdates.isEmpty,
-          );
-
-          requests.add(request);
-          requestMetadata.add((
-            changeIndex: i,
-            changeLogEntry: changeLogEntry,
-            entityState: entityState,
-            result: result,
-          ));
-        } catch (e, stackTrace) {
-          // Handle individual change processing errors
-          resultsSummary.errors.add({
-            'changeIndex': i,
-            'error': e.toString(),
-            'stackTrace': stackTrace.toString(),
-          });
         }
-      }
 
-      // Phase 2: Process all requests as a batch (if any valid requests collected)
-      if (requests.isNotEmpty) {
-        // Pre-validation enforces a single domainType for the whole batch,
-        // so process all requests together as a single batch. Use the
-        // first request's domainType as the batch domainType.
-        final domainType = requests.first.changeLogEntry.domainType;
+        if (pendingContexts.isEmpty) {
+          batchStart = batchEnd;
+          continue;
+        }
+
+        final keysToFetch =
+            <
+              ({
+                String domainType,
+                String domainId,
+                String entityType,
+                String entityId,
+              })
+            >[];
+        final entityIdsToFetch = <String>{};
+
+        for (final ctx in pendingContexts) {
+          final entityId = ctx.changeLogEntry.entityId;
+          if (!entityStateCache.containsKey(entityId) &&
+              entityIdsToFetch.add(entityId)) {
+            keysToFetch.add((
+              domainType: ctx.changeLogEntry.domainType,
+              domainId: ctx.changeLogEntry.domainId,
+              entityType: ctx.changeLogEntry.entityType,
+              entityId: entityId,
+            ));
+          }
+        }
+
+        if (keysToFetch.isNotEmpty) {
+          final fetchedStates = await storage.batchGetEntityState(
+            keys: keysToFetch,
+          );
+          entityStateCache.addAll(fetchedStates);
+          for (final key in keysToFetch) {
+            entityStateCache.putIfAbsent(key.entityId, () => null);
+          }
+        }
+
+        final batchRequests = <ChangeLogAndStateRequest>[];
+        final batchMetadata =
+            <
+              ({
+                int changeIndex,
+                BaseChangeLogEntry changeLogEntry,
+                BaseEntityState? entityState,
+                GetUpdateResults result,
+              })
+            >[];
+
+        for (final ctx in pendingContexts) {
+          try {
+            final changeLogEntry = ctx.changeLogEntry;
+            final entityId = changeLogEntry.entityId;
+            final BaseEntityState? entityState =
+                entityStateCache.containsKey(entityId)
+                ? entityStateCache[entityId]
+                : null;
+
+            try {
+              SlttLogger.logger.fine(
+                '[${storage.getStorageType()}] DEBUG: entityState for CID ${changeLogEntry.cid}: ${entityState?.toJson()}',
+              );
+            } catch (e, st) {
+              SlttLogger.logger.fine(
+                '[${storage.getStorageType()}] DEBUG: failed to serialize entityState for CID ${changeLogEntry.cid}: $e',
+              );
+              SlttLogger.logger.fine(st.toString());
+            }
+
+            final result = getUpdatesForChangeLogEntryAndEntityState(
+              changeLogEntry,
+              entityState,
+              storageMode: storageMode,
+              storageType: targetStorageType,
+              targetStorageId: targetStorageId,
+            );
+
+            try {
+              SlttLogger.logger.fine(
+                '[${storage.getStorageType()}] DEBUG: getUpdates result for CID ${changeLogEntry.cid}: isDuplicate=${result.isDuplicate} changeUpdates=${result.changeUpdates} stateUpdates=${result.stateUpdates}',
+              );
+            } catch (e, st) {
+              SlttLogger.logger.fine(
+                '[${storage.getStorageType()}] DEBUG: failed to print getUpdates result for CID ${changeLogEntry.cid}: $e',
+              );
+              SlttLogger.logger.fine(st.toString());
+            }
+
+            final payloadCheckResult = _checkPayloadLimits(
+              storageMode: storageMode,
+              changeLogEntry: changeLogEntry,
+              entityState: entityState,
+              stateUpdates: result.stateUpdates,
+              changeIndex: ctx.changeIndex,
+            );
+
+            if (payloadCheckResult != null) {
+              return payloadCheckResult;
+            }
+
+            SlttLogger.logger.fine(
+              '[${storage.getStorageType()}] DEBUG: computed stateUpdates for CID ${changeLogEntry.cid}: ${result.stateUpdates}',
+            );
+
+            final changeUpdates = <String, dynamic>{...result.changeUpdates};
+
+            final shouldSkipChangeLogWrite =
+                result.isDuplicate ||
+                changeUpdates.isEmpty ||
+                targetStorageType == 'local' &&
+                    storageMode ==
+                        'sync' /* for now, don't store incoming sync changes in the local change log */ ||
+                (targetStorageId ==
+                    changeLogEntry.storageId /* should already be saved */ );
+            final operationCounts = result.operationCounts;
+
+            final request = ChangeLogAndStateRequest(
+              changeLogEntry: changeLogEntry,
+              changeUpdates: changeUpdates,
+              entityState: entityState,
+              stateUpdates: result.stateUpdates,
+              operationCounts: operationCounts,
+              skipChangeLogWrite: shouldSkipChangeLogWrite,
+              skipStateWrite: result.stateUpdates.isEmpty,
+            );
+
+            BaseEntityState? workingState = entityState;
+
+            if (result.stateUpdates.isNotEmpty) {
+              final mergedStateJson = <String, dynamic>{
+                if (entityState != null) ...entityState.toJson(),
+                ...result.stateUpdates,
+              }..removeWhere((key, value) => value == null);
+
+              workingState = storage.createEntityStateFromJson(
+                entityType: changeLogEntry.entityType,
+                json: mergedStateJson,
+              );
+            }
+
+            batchRequests.add(request);
+            batchMetadata.add((
+              changeIndex: ctx.changeIndex,
+              changeLogEntry: changeLogEntry,
+              entityState: entityState,
+              result: result,
+            ));
+
+            entityStateCache[entityId] = workingState;
+          } catch (e, stackTrace) {
+            resultsSummary.errors.add({
+              'changeIndex': ctx.changeIndex,
+              'error': e.toString(),
+              'stackTrace': stackTrace.toString(),
+            });
+          }
+        }
+
+        if (batchRequests.isEmpty) {
+          batchStart = batchEnd;
+          continue;
+        }
+
+        final domainType = batchRequests.first.changeLogEntry.domainType;
 
         final batchResults = await storage.updateChangeLogAndStates(
           domainType: domainType,
-          requests: requests,
+          requests: batchRequests,
         );
 
-        // Phase 3: Categorize results for each request in the batch
-        for (int i = 0; i < requests.length; i++) {
-          final metadata = requestMetadata[i];
+        for (int i = 0; i < batchRequests.length; i++) {
+          final metadata = batchMetadata[i];
           final updateResults = (
             newChangeLogEntry: batchResults.newChangeLogEntries[i],
             newEntityState: batchResults.newEntityStates[i],
           );
 
-          // In sync mode, warn if we get unexpected state changes
           if (storageMode == 'sync' &&
               targetStorageId == metadata.changeLogEntry.storageId &&
               updateResults.newChangeLogEntry.operation !=
@@ -391,7 +465,6 @@ class ChangeProcessingService {
             );
           }
 
-          // Categorize the result
           categorizeChangeResult(
             resultsSummary: resultsSummary,
             updateResults: updateResults,
@@ -400,7 +473,12 @@ class ChangeProcessingService {
             includeChangeUpdates: includeChangeUpdates,
             includeStateUpdates: includeStateUpdates,
           );
+
+          final entityId = metadata.changeLogEntry.entityId;
+          entityStateCache[entityId] = updateResults.newEntityState;
         }
+
+        batchStart = batchEnd;
       }
 
       if (returnErrorIfInResultsSummary && resultsSummary.errors.isNotEmpty) {
@@ -736,4 +814,14 @@ class ChangeProcessingService {
 
     return null; // No validation errors
   }
+}
+
+class _PendingChangeContext {
+  const _PendingChangeContext({
+    required this.changeIndex,
+    required this.changeLogEntry,
+  });
+
+  final int changeIndex;
+  final BaseChangeLogEntry changeLogEntry;
 }

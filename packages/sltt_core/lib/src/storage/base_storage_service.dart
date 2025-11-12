@@ -82,6 +82,24 @@ abstract class BaseStorageService {
     return id;
   }
 
+  /// Maximum number of change/state pairs this storage can persist in a single
+  /// batch operation. Change processing will chunk work using this limit to
+  /// avoid exceeding backend batch constraints (for example DynamoDB's
+  /// 25-item limit per BatchWrite request).
+  int get batchPutChangesLimit;
+
+  /// Create a concrete entity state instance from JSON using the registered
+  /// serialization handlers. Storage implementations can override this when a
+  /// backend-specific registry is required (e.g., Isar collections), but most
+  /// backends can rely on the globally registered handlers.
+  BaseEntityState createEntityStateFromJson({
+    required String entityType,
+    required Map<String, dynamic> json,
+  }) {
+    final normalized = <String, dynamic>{...json, 'entityType': entityType};
+    return deserializeEntityStateSafely(normalized);
+  }
+
   /// Initialize the storage service
   Future<void> initialize();
 

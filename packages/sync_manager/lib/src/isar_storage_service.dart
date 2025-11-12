@@ -43,6 +43,9 @@ class IsarStorageService extends BaseStorageService {
   get databasePath => _initialized ? _dbPath : null;
 
   @override
+  int get batchPutChangesLimit => 10000;
+
+  @override
   Future<void> initialize({
     List<CollectionSchema>? providedEntityStateSchemas,
     void Function(IsarEntityStateStorageRegistry, Isar)? registerStorageGroups,
@@ -125,6 +128,19 @@ class IsarStorageService extends BaseStorageService {
     }
 
     throw UnimplementedError('Unknown entity type: $originalTypeString');
+  }
+
+  @override
+  BaseEntityState createEntityStateFromJson({
+    required String entityType,
+    required Map<String, dynamic> json,
+  }) {
+    final entityTypeEnum = EntityType.values.firstWhere(
+      (e) => e.value == entityType,
+      orElse: () => EntityType.unknown,
+    );
+    final normalized = <String, dynamic>{...json, 'entityType': entityType};
+    return _createEntityStateFromJson(entityTypeEnum, normalized, entityType);
   }
 
   @override
