@@ -128,7 +128,8 @@ class DynamoDBStorageService extends BaseStorageService {
     final outChanges = <BaseChangeLogEntry>[];
     final outStates = <BaseEntityState?>[];
     final changeItemsToPut = <Map<String, dynamic>>[];
-    final stateItemsToPut = <Map<String, dynamic>>[];
+    // the states need to be unique, so only update the latest for each entityId
+    final stateItemsToPutByEntityId = <String, Map<String, dynamic>>{};
     final syncStatesToUpsert =
         <
           ({
@@ -176,32 +177,19 @@ class DynamoDBStorageService extends BaseStorageService {
           req.stateUpdates.isEmpty) {
         newState = req.entityState!;
       } else {
-        final currentStateJson =
-            req.entityState?.toJson() ??
-            _buildInitialStateJson(
-              domainType: domainType,
-              domainId: newChange.domainId,
-              entityType: newChange.entityType,
-              entityId: newChange.entityId,
-              change: newChange,
-            );
+        final currentStateJson = req.entityState?.toJson() ?? {};
         final mergedStateJson = <String, dynamic>{
           ...currentStateJson,
           ...req.stateUpdates,
         }..removeWhere((key, value) => value == null);
 
-        mergedStateJson['entityId'] = newChange.entityId;
-        mergedStateJson['entityType'] = newChange.entityType;
-        mergedStateJson['domainType'] = domainType;
-        mergedStateJson['unknownJson'] = JsonUtils.normalize(
-          mergedStateJson['unknownJson'] as String?,
-        );
-
         newState = deserializeEntityStateSafely(mergedStateJson);
 
         if (!req.skipStateWrite) {
           // Prepare entity state item for batch put
-          stateItemsToPut.add(_buildEntityStateItem(newState));
+          stateItemsToPutByEntityId[newState.entityId] = _buildEntityStateItem(
+            newState,
+          );
 
           // Queue sync state update for entity state
           syncStatesToUpsert.add((
@@ -222,8 +210,8 @@ class DynamoDBStorageService extends BaseStorageService {
     }
 
     // Phase 3: Batch write entity states
-    if (stateItemsToPut.isNotEmpty) {
-      await _batchPutItems(stateItemsToPut);
+    if (stateItemsToPutByEntityId.isNotEmpty) {
+      await _batchPutItems(stateItemsToPutByEntityId.values.toList());
     }
 
     // Phase 4: Batch upsert entity type sync states

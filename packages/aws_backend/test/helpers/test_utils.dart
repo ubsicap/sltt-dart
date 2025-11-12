@@ -63,13 +63,31 @@ Future<http.Response> saveProjectChange(
     baseUrl,
     domainType: 'project',
     domainId: projectId,
-    entityType: 'project',
-    entityId: projectId,
-    changesToSave: [data],
-    changeBy: changeBy,
+    changesToSave: [
+      SaveChangeRequest<BaseDataFields>(
+        entityType: 'project',
+        entityId: projectId,
+        data: data,
+        changeBy: changeBy,
+      ),
+    ],
     srcStorageType: srcStorageType,
     srcStorageId: srcStorageId,
   );
+}
+
+class SaveChangeRequest<TData extends BaseDataFields> {
+  final String entityType;
+  final String entityId;
+  final TData data;
+  final String changeBy;
+
+  SaveChangeRequest({
+    required this.entityType,
+    required this.entityId,
+    required this.data,
+    required this.changeBy,
+  });
 }
 
 /// Generic helper function to save any entity change to the API.
@@ -80,10 +98,7 @@ Future<http.Response> saveProjectChange(
 /// - [baseUrl]: The base URL of the API server
 /// - [domainType]: The domain type (e.g., 'project')
 /// - [domainId]: The domain ID (should start with `__test` for tests)
-/// - [entityType]: The entity type (e.g., 'portion', 'document')
-/// - [entityId]: The entity ID
-/// - [data]: The entity data fields
-/// - [changeBy]: The user making the change (defaults to 'userId')
+/// - [changesToSave]: List of changes to save as [SaveChangeRequest] objects
 /// - [srcStorageType]: Source storage type (defaults to 'cloud')
 /// - [srcStorageId]: Source storage ID (defaults to 'test')
 ///
@@ -105,16 +120,13 @@ Future<http.Response> saveChanges<TData extends BaseDataFields>(
   Uri baseUrl, {
   required String domainType,
   required String domainId,
-  required String entityType,
-  required String entityId,
-  required List<TData> changesToSave,
-  String changeBy = 'userId',
+  required List<SaveChangeRequest<TData>> changesToSave,
   String srcStorageType = 'cloud',
   String srcStorageId = 'test',
 }) async {
   final changes = changesToSave
       .map(
-        (TData data) =>
+        (req) =>
             ChangeLogEntryFactoryService.forChangeSave<
               DynamoChangeLogEntry,
               int,
@@ -123,10 +135,10 @@ Future<http.Response> saveChanges<TData extends BaseDataFields>(
               factory: DynamoChangeLogEntry.new,
               domainType: domainType,
               domainId: domainId,
-              entityType: entityType,
-              entityId: entityId,
-              changeBy: changeBy,
-              data: data,
+              entityType: req.entityType,
+              entityId: req.entityId,
+              changeBy: req.changeBy,
+              data: req.data,
             ),
       )
       .toList();
