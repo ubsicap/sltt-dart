@@ -125,6 +125,8 @@ class ChangeProcessingService {
     /// include detailed state updates in the response
     required bool includeStateUpdates,
   }) async {
+    final swTotal = Stopwatch()..start();
+    final swPrep = Stopwatch()..start();
     final storageType = storage.getStorageType();
     SlttLogger.logger.info(
       '[ChangeProcessingService] Starting storeChanges with storageType=$storageType, storageMode=$storageMode, srcStorageType=$srcStorageType, srcStorageId=$srcStorageId, changesCount=${changes.length}, includeChangeUpdates=$includeChangeUpdates, includeStateUpdates=$includeStateUpdates',
@@ -211,7 +213,7 @@ class ChangeProcessingService {
             ? changes.length
             : batchStart + batchSize;
 
-        final pendingContexts = <_PendingChangeContext>[];
+        final incomingChangeContext = <_PendingChangeContext>[];
         for (int i = batchStart; i < batchEnd; i++) {
           final changeData = changes[i];
 
@@ -255,7 +257,7 @@ class ChangeProcessingService {
               );
             }
 
-            pendingContexts.add(
+            incomingChangeContext.add(
               _PendingChangeContext(
                 changeIndex: i,
                 changeLogEntry: changeLogEntry,
@@ -270,7 +272,7 @@ class ChangeProcessingService {
           }
         }
 
-        if (pendingContexts.isEmpty) {
+        if (incomingChangeContext.isEmpty) {
           batchStart = batchEnd;
           continue;
         }
@@ -286,7 +288,7 @@ class ChangeProcessingService {
             >[];
         final entityIdsToFetch = <String>{};
 
-        for (final ctx in pendingContexts) {
+        for (final ctx in incomingChangeContext) {
           final entityId = ctx.changeLogEntry.entityId;
           if (!entityStateCache.containsKey(entityId) &&
               entityIdsToFetch.add(entityId)) {
@@ -300,8 +302,13 @@ class ChangeProcessingService {
         }
 
         if (keysToFetch.isNotEmpty) {
+          final swBatchGet = Stopwatch()..start();
           final fetchedStates = await storage.batchGetEntityState(
             keys: keysToFetch,
+          );
+          swBatchGet.stop();
+          SlttLogger.logger.fine(
+            '[${storage.getStorageType()}] Batch fetched ${fetchedStates.length} entity states in ${swBatchGet.elapsedMilliseconds} ms',
           );
           entityStateCache.addAll(fetchedStates);
           for (final key in keysToFetch) {
@@ -320,7 +327,7 @@ class ChangeProcessingService {
               })
             >[];
 
-        for (final ctx in pendingContexts) {
+        for (final ctx in incomingChangeContext) {
           try {
             final changeLogEntry = ctx.changeLogEntry;
             final entityId = changeLogEntry.entityId;
@@ -340,12 +347,17 @@ class ChangeProcessingService {
               SlttLogger.logger.fine(st.toString());
             }
 
+            final swGetUpdates = Stopwatch()..start();
             final result = getUpdatesForChangeLogEntryAndEntityState(
               changeLogEntry,
               entityState,
               storageMode: storageMode,
               storageType: targetStorageType,
               targetStorageId: targetStorageId,
+            );
+            swGetUpdates.stop();
+            SlttLogger.logger.fine(
+              '[${storage.getStorageType()}] getUpdatesForChangeLogEntryAndEntityState for CID ${changeLogEntry.cid} took ${swGetUpdates.elapsedMilliseconds} ms',
             );
 
             try {
@@ -434,11 +446,21 @@ class ChangeProcessingService {
           continue;
         }
 
+        swPrep.stop();
+        SlttLogger.logger.fine(
+          '[${storage.getStorageType()}] Preparation for batch update took ${swPrep.elapsedMilliseconds} ms',
+        );
+
         final domainType = batchRequests.first.changeLogEntry.domainType;
+        final swBatchUpdate = Stopwatch()..start();
 
         final batchResults = await storage.updateChangeLogAndStates(
           domainType: domainType,
           requests: batchRequests,
+        );
+        swBatchUpdate.stop();
+        SlttLogger.logger.fine(
+          '[${storage.getStorageType()}] Batch updated ${batchRequests.length} change log entries and entity states in ${swBatchUpdate.elapsedMilliseconds} ms',
         );
 
         for (int i = 0; i < batchRequests.length; i++) {
@@ -493,7 +515,10 @@ class ChangeProcessingService {
           resultsSummary: resultsSummary,
         );
       }
-
+      swTotal.stop();
+      SlttLogger.logger.info(
+        '[${storage.getStorageType()}] Completed storeChanges in ${swTotal.elapsedMilliseconds} ms with resultsSummary: $resultsSummary',
+      );
       return ChangeProcessingResult(resultsSummary: resultsSummary);
     } catch (e, stackTrace) {
       return ChangeProcessingResult(
