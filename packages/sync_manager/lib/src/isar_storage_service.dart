@@ -304,7 +304,12 @@ class IsarStorageService extends BaseStorageService {
         }
 
         // Use storage group's putAll for batch writes
-        await storageGroup.putAll(states);
+        // reduce batch states to latest entity states only
+        final latestStatesById = <String, BaseEntityState>{};
+        for (final state in states) {
+          latestStatesById[state.entityId] = state;
+        }
+        await storageGroup.putAll(latestStatesById.values.toList());
         SlttLogger.logger.fine(
           '[$_logPrefix] Batch wrote ${states.length} entity states for type $entityTypeEnum',
         );
