@@ -18,6 +18,7 @@ import 'package:test/test.dart';
 
 import '../../sltt_core/test/helpers/api_changes_network_suite.dart'
     show ApiChangesNetworkTestSuite;
+import 'helpers/test_utils.dart' show resetTestProject;
 
 class TestServer extends BaseRestApiServer {
   TestServer({required super.serverName, required super.storage});
@@ -92,7 +93,14 @@ void main() {
     // Run individual test groups with proper naming
     group('GET /api/state', () {
       late ApiChangesNetworkTestSuite suite;
-      late Map<String, Future<void> Function()> stateTests;
+      late Map<
+        String,
+        Future<void> Function({
+          FutureOr<void> Function(String domainId)? setup,
+          FutureOr<void> Function(String domainId)? tearDown,
+        })
+      >
+      stateTests;
 
       setUp(() async {
         suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
@@ -101,34 +109,69 @@ void main() {
       });
 
       test('returns empty list for entityCollection with no states', () async {
-        await stateTests['returns empty list for entityCollection with no states']!();
+        await stateTests['returns empty list for entityCollection with no states']!(
+          setup: (String domainId) async {
+            final base = await resolveBaseUrl();
+            await resetTestProject(base, domainId);
+          },
+        );
       });
 
       test(
         'returns seeded entity state by entityCollection and entityId',
         () async {
-          await stateTests['returns seeded entity state by entityCollection and entityId']!();
+          await stateTests['returns seeded entity state by entityCollection and entityId']!(
+            setup: (String domainId) async {
+              final base = await resolveBaseUrl();
+              await resetTestProject(base, domainId);
+            },
+          );
         },
       );
 
       test('filters by parentId when parameter is provided', () async {
-        await stateTests['filters by parentId when parameter is provided']!();
+        await stateTests['filters by parentId when parameter is provided']!(
+          setup: (String domainId) async {
+            final base = await resolveBaseUrl();
+            await resetTestProject(base, domainId);
+          },
+        );
       });
 
       test('filters by storedAfter timestamp', () async {
-        await stateTests['filters by storedAfter timestamp']!();
+        await stateTests['filters by storedAfter timestamp']!(
+          setup: (String domainId) async {
+            final base = await resolveBaseUrl();
+            await resetTestProject(base, domainId);
+          },
+        );
       });
 
       test('storedAfter + pagination returns correct filtered page', () async {
-        await stateTests['storedAfter + pagination returns correct filtered page']!();
+        await stateTests['storedAfter + pagination returns correct filtered page']!(
+          setup: (String domainId) async {
+            final base = await resolveBaseUrl();
+            await resetTestProject(base, domainId);
+          },
+        );
       });
 
       test('storedAfter with old timestamp returns all items', () async {
-        await stateTests['storedAfter with old timestamp returns all items']!();
+        await stateTests['storedAfter with old timestamp returns all items']!(
+          setup: (String domainId) async {
+            final base = await resolveBaseUrl();
+            await resetTestProject(base, domainId);
+          },
+        );
       });
 
       test('storedAfter with future timestamp returns empty', () async {
-        await stateTests['storedAfter with future timestamp returns empty']!();
+        await stateTests['storedAfter with future timestamp returns empty']!(
+          setup: (String domainId) async {
+            final base = await resolveBaseUrl();
+            await resetTestProject(base, domainId);
+          },
+        );
       });
     });
 
