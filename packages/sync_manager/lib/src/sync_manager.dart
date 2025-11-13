@@ -127,7 +127,8 @@ class SyncManager {
 
       // Get changes for sync
       changesToSync = await _localStorage.getChangesForSync(
-        limit: 12 /* batch writes 12 changes + 12 state updates */,
+        limit:
+            120 /* 10x (average 4Kb per item) batch writes 12 changes + 12 state updates (25 per-batch write limit) */,
       );
 
       if (changesToSync.isEmpty) {
@@ -227,7 +228,10 @@ class SyncManager {
   }
 
   // Downsync changes from cloud storage to local state
-  Future<DownsyncResult> downsyncFromCloud({List<String>? domainIds}) async {
+  Future<DownsyncResult> downsyncFromCloud({
+    List<String>? domainIds,
+    Function? onProgress,
+  }) async {
     ProjectCursorChanges projectCursorChanges = {};
     StorageSummaries storageSummaries = {};
     try {
@@ -347,6 +351,11 @@ class SyncManager {
               storage: _localStorage,
               includeChangeUpdates: true,
               includeStateUpdates: true,
+            );
+
+            onProgress?.call(
+              projectId,
+              totalChangesForProject + incomingChanges.length,
             );
 
             // TODO: how to handle more gracefully so we don't get stuck?
