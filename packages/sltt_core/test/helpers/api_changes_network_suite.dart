@@ -42,23 +42,10 @@ class ApiChangesNetworkTestSuite {
     }
   }
 
-  // Wrap a legacy no-arg test function into the TestFn signature used by
-  // getTestGroups so runners can supply lifecycle hooks. The generated
-  // domainId is not used by legacy tests but is provided to lifecycle
-  // callbacks for consistency.
-  Future<void> _wrapLegacy(
-    Future<void> Function() fn, {
-    FutureOr<void> Function(String domainId)? setup,
-    FutureOr<void> Function(String domainId)? tearDown,
-  }) async {
-    final domainId = '__test_legacy_${DateTime.now().microsecondsSinceEpoch}';
-    if (setup != null) await setup(domainId);
-    try {
-      await fn();
-    } finally {
-      if (tearDown != null) await tearDown(domainId);
-    }
-  }
+  // Note: legacy no-arg tests have been adapted in-call to use
+  // _runTestWithLifecycle. We removed the separate _wrapLegacy helper so
+  // tests are consistently executed with a generated domainId that is
+  // passed to lifecycle hooks.
 
   Future<Map<String, dynamic>> postSingleChange(
     Map<String, dynamic> change,
@@ -254,24 +241,36 @@ class ApiChangesNetworkTestSuite {
       'POST /api/changes': {
         'with includeChangeUpdates/includeStateUpdates returns summaries':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testPostChangesWithSummaries,
+              final domainId = '__test_post_changes_with_summaries';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testPostChangesWithSummaries();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
             },
         'save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testReturnErrorIfInResultsSummarySaveMode,
+              final domainId = '__test_return_error_save_mode';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testReturnErrorIfInResultsSummarySaveMode();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
             },
         'sync mode: returns success with errors in summary (returnErrorIfInResultsSummary=false)':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testReturnErrorIfInResultsSummarySyncMode,
+              final domainId = '__test_return_error_sync_mode';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testReturnErrorIfInResultsSummarySyncMode();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -280,51 +279,79 @@ class ApiChangesNetworkTestSuite {
       'GET /api/projects/<projectId>/changes': {
         'returns empty list for project with no changes':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testGetProjectChangesEmpty,
+              final domainId = '__test_get_project_changes_empty';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testGetProjectChangesEmpty();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
             },
         'returns changes for project with seeded data':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testGetProjectChangesWithData,
+              final domainId = '__test_get_project_changes_with_data';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testGetProjectChangesWithData();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
             },
         'respects limit parameter': ({setup, tearDown}) async {
-          await _wrapLegacy(
-            _testGetProjectChangesWithLimit,
+          final domainId = '__test_get_project_changes_limit';
+          await _runTestWithLifecycle(
+            domainId,
+            ({required String domainId}) async {
+              await _testGetProjectChangesWithLimit();
+            },
             setup: setup,
             tearDown: tearDown,
           );
         },
         'supports cursor-based pagination': ({setup, tearDown}) async {
-          await _wrapLegacy(
-            _testGetProjectChangesWithPagination,
+          final domainId = '__test_get_project_changes_pagination';
+          await _runTestWithLifecycle(
+            domainId,
+            ({required String domainId}) async {
+              await _testGetProjectChangesWithPagination();
+            },
             setup: setup,
             tearDown: tearDown,
           );
         },
         'handles URL-encoded project IDs correctly': ({setup, tearDown}) async {
-          await _wrapLegacy(
-            _testGetProjectChangesUrlEncoded,
+          final domainId = '__test_get_project_changes_urlencoded';
+          await _runTestWithLifecycle(
+            domainId,
+            ({required String domainId}) async {
+              await _testGetProjectChangesUrlEncoded();
+            },
             setup: setup,
             tearDown: tearDown,
           );
         },
         'returns 400 for invalid limit values': ({setup, tearDown}) async {
-          await _wrapLegacy(
-            _testGetProjectChangesInvalidLimit,
+          final domainId = '__test_get_project_changes_invalid_limit';
+          await _runTestWithLifecycle(
+            domainId,
+            ({required String domainId}) async {
+              await _testGetProjectChangesInvalidLimit();
+            },
             setup: setup,
             tearDown: tearDown,
           );
         },
         'returns 400 for invalid cursor values': ({setup, tearDown}) async {
-          await _wrapLegacy(
-            _testGetProjectChangesInvalidCursor,
+          final domainId = '__test_get_project_changes_invalid_cursor';
+          await _runTestWithLifecycle(
+            domainId,
+            ({required String domainId}) async {
+              await _testGetProjectChangesInvalidCursor();
+            },
             setup: setup,
             tearDown: tearDown,
           );
@@ -334,51 +361,79 @@ class ApiChangesNetworkTestSuite {
       'GET /api/changes/{domainCollection}/{domainId}': {
         'returns empty list for project with no changes':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testGetProjectChangesEmpty,
+              final domainId = '__test_get_project_changes_empty';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testGetProjectChangesEmpty();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
             },
         'returns changes for project with seeded data':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testGetProjectChangesWithData,
+              final domainId = '__test_get_project_changes_with_data';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testGetProjectChangesWithData();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
             },
         'respects limit parameter': ({setup, tearDown}) async {
-          await _wrapLegacy(
-            _testGetProjectChangesWithLimit,
+          final domainId = '__test_get_project_changes_limit';
+          await _runTestWithLifecycle(
+            domainId,
+            ({required String domainId}) async {
+              await _testGetProjectChangesWithLimit();
+            },
             setup: setup,
             tearDown: tearDown,
           );
         },
         'supports cursor-based pagination': ({setup, tearDown}) async {
-          await _wrapLegacy(
-            _testGetProjectChangesWithPagination,
+          final domainId = '__test_get_project_changes_pagination';
+          await _runTestWithLifecycle(
+            domainId,
+            ({required String domainId}) async {
+              await _testGetProjectChangesWithPagination();
+            },
             setup: setup,
             tearDown: tearDown,
           );
         },
         'handles URL-encoded project IDs correctly': ({setup, tearDown}) async {
-          await _wrapLegacy(
-            _testGetProjectChangesUrlEncoded,
+          final domainId = '__test_get_project_changes_urlencoded';
+          await _runTestWithLifecycle(
+            domainId,
+            ({required String domainId}) async {
+              await _testGetProjectChangesUrlEncoded();
+            },
             setup: setup,
             tearDown: tearDown,
           );
         },
         'returns 400 for invalid limit values': ({setup, tearDown}) async {
-          await _wrapLegacy(
-            _testGetProjectChangesInvalidLimit,
+          final domainId = '__test_get_project_changes_invalid_limit';
+          await _runTestWithLifecycle(
+            domainId,
+            ({required String domainId}) async {
+              await _testGetProjectChangesInvalidLimit();
+            },
             setup: setup,
             tearDown: tearDown,
           );
         },
         'returns 400 for invalid cursor values': ({setup, tearDown}) async {
-          await _wrapLegacy(
-            _testGetProjectChangesInvalidCursor,
+          final domainId = '__test_get_project_changes_invalid_cursor';
+          await _runTestWithLifecycle(
+            domainId,
+            ({required String domainId}) async {
+              await _testGetProjectChangesInvalidCursor();
+            },
             setup: setup,
             tearDown: tearDown,
           );
@@ -387,8 +442,12 @@ class ApiChangesNetworkTestSuite {
       'POST /api/changes semantics': {
         'handles field-level conflict resolution (newer change wins)':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testPostChangesFieldLevelConflict,
+              final domainId = '__test_post_changes_field_level_conflict';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testPostChangesFieldLevelConflict();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -397,24 +456,36 @@ class ApiChangesNetworkTestSuite {
       'POST /api/changes srcStorageType/srcStorageId combinations': {
         'srcStorageType: local, srcStorageId: matches server storage id':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testPostChangesLocalMatchingStorageId,
+              final domainId = '__test_post_changes_local_match_storage_id';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testPostChangesLocalMatchingStorageId();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
             },
         'srcStorageType: local, srcStorageId: different from server':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testPostChangesLocalDifferentStorageId,
+              final domainId = '__test_post_changes_local_diff_storage_id';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testPostChangesLocalDifferentStorageId();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
             },
         'srcStorageType: cloud, srcStorageId: cloud':
             ({setup, tearDown}) async {
-              await _wrapLegacy(
-                _testPostChangesCloudStorage,
+              final domainId = '__test_post_changes_cloud_storage';
+              await _runTestWithLifecycle(
+                domainId,
+                ({required String domainId}) async {
+                  await _testPostChangesCloudStorage();
+                },
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -423,8 +494,7 @@ class ApiChangesNetworkTestSuite {
       'GET /api/state': {
         'returns empty list for entityCollection with no states':
             ({setup, tearDown}) async {
-              final domainId =
-                  '__test_state_empty_${DateTime.now().microsecondsSinceEpoch}';
+              final domainId = '__test_state_empty';
               await _runTestWithLifecycle(
                 domainId,
                 _testGetStateEmpty,
@@ -434,8 +504,7 @@ class ApiChangesNetworkTestSuite {
             },
         'returns seeded entity state by entityCollection and entityId':
             ({setup, tearDown}) async {
-              final domainId =
-                  '__test_get_state_with_seeded_data_${DateTime.now().microsecondsSinceEpoch}';
+              final domainId = '__test_get_state_with_seeded_data';
               await _runTestWithLifecycle(
                 domainId,
                 _testGetStateWithSeededData,
@@ -445,8 +514,7 @@ class ApiChangesNetworkTestSuite {
             },
         'filters by parentId when parameter is provided':
             ({setup, tearDown}) async {
-              final domainId =
-                  '__test_parent_filter_${DateTime.now().microsecondsSinceEpoch}';
+              final domainId = '__test_parent_filter';
               await _runTestWithLifecycle(
                 domainId,
                 _testGetStateWithParentIdFilter,
@@ -455,8 +523,7 @@ class ApiChangesNetworkTestSuite {
               );
             },
         'filters by storedAfter timestamp': ({setup, tearDown}) async {
-          final domainId =
-              '__test_state_stored_after_${DateTime.now().microsecondsSinceEpoch}';
+          final domainId = '__test_state_stored_after';
           await _runTestWithLifecycle(
             domainId,
             _testGetStateWithStoredAfterFilter,
@@ -466,8 +533,7 @@ class ApiChangesNetworkTestSuite {
         },
         'storedAfter + pagination returns correct filtered page':
             ({setup, tearDown}) async {
-              final domainId =
-                  '__test_state_stored_after_page_${DateTime.now().microsecondsSinceEpoch}';
+              final domainId = '__test_state_stored_after_page';
               await _runTestWithLifecycle(
                 domainId,
                 _testGetStateStoredAfterPagination,
@@ -477,8 +543,7 @@ class ApiChangesNetworkTestSuite {
             },
         'storedAfter with old timestamp returns all items':
             ({setup, tearDown}) async {
-              final domainId =
-                  '__test_state_stored_after_old_${DateTime.now().microsecondsSinceEpoch}';
+              final domainId = '__test_state_stored_after_old';
               await _runTestWithLifecycle(
                 domainId,
                 _testGetStateStoredAfterOldTimestamp,
@@ -488,8 +553,7 @@ class ApiChangesNetworkTestSuite {
             },
         'storedAfter with future timestamp returns empty':
             ({setup, tearDown}) async {
-              final domainId =
-                  '__test_state_stored_after_future_${DateTime.now().microsecondsSinceEpoch}';
+              final domainId = '__test_state_stored_after_future';
               await _runTestWithLifecycle(
                 domainId,
                 _testGetStateStoredAfterFutureTimestamp,
