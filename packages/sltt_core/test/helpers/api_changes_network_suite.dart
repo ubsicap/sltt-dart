@@ -282,9 +282,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_get_project_changes_empty';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testGetProjectChangesEmpty();
-                },
+                _testGetProjectChangesEmpty,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -294,9 +292,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_get_project_changes_with_data';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testGetProjectChangesWithData();
-                },
+                _testGetProjectChangesWithData,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -305,9 +301,7 @@ class ApiChangesNetworkTestSuite {
           final domainId = '__test_get_project_changes_limit';
           await _runTestWithLifecycle(
             domainId,
-            ({required String domainId}) async {
-              await _testGetProjectChangesWithLimit();
-            },
+            _testGetProjectChangesWithLimit,
             setup: setup,
             tearDown: tearDown,
           );
@@ -316,9 +310,7 @@ class ApiChangesNetworkTestSuite {
           final domainId = '__test_get_project_changes_pagination';
           await _runTestWithLifecycle(
             domainId,
-            ({required String domainId}) async {
-              await _testGetProjectChangesWithPagination();
-            },
+            _testGetProjectChangesWithPagination,
             setup: setup,
             tearDown: tearDown,
           );
@@ -327,9 +319,7 @@ class ApiChangesNetworkTestSuite {
           final domainId = '__test_get_project_changes_urlencoded';
           await _runTestWithLifecycle(
             domainId,
-            ({required String domainId}) async {
-              await _testGetProjectChangesUrlEncoded();
-            },
+            _testGetProjectChangesUrlEncoded,
             setup: setup,
             tearDown: tearDown,
           );
@@ -338,9 +328,7 @@ class ApiChangesNetworkTestSuite {
           final domainId = '__test_get_project_changes_invalid_limit';
           await _runTestWithLifecycle(
             domainId,
-            ({required String domainId}) async {
-              await _testGetProjectChangesInvalidLimit();
-            },
+            _testGetProjectChangesInvalidLimit,
             setup: setup,
             tearDown: tearDown,
           );
@@ -349,9 +337,7 @@ class ApiChangesNetworkTestSuite {
           final domainId = '__test_get_project_changes_invalid_cursor';
           await _runTestWithLifecycle(
             domainId,
-            ({required String domainId}) async {
-              await _testGetProjectChangesInvalidCursor();
-            },
+            _testGetProjectChangesInvalidCursor,
             setup: setup,
             tearDown: tearDown,
           );
@@ -364,9 +350,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_get_project_changes_empty';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testGetProjectChangesEmpty();
-                },
+                _testGetProjectChangesEmpty,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -376,9 +360,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_get_project_changes_with_data';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testGetProjectChangesWithData();
-                },
+                _testGetProjectChangesWithData,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -387,9 +369,7 @@ class ApiChangesNetworkTestSuite {
           final domainId = '__test_get_project_changes_limit';
           await _runTestWithLifecycle(
             domainId,
-            ({required String domainId}) async {
-              await _testGetProjectChangesWithLimit();
-            },
+            _testGetProjectChangesWithLimit,
             setup: setup,
             tearDown: tearDown,
           );
@@ -398,9 +378,7 @@ class ApiChangesNetworkTestSuite {
           final domainId = '__test_get_project_changes_pagination';
           await _runTestWithLifecycle(
             domainId,
-            ({required String domainId}) async {
-              await _testGetProjectChangesWithPagination();
-            },
+            _testGetProjectChangesWithPagination,
             setup: setup,
             tearDown: tearDown,
           );
@@ -409,9 +387,7 @@ class ApiChangesNetworkTestSuite {
           final domainId = '__test_get_project_changes_urlencoded';
           await _runTestWithLifecycle(
             domainId,
-            ({required String domainId}) async {
-              await _testGetProjectChangesUrlEncoded();
-            },
+            _testGetProjectChangesUrlEncoded,
             setup: setup,
             tearDown: tearDown,
           );
@@ -420,9 +396,7 @@ class ApiChangesNetworkTestSuite {
           final domainId = '__test_get_project_changes_invalid_limit';
           await _runTestWithLifecycle(
             domainId,
-            ({required String domainId}) async {
-              await _testGetProjectChangesInvalidLimit();
-            },
+            _testGetProjectChangesInvalidLimit,
             setup: setup,
             tearDown: tearDown,
           );
@@ -431,9 +405,7 @@ class ApiChangesNetworkTestSuite {
           final domainId = '__test_get_project_changes_invalid_cursor';
           await _runTestWithLifecycle(
             domainId,
-            ({required String domainId}) async {
-              await _testGetProjectChangesInvalidCursor();
-            },
+            _testGetProjectChangesInvalidCursor,
             setup: setup,
             tearDown: tearDown,
           );
@@ -754,8 +726,8 @@ class ApiChangesNetworkTestSuite {
     expect((jsonRes['errors'] as List).isNotEmpty, isTrue);
   }
 
-  Future<void> _testGetProjectChangesEmpty() async {
-    final resp = await getProjectChanges('empty-project');
+  Future<void> _testGetProjectChangesEmpty({required String domainId}) async {
+    final resp = await getProjectChanges(domainId);
 
     expect(resp['changes'], isA<List>());
     expect(resp['changes'], isEmpty);
@@ -764,8 +736,10 @@ class ApiChangesNetworkTestSuite {
     expect(resp.containsKey('cursor'), isFalse);
   }
 
-  Future<void> _testGetProjectChangesWithData() async {
-    final projectId = 'test-get-changes';
+  Future<void> _testGetProjectChangesWithData({
+    required String domainId,
+  }) async {
+    final projectId = domainId;
 
     // Seed some changes
     await seedChange(
@@ -797,8 +771,10 @@ class ApiChangesNetworkTestSuite {
     expect(resp['timestamp'], isNotNull);
   }
 
-  Future<void> _testGetProjectChangesWithLimit() async {
-    final projectId = 'test-limit';
+  Future<void> _testGetProjectChangesWithLimit({
+    required String domainId,
+  }) async {
+    final projectId = domainId;
 
     // Seed 3 changes
     for (int i = 1; i <= 3; i++) {
@@ -822,8 +798,10 @@ class ApiChangesNetworkTestSuite {
     expect(resp.containsKey('cursor'), isTrue);
   }
 
-  Future<void> _testGetProjectChangesWithPagination() async {
-    final projectId = 'test-pagination';
+  Future<void> _testGetProjectChangesWithPagination({
+    required String domainId,
+  }) async {
+    final projectId = domainId;
 
     // Seed multiple changes
     for (int i = 1; i <= 5; i++) {
@@ -863,8 +841,10 @@ class ApiChangesNetworkTestSuite {
     expect(firstPageSeqs.intersection(secondPageSeqs), isEmpty);
   }
 
-  Future<void> _testGetProjectChangesUrlEncoded() async {
-    final projectId = 'test@project.com';
+  Future<void> _testGetProjectChangesUrlEncoded({
+    required String domainId,
+  }) async {
+    final projectId = domainId;
 
     await seedChange(
       changePayload(
@@ -884,10 +864,12 @@ class ApiChangesNetworkTestSuite {
     expect(changes.first['domainId'], projectId);
   }
 
-  Future<void> _testGetProjectChangesInvalidLimit() async {
+  Future<void> _testGetProjectChangesInvalidLimit({
+    required String domainId,
+  }) async {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(
-      path: '/api/changes/projects/test',
+      path: '/api/changes/$domainCollection/${Uri.encodeComponent(domainId)}',
       queryParameters: {'limit': 'invalid'},
     );
 
@@ -896,10 +878,12 @@ class ApiChangesNetworkTestSuite {
     expect(res.statusCode, 400);
   }
 
-  Future<void> _testGetProjectChangesInvalidCursor() async {
+  Future<void> _testGetProjectChangesInvalidCursor({
+    required String domainId,
+  }) async {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(
-      path: '/api/changes/projects/test',
+      path: '/api/changes/$domainCollection/${Uri.encodeComponent(domainId)}',
       queryParameters: {'cursor': 'invalid'},
     );
 
