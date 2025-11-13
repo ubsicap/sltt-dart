@@ -1,9 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 // import 'package:sltt_core/sltt_core.dart'; // <-- may cause circular import?
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
+
+typedef TestFn =
+    Future<void> Function({
+      FutureOr<void> Function(String domainId)? setup,
+      FutureOr<void> Function(String domainId)? tearDown,
+    });
 
 /// Test suite configuration for API change network tests
 class ApiChangesNetworkTestSuite {
@@ -16,6 +23,42 @@ class ApiChangesNetworkTestSuite {
     this.resolveBaseUrl, {
     this.domainCollection = 'projects',
   });
+
+  // Helper to run a test with optional setup/tearDown lifecycle hooks.
+  // `body` is a no-arg closure that typically calls the underlying test
+  // implementation with a domainId embedded. `domainId` is passed to the
+  // setup/tearDown hooks so runners can operate on the same id.
+  Future<void> _runTestWithLifecycle(
+    String domainId,
+    FutureOr<void> Function({required String domainId}) body, {
+    FutureOr<void> Function(String domainId)? setup,
+    FutureOr<void> Function(String domainId)? tearDown,
+  }) async {
+    if (setup != null) await setup(domainId);
+    try {
+      await body(domainId: domainId);
+    } finally {
+      if (tearDown != null) await tearDown(domainId);
+    }
+  }
+
+  // Wrap a legacy no-arg test function into the TestFn signature used by
+  // getTestGroups so runners can supply lifecycle hooks. The generated
+  // domainId is not used by legacy tests but is provided to lifecycle
+  // callbacks for consistency.
+  Future<void> _wrapLegacy(
+    Future<void> Function() fn, {
+    FutureOr<void> Function(String domainId)? setup,
+    FutureOr<void> Function(String domainId)? tearDown,
+  }) async {
+    final domainId = '__test_legacy_${DateTime.now().microsecondsSinceEpoch}';
+    if (setup != null) await setup(domainId);
+    try {
+      await fn();
+    } finally {
+      if (tearDown != null) await tearDown(domainId);
+    }
+  }
 
   Future<Map<String, dynamic>> postSingleChange(
     Map<String, dynamic> change,
@@ -202,75 +245,258 @@ class ApiChangesNetworkTestSuite {
     };
   }
 
-  /// Get all test groups with their individual tests
-  Map<String, Map<String, Future<void> Function()>> getTestGroups() {
+  /// Get all test groups with their individual tests.
+  /// Each test is represented as a [TestFn] so runners can provide
+  /// per-test setup/tearDown hooks. Legacy no-arg test implementations
+  /// are wrapped automatically so existing test bodies continue to work.
+  Map<String, Map<String, TestFn>> getTestGroups() {
     return {
       'POST /api/changes': {
-        'with includeChangeUpdates/includeStateUpdates returns summaries': () =>
-            _testPostChangesWithSummaries(),
+        'with includeChangeUpdates/includeStateUpdates returns summaries':
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testPostChangesWithSummaries,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
         'save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)':
-            () => _testReturnErrorIfInResultsSummarySaveMode(),
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testReturnErrorIfInResultsSummarySaveMode,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
         'sync mode: returns success with errors in summary (returnErrorIfInResultsSummary=false)':
-            () => _testReturnErrorIfInResultsSummarySyncMode(),
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testReturnErrorIfInResultsSummarySyncMode,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
       },
       'GET /api/projects/<projectId>/changes': {
-        'returns empty list for project with no changes': () =>
-            _testGetProjectChangesEmpty(),
-        'returns changes for project with seeded data': () =>
-            _testGetProjectChangesWithData(),
-        'respects limit parameter': () => _testGetProjectChangesWithLimit(),
-        'supports cursor-based pagination': () =>
-            _testGetProjectChangesWithPagination(),
-        'handles URL-encoded project IDs correctly': () =>
-            _testGetProjectChangesUrlEncoded(),
-        'returns 400 for invalid limit values': () =>
-            _testGetProjectChangesInvalidLimit(),
-        'returns 400 for invalid cursor values': () =>
-            _testGetProjectChangesInvalidCursor(),
+        'returns empty list for project with no changes':
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testGetProjectChangesEmpty,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'returns changes for project with seeded data':
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testGetProjectChangesWithData,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'respects limit parameter': ({setup, tearDown}) async {
+          await _wrapLegacy(
+            _testGetProjectChangesWithLimit,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
+        'supports cursor-based pagination': ({setup, tearDown}) async {
+          await _wrapLegacy(
+            _testGetProjectChangesWithPagination,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
+        'handles URL-encoded project IDs correctly': ({setup, tearDown}) async {
+          await _wrapLegacy(
+            _testGetProjectChangesUrlEncoded,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
+        'returns 400 for invalid limit values': ({setup, tearDown}) async {
+          await _wrapLegacy(
+            _testGetProjectChangesInvalidLimit,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
+        'returns 400 for invalid cursor values': ({setup, tearDown}) async {
+          await _wrapLegacy(
+            _testGetProjectChangesInvalidCursor,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
       },
       // Alias using generalized path label (updated path)
       'GET /api/changes/{domainCollection}/{domainId}': {
-        'returns empty list for project with no changes': () =>
-            _testGetProjectChangesEmpty(),
-        'returns changes for project with seeded data': () =>
-            _testGetProjectChangesWithData(),
-        'respects limit parameter': () => _testGetProjectChangesWithLimit(),
-        'supports cursor-based pagination': () =>
-            _testGetProjectChangesWithPagination(),
-        'handles URL-encoded project IDs correctly': () =>
-            _testGetProjectChangesUrlEncoded(),
-        'returns 400 for invalid limit values': () =>
-            _testGetProjectChangesInvalidLimit(),
-        'returns 400 for invalid cursor values': () =>
-            _testGetProjectChangesInvalidCursor(),
+        'returns empty list for project with no changes':
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testGetProjectChangesEmpty,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'returns changes for project with seeded data':
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testGetProjectChangesWithData,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'respects limit parameter': ({setup, tearDown}) async {
+          await _wrapLegacy(
+            _testGetProjectChangesWithLimit,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
+        'supports cursor-based pagination': ({setup, tearDown}) async {
+          await _wrapLegacy(
+            _testGetProjectChangesWithPagination,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
+        'handles URL-encoded project IDs correctly': ({setup, tearDown}) async {
+          await _wrapLegacy(
+            _testGetProjectChangesUrlEncoded,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
+        'returns 400 for invalid limit values': ({setup, tearDown}) async {
+          await _wrapLegacy(
+            _testGetProjectChangesInvalidLimit,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
+        'returns 400 for invalid cursor values': ({setup, tearDown}) async {
+          await _wrapLegacy(
+            _testGetProjectChangesInvalidCursor,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
       },
       'POST /api/changes semantics': {
-        'handles field-level conflict resolution (newer change wins)': () =>
-            _testPostChangesFieldLevelConflict(),
+        'handles field-level conflict resolution (newer change wins)':
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testPostChangesFieldLevelConflict,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
       },
       'POST /api/changes srcStorageType/srcStorageId combinations': {
-        'srcStorageType: local, srcStorageId: matches server storage id': () =>
-            _testPostChangesLocalMatchingStorageId(),
-        'srcStorageType: local, srcStorageId: different from server': () =>
-            _testPostChangesLocalDifferentStorageId(),
-        'srcStorageType: cloud, srcStorageId: cloud': () =>
-            _testPostChangesCloudStorage(),
+        'srcStorageType: local, srcStorageId: matches server storage id':
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testPostChangesLocalMatchingStorageId,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'srcStorageType: local, srcStorageId: different from server':
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testPostChangesLocalDifferentStorageId,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'srcStorageType: cloud, srcStorageId: cloud':
+            ({setup, tearDown}) async {
+              await _wrapLegacy(
+                _testPostChangesCloudStorage,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
       },
       'GET /api/state': {
-        'returns empty list for entityCollection with no states': () =>
-            _testGetStateEmpty(),
-        'returns seeded entity state by entityCollection and entityId': () =>
-            _testGetStateWithSeededData(),
-        'filters by parentId when parameter is provided': () =>
-            _testGetStateWithParentIdFilter(),
-        'filters by storedAfter timestamp': () =>
-            _testGetStateWithStoredAfterFilter(),
-        'storedAfter + pagination returns correct filtered page': () =>
-            _testGetStateStoredAfterPagination(),
-        'storedAfter with old timestamp returns all items': () =>
-            _testGetStateStoredAfterOldTimestamp(),
-        'storedAfter with future timestamp returns empty': () =>
-            _testGetStateStoredAfterFutureTimestamp(),
+        'returns empty list for entityCollection with no states':
+            ({setup, tearDown}) async {
+              final domainId =
+                  '__test_state_empty_${DateTime.now().microsecondsSinceEpoch}';
+              await _runTestWithLifecycle(
+                domainId,
+                _testGetStateEmpty,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'returns seeded entity state by entityCollection and entityId':
+            ({setup, tearDown}) async {
+              final domainId =
+                  '__test_get_state_with_seeded_data_${DateTime.now().microsecondsSinceEpoch}';
+              await _runTestWithLifecycle(
+                domainId,
+                _testGetStateWithSeededData,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'filters by parentId when parameter is provided':
+            ({setup, tearDown}) async {
+              final domainId =
+                  '__test_parent_filter_${DateTime.now().microsecondsSinceEpoch}';
+              await _runTestWithLifecycle(
+                domainId,
+                _testGetStateWithParentIdFilter,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'filters by storedAfter timestamp': ({setup, tearDown}) async {
+          final domainId =
+              '__test_state_stored_after_${DateTime.now().microsecondsSinceEpoch}';
+          await _runTestWithLifecycle(
+            domainId,
+            _testGetStateWithStoredAfterFilter,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
+        'storedAfter + pagination returns correct filtered page':
+            ({setup, tearDown}) async {
+              final domainId =
+                  '__test_state_stored_after_page_${DateTime.now().microsecondsSinceEpoch}';
+              await _runTestWithLifecycle(
+                domainId,
+                _testGetStateStoredAfterPagination,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'storedAfter with old timestamp returns all items':
+            ({setup, tearDown}) async {
+              final domainId =
+                  '__test_state_stored_after_old_${DateTime.now().microsecondsSinceEpoch}';
+              await _runTestWithLifecycle(
+                domainId,
+                _testGetStateStoredAfterOldTimestamp,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
+        'storedAfter with future timestamp returns empty':
+            ({setup, tearDown}) async {
+              final domainId =
+                  '__test_state_stored_after_future_${DateTime.now().microsecondsSinceEpoch}';
+              await _runTestWithLifecycle(
+                domainId,
+                _testGetStateStoredAfterFutureTimestamp,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
       },
     };
   }
@@ -281,7 +507,7 @@ class ApiChangesNetworkTestSuite {
   }
 
   /// Get tests for a specific group
-  Map<String, Future<void> Function()> getTestsForGroup(String groupName) {
+  Map<String, TestFn> getTestsForGroup(String groupName) {
     final testGroups = getTestGroups();
     return testGroups[groupName] ?? {};
   }
@@ -297,9 +523,12 @@ class ApiChangesNetworkTestSuite {
       group(groupName, () {
         for (final testEntry in tests.entries) {
           final testName = testEntry.key;
-          final testFunction = testEntry.value;
+          final TestFn testFunction = testEntry.value;
 
-          test(testName, testFunction);
+          // Wrap TestFn into a no-arg test closure that calls it with no
+          // lifecycle hooks. Runners may call tests directly with
+          // setup/tearDown callbacks.
+          test(testName, () => testFunction());
         }
       });
     }
@@ -316,9 +545,9 @@ class ApiChangesNetworkTestSuite {
       group('$prefix - $groupName', () {
         for (final testEntry in tests.entries) {
           final testName = testEntry.key;
-          final testFunction = testEntry.value;
+          final TestFn testFunction = testEntry.value;
 
-          test(testName, testFunction);
+          test(testName, () => testFunction());
         }
       });
     }
@@ -829,9 +1058,12 @@ class ApiChangesNetworkTestSuite {
     }
   }
 
-  Future<void> _testGetStateEmpty() async {
+  Future<void> _testGetStateEmpty({required String domainId}) async {
     final baseUrl = await resolveBaseUrl();
-    final uri = baseUrl.replace(path: '/api/state/projects/test-project/tasks');
+    final uri = baseUrl.replace(
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+    );
     final req = await HttpClient().getUrl(uri);
     final res = await req.close();
     expect(res.statusCode, 200);
@@ -842,15 +1074,15 @@ class ApiChangesNetworkTestSuite {
     expect(json['hasMore'], isFalse);
   }
 
-  Future<void> _testGetStateWithSeededData() async {
+  Future<void> _testGetStateWithSeededData({required String domainId}) async {
     // Seed a state via the API using the same approach as other tests
     final expectedNameLocal = 'Seeded Task';
-    final expectedParentId = 'seed-project';
+    final expectedParentId = domainId;
 
     // Use the existing seedChange method to create the test data
     await seedChange(
       changePayload(
-        domainId: 'seed-project',
+        domainId: domainId,
         entityType: 'task',
         entityId: 'task-1',
         changeAt: baseTime,
@@ -866,7 +1098,10 @@ class ApiChangesNetworkTestSuite {
     final baseUrl = await resolveBaseUrl();
 
     // Query collection
-    final uri = baseUrl.replace(path: '/api/state/projects/seed-project/tasks');
+    final uri = baseUrl.replace(
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+    );
     final req = await HttpClient().getUrl(uri);
     final res = await req.close();
     expect(res.statusCode, 200);
@@ -879,25 +1114,28 @@ class ApiChangesNetworkTestSuite {
 
     // Query specific entity
     final uri2 = baseUrl.replace(
-      path: '/api/state/projects/seed-project/tasks/seed-project-task-1',
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks/${Uri.encodeComponent('$domainId-task-1')}',
     );
     final req2 = await HttpClient().getUrl(uri2);
     final res2 = await req2.close();
     expect(res2.statusCode, 200);
     final body2 = await res2.transform(utf8.decoder).join();
     final json2 = jsonDecode(body2) as Map<String, dynamic>;
-    expect(json2['entityId'], 'seed-project-task-1');
+    expect(json2['entityId'], '$domainId-task-1');
     final state = json2['state'] as Map<String, dynamic>;
     expect(state['data_nameLocal'], expectedNameLocal, reason: body2);
     expect(state['data_parentId'], expectedParentId, reason: body2);
     expect(state['data_parentProp'], 'pList', reason: body2);
   }
 
-  Future<void> _testGetStateWithParentIdFilter() async {
+  Future<void> _testGetStateWithParentIdFilter({
+    required String domainId,
+  }) async {
     // Seed multiple tasks with different parentIds
     await seedChange(
       changePayload(
-        domainId: 'filter-project',
+        domainId: domainId,
         entityType: 'task',
         entityId: 'task-parent-a-1',
         changeAt: baseTime,
@@ -912,7 +1150,7 @@ class ApiChangesNetworkTestSuite {
 
     await seedChange(
       changePayload(
-        domainId: 'filter-project',
+        domainId: domainId,
         entityType: 'task',
         entityId: 'task-parent-a-2',
         changeAt: baseTime.add(const Duration(seconds: 1)),
@@ -927,7 +1165,7 @@ class ApiChangesNetworkTestSuite {
 
     await seedChange(
       changePayload(
-        domainId: 'filter-project',
+        domainId: domainId,
         entityType: 'task',
         entityId: 'task-parent-b-1',
         changeAt: baseTime.add(const Duration(seconds: 2)),
@@ -944,7 +1182,8 @@ class ApiChangesNetworkTestSuite {
 
     // Test: Get all tasks (no filter)
     final allTasksUri = baseUrl.replace(
-      path: '/api/state/projects/filter-project/tasks',
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
     );
     final allTasksReq = await HttpClient().getUrl(allTasksUri);
     final allTasksRes = await allTasksReq.close();
@@ -960,7 +1199,8 @@ class ApiChangesNetworkTestSuite {
 
     // Test: Filter by parentId=parent-a
     final parentAUri = baseUrl.replace(
-      path: '/api/state/projects/filter-project/tasks',
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'parentId': 'parent-a'},
     );
     final parentAReq = await HttpClient().getUrl(parentAUri);
@@ -983,7 +1223,8 @@ class ApiChangesNetworkTestSuite {
 
     // Test: Filter by parentId=parent-b
     final parentBUri = baseUrl.replace(
-      path: '/api/state/projects/filter-project/tasks',
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'parentId': 'parent-b'},
     );
     final parentBReq = await HttpClient().getUrl(parentBUri);
@@ -1015,7 +1256,8 @@ class ApiChangesNetworkTestSuite {
 
     // Test: Filter by non-existent parentId
     final nonExistentUri = baseUrl.replace(
-      path: '/api/state/projects/filter-project/tasks',
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'parentId': 'non-existent'},
     );
     final nonExistentReq = await HttpClient().getUrl(nonExistentUri);
@@ -1031,15 +1273,17 @@ class ApiChangesNetworkTestSuite {
     );
   }
 
-  Future<void> _testGetStateWithStoredAfterFilter() async {
+  Future<void> _testGetStateWithStoredAfterFilter({
+    required String domainId,
+  }) async {
     final baseUrl = await resolveBaseUrl();
-    final projectId = '__test_state_stored_after__';
 
     // Reset test project
     await HttpClient()
         .deleteUrl(
           baseUrl.replace(
-            path: '/api/storage/__test/reset/projects/$projectId',
+            path:
+                '/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
           ),
         )
         .then((req) => req.close());
@@ -1048,7 +1292,7 @@ class ApiChangesNetworkTestSuite {
     for (int i = 1; i <= 3; i++) {
       await seedChange(
         changePayload(
-          domainId: projectId,
+          domainId: domainId,
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
@@ -1070,7 +1314,7 @@ class ApiChangesNetworkTestSuite {
     for (int i = 4; i <= 6; i++) {
       await seedChange(
         changePayload(
-          domainId: projectId,
+          domainId: domainId,
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
@@ -1081,7 +1325,8 @@ class ApiChangesNetworkTestSuite {
 
     // Test 1: Get all states without storedAfter filter
     final allStatesUri = baseUrl.replace(
-      path: '/api/state/projects/$projectId/tasks',
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
     );
     final allStatesReq = await HttpClient().getUrl(allStatesUri);
     final allStatesRes = await allStatesReq.close();
@@ -1097,7 +1342,8 @@ class ApiChangesNetworkTestSuite {
 
     // Test 2: Get only states stored after the between-batches timestamp
     final filteredUri = baseUrl.replace(
-      path: '/api/state/projects/$projectId/tasks',
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'storedAfter': betweenBatches.toIso8601String()},
     );
     final filteredReq = await HttpClient().getUrl(filteredUri);
@@ -1132,15 +1378,17 @@ class ApiChangesNetworkTestSuite {
     expect(hasSuffix('task_3'), isFalse);
   }
 
-  Future<void> _testGetStateStoredAfterPagination() async {
+  Future<void> _testGetStateStoredAfterPagination({
+    required String domainId,
+  }) async {
     final baseUrl = await resolveBaseUrl();
-    final projectId = '__test_state_stored_after_page__';
 
     // Reset test project
     await HttpClient()
         .deleteUrl(
           baseUrl.replace(
-            path: '/api/storage/__test/reset/projects/$projectId',
+            path:
+                '/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
           ),
         )
         .then((req) => req.close());
@@ -1149,7 +1397,7 @@ class ApiChangesNetworkTestSuite {
     for (int i = 1; i <= 3; i++) {
       await seedChange(
         changePayload(
-          domainId: projectId,
+          domainId: domainId,
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
@@ -1171,7 +1419,7 @@ class ApiChangesNetworkTestSuite {
     for (int i = 4; i <= 6; i++) {
       await seedChange(
         changePayload(
-          domainId: projectId,
+          domainId: domainId,
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
@@ -1182,7 +1430,8 @@ class ApiChangesNetworkTestSuite {
 
     // Test: Get filtered states with pagination (limit=2)
     final paginatedUri = baseUrl.replace(
-      path: '/api/state/projects/$projectId/tasks',
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {
         'storedAfter': betweenBatches.toIso8601String(),
         'limit': '2',
@@ -1212,15 +1461,17 @@ class ApiChangesNetworkTestSuite {
     }
   }
 
-  Future<void> _testGetStateStoredAfterOldTimestamp() async {
+  Future<void> _testGetStateStoredAfterOldTimestamp({
+    required String domainId,
+  }) async {
     final baseUrl = await resolveBaseUrl();
-    final projectId = '__test_state_stored_after_old__';
 
     // Reset test project
     await HttpClient()
         .deleteUrl(
           baseUrl.replace(
-            path: '/api/storage/__test/reset/projects/$projectId',
+            path:
+                '/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
           ),
         )
         .then((req) => req.close());
@@ -1233,7 +1484,7 @@ class ApiChangesNetworkTestSuite {
     for (int i = 1; i <= 3; i++) {
       await seedChange(
         changePayload(
-          domainId: projectId,
+          domainId: domainId,
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
@@ -1244,7 +1495,8 @@ class ApiChangesNetworkTestSuite {
 
     // Test: Filter with old timestamp (should return all items)
     final oldFilterUri = baseUrl.replace(
-      path: '/api/state/projects/$projectId/tasks',
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'storedAfter': beforeCreation.toIso8601String()},
     );
     final oldFilterReq = await HttpClient().getUrl(oldFilterUri);
@@ -1261,15 +1513,17 @@ class ApiChangesNetworkTestSuite {
     );
   }
 
-  Future<void> _testGetStateStoredAfterFutureTimestamp() async {
+  Future<void> _testGetStateStoredAfterFutureTimestamp({
+    required String domainId,
+  }) async {
     final baseUrl = await resolveBaseUrl();
-    final projectId = '__test_state_stored_after_future__';
 
     // Reset test project
     await HttpClient()
         .deleteUrl(
           baseUrl.replace(
-            path: '/api/storage/__test/reset/projects/$projectId',
+            path:
+                '/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
           ),
         )
         .then((req) => req.close());
@@ -1278,7 +1532,7 @@ class ApiChangesNetworkTestSuite {
     for (int i = 1; i <= 3; i++) {
       await seedChange(
         changePayload(
-          domainId: projectId,
+          domainId: domainId,
           entityType: 'task',
           entityId: 'task_$i',
           changeAt: DateTime.now().toUtc(),
@@ -1292,7 +1546,8 @@ class ApiChangesNetworkTestSuite {
       const Duration(seconds: 10),
     );
     final futureFilterUri = baseUrl.replace(
-      path: '/api/state/projects/$projectId/tasks',
+      path:
+          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'storedAfter': futureTimestamp.toIso8601String()},
     );
     final futureFilterReq = await HttpClient().getUrl(futureFilterUri);
