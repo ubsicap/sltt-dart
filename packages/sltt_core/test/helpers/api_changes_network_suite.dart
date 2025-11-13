@@ -244,9 +244,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_post_changes_with_summaries';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testPostChangesWithSummaries();
-                },
+                _testPostChangesWithSummaries,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -256,9 +254,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_return_error_save_mode';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testReturnErrorIfInResultsSummarySaveMode();
-                },
+                _testReturnErrorIfInResultsSummarySaveMode,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -268,9 +264,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_return_error_sync_mode';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testReturnErrorIfInResultsSummarySyncMode();
-                },
+                _testReturnErrorIfInResultsSummarySyncMode,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -417,9 +411,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_post_changes_field_level_conflict';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testPostChangesFieldLevelConflict();
-                },
+                _testPostChangesFieldLevelConflict,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -431,9 +423,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_post_changes_local_match_storage_id';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testPostChangesLocalMatchingStorageId();
-                },
+                _testPostChangesLocalMatchingStorageId,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -443,9 +433,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_post_changes_local_diff_storage_id';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testPostChangesLocalDifferentStorageId();
-                },
+                _testPostChangesLocalDifferentStorageId,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -455,9 +443,7 @@ class ApiChangesNetworkTestSuite {
               final domainId = '__test_post_changes_cloud_storage';
               await _runTestWithLifecycle(
                 domainId,
-                ({required String domainId}) async {
-                  await _testPostChangesCloudStorage();
-                },
+                _testPostChangesCloudStorage,
                 setup: setup,
                 tearDown: tearDown,
               );
@@ -591,13 +577,13 @@ class ApiChangesNetworkTestSuite {
 
   // Individual test implementations
 
-  Future<void> _testPostChangesWithSummaries() async {
+  Future<void> _testPostChangesWithSummaries({required String domainId}) async {
     // Use helper to post a single change so the helper can ensure
     // unique CIDs are generated per request to avoid unique index
     // violations when tests run repeatedly.
     final now = HlcTimestampGenerator.generate();
     final change = {
-      'domainId': 'proj-1',
+      'domainId': domainId,
       'domainType': 'project',
       'entityType': 'task',
       'entityId': 'entity-1-OWna',
@@ -630,12 +616,14 @@ class ApiChangesNetworkTestSuite {
     expect((json['stateUpdates'] as List).first, contains('cid'));
   }
 
-  Future<void> _testReturnErrorIfInResultsSummarySaveMode() async {
+  Future<void> _testReturnErrorIfInResultsSummarySaveMode({
+    required String domainId,
+  }) async {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(path: '/api/changes');
 
     final change = {
-      'domainId': 'test-project',
+      'domainId': domainId,
       'domainType': 'project',
       'entityType': 'task',
       'entityId': 'task-save-error-test',
@@ -676,13 +664,15 @@ class ApiChangesNetworkTestSuite {
     expect(body, contains('error'));
   }
 
-  Future<void> _testReturnErrorIfInResultsSummarySyncMode() async {
+  Future<void> _testReturnErrorIfInResultsSummarySyncMode({
+    required String domainId,
+  }) async {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(path: '/api/changes');
 
     final change = {
       'seq': 1235, // include seq to simulate existing change
-      'domainId': 'test-project',
+      'domainId': domainId,
       'domainType': 'project',
       'entityType': 'task',
       'entityId': 'task-sync-error-test',
@@ -892,10 +882,14 @@ class ApiChangesNetworkTestSuite {
     expect(res.statusCode, 400);
   }
 
-  Future<void> _testPostChangesFieldLevelConflict() async {
-    final uniqueSuffix = DateTime.now().microsecondsSinceEpoch.toString();
-    final project = 'proj-fl-$uniqueSuffix';
-    final entity = 'entity-fl-1-$uniqueSuffix';
+  Future<void> _testPostChangesFieldLevelConflict({
+    required String domainId,
+  }) async {
+    // Use the provided domainId as the project to avoid extra uniqueness
+    // suffixing; the lifecycle runner should generate unique domainIds
+    // per test when necessary.
+    final project = domainId;
+    final entity = '$domainId-entity-fl-1';
     await seedChange(
       changePayload(
         domainId: project,
@@ -993,12 +987,15 @@ class ApiChangesNetworkTestSuite {
     expect(su['data_rank_changeAt_'], newer.toUtc().toIso8601String());
   }
 
-  Future<void> _testPostChangesLocalMatchingStorageId() async {
+  Future<void> _testPostChangesLocalMatchingStorageId({
+    required String domainId,
+  }) async {
     // Discover the server storage id then post using the helper which will
-    // correctly prepare the payload for save mode.
+    // correctly prepare the payload for save mode. Use a derived discover
+    // domain so discovery does not collide with the test domain.
     final dummyResponse = await postSingleChange(
       changePayload(
-        domainId: 'discover-storage-id',
+        domainId: '$domainId-discover',
         entityType: 'project',
         entityId: 'dummy-AWIpz',
         changeAt: baseTime,
@@ -1009,7 +1006,7 @@ class ApiChangesNetworkTestSuite {
 
     final resp = await postSingleChange(
       changePayload(
-        domainId: 'test-local-match',
+        domainId: domainId,
         entityType: 'project',
         entityId: 'entity-1',
         changeAt: baseTime,
@@ -1024,11 +1021,13 @@ class ApiChangesNetworkTestSuite {
     expect(resp['stateUpdates'], isA<List>());
   }
 
-  Future<void> _testPostChangesLocalDifferentStorageId() async {
+  Future<void> _testPostChangesLocalDifferentStorageId({
+    required String domainId,
+  }) async {
     // Post using a different srcStorageId via postSingleChange helper.
     final resp = await postSingleChange(
       changePayload(
-        domainId: 'test-local-diff',
+        domainId: domainId,
         entityType: 'project',
         entityId: 'entity-1',
         changeAt: baseTime,
@@ -1043,14 +1042,14 @@ class ApiChangesNetworkTestSuite {
     expect(resp['stateUpdates'], isA<List>());
   }
 
-  Future<void> _testPostChangesCloudStorage() async {
+  Future<void> _testPostChangesCloudStorage({required String domainId}) async {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(path: '/api/changes');
 
-    // First discover the server's storage ID
+    // First discover the server's storage ID (use a derived domain)
     final dummyResponse = await postSingleChange(
       changePayload(
-        domainId: 'discover-storage-id-3',
+        domainId: '$domainId-discover',
         entityType: 'project',
         entityId: 'dummy',
         changeAt: baseTime,
@@ -1061,7 +1060,7 @@ class ApiChangesNetworkTestSuite {
 
     final payload = [
       changePayload(
-        domainId: 'test-cloud',
+        domainId: domainId,
         entityType: 'project',
         entityId: 'entity-1',
         changeAt: baseTime,
