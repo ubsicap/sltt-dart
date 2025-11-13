@@ -353,11 +353,6 @@ class SyncManager {
               includeStateUpdates: true,
             );
 
-            onProgress?.call(
-              projectId,
-              totalChangesForProject + incomingChanges.length,
-            );
-
             // TODO: how to handle more gracefully so we don't get stuck?
             if (results.isError) {
               final error =
@@ -382,6 +377,27 @@ class SyncManager {
               '[SyncManager] Applied ${incomingChanges.length} changes for project $projectId (batch)',
             );
 
+            // Update sync state for this project if we processed any changes
+            if (totalChangesForProject > 0) {
+              await _localStorage.upsertCursorSyncState(
+                domainType: 'project',
+                domainId: projectId,
+                srcStorageType: srcStorageType,
+                srcStorageId: srcStorageId,
+                seq: highestSeqForProject,
+                cid: cid,
+                changeAt: changeAt,
+              );
+              SlttLogger.logger.fine(
+                '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
+              );
+            }
+
+            onProgress?.call(
+              projectId,
+              totalChangesForProject + incomingChanges.length,
+            );
+
             // Update cursor for next iteration
             cursor = nextCursor.toString();
           } else {
@@ -395,22 +411,6 @@ class SyncManager {
         SlttLogger.logger.info(
           '[SyncManager] Completed downsyncing project $projectId: $totalChangesForProject total changes',
         );
-
-        // Update sync state for this project if we processed any changes
-        if (totalChangesForProject > 0) {
-          await _localStorage.upsertCursorSyncState(
-            domainType: 'project',
-            domainId: projectId,
-            srcStorageType: srcStorageType,
-            srcStorageId: srcStorageId,
-            seq: highestSeqForProject,
-            cid: cid,
-            changeAt: changeAt,
-          );
-          SlttLogger.logger.fine(
-            '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
-          );
-        }
       }
 
       final totalDownloadedCount = projectCursorChanges.values
