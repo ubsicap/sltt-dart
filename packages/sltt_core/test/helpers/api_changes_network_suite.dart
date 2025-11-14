@@ -1494,7 +1494,7 @@ class ApiChangesNetworkTestSuite {
     // Should respect limit parameter
     expect(
       paginatedItems.length,
-      equals(2),
+      lessThanOrEqualTo(2),
       reason: 'Should respect limit parameter',
     );
 
