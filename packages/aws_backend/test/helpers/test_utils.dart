@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
@@ -19,9 +20,22 @@ Future<void> resetTestProject(
   String projectId, {
   String domainType = 'projects',
 }) async {
-  await http.delete(
-    Uri.parse('$baseUrl/api/storage/__test/reset/$domainType/$projectId'),
-  );
+  try {
+    final uri = Uri.parse(
+      '$baseUrl/api/storage/__test/reset/$domainType/$projectId',
+    );
+    final res = await http.delete(uri).timeout(const Duration(seconds: 15));
+
+    // If server returned a non-success status, throw to make the failure
+    // visible immediately instead of letting the test hang or proceed.
+    if (res.statusCode >= 400) {
+      throw Exception('resetTestProject failed: ${res.statusCode} ${res.body}');
+    }
+  } on TimeoutException catch (e) {
+    throw Exception(
+      'resetTestProject timed out calling ${baseUrl.toString()}: $e',
+    );
+  }
 }
 
 /// Helper function to save a project change to the API.
