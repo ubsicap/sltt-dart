@@ -1317,15 +1317,16 @@ class DynamoDBStorageService extends BaseStorageService {
       itemsToDelete: itemsToDelete,
     );
 
-    // 4. Scan for entity type sync states (change logs)
+    // 4. Collect entity type sync states (change logs) by querying the PK
+    // Use Query instead of Scan to avoid a full table scan and reduce RCU usage
     final etscPk = _entityTypeSyncStatePrimaryKey(
       domainType: domainType,
       domainId: domainId,
       forChangeLog: true,
     );
 
-    await _scanAndCollectItems(
-      filterExpression: 'pk = :pk',
+    await _queryAndCollectItems(
+      keyConditionExpression: 'pk = :pk',
       expressionValues: {
         ':pk': {'S': etscPk},
       },
@@ -1333,15 +1334,15 @@ class DynamoDBStorageService extends BaseStorageService {
       itemsToDelete: itemsToDelete,
     );
 
-    // 5. Scan for entity type sync states (entity states)
+    // 5. Collect entity type sync states (entity states) by querying the PK
     final etssPk = _entityTypeSyncStatePrimaryKey(
       domainType: domainType,
       domainId: domainId,
       forChangeLog: false,
     );
 
-    await _scanAndCollectItems(
-      filterExpression: 'pk = :pk',
+    await _queryAndCollectItems(
+      keyConditionExpression: 'pk = :pk',
       expressionValues: {
         ':pk': {'S': etssPk},
       },
@@ -1435,6 +1436,11 @@ class DynamoDBStorageService extends BaseStorageService {
   }) async {
     Map<String, dynamic>? exclusiveStartKey;
 
+    // Retry configuration for Scan (handle transient throttling)
+    const int maxAttempts = 6;
+    const int baseDelayMs = 100;
+    final rand = Random();
+
     do {
       final scanPayload = <String, dynamic>{
         'TableName': tableName,
@@ -1447,38 +1453,153 @@ class DynamoDBStorageService extends BaseStorageService {
         scanPayload['ExclusiveStartKey'] = exclusiveStartKey;
       }
 
-      final response = await _dynamoRequest('Scan', scanPayload);
+      int attempt = 0;
+      int delayMs = baseDelayMs;
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to scan items: ${response.body}');
-      }
+      while (true) {
+        final response = await _dynamoRequest('Scan', scanPayload);
 
-      final body =
-          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-      final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
+        if (response.statusCode == 200) {
+          final body =
+              jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+          final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
 
-      for (final item in items) {
-        final itemMap = item as Map<String, dynamic>;
-        final pk = itemMap['pk'];
-        final sk = itemMap['sk'];
+          for (final item in items) {
+            final itemMap = item as Map<String, dynamic>;
+            final pk = itemMap['pk'];
+            final sk = itemMap['sk'];
 
-        if (pk != null && sk != null) {
-          // Use composite key to ensure uniqueness
-          final pkValue = pk['S'] as String?;
-          final skValue = sk['S'] as String?;
+            if (pk != null && sk != null) {
+              // Use composite key to ensure uniqueness
+              final pkValue = pk['S'] as String?;
+              final skValue = sk['S'] as String?;
 
-          if (pkValue != null && skValue != null) {
-            final compositeKey = '$pkValue#$skValue';
-            if (!itemKeys.contains(compositeKey)) {
-              itemKeys.add(compositeKey);
-              itemsToDelete.add({'pk': pk, 'sk': sk});
+              if (pkValue != null && skValue != null) {
+                final compositeKey = '$pkValue#$skValue';
+                if (!itemKeys.contains(compositeKey)) {
+                  itemKeys.add(compositeKey);
+                  itemsToDelete.add({'pk': pk, 'sk': sk});
+                }
+              }
             }
           }
-        }
-      }
 
-      exclusiveStartKey = body['LastEvaluatedKey'] as Map<String, dynamic>?;
+          exclusiveStartKey = body['LastEvaluatedKey'] as Map<String, dynamic>?;
+          break; // page handled
+        }
+
+        // Non-200 response - check for throttling and retry with backoff
+        final bodyStr = utf8.decode(response.bodyBytes);
+        bool isThrottling = false;
+        try {
+          final parsed = jsonDecode(bodyStr) as Map<String, dynamic>;
+          final type = parsed['__type']?.toString() ?? '';
+          if (type.contains('Throttling') ||
+              type.contains('ProvisionedThroughputExceededException') ||
+              type.contains('TableReadKeyRangeThroughputExceeded')) {
+            isThrottling = true;
+          }
+        } catch (_) {
+          // ignore parse errors
+        }
+
+        attempt++;
+        if (isThrottling && attempt <= maxAttempts) {
+          final jitter = rand.nextInt(100);
+          await Future.delayed(Duration(milliseconds: delayMs + jitter));
+          delayMs = (delayMs * 2).clamp(baseDelayMs, 30 * 1000);
+          continue; // retry this page
+        }
+
+        throw Exception('Failed to scan items: ${response.body}');
+      }
     } while (exclusiveStartKey != null);
+  }
+
+  /// Helper to query by PK/KeyConditionExpression and collect pk/sk for deletion
+  Future<void> _queryAndCollectItems({
+    required String keyConditionExpression,
+    required Map<String, dynamic> expressionValues,
+    required Set<String> itemKeys,
+    required List<Map<String, dynamic>> itemsToDelete,
+    String? indexName,
+  }) async {
+    Map<String, dynamic>? lastEvaluatedKey;
+
+    // Retry configuration for Query (handle transient throttling)
+    const int maxAttempts = 6;
+    const int baseDelayMs = 100;
+    final rand = Random();
+
+    do {
+      final payload = <String, dynamic>{
+        'TableName': tableName,
+        'KeyConditionExpression': keyConditionExpression,
+        'ExpressionAttributeValues': expressionValues,
+        'ProjectionExpression': 'pk, sk',
+      };
+
+      if (indexName != null) payload['IndexName'] = indexName;
+      if (lastEvaluatedKey != null) payload['ExclusiveStartKey'] = lastEvaluatedKey;
+
+      int attempt = 0;
+      int delayMs = baseDelayMs;
+
+      while (true) {
+        final response = await _dynamoRequest('Query', payload);
+
+        if (response.statusCode == 200) {
+          final body = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+          final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
+
+          for (final item in items) {
+            final itemMap = item as Map<String, dynamic>;
+            final pk = itemMap['pk'];
+            final sk = itemMap['sk'];
+
+            if (pk != null && sk != null) {
+              final pkValue = pk['S'] as String?;
+              final skValue = sk['S'] as String?;
+              if (pkValue != null && skValue != null) {
+                final compositeKey = '$pkValue#$skValue';
+                if (!itemKeys.contains(compositeKey)) {
+                  itemKeys.add(compositeKey);
+                  itemsToDelete.add({'pk': pk, 'sk': sk});
+                }
+              }
+            }
+          }
+
+          lastEvaluatedKey = body['LastEvaluatedKey'] as Map<String, dynamic>?;
+          break; // page handled
+        }
+
+        // Non-200 response - detect throttling and retry with backoff
+        final bodyStr = utf8.decode(response.bodyBytes);
+        bool isThrottling = false;
+        try {
+          final parsed = jsonDecode(bodyStr) as Map<String, dynamic>;
+          final type = parsed['__type']?.toString() ?? '';
+          if (type.contains('Throttling') ||
+              type.contains('ProvisionedThroughputExceededException') ||
+              type.contains('TableReadKeyRangeThroughputExceeded')) {
+            isThrottling = true;
+          }
+        } catch (_) {
+          // ignore parse errors
+        }
+
+        attempt++;
+        if (isThrottling && attempt <= maxAttempts) {
+          final jitter = rand.nextInt(100);
+          await Future.delayed(Duration(milliseconds: delayMs + jitter));
+          delayMs = (delayMs * 2).clamp(baseDelayMs, 30 * 1000);
+          continue; // retry this page
+        }
+
+        throw Exception('Failed to query items: ${response.body}');
+      }
+    } while (lastEvaluatedKey != null);
   }
 
   /// Helper method to batch delete items (max 25 per request)
