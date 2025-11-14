@@ -42,7 +42,10 @@ void main() {
     // the server if multiple tests call resolveBaseUrl concurrently.
     if (baseUrlCompleter != null) return baseUrlCompleter!.future;
     if (baseUrl != null) return baseUrl!;
-    baseUrlCompleter = Completer<Uri>();
+
+    // If an external base URL is provided via environment (or the constant),
+    // use it and return synchronously. Do NOT create the completer in that
+    // case because callers that return the completer's future would hang.
     final externalApiBaseUrl =
         Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl;
     if (externalApiBaseUrl.isNotEmpty) {
@@ -63,6 +66,10 @@ void main() {
 
     // Initialize will create the table if it doesn't exist when useLocalDynamoDB=true
     await storage!.initialize();
+
+    // Now we will actually start the local server; create the completer so
+    // concurrent callers can await the same initialization.
+    baseUrlCompleter = Completer<Uri>();
 
     final app = TestServer(serverName: 'dynamo-state-it', storage: storage!);
     final handler = const Pipeline().addHandler(app.router().call);
