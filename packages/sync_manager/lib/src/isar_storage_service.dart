@@ -36,8 +36,8 @@ class IsarStorageService extends BaseStorageService {
     _dbDirectory = dbDirectory ?? './isar_db';
   }
 
-  get databaseName => _databaseName;
-  get logPrefix => _logPrefix;
+  String get databaseName => _databaseName;
+  String get logPrefix => _logPrefix;
 
   /// full path to database file
   get databasePath => _initialized ? _dbPath : null;

@@ -16,6 +16,7 @@ class SyncManager {
 
   final Dio _dio = Dio();
   late final IsarStorageService _localStorage;
+  bool _ownsLocalStorage = true;
 
   // API endpoints - defaults to AWS dev cloud, can be overridden for testing
   String _cloudStorageUrl =
@@ -40,11 +41,17 @@ class SyncManager {
     );
   }
 
-  Future<void> initialize({IsarStorageService? localStorage}) async {
+  Future<void> initialize({
+    IsarStorageService? localStorage,
+    bool closeStorageOnDispose = true,
+  }) async {
     if (_initialized) return;
 
     _localStorage = localStorage ?? LocalStorageService.instance;
-    await _localStorage.initialize();
+    _ownsLocalStorage = closeStorageOnDispose || localStorage == null;
+    if (localStorage == null) {
+      await _localStorage.initialize();
+    }
 
     _dio.options.headers['Content-Type'] = 'application/json';
     _dio.options.connectTimeout = const Duration(seconds: 10);
@@ -536,7 +543,9 @@ class SyncManager {
       // Clean up auto-sync resources
       disableAutoOutsync();
 
-      await _localStorage.close();
+      if (_ownsLocalStorage) {
+        await _localStorage.close();
+      }
       _initialized = false;
       _instance = null;
       SlttLogger.logger.info('[SyncManager] Closed');
