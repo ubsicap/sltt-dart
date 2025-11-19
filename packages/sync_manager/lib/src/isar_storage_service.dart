@@ -1058,7 +1058,7 @@ class IsarStorageService extends BaseStorageService {
     final end = DateTime.now().add(timeout);
 
     final dir = Directory(dirPath);
-    if (!await dir.exists()) return false;
+    if (!await dir.exists()) return true;
 
     final isarFile = File('$dirPath/$databaseName.isar');
     final isarLck = File('$dirPath/$databaseName.isar-lck');
