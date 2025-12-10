@@ -393,6 +393,9 @@ class ChangeProcessingService {
                 result.isDuplicate ||
                 changeUpdates.isEmpty ||
                 targetStorageType == 'local' &&
+                    storageMode == 'save' &&
+                    result.operationCounts.noOp == 1 ||
+                targetStorageType == 'local' &&
                     storageMode ==
                         'sync' /* for now, don't store incoming sync changes in the local change log */ ||
                 (targetStorageId ==
