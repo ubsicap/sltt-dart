@@ -227,7 +227,9 @@ class SyncManager {
         changesRequested: changesToSync,
         deletedLocalChanges: [],
         message: 'Outsync failed: $e',
-        error: e.toString(), // Capture original error
+        error:
+            (e as dynamic).response?.toString() ??
+            e.toString(), // Capture original error
         errorStackTrace: stackTrace
             .toString(), // Include error stack for debugging
       );
