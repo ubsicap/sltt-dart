@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 
 import 'isar_storage_service.dart';
@@ -499,6 +500,10 @@ class SyncManager {
         domainId: projectId,
       );
 
+      final localCursorStats = await _localStorage.getCursorSyncState(
+        projectId,
+      );
+
       // Try to get cloud storage stats
       EntityTypeSummary? cloudChangeStats;
       EntityTypeStats? cloudStateStats;
@@ -521,6 +526,7 @@ class SyncManager {
       return SyncStatus(
         localChangeStats: localChangeStats,
         localStateStats: localStateStats,
+        localCursorState: localCursorStats,
         cloudChangeStats: cloudChangeStats,
         cloudStateStats: cloudStateStats,
       );
@@ -529,6 +535,7 @@ class SyncManager {
       return SyncStatus(
         localChangeStats: null,
         localStateStats: null,
+        localCursorState: null,
         cloudChangeStats: null,
         cloudStateStats: null,
       );
@@ -639,12 +646,14 @@ class FullSyncResult {
 class SyncStatus {
   final EntityTypeStats? localChangeStats;
   final EntityTypeStats? localStateStats;
+  final CursorSyncState? localCursorState;
   final EntityTypeSummary? cloudChangeStats;
   final EntityTypeStats? cloudStateStats;
 
   SyncStatus({
     required this.localChangeStats,
     required this.localStateStats,
+    required this.localCursorState,
     required this.cloudChangeStats,
     required this.cloudStateStats,
   });
@@ -652,6 +661,7 @@ class SyncStatus {
   Map<String, dynamic> toJson() => {
     'localChangeStats': localChangeStats?.toJson(),
     'localStateStats': localStateStats?.toJson(),
+    'localCursorStats': localCursorState?.toJson(),
     'cloudChangeStats': cloudChangeStats?.toJson(),
     'cloudStateStats': cloudStateStats?.toJson(),
   };

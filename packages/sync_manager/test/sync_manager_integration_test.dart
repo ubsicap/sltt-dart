@@ -612,6 +612,21 @@ Future<void> testFullSyncCreate({
     reason:
         'After full sync, project $projectId should have 1 local state entity',
   );
+
+  final localCursorState = status.localCursorState;
+  expect(
+    localCursorState,
+    isNotNull,
+    reason: 'Local cursor state should be available for $projectId',
+  );
+
+  expect(
+    localCursorState?.seq,
+    equals(1),
+    reason:
+        'After full sync, sync cursor state seq should update to the latest cloud change',
+  );
+
   // confirm cloud state totals
   final cloudTotals = status.cloudStateStats?.totals;
   expect(
@@ -784,6 +799,22 @@ Future<void> testFullSyncUpdate({
     reason:
         'After full sync, project $projectId should have 1 local state entity',
   );
+
+  // make sure sync cursor seq matches the latest change
+  final localCursorState = status.localCursorState;
+  expect(
+    localCursorState,
+    isNotNull,
+    reason: 'Local cursor state should be available for $projectId',
+  );
+
+  expect(
+    localCursorState?.seq,
+    equals(2),
+    reason:
+        'After full sync, sync cursor state seq should update for the latest cloud change',
+  );
+
   // confirm cloud state totals
   final cloudTotals = status.cloudStateStats?.totals;
   expect(
@@ -949,6 +980,44 @@ Future<void> testFullSyncOutdated({
     operation: 'update',
   );
 
+  // first downsync from cloud to get the trump change
+  final downsyncResult = await syncManager.downsyncFromCloud(
+    domainIds: [projectId],
+  );
+
+  expect(
+    downsyncResult.projectCursorChanges.values
+        .expand((changes) => changes)
+        .any((change) => change['entityId'] == projectId),
+    isTrue,
+    reason: 'Downsync should include the cloud project change',
+  );
+
+  // make sure local state reflects the trump change even though we still have an outgoing change
+  final localStateAfterDownsync = await getCurrentEntityStateAndCheckCloudAt(
+    local,
+    projectId,
+  );
+  expect(
+    localStateAfterDownsync.data_nameLocal,
+    equals(expectedNameLocalAfterDownsync),
+    reason:
+        'After downsync, local state for project $projectId should reflect cloud change as LWW',
+  );
+
+  // make sure outsync is still pending after downsync
+  final pendingLocalChanges1 = (await local.getChangesWithCursor(
+    domainType: 'project',
+    domainId: projectId,
+  )).map((c) => c as IsarChangeLogEntry).toList();
+  expect(
+    pendingLocalChanges1,
+    hasLength(1),
+    reason:
+        'Downsync should leave local-origin change log entries for $projectId, but got: ${(pendingLocalChanges1).map((c) => c.toJson())}',
+  );
+
+  // now perform full sync to outsync local outdated change and downsync outdated cursor
   final fullSyncResult = await syncManager.performFullSync(
     domainIds: [projectId],
   );
@@ -964,30 +1033,28 @@ Future<void> testFullSyncOutdated({
     reason: 'Full sync should remove outsynced local change from storage',
   );
   expect(
-    fullSyncResult.downsyncResult.projectCursorChanges.values
-        .expand((changes) => changes)
-        .any((change) => change['entityId'] == projectId),
-    isTrue,
-    reason: 'Downsync should include the cloud project change',
+    fullSyncResult.downsyncResult.projectCursorChanges.values,
+    isEmpty,
+    reason: 'Downsync should be empty (already downsynced)',
   );
 
   // Verify outsynced project has no pending local-origin changes
-  final syncStatus = await syncManager.getSyncStatus(projectId);
-  final pendingLocalChanges = await local.getChangesWithCursor(
+  final pendingLocalChanges2 = await local.getChangesWithCursor(
     domainType: 'project',
     domainId: projectId,
   );
 
   expect(
-    pendingLocalChanges,
+    pendingLocalChanges2,
     isEmpty,
     reason:
-        'Full sync should remove local-origin change log entries for $projectId, but got: ${(pendingLocalChanges).map((c) => c.toJson())}',
+        'Full sync should remove local-origin change log entries for $projectId, but got: ${(pendingLocalChanges2).map((c) => c.toJson())}',
   );
 
   // After full sync and deletion of local change-log entries, pending
   // change stats will be empty. Verify the historical state counters
   // (localStateStats) still reflect the operation that occurred.
+  final syncStatus = await syncManager.getSyncStatus(projectId);
   final stateTotals = syncStatus.localStateStats?.totals;
   expect(
     stateTotals,
@@ -1009,6 +1076,21 @@ Future<void> testFullSyncOutdated({
     }),
     reason:
         'After full sync, project $projectId should have 3 total local state changes',
+  );
+
+  // make sure sync cursor seq matches the outdated change
+  final localCursorState = syncStatus.localCursorState;
+  expect(
+    localCursorState,
+    isNotNull,
+    reason: 'Local cursor state should be available for $projectId',
+  );
+
+  expect(
+    localCursorState?.seq,
+    equals(3),
+    reason:
+        'After full sync, sync cursor state seq should update for the outdated cloud change',
   );
 
   // confirm cloud state totals
