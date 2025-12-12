@@ -28,5 +28,8 @@ class CursorSyncState extends SyncState {
     super.storedAt_orig_,
   });
 
+  factory CursorSyncState.fromJson(Map<String, dynamic> json) =>
+      _$CursorSyncStateFromJson(json);
+
   Map<String, dynamic> toJson() => _$CursorSyncStateToJson(this);
 }
