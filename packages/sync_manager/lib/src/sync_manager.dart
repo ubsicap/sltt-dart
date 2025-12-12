@@ -673,6 +673,24 @@ class SyncStatus {
     required this.cloudStateStats,
   });
 
+  factory SyncStatus.fromJson(Map<String, dynamic> json) => SyncStatus(
+    localChangeStats: json['localChangeStats'] != null
+        ? EntityTypeStats.fromJson(json['localChangeStats'])
+        : null,
+    localStateStats: json['localStateStats'] != null
+        ? EntityTypeStats.fromJson(json['localStateStats'])
+        : null,
+    localCursorState: json['localCursorState'] != null
+        ? CursorSyncState.fromJson(json['localCursorState'])
+        : null,
+    cloudChangeStats: json['cloudChangeStats'] != null
+        ? EntityTypeSummary.fromJson(json['cloudChangeStats'])
+        : null,
+    cloudStateStats: json['cloudStateStats'] != null
+        ? EntityTypeStats.fromJson(json['cloudStateStats'])
+        : null,
+  );
+
   Map<String, dynamic> toJson() => {
     'localChangeStats': localChangeStats?.toJson(),
     'localStateStats': localStateStats?.toJson(),
