@@ -515,7 +515,7 @@ class SyncManager {
         domainId: projectId,
       );
 
-      final localCursorStats = await _localStorage.getCursorSyncState(
+      final localCursorState = await _localStorage.getCursorSyncState(
         projectId,
       );
 
@@ -541,7 +541,7 @@ class SyncManager {
       return SyncStatus(
         localChangeStats: localChangeStats,
         localStateStats: localStateStats,
-        localCursorState: localCursorStats,
+        localCursorState: localCursorState,
         cloudChangeStats: cloudChangeStats,
         cloudStateStats: cloudStateStats,
       );
@@ -676,7 +676,7 @@ class SyncStatus {
   Map<String, dynamic> toJson() => {
     'localChangeStats': localChangeStats?.toJson(),
     'localStateStats': localStateStats?.toJson(),
-    'localCursorStats': localCursorState?.toJson(),
+    'localCursorState': localCursorState?.toJson(),
     'cloudChangeStats': cloudChangeStats?.toJson(),
     'cloudStateStats': cloudStateStats?.toJson(),
   };
