@@ -342,6 +342,21 @@ class SyncManager {
               SlttLogger.logger.fine(
                 '[SyncManager] No more changes for project $projectId',
               );
+              if (lastSeq < highestSeqForProject) {
+                // Update sync state even if no changes were returned
+                await _localStorage.upsertCursorSyncState(
+                  domainType: 'project',
+                  domainId: projectId,
+                  srcStorageType: srcStorageType,
+                  srcStorageId: srcStorageId,
+                  seq: highestSeqForProject,
+                  cid: cid,
+                  changeAt: changeAt,
+                );
+                SlttLogger.logger.fine(
+                  '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
+                );
+              }
               break;
             }
 
