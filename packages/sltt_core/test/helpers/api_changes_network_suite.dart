@@ -51,7 +51,7 @@ class ApiChangesNetworkTestSuite {
     Map<String, dynamic> change,
   ) async {
     final baseUrl = await resolveBaseUrl();
-    final uri = baseUrl.replace(path: '/api/changes');
+    final uri = baseUrl.replace(path: '${baseUrl.path}/api/changes');
     // We'll retry the POST if the server reports a unique-index violation
     // (Isar unique index) which can happen when tests reuse predictable CIDs.
     // Each attempt will generate a fresh CID suffix to avoid collisions.
@@ -165,7 +165,8 @@ class ApiChangesNetworkTestSuite {
 
     final uri = baseUrl.replace(
       // New changes path
-      path: '/api/changes/$domainCollection/${Uri.encodeComponent(projectId)}',
+      path:
+          '${baseUrl.path}/api/changes/$domainCollection/${Uri.encodeComponent(projectId)}',
       queryParameters: queryParams.isEmpty ? null : queryParams,
     );
 
@@ -620,7 +621,7 @@ class ApiChangesNetworkTestSuite {
     required String domainId,
   }) async {
     final baseUrl = await resolveBaseUrl();
-    final uri = baseUrl.replace(path: '/api/changes');
+    final uri = baseUrl.replace(path: '${baseUrl.path}/api/changes');
 
     final change = {
       'domainId': domainId,
@@ -668,7 +669,7 @@ class ApiChangesNetworkTestSuite {
     required String domainId,
   }) async {
     final baseUrl = await resolveBaseUrl();
-    final uri = baseUrl.replace(path: '/api/changes');
+    final uri = baseUrl.replace(path: '${baseUrl.path}/api/changes');
 
     final change = {
       'seq': 1235, // include seq to simulate existing change
@@ -859,7 +860,8 @@ class ApiChangesNetworkTestSuite {
   }) async {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(
-      path: '/api/changes/$domainCollection/${Uri.encodeComponent(domainId)}',
+      path:
+          '${baseUrl.path}/api/changes/$domainCollection/${Uri.encodeComponent(domainId)}',
       queryParameters: {'limit': 'invalid'},
     );
 
@@ -873,7 +875,8 @@ class ApiChangesNetworkTestSuite {
   }) async {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(
-      path: '/api/changes/$domainCollection/${Uri.encodeComponent(domainId)}',
+      path:
+          '${baseUrl.path}/api/changes/$domainCollection/${Uri.encodeComponent(domainId)}',
       queryParameters: {'cursor': 'invalid'},
     );
 
@@ -1044,7 +1047,7 @@ class ApiChangesNetworkTestSuite {
 
   Future<void> _testPostChangesCloudStorage({required String domainId}) async {
     final baseUrl = await resolveBaseUrl();
-    final uri = baseUrl.replace(path: '/api/changes');
+    final uri = baseUrl.replace(path: '${baseUrl.path}/api/changes');
 
     // First discover the server's storage ID (use a derived domain)
     final dummyResponse = await postSingleChange(
@@ -1109,12 +1112,12 @@ class ApiChangesNetworkTestSuite {
     final baseUrl = await resolveBaseUrl();
     final uri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
     );
     final req = await HttpClient().getUrl(uri);
     final res = await req.close();
-    expect(res.statusCode, 200);
     final body = await res.transform(utf8.decoder).join();
+    expect(res.statusCode, 200, reason: 'Got ${body.toString()}');
     final json = jsonDecode(body) as Map<String, dynamic>;
     expect(json['items'], isA<List>());
     expect(json['items'], isEmpty);
@@ -1147,7 +1150,7 @@ class ApiChangesNetworkTestSuite {
     // Query collection
     final uri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
     );
     final req = await HttpClient().getUrl(uri);
     final res = await req.close();
@@ -1162,7 +1165,7 @@ class ApiChangesNetworkTestSuite {
     // Query specific entity
     final uri2 = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks/${Uri.encodeComponent('$domainId-task-1')}',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks/${Uri.encodeComponent('$domainId-task-1')}',
     );
     final req2 = await HttpClient().getUrl(uri2);
     final res2 = await req2.close();
@@ -1230,12 +1233,16 @@ class ApiChangesNetworkTestSuite {
     // Test: Get all tasks (no filter)
     final allTasksUri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
     );
     final allTasksReq = await HttpClient().getUrl(allTasksUri);
     final allTasksRes = await allTasksReq.close();
-    expect(allTasksRes.statusCode, 200);
     final allTasksBody = await allTasksRes.transform(utf8.decoder).join();
+    expect(
+      allTasksRes.statusCode,
+      200,
+      reason: 'Got ${allTasksBody.toString()}',
+    );
     final allTasksJson = jsonDecode(allTasksBody) as Map<String, dynamic>;
     expect(allTasksJson['items'], isA<List>());
     expect(
@@ -1247,7 +1254,7 @@ class ApiChangesNetworkTestSuite {
     // Test: Filter by parentId=parent-a
     final parentAUri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'parentId': 'parent-a'},
     );
     final parentAReq = await HttpClient().getUrl(parentAUri);
@@ -1271,7 +1278,7 @@ class ApiChangesNetworkTestSuite {
     // Test: Filter by parentId=parent-b
     final parentBUri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'parentId': 'parent-b'},
     );
     final parentBReq = await HttpClient().getUrl(parentBUri);
@@ -1304,7 +1311,7 @@ class ApiChangesNetworkTestSuite {
     // Test: Filter by non-existent parentId
     final nonExistentUri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'parentId': 'non-existent'},
     );
     final nonExistentReq = await HttpClient().getUrl(nonExistentUri);
@@ -1330,7 +1337,7 @@ class ApiChangesNetworkTestSuite {
         .deleteUrl(
           baseUrl.replace(
             path:
-                '/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
+                '${baseUrl.path}/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
           ),
         )
         .then((req) => req.close());
@@ -1373,7 +1380,7 @@ class ApiChangesNetworkTestSuite {
     // Test 1: Get all states without storedAfter filter
     final allStatesUri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
     );
     final allStatesReq = await HttpClient().getUrl(allStatesUri);
     final allStatesRes = await allStatesReq.close();
@@ -1390,7 +1397,7 @@ class ApiChangesNetworkTestSuite {
     // Test 2: Get only states stored after the between-batches timestamp
     final filteredUri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'storedAfter': betweenBatches.toIso8601String()},
     );
     final filteredReq = await HttpClient().getUrl(filteredUri);
@@ -1435,7 +1442,7 @@ class ApiChangesNetworkTestSuite {
         .deleteUrl(
           baseUrl.replace(
             path:
-                '/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
+                '${baseUrl.path}/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
           ),
         )
         .then((req) => req.close());
@@ -1478,7 +1485,7 @@ class ApiChangesNetworkTestSuite {
     // Test: Get filtered states with pagination (limit=2)
     final paginatedUri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {
         'storedAfter': betweenBatches.toIso8601String(),
         'limit': '2',
@@ -1518,7 +1525,7 @@ class ApiChangesNetworkTestSuite {
         .deleteUrl(
           baseUrl.replace(
             path:
-                '/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
+                '${baseUrl.path}/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
           ),
         )
         .then((req) => req.close());
@@ -1543,7 +1550,7 @@ class ApiChangesNetworkTestSuite {
     // Test: Filter with old timestamp (should return all items)
     final oldFilterUri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'storedAfter': beforeCreation.toIso8601String()},
     );
     final oldFilterReq = await HttpClient().getUrl(oldFilterUri);
@@ -1570,7 +1577,7 @@ class ApiChangesNetworkTestSuite {
         .deleteUrl(
           baseUrl.replace(
             path:
-                '/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
+                '${baseUrl.path}/api/storage/__test/reset/$domainCollection/${Uri.encodeComponent(domainId)}',
           ),
         )
         .then((req) => req.close());
@@ -1594,7 +1601,7 @@ class ApiChangesNetworkTestSuite {
     );
     final futureFilterUri = baseUrl.replace(
       path:
-          '/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
       queryParameters: {'storedAfter': futureTimestamp.toIso8601String()},
     );
     final futureFilterReq = await HttpClient().getUrl(futureFilterUri);
