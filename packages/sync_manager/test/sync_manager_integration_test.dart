@@ -20,8 +20,6 @@ void main() {
   // Initialize project logger so SLTT_LOG_LEVEL is honored in tests.
   SlttLogger.init();
 
-  final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] != 'false';
-
   // Group 1: Tests with Isar-backed cloud storage (in-process)
   group('[isar] SyncManager integration (Isar cloud)', () {
     late String cloudBaseUrl;
@@ -159,116 +157,112 @@ void main() {
   });
 
   // Group 2: Tests with DynamoDB-backed cloud storage (HTTP)
-  group(
-    '[dynamodb] SyncManager integration (DynamoDB cloud)',
-    () {
-      late String cloudBaseUrl;
-      late String srcStorageId;
-      late String srcStorageType;
+  group('[dynamodb] SyncManager integration (DynamoDB cloud)', () {
+    late String cloudBaseUrl;
+    late String srcStorageId;
+    late String srcStorageType;
 
-      setUpAll(() async {
-        // register change log entry SerializableGroup
-        registerIsarChangeLogSerializableGroup();
-      });
+    setUpAll(() async {
+      // register change log entry SerializableGroup
+      registerIsarChangeLogSerializableGroup();
+    });
 
-      setUp(() async {
-        final local = LocalStorageService.instance;
-        // Ensure any previous instances are closed and on-disk files removed
-        // to avoid cross-test interference and 'file in use' errors on Windows.
-        try {
-          await local.deleteDatabase();
-        } catch (e) {
-          SlttLogger.logger.warning(
-            '[test] Warning: failed to delete local database: $e',
-          );
-          rethrow;
-        }
-        await local.initialize();
+    setUp(() async {
+      final local = LocalStorageService.instance;
+      // Ensure any previous instances are closed and on-disk files removed
+      // to avoid cross-test interference and 'file in use' errors on Windows.
+      try {
+        await local.deleteDatabase();
+      } catch (e) {
+        SlttLogger.logger.warning(
+          '[test] Warning: failed to delete local database: $e',
+        );
+        rethrow;
+      }
+      await local.initialize();
 
-        // Use cloud URL from environment or default to dev
-        cloudBaseUrl = Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl;
-        srcStorageId = 'test-storage';
-        srcStorageType = 'cloud';
-      });
+      // Use cloud URL from environment or default to dev
+      cloudBaseUrl = Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl;
+      srcStorageId = 'test-storage';
+      srcStorageType = 'cloud';
+    });
 
-      test(
-        '[dynamodb] outsync [create]: save local changes > outsync to cloud',
-        () async {
-          await testOutsyncCreate(
-            cloudBaseUrl: cloudBaseUrl,
-            srcStorageId: srcStorageId,
-            srcStorageType: srcStorageType,
-            useDynamoDb: true,
-          );
-        },
-      );
+    test(
+      '[dynamodb] outsync [create]: save local changes > outsync to cloud',
+      () async {
+        await testOutsyncCreate(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useDynamoDb: true,
+        );
+      },
+    );
 
-      test(
-        '[dynamodb] downsync [create]: save cloud changes > downsync to local',
-        () async {
-          await testDownsyncCreate(
-            cloudBaseUrl: cloudBaseUrl,
-            srcStorageId: srcStorageId,
-            srcStorageType: srcStorageType,
-            useDynamoDb: true,
-          );
-        },
-      );
+    test(
+      '[dynamodb] downsync [create]: save cloud changes > downsync to local',
+      () async {
+        await testDownsyncCreate(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useDynamoDb: true,
+        );
+      },
+    );
 
-      test(
-        '[dynamodb] full sync [create]: save local changes > outsync to cloud > downsync same',
-        () async {
-          await testFullSyncCreate(
-            cloudBaseUrl: cloudBaseUrl,
-            srcStorageId: srcStorageId,
-            srcStorageType: srcStorageType,
-            useDynamoDb: true,
-          );
-        },
-        timeout: Timeout.none,
-      );
+    test(
+      '[dynamodb] full sync [create]: save local changes > outsync to cloud > downsync same',
+      () async {
+        await testFullSyncCreate(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useDynamoDb: true,
+        );
+      },
+      timeout: Timeout.none,
+    );
 
-      test(
-        '[dynamodb] full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
-        () async {
-          await testFullSyncUpdate(
-            cloudBaseUrl: cloudBaseUrl,
-            srcStorageId: srcStorageId,
-            srcStorageType: srcStorageType,
-            useDynamoDb: true,
-          );
-        },
-        timeout: Timeout.none,
-      );
+    test(
+      '[dynamodb] full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
+      () async {
+        await testFullSyncUpdate(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useDynamoDb: true,
+        );
+      },
+      timeout: Timeout.none,
+    );
 
-      test(
-        '[dynamodb] full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
-        () async {
-          await testFullSyncOutdated(
-            cloudBaseUrl: cloudBaseUrl,
-            srcStorageId: srcStorageId,
-            srcStorageType: srcStorageType,
-            useDynamoDb: true,
-          );
-        },
-        timeout: Timeout.none,
-      );
+    test(
+      '[dynamodb] full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
+      () async {
+        await testFullSyncOutdated(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useDynamoDb: true,
+        );
+      },
+      timeout: Timeout.none,
+    );
 
-      test(
-        '[dynamodb] full sync [pUpdate]: cloud save > downsync > local save [rank, nameLocal] > cloud save [rank] > upsync - pUpdate nameLocal > downsynced cloud changes',
-        () async {
-          await testFullSyncPartialUpdate(
-            cloudBaseUrl: cloudBaseUrl,
-            srcStorageId: srcStorageId,
-            srcStorageType: srcStorageType,
-            useDynamoDb: true,
-          );
-        },
-        timeout: Timeout.none,
-      );
-    },
-    skip: !useCloudStorage ? 'USE_CLOUD_STORAGE is false' : null,
-  );
+    test(
+      '[dynamodb] full sync [pUpdate]: cloud save > downsync > local save [rank, nameLocal] > cloud save [rank] > upsync - pUpdate nameLocal > downsynced cloud changes',
+      () async {
+        await testFullSyncPartialUpdate(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useDynamoDb: true,
+        );
+      },
+      timeout: Timeout.none,
+    );
+  });
 }
 
 // ============================================================================
