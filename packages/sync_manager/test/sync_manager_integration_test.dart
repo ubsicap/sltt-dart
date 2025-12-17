@@ -965,7 +965,7 @@ Future<void> testFullSyncOutdated({
     srcStorageId: srcStorageId,
     domainId: projectId,
     entityId: projectId,
-    changeAt: DateTime.now().toUtc(),
+    changeAt: DateTime.now().add(const Duration(seconds: 1)).toUtc(),
     dataJson: stableStringify({
       ...BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
       'nameLocal': expectedNameLocalAfterDownsync,
@@ -996,7 +996,7 @@ Future<void> testFullSyncOutdated({
     localStateAfterDownsync.data_nameLocal,
     equals(expectedNameLocalAfterDownsync),
     reason:
-        'After downsync, local state for project $projectId should reflect cloud change as LWW',
+        'After downsync, local state for project $projectId should reflect cloud change as LWW data_nameLocal_changeAt_ (cloud): ${cloudChange2.changeAt} vs. local: ${localStateAfterDownsync.data_nameLocal_changeAt_}',
   );
 
   // make sure outsync is still pending after downsync
