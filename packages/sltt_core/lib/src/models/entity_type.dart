@@ -23,6 +23,8 @@ const String kEntityTypePortion = 'portion';
 const String kEntityTypePortionCollection = 'portions';
 const String kEntityTypePassage = 'passage';
 const String kEntityTypePassageCollection = 'passages';
+const String kEntityTypeStoryboard = 'storyboard';
+const String kEntityTypeStoryboardCollection = 'storyboards';
 const String kEntityTypeReference = 'reference';
 const String kEntityTypeReferenceCollection = 'references';
 const String kEntityTypeDocument = 'document';
@@ -58,6 +60,8 @@ String? getCollectionByEntity(String entityType) {
       return kEntityTypePortionCollection;
     case kEntityTypePassage:
       return kEntityTypePassageCollection;
+    case kEntityTypeStoryboard:
+      return kEntityTypeStoryboardCollection;
     case kEntityTypeReference:
       return kEntityTypeReferenceCollection;
     case kEntityTypeDocument:
@@ -97,6 +101,8 @@ String? getEntityByCollection(String collectionName) {
       return kEntityTypePortion;
     case kEntityTypePassageCollection:
       return kEntityTypePassage;
+    case kEntityTypeStoryboardCollection:
+      return kEntityTypeStoryboard;
     case kEntityTypeReferenceCollection:
       return kEntityTypeReference;
     case kEntityTypeDocumentCollection:
@@ -130,6 +136,7 @@ enum EntityType {
   message(kEntityTypeMessage),
   portion(kEntityTypePortion),
   passage(kEntityTypePassage),
+  storyboard(kEntityTypeStoryboard),
   reference(kEntityTypeReference),
   document(kEntityTypeDocument),
   video(kEntityTypeVideo),
@@ -155,6 +162,7 @@ enum EntityType {
     kEntityTypeMessage: 'mesg',
     kEntityTypePortion: 'prtn',
     kEntityTypePassage: 'psgZ',
+    kEntityTypeStoryboard: 'strb',
     kEntityTypeReference: 'refZ',
     kEntityTypeDocument: 'docu',
     kEntityTypeVideo: 'vidZ',
@@ -202,7 +210,10 @@ enum EntityType {
   /// Format: YYYY-mmdd-HHMMss-sss±HH{UC}-{4-character-random}-{entity-short}
   /// Similar to generateCid() but without -cid suffix
   /// ({String? [userId]}) embed 2 character hash of the userId after the timezone hour offset, 'UK' by default
-  static String generateEntityId({required EntityType entityType, String? userId}) {
+  static String generateEntityId({
+    required EntityType entityType,
+    String? userId,
+  }) {
     final suffix = getSuffix(entityType: entityType);
     final coreId = generateCoreId(userId: userId);
     return '$coreId-$suffix';
@@ -257,13 +268,15 @@ String generateCoreId({String? userId}) {
   final timezonePart = '$offsetSign$offsetHours';
 
   // 4-character random part
-  final rng = /* timestamp != null ? Random(timestamp.millisecond) : */ Random();
+  final rng = /* timestamp != null ? Random(timestamp.millisecond) : */
+      Random();
   final randomPart = generateRandomChars(4, rng: rng);
   final userCode = (userId != null)
       ? generateRandomChars(
-        2, chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-        rng: Random(1234567890) /* stable for same userId */
-      )
+          2,
+          chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+          rng: Random(1234567890) /* stable for same userId */,
+        )
       : 'UK' /* unknown */;
   return '$datePart$timezonePart$userCode-$randomPart';
 }
@@ -272,6 +285,9 @@ String generateCoreId({String? userId}) {
 /// Format: YYYY-mmdd-HHMMss-sss[_-]HH{UC}-{4chars}-{entity-short}-cid
 /// ({String? userId}) embed 2 character hash of the userId after the timezone hour offset, 'UK' by default
 String generateCid({required EntityType entityType, String? userId}) {
-  final entityId = EntityType.generateEntityId(entityType: entityType, userId: userId);
+  final entityId = EntityType.generateEntityId(
+    entityType: entityType,
+    userId: userId,
+  );
   return '$entityId-cid';
 }
