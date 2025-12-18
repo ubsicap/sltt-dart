@@ -13,6 +13,18 @@ class InMemoryStorage implements BaseStorageService {
   InMemoryStorage({required this.storageType, String? storageId})
     : storageId = storageId ?? BaseStorageService.generateShortStorageId();
 
+  @override
+  int get batchPutChangesLimit => 1000;
+
+  @override
+  BaseEntityState createEntityStateFromJson({
+    required String entityType,
+    required Map<String, dynamic> json,
+  }) {
+    final normalized = <String, dynamic>{...json, 'entityType': entityType};
+    return TestEntityState.fromJson(normalized);
+  }
+
   String _key(String projectId, String entityType, String entityId) =>
       '$projectId|$entityType|$entityId';
 
@@ -46,7 +58,49 @@ class InMemoryStorage implements BaseStorageService {
   }
 
   @override
-  Future<UpdateChangeLogAndStateResult> updateChangeLogAndState({
+  Future<Map<String, BaseEntityState?>> batchGetEntityState({
+    required List<
+      ({String domainType, String domainId, String entityType, String entityId})
+    >
+    keys,
+  }) async {
+    final result = <String, BaseEntityState?>{};
+    for (final key in keys) {
+      result[key.entityId] = await getEntityState(
+        domainType: key.domainType,
+        domainId: key.domainId,
+        entityType: key.entityType,
+        entityId: key.entityId,
+      );
+    }
+    return result;
+  }
+
+  @override
+  Future<UpdateChangeLogAndStatesResult> updateChangeLogAndStates({
+    required String domainType,
+    required List<ChangeLogAndStateRequest> requests,
+  }) async {
+    final outChanges = <BaseChangeLogEntry>[];
+    final outStates = <BaseEntityState?>[];
+    for (var req in requests) {
+      final res = await _updateOneChangeLogAndState(
+        domainType: domainType,
+        changeLogEntry: req.changeLogEntry,
+        changeUpdates: req.changeUpdates,
+        entityState: req.entityState,
+        stateUpdates: req.stateUpdates,
+        operationCounts: req.operationCounts,
+        skipChangeLogWrite: req.skipChangeLogWrite,
+        skipStateWrite: req.skipStateWrite,
+      );
+      outChanges.add(res.newChangeLogEntry);
+      outStates.add(res.newEntityState);
+    }
+    return (newChangeLogEntries: outChanges, newEntityStates: outStates);
+  }
+
+  Future<UpdateChangeLogAndStateResult> _updateOneChangeLogAndState({
     required String domainType,
     required BaseChangeLogEntry changeLogEntry,
     required Map<String, dynamic> changeUpdates,

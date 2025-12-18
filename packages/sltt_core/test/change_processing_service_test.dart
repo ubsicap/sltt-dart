@@ -38,6 +38,106 @@ void main() {
         storage = InMemoryStorage(storageType: 'local');
       });
 
+      test(
+        'BaseStorageService.batchGetEntityState returns map by entityId',
+        () async {
+          await storage.initialize();
+          final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+
+          // Create two entities in the same domain via storeChanges (save mode)
+          final e1 =
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int,
+                ProjectDataFields
+              >(
+                factory: TestChangeLogEntry.new,
+                domainType: 'project',
+                domainId: 'proj-batch',
+                entityType: 'task',
+                entityId: 'proj-batch-task-1',
+                changeBy: 'tester',
+                changeAt: baseTime,
+                data: ProjectDataFields(
+                  nameLocal: 'Batch One',
+                  parentId: 'root',
+                  parentProp: 'pList',
+                ),
+                operation: 'create',
+              );
+
+          final e2 =
+              ChangeLogEntryFactoryService.forChangeSave<
+                TestChangeLogEntry,
+                int,
+                ProjectDataFields
+              >(
+                factory: TestChangeLogEntry.new,
+                domainType: 'project',
+                domainId: 'proj-batch',
+                entityType: 'task',
+                entityId: 'proj-batch-task-2',
+                changeBy: 'tester',
+                changeAt: baseTime.add(const Duration(minutes: 1)),
+                data: ProjectDataFields(
+                  nameLocal: 'Batch Two',
+                  parentId: 'root',
+                  parentProp: 'pList',
+                ),
+                operation: 'create',
+              );
+
+          final saveRes = await ChangeProcessingService.storeChanges(
+            storageMode: 'save',
+            changes: [e1.toJson(), e2.toJson()],
+            srcStorageType: 'local',
+            srcStorageId: 'local',
+            storage: storage,
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+          expect(saveRes.isSuccess, isTrue, reason: 'Seed saves must succeed');
+
+          // Batch get states for the two entities plus a missing one
+          final keys =
+              <
+                ({
+                  String domainType,
+                  String domainId,
+                  String entityType,
+                  String entityId,
+                })
+              >[
+                (
+                  domainType: 'project',
+                  domainId: 'proj-batch',
+                  entityType: 'task',
+                  entityId: 'proj-batch-task-1',
+                ),
+                (
+                  domainType: 'project',
+                  domainId: 'proj-batch',
+                  entityType: 'task',
+                  entityId: 'proj-batch-task-2',
+                ),
+                (
+                  domainType: 'project',
+                  domainId: 'proj-batch',
+                  entityType: 'task',
+                  entityId: 'proj-batch-task-MISSING',
+                ),
+              ];
+
+          final states = await storage.batchGetEntityState(keys: keys);
+
+          expect(states.containsKey('proj-batch-task-1'), isTrue);
+          expect(states.containsKey('proj-batch-task-2'), isTrue);
+          expect(states['proj-batch-task-1'], isNotNull);
+          expect(states['proj-batch-task-2'], isNotNull);
+          expect(states['proj-batch-task-MISSING'], isNull);
+        },
+      );
+
       tearDown(() async {
         await storage.close();
       });
@@ -295,6 +395,68 @@ void main() {
         expect(summary.stateUpdates.length, equals(2));
         expect(summary.created, isA<List>());
         expect(summary.created.length, equals(2));
+      });
+
+      test('returns error when batch contains mixed domainTypes', () async {
+        await storage.initialize();
+        final baseTime = DateTime.parse('2023-01-01T00:00:00Z');
+
+        final entry1 =
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
+              factory: TestChangeLogEntry.new,
+              domainType: 'project',
+              domainId: 'proj-1',
+              entityType: 'task',
+              entityId: 'proj-1-task-1',
+              changeBy: 'tester',
+              changeAt: baseTime,
+              data: ProjectDataFields(
+                nameLocal: 'Task A',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
+              operation: 'create',
+            );
+
+        // Same structure but different domainType to trigger prevalidation error
+        final entry2 =
+            ChangeLogEntryFactoryService.forChangeSave<
+              TestChangeLogEntry,
+              int,
+              ProjectDataFields
+            >(
+              factory: TestChangeLogEntry.new,
+              domainType: 'other',
+              domainId: 'other-1',
+              entityType: 'task',
+              entityId: 'other-1-task-1',
+              changeBy: 'tester',
+              changeAt: baseTime.add(const Duration(minutes: 1)),
+              data: ProjectDataFields(
+                nameLocal: 'Task B',
+                parentId: 'root',
+                parentProp: 'pList',
+              ),
+              operation: 'create',
+            );
+
+        final result = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [entry1.toJson(), entry2.toJson()],
+          srcStorageType: 'local',
+          srcStorageId: 'local',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+
+        expect(result.isError, isTrue);
+        expect(result.errorCode, equals(400));
+        expect(result.errorMessage, contains('same domainType'));
       });
     });
 

@@ -1,10 +1,12 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:isar_community/isar.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 part 'cursor_sync_state.g.dart';
 
+@JsonSerializable(explicitToJson: true)
 @collection
 class CursorSyncState extends SyncState {
   final Id id;
@@ -25,4 +27,9 @@ class CursorSyncState extends SyncState {
     required super.storedAt,
     super.storedAt_orig_,
   });
+
+  factory CursorSyncState.fromJson(Map<String, dynamic> json) =>
+      _$CursorSyncStateFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CursorSyncStateToJson(this);
 }

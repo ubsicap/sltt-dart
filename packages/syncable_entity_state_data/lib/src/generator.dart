@@ -11,7 +11,8 @@ import 'annotations.dart';
 
 /// Generator that produces `*EntityState` classes for data classes annotated
 /// with `@SyncableEntityStateData`.
-class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEntityStateData> {
+class SyncableEntityStateDataGenerator
+    extends GeneratorForAnnotation<SyncableEntityStateData> {
   final _formatter = DartFormatter(languageVersion: Version.parse('3.3.0'));
 
   @override
@@ -22,12 +23,13 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
   ) {
     if (element is! ClassElement2) return null;
 
-  final className = element.displayName;
+    final className = element.displayName;
     final entityStateClassName = '${className}EntityState';
     final entityTypeValue = annotation.read('entityType').stringValue;
     final jsonRequired = annotation.peek('jsonRequired')?.boolValue ?? true;
     final includeIfNull = annotation.peek('includeIfNull')?.boolValue ?? true;
-    final enforceIsar = annotation.peek('enforceIsarCompatibility')?.boolValue ?? true;
+    final enforceIsar =
+        annotation.peek('enforceIsarCompatibility')?.boolValue ?? true;
 
     // Determine entityType: override or infer from class name (strip 'Data' suffix if present)
     // entityTypeValue already provided explicitly via annotation
@@ -40,13 +42,14 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
     // Add 'parentProp' to core fields so generated entity state classes
     // include the base-class parentProp/meta fields rather than generating them.
     const coreFieldNames = {'parentId', 'parentProp', 'deleted', 'rank'};
-  final dataFields = allFields.where((f) => !coreFieldNames.contains(f.displayName));
+    final dataFields =
+        allFields.where((f) => !coreFieldNames.contains(f.displayName));
 
     // Optionally enforce Isar compatibility
     final incompatible = <String, String>{};
     if (enforceIsar) {
       for (final f in dataFields) {
-        final dt = f.type.getDisplayString(withNullability: true);
+        final dt = f.type.getDisplayString();
         if (!_isIsarCompatibleType(f.type)) {
           incompatible[f.displayName] = dt;
         }
@@ -64,7 +67,8 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
     buffer.writeln('// ignore_for_file: non_constant_identifier_names');
     // original source file name not needed for standalone output
     // Standalone generated file with its own library so json_serializable can generate *_entity_state.g.dart.
-    final sourceFileName = buildStep.inputId.pathSegments.last; // e.g. task_data.dart
+    final sourceFileName =
+        buildStep.inputId.pathSegments.last; // e.g. task_data.dart
     final baseName = sourceFileName.replaceAll('.dart', ''); // task_data
     final gPartName = '$baseName.entity_state.g.dart';
     buffer
@@ -91,8 +95,8 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
 
     // Data field declarations + meta markers per field
     for (final field in dataFields) {
-  final name = field.displayName;
-      final typeStr = field.type.getDisplayString(withNullability: true);
+      final name = field.displayName;
+      final typeStr = field.type.getDisplayString();
       buffer.writeln('  final $typeStr data_$name;');
       buffer.writeln('  final int? data_${name}_dataSchemaRev_;');
       buffer.writeln('  final DateTime? data_${name}_changeAt_;');
@@ -116,8 +120,6 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
     buffer.writeln('    required super.data_parentId_changeAt_,');
     buffer.writeln('    required super.data_parentId_cid_,');
     buffer.writeln('    required super.data_parentId_changeBy_,');
-    // parentProp is optional and may be absent from older change logs; pass nulls
-    buffer.writeln('    // parentProp related meta (required to match BaseEntityState)');
     buffer.writeln('    required super.data_parentProp,');
     buffer.writeln('    super.data_parentProp_dataSchemaRev_,');
     buffer.writeln('    required super.data_parentProp_changeAt_,');
@@ -141,7 +143,7 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
     buffer.writeln('    super.data_deleted_cloudAt_,');
 
     for (final field in dataFields) {
-  final name = field.displayName;
+      final name = field.displayName;
       buffer.writeln('    required this.data_$name,');
       buffer.writeln('    this.data_${name}_dataSchemaRev_,');
       buffer.writeln('    this.data_${name}_changeAt_,');
@@ -171,9 +173,9 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
     buffer.writeln('  Map<String, dynamic> toJsonSafe() {');
     buffer.writeln('    final j = toJson();');
     for (final field in allFields) {
-  final name = field.displayName;
+      final name = field.displayName;
       // Provide basic defaults based on type
-      final typeStr = field.type.getDisplayString(withNullability: true);
+      final typeStr = field.type.getDisplayString();
       final defaultExpr = _defaultForType(typeStr);
       if (jsonRequired) {
         buffer.writeln("    j.putIfAbsent('data_$name', () => $defaultExpr);");
@@ -207,7 +209,7 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
       '$className _${entityStateClassName}ToData($entityStateClassName s) => $className(',
     );
     for (final field in allFields) {
-  final originalName = field.displayName;
+      final originalName = field.displayName;
       if (coreFieldNames.contains(originalName)) {
         // Map to base class field naming (data_<core>)
         buffer.writeln('  $originalName: s.data_$originalName,');
@@ -230,7 +232,7 @@ class SyncableEntityStateDataGenerator extends GeneratorForAnnotation<SyncableEn
 }
 
 bool _isIsarCompatibleType(DartType type) {
-  final t = type.getDisplayString(withNullability: false);
+  final t = type.getDisplayString();
   const scalars = {'String', 'int', 'double', 'bool', 'DateTime'};
   if (scalars.contains(t)) return true;
   if (t.startsWith('List<')) return true; // heuristic; deeper validation later
@@ -251,7 +253,8 @@ String _defaultForType(String typeStr) {
   return 'null';
 }
 
-Builder syncableEntityStateDataBuilder(BuilderOptions options) => LibraryBuilder(
+Builder syncableEntityStateDataBuilder(BuilderOptions options) =>
+    LibraryBuilder(
       SyncableEntityStateDataGenerator(),
       generatedExtension: '.entity_state.dart',
     );

@@ -65,6 +65,30 @@
             "console": "terminal"
         },
         {
+            "name": "Debug AWS Backend (tst)",
+            "type": "dart",
+            "request": "launch",
+            "program": "packages/aws_backend/bin/debug_server.dart",
+            "args": [
+                "--aws-profile", "sltt-dart-tst",
+                "--stage", "tst",
+                "--port", "8080"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "AWS_PROFILE": "sltt-dart-tst",
+                "AWS_ACCESS_KEY_ID":  "${input:awsAccessKeyId}",
+                "AWS_SECRET_ACCESS_KEY": "${input:awsSecretAccessKey}",
+                "AWS_REGION": "us-east-1",
+                "DYNAMODB_REGION": "us-east-1",
+                "DYNAMODB_TABLE": "sltt-backend-changes-states-tst",
+                "STAGE": "tst",
+                "USE_CLOUD_STORAGE": "true",
+                "LOCAL_DEBUGGER": "true"
+            },
+            "console": "terminal"
+        },
+        {
             "name": "Attach: Debug AWS Backend (Dev)",
             "type": "dart",
             "request": "attach",

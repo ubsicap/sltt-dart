@@ -208,6 +208,8 @@ void registerIsarPassageDataEntityStateStorageGroup(
           put: (state) async => await isar.isarPassageDataEntityStates.put(
             state as IsarPassageDataEntityState,
           ),
+          putAll: (states) async => await isar.isarPassageDataEntityStates
+              .putAll(states.cast<IsarPassageDataEntityState>()),
           collection: (isar) => isar.isarPassageDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarPassageDataEntityStates
@@ -245,6 +247,11 @@ void registerIsarPassageDataEntityStateStorageGroup(
                     .limit(limit ?? 100)
                     .findAll();
               },
+          getAllByEntityId: (isar, entityIds) async {
+            final results = await isar.isarPassageDataEntityStates
+                .getAllByEntityId(entityIds);
+            return results.whereType<IsarPassageDataEntityState>().toList();
+          },
           deleteByDomain: ({required domainId, required domainType}) async =>
               await isar.isarPassageDataEntityStates
                   .filter()

@@ -53,10 +53,14 @@ void main() {
         baseUrl,
         domainType: domainType,
         domainId: projectId,
-        entityType: 'passage',
-        entityId: 'passage_single',
-        changesToSave: [data],
-        changeBy: 'bench-user',
+        changesToSave: [
+          SaveChangeRequest<PassageTranslationData>(
+            entityType: 'passage',
+            entityId: 'passage_single',
+            data: data,
+            changeBy: 'bench-user',
+          ),
+        ],
         srcStorageType: 'cloud',
         srcStorageId: 'bench',
       );
@@ -71,29 +75,71 @@ void main() {
       );
     });
 
-    test('POST 100 passage changes in single batch (saveChanges list)', () async {
-      final batch = List.generate(100, makePassage);
-      final sw = Stopwatch()..start();
-      final resp = await saveChanges<PassageTranslationData>(
-        baseUrl,
-        domainType: domainType,
-        domainId: projectId,
-        entityType: 'passage',
-        entityId: 'passage_batch',
-        changesToSave: batch,
-        changeBy: 'bench-user',
-        srcStorageType: 'cloud',
-        srcStorageId: 'bench',
-      );
-      sw.stop();
-      expect(
-        resp.statusCode,
-        anyOf([200, 201]),
-        reason: 'Batch failed: ${resp.statusCode} ${resp.body}',
-      );
-      print(
-        'Benchmark: single batch POST of 100 PassageTranslationData changes took ${sw.elapsedMilliseconds} ms',
-      );
-    });
+    test(
+      'POST [create] 100 passage changes in single batch (saveChanges list)',
+      () async {
+        final batch = List.generate(100, makePassage);
+        final sw = Stopwatch()..start();
+        final resp = await saveChanges<PassageTranslationData>(
+          baseUrl,
+          domainType: domainType,
+          domainId: projectId,
+          changesToSave: batch
+              .map(
+                (data) => SaveChangeRequest<PassageTranslationData>(
+                  entityType: 'passage',
+                  entityId: 'passage_batch_${batch.indexOf(data)}',
+                  data: data,
+                  changeBy: 'bench-user',
+                ),
+              )
+              .toList(),
+          srcStorageType: 'cloud',
+          srcStorageId: 'bench',
+        );
+        sw.stop();
+        expect(
+          resp.statusCode,
+          anyOf([200, 201]),
+          reason: 'Batch failed: ${resp.statusCode} ${resp.body}',
+        );
+        print(
+          'Benchmark: single batch POST [create] of 100 PassageTranslationData changes took ${sw.elapsedMilliseconds} ms',
+        );
+      },
+    );
+    test(
+      'POST [update] 100 passage changes in single batch (saveChanges list)',
+      () async {
+        final batch = List.generate(100, makePassage);
+        final sw = Stopwatch()..start();
+        final resp = await saveChanges<PassageTranslationData>(
+          baseUrl,
+          domainType: domainType,
+          domainId: projectId,
+          changesToSave: batch
+              .map(
+                (data) => SaveChangeRequest<PassageTranslationData>(
+                  entityType: 'passage',
+                  entityId: 'passage_same',
+                  data: data,
+                  changeBy: 'bench-user',
+                ),
+              )
+              .toList(),
+          srcStorageType: 'cloud',
+          srcStorageId: 'bench',
+        );
+        sw.stop();
+        expect(
+          resp.statusCode,
+          anyOf([200, 201]),
+          reason: 'Batch failed: ${resp.statusCode} ${resp.body}',
+        );
+        print(
+          'Benchmark: single batch POST [update] of 100 PassageTranslationData changes took ${sw.elapsedMilliseconds} ms',
+        );
+      },
+    );
   });
 }

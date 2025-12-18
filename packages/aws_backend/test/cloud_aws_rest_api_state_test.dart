@@ -69,10 +69,14 @@ void main() {
         baseUrl,
         domainType: 'project',
         domainId: projectId,
-        entityType: 'portion',
-        entityId: 'portion_1',
-        changesToSave: [portionData],
-        changeBy: 'user1',
+        changesToSave: [
+          SaveChangeRequest<PortionTranslationData>(
+            entityType: 'portion',
+            entityId: 'portion_1',
+            data: portionData,
+            changeBy: 'user1',
+          ),
+        ],
       );
 
       // create another portion with different parentId, use portion_1,
@@ -88,10 +92,14 @@ void main() {
         baseUrl,
         domainType: 'project',
         domainId: projectId,
-        entityType: 'portion',
-        entityId: 'portion_2',
-        changesToSave: [otherPortionData],
-        changeBy: 'user2',
+        changesToSave: [
+          SaveChangeRequest<PortionTranslationData>(
+            entityType: 'portion',
+            entityId: 'portion_2',
+            data: otherPortionData,
+            changeBy: 'user2',
+          ),
+        ],
       );
 
       final resp = await http.get(
@@ -152,10 +160,14 @@ void main() {
             baseUrl,
             domainType: 'project',
             domainId: projectId,
-            entityType: 'portion',
-            entityId: 'portion_$i',
-            changesToSave: [portionData],
-            changeBy: 'user$i',
+            changesToSave: [
+              SaveChangeRequest<PortionTranslationData>(
+                entityType: 'portion',
+                entityId: 'portion_$i',
+                data: portionData,
+                changeBy: 'user$i',
+              ),
+            ],
           );
         }
 
@@ -225,10 +237,14 @@ void main() {
             baseUrl,
             domainType: 'project',
             domainId: projectId,
-            entityType: 'portion',
-            entityId: 'portion_$i',
-            changesToSave: [portionData],
-            changeBy: 'user$i',
+            changesToSave: [
+              SaveChangeRequest<PortionTranslationData>(
+                entityType: 'portion',
+                entityId: 'portion_$i',
+                data: portionData,
+                changeBy: 'user$i',
+              ),
+            ],
           );
         }
 
@@ -342,10 +358,14 @@ void main() {
             baseUrl,
             domainType: 'project',
             domainId: projectId,
-            entityType: 'portion',
-            entityId: 'portion_$i',
-            changesToSave: [portionData],
-            changeBy: 'user$i',
+            changesToSave: [
+              SaveChangeRequest<PortionTranslationData>(
+                entityType: 'portion',
+                entityId: 'portion_$i',
+                data: portionData,
+                changeBy: 'user$i',
+              ),
+            ],
           );
         }
 
@@ -371,10 +391,14 @@ void main() {
             baseUrl,
             domainType: 'project',
             domainId: projectId,
-            entityType: 'portion',
-            entityId: 'portion_$i',
-            changesToSave: [portionData],
-            changeBy: 'user$i',
+            changesToSave: [
+              SaveChangeRequest<PortionTranslationData>(
+                entityType: 'portion',
+                entityId: 'portion_$i',
+                data: portionData,
+                changeBy: 'user$i',
+              ),
+            ],
           );
         }
 

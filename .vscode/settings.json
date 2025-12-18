@@ -5,7 +5,7 @@
     "[dart]": {
         "editor.inlayHints.enabled": "on",
         "editor.rulers": [80, 120],
-        "editor.hover.enabled": true,
+        "editor.hover.enabled": "on",
         "editor.hover.delay": 300,
         "editor.wordWrap": "bounded",
         "editor.wordWrapColumn": 120,

@@ -521,7 +521,7 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys({
 
         final existingFieldChangeAt = _toDateTime(
           existingStateJson['${entityFieldKey}_changeAt_'],
-          DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
+          epochZeroUtc,
         );
         if (changeLogEntry.changeAt.isAfter(existingFieldChangeAt)) {
           fieldUpdates[field] = value;

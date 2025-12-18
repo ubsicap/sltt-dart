@@ -184,7 +184,7 @@ abstract class BaseEntityState
   }
 
   static DateTime defaultOrigDateTime() {
-    return DateTime.fromMillisecondsSinceEpoch(0).toUtc();
+    return epochZeroUtc;
   }
 
   static DateTime normalizeOrigDateTime(DateTime? orig, DateTime current) {
@@ -233,6 +233,7 @@ abstract class BaseEntityState
   }
 }
 
+DateTime epochZeroUtc = DateTime.fromMillisecondsSinceEpoch(0).toUtc();
 mixin CoreEntityMetaData {
   String get entityId;
   String get entityType;

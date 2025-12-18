@@ -29,6 +29,7 @@ provider:
         - dynamodb:DeleteItem
         - dynamodb:Query
         - dynamodb:Scan
+        - dynamodb:BatchGetItem
         - dynamodb:BatchWriteItem
         - dynamodb:DescribeTable
         - dynamodb:CreateTable

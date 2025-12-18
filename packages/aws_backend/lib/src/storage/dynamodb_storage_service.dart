@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
@@ -60,6 +61,10 @@ class DynamoDBStorageService extends BaseStorageService {
 
   String? _storageId;
 
+  /// Maximum number of change log entries that can be processed in a single batch. Leave room for state updates in the same batch (max 25 items total).
+  @override
+  int get batchPutChangesLimit => 12;
+
   @override
   Future<void> initialize() async {
     if (_initialized) return;
@@ -83,7 +88,7 @@ class DynamoDBStorageService extends BaseStorageService {
     }
 
     if (useLocalDynamoDB) {
-      await _createTableIfNotExists();
+      await createTableIfNotExists();
     }
 
     await ensureStorageId();
@@ -114,85 +119,437 @@ class DynamoDBStorageService extends BaseStorageService {
   }
 
   @override
-  Future<UpdateChangeLogAndStateResult> updateChangeLogAndState({
+  Future<UpdateChangeLogAndStatesResult> updateChangeLogAndStates({
     required String domainType,
-    required BaseChangeLogEntry changeLogEntry,
-    required Map<String, dynamic> changeUpdates,
-    BaseEntityState? entityState,
-    required Map<String, dynamic> stateUpdates,
-    required OperationCounts operationCounts,
-    bool skipChangeLogWrite = false,
-    bool skipStateWrite = false,
+    required List<ChangeLogAndStateRequest> requests,
   }) async {
     await initialize();
 
-    final mergedChangeJson = <String, dynamic>{
-      ...changeLogEntry.toJson(),
-      ...changeUpdates,
-    }..removeWhere((key, value) => value == null);
+    // Phase 1: Process all requests and prepare items
+    final outChanges = <BaseChangeLogEntry>[];
+    final outStates = <BaseEntityState?>[];
+    final changeItemsToPut = <Map<String, dynamic>>[];
+    // the states need to be unique, so only update the latest for each entityId
+    final stateItemsToPutByEntityId = <String, Map<String, dynamic>>{};
+    final syncStatesToUpsert =
+        <
+          ({
+            String entityType,
+            DynamoChangeLogEntry change,
+            OperationCounts operationCounts,
+            bool forChangeLog,
+          })
+        >[];
 
-    final newChange = DynamoChangeLogEntry.fromJson(mergedChangeJson);
+    for (var req in requests) {
+      // Merge change log entry with updates
+      final mergedChangeJson = <String, dynamic>{
+        ...req.changeLogEntry.toJson(),
+        ...req.changeUpdates,
+      }..removeWhere((key, value) => value == null);
 
-    if (!skipChangeLogWrite) {
-      // Always assign a new sequence number from DynamoDB's atomic counter
-      // The client-provided seq value (if any) is ignored
-      newChange.seq = await _bumpSeq(
+      final newChange = DynamoChangeLogEntry.fromJson(mergedChangeJson);
+
+      if (!req.skipChangeLogWrite) {
+        // Assign sequence number
+        newChange.seq = await _bumpSeq(
+          domainType: domainType,
+          domainId: newChange.domainId,
+        );
+
+        // Prepare change log item for batch put
+        changeItemsToPut.add(_buildChangeLogItem(newChange));
+
+        // Queue sync state update for change log
+        syncStatesToUpsert.add((
+          entityType: newChange.entityType,
+          change: newChange,
+          operationCounts: req.operationCounts,
+          forChangeLog: true,
+        ));
+      }
+
+      outChanges.add(newChange);
+
+      // Process entity state
+      late final BaseEntityState newState;
+      if (req.skipStateWrite &&
+          req.entityState != null &&
+          req.stateUpdates.isEmpty) {
+        newState = req.entityState!;
+      } else {
+        final currentStateJson = req.entityState?.toJson() ?? {};
+        final mergedStateJson = <String, dynamic>{
+          ...currentStateJson,
+          ...req.stateUpdates,
+        }..removeWhere((key, value) => value == null);
+
+        newState = deserializeEntityStateSafely(mergedStateJson);
+
+        if (!req.skipStateWrite) {
+          // Prepare entity state item for batch put
+          stateItemsToPutByEntityId[newState.entityId] = _buildEntityStateItem(
+            newState,
+          );
+
+          // Queue sync state update for entity state
+          syncStatesToUpsert.add((
+            entityType: newChange.entityType,
+            change: newChange,
+            operationCounts: req.operationCounts,
+            forChangeLog: false,
+          ));
+        }
+      }
+
+      outStates.add(newState);
+    }
+
+    // Phase 2: Batch write change log entries
+    if (changeItemsToPut.isNotEmpty) {
+      await _batchPutItems(changeItemsToPut);
+    }
+
+    // Phase 3: Batch write entity states
+    if (stateItemsToPutByEntityId.isNotEmpty) {
+      await _batchPutItems(stateItemsToPutByEntityId.values.toList());
+    }
+
+    // Phase 4: Batch upsert entity type sync states
+    if (syncStatesToUpsert.isNotEmpty) {
+      await _batchUpsertEntityTypeSyncStates(
         domainType: domainType,
-        domainId: newChange.domainId,
-      );
-      await _putChangeLogEntry(newChange);
-
-      // Upsert entity type sync state counters for change log
-      await upsertEntityTypeSyncStates(
-        domainType: domainType,
-        entityType: newChange.entityType,
-        newChange: newChange,
-        operationCounts: operationCounts,
-        forChangeLog: true,
+        syncStates: syncStatesToUpsert,
       );
     }
 
-    late final BaseEntityState newState;
-    if (skipStateWrite && entityState != null && stateUpdates.isEmpty) {
-      newState = entityState;
-    } else {
-      final currentStateJson =
-          entityState?.toJson() ??
-          _buildInitialStateJson(
-            domainType: domainType,
-            domainId: newChange.domainId,
-            entityType: newChange.entityType,
-            entityId: newChange.entityId,
-            change: newChange,
-          );
-      final mergedStateJson = <String, dynamic>{
-        ...currentStateJson,
-        ...stateUpdates,
-      }..removeWhere((key, value) => value == null);
+    return (newChangeLogEntries: outChanges, newEntityStates: outStates);
+  }
 
-      mergedStateJson['entityId'] = newChange.entityId;
-      mergedStateJson['entityType'] = newChange.entityType;
-      mergedStateJson['domainType'] = domainType;
-      mergedStateJson['unknownJson'] = JsonUtils.normalize(
-        mergedStateJson['unknownJson'] as String?,
-      );
+  /// Builds a DynamoDB item for a change log entry.
+  Map<String, dynamic> _buildChangeLogItem(DynamoChangeLogEntry entry) {
+    return {
+      'pk': {
+        'S': _changePrimaryKey(
+          domainType: entry.domainType,
+          domainId: entry.domainId,
+          entityType: entry.entityType,
+          entityId: entry.entityId,
+        ),
+      },
+      'sk': {'S': _changeSortKey(entry.cid)},
+      'gsi1pk': {
+        'S': _changeGsiPartition(
+          domainType: entry.domainType,
+          domainId: entry.domainId,
+        ),
+      },
+      'gsi1sk': {'S': _changeGsiSortKey(entry.seq)},
+      'seq': {'N': entry.seq.toString()},
+      ..._encodeJson(entry.toJson()),
+    };
+  }
 
-      newState = deserializeEntityStateSafely(mergedStateJson);
+  /// Builds a DynamoDB item for an entity state.
+  Map<String, dynamic> _buildEntityStateItem<
+    TEntityState extends BaseEntityState
+  >(TEntityState state) {
+    final stateJson = state.toJson();
+    final parentId = stateJson['data_parentId'] as String? ?? '';
+    final parentProp = stateJson['data_parentProp'] as String? ?? '';
+    final rank = stateJson['data_rank']?.toString();
 
-      if (!skipStateWrite) {
-        await _putEntityState(newState);
+    return {
+      'pk': {
+        'S': _statePrimaryKey(
+          domainType: state.domainType,
+          domainId: state.change_domainId,
+          entityType: state.entityType,
+        ),
+      },
+      'sk': {'S': _stateSortKey(entityId: state.entityId)},
+      'gsi2pk': {
+        'S': _stateGsi2Partition(
+          domainType: state.domainType,
+          domainId: state.change_domainId,
+          entityType: state.entityType,
+          parentId: parentId,
+        ),
+      },
+      'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, rank: rank)},
+      ..._encodeJson(stateJson),
+    };
+  }
 
-        // Upsert entity type sync state counters
-        await upsertEntityTypeSyncStates(
-          domainType: domainType,
-          entityType: newChange.entityType,
-          newChange: newChange,
-          operationCounts: operationCounts,
+  /// Batch puts items to DynamoDB (max 25 per request).
+  Future<void> _batchPutItems(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
+
+    // DynamoDB BatchWriteItem supports max 25 items per request
+    const batchSize = 25;
+
+    for (var i = 0; i < items.length; i += batchSize) {
+      final batch = items.skip(i).take(batchSize).toList();
+
+      final putRequests = batch.map((item) {
+        return {
+          'PutRequest': {'Item': item},
+        };
+      }).toList();
+
+      final response = await _dynamoRequest('BatchWriteItem', {
+        'RequestItems': {tableName: putRequests},
+      });
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to batch put items: ${response.body}');
+      }
+
+      // Handle unprocessed items (throttling, etc.)
+      final body =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      final unprocessed = body['UnprocessedItems'] as Map<String, dynamic>?;
+
+      if (unprocessed != null && unprocessed.isNotEmpty) {
+        // Retry unprocessed items after a brief delay
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        final unprocessedForTable =
+            unprocessed[tableName] as List<dynamic>? ?? <dynamic>[];
+        final retryItems = unprocessedForTable.map((req) {
+          final putReq = req as Map<String, dynamic>;
+          return putReq['PutRequest']['Item'] as Map<String, dynamic>;
+        }).toList();
+
+        await _batchPutItems(retryItems);
+      }
+    }
+  }
+
+  /// Batch upserts entity type sync states.
+  ///
+  /// Note: DynamoDB doesn't support batch conditional updates, so we still need
+  /// to fetch existing states first, then batch write the updates.
+  Future<void> _batchUpsertEntityTypeSyncStates({
+    required String domainType,
+    required List<
+      ({
+        String entityType,
+        DynamoChangeLogEntry change,
+        OperationCounts operationCounts,
+        bool forChangeLog,
+      })
+    >
+    syncStates,
+  }) async {
+    if (syncStates.isEmpty) return;
+
+    // Group by (entityType, forChangeLog) to aggregate operation counts
+    final grouped =
+        <
+          String,
+          ({
+            String entityType,
+            DynamoChangeLogEntry latestChange,
+            int creates,
+            int updates,
+            int deletes,
+            bool forChangeLog,
+          })
+        >{};
+
+    for (final syncState in syncStates) {
+      final key = '${syncState.entityType}#${syncState.forChangeLog}';
+      final existing = grouped[key];
+
+      if (existing == null) {
+        grouped[key] = (
+          entityType: syncState.entityType,
+          latestChange: syncState.change,
+          creates: syncState.operationCounts.create,
+          updates: syncState.operationCounts.update,
+          deletes: syncState.operationCounts.delete,
+          forChangeLog: syncState.forChangeLog,
+        );
+      } else {
+        // Keep the latest change
+        final latestChange =
+            syncState.change.changeAt.isAfter(existing.latestChange.changeAt)
+            ? syncState.change
+            : existing.latestChange;
+
+        grouped[key] = (
+          entityType: existing.entityType,
+          latestChange: latestChange,
+          creates: existing.creates + syncState.operationCounts.create,
+          updates: existing.updates + syncState.operationCounts.update,
+          deletes: existing.deletes + syncState.operationCounts.delete,
+          forChangeLog: existing.forChangeLog,
         );
       }
     }
 
-    return (newChangeLogEntry: newChange, newEntityState: newState);
+    // Batch get existing sync states
+    final keysToGet = <Map<String, dynamic>>[];
+    for (final entry in grouped.values) {
+      final pk = _entityTypeSyncStatePrimaryKey(
+        domainType: domainType,
+        domainId: entry.latestChange.domainId,
+        forChangeLog: entry.forChangeLog,
+      );
+      final sk = _entityTypeSyncStateSortKey(
+        entityType: entry.entityType,
+        forChangeLog: entry.forChangeLog,
+      );
+      keysToGet.add({
+        'pk': {'S': pk},
+        'sk': {'S': sk},
+      });
+    }
+
+    final existingStates = await _batchGetItems(keysToGet);
+    final existingByKey = <String, DynamoEntityTypeSyncState>{};
+    for (final item in existingStates) {
+      final state = DynamoEntityTypeSyncState.fromJson(_decodeItem(item));
+      final key =
+          '${state.entityType}#${item['pk']['S'].toString().contains('etsc')}';
+      existingByKey[key] = state;
+    }
+
+    // Prepare batch puts
+    final itemsToPut = <Map<String, dynamic>>[];
+    final storageId = await getStorageId();
+
+    for (final entry in grouped.entries) {
+      final key = entry.key;
+      final data = entry.value;
+      final existing = existingByKey[key];
+
+      late final DateTime latestChangeAt;
+      late final String latestCid;
+      late final int latestSeq;
+      late final int created;
+      late final int updated;
+      late final int deleted;
+      // ignore: non_constant_identifier_names
+      late final DateTime storedAt_orig_;
+
+      if (existing != null) {
+        // Determine latest change metadata
+        if (data.latestChange.changeAt.isAfter(existing.changeAt) ||
+            data.latestChange.changeAt.isAtSameMomentAs(existing.changeAt)) {
+          latestChangeAt = data.latestChange.changeAt;
+          latestCid = data.latestChange.cid;
+          latestSeq = data.latestChange.seq;
+        } else {
+          latestChangeAt = existing.changeAt;
+          latestCid = existing.cid;
+          latestSeq = existing.seq;
+        }
+
+        created = existing.created + data.creates;
+        updated = existing.updated + data.updates;
+        deleted = existing.deleted + data.deletes;
+        storedAt_orig_ = existing.storedAt_orig_ ?? existing.storedAt;
+      } else {
+        latestChangeAt = data.latestChange.changeAt;
+        latestCid = data.latestChange.cid;
+        latestSeq = data.latestChange.seq;
+        created = data.creates;
+        updated = data.updates;
+        deleted = data.deletes;
+        storedAt_orig_ = data.latestChange.storedAt ?? DateTime.now().toUtc();
+      }
+
+      final newState = DynamoEntityTypeSyncState(
+        entityType: data.entityType,
+        domainId: data.latestChange.domainId,
+        domainType: domainType,
+        storageId: storageId,
+        storageType: getStorageType(),
+        cid: latestCid,
+        changeAt: latestChangeAt,
+        seq: latestSeq,
+        created: created,
+        updated: updated,
+        deleted: deleted,
+        storedAt: data.latestChange.storedAt ?? DateTime.now().toUtc(),
+        storedAt_orig_: storedAt_orig_,
+      );
+
+      final pk = _entityTypeSyncStatePrimaryKey(
+        domainType: domainType,
+        domainId: data.latestChange.domainId,
+        forChangeLog: data.forChangeLog,
+      );
+      final sk = _entityTypeSyncStateSortKey(
+        entityType: data.entityType,
+        forChangeLog: data.forChangeLog,
+      );
+
+      itemsToPut.add({
+        'pk': {'S': pk},
+        'sk': {'S': sk},
+        ..._encodeJson(newState.toJson()),
+      });
+    }
+
+    // Batch put all sync states
+    if (itemsToPut.isNotEmpty) {
+      await _batchPutItems(itemsToPut);
+    }
+  }
+
+  /// Batch gets items from DynamoDB (max 100 per request).
+  Future<List<Map<String, dynamic>>> _batchGetItems(
+    List<Map<String, dynamic>> keys,
+  ) async {
+    if (keys.isEmpty) return [];
+
+    final results = <Map<String, dynamic>>[];
+
+    // DynamoDB BatchGetItem supports max 100 items per request
+    const batchSize = 100;
+
+    for (var i = 0; i < keys.length; i += batchSize) {
+      final batch = keys.skip(i).take(batchSize).toList();
+
+      final response = await _dynamoRequest('BatchGetItem', {
+        'RequestItems': {
+          tableName: {'Keys': batch},
+        },
+      });
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to batch get items: ${response.body}');
+      }
+
+      final body =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      final responses = body['Responses'] as Map<String, dynamic>?;
+      if (responses != null && responses.containsKey(tableName)) {
+        final items = responses[tableName] as List<dynamic>? ?? [];
+        results.addAll(items.cast<Map<String, dynamic>>());
+      }
+
+      // Handle unprocessed keys (throttling, etc.)
+      final unprocessed = body['UnprocessedKeys'] as Map<String, dynamic>?;
+      if (unprocessed != null && unprocessed.isNotEmpty) {
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        final unprocessedForTable =
+            unprocessed[tableName] as Map<String, dynamic>?;
+        if (unprocessedForTable != null) {
+          final retryKeys = unprocessedForTable['Keys'] as List<dynamic>? ?? [];
+          final retryResults = await _batchGetItems(
+            retryKeys.cast<Map<String, dynamic>>(),
+          );
+          results.addAll(retryResults);
+        }
+      }
+    }
+
+    return results;
   }
 
   /// Stores an entity state without updating change log or sync states.
@@ -271,6 +628,50 @@ class DynamoDBStorageService extends BaseStorageService {
     final decodedItem = _decodeItem(item, excludeStorageKeys: true);
 
     return deserializeEntityStateSafely(decodedItem);
+  }
+
+  @override
+  Future<Map<String, BaseEntityState?>> batchGetEntityState({
+    required List<
+      ({String domainType, String domainId, String entityType, String entityId})
+    >
+    keys,
+  }) async {
+    await initialize();
+    if (keys.isEmpty) return <String, BaseEntityState?>{};
+
+    // Build DynamoDB keys (pk/sk) for each requested state
+    final dynamoKeys = <Map<String, dynamic>>[];
+    for (final k in keys) {
+      dynamoKeys.add({
+        'pk': {
+          'S': _statePrimaryKey(
+            domainType: k.domainType,
+            domainId: k.domainId,
+            entityType: k.entityType,
+          ),
+        },
+        'sk': {'S': _stateSortKey(entityId: k.entityId)},
+      });
+    }
+
+    // Batch get (Dynamo limits 100 per request handled internally)
+    final items = await _batchGetItems(dynamoKeys);
+    final out = <String, BaseEntityState?>{};
+
+    // Decode found items and map by entityId
+    for (final item in items) {
+      final decoded = _decodeItem(item, excludeStorageKeys: true);
+      final state = deserializeEntityStateSafely(decoded);
+      out[state.entityId] = state;
+    }
+
+    // Ensure all requested entityIds present; fill missing with null
+    for (final k in keys) {
+      out.putIfAbsent(k.entityId, () => null);
+    }
+
+    return out;
   }
 
   @override
@@ -916,15 +1317,16 @@ class DynamoDBStorageService extends BaseStorageService {
       itemsToDelete: itemsToDelete,
     );
 
-    // 4. Scan for entity type sync states (change logs)
+    // 4. Collect entity type sync states (change logs) by querying the PK
+    // Use Query instead of Scan to avoid a full table scan and reduce RCU usage
     final etscPk = _entityTypeSyncStatePrimaryKey(
       domainType: domainType,
       domainId: domainId,
       forChangeLog: true,
     );
 
-    await _scanAndCollectItems(
-      filterExpression: 'pk = :pk',
+    await _queryAndCollectItems(
+      keyConditionExpression: 'pk = :pk',
       expressionValues: {
         ':pk': {'S': etscPk},
       },
@@ -932,15 +1334,15 @@ class DynamoDBStorageService extends BaseStorageService {
       itemsToDelete: itemsToDelete,
     );
 
-    // 5. Scan for entity type sync states (entity states)
+    // 5. Collect entity type sync states (entity states) by querying the PK
     final etssPk = _entityTypeSyncStatePrimaryKey(
       domainType: domainType,
       domainId: domainId,
       forChangeLog: false,
     );
 
-    await _scanAndCollectItems(
-      filterExpression: 'pk = :pk',
+    await _queryAndCollectItems(
+      keyConditionExpression: 'pk = :pk',
       expressionValues: {
         ':pk': {'S': etssPk},
       },
@@ -1034,6 +1436,11 @@ class DynamoDBStorageService extends BaseStorageService {
   }) async {
     Map<String, dynamic>? exclusiveStartKey;
 
+    // Retry configuration for Scan (handle transient throttling)
+    const int maxAttempts = 6;
+    const int baseDelayMs = 100;
+    final rand = Random();
+
     do {
       final scanPayload = <String, dynamic>{
         'TableName': tableName,
@@ -1046,38 +1453,153 @@ class DynamoDBStorageService extends BaseStorageService {
         scanPayload['ExclusiveStartKey'] = exclusiveStartKey;
       }
 
-      final response = await _dynamoRequest('Scan', scanPayload);
+      int attempt = 0;
+      int delayMs = baseDelayMs;
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to scan items: ${response.body}');
-      }
+      while (true) {
+        final response = await _dynamoRequest('Scan', scanPayload);
 
-      final body =
-          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-      final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
+        if (response.statusCode == 200) {
+          final body =
+              jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+          final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
 
-      for (final item in items) {
-        final itemMap = item as Map<String, dynamic>;
-        final pk = itemMap['pk'];
-        final sk = itemMap['sk'];
+          for (final item in items) {
+            final itemMap = item as Map<String, dynamic>;
+            final pk = itemMap['pk'];
+            final sk = itemMap['sk'];
 
-        if (pk != null && sk != null) {
-          // Use composite key to ensure uniqueness
-          final pkValue = pk['S'] as String?;
-          final skValue = sk['S'] as String?;
+            if (pk != null && sk != null) {
+              // Use composite key to ensure uniqueness
+              final pkValue = pk['S'] as String?;
+              final skValue = sk['S'] as String?;
 
-          if (pkValue != null && skValue != null) {
-            final compositeKey = '$pkValue#$skValue';
-            if (!itemKeys.contains(compositeKey)) {
-              itemKeys.add(compositeKey);
-              itemsToDelete.add({'pk': pk, 'sk': sk});
+              if (pkValue != null && skValue != null) {
+                final compositeKey = '$pkValue#$skValue';
+                if (!itemKeys.contains(compositeKey)) {
+                  itemKeys.add(compositeKey);
+                  itemsToDelete.add({'pk': pk, 'sk': sk});
+                }
+              }
             }
           }
-        }
-      }
 
-      exclusiveStartKey = body['LastEvaluatedKey'] as Map<String, dynamic>?;
+          exclusiveStartKey = body['LastEvaluatedKey'] as Map<String, dynamic>?;
+          break; // page handled
+        }
+
+        // Non-200 response - check for throttling and retry with backoff
+        final bodyStr = utf8.decode(response.bodyBytes);
+        bool isThrottling = false;
+        try {
+          final parsed = jsonDecode(bodyStr) as Map<String, dynamic>;
+          final type = parsed['__type']?.toString() ?? '';
+          if (type.contains('Throttling') ||
+              type.contains('ProvisionedThroughputExceededException') ||
+              type.contains('TableReadKeyRangeThroughputExceeded')) {
+            isThrottling = true;
+          }
+        } catch (_) {
+          // ignore parse errors
+        }
+
+        attempt++;
+        if (isThrottling && attempt <= maxAttempts) {
+          final jitter = rand.nextInt(100);
+          await Future.delayed(Duration(milliseconds: delayMs + jitter));
+          delayMs = (delayMs * 2).clamp(baseDelayMs, 30 * 1000);
+          continue; // retry this page
+        }
+
+        throw Exception('Failed to scan items: ${response.body}');
+      }
     } while (exclusiveStartKey != null);
+  }
+
+  /// Helper to query by PK/KeyConditionExpression and collect pk/sk for deletion
+  Future<void> _queryAndCollectItems({
+    required String keyConditionExpression,
+    required Map<String, dynamic> expressionValues,
+    required Set<String> itemKeys,
+    required List<Map<String, dynamic>> itemsToDelete,
+    String? indexName,
+  }) async {
+    Map<String, dynamic>? lastEvaluatedKey;
+
+    // Retry configuration for Query (handle transient throttling)
+    const int maxAttempts = 6;
+    const int baseDelayMs = 100;
+    final rand = Random();
+
+    do {
+      final payload = <String, dynamic>{
+        'TableName': tableName,
+        'KeyConditionExpression': keyConditionExpression,
+        'ExpressionAttributeValues': expressionValues,
+        'ProjectionExpression': 'pk, sk',
+      };
+
+      if (indexName != null) payload['IndexName'] = indexName;
+      if (lastEvaluatedKey != null) payload['ExclusiveStartKey'] = lastEvaluatedKey;
+
+      int attempt = 0;
+      int delayMs = baseDelayMs;
+
+      while (true) {
+        final response = await _dynamoRequest('Query', payload);
+
+        if (response.statusCode == 200) {
+          final body = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+          final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
+
+          for (final item in items) {
+            final itemMap = item as Map<String, dynamic>;
+            final pk = itemMap['pk'];
+            final sk = itemMap['sk'];
+
+            if (pk != null && sk != null) {
+              final pkValue = pk['S'] as String?;
+              final skValue = sk['S'] as String?;
+              if (pkValue != null && skValue != null) {
+                final compositeKey = '$pkValue#$skValue';
+                if (!itemKeys.contains(compositeKey)) {
+                  itemKeys.add(compositeKey);
+                  itemsToDelete.add({'pk': pk, 'sk': sk});
+                }
+              }
+            }
+          }
+
+          lastEvaluatedKey = body['LastEvaluatedKey'] as Map<String, dynamic>?;
+          break; // page handled
+        }
+
+        // Non-200 response - detect throttling and retry with backoff
+        final bodyStr = utf8.decode(response.bodyBytes);
+        bool isThrottling = false;
+        try {
+          final parsed = jsonDecode(bodyStr) as Map<String, dynamic>;
+          final type = parsed['__type']?.toString() ?? '';
+          if (type.contains('Throttling') ||
+              type.contains('ProvisionedThroughputExceededException') ||
+              type.contains('TableReadKeyRangeThroughputExceeded')) {
+            isThrottling = true;
+          }
+        } catch (_) {
+          // ignore parse errors
+        }
+
+        attempt++;
+        if (isThrottling && attempt <= maxAttempts) {
+          final jitter = rand.nextInt(100);
+          await Future.delayed(Duration(milliseconds: delayMs + jitter));
+          delayMs = (delayMs * 2).clamp(baseDelayMs, 30 * 1000);
+          continue; // retry this page
+        }
+
+        throw Exception('Failed to query items: ${response.body}');
+      }
+    } while (lastEvaluatedKey != null);
   }
 
   /// Helper method to batch delete items (max 25 per request)
@@ -1087,81 +1609,93 @@ class DynamoDBStorageService extends BaseStorageService {
     // DynamoDB BatchWriteItem supports max 25 items per request
     const batchSize = 25;
 
+    // Retry configuration
+    const int maxAttempts = 6; // exponential backoff attempts
+    const int baseDelayMs = 100; // initial backoff
+    final rand = Random();
+
     for (var i = 0; i < items.length; i += batchSize) {
       final batch = items.skip(i).take(batchSize).toList();
 
-      final deleteRequests = batch.map((item) {
-        return {
-          'DeleteRequest': {'Key': item},
-        };
-      }).toList();
+      // We'll loop and retry any unprocessed items or throttled responses
+      List<Map<String, dynamic>> toDelete = batch;
+      int attempt = 0;
+      int delayMs = baseDelayMs;
 
-      final response = await _dynamoRequest('BatchWriteItem', {
-        'RequestItems': {tableName: deleteRequests},
-      });
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to batch delete items: ${response.body}');
-      }
-
-      // Handle unprocessed items (throttling, etc.)
-      final body =
-          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-      final unprocessed = body['UnprocessedItems'] as Map<String, dynamic>?;
-
-      if (unprocessed != null && unprocessed.isNotEmpty) {
-        // Retry unprocessed items after a brief delay
-        await Future.delayed(const Duration(milliseconds: 100));
-
-        final unprocessedForTable =
-            unprocessed[tableName] as List<dynamic>? ?? <dynamic>[];
-        final retryItems = unprocessedForTable.map((req) {
-          final deleteReq = req as Map<String, dynamic>;
-          return deleteReq['DeleteRequest']['Key'] as Map<String, dynamic>;
+      while (toDelete.isNotEmpty) {
+        final deleteRequests = toDelete.map((item) {
+          return {
+            'DeleteRequest': {'Key': item},
+          };
         }).toList();
 
-        await _batchDeleteItems(retryItems);
+        final response = await _dynamoRequest('BatchWriteItem', {
+          'RequestItems': {tableName: deleteRequests},
+        });
+
+        // Successful HTTP response
+        if (response.statusCode == 200) {
+          final body =
+              jsonDecode(utf8.decode(response.bodyBytes))
+                  as Map<String, dynamic>;
+
+          final unprocessed = body['UnprocessedItems'] as Map<String, dynamic>?;
+
+          if (unprocessed != null && unprocessed.isNotEmpty) {
+            final unprocessedForTable =
+                unprocessed[tableName] as List<dynamic>? ?? <dynamic>[];
+            final retryItems = unprocessedForTable.map((req) {
+              final deleteReq = req as Map<String, dynamic>;
+              return deleteReq['DeleteRequest']['Key'] as Map<String, dynamic>;
+            }).toList();
+
+            attempt++;
+            if (attempt > maxAttempts) {
+              throw Exception(
+                'Failed to batch delete items after $attempt attempts; '
+                'remaining=${retryItems.length}; lastResponse=${response.body}',
+              );
+            }
+
+            // Backoff with jitter
+            final jitter = rand.nextInt(100);
+            await Future.delayed(Duration(milliseconds: delayMs + jitter));
+            delayMs = (delayMs * 2).clamp(baseDelayMs, 30 * 1000);
+            toDelete = retryItems.cast<Map<String, dynamic>>();
+            continue; // retry loop
+          }
+
+          // No unprocessed items - batch succeeded
+          break;
+        }
+
+        // Non-200 response - try to detect throttling and retry with backoff
+        final bodyStr = utf8.decode(response.bodyBytes);
+        bool isThrottling = false;
+        try {
+          final parsed = jsonDecode(bodyStr) as Map<String, dynamic>;
+          final type = parsed['__type']?.toString() ?? '';
+          if (type.contains('Throttling') ||
+              type.contains('ProvisionedThroughputExceededException')) {
+            isThrottling = true;
+          }
+        } catch (_) {
+          // ignore parse errors
+        }
+
+        attempt++;
+        if (isThrottling && attempt <= maxAttempts) {
+          final jitter = rand.nextInt(100);
+          await Future.delayed(Duration(milliseconds: delayMs + jitter));
+          delayMs = (delayMs * 2).clamp(baseDelayMs, 30 * 1000);
+          // retry same toDelete list
+          continue;
+        }
+
+        // If we've exhausted retries or it's not a throttling error, fail with the last response
+        throw Exception('Failed to batch delete items: ${response.body}');
       }
     }
-  }
-
-  Map<String, dynamic> _buildInitialStateJson({
-    required String domainType,
-    required String domainId,
-    required String entityType,
-    required String entityId,
-    required BaseChangeLogEntry change,
-  }) {
-    final changeAt = change.changeAt.toUtc().toIso8601String();
-    final changeBy = change.changeBy;
-    final cid = change.cid;
-
-    return {
-      'entityId': entityId,
-      'entityType': entityType,
-      'domainType': domainType,
-      'unknownJson': JsonUtils.normalize('{}'),
-      'change_domainId': domainId,
-      'change_domainId_orig_': domainId,
-      'change_changeAt': changeAt,
-      'change_changeAt_orig_': changeAt,
-      'change_cid': cid,
-      'change_cid_orig_': cid,
-      'change_changeBy': changeBy,
-      'change_changeBy_orig_': changeBy,
-      'change_storedAt':
-          change.storedAt?.toUtc().toIso8601String() ??
-          change.cloudAt?.toUtc().toIso8601String() ??
-          changeAt,
-      'data_parentId': '',
-      'data_parentId_changeAt_': changeAt,
-      'data_parentId_changeBy_': changeBy,
-      'data_parentId_cid_': cid,
-      'data_parentProp': '',
-      'data_parentProp_changeAt_': changeAt,
-      'data_parentProp_changeBy_': changeBy,
-      'data_parentProp_cid_': cid,
-    };
   }
 
   Future<void> _putChangeLogEntry(DynamoChangeLogEntry entry) async {
@@ -1305,6 +1839,12 @@ class DynamoDBStorageService extends BaseStorageService {
     String operation,
     Map<String, dynamic> payload,
   ) async {
+    // Ensure initialization has run so `_endpoint` and headers are populated.
+    // Some callers may invoke low-level operations without explicitly
+    // calling `initialize()` (or there may be a race). Defensively ensure
+    // initialization here to avoid a LateInitializationError on `_endpoint`.
+    if (!_initialized) await initialize();
+
     final uri = Uri.parse(_endpoint);
     final body = jsonEncode(payload);
 
@@ -1354,7 +1894,7 @@ class DynamoDBStorageService extends BaseStorageService {
     return http.Response.fromStream(streamed);
   }
 
-  Future<void> _createTableIfNotExists() async {
+  Future<void> createTableIfNotExists() async {
     final describe = await _dynamoRequest('DescribeTable', {
       'TableName': tableName,
     });

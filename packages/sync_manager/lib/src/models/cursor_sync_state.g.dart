@@ -1644,3 +1644,37 @@ extension CursorSyncStateQueryProperty
     });
   }
 }
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+CursorSyncState _$CursorSyncStateFromJson(Map<String, dynamic> json) =>
+    CursorSyncState(
+      id: (json['id'] as num?)?.toInt() ?? Isar.autoIncrement,
+      domainId: json['domainId'] as String,
+      domainType: json['domainType'] as String,
+      storageId: json['storageId'] as String,
+      storageType: json['storageType'] as String,
+      cid: json['cid'] as String,
+      changeAt: DateTime.parse(json['changeAt'] as String),
+      seq: (json['seq'] as num).toInt(),
+      storedAt: DateTime.parse(json['storedAt'] as String),
+      storedAt_orig_: json['storedAt_orig_'] == null
+          ? null
+          : DateTime.parse(json['storedAt_orig_'] as String),
+    );
+
+Map<String, dynamic> _$CursorSyncStateToJson(CursorSyncState instance) =>
+    <String, dynamic>{
+      'domainId': instance.domainId,
+      'domainType': instance.domainType,
+      'storageId': instance.storageId,
+      'storageType': instance.storageType,
+      'cid': instance.cid,
+      'changeAt': instance.changeAt.toIso8601String(),
+      'seq': instance.seq,
+      'storedAt': instance.storedAt.toIso8601String(),
+      'storedAt_orig_': instance.storedAt_orig_?.toIso8601String(),
+      'id': instance.id,
+    };

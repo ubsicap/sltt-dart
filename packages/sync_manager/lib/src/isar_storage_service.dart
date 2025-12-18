@@ -36,11 +36,14 @@ class IsarStorageService extends BaseStorageService {
     _dbDirectory = dbDirectory ?? './isar_db';
   }
 
-  get databaseName => _databaseName;
-  get logPrefix => _logPrefix;
+  String get databaseName => _databaseName;
+  String get logPrefix => _logPrefix;
 
   /// full path to database file
   get databasePath => _initialized ? _dbPath : null;
+
+  @override
+  int get batchPutChangesLimit => 10000;
 
   @override
   Future<void> initialize({
@@ -128,6 +131,19 @@ class IsarStorageService extends BaseStorageService {
   }
 
   @override
+  BaseEntityState createEntityStateFromJson({
+    required String entityType,
+    required Map<String, dynamic> json,
+  }) {
+    final entityTypeEnum = EntityType.values.firstWhere(
+      (e) => e.value == entityType,
+      orElse: () => EntityType.unknown,
+    );
+    final normalized = <String, dynamic>{...json, 'entityType': entityType};
+    return _createEntityStateFromJson(entityTypeEnum, normalized, entityType);
+  }
+
+  @override
   String getStorageType() => 'local';
 
   @override
@@ -169,139 +185,295 @@ class IsarStorageService extends BaseStorageService {
   }
 
   @override
-  Future<UpdateChangeLogAndStateResult> updateChangeLogAndState({
+  Future<UpdateChangeLogAndStatesResult> updateChangeLogAndStates({
     required String domainType,
-    required BaseChangeLogEntry changeLogEntry,
-    required Map<String, dynamic> changeUpdates,
-    required OperationCounts operationCounts,
-    BaseEntityState? entityState,
-    required Map<String, dynamic> stateUpdates,
-    bool skipChangeLogWrite = false,
-    bool skipStateWrite = false,
+    required List<ChangeLogAndStateRequest> requests,
   }) async {
-    if (skipChangeLogWrite && skipStateWrite ||
-        (changeUpdates.isEmpty && stateUpdates.isEmpty)) {
-      // no change to state or change log entry
-      SlttLogger.logger.fine(
-        '[$_logPrefix] updateChangeLogAndState - no changes detected',
-      );
-      return (newChangeLogEntry: changeLogEntry, newEntityState: entityState!);
-    }
-    // Create updated change log entry
-    final newChangeJson = {...changeLogEntry.toJson(), ...changeUpdates};
-    final newChange = client.IsarChangeLogEntry.fromJson(newChangeJson);
-    if (!skipChangeLogWrite) {
-      // IMPORTANT: When writing to storage, avoid using an incoming
-      // seq value from the caller. Isar uses `seq` as the primary key and
-      // calling `put` with a specific seq can overwrite an existing entry
-      // with the same id. To prevent accidental overwrites when syncing
-      // changes into the cloud, force the storage to assign a new
-      // auto-increment id.
-      newChange.seq = Isar.autoIncrement;
-    } else {
-      SlttLogger.logger.fine(
-        'updateChangeLogAndState - skipping change log write for cid=${newChange.cid} (cloudAt=${newChange.cloudAt})',
-      );
-    }
+    // Phase 1: Process all requests and prepare items
+    final outChanges = <BaseChangeLogEntry>[];
+    final outStates = <BaseEntityState?>[];
+    final changesToPut = <client.IsarChangeLogEntry>[];
+    final statesToPutByType = <EntityType, List<BaseEntityState>>{};
+    final syncStatesToUpsert =
+        <
+          ({
+            String entityType,
+            client.IsarChangeLogEntry change,
+            OperationCounts operationCounts,
+          })
+        >[];
 
-    // Convert to appropriate Isar state type based on entity type
-    final entityTypeEnum = EntityType.values.firstWhere(
-      (e) => e.value == changeLogEntry.entityType,
-      orElse: () => EntityType.unknown,
-    );
+    for (var req in requests) {
+      // Create updated change log entry
+      final newChangeJson = {
+        ...req.changeLogEntry.toJson(),
+        ...req.changeUpdates,
+      };
+      final newChange = client.IsarChangeLogEntry.fromJson(newChangeJson);
 
-    // Create or update entity state
-    late final BaseEntityState newEntityState;
-    if (entityState != null) {
-      // Merge state updates into existing state
-      SlttLogger.logger.fine(
-        'updateChangeLogAndState - before merge - entityState id: ${entityState.toJson()['id']}',
-      );
-      final mergedStateJson = {...entityState.toJson(), ...stateUpdates}
-        ..removeWhere((k, v) => v == null);
-
-      SlttLogger.logger.fine(
-        'updateChangeLogAndState - after merge - mergedStateJson id: ${mergedStateJson['id']}',
-      );
-
-      newEntityState = _createEntityStateFromJson(
-        entityTypeEnum,
-        mergedStateJson,
-        changeLogEntry.entityType,
-      );
-    } else {
-      // Create new entity state from state updates
-      // Make a shallow copy and ensure required metadata fields exist
-      final stateJson = Map<String, dynamic>.from(stateUpdates);
-
-      newEntityState = _createEntityStateFromJson(
-        entityTypeEnum,
-        stateJson,
-        changeLogEntry.entityType,
-      );
-    }
-
-    // Validate core change/storage responsibilities using the shared helper.
-    // The validator will throw if required metadata (e.g., cloudAt for cloud
-    // storage) is missing. It does not mutate the change or state.
-    ChangeProcessingService.checkCoreChangeStorageResponsibilities(
-      storage: this,
-      changeToPut: newChange,
-      entityStateToPut: newEntityState,
-      skipChangeLogWrite: skipChangeLogWrite,
-      skipStateWrite: skipStateWrite,
-    );
-
-    SlttLogger.logger.fine(
-      'updateChangeLogAndState - before put - newChange seq: ${newChange.seq}',
-    );
-    SlttLogger.logger.fine(
-      'updateChangeLogAndState - before put - newEntityState id: ${newEntityState.toJson()['id']}',
-    );
-    SlttLogger.logger.fine(
-      'updateChangeLogAndState - before put - newEntityState entityId: ${newEntityState.entityId}',
-    );
-
-    // Save both change and state in a transaction
-    await _isar.writeTxn(() async {
-      if (!skipChangeLogWrite) {
-        await _isar.collection<client.IsarChangeLogEntry>().put(newChange);
-
+      if (!req.skipChangeLogWrite) {
+        // Force Isar to assign a new auto-increment id
+        newChange.seq = Isar.autoIncrement;
+        changesToPut.add(newChange);
+      } else {
         SlttLogger.logger.fine(
-          'updateChangeLogAndState - after put - newChange id: ${newChange.seq}',
+          'updateChangeLogAndState - skipping change log write for cid=${newChange.cid} (cloudAt=${newChange.cloudAt})',
         );
       }
 
-      // Try to use registered storage group first
-      final storageGroup = _entityStateRegistry.get(entityTypeEnum);
-      if (storageGroup == null) {
-        throw UnimplementedError(
-          'No storage group registered for entity type: ${changeLogEntry.entityType}',
-        );
-      }
-      if (!skipStateWrite) {
-        await storageGroup.put(newEntityState);
-      }
-
-      SlttLogger.logger.fine(
-        'updateChangeLogAndState - after put - newEntityState id: ${newEntityState.toJson()['id']}',
+      // Convert to appropriate Isar state type based on entity type
+      final entityTypeEnum = EntityType.values.firstWhere(
+        (e) => e.value == req.changeLogEntry.entityType,
+        orElse: () => EntityType.unknown,
       );
 
-      if (!skipStateWrite) {
-        // Upsert entity-type sync state counters (created/updated/deleted)
-        await upsertEntityTypeSyncStates(
-          entityType: changeLogEntry.entityType,
-          operationCounts: operationCounts,
-          newChange: newChange,
+      // Create or update entity state
+      late final BaseEntityState newEntityState;
+      if (req.entityState != null) {
+        // Merge state updates into existing state
+        final mergedStateJson = {
+          ...req.entityState!.toJson(),
+          ...req.stateUpdates,
+        }..removeWhere((k, v) => v == null);
+
+        newEntityState = _createEntityStateFromJson(
+          entityTypeEnum,
+          mergedStateJson,
+          req.changeLogEntry.entityType,
+        );
+      } else {
+        // Create new entity state from state updates
+        final stateJson = Map<String, dynamic>.from(req.stateUpdates);
+
+        newEntityState = _createEntityStateFromJson(
+          entityTypeEnum,
+          stateJson,
+          req.changeLogEntry.entityType,
+        );
+      }
+
+      // Validate core change/storage responsibilities
+      ChangeProcessingService.checkCoreChangeStorageResponsibilities(
+        storage: this,
+        changeToPut: newChange,
+        entityStateToPut: newEntityState,
+        skipChangeLogWrite: req.skipChangeLogWrite,
+        skipStateWrite: req.skipStateWrite,
+      );
+
+      if (!req.skipStateWrite) {
+        // Group states by entity type for batch processing
+        statesToPutByType
+            .putIfAbsent(entityTypeEnum, () => [])
+            .add(newEntityState);
+
+        // Queue sync state update
+        syncStatesToUpsert.add((
+          entityType: req.changeLogEntry.entityType,
+          change: newChange,
+          operationCounts: req.operationCounts,
+        ));
+      }
+
+      outChanges.add(_convertToChangeLogEntry(newChange));
+      outStates.add(newEntityState);
+    }
+
+    // Phase 2: Batch write all items in a single transaction
+    await _isar.writeTxn(() async {
+      // Batch put change log entries
+      if (changesToPut.isNotEmpty) {
+        await _isar.collection<client.IsarChangeLogEntry>().putAll(
+          changesToPut,
+        );
+        SlttLogger.logger.fine(
+          '[$_logPrefix] Batch wrote ${changesToPut.length} change log entries',
+        );
+      }
+
+      // Batch put entity states by type
+      for (final entry in statesToPutByType.entries) {
+        final entityTypeEnum = entry.key;
+        final states = entry.value;
+
+        final storageGroup = _entityStateRegistry.get(entityTypeEnum);
+        if (storageGroup == null) {
+          throw UnimplementedError(
+            'No storage group registered for entity type: $entityTypeEnum',
+          );
+        }
+
+        // Use storage group's putAll for batch writes
+        // reduce batch states to latest entity states only
+        final latestStatesById = <String, BaseEntityState>{};
+        for (final state in states) {
+          latestStatesById[state.entityId] = state;
+        }
+        await storageGroup.putAll(latestStatesById.values.toList());
+        SlttLogger.logger.fine(
+          '[$_logPrefix] Batch wrote ${states.length} entity states for type $entityTypeEnum',
+        );
+      }
+
+      // Batch upsert entity type sync states
+      if (syncStatesToUpsert.isNotEmpty) {
+        await _batchUpsertEntityTypeSyncStates(
           domainType: domainType,
+          syncStates: syncStatesToUpsert,
         );
       }
     });
 
-    return (
-      newChangeLogEntry: _convertToChangeLogEntry(newChange),
-      newEntityState: newEntityState,
-    );
+    return (newChangeLogEntries: outChanges, newEntityStates: outStates);
+  }
+
+  /// Batch upserts entity type sync states.
+  /// Must be called within a write transaction.
+  Future<void> _batchUpsertEntityTypeSyncStates({
+    required String domainType,
+    required List<
+      ({
+        String entityType,
+        client.IsarChangeLogEntry change,
+        OperationCounts operationCounts,
+      })
+    >
+    syncStates,
+  }) async {
+    if (syncStates.isEmpty) return;
+
+    // Group by entityType to aggregate operation counts
+    final grouped =
+        <
+          String,
+          ({
+            String entityType,
+            client.IsarChangeLogEntry latestChange,
+            int creates,
+            int updates,
+            int deletes,
+          })
+        >{};
+
+    for (final syncState in syncStates) {
+      final key = syncState.entityType;
+      final existing = grouped[key];
+
+      if (existing == null) {
+        grouped[key] = (
+          entityType: syncState.entityType,
+          latestChange: syncState.change,
+          creates: syncState.operationCounts.create,
+          updates: syncState.operationCounts.update,
+          deletes: syncState.operationCounts.delete,
+        );
+      } else {
+        // Keep the latest change
+        final latestChange =
+            syncState.change.changeAt.isAfter(existing.latestChange.changeAt)
+            ? syncState.change
+            : existing.latestChange;
+
+        grouped[key] = (
+          entityType: existing.entityType,
+          latestChange: latestChange,
+          creates: existing.creates + syncState.operationCounts.create,
+          updates: existing.updates + syncState.operationCounts.update,
+          deletes: existing.deletes + syncState.operationCounts.delete,
+        );
+      }
+    }
+
+    // Fetch existing sync states for all entity types in this batch
+    final entityTypes = grouped.keys.toList();
+    final existingStates = <String, IsarEntityTypeSyncState>{};
+
+    for (final entityType in entityTypes) {
+      final existing = await _isar.isarEntityTypeSyncStates
+          .where()
+          .entityTypeDomainIdEqualTo(
+            entityType,
+            grouped[entityType]!.latestChange.domainId,
+          )
+          .findFirst();
+      if (existing != null) {
+        existingStates[entityType] = existing;
+      }
+    }
+
+    // Prepare batch of sync states to put
+    final statesToPut = <IsarEntityTypeSyncState>[];
+
+    for (final entry in grouped.entries) {
+      final key = entry.key;
+      final data = entry.value;
+      final existing = existingStates[key];
+
+      late final DateTime latestChangeAt;
+      late final String latestCid;
+      late final int latestSeq;
+      late final int created;
+      late final int updated;
+      late final int deleted;
+      // ignore: non_constant_identifier_names
+      late final DateTime storedAt_orig_;
+
+      if (existing != null) {
+        // Determine latest change metadata
+        if (data.latestChange.changeAt.isAfter(existing.changeAt) ||
+            data.latestChange.changeAt.isAtSameMomentAs(existing.changeAt)) {
+          latestChangeAt = data.latestChange.changeAt;
+          latestCid = data.latestChange.cid;
+          latestSeq = data.latestChange.seq;
+        } else {
+          latestChangeAt = existing.changeAt;
+          latestCid = existing.cid;
+          latestSeq = existing.seq;
+        }
+
+        created = existing.created + data.creates;
+        updated = existing.updated + data.updates;
+        deleted = existing.deleted + data.deletes;
+        storedAt_orig_ = existing.storedAt_orig_!;
+      } else {
+        latestChangeAt = data.latestChange.changeAt;
+        latestCid = data.latestChange.cid;
+        latestSeq = data.latestChange.seq;
+        created = data.creates;
+        updated = data.updates;
+        deleted = data.deletes;
+        storedAt_orig_ = data.latestChange.storedAt ?? DateTime.now().toUtc();
+      }
+
+      final newState = IsarEntityTypeSyncState(
+        id: existing?.id ?? Isar.autoIncrement,
+        entityType: data.entityType,
+        domainId: data.latestChange.domainId,
+        domainType: domainType,
+        storageId: _storageId,
+        storageType: getStorageType(),
+        cid: latestCid,
+        changeAt: latestChangeAt,
+        seq: latestSeq,
+        created: created,
+        updated: updated,
+        deleted: deleted,
+        storedAt: data.latestChange.storedAt ?? DateTime.now().toUtc(),
+        storedAt_orig_: storedAt_orig_,
+      );
+
+      statesToPut.add(newState);
+    }
+
+    // Batch put all sync states
+    if (statesToPut.isNotEmpty) {
+      await _isar.isarEntityTypeSyncStates.putAllByEntityTypeDomainId(
+        statesToPut,
+      );
+      SlttLogger.logger.fine(
+        '[$_logPrefix] Batch upserted ${statesToPut.length} entity type sync states',
+      );
+    }
   }
 
   @override
@@ -429,6 +601,91 @@ class IsarStorageService extends BaseStorageService {
         .domainTypeEqualTo(domainType)
         .findFirst();
     return change != null ? _convertToChangeLogEntry(change) : null;
+  }
+
+  @override
+  Future<Map<String, BaseEntityState?>> batchGetEntityState({
+    required List<
+      ({String domainType, String domainId, String entityType, String entityId})
+    >
+    keys,
+  }) async {
+    if (keys.isEmpty) return <String, BaseEntityState?>{};
+
+    // Group keys by entityType to leverage per-collection batch queries
+    final grouped =
+        <
+          String,
+          List<
+            ({
+              String domainType,
+              String domainId,
+              String entityType,
+              String entityId,
+            })
+          >
+        >{};
+    for (final k in keys) {
+      grouped.putIfAbsent(k.entityType, () => []).add(k);
+    }
+
+    final out = <String, BaseEntityState?>{};
+
+    // For each entityType, use getAllByEntityId for efficient batch retrieval
+    for (final entry in grouped.entries) {
+      final entityTypeString = entry.key;
+      final items = entry.value;
+
+      final entityTypeEnum = EntityType.values.firstWhere(
+        (e) => e.value == entityTypeString,
+        orElse: () => EntityType.unknown,
+      );
+      final storageGroup = _entityStateRegistry.get(entityTypeEnum);
+
+      if (storageGroup == null) {
+        // Unknown type: fall back to individual retrieval
+        for (final k in items) {
+          final state = await _getSingleState(
+            domainType: k.domainType,
+            domainId: k.domainId,
+            entityType: k.entityType,
+            entityId: k.entityId,
+          );
+          out[k.entityId] = state;
+        }
+        continue;
+      }
+
+      // Use getAllByEntityId for efficient batch retrieval
+      final entityIds = items.map((k) => k.entityId).toList();
+      final results = await storageGroup.getAllByEntityId(_isar, entityIds);
+
+      // Map results by entityId
+      for (final state in results) {
+        out[state.entityId] = state;
+      }
+
+      // Ensure all requested ids present; fill missing with null
+      for (final k in items) {
+        out.putIfAbsent(k.entityId, () => null);
+      }
+    }
+    return out;
+  }
+
+  Future<BaseEntityState?> _getSingleState({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+  }) async {
+    final entityTypeEnum = EntityType.values.firstWhere(
+      (e) => e.value == entityType,
+      orElse: () => EntityType.unknown,
+    );
+    final storageGroup = _entityStateRegistry.get(entityTypeEnum);
+    if (storageGroup == null) return null;
+    return await storageGroup.findByDomainAndEntity(_isar, domainId, entityId);
   }
 
   /// Delete multiple changes by sequence numbers.
@@ -801,7 +1058,7 @@ class IsarStorageService extends BaseStorageService {
     final end = DateTime.now().add(timeout);
 
     final dir = Directory(dirPath);
-    if (!await dir.exists()) return false;
+    if (!await dir.exists()) return true;
 
     final isarFile = File('$dirPath/$databaseName.isar');
     final isarLck = File('$dirPath/$databaseName.isar-lck');
@@ -855,7 +1112,7 @@ class IsarStorageService extends BaseStorageService {
       );
       return true;
     }
-    return false;
+    // Removed unreachable return false (dead code) after refactor.
   }
 
   // Cursor-based pagination and filtering

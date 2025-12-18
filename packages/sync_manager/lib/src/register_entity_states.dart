@@ -26,6 +26,8 @@ void registerAllIsarEntityStateStorageGroups(
       fromJson: IsarProjectState.fromJson,
       put: (state) async =>
           await isar.isarProjectStates.put(state as IsarProjectState),
+      putAll: (states) async =>
+          await isar.isarProjectStates.putAll(states.cast<IsarProjectState>()),
       collection: (Isar db) => db.isarProjectStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarProjectStates
@@ -34,6 +36,10 @@ void registerAllIsarEntityStateStorageGroups(
           .and()
           .entityIdEqualTo(entityId)
           .findFirst(),
+      getAllByEntityId: (Isar db, List<String> entityIds) async {
+        final results = await db.isarProjectStates.getAllByEntityId(entityIds);
+        return results.whereType<IsarProjectState>().toList();
+      },
       findByDomainWithPagination:
           ({
             required String domainId,
@@ -73,6 +79,9 @@ void registerAllIsarEntityStateStorageGroups(
       fromJson: IsarDocumentState.fromJson,
       put: (state) async =>
           await isar.isarDocumentStates.put(state as IsarDocumentState),
+      putAll: (states) async => await isar.isarDocumentStates.putAll(
+        states.cast<IsarDocumentState>(),
+      ),
       collection: (Isar db) => db.isarDocumentStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarDocumentStates
@@ -81,6 +90,10 @@ void registerAllIsarEntityStateStorageGroups(
           .and()
           .entityIdEqualTo(entityId)
           .findFirst(),
+      getAllByEntityId: (Isar db, List<String> entityIds) async {
+        final results = await db.isarDocumentStates.getAllByEntityId(entityIds);
+        return results.whereType<IsarDocumentState>().toList();
+      },
       findByDomainWithPagination:
           ({
             required String domainId,
@@ -120,6 +133,8 @@ void registerAllIsarEntityStateStorageGroups(
       fromJson: IsarTaskState.fromJson,
       put: (state) async =>
           await isar.isarTaskStates.put(state as IsarTaskState),
+      putAll: (states) async =>
+          await isar.isarTaskStates.putAll(states.cast<IsarTaskState>()),
       collection: (Isar db) => db.isarTaskStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarTaskStates
@@ -128,6 +143,10 @@ void registerAllIsarEntityStateStorageGroups(
           .and()
           .entityIdEqualTo(entityId)
           .findFirst(),
+      getAllByEntityId: (Isar db, List<String> entityIds) async {
+        final results = await db.isarTaskStates.getAllByEntityId(entityIds);
+        return results.whereType<IsarTaskState>().toList();
+      },
       findByDomainWithPagination:
           ({
             required String domainId,

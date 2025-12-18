@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:aws_backend/aws_backend.dart';
+import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
 import 'package:shelf_router/shelf_router.dart';
+import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 import 'helpers/fake_storage.dart';
@@ -123,23 +125,23 @@ void main() {
     test(
       'includeChangeUpdates/includeStateUpdates returns summaries',
       () async {
+        final entryForSave =
+            ChangeLogEntryFactoryService.forChangeSave<
+              DynamoChangeLogEntry,
+              int,
+              BaseDataFields
+            >(
+              factory: DynamoChangeLogEntry.new,
+              domainType: 'project',
+              domainId: '__test1',
+              entityType: 'document',
+              entityId: 'doc1',
+              changeBy: 'tester',
+              data: BaseDataFields(parentId: '__test1', parentProp: 'docs'),
+            );
+
         final payload = jsonEncode({
-          'changes': [
-            {
-              'domainType': 'project',
-              'domainId': '__test1',
-              'entityType': 'document',
-              'entityId': 'doc1',
-              'operation': 'create',
-              'seq': 1,
-              'cid': 'test-cid-1',
-              'stateChanged': false,
-              'changeBy': 'tester',
-              'changeAt': DateTime.now().toUtc().toIso8601String(),
-              'storageId': 'test-storage',
-              'dataJson': jsonEncode({'foo': 'bar'}),
-            },
-          ],
+          'changes': [entryForSave.toJson()],
           'srcStorageType': 'local',
           'srcStorageId': 'test',
           'storageMode': 'save',
@@ -148,7 +150,11 @@ void main() {
         });
 
         final resp = await post(payload);
-        expect(resp['statusCode'], anyOf([200, 201]));
+        expect(
+          resp['statusCode'],
+          anyOf([200, 201]),
+          reason: 'Status code should be 200 or 201, but got:\n$resp',
+        );
         final body = jsonDecode(resp['body'] as String) as Map<String, dynamic>;
         expect(body['created'], isA<List>());
         expect(body['changeUpdates'], isA<List>());

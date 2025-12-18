@@ -7,8 +7,7 @@ void main() {
   late final IsarStorageService storage;
   // Use a unique database name per test run to avoid unique-index collisions
   // from prior runs when the same static name is reused.
-  final testDbName =
-      'isar_storage_get_entity_states_test';
+  final testDbName = 'isar_storage_get_entity_states_test';
 
   setUpAll(() async {
     isarChangeLogEntryFactoryRegistration;
@@ -186,8 +185,7 @@ void main() {
       final storageId = await storage.getStorageId();
 
       final storedAtChange1 = now.toIso8601String();
-      await storage.updateChangeLogAndState(
-        domainType: 'project',
+      final req = ChangeLogAndStateRequest(
         changeLogEntry: IsarChangeLogEntry.fromJson(change1),
         changeUpdates: {
           'stateChanged': true,
@@ -224,6 +222,11 @@ void main() {
           'data_parentProp_changeBy_': 'tester',
           'data_nameLocal': 'Task 1',
         },
+      );
+
+      await storage.updateChangeLogAndStates(
+        domainType: 'project',
+        requests: [req],
       );
 
       SlttLogger.logger.fine('DEBUG: stateUpdates for task-2 -> ');
@@ -267,8 +270,7 @@ void main() {
       final storedAtChange2 = now
           .add(const Duration(seconds: 1))
           .toIso8601String();
-      await storage.updateChangeLogAndState(
-        domainType: 'project',
+      final req2 = ChangeLogAndStateRequest(
         changeLogEntry: IsarChangeLogEntry.fromJson(change2),
         changeUpdates: {
           'stateChanged': true,
@@ -315,6 +317,11 @@ void main() {
           'data_parentProp_changeBy_': 'tester',
           'data_nameLocal': 'Task 2',
         },
+      );
+
+      await storage.updateChangeLogAndStates(
+        domainType: 'project',
+        requests: [req2],
       );
 
       // Query for parentProp == 'pList'

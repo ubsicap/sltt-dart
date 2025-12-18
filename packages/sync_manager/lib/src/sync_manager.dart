@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/models/cursor_sync_state.dart';
+import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 
 import 'isar_storage_service.dart';
 
@@ -15,6 +17,7 @@ class SyncManager {
 
   final Dio _dio = Dio();
   late final IsarStorageService _localStorage;
+  bool _ownsLocalStorage = true;
 
   // API endpoints - defaults to AWS dev cloud, can be overridden for testing
   String _cloudStorageUrl =
@@ -39,11 +42,17 @@ class SyncManager {
     );
   }
 
-  Future<void> initialize({IsarStorageService? localStorage}) async {
+  Future<void> initialize({
+    IsarStorageService? localStorage,
+    bool closeStorageOnDispose = true,
+  }) async {
     if (_initialized) return;
 
     _localStorage = localStorage ?? LocalStorageService.instance;
-    await _localStorage.initialize();
+    _ownsLocalStorage = closeStorageOnDispose || localStorage == null;
+    if (localStorage == null) {
+      await _localStorage.initialize();
+    }
 
     _dio.options.headers['Content-Type'] = 'application/json';
     _dio.options.connectTimeout = const Duration(seconds: 10);
@@ -120,16 +129,21 @@ class SyncManager {
 
   // Outsync changes from outsyncs to cloud storage
   Future<OutsyncResult> outsyncToCloud({List<String>? domainIds}) async {
+    late final List<IsarChangeLogEntry> changesToSync;
     try {
       SlttLogger.logger.info('[SyncManager] Starting outsync to cloud...');
 
-      // Get changes for sync (excludes outdated changes)
-      final changesToSync = await _localStorage.getChangesForSync();
+      // Get changes for sync
+      changesToSync = await _localStorage.getChangesForSync(
+        limit:
+            120 /* 10x (average 4Kb per item) batch writes 12 changes + 12 state updates (25 per-batch write limit) */,
+      );
 
       if (changesToSync.isEmpty) {
         SlttLogger.logger.fine('[SyncManager] No changes to outsync');
         return OutsyncResult(
           success: true,
+          changesRequested: changesToSync,
           changeSummary: null,
           deletedLocalChanges: [],
           message: 'No changes to sync',
@@ -177,6 +191,7 @@ class SyncManager {
           return OutsyncResult(
             success: true,
             message: 'Successfully outsynced ${cidsSynced.length} changes',
+            changesRequested: changesToSync,
             changeSummary: summary,
             deletedLocalChanges: cidsSynced,
           );
@@ -191,6 +206,7 @@ class SyncManager {
           return OutsyncResult(
             success: false,
             message: message,
+            changesRequested: changesToSync,
             changeSummary: summary,
             deletedLocalChanges: [],
             error: error,
@@ -209,9 +225,12 @@ class SyncManager {
       return OutsyncResult(
         success: false,
         changeSummary: null,
+        changesRequested: changesToSync,
         deletedLocalChanges: [],
         message: 'Outsync failed: $e',
-        error: e.toString(), // Capture original error
+        error:
+            (e as dynamic).response?.toString() ??
+            e.toString(), // Capture original error
         errorStackTrace: stackTrace
             .toString(), // Include error stack for debugging
       );
@@ -219,7 +238,10 @@ class SyncManager {
   }
 
   // Downsync changes from cloud storage to local state
-  Future<DownsyncResult> downsyncFromCloud({List<String>? domainIds}) async {
+  Future<DownsyncResult> downsyncFromCloud({
+    List<String>? domainIds,
+    Function? onProgress,
+  }) async {
     ProjectCursorChanges projectCursorChanges = {};
     StorageSummaries storageSummaries = {};
     try {
@@ -320,6 +342,21 @@ class SyncManager {
               SlttLogger.logger.fine(
                 '[SyncManager] No more changes for project $projectId',
               );
+              if (lastSeq < highestSeqForProject) {
+                // Update sync state even if no changes were returned
+                await _localStorage.upsertCursorSyncState(
+                  domainType: 'project',
+                  domainId: projectId,
+                  srcStorageType: srcStorageType,
+                  srcStorageId: srcStorageId,
+                  seq: highestSeqForProject,
+                  cid: cid,
+                  changeAt: changeAt,
+                );
+                SlttLogger.logger.fine(
+                  '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
+                );
+              }
               break;
             }
 
@@ -365,6 +402,27 @@ class SyncManager {
               '[SyncManager] Applied ${incomingChanges.length} changes for project $projectId (batch)',
             );
 
+            // Update sync state for this project if we processed any changes
+            if (totalChangesForProject > 0) {
+              await _localStorage.upsertCursorSyncState(
+                domainType: 'project',
+                domainId: projectId,
+                srcStorageType: srcStorageType,
+                srcStorageId: srcStorageId,
+                seq: highestSeqForProject,
+                cid: cid,
+                changeAt: changeAt,
+              );
+              SlttLogger.logger.fine(
+                '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
+              );
+            }
+
+            onProgress?.call(
+              projectId,
+              totalChangesForProject + incomingChanges.length,
+            );
+
             // Update cursor for next iteration
             cursor = nextCursor.toString();
           } else {
@@ -378,22 +436,6 @@ class SyncManager {
         SlttLogger.logger.info(
           '[SyncManager] Completed downsyncing project $projectId: $totalChangesForProject total changes',
         );
-
-        // Update sync state for this project if we processed any changes
-        if (totalChangesForProject > 0) {
-          await _localStorage.upsertCursorSyncState(
-            domainType: 'project',
-            domainId: projectId,
-            srcStorageType: srcStorageType,
-            srcStorageId: srcStorageId,
-            seq: highestSeqForProject,
-            cid: cid,
-            changeAt: changeAt,
-          );
-          SlttLogger.logger.fine(
-            '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
-          );
-        }
       }
 
       final totalDownloadedCount = projectCursorChanges.values
@@ -440,6 +482,7 @@ class SyncManager {
     // Use the already computed deleted local sequences from outsync result
     final finalOutsyncResult = OutsyncResult(
       success: outsyncResult.success,
+      changesRequested: outsyncResult.changesRequested,
       changeSummary: outsyncResult.changeSummary,
       deletedLocalChanges: outsyncResult.deletedLocalChanges,
       message: outsyncResult.message,
@@ -472,6 +515,10 @@ class SyncManager {
         domainId: projectId,
       );
 
+      final localCursorState = await _localStorage.getCursorSyncState(
+        projectId,
+      );
+
       // Try to get cloud storage stats
       EntityTypeSummary? cloudChangeStats;
       EntityTypeStats? cloudStateStats;
@@ -494,6 +541,7 @@ class SyncManager {
       return SyncStatus(
         localChangeStats: localChangeStats,
         localStateStats: localStateStats,
+        localCursorState: localCursorState,
         cloudChangeStats: cloudChangeStats,
         cloudStateStats: cloudStateStats,
       );
@@ -502,6 +550,7 @@ class SyncManager {
       return SyncStatus(
         localChangeStats: null,
         localStateStats: null,
+        localCursorState: null,
         cloudChangeStats: null,
         cloudStateStats: null,
       );
@@ -518,7 +567,9 @@ class SyncManager {
       // Clean up auto-sync resources
       disableAutoOutsync();
 
-      await _localStorage.close();
+      if (_ownsLocalStorage) {
+        await _localStorage.close();
+      }
       _initialized = false;
       _instance = null;
       SlttLogger.logger.info('[SyncManager] Closed');
@@ -529,6 +580,7 @@ class SyncManager {
 // Result classes
 class OutsyncResult {
   final bool success;
+  final List<IsarChangeLogEntry> changesRequested;
   ChangeProcessingSummary? changeSummary;
   final List<String> deletedLocalChanges;
   final String message;
@@ -537,6 +589,7 @@ class OutsyncResult {
 
   OutsyncResult({
     required this.success,
+    required this.changesRequested,
     required this.changeSummary,
     required this.deletedLocalChanges,
     required this.message,
@@ -608,19 +661,40 @@ class FullSyncResult {
 class SyncStatus {
   final EntityTypeStats? localChangeStats;
   final EntityTypeStats? localStateStats;
+  final CursorSyncState? localCursorState;
   final EntityTypeSummary? cloudChangeStats;
   final EntityTypeStats? cloudStateStats;
 
   SyncStatus({
     required this.localChangeStats,
     required this.localStateStats,
+    required this.localCursorState,
     required this.cloudChangeStats,
     required this.cloudStateStats,
   });
 
+  factory SyncStatus.fromJson(Map<String, dynamic> json) => SyncStatus(
+    localChangeStats: json['localChangeStats'] != null
+        ? EntityTypeStats.fromJson(json['localChangeStats'])
+        : null,
+    localStateStats: json['localStateStats'] != null
+        ? EntityTypeStats.fromJson(json['localStateStats'])
+        : null,
+    localCursorState: json['localCursorState'] != null
+        ? CursorSyncState.fromJson(json['localCursorState'])
+        : null,
+    cloudChangeStats: json['cloudChangeStats'] != null
+        ? EntityTypeSummary.fromJson(json['cloudChangeStats'])
+        : null,
+    cloudStateStats: json['cloudStateStats'] != null
+        ? EntityTypeStats.fromJson(json['cloudStateStats'])
+        : null,
+  );
+
   Map<String, dynamic> toJson() => {
     'localChangeStats': localChangeStats?.toJson(),
     'localStateStats': localStateStats?.toJson(),
+    'localCursorState': localCursorState?.toJson(),
     'cloudChangeStats': cloudChangeStats?.toJson(),
     'cloudStateStats': cloudStateStats?.toJson(),
   };

@@ -30,6 +30,30 @@ class StorageServiceDefaults {
   }
 }
 
+/// Request object that groups all parameters for a single change+state update.
+///
+/// Storage implementations should process a list of these requests in order
+/// to perform batch or sequential updates.
+class ChangeLogAndStateRequest {
+  final BaseChangeLogEntry changeLogEntry;
+  final Map<String, dynamic> changeUpdates;
+  final BaseEntityState? entityState;
+  final Map<String, dynamic> stateUpdates;
+  final OperationCounts operationCounts;
+  final bool skipChangeLogWrite;
+  final bool skipStateWrite;
+
+  ChangeLogAndStateRequest({
+    required this.changeLogEntry,
+    required this.changeUpdates,
+    this.entityState,
+    required this.stateUpdates,
+    required this.operationCounts,
+    this.skipChangeLogWrite = false,
+    this.skipStateWrite = false,
+  });
+}
+
 /// Abstract base class for all storage service implementations.
 ///
 /// This interface defines the contract that all storage services must implement,
@@ -58,21 +82,35 @@ abstract class BaseStorageService {
     return id;
   }
 
+  /// Maximum number of change/state pairs this storage can persist in a single
+  /// batch operation. Change processing will chunk work using this limit to
+  /// avoid exceeding backend batch constraints (for example DynamoDB's
+  /// 25-item limit per BatchWrite request).
+  int get batchPutChangesLimit;
+
+  /// Create a concrete entity state instance from JSON using the registered
+  /// serialization handlers. Storage implementations can override this when a
+  /// backend-specific registry is required (e.g., Isar collections), but most
+  /// backends can rely on the globally registered handlers.
+  BaseEntityState createEntityStateFromJson({
+    required String entityType,
+    required Map<String, dynamic> json,
+  }) {
+    final normalized = <String, dynamic>{...json, 'entityType': entityType};
+    return deserializeEntityStateSafely(normalized);
+  }
+
   /// Initialize the storage service
   Future<void> initialize();
 
   /// Close and cleanup the storage service
   Future<void> close();
 
-  Future<UpdateChangeLogAndStateResult> updateChangeLogAndState({
+  /// Process a list of change+state update requests. Implementations may
+  /// process them sequentially or in bulk depending on backend capabilities.
+  Future<UpdateChangeLogAndStatesResult> updateChangeLogAndStates({
     required String domainType,
-    required BaseChangeLogEntry changeLogEntry,
-    required Map<String, dynamic> changeUpdates,
-    BaseEntityState? entityState,
-    required Map<String, dynamic> stateUpdates,
-    required OperationCounts operationCounts,
-    bool skipChangeLogWrite = false,
-    bool skipStateWrite = false,
+    required List<ChangeLogAndStateRequest> requests,
   });
 
   /// Get the current state of an entity for field-level comparison.
@@ -81,6 +119,24 @@ abstract class BaseStorageService {
     required String domainId,
     required String entityType,
     required String entityId,
+  });
+
+  /// Batch version of getEntityState.
+  ///
+  /// Given a list of keys (domainType, domainId, entityType, entityId),
+  /// returns a map keyed by entityId with nullable BaseEntityState values.
+  ///
+  /// Notes:
+  /// Storage backends should override with a
+  ///   more efficient bulk implementation when supported.
+  /// - The returned map is keyed by entityId. Callers should ensure that the
+  ///   entityIds in the provided keys list are unique within the batch to avoid
+  ///   key collisions.
+  Future<Map<String, BaseEntityState?>> batchGetEntityState({
+    required List<
+      ({String domainType, String domainId, String entityType, String entityId})
+    >
+    keys,
   });
 
   /// Get a specific change by sequence number
@@ -198,7 +254,13 @@ abstract class BaseStorageService {
   });
 }
 
-/// Return type for updateChangeLogAndState: a tuple of change log entry and entity state.
+/// Return type for updateChangeLogAndStates: lists of change log entries and entity states.
+typedef UpdateChangeLogAndStatesResult = ({
+  List<BaseChangeLogEntry> newChangeLogEntries,
+  List<BaseEntityState?> newEntityStates,
+});
+
+/// Legacy return type for single-item processing (deprecated, use UpdateChangeLogAndStatesResult)
 typedef UpdateChangeLogAndStateResult = ({
   BaseChangeLogEntry newChangeLogEntry,
   BaseEntityState? newEntityState,

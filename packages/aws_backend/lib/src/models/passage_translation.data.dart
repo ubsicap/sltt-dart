@@ -7,17 +7,6 @@ import 'package:sltt_core/sltt_core.dart';
 
 part 'passage_translation.data.g.dart';
 
-/**
- * Fields to Serialize/Deserialize for PassageTranslation entity state storage
- *
- * visibility and name +
- *final PassageType type;
-  final Difficulty difficulty;
-  final List<Reference> references;
-  final List<String> tags;
-  final bool includeInStatistics;
- */
-
 @JsonSerializable(includeIfNull: false, checked: true)
 // @SyncableEntityStateData(entityType: kEntityTypePassage)
 class PassageTranslationData extends BaseDataFields {
