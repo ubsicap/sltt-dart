@@ -20,6 +20,9 @@ dependencies:
   # Minimal HTTP client for DynamoDB API calls
   http: ^1.1.0
 
+  # XML parsing for S3 responses
+  xml: ^6.5.0
+
   # JSON handling
   json_annotation: ^4.8.0
 

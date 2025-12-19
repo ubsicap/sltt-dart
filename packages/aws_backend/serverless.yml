@@ -3,6 +3,9 @@ service: sltt-backend
 
 # No plugins needed - using manual build process
 
+custom:
+  mediaBucket: ${self:service}-media-${aws:accountId}
+
 provider:
   name: aws
   runtime: provided.al2  # Custom runtime for Dart compiled binary
@@ -18,6 +21,7 @@ provider:
     STAGE: ${self:provider.stage}
     DYNAMODB_TABLE: ${self:service}-changes-states-${self:provider.stage}
     DYNAMODB_REGION: ${self:provider.region}
+    MEDIA_BUCKET: ${self:custom.mediaBucket}
 
   # IAM permissions for DynamoDB
   iamRoleStatements:
@@ -36,6 +40,19 @@ provider:
       Resource:
         - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
         - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}/index/*"
+    - Effect: Allow
+      Action:
+        - s3:AbortMultipartUpload
+        - s3:CreateMultipartUpload
+        - s3:GetObject
+        - s3:HeadObject
+        - s3:ListBucket
+        - s3:ListMultipartUploadParts
+        - s3:PutObject
+        - s3:UploadPart
+      Resource:
+        - "arn:aws:s3:::${self:custom.mediaBucket}"
+        - "arn:aws:s3:::${self:custom.mediaBucket}/*"
 
 functions:
   # Main API handler for SLTT changes
@@ -103,6 +120,21 @@ resources:
             Value: ${self:service}
           - Key: Stage
             Value: ${self:provider.stage}
+    MediaBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.mediaBucket}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        LifecycleConfiguration:
+          Rules:
+            - Id: AbortIncompleteMultipartUploads
+              Status: Enabled
+              AbortIncompleteMultipartUpload:
+                DaysAfterInitiation: 2
 
 # Package configuration
 package:

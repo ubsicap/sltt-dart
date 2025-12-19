@@ -66,32 +66,49 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
   print('   Stage: $stage');
   print('   Port: $port');
 
-  try {
-    // Get configuration from environment variables (set by run_debug_server.sh)
-    final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] ?? 'true';
-    final useLocalDynamoDB = useCloudStorage != 'true';
+  // Get configuration from environment variables (set by run_debug_server.sh)
+  final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] ?? 'true';
+  final useLocalDynamoDB = useCloudStorage != 'true';
 
-    // Create DynamoDB storage service
-    final storageInstance = StorageFactory.createStorage(
-      useLocalDynamoDB: useLocalDynamoDB,
-    );
+  // Create DynamoDB storage service
+  final storageInstance = StorageFactory.createStorage(
+    useLocalDynamoDB: useLocalDynamoDB,
+  );
+
+  final mediaBucket = Platform.environment['MEDIA_BUCKET'];
+  final mediaRegion =
+      Platform.environment['AWS_REGION'] ??
+      Platform.environment['AWS_DEFAULT_REGION'] ??
+      'us-east-1';
+  final mediaStorage = AwsMediaStorage(
+    bucketName: mediaBucket ?? '',
+    region: mediaRegion,
+  );
+
+  try {
+    if (mediaBucket == null || mediaBucket.isEmpty) {
+      throw StateError('MEDIA_BUCKET environment variable is required');
+    }
 
     print('🗄️  Configuration:');
     print('   Table: ${storageInstance.tableName}');
     print('   Region: ${storageInstance.region}');
     print('   USE_CLOUD_STORAGE: $useCloudStorage');
     print('   useLocalDynamoDB: ${storageInstance.useLocalDynamoDB}');
+    print('   MEDIA_BUCKET: $mediaBucket');
 
     print('🗄️  Connecting to DynamoDB...');
 
     // Initialize storage
     await storageInstance.initialize();
+    await mediaStorage.initialize();
     print('✅ DynamoDB connection established');
 
     // Create server instance
     final serverInstance = AwsRestApiServer(
       serverName: 'Debug AWS Backend',
       storage: storageInstance,
+      mediaStorage: mediaStorage,
     );
 
     print('🚀 Starting debug server...');
@@ -127,6 +144,8 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
   } catch (e, stackTrace) {
     print('❌ Error setting up debug environment: $e');
     print('Stack trace: $stackTrace');
+    await mediaStorage.close();
+    await storageInstance.close();
     exit(1);
   }
 }
