@@ -173,12 +173,9 @@ abstract class BaseRestApiServer {
       '/api/state/<domainCollection>/<domainId>/<entityCollection>/<entityId>',
       _handleGetEntityState,
     );
-    router.post('/api/storage/media/get-urls', _handleMediaGetUrls);
-    router.post('/api/storage/media/get-file-parts', _handleMediaGetFileParts);
-    router.post(
-      '/api/storage/media/create-multipart',
-      _handleMediaCreateMultipart,
-    );
+    router.post('/api/media/get-urls', _handleMediaGetUrls);
+    router.post('/api/media/get-file-parts', _handleMediaGetFileParts);
+    router.post('/api/media/create-multipart', _handleMediaCreateMultipart);
     router.post('/api/storage/__test/state', _handleStorageTestStoreState);
     router.post('/api/storage/__test/change', _handleStorageTestStoreChange);
     router.delete(
@@ -523,7 +520,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'POST',
-          'path': '/api/storage/media/get-urls',
+          'path': '/api/media/get-urls',
           'description':
               'Generate signed URLs for media uploads (head_object, upload_part).',
           'requestBody': {
@@ -581,7 +578,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'POST',
-          'path': '/api/storage/media/get-file-parts',
+          'path': '/api/media/get-file-parts',
           'description':
               'List uploaded parts for a multipart upload (S3 ListParts-compatible). Supports pagination via cursor.',
           'requestBody': {
@@ -638,7 +635,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'POST',
-          'path': '/api/storage/media/create-multipart',
+          'path': '/api/media/create-multipart',
           'description': 'Create a multipart upload for a media object.',
           'requestBody': {
             'type': 'object',
