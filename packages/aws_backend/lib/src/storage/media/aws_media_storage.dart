@@ -393,9 +393,9 @@ class AwsMediaStorage extends BaseMediaStorage {
   }
 
   String? _text(XmlElement element, String tag) {
-    final found = element.findAllElements(tag);
-    if (found.isEmpty) return null;
-    return found.first.value;
+    final found = element.getElement(tag);
+    // ignore: deprecated_member_use
+    return found?.text; // .text not actually deprecated?
   }
 }
 
