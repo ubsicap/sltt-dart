@@ -58,6 +58,7 @@
                 "AWS_REGION": "us-east-1",
                 "DYNAMODB_REGION": "us-east-1",
                 "DYNAMODB_TABLE": "sltt-backend-changes-states-dev",
+                "MEDIA_BUCKET": "sltt-backend-media-${input:awsAccountId}",
                 "STAGE": "dev",
                 "USE_CLOUD_STORAGE": "true",
                 "LOCAL_DEBUGGER": "true"
@@ -82,6 +83,7 @@
                 "AWS_REGION": "us-east-1",
                 "DYNAMODB_REGION": "us-east-1",
                 "DYNAMODB_TABLE": "sltt-backend-changes-states-tst",
+                "MEDIA_BUCKET": "sltt-backend-media-${input:awsAccountId}",
                 "STAGE": "tst",
                 "USE_CLOUD_STORAGE": "true",
                 "LOCAL_DEBUGGER": "true"
@@ -170,6 +172,11 @@
             "id": "port",
             "description": "Local Server Port",
             "default": "8080",
+            "type": "promptString"
+        },
+        {
+            "id": "awsAccountId",
+            "description": "AWS Account ID",
             "type": "promptString"
         },
         {
