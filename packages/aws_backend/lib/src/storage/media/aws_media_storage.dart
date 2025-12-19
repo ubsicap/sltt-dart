@@ -20,6 +20,9 @@ class AwsMediaStorage extends BaseMediaStorage {
   final String bucketName;
   final String region;
   final Duration _presignedUrlDuration;
+  static final S3ServiceConfiguration _s3Config = S3ServiceConfiguration(
+    signPayload: false,
+  );
 
   final http.Client _httpClient;
   final bool _ownsHttpClient;
@@ -366,6 +369,7 @@ class AwsMediaStorage extends BaseMediaStorage {
         service: AWSService.s3,
       ),
       expiresIn: _presignedUrlDuration,
+      serviceConfiguration: _s3Config,
     );
 
     return presigned;
@@ -378,6 +382,7 @@ class AwsMediaStorage extends BaseMediaStorage {
         region: region,
         service: AWSService.s3,
       ),
+      serviceConfiguration: _s3Config,
     );
 
     final httpRequest = http.Request(signed.method.value, signed.uri)
@@ -390,7 +395,7 @@ class AwsMediaStorage extends BaseMediaStorage {
   String? _text(XmlElement element, String tag) {
     final found = element.findAllElements(tag);
     if (found.isEmpty) return null;
-    return found.first.text;
+    return found.first.value;
   }
 }
 
