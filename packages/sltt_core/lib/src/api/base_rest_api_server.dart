@@ -15,10 +15,15 @@ import 'package:sltt_core/sltt_core.dart';
 abstract class BaseRestApiServer {
   final String serverName;
   final BaseStorageService storage;
+  final BaseMediaStorage mediaStorage;
 
   HttpServer? _server;
 
-  BaseRestApiServer({required this.serverName, required this.storage});
+  BaseRestApiServer({
+    required this.serverName,
+    required this.storage,
+    required this.mediaStorage,
+  });
 
   /// Storage type description for API documentation
   String get storageTypeDescription;
@@ -109,8 +114,9 @@ abstract class BaseRestApiServer {
       return StartResponse(storageId: storageId, storageType: storageType);
     }
 
-    // Initialize the storage service
+    // Initialize the storage and media services
     await storage.initialize();
+    await mediaStorage.initialize();
     final storageId = await storage.ensureStorageId();
     final storageType = storage.getStorageType();
 
@@ -166,6 +172,12 @@ abstract class BaseRestApiServer {
     router.get(
       '/api/state/<domainCollection>/<domainId>/<entityCollection>/<entityId>',
       _handleGetEntityState,
+    );
+    router.post('/api/storage/media/get-urls', _handleMediaGetUrls);
+    router.post('/api/storage/media/get-file-parts', _handleMediaGetFileParts);
+    router.post(
+      '/api/storage/media/create-multipart',
+      _handleMediaCreateMultipart,
     );
     router.post('/api/storage/__test/state', _handleStorageTestStoreState);
     router.post('/api/storage/__test/change', _handleStorageTestStoreChange);
@@ -506,6 +518,144 @@ abstract class BaseRestApiServer {
                 'format': 'ISO8601',
                 'description': 'When the response was generated',
               },
+            },
+          },
+        },
+        {
+          'method': 'POST',
+          'path': '/api/storage/media/get-urls',
+          'description':
+              'Generate signed URLs for media uploads (head_object, upload_part).',
+          'requestBody': {
+            'type': 'object',
+            'required': ['remoteFileKey', 'clientMethods'],
+            'properties': {
+              'remoteFileKey': {
+                'type': 'string',
+                'description':
+                    'Destination object key (e.g., S3 key) for the media file.',
+              },
+              'clientMethods': {
+                'type': 'array',
+                'items': {
+                  'type': 'string',
+                  'enum': ['head_object', 'upload_part'],
+                },
+                'description':
+                    'Requested client methods to sign. Supported: head_object, upload_part.',
+              },
+              'partNumber': {
+                'type': 'integer',
+                'description': 'Part number (required for upload_part).',
+              },
+              'uploadId': {
+                'type': 'string',
+                'description':
+                    'Existing multipart uploadId (required for upload_part).',
+              },
+            },
+          },
+          'response': {
+            'type': 'object',
+            'properties': {
+              'urls': {
+                'type': 'array',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'remoteFileKey': {'type': 'string'},
+                    'head_object': {'type': 'string'},
+                    'upload_part': {'type': 'string'},
+                    'partNumber': {'type': 'integer'},
+                    'uploadId': {'type': 'string'},
+                    'expiresAt': {
+                      'type': 'string',
+                      'format': 'ISO8601',
+                      'description': 'Expiration timestamp for the signed URL.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          'method': 'POST',
+          'path': '/api/storage/media/get-file-parts',
+          'description':
+              'List uploaded parts for a multipart upload (S3 ListParts-compatible). Supports pagination via cursor.',
+          'requestBody': {
+            'type': 'object',
+            'required': ['remoteFileKey'],
+            'properties': {
+              'remoteFileKey': {
+                'type': 'string',
+                'description': 'Destination object key (e.g., S3 key).',
+              },
+              'uploadId': {
+                'type': 'string',
+                'description':
+                    'Multipart upload ID. If omitted, the backend may search active uploads for this key.',
+              },
+              'cursor': {
+                'type': 'string',
+                'description':
+                    'Pagination cursor to resume listing parts when previous response indicated more data.',
+              },
+            },
+          },
+          'response': {
+            'type': 'object',
+            'description':
+                'Shape mirrors S3 ListParts output and may include Cursor when additional pagination is required.',
+            'properties': {
+              'Bucket': {'type': 'string'},
+              'Key': {'type': 'string'},
+              'UploadId': {'type': 'string'},
+              'PartNumberMarker': {'type': 'integer'},
+              'NextPartNumberMarker': {'type': 'integer'},
+              'MaxParts': {'type': 'integer'},
+              'IsTruncated': {'type': 'boolean'},
+              'Parts': {
+                'type': 'array',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'PartNumber': {'type': 'integer'},
+                    'Size': {'type': 'integer'},
+                    'ETag': {'type': 'string'},
+                    'LastModified': {'type': 'string', 'format': 'ISO8601'},
+                  },
+                },
+              },
+              'Cursor': {
+                'type': 'string',
+                'description':
+                    'Set when further pagination is required; pass to the next request to continue.',
+              },
+            },
+          },
+        },
+        {
+          'method': 'POST',
+          'path': '/api/storage/media/create-multipart',
+          'description': 'Create a multipart upload for a media object.',
+          'requestBody': {
+            'type': 'object',
+            'required': ['remoteFileKey'],
+            'properties': {
+              'remoteFileKey': {
+                'type': 'string',
+                'description': 'Destination object key (e.g., S3 key).',
+              },
+            },
+          },
+          'response': {
+            'type': 'object',
+            'properties': {
+              'remoteFileKey': {'type': 'string'},
+              'uploadId': {'type': 'string'},
+              'bucket': {'type': 'string'},
             },
           },
         },
@@ -1660,6 +1810,122 @@ abstract class BaseRestApiServer {
     }
   }
 
+  /// Generate signed URLs for media operations (e.g., head_object, upload_part).
+  Future<Response> _handleMediaGetUrls(Request request) async {
+    try {
+      final bodyStr = await request.readAsString();
+      final body = jsonDecode(bodyStr) as Map<String, dynamic>;
+
+      final remoteFileKey = (body['remoteFileKey'] as String?)?.trim();
+      if (remoteFileKey == null || remoteFileKey.isEmpty) {
+        return _errorResponse('remoteFileKey is required', 400);
+      }
+
+      final clientMethodsRaw = body['clientMethods'];
+      if (clientMethodsRaw is! List) {
+        return _errorResponse('clientMethods must be a list of strings', 400);
+      }
+      final clientMethods = clientMethodsRaw.map((e) => e.toString()).toSet();
+      const allowedMethods = {'upload_part', 'head_object'};
+      if (!allowedMethods.containsAll(clientMethods)) {
+        return _errorResponse(
+          'clientMethods contains unsupported entries; allowed: ${allowedMethods.join(', ')}',
+          400,
+        );
+      }
+
+      final partNumberRaw = body['partNumber'];
+      int? partNumber;
+      if (partNumberRaw != null) {
+        if (partNumberRaw is int) {
+          partNumber = partNumberRaw;
+        } else if (partNumberRaw is String && partNumberRaw.isNotEmpty) {
+          partNumber = int.tryParse(partNumberRaw);
+        }
+        if (partNumber == null || partNumber <= 0) {
+          return _errorResponse('partNumber must be a positive integer', 400);
+        }
+      }
+
+      final uploadId = (body['uploadId'] as String?)?.trim();
+
+      final resp = await mediaStorage.getSignedUrls(
+        MediaSignedUrlRequest(
+          remoteFileKey: remoteFileKey,
+          clientMethods: clientMethods,
+          partNumber: partNumber,
+          uploadId: uploadId,
+        ),
+      );
+
+      return Response.ok(
+        jsonEncode(resp.toJson()),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on UnsupportedError catch (e) {
+      return _errorResponse(e.message ?? 'Media storage not configured', 501);
+    } catch (e, st) {
+      return _errorResponse('Failed to generate media URLs: $e', 500, st);
+    }
+  }
+
+  /// List uploaded parts for a multipart upload. Supports optional cursor for pagination.
+  Future<Response> _handleMediaGetFileParts(Request request) async {
+    try {
+      final bodyStr = await request.readAsString();
+      final body = jsonDecode(bodyStr) as Map<String, dynamic>;
+
+      final remoteFileKey = (body['remoteFileKey'] as String?)?.trim();
+      if (remoteFileKey == null || remoteFileKey.isEmpty) {
+        return _errorResponse('remoteFileKey is required', 400);
+      }
+
+      final uploadId = (body['uploadId'] as String?)?.trim();
+      final cursor = (body['cursor'] as String?)?.trim();
+
+      final resp = await mediaStorage.listFileParts(
+        remoteFileKey: remoteFileKey,
+        uploadId: uploadId,
+        cursor: cursor,
+      );
+
+      return Response.ok(
+        jsonEncode(resp.toJson()),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on UnsupportedError catch (e) {
+      return _errorResponse(e.message ?? 'Media storage not configured', 501);
+    } catch (e, st) {
+      return _errorResponse('Failed to list media parts: $e', 500, st);
+    }
+  }
+
+  /// Create a multipart upload for a remote file key.
+  Future<Response> _handleMediaCreateMultipart(Request request) async {
+    try {
+      final bodyStr = await request.readAsString();
+      final body = jsonDecode(bodyStr) as Map<String, dynamic>;
+
+      final remoteFileKey = (body['remoteFileKey'] as String?)?.trim();
+      if (remoteFileKey == null || remoteFileKey.isEmpty) {
+        return _errorResponse('remoteFileKey is required', 400);
+      }
+
+      final resp = await mediaStorage.createMultipartUpload(
+        remoteFileKey: remoteFileKey,
+      );
+
+      return Response.ok(
+        jsonEncode(resp.toJson()),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on UnsupportedError catch (e) {
+      return _errorResponse(e.message ?? 'Media storage not configured', 501);
+    } catch (e, st) {
+      return _errorResponse('Failed to create multipart upload: $e', 500, st);
+    }
+  }
+
   /// Handle storage test reset
   /// route: '/api/storage/__test/reset/<domainCollection>/<domainId>'
   /// For __testXXX domainIds only
@@ -1962,6 +2228,7 @@ abstract class BaseRestApiServer {
     }
 
     await storage.close();
+    await mediaStorage.close();
   }
 
   /// Check if server is running

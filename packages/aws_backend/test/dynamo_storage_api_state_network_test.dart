@@ -21,7 +21,11 @@ import '../../sltt_core/test/helpers/api_changes_network_suite.dart'
 import 'helpers/test_utils.dart' show resetTestProject;
 
 class TestServer extends BaseRestApiServer {
-  TestServer({required super.serverName, required super.storage});
+  TestServer({
+    required super.serverName,
+    required super.storage,
+    required super.mediaStorage,
+  });
 
   @override
   String get storageTypeDescription => storage.getStorageType();
@@ -71,7 +75,11 @@ void main() {
     // concurrent callers can await the same initialization.
     baseUrlCompleter = Completer<Uri>();
 
-    final app = TestServer(serverName: 'dynamo-state-it', storage: storage!);
+    final app = TestServer(
+      serverName: 'dynamo-state-it',
+      storage: storage!,
+      mediaStorage: NullMediaStorage(),
+    );
     final handler = const Pipeline().addHandler(app.router().call);
     server = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, 0);
     baseUrl = Uri.parse('http://localhost:${server!.port}');

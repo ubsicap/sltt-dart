@@ -11,7 +11,11 @@ import 'helpers/in_memory_storage.dart';
 import 'test_models.dart';
 
 class TestServer extends BaseRestApiServer {
-  TestServer({required super.serverName, required super.storage});
+  TestServer({
+    required super.serverName,
+    required super.storage,
+    required super.mediaStorage,
+  });
 
   @override
   String get storageTypeDescription => storage.getStorageType();
@@ -33,7 +37,11 @@ void main() {
     }
     // Fallback: start in-memory server for this test file
     final storage = InMemoryStorage(storageType: 'local');
-    final app = TestServer(serverName: 'core-it', storage: storage);
+    final app = TestServer(
+      serverName: 'core-it',
+      storage: storage,
+      mediaStorage: NullMediaStorage(),
+    );
     final handler = const Pipeline().addHandler(app.router().call);
     server = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, 0);
     baseUrl = Uri.parse('http://localhost:${server!.port}');

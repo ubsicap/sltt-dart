@@ -21,7 +21,11 @@ import '../../sltt_core/test/helpers/api_changes_network_suite.dart'
     show ApiChangesNetworkTestSuite;
 
 class TestServer extends BaseRestApiServer {
-  TestServer({required super.serverName, required super.storage});
+  TestServer({
+    required super.serverName,
+    required super.storage,
+    BaseMediaStorage? mediaStorage,
+  }) : super(mediaStorage: mediaStorage ?? NullMediaStorage());
 
   @override
   String get storageTypeDescription => storage.getStorageType();

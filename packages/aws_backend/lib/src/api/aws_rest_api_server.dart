@@ -14,7 +14,11 @@ class AwsRestApiServer extends BaseRestApiServer {
   AwsRestApiServer({
     required super.serverName,
     required DynamoDBStorageService storage,
-  }) : super(storage: storage);
+    BaseMediaStorage? mediaStorage,
+  }) : super(
+         storage: storage,
+         mediaStorage: mediaStorage ?? NullMediaStorage(),
+       );
 
   @override
   String get storageTypeDescription => 'AWS DynamoDB';

@@ -15,9 +15,11 @@ class LocalhostRestApiServer extends BaseRestApiServer {
     this.storageType,
     String serverName, {
     BaseStorageService? storage,
+    BaseMediaStorage? mediaStorage,
   }) : super(
          serverName: serverName,
          storage: storage ?? _createStorage(storageType),
+         mediaStorage: mediaStorage ?? NullMediaStorage(),
        );
 
   @override
