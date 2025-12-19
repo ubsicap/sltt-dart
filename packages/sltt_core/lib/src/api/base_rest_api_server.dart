@@ -174,7 +174,7 @@ abstract class BaseRestApiServer {
       _handleGetEntityState,
     );
     router.post('/api/media/get-urls', _handleMediaGetUrls);
-    router.post('/api/media/get-file-parts', _handleMediaGetFileParts);
+    router.post('/api/media/list-parts', _handleMediaGetFileParts);
     router.post('/api/media/create-multipart', _handleMediaCreateMultipart);
     router.post('/api/storage/__test/state', _handleStorageTestStoreState);
     router.post('/api/storage/__test/change', _handleStorageTestStoreChange);
@@ -578,7 +578,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'POST',
-          'path': '/api/media/get-file-parts',
+          'path': '/api/media/list-parts',
           'description':
               'List uploaded parts for a multipart upload (S3 ListParts-compatible). Supports pagination via cursor.',
           'requestBody': {
