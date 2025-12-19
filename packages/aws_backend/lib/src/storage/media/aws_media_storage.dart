@@ -108,6 +108,80 @@ class AwsMediaStorage extends BaseMediaStorage {
     );
   }
 
+  /// Locate an existing multipart upload for a key using the S3
+  /// ListMultipartUploads API. If found, returns the uploadId. If not found
+  /// but more pages exist, returns a cursor encoded as
+  /// "<NextKeyMarker>|<NextUploadIdMarker>" so callers can continue the
+  /// search. An empty uploadId with a non-empty cursor means keep paging; an
+  /// empty uploadId with an empty cursor means nothing was found.
+  Future<MultipartUploadLookupResult> findMultipartUpload({
+    required String remoteFileKey,
+    String? cursor,
+  }) async {
+    await initialize();
+
+    final key = _normalizeKey(remoteFileKey);
+
+    String? keyMarker;
+    String? uploadIdMarker;
+    if (cursor != null && cursor.isNotEmpty) {
+      final parts = cursor.split('|');
+      keyMarker = parts.isNotEmpty ? parts[0] : null;
+      uploadIdMarker = parts.length > 1 ? parts[1] : null;
+    }
+
+    final query = <String, String>{'uploads': '', 'prefix': key};
+
+    if (keyMarker != null && keyMarker.isNotEmpty) {
+      query['key-marker'] = keyMarker;
+    }
+    if (uploadIdMarker != null && uploadIdMarker.isNotEmpty) {
+      query['upload-id-marker'] = uploadIdMarker;
+    }
+
+    final request = AWSHttpRequest(
+      method: AWSHttpMethod.get,
+      uri: Uri(scheme: 'https', host: _host, path: '/', queryParameters: query),
+      headers: {'host': _host},
+    );
+
+    final response = await _sendSigned(request);
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to list multipart uploads (status ${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final doc = XmlDocument.parse(response.body);
+    for (final upload in doc.findAllElements('Upload')) {
+      final uploadKey = _text(upload, 'Key');
+      final foundUploadId = _text(upload, 'UploadId');
+      if (uploadKey == key &&
+          foundUploadId != null &&
+          foundUploadId.isNotEmpty) {
+        return MultipartUploadLookupResult(uploadId: foundUploadId);
+      }
+    }
+
+    final isTruncated =
+        (_text(doc.rootElement, 'IsTruncated') ?? '').toLowerCase().trim() ==
+        'true';
+
+    if (isTruncated) {
+      final nextKeyMarker = _text(doc.rootElement, 'NextKeyMarker');
+      final nextUploadIdMarker = _text(doc.rootElement, 'NextUploadIdMarker');
+      final nextCursor = _encodeMultipartCursor(
+        nextKeyMarker,
+        nextUploadIdMarker,
+      );
+      if (nextCursor != null) {
+        return MultipartUploadLookupResult(uploadId: '', cursor: nextCursor);
+      }
+    }
+
+    return MultipartUploadLookupResult(uploadId: '');
+  }
+
   @override
   Future<MediaListPartsResponse> listFileParts({
     required String remoteFileKey,
@@ -117,19 +191,42 @@ class AwsMediaStorage extends BaseMediaStorage {
     await initialize();
 
     final key = _normalizeKey(remoteFileKey);
-    if (uploadId == null || uploadId.isEmpty) {
-      throw ArgumentError('uploadId is required to list multipart parts');
+    String resolvedUploadId = uploadId ?? '';
+    String? partsCursor = cursor;
+
+    if (resolvedUploadId.isEmpty) {
+      final lookup = await findMultipartUpload(
+        remoteFileKey: key,
+        cursor: cursor,
+      );
+
+      if (lookup.uploadId.isEmpty) {
+        return MediaListPartsResponse(
+          bucket: bucketName,
+          remoteFileKey: key,
+          uploadId: '',
+          partNumberMarker: null,
+          nextPartNumberMarker: null,
+          maxParts: null,
+          isTruncated: lookup.cursor != null,
+          parts: const <MediaPartSummary>[],
+          cursor: lookup.cursor,
+        );
+      }
+
+      resolvedUploadId = lookup.uploadId;
+      partsCursor = null;
     }
 
     int? partNumberMarker;
-    if (cursor != null && cursor.isNotEmpty) {
-      partNumberMarker = int.tryParse(cursor);
+    if (partsCursor != null && partsCursor.isNotEmpty) {
+      partNumberMarker = int.tryParse(partsCursor);
       if (partNumberMarker == null) {
         throw ArgumentError('cursor must be a valid integer');
       }
     }
 
-    final query = <String, String>{'uploadId': uploadId};
+    final query = <String, String>{'uploadId': resolvedUploadId};
     if (partNumberMarker != null) {
       query['part-number-marker'] = partNumberMarker.toString();
     }
@@ -185,7 +282,7 @@ class AwsMediaStorage extends BaseMediaStorage {
     return MediaListPartsResponse(
       bucket: bucket,
       remoteFileKey: key,
-      uploadId: parsedUploadId ?? uploadId,
+      uploadId: parsedUploadId ?? resolvedUploadId,
       partNumberMarker: partMarker,
       nextPartNumberMarker: nextMarker,
       maxParts: maxParts,
@@ -240,6 +337,19 @@ class AwsMediaStorage extends BaseMediaStorage {
   String _normalizeKey(String key) =>
       key.startsWith('/') ? key.substring(1) : key;
 
+  String? _encodeMultipartCursor(String? keyMarker, String? uploadIdMarker) {
+    final hasKey = keyMarker != null && keyMarker.isNotEmpty;
+    final hasUploadId = uploadIdMarker != null && uploadIdMarker.isNotEmpty;
+
+    if (!hasKey && !hasUploadId) {
+      return null;
+    }
+
+    final safeKeyMarker = hasKey ? keyMarker : '';
+    final safeUploadMarker = hasUploadId ? uploadIdMarker : '';
+    return '$safeKeyMarker|$safeUploadMarker';
+  }
+
   Future<Uri> _presignUri({
     required AWSHttpMethod method,
     required String key,
@@ -282,4 +392,13 @@ class AwsMediaStorage extends BaseMediaStorage {
     if (found.isEmpty) return null;
     return found.first.text;
   }
+}
+
+class MultipartUploadLookupResult {
+  MultipartUploadLookupResult({required this.uploadId, this.cursor});
+
+  final String uploadId;
+  final String? cursor;
+
+  bool get hasUploadId => uploadId.isNotEmpty;
 }
