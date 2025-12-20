@@ -176,6 +176,7 @@ abstract class BaseRestApiServer {
     router.post('/api/media/get-urls', _handleMediaGetUrls);
     router.post('/api/media/list-parts', _handleMediaGetFileParts);
     router.post('/api/media/create-multipart', _handleMediaCreateMultipart);
+    // router.post('/api/media/complete-multipart', _handleMediaCompleteMultipart);
     router.post('/api/storage/__test/state', _handleStorageTestStoreState);
     router.post('/api/storage/__test/change', _handleStorageTestStoreChange);
     router.delete(
