@@ -36,4 +36,15 @@ class FileMediaStorage extends BaseMediaStorage {
       'FileMediaStorage does not implement createMultipartUpload yet',
     );
   }
+
+  @override
+  Future<MediaCompleteMultipartResponse> completeMultipartUpload({
+    required String remoteFileKey,
+    required String uploadId,
+    required List<MediaCompletedPart> parts,
+  }) async {
+    throw UnsupportedError(
+      'FileMediaStorage does not implement completeMultipartUpload yet',
+    );
+  }
 }

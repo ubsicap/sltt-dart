@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:aws_common/aws_common.dart';
@@ -328,6 +329,67 @@ class AwsMediaStorage extends BaseMediaStorage {
     );
   }
 
+  @override
+  Future<MediaCompleteMultipartResponse> completeMultipartUpload({
+    required String remoteFileKey,
+    required String uploadId,
+    required List<MediaCompletedPart> parts,
+  }) async {
+    await initialize();
+    final key = _normalizeKey(remoteFileKey);
+
+    if (uploadId.isEmpty) {
+      throw ArgumentError('uploadId is required to complete multipart upload');
+    }
+    if (parts.isEmpty) {
+      throw ArgumentError('parts must include at least one entry');
+    }
+
+    final sortedParts = [...parts]
+      ..sort((a, b) => a.partNumber.compareTo(b.partNumber));
+
+    final buffer = StringBuffer('<CompleteMultipartUpload>');
+    for (final part in sortedParts) {
+      if (part.partNumber <= 0) {
+        throw ArgumentError('partNumber must be positive');
+      }
+      if (part.eTag.isEmpty) {
+        throw ArgumentError('eTag is required for each part');
+      }
+      buffer
+        ..write('<Part>')
+        ..write('<PartNumber>${part.partNumber}</PartNumber>')
+        ..write('<ETag>"${part.eTag}"</ETag>')
+        ..write('</Part>');
+    }
+    buffer.write('</CompleteMultipartUpload>');
+    final payloadBytes = utf8.encode(buffer.toString());
+
+    final request = AWSHttpRequest(
+      method: AWSHttpMethod.post,
+      uri: _objectUri(key, {'uploadId': uploadId}),
+      headers: {'host': _host, 'content-type': 'application/xml'},
+    );
+
+    final response = await _sendSigned(request, body: payloadBytes);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Failed to complete multipart upload (status ${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final doc = XmlDocument.parse(response.body);
+
+    return MediaCompleteMultipartResponse(
+      remoteFileKey: _text(doc.rootElement, 'Key') ?? key,
+      uploadId: uploadId,
+      bucket: _text(doc.rootElement, 'Bucket'),
+      location: _text(doc.rootElement, 'Location'),
+      eTag: _text(doc.rootElement, 'ETag')?.replaceAll('"', ''),
+    );
+  }
+
   Uri _objectUri(String key, [Map<String, String>? query]) {
     return Uri(
       scheme: 'https',
@@ -375,7 +437,10 @@ class AwsMediaStorage extends BaseMediaStorage {
     return presigned;
   }
 
-  Future<http.Response> _sendSigned(AWSHttpRequest request) async {
+  Future<http.Response> _sendSigned(
+    AWSHttpRequest request, {
+    List<int>? body,
+  }) async {
     final signed = await _signer!.sign(
       request,
       credentialScope: AWSCredentialScope(
@@ -387,6 +452,10 @@ class AwsMediaStorage extends BaseMediaStorage {
 
     final httpRequest = http.Request(signed.method.value, signed.uri)
       ..headers.addAll(signed.headers);
+
+    if (body != null && body.isNotEmpty) {
+      httpRequest.bodyBytes = body;
+    }
 
     final streamed = await _httpClient.send(httpRequest);
     return http.Response.fromStream(streamed);

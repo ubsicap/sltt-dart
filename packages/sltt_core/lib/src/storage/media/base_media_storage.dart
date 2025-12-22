@@ -79,6 +79,16 @@ class MediaPartSummary {
   };
 }
 
+/// Part descriptor used when completing a multipart upload.
+class MediaCompletedPart {
+  MediaCompletedPart({required this.partNumber, required this.eTag});
+
+  final int partNumber;
+  final String eTag;
+
+  Map<String, dynamic> toJson() => {'PartNumber': partNumber, 'ETag': eTag};
+}
+
 /// List parts response aligned with S3 ListParts output, plus optional cursor for pagination.
 class MediaListPartsResponse {
   MediaListPartsResponse({
@@ -136,6 +146,31 @@ class MediaCreateMultipartResponse {
   };
 }
 
+/// Response for completing a multipart upload.
+class MediaCompleteMultipartResponse {
+  MediaCompleteMultipartResponse({
+    required this.remoteFileKey,
+    required this.uploadId,
+    this.bucket,
+    this.location,
+    this.eTag,
+  });
+
+  final String remoteFileKey;
+  final String uploadId;
+  final String? bucket;
+  final String? location;
+  final String? eTag;
+
+  Map<String, dynamic> toJson() => {
+    'remoteFileKey': remoteFileKey,
+    'uploadId': uploadId,
+    if (bucket != null) 'bucket': bucket,
+    if (location != null) 'location': location,
+    if (eTag != null) 'eTag': eTag,
+  };
+}
+
 /// Base contract for media storage backends (e.g., S3, file, memory).
 abstract class BaseMediaStorage {
   Future<void> initialize();
@@ -155,5 +190,12 @@ abstract class BaseMediaStorage {
   /// Create a multipart upload for the provided remote file key.
   Future<MediaCreateMultipartResponse> createMultipartUpload({
     required String remoteFileKey,
+  });
+
+  /// Complete a multipart upload for the provided remote file key.
+  Future<MediaCompleteMultipartResponse> completeMultipartUpload({
+    required String remoteFileKey,
+    required String uploadId,
+    required List<MediaCompletedPart> parts,
   });
 }

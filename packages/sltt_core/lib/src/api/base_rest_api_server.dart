@@ -657,6 +657,48 @@ abstract class BaseRestApiServer {
             },
           },
         },
+        {
+          'method': 'POST',
+          'path': '/api/media/multipart-complete',
+          'description':
+              'Complete a multipart upload by supplying part numbers and ETags.',
+          'requestBody': {
+            'type': 'object',
+            'required': ['remoteFileKey', 'uploadId', 'parts'],
+            'properties': {
+              'remoteFileKey': {
+                'type': 'string',
+                'description': 'Destination object key (e.g., S3 key).',
+              },
+              'uploadId': {
+                'type': 'string',
+                'description': 'Multipart upload ID to complete.',
+              },
+              'parts': {
+                'type': 'array',
+                'items': {
+                  'type': 'object',
+                  'required': ['partNumber', 'eTag'],
+                  'properties': {
+                    'partNumber': {'type': 'integer'},
+                    'eTag': {'type': 'string'},
+                  },
+                },
+                'description': 'List of uploaded parts with their ETags.',
+              },
+            },
+          },
+          'response': {
+            'type': 'object',
+            'properties': {
+              'remoteFileKey': {'type': 'string'},
+              'uploadId': {'type': 'string'},
+              'bucket': {'type': 'string'},
+              'location': {'type': 'string'},
+              'eTag': {'type': 'string'},
+            },
+          },
+        },
         // Generalized domain-scoped endpoints
         {
           'method': 'GET',
@@ -1921,6 +1963,72 @@ abstract class BaseRestApiServer {
       return _errorResponse(e.message ?? 'Media storage not configured', 501);
     } catch (e, st) {
       return _errorResponse('Failed to create multipart upload: $e', 500, st);
+    }
+  }
+
+  /// Complete a multipart upload.
+  Future<Response> _handleMediaCompleteMultipart(Request request) async {
+    try {
+      final bodyStr = await request.readAsString();
+      final body = jsonDecode(bodyStr) as Map<String, dynamic>;
+
+      final remoteFileKey = (body['remoteFileKey'] as String?)?.trim();
+      if (remoteFileKey == null || remoteFileKey.isEmpty) {
+        return _errorResponse('remoteFileKey is required', 400);
+      }
+
+      final uploadId = (body['uploadId'] as String?)?.trim();
+      if (uploadId == null || uploadId.isEmpty) {
+        return _errorResponse('uploadId is required', 400);
+      }
+
+      final partsRaw = body['parts'];
+      if (partsRaw is! List || partsRaw.isEmpty) {
+        return _errorResponse('parts must be a non-empty array', 400);
+      }
+
+      final parts = <MediaCompletedPart>[];
+      for (final part in partsRaw) {
+        if (part is! Map) {
+          return _errorResponse('Each part must be an object', 400);
+        }
+
+        final partNumberRaw = part['partNumber'] ?? part['PartNumber'];
+        int? partNumber;
+        if (partNumberRaw is int) {
+          partNumber = partNumberRaw;
+        } else if (partNumberRaw is String && partNumberRaw.isNotEmpty) {
+          partNumber = int.tryParse(partNumberRaw);
+        }
+        if (partNumber == null || partNumber <= 0) {
+          return _errorResponse('partNumber must be a positive integer', 400);
+        }
+
+        var eTag = (part['eTag'] ?? part['ETag'])?.toString().trim();
+        if (eTag == null || eTag.isEmpty) {
+          return _errorResponse('eTag is required for each part', 400);
+        }
+        if (eTag.length >= 2 && eTag.startsWith('"') && eTag.endsWith('"')) {
+          eTag = eTag.substring(1, eTag.length - 1);
+        }
+
+        parts.add(MediaCompletedPart(partNumber: partNumber, eTag: eTag));
+      }
+
+      final resp = await mediaStorage.completeMultipartUpload(
+        remoteFileKey: remoteFileKey,
+        uploadId: uploadId,
+        parts: parts,
+      );
+
+      return Response.ok(
+        jsonEncode(resp.toJson()),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on UnsupportedError catch (e) {
+      return _errorResponse(e.message ?? 'Media storage not configured', 501);
+    } catch (e, st) {
+      return _errorResponse('Failed to complete multipart upload: $e', 500, st);
     }
   }
 

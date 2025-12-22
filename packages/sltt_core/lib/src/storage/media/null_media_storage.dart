@@ -30,4 +30,13 @@ class NullMediaStorage extends BaseMediaStorage {
   }) async {
     throw UnsupportedError('Media storage is not configured');
   }
+
+  @override
+  Future<MediaCompleteMultipartResponse> completeMultipartUpload({
+    required String remoteFileKey,
+    required String uploadId,
+    required List<MediaCompletedPart> parts,
+  }) async {
+    throw UnsupportedError('Media storage is not configured');
+  }
 }
