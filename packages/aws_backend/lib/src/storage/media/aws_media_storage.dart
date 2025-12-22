@@ -73,12 +73,17 @@ class AwsMediaStorage extends BaseMediaStorage {
     final expiresAt = DateTime.now().toUtc().add(_presignedUrlDuration);
 
     Uri? headUrl;
+    Uri? getObjectUrl;
     Uri? uploadPartUrl;
     int? partNumber;
     String? uploadId;
 
     if (request.clientMethods.contains('head_object')) {
       headUrl = await _presignUri(method: AWSHttpMethod.head, key: key);
+    }
+
+    if (request.clientMethods.contains('get_object')) {
+      getObjectUrl = await _presignUri(method: AWSHttpMethod.get, key: key);
     }
 
     if (request.clientMethods.contains('upload_part')) {
@@ -103,6 +108,7 @@ class AwsMediaStorage extends BaseMediaStorage {
         MediaSignedUrlEntry(
           remoteFileKey: key,
           headObjectUrl: headUrl,
+          getObjectUrl: getObjectUrl,
           uploadPartUrl: uploadPartUrl,
           partNumber: partNumber,
           uploadId: uploadId,

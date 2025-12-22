@@ -20,6 +20,7 @@ class MediaSignedUrlEntry {
   MediaSignedUrlEntry({
     required this.remoteFileKey,
     this.headObjectUrl,
+    this.getObjectUrl,
     this.uploadPartUrl,
     this.partNumber,
     this.uploadId,
@@ -28,6 +29,7 @@ class MediaSignedUrlEntry {
 
   final String remoteFileKey;
   final Uri? headObjectUrl;
+  final Uri? getObjectUrl;
   final Uri? uploadPartUrl;
   final int? partNumber;
   final String? uploadId;
@@ -37,6 +39,7 @@ class MediaSignedUrlEntry {
     return {
       'remoteFileKey': remoteFileKey,
       if (headObjectUrl != null) 'head_object': headObjectUrl.toString(),
+      if (getObjectUrl != null) 'get_object': getObjectUrl.toString(),
       if (uploadPartUrl != null) 'upload_part': uploadPartUrl.toString(),
       if (partNumber != null) 'partNumber': partNumber,
       if (uploadId != null) 'uploadId': uploadId,

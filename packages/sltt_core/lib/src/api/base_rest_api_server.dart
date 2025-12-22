@@ -523,7 +523,7 @@ abstract class BaseRestApiServer {
           'method': 'POST',
           'path': '/api/media/get-urls',
           'description':
-              'Generate signed URLs for media uploads (head_object, upload_part).',
+              'Generate signed URLs for media operations (head_object, get_object, upload_part).',
           'requestBody': {
             'type': 'object',
             'required': ['remoteFileKey', 'clientMethods'],
@@ -537,10 +537,10 @@ abstract class BaseRestApiServer {
                 'type': 'array',
                 'items': {
                   'type': 'string',
-                  'enum': ['head_object', 'upload_part'],
+                  'enum': ['head_object', 'get_object', 'upload_part'],
                 },
                 'description':
-                    'Requested client methods to sign. Supported: head_object, upload_part.',
+                    'Requested client methods to sign. Supported: head_object, get_object, upload_part.',
               },
               'partNumber': {
                 'type': 'integer',
@@ -563,6 +563,7 @@ abstract class BaseRestApiServer {
                   'properties': {
                     'remoteFileKey': {'type': 'string'},
                     'head_object': {'type': 'string'},
+                    'get_object': {'type': 'string'},
                     'upload_part': {'type': 'string'},
                     'partNumber': {'type': 'integer'},
                     'uploadId': {'type': 'string'},
@@ -1850,7 +1851,7 @@ abstract class BaseRestApiServer {
     }
   }
 
-  /// Generate signed URLs for media operations (e.g., head_object, upload_part).
+  /// Generate signed URLs for media operations (e.g., head_object, get_object, upload_part).
   Future<Response> _handleMediaGetUrls(Request request) async {
     try {
       final bodyStr = await request.readAsString();
@@ -1866,7 +1867,7 @@ abstract class BaseRestApiServer {
         return _errorResponse('clientMethods must be a list of strings', 400);
       }
       final clientMethods = clientMethodsRaw.map((e) => e.toString()).toSet();
-      const allowedMethods = {'upload_part', 'head_object'};
+      const allowedMethods = {'upload_part', 'head_object', 'get_object'};
       if (!allowedMethods.containsAll(clientMethods)) {
         return _errorResponse(
           'clientMethods contains unsupported entries; allowed: ${allowedMethods.join(', ')}',
