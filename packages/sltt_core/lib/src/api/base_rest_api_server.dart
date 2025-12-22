@@ -175,8 +175,8 @@ abstract class BaseRestApiServer {
     );
     router.post('/api/media/get-urls', _handleMediaGetUrls);
     router.post('/api/media/list-parts', _handleMediaGetFileParts);
-    router.post('/api/media/create-multipart', _handleMediaCreateMultipart);
-    // router.post('/api/media/complete-multipart', _handleMediaCompleteMultipart);
+    router.post('/api/media/multipart-create', _handleMediaCreateMultipart);
+    router.post('/api/media/multipart-complete', _handleMediaCompleteMultipart);
     router.post('/api/storage/__test/state', _handleStorageTestStoreState);
     router.post('/api/storage/__test/change', _handleStorageTestStoreChange);
     router.delete(
@@ -636,7 +636,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'POST',
-          'path': '/api/media/create-multipart',
+          'path': '/api/media/multipart-create',
           'description': 'Create a multipart upload for a media object.',
           'requestBody': {
             'type': 'object',

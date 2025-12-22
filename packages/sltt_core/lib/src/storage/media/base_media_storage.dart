@@ -117,7 +117,7 @@ class MediaListPartsResponse {
   };
 }
 
-/// Response for create-multipart upload.
+/// Response for /multipart-create upload.
 class MediaCreateMultipartResponse {
   MediaCreateMultipartResponse({
     required this.remoteFileKey,
