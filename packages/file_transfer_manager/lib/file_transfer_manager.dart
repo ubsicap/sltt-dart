@@ -16,3 +16,13 @@ Future<void> concatenateFiles({
     await sink.close();
   }
 }
+
+const maxConcurrency = 4;
+
+/// Adaptive chunk size based on file size
+int chooseChunkSize(int fileSizeBytes) {
+  if (fileSizeBytes < 20 * 1024 * 1024) return fileSizeBytes; // no chunking
+  if (fileSizeBytes < 200 * 1024 * 1024) return 2 * 1024 * 1024;
+  if (fileSizeBytes < 1000 * 1024 * 1024) return 5 * 1024 * 1024;
+  return 10 * 1024 * 1024;
+}
