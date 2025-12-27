@@ -23,6 +23,7 @@ Future<void> concatenateFiles({
 
 const maxConcurrency = 4;
 const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
+const _defaultDownloadConcurrency = 4;
 
 /// Adaptive chunk size based on file size
 int chooseChunkSize(int fileSizeBytes) {
@@ -520,118 +521,234 @@ class MediaDownloadService {
     required this.apiClient,
     required this.cloudedBase,
     this.maxPartConcurrency = maxConcurrency,
+    this.maxDownloadConcurrency = _defaultDownloadConcurrency,
+    this.chunkSizeOverride,
   });
 
   final MediaApiClient apiClient;
   final Directory cloudedBase;
   final int maxPartConcurrency;
+  final int maxDownloadConcurrency;
+  final int? chunkSizeOverride;
 
-  Future<File> download({
+  final List<_DownloadJob> _queue = [];
+  int _activeDownloads = 0;
+  bool _processingQueue = false;
+
+  Future<File> enqueueDownload({
     required String remoteFileKey,
     String? fileName,
-  }) async {
-    final signed = await apiClient.getUrls(
+    bool addToFront = false,
+    required DownloadProgressCallback onProgress,
+  }) {
+    final job = _DownloadJob(
       remoteFileKey: remoteFileKey,
-      clientMethods: ['head_object', 'get_object'],
+      fileName: fileName,
+      onProgress: onProgress,
     );
 
-    final headUrl = signed.firstWhere((u) => u.headObject != null).headObject!;
-    final getUrl = signed.firstWhere((u) => u.getObject != null).getObject!;
-    final expiresAt = signed.first.expiresAt;
-
-    final headResponse = await apiClient.head(headUrl);
-    if (headResponse.statusCode != HttpStatus.ok) {
-      throw HttpException(
-        'HEAD failed for $remoteFileKey (${headResponse.statusCode})',
-        uri: headUrl,
-      );
-    }
-
-    final contentLengthStr = headResponse.headers.value(
-      HttpHeaders.contentLengthHeader,
-    );
-    if (contentLengthStr == null) {
-      throw StateError('Missing content-length for $remoteFileKey');
-    }
-
-    final contentLength = int.parse(contentLengthStr);
-    final resolvedFileName = fileName ?? p.basename(remoteFileKey);
-    final targetDir = Directory(
-      p.join(
-        cloudedBase.path,
-        resolvedFileName.length >= 7
-            ? resolvedFileName.substring(0, 7)
-            : resolvedFileName,
+    // Signal queued state.
+    onProgress(
+      DownloadProgress(
+        partsCompleted: -1,
+        partsTotal: 0,
+        bytesCompleted: 0,
+        bytesTotal: 0,
+        bytesPerChunk: 0,
       ),
     );
-    await targetDir.create(recursive: true);
 
-    final chunkSize = chooseChunkSize(contentLength);
-
-    if (chunkSize >= contentLength) {
-      final destFile = File(p.join(targetDir.path, resolvedFileName));
-      final response = await _getWithRenewal(getUrl, expiresAt);
-      final sink = destFile.openWrite();
-      await sink.addStream(response);
-      await sink.close();
-      return destFile;
+    if (addToFront) {
+      _queue.insert(0, job);
+    } else {
+      _queue.add(job);
     }
 
-    final totalParts = (contentLength / chunkSize).ceil();
-    final downloadDir = Directory(
-      p.join(cloudedBase.path, '__downloading', resolvedFileName),
-    );
-    await downloadDir.create(recursive: true);
+    _processQueue();
+    return job.completer.future;
+  }
 
-    Future<File> downloadPart(int partNumber) async {
-      final start = (partNumber - 1) * chunkSize;
-      final end = min(contentLength - 1, start + chunkSize - 1);
-      final response = await _getWithRenewal(
-        getUrl,
-        expiresAt,
-        headers: {HttpHeaders.rangeHeader: 'bytes=$start-$end'},
+  void _processQueue() {
+    if (_processingQueue) return;
+    _processingQueue = true;
+
+    Future<void>.microtask(() async {
+      try {
+        while (_activeDownloads < maxDownloadConcurrency && _queue.isNotEmpty) {
+          final job = _queue.removeAt(0);
+          _activeDownloads++;
+          _runSingleDownload(job).whenComplete(() {
+            _activeDownloads--;
+            _processingQueue = false;
+            _processQueue();
+          });
+        }
+      } finally {
+        _processingQueue = false;
+      }
+    });
+  }
+
+  Future<File> _runSingleDownload(_DownloadJob job) async {
+    try {
+      final signed = await apiClient.getUrls(
+        remoteFileKey: job.remoteFileKey,
+        clientMethods: ['head_object', 'get_object'],
       );
 
-      final partFile = File(
+      final headUrl = signed
+          .firstWhere((u) => u.headObject != null)
+          .headObject!;
+      final getUrl = signed.firstWhere((u) => u.getObject != null).getObject!;
+      final expiresAt = signed.first.expiresAt;
+
+      final headResponse = await apiClient.head(headUrl);
+      if (headResponse.statusCode != HttpStatus.ok) {
+        throw HttpException(
+          'HEAD failed for ${job.remoteFileKey} (${headResponse.statusCode})',
+          uri: headUrl,
+        );
+      }
+
+      final contentLengthStr = headResponse.headers.value(
+        HttpHeaders.contentLengthHeader,
+      );
+      if (contentLengthStr == null) {
+        throw StateError('Missing content-length for ${job.remoteFileKey}');
+      }
+
+      final contentLength = int.parse(contentLengthStr);
+      final resolvedFileName = job.fileName ?? p.basename(job.remoteFileKey);
+      final targetDir = Directory(
         p.join(
-          downloadDir.path,
-          '$resolvedFileName-${partNumber.toString().padLeft(7, '0')}',
+          cloudedBase.path,
+          resolvedFileName.length >= 7
+              ? resolvedFileName.substring(0, 7)
+              : resolvedFileName,
         ),
       );
-      final sink = partFile.openWrite();
-      await sink.addStream(response);
-      await sink.close();
-      return partFile;
-    }
+      await targetDir.create(recursive: true);
 
-    // Download last part first.
-    await downloadPart(totalParts);
+      final chunkSize = chunkSizeOverride ?? chooseChunkSize(contentLength);
+      final totalParts = (contentLength / chunkSize).ceil();
 
-    final remainingParts = [for (var i = 1; i < totalParts; i++) i];
-    remainingParts.shuffle(Random());
+      job.onProgress(
+        DownloadProgress(
+          partsCompleted: 0,
+          partsTotal: totalParts,
+          bytesCompleted: 0,
+          bytesTotal: contentLength,
+          bytesPerChunk: chunkSize,
+        ),
+      );
 
-    await _runWithConcurrency<int>(
-      items: remainingParts,
-      concurrency: maxPartConcurrency,
-      worker: (part) => downloadPart(part).then((_) => null),
-    );
+      if (chunkSize >= contentLength) {
+        final destFile = File(p.join(targetDir.path, resolvedFileName));
+        final response = await _getWithRenewal(getUrl, expiresAt);
+        final sink = destFile.openWrite();
+        await sink.addStream(response);
+        await sink.close();
 
-    final orderedParts = [for (var i = 1; i <= totalParts; i++) i]
-        .map(
-          (part) => File(
-            p.join(
-              downloadDir.path,
-              '$resolvedFileName-${part.toString().padLeft(7, '0')}',
-            ),
+        job.onProgress(
+          DownloadProgress(
+            partsCompleted: totalParts,
+            partsTotal: totalParts,
+            bytesCompleted: contentLength,
+            bytesTotal: contentLength,
+            bytesPerChunk: chunkSize,
           ),
-        )
-        .toList();
+        );
+        job.completer.complete(destFile);
+        return destFile;
+      }
 
-    final destFile = File(p.join(targetDir.path, resolvedFileName));
-    await concatenateFiles(parts: orderedParts, output: destFile);
+      final downloadDir = Directory(
+        p.join(cloudedBase.path, '__downloading', resolvedFileName),
+      );
+      await downloadDir.create(recursive: true);
 
-    await downloadDir.delete(recursive: true);
-    return destFile;
+      var partsCompleted = 0;
+      var bytesCompleted = 0;
+      void reportProgress(int partBytes) {
+        partsCompleted++;
+        bytesCompleted += partBytes;
+        job.onProgress(
+          DownloadProgress(
+            partsCompleted: partsCompleted,
+            partsTotal: totalParts,
+            bytesCompleted: bytesCompleted,
+            bytesTotal: contentLength,
+            bytesPerChunk: chunkSize,
+          ),
+        );
+      }
+
+      Future<File> downloadPart(int partNumber) async {
+        final start = (partNumber - 1) * chunkSize;
+        final end = min(contentLength - 1, start + chunkSize - 1);
+        final response = await _getWithRenewal(
+          getUrl,
+          expiresAt,
+          headers: {HttpHeaders.rangeHeader: 'bytes=$start-$end'},
+        );
+
+        final partFile = File(
+          p.join(
+            downloadDir.path,
+            '$resolvedFileName-${partNumber.toString().padLeft(7, '0')}',
+          ),
+        );
+        final sink = partFile.openWrite();
+        await sink.addStream(response);
+        await sink.close();
+        reportProgress(end - start + 1);
+        return partFile;
+      }
+
+      // Download last part first.
+      await downloadPart(totalParts);
+
+      final remainingParts = [for (var i = 1; i < totalParts; i++) i];
+      remainingParts.shuffle(Random());
+
+      await _runWithConcurrency<int>(
+        items: remainingParts,
+        concurrency: maxPartConcurrency,
+        worker: (part) => downloadPart(part).then((_) => null),
+      );
+
+      final orderedParts = [for (var i = 1; i <= totalParts; i++) i]
+          .map(
+            (part) => File(
+              p.join(
+                downloadDir.path,
+                '$resolvedFileName-${part.toString().padLeft(7, '0')}',
+              ),
+            ),
+          )
+          .toList();
+
+      final destFile = File(p.join(targetDir.path, resolvedFileName));
+      await concatenateFiles(parts: orderedParts, output: destFile);
+
+      await downloadDir.delete(recursive: true);
+      job.onProgress(
+        DownloadProgress(
+          partsCompleted: totalParts,
+          partsTotal: totalParts,
+          bytesCompleted: contentLength,
+          bytesTotal: contentLength,
+          bytesPerChunk: chunkSize,
+        ),
+      );
+      job.completer.complete(destFile);
+      return destFile;
+    } catch (e, st) {
+      if (!job.completer.isCompleted) {
+        job.completer.completeError(e, st);
+      }
+      rethrow;
+    }
   }
 
   Future<Stream<List<int>>> _getWithRenewal(
@@ -654,6 +771,37 @@ class MediaDownloadService {
       uri: initialUrl,
     );
   }
+}
+
+class DownloadProgress {
+  DownloadProgress({
+    required this.partsCompleted,
+    required this.partsTotal,
+    required this.bytesCompleted,
+    required this.bytesTotal,
+    required this.bytesPerChunk,
+  });
+
+  final int partsCompleted;
+  final int partsTotal;
+  final int bytesCompleted;
+  final int bytesTotal;
+  final int bytesPerChunk;
+}
+
+typedef DownloadProgressCallback = void Function(DownloadProgress progress);
+
+class _DownloadJob {
+  _DownloadJob({
+    required this.remoteFileKey,
+    this.fileName,
+    required this.onProgress,
+  });
+
+  final String remoteFileKey;
+  final String? fileName;
+  final DownloadProgressCallback onProgress;
+  final Completer<File> completer = Completer<File>();
 }
 
 Future<void> _runWithConcurrency<T>({

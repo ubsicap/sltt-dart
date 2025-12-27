@@ -24,9 +24,8 @@ String buildTestRemoteKey({
 }
 
 void main() {
-  final enableInternet = true;
-  // Platform.environment['RUN_INTERNET_TESTS'] == 'true' ||
-  //     Platform.environment.containsKey('CLOUD_BASE_URL');
+  final enableInternet =
+      Platform.environment['RUN_INTERNET_TESTS'] == 'true';
 
   group('offline (fake server)', () {
     late Directory tempDir;
@@ -141,9 +140,9 @@ Future<void> _runUploadTest({
   await file.parent.create(recursive: true);
 
   final content = List<int>.generate(
-    s3CompatiblePartSize * 2 + 123,
+    s3CompatiblePartSize + 512 * 1024,
     (i) => i % 256,
-  ); // ~12MB to ensure multipart parts >5MB
+  ); // ~6.5MB to ensure first part >5MB and multipart
   await file.writeAsBytes(content, flush: true);
 
   const testName = 'uploads pending files via multipart and moves to clouded';
@@ -190,7 +189,7 @@ Future<void> _runDownloadTest({
     testName: testName,
     timestamp: timestamp,
   );
-  final size = 21 * 1024 * 1024 + 123; // triggers chunked path
+  final size = 10 * 1024 * 1024 + 123; // chunked via override
   final rand = Random(42);
   final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
 
@@ -221,9 +220,21 @@ Future<void> _runDownloadTest({
     apiClient: env.apiClient,
     cloudedBase: cloudedDir,
     maxPartConcurrency: 3,
+    chunkSizeOverride: 2 * 1024 * 1024,
   );
 
-  final file = await downloadService.download(remoteFileKey: remoteKey);
+  DownloadProgress lastProgress = DownloadProgress(
+    partsCompleted: -1,
+    partsTotal: 0,
+    bytesCompleted: 0,
+    bytesTotal: 0,
+    bytesPerChunk: 0,
+  );
+
+  final file = await downloadService.enqueueDownload(
+    remoteFileKey: remoteKey,
+    onProgress: (p) => lastProgress = p,
+  );
 
   expect(await file.exists(), isTrue);
   expect(await file.readAsBytes(), equals(bytes));
@@ -232,6 +243,9 @@ Future<void> _runDownloadTest({
     p.join(cloudedDir.path, '__downloading', p.basename(remoteKey)),
   );
   expect(await downloadingDir.exists(), isFalse);
+
+  expect(lastProgress.partsCompleted, equals(lastProgress.partsTotal));
+  expect(lastProgress.bytesCompleted, equals(bytes.length));
 }
 
 Future<_Env> _buildOfflineEnv() async {
