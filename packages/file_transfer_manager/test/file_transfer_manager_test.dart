@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:file_transfer_manager/file_transfer_manager.dart';
 import 'package:path/path.dart' as p;
+import 'package:sltt_core/src/server/server_urls.dart';
 import 'package:test/test.dart';
 
 String buildTestRemoteKey({
@@ -21,104 +22,230 @@ String buildTestRemoteKey({
 }
 
 void main() {
-  late Directory tempDir;
-  late Directory pendingDir;
-  late Directory cloudedDir;
-  late FakeMediaServer server;
-  late MediaApiClient apiClient;
+  final enableInternet =
+      Platform.environment['RUN_INTERNET_TESTS'] == 'true' ||
+          Platform.environment.containsKey('CLOUD_BASE_URL');
 
-  setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('ftm_test_');
-    pendingDir = Directory(p.join(tempDir.path, 'pending'));
-    cloudedDir = Directory(p.join(tempDir.path, 'clouded'));
-    await pendingDir.create(recursive: true);
-    await cloudedDir.create(recursive: true);
+  group('offline (fake server)', () {
+    late Directory tempDir;
+    late Directory pendingDir;
+    late Directory cloudedDir;
+    late _Env env;
 
-    server = FakeMediaServer();
-    await server.start();
-    apiClient = MediaApiClient(server.baseUri.toString());
-  });
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('ftm_test_');
+      pendingDir = Directory(p.join(tempDir.path, 'pending'));
+      cloudedDir = Directory(p.join(tempDir.path, 'clouded'));
+      await pendingDir.create(recursive: true);
+      await cloudedDir.create(recursive: true);
 
-  tearDown(() async {
-    apiClient.close();
-    await server.stop();
-    await tempDir.delete(recursive: true);
-  });
+      env = await _buildOfflineEnv();
+    });
 
-  group('MediaUploadService', () {
+    tearDown(() async {
+      await env.dispose();
+      await tempDir.delete(recursive: true);
+    });
+
     test('uploads pending files via multipart and moves to clouded', () async {
-      final filePath = p.join(pendingDir.path, 'videos', 'clip.bin');
-      final file = File(filePath);
-      await file.parent.create(recursive: true);
-
-      final content = List<int>.generate(32 * 1024, (i) => i % 256); // 32KB
-      await file.writeAsBytes(content, flush: true);
-
-      const testName =
-          'uploads pending files via multipart and moves to clouded';
-      final timestamp = DateTime.now();
-      final remoteKey = buildTestRemoteKey(
-        relativePath: p.relative(file.path, from: pendingDir.path),
-        testName: testName,
-        timestamp: timestamp,
-      );
-
-      final uploadService = MediaUploadService(
-        apiClient: apiClient,
-        pendingUploadBase: pendingDir,
-        cloudedBase: cloudedDir,
-        partSizeBytes: 8 * 1024, // force multipart
-        remoteFileKeyResolver: (f) => buildTestRemoteKey(
-          relativePath: p.relative(f.path, from: pendingDir.path),
-          testName: testName,
-          timestamp: timestamp,
-        ),
-      );
-
-      await uploadService.processPendingUploads();
-      final cloudedFile = File(
-        p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
-      );
-      expect(await cloudedFile.exists(), isTrue);
-      expect(await cloudedFile.readAsBytes(), equals(content));
-      expect(await file.exists(), isFalse);
-
-      final stored = server.completedObjects[remoteKey];
-      expect(stored, equals(content));
+      await _runUploadTest(env: env, pendingDir: pendingDir, cloudedDir: cloudedDir);
     });
-  });
 
-  group('MediaDownloadService', () {
     test('downloads chunked file and assembles locally', () async {
-      const testName = 'downloads chunked file and assembles locally';
-      final timestamp = DateTime.now();
-      final remoteKey = buildTestRemoteKey(
-        relativePath: 'media/bigfile.bin',
-        testName: testName,
-        timestamp: timestamp,
-      );
-      final size = 21 * 1024 * 1024 + 123; // triggers chunked path
-      final rand = Random(42);
-      final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
-      server.completedObjects[remoteKey] = bytes;
-
-      final downloadService = MediaDownloadService(
-        apiClient: apiClient,
-        cloudedBase: cloudedDir,
-        maxPartConcurrency: 3,
-      );
-
-      final file = await downloadService.download(remoteFileKey: remoteKey);
-
-      expect(await file.exists(), isTrue);
-      expect(await file.readAsBytes(), equals(bytes));
-
-      final downloadingDir = Directory(
-        p.join(cloudedDir.path, '__downloading', p.basename(remoteKey)),
-      );
-      expect(await downloadingDir.exists(), isFalse);
+      await _runDownloadTest(env: env, pendingDir: pendingDir, cloudedDir: cloudedDir);
     });
   });
+
+  group(
+    'internet (cloud API)',
+    () {
+      late Directory tempDir;
+      late Directory pendingDir;
+      late Directory cloudedDir;
+      late _Env env;
+
+      setUp(() async {
+        tempDir = await Directory.systemTemp.createTemp('ftm_test_');
+        pendingDir = Directory(p.join(tempDir.path, 'pending'));
+        cloudedDir = Directory(p.join(tempDir.path, 'clouded'));
+        await pendingDir.create(recursive: true);
+        await cloudedDir.create(recursive: true);
+
+        env = await _buildInternetEnv();
+      });
+
+      tearDown(() async {
+        await env.dispose();
+        await tempDir.delete(recursive: true);
+      });
+
+      test('uploads pending files via multipart and moves to clouded', () async {
+        await _runUploadTest(env: env, pendingDir: pendingDir, cloudedDir: cloudedDir);
+      });
+
+      test('downloads chunked file and assembles locally', () async {
+        await _runDownloadTest(env: env, pendingDir: pendingDir, cloudedDir: cloudedDir);
+      });
+    },
+    skip: enableInternet
+        ? null
+        : 'Set RUN_INTERNET_TESTS=true and optionally CLOUD_BASE_URL to enable',
+  );
+}
+
+Future<List<int>> _fetchRemoteBytes(
+  MediaApiClient apiClient,
+  String remoteKey,
+) async {
+  final urls = await apiClient.getUrls(
+    remoteFileKey: remoteKey,
+    clientMethods: ['get_object'],
+  );
+  final signed = urls.firstWhere((u) => u.getObject != null).getObject!;
+  final response = await apiClient.get(signed);
+  final bytes = await response.fold<List<int>>([], (prev, element) {
+    prev.addAll(element);
+    return prev;
+  });
+  return bytes;
+}
+
+Future<void> _runUploadTest({
+  required _Env env,
+  required Directory pendingDir,
+  required Directory cloudedDir,
+}) async {
+  final filePath = p.join(pendingDir.path, 'videos', 'clip.bin');
+  final file = File(filePath);
+  await file.parent.create(recursive: true);
+
+  final content = List<int>.generate(32 * 1024, (i) => i % 256); // 32KB
+  await file.writeAsBytes(content, flush: true);
+
+  const testName = 'uploads pending files via multipart and moves to clouded';
+  final timestamp = DateTime.now();
+  final remoteKey = buildTestRemoteKey(
+    relativePath: p.relative(file.path, from: pendingDir.path),
+    testName: testName,
+    timestamp: timestamp,
+  );
+
+  final uploadService = MediaUploadService(
+    apiClient: env.apiClient,
+    pendingUploadBase: pendingDir,
+    cloudedBase: cloudedDir,
+    partSizeBytes: 8 * 1024, // force multipart
+    remoteFileKeyResolver: (f) => buildTestRemoteKey(
+      relativePath: p.relative(f.path, from: pendingDir.path),
+      testName: testName,
+      timestamp: timestamp,
+    ),
+  );
+
+  await uploadService.processPendingUploads();
+  final cloudedFile = File(
+    p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
+  );
+  expect(await cloudedFile.exists(), isTrue);
+  expect(await cloudedFile.readAsBytes(), equals(content));
+  expect(await file.exists(), isFalse);
+
+  final remoteBytes = await _fetchRemoteBytes(env.apiClient, remoteKey);
+  expect(remoteBytes, equals(content));
+}
+
+Future<void> _runDownloadTest({
+  required _Env env,
+  required Directory pendingDir,
+  required Directory cloudedDir,
+}) async {
+  const testName = 'downloads chunked file and assembles locally';
+  final timestamp = DateTime.now();
+  final remoteKey = buildTestRemoteKey(
+    relativePath: 'media/bigfile.bin',
+    testName: testName,
+    timestamp: timestamp,
+  );
+  final size = 21 * 1024 * 1024 + 123; // triggers chunked path
+  final rand = Random(42);
+  final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
+
+  if (env.fakeServer != null) {
+    env.fakeServer!.completedObjects[remoteKey] = bytes;
+  } else {
+    final seedFile = File(p.join(pendingDir.path, 'seed.bin'));
+    await seedFile.parent.create(recursive: true);
+    await seedFile.writeAsBytes(bytes, flush: true);
+    final seedingUpload = MediaUploadService(
+      apiClient: env.apiClient,
+      pendingUploadBase: pendingDir,
+      cloudedBase: cloudedDir,
+      partSizeBytes: 8 * 1024,
+      remoteFileKeyResolver: (_) => remoteKey,
+    );
+    await seedingUpload.processPendingUploads();
+
+    final localSeedCopy = File(
+      p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
+    );
+    if (await localSeedCopy.exists()) {
+      await localSeedCopy.delete();
+    }
+  }
+
+  final downloadService = MediaDownloadService(
+    apiClient: env.apiClient,
+    cloudedBase: cloudedDir,
+    maxPartConcurrency: 3,
+  );
+
+  final file = await downloadService.download(remoteFileKey: remoteKey);
+
+  expect(await file.exists(), isTrue);
+  expect(await file.readAsBytes(), equals(bytes));
+
+  final downloadingDir = Directory(
+    p.join(cloudedDir.path, '__downloading', p.basename(remoteKey)),
+  );
+  expect(await downloadingDir.exists(), isFalse);
+}
+
+Future<_Env> _buildOfflineEnv() async {
+  final server = FakeMediaServer();
+  await server.start();
+  final client = MediaApiClient(server.baseUri.toString());
+  return _Env(
+    apiClient: client,
+    fakeServer: server,
+    dispose: () async {
+      client.close();
+      await server.stop();
+    },
+  );
+}
+
+Future<_Env> _buildInternetEnv() async {
+  final baseUrl = Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl;
+  final client = MediaApiClient(baseUrl);
+  return _Env(
+    apiClient: client,
+    fakeServer: null,
+    dispose: () async {
+      client.close();
+    },
+  );
+}
+
+class _Env {
+  _Env({
+    required this.apiClient,
+    required this.fakeServer,
+    required this.dispose,
+  });
+
+  final MediaApiClient apiClient;
+  final FakeMediaServer? fakeServer;
+  final Future<void> Function() dispose;
 }
 
 class FakeMediaServer {
