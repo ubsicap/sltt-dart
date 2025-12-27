@@ -193,6 +193,10 @@ class MediaApiClient {
     if (cursor != null) body['cursor'] = cursor;
 
     final data = await _postJson(uri, body);
+    final rawUploadId = (data['UploadId'] as String?) ?? uploadId;
+    final normalizedUploadId = rawUploadId == null || rawUploadId.isEmpty
+        ? null
+        : rawUploadId;
     final partsJson = (data['Parts'] as List<dynamic>? ?? []);
     final parts = partsJson.map((e) {
       final m = e as Map<String, dynamic>;
@@ -209,7 +213,7 @@ class MediaApiClient {
 
     return ListPartsResponse(
       remoteFileKey: data['Key'] as String? ?? remoteFileKey,
-      uploadId: data['UploadId'] as String? ?? uploadId,
+      uploadId: normalizedUploadId,
       parts: parts,
       isTruncated: data['IsTruncated'] as bool? ?? false,
       cursor: data['Cursor'] as String?,
@@ -656,18 +660,18 @@ Future<void> _runWithConcurrency<T>({
   required int concurrency,
   required Future<void> Function(T item) worker,
 }) async {
-  final controller = StreamController<T>();
-  final stream = controller.stream;
+  if (items.isEmpty) return;
 
-  final workers = List.generate(concurrency, (_) async {
-    await for (final item in stream) {
+  final capped = concurrency <= 0 ? 1 : min(concurrency, items.length);
+  var index = 0;
+
+  Future<void> runWorker() async {
+    while (true) {
+      if (index >= items.length) return;
+      final item = items[index++];
       await worker(item);
     }
-  });
-
-  for (final item in items) {
-    controller.add(item);
   }
-  await controller.close();
-  await Future.wait(workers);
+
+  await Future.wait(List.generate(capped, (_) => runWorker()));
 }
