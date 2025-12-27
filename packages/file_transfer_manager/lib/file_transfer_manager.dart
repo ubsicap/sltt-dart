@@ -1,15 +1,19 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
+
+import 'package:path/path.dart' as p;
 
 /// fast and memory-efficient file concatenation
 Future<void> concatenateFiles({
   required List<File> parts,
   required File output,
 }) async {
-  final sink = output.openWrite(); // streaming write
+  final sink = output.openWrite();
 
   try {
     for (final part in parts) {
-      // Stream bytes directly from disk → sink
       await sink.addStream(part.openRead());
     }
   } finally {
@@ -18,11 +22,652 @@ Future<void> concatenateFiles({
 }
 
 const maxConcurrency = 4;
+const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
 
 /// Adaptive chunk size based on file size
 int chooseChunkSize(int fileSizeBytes) {
-  if (fileSizeBytes < 20 * 1024 * 1024) return fileSizeBytes; // no chunking
+  if (fileSizeBytes < 20 * 1024 * 1024) return fileSizeBytes;
   if (fileSizeBytes < 200 * 1024 * 1024) return 2 * 1024 * 1024;
   if (fileSizeBytes < 1000 * 1024 * 1024) return 5 * 1024 * 1024;
   return 10 * 1024 * 1024;
+}
+
+class SignedUrlBundle {
+  SignedUrlBundle({
+    required this.remoteFileKey,
+    this.headObject,
+    this.getObject,
+    this.uploadPart,
+    this.partNumber,
+    this.uploadId,
+    this.expiresAt,
+  });
+
+  final String remoteFileKey;
+  final Uri? headObject;
+  final Uri? getObject;
+  final Uri? uploadPart;
+  final int? partNumber;
+  final String? uploadId;
+  final DateTime? expiresAt;
+
+  factory SignedUrlBundle.fromJson(Map<String, dynamic> json) {
+    DateTime? expires;
+    final expiresRaw = json['expiresAt'];
+    if (expiresRaw is String) {
+      expires = DateTime.tryParse(expiresRaw);
+    }
+
+    return SignedUrlBundle(
+      remoteFileKey: json['remoteFileKey'] as String,
+      headObject: json['head_object'] != null
+          ? Uri.parse(json['head_object'] as String)
+          : null,
+      getObject: json['get_object'] != null
+          ? Uri.parse(json['get_object'] as String)
+          : null,
+      uploadPart: json['upload_part'] != null
+          ? Uri.parse(json['upload_part'] as String)
+          : null,
+      partNumber: json['partNumber'] as int?,
+      uploadId: json['uploadId'] as String?,
+      expiresAt: expires,
+    );
+  }
+}
+
+class ListedPart {
+  ListedPart({
+    required this.partNumber,
+    required this.size,
+    required this.eTag,
+    this.lastModified,
+  });
+
+  final int partNumber;
+  final int size;
+  final String eTag;
+  final DateTime? lastModified;
+}
+
+class ListPartsResponse {
+  ListPartsResponse({
+    required this.remoteFileKey,
+    this.uploadId,
+    required this.parts,
+    this.isTruncated = false,
+    this.cursor,
+  });
+
+  final String remoteFileKey;
+  final String? uploadId;
+  final List<ListedPart> parts;
+  final bool isTruncated;
+  final String? cursor;
+}
+
+class MultipartCreateResponse {
+  MultipartCreateResponse({
+    required this.remoteFileKey,
+    required this.uploadId,
+    this.bucket,
+  });
+
+  final String remoteFileKey;
+  final String uploadId;
+  final String? bucket;
+}
+
+class UploadedPartSummary {
+  UploadedPartSummary({required this.partNumber, required this.eTag});
+
+  final int partNumber;
+  final String eTag;
+}
+
+class MediaApiClient {
+  MediaApiClient(String baseUrl, {HttpClient? client})
+    : baseUri = Uri.parse(baseUrl),
+      httpClient = client ?? HttpClient();
+
+  final Uri baseUri;
+  final HttpClient httpClient;
+
+  Uri _path(String path) {
+    final normalized = path.startsWith('/') ? path.substring(1) : path;
+    return baseUri.resolve(normalized);
+  }
+
+  Future<Map<String, dynamic>> _postJson(
+    Uri uri,
+    Map<String, dynamic> body,
+  ) async {
+    final request = await httpClient.postUrl(uri);
+    request.headers.contentType = ContentType.json;
+    request.write(jsonEncode(body));
+
+    final response = await request.close();
+    final text = await response.transform(utf8.decoder).join();
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(text) as Map<String, dynamic>;
+    }
+
+    throw HttpException(
+      'POST ${uri.path} failed (${response.statusCode}): $text',
+      uri: uri,
+    );
+  }
+
+  Future<List<SignedUrlBundle>> getUrls({
+    required String remoteFileKey,
+    required List<String> clientMethods,
+    int? partNumber,
+    String? uploadId,
+  }) async {
+    final uri = _path('/api/media/get-urls');
+    final body = <String, dynamic>{
+      'remoteFileKey': remoteFileKey,
+      'clientMethods': clientMethods,
+    };
+
+    if (partNumber != null) body['partNumber'] = partNumber;
+    if (uploadId != null) body['uploadId'] = uploadId;
+
+    final data = await _postJson(uri, body);
+    final urls = (data['urls'] as List<dynamic>? ?? [])
+        .map((e) => SignedUrlBundle.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    return urls;
+  }
+
+  Future<ListPartsResponse> listParts({
+    required String remoteFileKey,
+    String? uploadId,
+    String? cursor,
+  }) async {
+    final uri = _path('/api/media/list-parts');
+    final body = <String, dynamic>{'remoteFileKey': remoteFileKey};
+    if (uploadId != null) body['uploadId'] = uploadId;
+    if (cursor != null) body['cursor'] = cursor;
+
+    final data = await _postJson(uri, body);
+    final partsJson = (data['Parts'] as List<dynamic>? ?? []);
+    final parts = partsJson.map((e) {
+      final m = e as Map<String, dynamic>;
+      DateTime? lastModified;
+      final last = m['LastModified'];
+      if (last is String) lastModified = DateTime.tryParse(last);
+      return ListedPart(
+        partNumber: (m['PartNumber'] as num).toInt(),
+        size: (m['Size'] as num).toInt(),
+        eTag: m['ETag'] as String,
+        lastModified: lastModified,
+      );
+    }).toList();
+
+    return ListPartsResponse(
+      remoteFileKey: data['Key'] as String? ?? remoteFileKey,
+      uploadId: data['UploadId'] as String? ?? uploadId,
+      parts: parts,
+      isTruncated: data['IsTruncated'] as bool? ?? false,
+      cursor: data['Cursor'] as String?,
+    );
+  }
+
+  Future<MultipartCreateResponse> createMultipart(String remoteFileKey) async {
+    final uri = _path('/api/media/multipart-create');
+    final data = await _postJson(uri, {'remoteFileKey': remoteFileKey});
+    return MultipartCreateResponse(
+      remoteFileKey: data['remoteFileKey'] as String? ?? remoteFileKey,
+      uploadId: data['uploadId'] as String,
+      bucket: data['bucket'] as String?,
+    );
+  }
+
+  Future<void> completeMultipart({
+    required String remoteFileKey,
+    required String uploadId,
+    required List<UploadedPartSummary> parts,
+  }) async {
+    final uri = _path('/api/media/multipart-complete');
+    final body = {
+      'remoteFileKey': remoteFileKey,
+      'uploadId': uploadId,
+      'parts': parts
+          .map((p) => {'partNumber': p.partNumber, 'eTag': p.eTag})
+          .toList(),
+    };
+
+    await _postJson(uri, body);
+  }
+
+  Future<HttpClientResponse> head(Uri url) async {
+    final request = await httpClient.openUrl('HEAD', url);
+    return request.close();
+  }
+
+  Future<HttpClientResponse> get(
+    Uri url, {
+    Map<String, String>? headers,
+  }) async {
+    final request = await httpClient.getUrl(url);
+    headers?.forEach(request.headers.set);
+    return request.close();
+  }
+
+  Future<HttpClientResponse> putStream({
+    required Uri url,
+    required Stream<List<int>> bytes,
+    required int contentLength,
+  }) async {
+    final request = await httpClient.putUrl(url);
+    request.contentLength = contentLength;
+    await request.addStream(bytes);
+    return request.close();
+  }
+
+  void close() {
+    httpClient.close(force: true);
+  }
+}
+
+class MediaUploadService {
+  MediaUploadService({
+    required this.apiClient,
+    required this.pendingUploadBase,
+    required this.cloudedBase,
+    this.remoteFileKeyResolver,
+    this.partSizeBytes = _defaultPartSizeBytes,
+    this.maxPartConcurrency = maxConcurrency,
+  });
+
+  final MediaApiClient apiClient;
+  final Directory pendingUploadBase;
+  final Directory cloudedBase;
+  final String Function(File file)? remoteFileKeyResolver;
+  final int partSizeBytes;
+  final int maxPartConcurrency;
+
+  bool _processing = false;
+  bool _rerunRequested = false;
+  final Random _random = Random();
+
+  Future<void> watchAndProcess() async {
+    await processPendingUploads();
+
+    await for (final _ in pendingUploadBase.watch(recursive: true)) {
+      if (_processing) {
+        _rerunRequested = true;
+        continue;
+      }
+      await processPendingUploads();
+    }
+  }
+
+  Future<void> processPendingUploads() async {
+    if (_processing) {
+      _rerunRequested = true;
+      return;
+    }
+
+    _processing = true;
+    try {
+      final files = await _collectFiles();
+      for (final file in files) {
+        await _uploadFile(file);
+      }
+    } finally {
+      _processing = false;
+    }
+
+    if (_rerunRequested) {
+      _rerunRequested = false;
+      await processPendingUploads();
+    }
+  }
+
+  Future<List<File>> _collectFiles() async {
+    final files = <File>[];
+    await for (final entity in pendingUploadBase.list(
+      recursive: true,
+      followLinks: false,
+    )) {
+      if (entity is File) {
+        files.add(entity);
+      }
+    }
+
+    files.sort((a, b) {
+      final aStat = a.statSync();
+      final bStat = b.statSync();
+      return aStat.modified.compareTo(bStat.modified);
+    });
+
+    final ordered = <File>[];
+    var left = 0;
+    var right = files.length - 1;
+    var takeOldest = true;
+    while (left <= right) {
+      if (takeOldest) {
+        ordered.add(files[left]);
+        left++;
+      } else {
+        ordered.add(files[right]);
+        right--;
+      }
+      takeOldest = !takeOldest;
+    }
+
+    return ordered;
+  }
+
+  Future<void> _uploadFile(File file) async {
+    final fileSize = await file.length();
+    final remoteFileKey = _buildRemoteFileKey(file);
+
+    final headUrls = await apiClient.getUrls(
+      remoteFileKey: remoteFileKey,
+      clientMethods: ['head_object'],
+    );
+
+    final headUrl = headUrls
+        .firstWhere((u) => u.headObject != null)
+        .headObject!;
+    final headResponse = await apiClient.head(headUrl);
+    if (headResponse.statusCode == HttpStatus.ok) {
+      await _moveToClouded(file, remoteFileKey);
+      return;
+    }
+
+    final listed = await apiClient.listParts(remoteFileKey: remoteFileKey);
+    final existingParts = <int, String>{
+      for (final part in listed.parts) part.partNumber: part.eTag,
+    };
+
+    final uploadId =
+        listed.uploadId ??
+        (await apiClient.createMultipart(remoteFileKey)).uploadId;
+
+    final totalParts = (fileSize / partSizeBytes).ceil();
+    final missingParts = <int>[];
+    for (var partNumber = 1; partNumber <= totalParts; partNumber++) {
+      if (!existingParts.containsKey(partNumber)) {
+        missingParts.add(partNumber);
+      }
+    }
+
+    if (missingParts.isNotEmpty && existingParts.isNotEmpty) {
+      missingParts.shuffle(_random);
+    }
+
+    final uploaded = <UploadedPartSummary>[
+      for (final entry in existingParts.entries)
+        UploadedPartSummary(partNumber: entry.key, eTag: entry.value),
+    ];
+
+    if (missingParts.isNotEmpty) {
+      await _runWithConcurrency<int>(
+        items: missingParts,
+        concurrency: maxPartConcurrency,
+        worker: (partNumber) async {
+          final eTag = await _uploadPart(
+            file: file,
+            partNumber: partNumber,
+            uploadId: uploadId,
+            remoteFileKey: remoteFileKey,
+          );
+          uploaded.add(UploadedPartSummary(partNumber: partNumber, eTag: eTag));
+        },
+      );
+    }
+
+    uploaded.sort((a, b) => a.partNumber.compareTo(b.partNumber));
+    await apiClient.completeMultipart(
+      remoteFileKey: remoteFileKey,
+      uploadId: uploadId,
+      parts: uploaded,
+    );
+
+    await _moveToClouded(file, remoteFileKey);
+  }
+
+  Future<String> _uploadPart({
+    required File file,
+    required int partNumber,
+    required String uploadId,
+    required String remoteFileKey,
+  }) async {
+    final start = (partNumber - 1) * partSizeBytes;
+    final endExclusive = min(start + partSizeBytes, await file.length());
+    final length = endExclusive - start;
+
+    var attempt = 0;
+    while (true) {
+      attempt++;
+      final bundle = await apiClient.getUrls(
+        remoteFileKey: remoteFileKey,
+        clientMethods: ['upload_part'],
+        partNumber: partNumber,
+        uploadId: uploadId,
+      );
+
+      final signed = bundle.firstWhere((u) => u.uploadPart != null);
+      if (signed.expiresAt != null &&
+          DateTime.now().isAfter(signed.expiresAt!)) {
+        continue;
+      }
+
+      final stream = file.openRead(start, endExclusive);
+      final response = await apiClient.putStream(
+        url: signed.uploadPart!,
+        bytes: stream,
+        contentLength: length,
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final eTag = response.headers.value('etag');
+        if (eTag == null || eTag.isEmpty) {
+          throw StateError(
+            'upload_part missing ETag for $remoteFileKey part $partNumber',
+          );
+        }
+        return eTag;
+      }
+
+      if (response.statusCode == HttpStatus.forbidden && attempt < 3) {
+        continue;
+      }
+
+      final body = await response.transform(utf8.decoder).join();
+      throw HttpException(
+        'Failed to upload part $partNumber for $remoteFileKey (${response.statusCode}): $body',
+        uri: signed.uploadPart,
+      );
+    }
+  }
+
+  Future<void> _moveToClouded(File file, String remoteFileKey) async {
+    final relative = remoteFileKey.replaceAll('\\', '/');
+    final destination = File(p.join(cloudedBase.path, relative));
+    await destination.parent.create(recursive: true);
+
+    try {
+      await file.rename(destination.path);
+    } on FileSystemException {
+      await file.copy(destination.path);
+      await file.delete();
+    }
+  }
+
+  String _buildRemoteFileKey(File file) {
+    if (remoteFileKeyResolver != null) {
+      return remoteFileKeyResolver!(file);
+    }
+    final relative = p.relative(file.path, from: pendingUploadBase.path);
+    return p.toUri(relative).path;
+  }
+}
+
+class MediaDownloadService {
+  MediaDownloadService({
+    required this.apiClient,
+    required this.cloudedBase,
+    this.maxPartConcurrency = maxConcurrency,
+  });
+
+  final MediaApiClient apiClient;
+  final Directory cloudedBase;
+  final int maxPartConcurrency;
+
+  Future<File> download({
+    required String remoteFileKey,
+    String? fileName,
+  }) async {
+    final signed = await apiClient.getUrls(
+      remoteFileKey: remoteFileKey,
+      clientMethods: ['head_object', 'get_object'],
+    );
+
+    final headUrl = signed.firstWhere((u) => u.headObject != null).headObject!;
+    final getUrl = signed.firstWhere((u) => u.getObject != null).getObject!;
+    final expiresAt = signed.first.expiresAt;
+
+    final headResponse = await apiClient.head(headUrl);
+    if (headResponse.statusCode != HttpStatus.ok) {
+      throw HttpException(
+        'HEAD failed for $remoteFileKey (${headResponse.statusCode})',
+        uri: headUrl,
+      );
+    }
+
+    final contentLengthStr = headResponse.headers.value(
+      HttpHeaders.contentLengthHeader,
+    );
+    if (contentLengthStr == null) {
+      throw StateError('Missing content-length for $remoteFileKey');
+    }
+
+    final contentLength = int.parse(contentLengthStr);
+    final resolvedFileName = fileName ?? p.basename(remoteFileKey);
+    final targetDir = Directory(
+      p.join(
+        cloudedBase.path,
+        resolvedFileName.length >= 7
+            ? resolvedFileName.substring(0, 7)
+            : resolvedFileName,
+      ),
+    );
+    await targetDir.create(recursive: true);
+
+    final chunkSize = chooseChunkSize(contentLength);
+
+    if (chunkSize >= contentLength) {
+      final destFile = File(p.join(targetDir.path, resolvedFileName));
+      final response = await _getWithRenewal(getUrl, expiresAt);
+      final sink = destFile.openWrite();
+      await sink.addStream(response);
+      await sink.close();
+      return destFile;
+    }
+
+    final totalParts = (contentLength / chunkSize).ceil();
+    final downloadDir = Directory(
+      p.join(cloudedBase.path, '__downloading', resolvedFileName),
+    );
+    await downloadDir.create(recursive: true);
+
+    Future<File> downloadPart(int partNumber) async {
+      final start = (partNumber - 1) * chunkSize;
+      final end = min(contentLength - 1, start + chunkSize - 1);
+      final response = await _getWithRenewal(
+        getUrl,
+        expiresAt,
+        headers: {HttpHeaders.rangeHeader: 'bytes=$start-$end'},
+      );
+
+      final partFile = File(
+        p.join(
+          downloadDir.path,
+          '$resolvedFileName-${partNumber.toString().padLeft(7, '0')}',
+        ),
+      );
+      final sink = partFile.openWrite();
+      await sink.addStream(response);
+      await sink.close();
+      return partFile;
+    }
+
+    // Download last part first.
+    await downloadPart(totalParts);
+
+    final remainingParts = [for (var i = 1; i < totalParts; i++) i];
+    remainingParts.shuffle(Random());
+
+    await _runWithConcurrency<int>(
+      items: remainingParts,
+      concurrency: maxPartConcurrency,
+      worker: (part) => downloadPart(part).then((_) => null),
+    );
+
+    final orderedParts = [for (var i = 1; i <= totalParts; i++) i]
+        .map(
+          (part) => File(
+            p.join(
+              downloadDir.path,
+              '$resolvedFileName-${part.toString().padLeft(7, '0')}',
+            ),
+          ),
+        )
+        .toList();
+
+    final destFile = File(p.join(targetDir.path, resolvedFileName));
+    await concatenateFiles(parts: orderedParts, output: destFile);
+
+    await downloadDir.delete(recursive: true);
+    return destFile;
+  }
+
+  Future<Stream<List<int>>> _getWithRenewal(
+    Uri initialUrl,
+    DateTime? expiresAt, {
+    Map<String, String>? headers,
+  }) async {
+    if (expiresAt != null && DateTime.now().isAfter(expiresAt)) {
+      throw StateError('Signed URL expired before download started');
+    }
+
+    final response = await apiClient.get(initialUrl, headers: headers);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response;
+    }
+
+    final body = await response.transform(utf8.decoder).join();
+    throw HttpException(
+      'GET failed (${response.statusCode}): $body',
+      uri: initialUrl,
+    );
+  }
+}
+
+Future<void> _runWithConcurrency<T>({
+  required List<T> items,
+  required int concurrency,
+  required Future<void> Function(T item) worker,
+}) async {
+  final controller = StreamController<T>();
+  final stream = controller.stream;
+
+  final workers = List.generate(concurrency, (_) async {
+    await for (final item in stream) {
+      await worker(item);
+    }
+  });
+
+  for (final item in items) {
+    controller.add(item);
+  }
+  await controller.close();
+  await Future.wait(workers);
 }
