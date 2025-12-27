@@ -24,9 +24,9 @@ String buildTestRemoteKey({
 }
 
 void main() {
-  final enableInternet =
-      Platform.environment['RUN_INTERNET_TESTS'] == 'true' ||
-          Platform.environment.containsKey('CLOUD_BASE_URL');
+  final enableInternet = true;
+  // Platform.environment['RUN_INTERNET_TESTS'] == 'true' ||
+  //     Platform.environment.containsKey('CLOUD_BASE_URL');
 
   group('offline (fake server)', () {
     late Directory tempDir;
@@ -50,11 +50,19 @@ void main() {
     });
 
     test('uploads pending files via multipart and moves to clouded', () async {
-      await _runUploadTest(env: env, pendingDir: pendingDir, cloudedDir: cloudedDir);
+      await _runUploadTest(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+      );
     });
 
     test('downloads chunked file and assembles locally', () async {
-      await _runDownloadTest(env: env, pendingDir: pendingDir, cloudedDir: cloudedDir);
+      await _runDownloadTest(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+      );
     });
   });
 
@@ -81,12 +89,23 @@ void main() {
         await tempDir.delete(recursive: true);
       });
 
-      test('uploads pending files via multipart and moves to clouded', () async {
-        await _runUploadTest(env: env, pendingDir: pendingDir, cloudedDir: cloudedDir);
-      });
+      test(
+        'uploads pending files via multipart and moves to clouded',
+        () async {
+          await _runUploadTest(
+            env: env,
+            pendingDir: pendingDir,
+            cloudedDir: cloudedDir,
+          );
+        },
+      );
 
       test('downloads chunked file and assembles locally', () async {
-        await _runDownloadTest(env: env, pendingDir: pendingDir, cloudedDir: cloudedDir);
+        await _runDownloadTest(
+          env: env,
+          pendingDir: pendingDir,
+          cloudedDir: cloudedDir,
+        );
       });
     },
     skip: enableInternet
