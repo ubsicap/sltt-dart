@@ -1,8 +1,18 @@
-/// Support for doing something awesome.
-///
-/// More dartdocs go here.
-library;
+import 'dart:io';
 
-export 'src/file_transfer_manager_base.dart';
+/// fast and memory-efficient file concatenation
+Future<void> concatenateFiles({
+  required List<File> parts,
+  required File output,
+}) async {
+  final sink = output.openWrite(); // streaming write
 
-// TODO: Export any libraries intended for clients of this package.
+  try {
+    for (final part in parts) {
+      // Stream bytes directly from disk → sink
+      await sink.addStream(part.openRead());
+    }
+  } finally {
+    await sink.close();
+  }
+}
