@@ -7,6 +7,8 @@ import 'package:path/path.dart' as p;
 import 'package:sltt_core/src/server/server_urls.dart';
 import 'package:test/test.dart';
 
+const s3CompatiblePartSize = 6 * 1024 * 1024; // 6MB, exceeds 5MB minimum
+
 String buildTestRemoteKey({
   required String relativePath,
   required String testName,
@@ -119,7 +121,10 @@ Future<void> _runUploadTest({
   final file = File(filePath);
   await file.parent.create(recursive: true);
 
-  final content = List<int>.generate(32 * 1024, (i) => i % 256); // 32KB
+  final content = List<int>.generate(
+    s3CompatiblePartSize * 2 + 123,
+    (i) => i % 256,
+  ); // ~12MB to ensure multipart parts >5MB
   await file.writeAsBytes(content, flush: true);
 
   const testName = 'uploads pending files via multipart and moves to clouded';
@@ -134,7 +139,7 @@ Future<void> _runUploadTest({
     apiClient: env.apiClient,
     pendingUploadBase: pendingDir,
     cloudedBase: cloudedDir,
-    partSizeBytes: 8 * 1024, // force multipart
+    partSizeBytes: s3CompatiblePartSize,
     remoteFileKeyResolver: (f) => buildTestRemoteKey(
       relativePath: p.relative(f.path, from: pendingDir.path),
       testName: testName,
@@ -180,7 +185,7 @@ Future<void> _runDownloadTest({
       apiClient: env.apiClient,
       pendingUploadBase: pendingDir,
       cloudedBase: cloudedDir,
-      partSizeBytes: 8 * 1024,
+      partSizeBytes: s3CompatiblePartSize,
       remoteFileKeyResolver: (_) => remoteKey,
     );
     await seedingUpload.processPendingUploads();
