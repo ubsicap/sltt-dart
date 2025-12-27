@@ -6,6 +6,20 @@ import 'package:file_transfer_manager/file_transfer_manager.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+String buildTestRemoteKey({
+  required String relativePath,
+  required String testName,
+  required DateTime timestamp,
+}) {
+  final normalized = relativePath.replaceAll('\\', '/');
+  final dir = p.posix.dirname(normalized);
+  final base = p.posix.basename(normalized);
+  final sanitizedTest = testName.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+  final suffix = '${base}_${timestamp.toUtc().millisecondsSinceEpoch}';
+  final dirPart = dir == '.' ? '' : '$dir/';
+  return '__test/$sanitizedTest/$dirPart$suffix';
+}
+
 void main() {
   late Directory tempDir;
   late Directory pendingDir;
@@ -40,28 +54,49 @@ void main() {
       final content = List<int>.generate(32 * 1024, (i) => i % 256); // 32KB
       await file.writeAsBytes(content, flush: true);
 
+      const testName =
+          'uploads pending files via multipart and moves to clouded';
+      final timestamp = DateTime.now();
+      final remoteKey = buildTestRemoteKey(
+        relativePath: p.relative(file.path, from: pendingDir.path),
+        testName: testName,
+        timestamp: timestamp,
+      );
+
       final uploadService = MediaUploadService(
         apiClient: apiClient,
         pendingUploadBase: pendingDir,
         cloudedBase: cloudedDir,
         partSizeBytes: 8 * 1024, // force multipart
+        remoteFileKeyResolver: (f) => buildTestRemoteKey(
+          relativePath: p.relative(f.path, from: pendingDir.path),
+          testName: testName,
+          timestamp: timestamp,
+        ),
       );
 
       await uploadService.processPendingUploads();
-
-      final cloudedFile = File(p.join(cloudedDir.path, 'videos', 'clip.bin'));
+      final cloudedFile = File(
+        p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
+      );
       expect(await cloudedFile.exists(), isTrue);
       expect(await cloudedFile.readAsBytes(), equals(content));
       expect(await file.exists(), isFalse);
 
-      final stored = server.completedObjects['videos/clip.bin'];
+      final stored = server.completedObjects[remoteKey];
       expect(stored, equals(content));
     });
   });
 
   group('MediaDownloadService', () {
     test('downloads chunked file and assembles locally', () async {
-      final remoteKey = 'media/bigfile.bin';
+      const testName = 'downloads chunked file and assembles locally';
+      final timestamp = DateTime.now();
+      final remoteKey = buildTestRemoteKey(
+        relativePath: 'media/bigfile.bin',
+        testName: testName,
+        timestamp: timestamp,
+      );
       final size = 21 * 1024 * 1024 + 123; // triggers chunked path
       final rand = Random(42);
       final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
