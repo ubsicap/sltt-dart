@@ -135,7 +135,8 @@ class MediaApiClient {
 
   Uri _path(String path) {
     final normalized = path.startsWith('/') ? path.substring(1) : path;
-    return baseUri.resolve(normalized);
+    final base = baseUri.toString().replaceAll(RegExp(r'/+$'), '');
+    return Uri.parse('$base/$normalized');
   }
 
   Future<Map<String, dynamic>> _postJson(
