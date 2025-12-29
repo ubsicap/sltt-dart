@@ -304,6 +304,8 @@ class MediaUploadService {
   bool _processing = false;
   bool _rerunRequested = false;
   final Random _random = Random();
+  bool _uploadsEnabled = false;
+  StreamSubscription<FileSystemEvent>? _uploadWatch;
   void _reportTotals() =>
       pendingTotalsCallback?.call(_pendingFiles, _pendingBytes);
 
@@ -320,16 +322,32 @@ class MediaUploadService {
   int _pendingFiles = 0;
   int _pendingBytes = 0;
 
-  Future<void> watchAndProcess() async {
-    await processPendingUploads();
+  Future<void> watchAndProcess() async => startProcessingUploads();
 
-    await for (final _ in pendingUploadBase.watch(recursive: true)) {
+  Future<void> startProcessingUploads() async {
+    _uploadsEnabled = true;
+    _ensureUploadWatch();
+    await processPendingUploads();
+  }
+
+  Future<void> resumeProcessingUploads() async => startProcessingUploads();
+
+  Future<void> stopProcessingUploads() async {
+    _uploadsEnabled = false;
+    _rerunRequested = false;
+  }
+
+  void _ensureUploadWatch() {
+    if (_uploadWatch != null) return;
+    _uploadWatch = pendingUploadBase.watch(recursive: true).listen((
+      event,
+    ) async {
       if (_processing) {
         _rerunRequested = true;
-        continue;
+        return;
       }
       await processPendingUploads();
-    }
+    });
   }
 
   Future<void> processPendingUploads() async {
@@ -343,8 +361,10 @@ class MediaUploadService {
       _pendingFiles = 0;
       _pendingBytes = 0;
       final files = await _collectFiles();
-      for (final file in files) {
-        await _uploadFile(file);
+      if (_uploadsEnabled) {
+        for (final file in files) {
+          await _uploadFile(file);
+        }
       }
     } finally {
       _processing = false;
@@ -578,6 +598,7 @@ class MediaDownloadService {
   int _activeDownloads = 0;
   bool _processingQueue = false;
   int _pendingDownloads = 0;
+  bool _downloadsEnabled = true;
 
   void _reportPendingDownloads() =>
       pendingDownloadsCallback?.call(_pendingDownloads);
@@ -585,6 +606,15 @@ class MediaDownloadService {
   void _adjustPendingDownloads(int delta) {
     _pendingDownloads = ((_pendingDownloads + delta).clamp(0, 1 << 30));
     _reportPendingDownloads();
+  }
+
+  void stopProcessingDownloads() {
+    _downloadsEnabled = false;
+  }
+
+  void resumeProcessingDownloads() {
+    _downloadsEnabled = true;
+    _processQueue();
   }
 
   Future<File> enqueueDownload({
@@ -622,12 +652,14 @@ class MediaDownloadService {
   }
 
   void _processQueue() {
-    if (_processingQueue) return;
+    if (_processingQueue || !_downloadsEnabled) return;
     _processingQueue = true;
 
     Future<void>.microtask(() async {
       try {
-        while (_activeDownloads < maxDownloadConcurrency && _queue.isNotEmpty) {
+        while (_downloadsEnabled &&
+            _activeDownloads < maxDownloadConcurrency &&
+            _queue.isNotEmpty) {
           final job = _queue.removeAt(0);
           _activeDownloads++;
           _runSingleDownload(job).whenComplete(() {
