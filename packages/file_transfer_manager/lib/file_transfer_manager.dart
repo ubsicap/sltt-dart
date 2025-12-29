@@ -25,6 +25,8 @@ const maxConcurrency = 4;
 const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
 const _defaultDownloadConcurrency = 4;
 
+typedef PendingUploadTotalsCallback = void Function(int files, int bytes);
+
 /// Adaptive chunk size based on file size
 int chooseChunkSize(int fileSizeBytes) {
   if (fileSizeBytes < 20 * 1024 * 1024) return fileSizeBytes;
@@ -287,6 +289,7 @@ class MediaUploadService {
     this.remoteFileKeyResolver,
     this.partSizeBytes = _defaultPartSizeBytes,
     this.maxPartConcurrency = maxConcurrency,
+    this.pendingTotalsCallback,
   });
 
   final MediaApiClient apiClient;
@@ -295,10 +298,26 @@ class MediaUploadService {
   final String Function(File file)? remoteFileKeyResolver;
   final int partSizeBytes;
   final int maxPartConcurrency;
+  final PendingUploadTotalsCallback? pendingTotalsCallback;
 
   bool _processing = false;
   bool _rerunRequested = false;
   final Random _random = Random();
+  void _reportTotals() =>
+      pendingTotalsCallback?.call(_pendingFiles, _pendingBytes);
+
+  void _adjustPendingFiles(int delta) {
+    _pendingFiles = (_pendingFiles + delta).clamp(0, 1 << 30);
+    _reportTotals();
+  }
+
+  void _adjustPendingBytes(int delta) {
+    _pendingBytes = (_pendingBytes + delta).clamp(0, 1 << 62);
+    _reportTotals();
+  }
+
+  int _pendingFiles = 0;
+  int _pendingBytes = 0;
 
   Future<void> watchAndProcess() async {
     await processPendingUploads();
@@ -320,6 +339,8 @@ class MediaUploadService {
 
     _processing = true;
     try {
+      _pendingFiles = 0;
+      _pendingBytes = 0;
       final files = await _collectFiles();
       for (final file in files) {
         await _uploadFile(file);
@@ -341,7 +362,10 @@ class MediaUploadService {
       followLinks: false,
     )) {
       if (entity is File) {
+        final size = await entity.length();
         files.add(entity);
+        _adjustPendingFiles(1);
+        _adjustPendingBytes(size);
       }
     }
 
@@ -383,6 +407,8 @@ class MediaUploadService {
         .headObject!;
     final headResponse = await apiClient.head(headUrl);
     if (headResponse.statusCode == HttpStatus.ok) {
+      _adjustPendingBytes(-fileSize);
+      _adjustPendingFiles(-1);
       await _moveToClouded(file, remoteFileKey);
       return;
     }
@@ -413,6 +439,12 @@ class MediaUploadService {
         UploadedPartSummary(partNumber: entry.key, eTag: entry.value),
     ];
 
+    final missingBytes = missingParts.fold<int>(
+      0,
+      (sum, partNumber) => sum + _partLength(fileSize, partNumber),
+    );
+    _adjustPendingBytes(missingBytes - fileSize);
+
     if (missingParts.isNotEmpty) {
       await _runWithConcurrency<int>(
         items: missingParts,
@@ -436,6 +468,7 @@ class MediaUploadService {
       parts: uploaded,
     );
 
+    _adjustPendingFiles(-1);
     await _moveToClouded(file, remoteFileKey);
   }
 
@@ -479,6 +512,7 @@ class MediaUploadService {
             'upload_part missing ETag for $remoteFileKey part $partNumber',
           );
         }
+        _adjustPendingBytes(-length);
         return eTag;
       }
 
@@ -492,6 +526,12 @@ class MediaUploadService {
         uri: signed.uploadPart,
       );
     }
+  }
+
+  int _partLength(int fileSize, int partNumber) {
+    final start = (partNumber - 1) * partSizeBytes;
+    final endExclusive = min(start + partSizeBytes, fileSize);
+    return endExclusive - start;
   }
 
   Future<void> _moveToClouded(File file, String remoteFileKey) async {
