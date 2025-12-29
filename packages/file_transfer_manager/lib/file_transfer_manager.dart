@@ -326,7 +326,6 @@ class MediaUploadService {
 
   Future<void> startProcessingUploads() async {
     _uploadsEnabled = true;
-    _ensureUploadWatch();
     await processPendingUploads();
   }
 
@@ -363,6 +362,7 @@ class MediaUploadService {
       return;
     }
 
+    _ensureUploadWatch();
     _processing = true;
     try {
       _pendingFiles = 0;
