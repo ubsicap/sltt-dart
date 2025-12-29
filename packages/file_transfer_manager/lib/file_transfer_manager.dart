@@ -598,7 +598,7 @@ class MediaDownloadService {
   int _activeDownloads = 0;
   bool _processingQueue = false;
   int _pendingDownloads = 0;
-  bool _downloadsEnabled = true;
+  bool _downloadsEnabled = false;
 
   void _reportPendingDownloads() =>
       pendingDownloadsCallback?.call(_pendingDownloads);
@@ -612,10 +612,12 @@ class MediaDownloadService {
     _downloadsEnabled = false;
   }
 
-  void resumeProcessingDownloads() {
+  void startProcessingDownloads() {
     _downloadsEnabled = true;
     _processQueue();
   }
+
+  void resumeProcessingDownloads() => startProcessingDownloads();
 
   Future<File> enqueueDownload({
     required String remoteFileKey,

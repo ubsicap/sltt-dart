@@ -24,8 +24,7 @@ String buildTestRemoteKey({
 }
 
 void main() {
-  final enableInternet =
-      Platform.environment['RUN_INTERNET_TESTS'] == 'true';
+  final enableInternet = Platform.environment['RUN_INTERNET_TESTS'] == 'true';
 
   group('offline (fake server)', () {
     late Directory tempDir;
@@ -126,7 +125,7 @@ void main() {
           cloudedBase: cloudedDir,
           remoteFileKeyResolver: (_) => remoteKey,
         );
-        await seedingUpload.processPendingUploads();
+        await seedingUpload.startProcessingUploads();
       }
 
       final downloadService = MediaDownloadService(
@@ -140,6 +139,7 @@ void main() {
         remoteFileKey: remoteKey,
         onProgress: (_) {},
       );
+      downloadService.startProcessingDownloads();
 
       final destFile = File(
         p.join(
@@ -150,8 +150,11 @@ void main() {
       );
 
       await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(await destFile.exists(), isFalse,
-          reason: 'download should not start while stopped');
+      expect(
+        await destFile.exists(),
+        isFalse,
+        reason: 'download should not start while stopped',
+      );
 
       downloadService.resumeProcessingDownloads();
       final file = await downloadFuture;
@@ -262,7 +265,7 @@ Future<void> _runUploadTest({
     ),
   );
 
-  await uploadService.processPendingUploads();
+  await uploadService.startProcessingUploads();
   final cloudedFile = File(
     p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
   );
@@ -303,7 +306,7 @@ Future<void> _runDownloadTest({
       partSizeBytes: s3CompatiblePartSize,
       remoteFileKeyResolver: (_) => remoteKey,
     );
-    await seedingUpload.processPendingUploads();
+    await seedingUpload.startProcessingUploads();
 
     final localSeedCopy = File(
       p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
@@ -319,6 +322,8 @@ Future<void> _runDownloadTest({
     maxPartConcurrency: 3,
     chunkSizeOverride: 2 * 1024 * 1024,
   );
+
+  downloadService.startProcessingDownloads();
 
   DownloadProgress lastProgress = DownloadProgress(
     partsCompleted: -1,
