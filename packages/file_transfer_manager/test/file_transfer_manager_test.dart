@@ -24,7 +24,8 @@ String buildTestRemoteKey({
 }
 
 void main() {
-  final enableInternet = Platform.environment['RUN_INTERNET_TESTS'] == 'true';
+  final enableInternet =
+      true; // Platform.environment['RUN_INTERNET_TESTS'] == 'true';
 
   group('offline (fake server)', () {
     late Directory tempDir;
@@ -139,7 +140,6 @@ void main() {
         remoteFileKey: remoteKey,
         onProgress: (_) {},
       );
-      downloadService.startProcessingDownloads();
 
       final destFile = File(
         p.join(
