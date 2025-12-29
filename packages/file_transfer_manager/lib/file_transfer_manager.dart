@@ -26,6 +26,7 @@ const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
 const _defaultDownloadConcurrency = 4;
 
 typedef PendingUploadTotalsCallback = void Function(int files, int bytes);
+typedef PendingDownloadTotalsCallback = void Function(int files);
 
 /// Adaptive chunk size based on file size
 int chooseChunkSize(int fileSizeBytes) {
@@ -307,12 +308,12 @@ class MediaUploadService {
       pendingTotalsCallback?.call(_pendingFiles, _pendingBytes);
 
   void _adjustPendingFiles(int delta) {
-    _pendingFiles = (_pendingFiles + delta).clamp(0, 1 << 30);
+    _pendingFiles = ((_pendingFiles + delta).clamp(0, 1 << 30));
     _reportTotals();
   }
 
   void _adjustPendingBytes(int delta) {
-    _pendingBytes = (_pendingBytes + delta).clamp(0, 1 << 62);
+    _pendingBytes = ((_pendingBytes + delta).clamp(0, 1 << 62));
     _reportTotals();
   }
 
@@ -563,6 +564,7 @@ class MediaDownloadService {
     this.maxPartConcurrency = maxConcurrency,
     this.maxDownloadConcurrency = _defaultDownloadConcurrency,
     this.chunkSizeOverride,
+    this.pendingDownloadsCallback,
   });
 
   final MediaApiClient apiClient;
@@ -570,10 +572,20 @@ class MediaDownloadService {
   final int maxPartConcurrency;
   final int maxDownloadConcurrency;
   final int? chunkSizeOverride;
+  final PendingDownloadTotalsCallback? pendingDownloadsCallback;
 
   final List<_DownloadJob> _queue = [];
   int _activeDownloads = 0;
   bool _processingQueue = false;
+  int _pendingDownloads = 0;
+
+  void _reportPendingDownloads() =>
+      pendingDownloadsCallback?.call(_pendingDownloads);
+
+  void _adjustPendingDownloads(int delta) {
+    _pendingDownloads = ((_pendingDownloads + delta).clamp(0, 1 << 30));
+    _reportPendingDownloads();
+  }
 
   Future<File> enqueueDownload({
     required String remoteFileKey,
@@ -581,6 +593,7 @@ class MediaDownloadService {
     bool addToFront = false,
     required DownloadProgressCallback onProgress,
   }) {
+    _adjustPendingDownloads(1);
     final job = _DownloadJob(
       remoteFileKey: remoteFileKey,
       fileName: fileName,
@@ -619,6 +632,7 @@ class MediaDownloadService {
           _activeDownloads++;
           _runSingleDownload(job).whenComplete(() {
             _activeDownloads--;
+            _adjustPendingDownloads(-1);
             _processingQueue = false;
             _processQueue();
           });
