@@ -102,6 +102,8 @@ void main() {
 
       final remoteBytes = await _fetchRemoteBytes(env.apiClient, remoteKey);
       expect(remoteBytes, equals(content));
+
+      await uploadService.dispose();
     });
 
     test('stops and resumes download processing', () async {
@@ -127,6 +129,7 @@ void main() {
           remoteFileKeyResolver: (_) => remoteKey,
         );
         await seedingUpload.startProcessingUploads();
+        await seedingUpload.dispose();
       }
 
       final downloadService = MediaDownloadService(
@@ -275,6 +278,8 @@ Future<void> _runUploadTest({
 
   final remoteBytes = await _fetchRemoteBytes(env.apiClient, remoteKey);
   expect(remoteBytes, equals(content));
+
+  await uploadService.dispose();
 }
 
 Future<void> _runDownloadTest({
@@ -307,6 +312,7 @@ Future<void> _runDownloadTest({
       remoteFileKeyResolver: (_) => remoteKey,
     );
     await seedingUpload.startProcessingUploads();
+    await seedingUpload.dispose();
 
     final localSeedCopy = File(
       p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),

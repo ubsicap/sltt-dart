@@ -337,6 +337,13 @@ class MediaUploadService {
     _rerunRequested = false;
   }
 
+  Future<void> dispose() async {
+    _uploadsEnabled = false;
+    _rerunRequested = false;
+    await _uploadWatch?.cancel();
+    _uploadWatch = null;
+  }
+
   void _ensureUploadWatch() {
     if (_uploadWatch != null) return;
     _uploadWatch = pendingUploadBase.watch(recursive: true).listen((
