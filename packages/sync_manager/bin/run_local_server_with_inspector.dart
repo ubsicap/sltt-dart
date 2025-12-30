@@ -7,6 +7,7 @@ import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/localhost_rest_api_server.dart';
 import 'package:sync_manager/src/models/passage_translation.entity_state.isar.dart';
 import 'package:sync_manager/src/models/portion_translation.entity_state.isar.dart';
+import 'package:sync_manager/src/models/video_translation.entity_state.isar.dart';
 
 void main(List<String> args) async {
   String? dbPath;
@@ -88,6 +89,7 @@ void main(List<String> args) async {
     providedEntityStateSchemas = [
       IsarPortionDataEntityStateSchema,
       IsarPassageDataEntityStateSchema,
+      IsarVideoDataEntityStateSchema,
       // Add any other schemas specific to sltt-standalone-app here
     ];
   } else {
