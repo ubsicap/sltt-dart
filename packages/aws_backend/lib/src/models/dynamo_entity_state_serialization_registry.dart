@@ -1,5 +1,6 @@
 import 'package:aws_backend/src/models/passage_translation.entity_state.dynamo.dart';
 import 'package:aws_backend/src/models/portion_translation.entity_state.dynamo.dart';
+import 'package:aws_backend/src/models/video_translation.entity_state.dynamo.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'dynamo_change_log_entry.dart';
@@ -37,6 +38,14 @@ final bool _dynamoSerializationRegistration = (() {
         (json) => DynamoPassageDataEntityState.fromJsonBase(json),
         (state) => (state as DynamoPassageDataEntityState).toJson(),
         (state) => (state as DynamoPassageDataEntityState).toJsonBase(),
+      );
+    } else if (entityType == EntityType.video) {
+      registerEntityStateFactory(
+        entityType,
+        (json) => DynamoVideoDataEntityState.fromJson(json),
+        (json) => DynamoVideoDataEntityState.fromJsonBase(json),
+        (state) => (state as DynamoVideoDataEntityState).toJson(),
+        (state) => (state as DynamoVideoDataEntityState).toJsonBase(),
       );
     }
     // default handler (especially for tests)
