@@ -210,9 +210,9 @@ void main() {
         );
       });
     },
-    skip: enableInternet
-        ? null
-        : 'Set RUN_INTERNET_TESTS=true and optionally CLOUD_BASE_URL to enable',
+    skip: enableInternet,
+    // ? null
+    // : 'Set RUN_INTERNET_TESTS=true and optionally CLOUD_BASE_URL to enable',
   );
 }
 
