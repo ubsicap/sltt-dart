@@ -283,6 +283,33 @@ class MediaApiClient {
 }
 
 class MediaUploadService {
+  static MediaUploadService? _singleton;
+
+  /// Returns a shared upload service instance, creating it on first use so
+  /// pending upload state/queue can be shared across the app.
+  static MediaUploadService ensureSingleton({
+    required MediaApiClient apiClient,
+    required Directory pendingUploadBase,
+    required Directory cloudedBase,
+    String Function(File file)? remoteFileKeyResolver,
+    int partSizeBytes = _defaultPartSizeBytes,
+    int maxPartConcurrency = maxConcurrency,
+    PendingUploadTotalsCallback? pendingTotalsCallback,
+  }) {
+    _singleton ??= MediaUploadService(
+      apiClient: apiClient,
+      pendingUploadBase: pendingUploadBase,
+      cloudedBase: cloudedBase,
+      remoteFileKeyResolver: remoteFileKeyResolver,
+      partSizeBytes: partSizeBytes,
+      maxPartConcurrency: maxPartConcurrency,
+      pendingTotalsCallback: pendingTotalsCallback,
+    );
+    return _singleton!;
+  }
+
+  static MediaUploadService? get instance => _singleton;
+
   MediaUploadService({
     required this.apiClient,
     required this.pendingUploadBase,
@@ -585,6 +612,32 @@ class MediaUploadService {
 }
 
 class MediaDownloadService {
+  static MediaDownloadService? _singleton;
+
+  /// Returns the shared download service instance after initializing it once.
+  /// Subsequent calls reuse the first-created instance so download queue state
+  /// is shared across the app.
+  static MediaDownloadService ensureSingleton({
+    required MediaApiClient apiClient,
+    required Directory cloudedBase,
+    int maxPartConcurrency = maxConcurrency,
+    int maxDownloadConcurrency = _defaultDownloadConcurrency,
+    int? chunkSizeOverride,
+    PendingDownloadTotalsCallback? pendingDownloadsCallback,
+  }) {
+    _singleton ??= MediaDownloadService(
+      apiClient: apiClient,
+      cloudedBase: cloudedBase,
+      maxPartConcurrency: maxPartConcurrency,
+      maxDownloadConcurrency: maxDownloadConcurrency,
+      chunkSizeOverride: chunkSizeOverride,
+      pendingDownloadsCallback: pendingDownloadsCallback,
+    );
+    return _singleton!;
+  }
+
+  static MediaDownloadService? get instance => _singleton;
+
   MediaDownloadService({
     required this.apiClient,
     required this.cloudedBase,
