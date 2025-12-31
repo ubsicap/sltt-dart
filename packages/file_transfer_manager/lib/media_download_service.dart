@@ -78,6 +78,22 @@ class MediaDownloadService {
     bool addToFront = false,
     required DownloadProgressCallback onProgress,
   }) {
+    final existingIndex = _queue.indexWhere(
+      (job) => job.remoteFileKey == remoteFileKey,
+    );
+
+    if (existingIndex != -1) {
+      final existingJob = _queue.removeAt(existingIndex);
+      final wasDownloadEnabled = _downloadsEnabled;
+      stopProcessingDownloads();
+      // Always move to the front when re-requested to prioritize it.
+      _queue.insert(0, existingJob);
+      if (wasDownloadEnabled) {
+        startProcessingDownloads();
+      }
+      return existingJob.completer.future;
+    }
+
     _adjustPendingDownloads(1);
     final job = _DownloadJob(
       remoteFileKey: remoteFileKey,
