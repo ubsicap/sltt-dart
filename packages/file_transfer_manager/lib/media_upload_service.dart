@@ -28,6 +28,10 @@ class MediaUploadService {
 
   static MediaUploadService? get instance => _singleton;
 
+  static void clearInstance() {
+    _singleton = null;
+  }
+
   MediaUploadService({
     required this.apiClient,
     required this.pendingUploadBase,

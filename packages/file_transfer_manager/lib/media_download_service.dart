@@ -27,6 +27,10 @@ class MediaDownloadService {
 
   static MediaDownloadService? get instance => _singleton;
 
+  static void clearInstance() {
+    _singleton = null;
+  }
+
   MediaDownloadService({
     required this.apiClient,
     required this.cloudedBase,
