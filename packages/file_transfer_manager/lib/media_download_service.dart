@@ -19,7 +19,6 @@ class MediaDownloadService {
       apiClient: apiClient,
       cloudedBase: cloudedBase,
       maxPartConcurrency: maxPartConcurrency,
-      maxDownloadConcurrency: maxDownloadConcurrency,
       maxDownloadRequestsConcurrency: maxDownloadRequestsConcurrency,
       chunkSizeOverride: chunkSizeOverride,
       pendingDownloadsCallback: pendingDownloadsCallback,
@@ -37,7 +36,6 @@ class MediaDownloadService {
     required this.apiClient,
     required this.cloudedBase,
     this.maxPartConcurrency = maxConcurrency,
-    this.maxDownloadConcurrency = _defaultDownloadConcurrency,
     this.maxDownloadRequestsConcurrency = _defaultDownloadRequestsConcurrency,
     this.chunkSizeOverride,
     this.pendingDownloadsCallback,
@@ -46,7 +44,6 @@ class MediaDownloadService {
   final MediaApiClient apiClient;
   final Directory cloudedBase;
   final int maxPartConcurrency;
-  final int maxDownloadConcurrency;
   final int maxDownloadRequestsConcurrency;
   final int? chunkSizeOverride;
   final PendingDownloadTotalsCallback? pendingDownloadsCallback;
@@ -135,7 +132,7 @@ class MediaDownloadService {
     Future<void>.microtask(() async {
       try {
         while (_downloadsEnabled &&
-            _activeDownloads < maxDownloadConcurrency &&
+            _activeDownloads < maxDownloadRequestsConcurrency &&
             _queueLIFO.isNotEmpty &&
             _admitMoreJobs) {
           final job = _queueLIFO.removeLast();
