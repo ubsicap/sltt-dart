@@ -11,6 +11,7 @@ class MediaDownloadService {
     required Directory cloudedBase,
     int maxPartConcurrency = maxConcurrency,
     int maxDownloadConcurrency = _defaultDownloadConcurrency,
+    int maxDownloadRequestsConcurrency = _defaultDownloadRequestsConcurrency,
     int? chunkSizeOverride,
     PendingDownloadTotalsCallback? pendingDownloadsCallback,
   }) {
@@ -19,6 +20,7 @@ class MediaDownloadService {
       cloudedBase: cloudedBase,
       maxPartConcurrency: maxPartConcurrency,
       maxDownloadConcurrency: maxDownloadConcurrency,
+      maxDownloadRequestsConcurrency: maxDownloadRequestsConcurrency,
       chunkSizeOverride: chunkSizeOverride,
       pendingDownloadsCallback: pendingDownloadsCallback,
     );
@@ -36,20 +38,23 @@ class MediaDownloadService {
     required this.cloudedBase,
     this.maxPartConcurrency = maxConcurrency,
     this.maxDownloadConcurrency = _defaultDownloadConcurrency,
+    this.maxDownloadRequestsConcurrency = _defaultDownloadRequestsConcurrency,
     this.chunkSizeOverride,
     this.pendingDownloadsCallback,
-  });
+  }) : _requestLimiter = _RequestLimiter(maxDownloadRequestsConcurrency);
 
   final MediaApiClient apiClient;
   final Directory cloudedBase;
   final int maxPartConcurrency;
   final int maxDownloadConcurrency;
+  final int maxDownloadRequestsConcurrency;
   final int? chunkSizeOverride;
   final PendingDownloadTotalsCallback? pendingDownloadsCallback;
 
   /// LIFO queue for downloads: prioritize most-recently requested downloads, unless addToEnd is true.
   final List<_DownloadJob> _queueLIFO = [];
   final Map<String, _DownloadJob> _activeJobs = {};
+  final _RequestLimiter _requestLimiter;
   int _activeDownloads = 0;
   bool _processingQueue = false;
   int _pendingDownloads = 0;
@@ -210,10 +215,15 @@ class MediaDownloadService {
 
       if (chunkSize >= contentLength) {
         final destFile = File(p.join(targetDir.path, resolvedFileName));
-        final response = await _getWithRenewal(getUrl, expiresAt);
-        final sink = destFile.openWrite();
-        await sink.addStream(response);
-        await sink.close();
+        await _requestLimiter.acquire();
+        try {
+          final response = await _getWithRenewal(getUrl, expiresAt);
+          final sink = destFile.openWrite();
+          await sink.addStream(response);
+          await sink.close();
+        } finally {
+          _requestLimiter.release();
+        }
 
         job.onProgress(
           DownloadProgress(
@@ -252,23 +262,28 @@ class MediaDownloadService {
       Future<File> downloadPart(int partNumber) async {
         final start = (partNumber - 1) * chunkSize;
         final end = min(contentLength - 1, start + chunkSize - 1);
-        final response = await _getWithRenewal(
-          getUrl,
-          expiresAt,
-          headers: {HttpHeaders.rangeHeader: 'bytes=$start-$end'},
-        );
+        await _requestLimiter.acquire();
+        try {
+          final response = await _getWithRenewal(
+            getUrl,
+            expiresAt,
+            headers: {HttpHeaders.rangeHeader: 'bytes=$start-$end'},
+          );
 
-        final partFile = File(
-          p.join(
-            downloadDir.path,
-            '$resolvedFileName-${partNumber.toString().padLeft(7, '0')}',
-          ),
-        );
-        final sink = partFile.openWrite();
-        await sink.addStream(response);
-        await sink.close();
-        reportProgress(end - start + 1);
-        return partFile;
+          final partFile = File(
+            p.join(
+              downloadDir.path,
+              '$resolvedFileName-${partNumber.toString().padLeft(7, '0')}',
+            ),
+          );
+          final sink = partFile.openWrite();
+          await sink.addStream(response);
+          await sink.close();
+          reportProgress(end - start + 1);
+          return partFile;
+        } finally {
+          _requestLimiter.release();
+        }
       }
 
       // Download last part first.
@@ -378,4 +393,29 @@ class _DownloadJob {
   final String? fileName;
   final DownloadProgressCallback onProgress;
   final Completer<File> completer = Completer<File>();
+}
+
+class _RequestLimiter {
+  _RequestLimiter(int permits) : _permits = permits <= 0 ? 1 : permits;
+
+  int _permits;
+  final Queue<Completer<void>> _waiters = Queue();
+
+  Future<void> acquire() {
+    if (_permits > 0) {
+      _permits--;
+      return Future.value();
+    }
+    final completer = Completer<void>();
+    _waiters.add(completer);
+    return completer.future;
+  }
+
+  void release() {
+    if (_waiters.isNotEmpty) {
+      _waiters.removeFirst().complete();
+      return;
+    }
+    _permits++;
+  }
 }
