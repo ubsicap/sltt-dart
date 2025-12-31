@@ -57,6 +57,7 @@ class MediaDownloadService {
   final _RequestLimiter _requestLimiter;
   int _activeDownloads = 0;
   bool _processingQueue = false;
+  bool _admitMoreJobs = true;
   int _pendingDownloads = 0;
   bool _downloadsEnabled = false;
 
@@ -128,21 +129,24 @@ class MediaDownloadService {
   }
 
   void _processQueue() {
-    if (_processingQueue || !_downloadsEnabled) return;
+    if (_processingQueue || !_downloadsEnabled || !_admitMoreJobs) return;
     _processingQueue = true;
 
     Future<void>.microtask(() async {
       try {
         while (_downloadsEnabled &&
             _activeDownloads < maxDownloadConcurrency &&
-            _queueLIFO.isNotEmpty) {
+            _queueLIFO.isNotEmpty &&
+            _admitMoreJobs) {
           final job = _queueLIFO.removeLast();
           _activeJobs[job.remoteFileKey] = job;
           _activeDownloads++;
+          _admitMoreJobs = false; // pause admitting until job signals readiness
           _runSingleDownload(job).whenComplete(() {
             _activeDownloads--;
             _adjustPendingDownloads(-1);
             _activeJobs.remove(job.remoteFileKey);
+            _admitMoreJobs = true;
             _processingQueue = false;
             _processQueue();
           });
@@ -202,6 +206,12 @@ class MediaDownloadService {
 
       final chunkSize = chunkSizeOverride ?? chooseChunkSize(contentLength);
       final totalParts = (contentLength / chunkSize).ceil();
+
+      final allowsAnotherJob = totalParts < maxDownloadRequestsConcurrency;
+      if (allowsAnotherJob) {
+        _admitMoreJobs = true;
+        _processQueue();
+      }
 
       job.onProgress(
         DownloadProgress(
