@@ -9,8 +9,6 @@ class MediaDownloadService {
   static MediaDownloadService ensureSingleton({
     required MediaApiClient apiClient,
     required Directory cloudedBase,
-    int maxPartConcurrency = maxConcurrency,
-    int maxDownloadConcurrency = _defaultDownloadConcurrency,
     int maxDownloadRequestsConcurrency = _defaultDownloadRequestsConcurrency,
     int? chunkSizeOverride,
     PendingDownloadTotalsCallback? pendingDownloadsCallback,
@@ -18,7 +16,6 @@ class MediaDownloadService {
     _singleton ??= MediaDownloadService(
       apiClient: apiClient,
       cloudedBase: cloudedBase,
-      maxPartConcurrency: maxPartConcurrency,
       maxDownloadRequestsConcurrency: maxDownloadRequestsConcurrency,
       chunkSizeOverride: chunkSizeOverride,
       pendingDownloadsCallback: pendingDownloadsCallback,
@@ -35,7 +32,6 @@ class MediaDownloadService {
   MediaDownloadService({
     required this.apiClient,
     required this.cloudedBase,
-    this.maxPartConcurrency = maxConcurrency,
     this.maxDownloadRequestsConcurrency = _defaultDownloadRequestsConcurrency,
     this.chunkSizeOverride,
     this.pendingDownloadsCallback,
@@ -43,7 +39,6 @@ class MediaDownloadService {
 
   final MediaApiClient apiClient;
   final Directory cloudedBase;
-  final int maxPartConcurrency;
   final int maxDownloadRequestsConcurrency;
   final int? chunkSizeOverride;
   final PendingDownloadTotalsCallback? pendingDownloadsCallback;
@@ -301,7 +296,7 @@ class MediaDownloadService {
 
       await _runWithConcurrency<int>(
         items: remainingParts,
-        concurrency: maxPartConcurrency,
+        concurrency: maxDownloadRequestsConcurrency,
         worker: (part) => downloadPart(part).then((_) => null),
       );
 
