@@ -47,7 +47,8 @@ class MediaDownloadService {
   final int? chunkSizeOverride;
   final PendingDownloadTotalsCallback? pendingDownloadsCallback;
 
-  final List<_DownloadJob> _queue = [];
+  /// LIFO queue for downloads: prioritize most-recently requested downloads, unless addToEnd is true.
+  final List<_DownloadJob> _queueLIFO = [];
   int _activeDownloads = 0;
   bool _processingQueue = false;
   int _pendingDownloads = 0;
@@ -75,23 +76,32 @@ class MediaDownloadService {
   Future<File> enqueueDownload({
     required String remoteFileKey,
     String? fileName,
-    bool addToFront = false,
+    bool addToEnd = false,
     required DownloadProgressCallback onProgress,
   }) {
-    final existingIndex = _queue.indexWhere(
+    final existingIndex = _queueLIFO.indexWhere(
       (job) => job.remoteFileKey == remoteFileKey,
     );
+    if (existingIndex == _queueLIFO.length - 1) {
+      // Already the next to be processed.
+      return _queueLIFO.last.completer.future;
+    }
+    final wasDownloadEnabled = _downloadsEnabled;
 
     if (existingIndex != -1) {
-      final existingJob = _queue.removeAt(existingIndex);
-      final wasDownloadEnabled = _downloadsEnabled;
+      final existingJob = _queueLIFO.removeAt(existingIndex);
       stopProcessingDownloads();
-      // Always move to the front when re-requested to prioritize it.
-      _queue.insert(0, existingJob);
+      // Always move to the end when re-requested so it is processed next in LIFO order.
+      _queueLIFO.add(existingJob);
       if (wasDownloadEnabled) {
         startProcessingDownloads();
       }
       return existingJob.completer.future;
+    }
+
+    if (!addToEnd) {
+      // don't stop processing when adding to end.
+      stopProcessingDownloads();
     }
 
     _adjustPendingDownloads(1);
@@ -112,13 +122,17 @@ class MediaDownloadService {
       ),
     );
 
-    if (addToFront) {
-      _queue.insert(0, job);
+    if (addToEnd) {
+      _queueLIFO.add(job);
     } else {
-      _queue.add(job);
+      _queueLIFO.insert(0, job);
     }
 
-    _processQueue();
+    if (wasDownloadEnabled) {
+      startProcessingDownloads();
+    } else {
+      _processQueue();
+    }
     return job.completer.future;
   }
 
@@ -130,8 +144,8 @@ class MediaDownloadService {
       try {
         while (_downloadsEnabled &&
             _activeDownloads < maxDownloadConcurrency &&
-            _queue.isNotEmpty) {
-          final job = _queue.removeAt(0);
+            _queueLIFO.isNotEmpty) {
+          final job = _queueLIFO.removeLast();
           _activeDownloads++;
           _runSingleDownload(job).whenComplete(() {
             _activeDownloads--;
