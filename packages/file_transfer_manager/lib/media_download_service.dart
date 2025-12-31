@@ -49,6 +49,7 @@ class MediaDownloadService {
 
   /// LIFO queue for downloads: prioritize most-recently requested downloads, unless addToEnd is true.
   final List<_DownloadJob> _queueLIFO = [];
+  final Map<String, _DownloadJob> _activeJobs = {};
   int _activeDownloads = 0;
   bool _processingQueue = false;
   int _pendingDownloads = 0;
@@ -76,32 +77,21 @@ class MediaDownloadService {
   Future<File> enqueueDownload({
     required String remoteFileKey,
     String? fileName,
-    bool addToEnd = false,
+    bool addToEnd = true,
     required DownloadProgressCallback onProgress,
   }) {
+    final activeJob = _activeJobs[remoteFileKey];
+    if (activeJob != null) {
+      return activeJob.completer.future;
+    }
+
     final existingIndex = _queueLIFO.indexWhere(
       (job) => job.remoteFileKey == remoteFileKey,
     );
-    if (existingIndex == _queueLIFO.length - 1) {
-      // Already the next to be processed.
-      return _queueLIFO.last.completer.future;
-    }
-    final wasDownloadEnabled = _downloadsEnabled;
-
     if (existingIndex != -1) {
       final existingJob = _queueLIFO.removeAt(existingIndex);
-      stopProcessingDownloads();
-      // Always move to the end when re-requested so it is processed next in LIFO order.
       _queueLIFO.add(existingJob);
-      if (wasDownloadEnabled) {
-        startProcessingDownloads();
-      }
       return existingJob.completer.future;
-    }
-
-    if (!addToEnd) {
-      // don't stop processing when adding to end.
-      stopProcessingDownloads();
     }
 
     _adjustPendingDownloads(1);
@@ -128,11 +118,7 @@ class MediaDownloadService {
       _queueLIFO.insert(0, job);
     }
 
-    if (wasDownloadEnabled) {
-      startProcessingDownloads();
-    } else {
-      _processQueue();
-    }
+    _processQueue();
     return job.completer.future;
   }
 
@@ -146,10 +132,12 @@ class MediaDownloadService {
             _activeDownloads < maxDownloadConcurrency &&
             _queueLIFO.isNotEmpty) {
           final job = _queueLIFO.removeLast();
+          _activeJobs[job.remoteFileKey] = job;
           _activeDownloads++;
           _runSingleDownload(job).whenComplete(() {
             _activeDownloads--;
             _adjustPendingDownloads(-1);
+            _activeJobs.remove(job.remoteFileKey);
             _processingQueue = false;
             _processQueue();
           });
