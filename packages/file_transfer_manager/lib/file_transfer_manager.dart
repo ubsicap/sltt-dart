@@ -698,6 +698,13 @@ class MediaDownloadService {
       final expiresAt = signed.first.expiresAt;
 
       final headResponse = await apiClient.head(headUrl);
+      if (headResponse.statusCode == HttpStatus.notFound) {
+        throw DownloadNotFoundException(
+          remoteFileKey: job.remoteFileKey,
+          statusCode: headResponse.statusCode,
+          uri: headUrl,
+        );
+      }
       if (headResponse.statusCode != HttpStatus.ok) {
         throw HttpException(
           'HEAD failed for ${job.remoteFileKey} (${headResponse.statusCode})',
@@ -882,6 +889,16 @@ class DownloadProgress {
   final int bytesCompleted;
   final int bytesTotal;
   final int bytesPerChunk;
+}
+
+class DownloadNotFoundException extends HttpException {
+  DownloadNotFoundException({
+    required this.remoteFileKey,
+    required int statusCode,
+    required super.uri,
+  }) : super('Remote media missing ($statusCode) for $remoteFileKey');
+
+  final String remoteFileKey;
 }
 
 typedef DownloadProgressCallback = void Function(DownloadProgress progress);
