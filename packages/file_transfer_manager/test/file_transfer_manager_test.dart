@@ -96,6 +96,12 @@ void main() {
       final cloudedFile = File(
         p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
       );
+      // Wait for file to appear in clouded dir (max 5s)
+      final start = DateTime.now();
+      while (!await cloudedFile.exists() &&
+          DateTime.now().difference(start).inSeconds < 5) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
       expect(await cloudedFile.exists(), isTrue);
       expect(await cloudedFile.readAsBytes(), equals(content));
       expect(await file.exists(), isFalse);
@@ -272,6 +278,12 @@ Future<void> _runUploadTest({
   final cloudedFile = File(
     p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
   );
+  // Wait for file to appear in clouded dir (max 5s)
+  final start = DateTime.now();
+  while (!await cloudedFile.exists() &&
+      DateTime.now().difference(start).inSeconds < 5) {
+    await Future.delayed(const Duration(milliseconds: 50));
+  }
   expect(await cloudedFile.exists(), isTrue);
   expect(await cloudedFile.readAsBytes(), equals(content));
   expect(await file.exists(), isFalse);
