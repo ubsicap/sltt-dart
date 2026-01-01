@@ -50,14 +50,13 @@ class MediaDownloadService {
   int _activeDownloads = 0;
   bool _processingQueue = false;
   bool _admitMoreJobs = true;
-  int _pendingDownloads = 0;
+  int get _pendingDownloads => _queueLIFO.length + _activeJobs.length;
   bool _downloadsEnabled = false;
 
   void _reportPendingDownloads() =>
       pendingDownloadsCallback?.call(_pendingDownloads);
 
-  void _adjustPendingDownloads(int delta) {
-    _pendingDownloads = ((_pendingDownloads + delta).clamp(0, 1 << 30));
+  void _adjustPendingDownloads() {
     _reportPendingDownloads();
   }
 
@@ -92,7 +91,7 @@ class MediaDownloadService {
       return existingJob.completer.future;
     }
 
-    _adjustPendingDownloads(1);
+    _adjustPendingDownloads();
     final job = _DownloadJob(
       remoteFileKey: remoteFileKey,
       fileName: fileName,
@@ -137,7 +136,7 @@ class MediaDownloadService {
           _runSingleDownload(job)
               .then((_) {
                 _activeDownloads--;
-                _adjustPendingDownloads(-1);
+                _adjustPendingDownloads();
                 _activeJobs.remove(job.remoteFileKey);
                 _admitMoreJobs = true;
                 _processingQueue = false;
@@ -158,7 +157,7 @@ class MediaDownloadService {
                 }
 
                 // Real failure: finish the job with error and adjust pending.
-                _adjustPendingDownloads(-1);
+                _adjustPendingDownloads();
                 _activeJobs.remove(job.remoteFileKey);
                 if (!job.completer.isCompleted) {
                   job.completer.completeError(error, stack);
