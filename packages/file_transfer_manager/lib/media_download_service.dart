@@ -148,7 +148,8 @@ class MediaDownloadService {
                 _processingQueue = false;
                 _admitMoreJobs = true;
 
-                if (error is _DownloadPausedException) {
+                if (error is _DownloadPausedException ||
+                    error is _DownloadTransientException) {
                   // Requeue incomplete job; do not decrement pending.
                   _activeJobs.remove(job.remoteFileKey);
                   _queueLIFO.add(job);
@@ -207,6 +208,9 @@ class MediaDownloadService {
         );
       }
       if (headResponse.statusCode != HttpStatus.ok) {
+        if (_isTransientStatus(headResponse.statusCode)) {
+          throw _DownloadTransientException();
+        }
         throw HttpException(
           'HEAD failed for ${job.remoteFileKey} (${headResponse.statusCode})',
           uri: headUrl,
@@ -439,7 +443,7 @@ class MediaDownloadService {
       job.completer.complete(destFile);
       return destFile;
     } catch (e, st) {
-      if (e is _DownloadPausedException) {
+      if (e is _DownloadPausedException || e is _DownloadTransientException) {
         // Do not complete the future; let caller requeue.
         rethrow;
       }
@@ -478,27 +482,37 @@ class MediaDownloadService {
       attempts++;
       await ensureFreshUrl();
 
-      final response = await apiClient.get(url, headers: headers);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return response;
+      try {
+        final response = await apiClient.get(url, headers: headers);
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return response;
+        }
+
+        if (_isTransientStatus(response.statusCode)) {
+          throw _DownloadTransientException();
+        }
+
+        final body = await response.transform(utf8.decoder).join();
+        final looksExpired = _looksLikeExpired(response.statusCode, body);
+        final canRetry = attempts < maxAttempts && looksExpired;
+
+        if (canRetry) {
+          final renewed = await renewUrl();
+          url = renewed.url;
+          urlExpiry = renewed.expiresAt;
+          onRenewed(url, urlExpiry);
+          continue;
+        }
+
+        throw HttpException(
+          'GET failed (${response.statusCode}): $body',
+          uri: url,
+        );
+      } on SocketException catch (_) {
+        throw _DownloadTransientException();
+      } on HandshakeException catch (_) {
+        throw _DownloadTransientException();
       }
-
-      final body = await response.transform(utf8.decoder).join();
-      final looksExpired = _looksLikeExpired(response.statusCode, body);
-      final canRetry = attempts < maxAttempts && looksExpired;
-
-      if (canRetry) {
-        final renewed = await renewUrl();
-        url = renewed.url;
-        urlExpiry = renewed.expiresAt;
-        onRenewed(url, urlExpiry);
-        continue;
-      }
-
-      throw HttpException(
-        'GET failed (${response.statusCode}): $body',
-        uri: url,
-      );
     }
   }
 
@@ -546,6 +560,14 @@ class DownloadNotFoundException extends HttpException {
 }
 
 class _DownloadPausedException implements Exception {}
+
+class _DownloadTransientException implements Exception {}
+
+bool _isTransientStatus(int statusCode) {
+  return statusCode == HttpStatus.requestTimeout ||
+      statusCode == 429 ||
+      (statusCode >= 500 && statusCode < 600);
+}
 
 typedef DownloadProgressCallback = void Function(DownloadProgress progress);
 
