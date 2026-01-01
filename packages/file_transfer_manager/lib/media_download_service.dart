@@ -162,8 +162,22 @@ class MediaDownloadService {
       final headUrl = signed
           .firstWhere((u) => u.headObject != null)
           .headObject!;
-      final getUrl = signed.firstWhere((u) => u.getObject != null).getObject!;
-      final expiresAt = signed.first.expiresAt;
+      var getUrl = signed.firstWhere((u) => u.getObject != null).getObject!;
+      var expiresAt = signed.first.expiresAt!;
+
+      Future<_RenewedUrl> refreshGetUrl() async {
+        final refreshed = await apiClient.getUrls(
+          remoteFileKey: job.remoteFileKey,
+          clientMethods: ['get_object'],
+        );
+        final refreshedGet = refreshed
+            .firstWhere((u) => u.getObject != null)
+            .getObject!;
+        final refreshedExpires = refreshed.first.expiresAt!;
+        getUrl = refreshedGet;
+        expiresAt = refreshedExpires;
+        return _RenewedUrl(refreshedGet, refreshedExpires);
+      }
 
       final headResponse = await apiClient.head(headUrl);
       if (headResponse.statusCode == HttpStatus.notFound) {
@@ -222,7 +236,15 @@ class MediaDownloadService {
         final destFile = File(p.join(targetDir.path, resolvedFileName));
         await _requestLimiter.acquire();
         try {
-          final response = await _getWithRenewal(getUrl, expiresAt);
+          final response = await _getWithRenewal(
+            currentUrl: getUrl,
+            expiresAt: expiresAt,
+            renewUrl: refreshGetUrl,
+            onRenewed: (url, newExpires) {
+              getUrl = url;
+              expiresAt = newExpires;
+            },
+          );
           final sink = destFile.openWrite();
           await sink.addStream(response);
           await sink.close();
@@ -270,8 +292,13 @@ class MediaDownloadService {
         await _requestLimiter.acquire();
         try {
           final response = await _getWithRenewal(
-            getUrl,
-            expiresAt,
+            currentUrl: getUrl,
+            expiresAt: expiresAt,
+            renewUrl: refreshGetUrl,
+            onRenewed: (url, newExpires) {
+              getUrl = url;
+              expiresAt = newExpires;
+            },
             headers: {HttpHeaders.rangeHeader: 'bytes=$start-$end'},
           );
 
@@ -337,25 +364,65 @@ class MediaDownloadService {
     }
   }
 
-  Future<Stream<List<int>>> _getWithRenewal(
-    Uri initialUrl,
-    DateTime? expiresAt, {
+  Future<Stream<List<int>>> _getWithRenewal({
+    required Uri currentUrl,
+    required Future<_RenewedUrl> Function() renewUrl,
+    required void Function(Uri newUrl, DateTime newExpiresAt) onRenewed,
+    required DateTime expiresAt,
     Map<String, String>? headers,
+    int maxAttempts = 3,
+    Duration earlyRefreshWindow = const Duration(minutes: 2),
   }) async {
-    if (expiresAt != null && DateTime.now().isAfter(expiresAt)) {
-      throw StateError('Signed URL expired before download started');
+    var attempts = 0;
+    var url = currentUrl;
+    var urlExpiry = expiresAt;
+
+    Future<void> ensureFreshUrl() async {
+      final now = DateTime.now();
+      if (now.isAfter(urlExpiry) ||
+          now.add(earlyRefreshWindow).isAfter(urlExpiry)) {
+        final renewed = await renewUrl();
+        url = renewed.url;
+        urlExpiry = renewed.expiresAt;
+        onRenewed(url, urlExpiry);
+      }
     }
 
-    final response = await apiClient.get(initialUrl, headers: headers);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return response;
-    }
+    while (true) {
+      attempts++;
+      await ensureFreshUrl();
 
-    final body = await response.transform(utf8.decoder).join();
-    throw HttpException(
-      'GET failed (${response.statusCode}): $body',
-      uri: initialUrl,
-    );
+      final response = await apiClient.get(url, headers: headers);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response;
+      }
+
+      final body = await response.transform(utf8.decoder).join();
+      final looksExpired = _looksLikeExpired(response.statusCode, body);
+      final canRetry = attempts < maxAttempts && looksExpired;
+
+      if (canRetry) {
+        final renewed = await renewUrl();
+        url = renewed.url;
+        urlExpiry = renewed.expiresAt;
+        onRenewed(url, urlExpiry);
+        continue;
+      }
+
+      throw HttpException(
+        'GET failed (${response.statusCode}): $body',
+        uri: url,
+      );
+    }
+  }
+
+  bool _looksLikeExpired(int statusCode, String body) {
+    if (statusCode != HttpStatus.forbidden &&
+        statusCode != HttpStatus.badRequest) {
+      return false;
+    }
+    final lower = body.toLowerCase();
+    return lower.contains('expired') || lower.contains('request has expired');
   }
 }
 
@@ -373,6 +440,13 @@ class DownloadProgress {
   final int bytesCompleted;
   final int bytesTotal;
   final int bytesPerChunk;
+}
+
+class _RenewedUrl {
+  _RenewedUrl(this.url, this.expiresAt);
+
+  final Uri url;
+  final DateTime expiresAt;
 }
 
 class DownloadNotFoundException extends HttpException {
