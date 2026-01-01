@@ -24,8 +24,7 @@ String buildTestRemoteKey({
 }
 
 void main() {
-  final skipInternetTests =
-      false; // Platform.environment['RUN_INTERNET_TESTS'] == 'true';
+  final skipInternetTests = false;
 
   group('offline (fake server)', () {
     late Directory tempDir;
@@ -89,76 +88,67 @@ void main() {
     });
   });
 
-  group(
-    'internet (cloud API)',
-    () {
-      late Directory tempDir;
-      late Directory pendingDir;
-      late Directory cloudedDir;
-      late _Env env;
+  group('internet (cloud API)', () {
+    late Directory tempDir;
+    late Directory pendingDir;
+    late Directory cloudedDir;
+    late _Env env;
 
-      setUp(() async {
-        tempDir = await Directory.systemTemp.createTemp('ftm_test_');
-        pendingDir = Directory(p.join(tempDir.path, 'pending'));
-        cloudedDir = Directory(p.join(tempDir.path, 'clouded'));
-        await pendingDir.create(recursive: true);
-        await cloudedDir.create(recursive: true);
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('ftm_test_');
+      pendingDir = Directory(p.join(tempDir.path, 'pending'));
+      cloudedDir = Directory(p.join(tempDir.path, 'clouded'));
+      await pendingDir.create(recursive: true);
+      await cloudedDir.create(recursive: true);
 
-        env = await _buildInternetEnv();
-      });
+      env = await _buildInternetEnv();
+    });
 
-      tearDown(() async {
-        await env.dispose();
-        await tempDir.delete(recursive: true);
-      });
+    tearDown(() async {
+      await env.dispose();
+      await tempDir.delete(recursive: true);
+    });
 
-      test(
-        'uploads pending files via multipart and moves to clouded',
-        () async {
-          await _runUploadTest(
-            env: env,
-            pendingDir: pendingDir,
-            cloudedDir: cloudedDir,
-          );
-        },
+    test('uploads pending files via multipart and moves to clouded', () async {
+      await _runUploadTest(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
       );
+    });
 
-      test('downloads chunked file and assembles locally', () async {
-        await _runDownloadTest(
-          env: env,
-          pendingDir: pendingDir,
-          cloudedDir: cloudedDir,
-        );
-      });
+    test('downloads chunked file and assembles locally', () async {
+      await _runDownloadTest(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+      );
+    });
 
-      test('stops and resumes upload processing', () async {
-        await _runStopsAndResumesUploadProcessing(
-          env: env,
-          pendingDir: pendingDir,
-          cloudedDir: cloudedDir,
-        );
-      });
+    test('stops and resumes upload processing', () async {
+      await _runStopsAndResumesUploadProcessing(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+      );
+    });
 
-      test('stops and resumes download processing', () async {
-        await _runStopsAndResumesDownloadProcessing(
-          env: env,
-          pendingDir: pendingDir,
-          cloudedDir: cloudedDir,
-        );
-      });
+    test('stops and resumes download processing', () async {
+      await _runStopsAndResumesDownloadProcessing(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+      );
+    });
 
-      test('resumes download using existing parts', () async {
-        await _runResumesDownloadUsingExistingParts(
-          env: env,
-          pendingDir: pendingDir,
-          cloudedDir: cloudedDir,
-        );
-      });
-    },
-    skip: skipInternetTests,
-    // ? null
-    // : 'Set RUN_INTERNET_TESTS=true and optionally CLOUD_BASE_URL to enable',
-  );
+    test('resumes download using existing parts', () async {
+      await _runResumesDownloadUsingExistingParts(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+      );
+    });
+  }, skip: skipInternetTests);
 }
 
 Future<List<int>> _fetchRemoteBytes(
