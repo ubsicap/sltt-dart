@@ -75,7 +75,10 @@ class MediaDownloadService {
   Future<File> enqueueDownload({
     required String remoteFileKey,
     String? fileName,
-    bool addToEnd = true,
+
+    /// If true, adds to end of queue instead of prioritizing.
+    /// (false by default).
+    bool addToEnd = false,
     required DownloadProgressCallback onProgress,
   }) {
     final activeJob = _activeJobs[remoteFileKey];
