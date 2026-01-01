@@ -24,8 +24,8 @@ String buildTestRemoteKey({
 }
 
 void main() {
-  final enableInternet =
-      true; // Platform.environment['RUN_INTERNET_TESTS'] == 'true';
+  final skipInternetTests =
+      false; // Platform.environment['RUN_INTERNET_TESTS'] == 'true';
 
   group('offline (fake server)', () {
     late Directory tempDir;
@@ -155,7 +155,7 @@ void main() {
         );
       });
     },
-    skip: enableInternet,
+    skip: skipInternetTests,
     // ? null
     // : 'Set RUN_INTERNET_TESTS=true and optionally CLOUD_BASE_URL to enable',
   );
