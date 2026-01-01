@@ -269,6 +269,49 @@ class MediaDownloadService {
 
       var partsCompleted = 0;
       var bytesCompleted = 0;
+      final existingParts = <int>{};
+
+      int expectedPartLength(int partNumber) {
+        final start = (partNumber - 1) * chunkSize;
+        final endExclusive = min(start + chunkSize, contentLength);
+        return endExclusive - start;
+      }
+
+      Future<void> loadExistingParts() async {
+        if (!await downloadDir.exists()) return;
+        await for (final entity in downloadDir.list()) {
+          if (entity is! File) continue;
+          final name = p.basename(entity.path);
+          final maybePart = name.split('-').last;
+          final partNumber = int.tryParse(maybePart) ?? -1;
+          if (partNumber <= 0) continue;
+
+          final expectedLength = expectedPartLength(partNumber);
+          final actualLength = await entity.length();
+          if (actualLength == expectedLength) {
+            existingParts.add(partNumber);
+            partsCompleted++;
+            bytesCompleted += actualLength;
+          } else {
+            await entity.delete(); // discard corrupt/incomplete part
+          }
+        }
+
+        if (partsCompleted > 0) {
+          job.onProgress(
+            DownloadProgress(
+              partsCompleted: partsCompleted,
+              partsTotal: totalParts,
+              bytesCompleted: bytesCompleted,
+              bytesTotal: contentLength,
+              bytesPerChunk: chunkSize,
+            ),
+          );
+        }
+      }
+
+      await loadExistingParts();
+
       void reportProgress(int partBytes) {
         partsCompleted++;
         bytesCompleted += partBytes;
@@ -315,17 +358,24 @@ class MediaDownloadService {
         }
       }
 
-      // Download last part first.
-      await downloadPart(totalParts);
+      // Download last part first if missing.
+      if (!existingParts.contains(totalParts)) {
+        await downloadPart(totalParts);
+      }
 
-      final remainingParts = [for (var i = 1; i < totalParts; i++) i];
+      final remainingParts = [
+        for (var i = 1; i < totalParts; i++)
+          if (!existingParts.contains(i)) i,
+      ];
       remainingParts.shuffle(Random());
 
-      await _runWithConcurrency<int>(
-        items: remainingParts,
-        concurrency: maxDownloadRequestsConcurrency,
-        worker: (part) => downloadPart(part).then((_) => null),
-      );
+      if (remainingParts.isNotEmpty) {
+        await _runWithConcurrency<int>(
+          items: remainingParts,
+          concurrency: maxDownloadRequestsConcurrency,
+          worker: (part) => downloadPart(part).then((_) => null),
+        );
+      }
 
       final orderedParts = [for (var i = 1; i <= totalParts; i++) i]
           .map(

@@ -215,6 +215,88 @@ void main() {
           cloudedDir: cloudedDir,
         );
       });
+
+      test('resumes download using existing parts', () async {
+        const testName = 'resumes download using existing parts';
+        final timestamp = DateTime.now();
+        final remoteKey = buildTestRemoteKey(
+          relativePath: 'media/resume.bin',
+          testName: testName,
+          timestamp: timestamp,
+        );
+
+        final chunkSize = 2 * 1024 * 1024;
+        final size = 6 * 1024 * 1024 + 321; // 3 parts with remainder
+        final rand = Random(7);
+        final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
+
+        env.fakeServer!.completedObjects[remoteKey] = bytes;
+
+        final resolvedFileName = p.basename(remoteKey);
+        final downloadDir = Directory(
+          p.join(cloudedDir.path, '__downloading', resolvedFileName),
+        );
+        await downloadDir.create(recursive: true);
+
+        int partLength(int partNumber) {
+          final start = (partNumber - 1) * chunkSize;
+          final endExclusive = min(start + chunkSize, size);
+          return endExclusive - start;
+        }
+
+        // Seed parts 1 and 2 as already downloaded.
+        for (final partNumber in [1, 2]) {
+          final start = (partNumber - 1) * chunkSize;
+          final endExclusive = start + partLength(partNumber);
+          final partFile = File(
+            p.join(
+              downloadDir.path,
+              '$resolvedFileName-${partNumber.toString().padLeft(7, '0')}',
+            ),
+          );
+          await partFile.writeAsBytes(
+            bytes.sublist(start, endExclusive),
+            flush: true,
+          );
+        }
+
+        final progressUpdates = <DownloadProgress>[];
+
+        final downloadService = MediaDownloadService(
+          apiClient: env.apiClient,
+          cloudedBase: cloudedDir,
+          chunkSizeOverride: chunkSize,
+        );
+
+        final file = await downloadService.enqueueDownload(
+          remoteFileKey: remoteKey,
+          onProgress: (p) => progressUpdates.add(p),
+        );
+
+        expect(await file.exists(), isTrue);
+        expect(await file.readAsBytes(), equals(bytes));
+
+        final downloadingDir = Directory(
+          p.join(cloudedDir.path, '__downloading', resolvedFileName),
+        );
+        expect(await downloadingDir.exists(), isFalse);
+
+        final preDownloadedBytes = partLength(1) + partLength(2);
+        final resumedProgress = progressUpdates.firstWhere(
+          (p) => p.partsCompleted >= 0 && p.partsCompleted <= 2,
+          orElse: () => progressUpdates.last,
+        );
+        expect(resumedProgress.partsCompleted, greaterThanOrEqualTo(2));
+        expect(
+          resumedProgress.bytesCompleted,
+          greaterThanOrEqualTo(preDownloadedBytes),
+        );
+
+        final lastProgress = progressUpdates.last;
+        final totalParts = (size / chunkSize).ceil();
+        expect(lastProgress.partsCompleted, equals(totalParts));
+        expect(lastProgress.bytesCompleted, equals(size));
+      });
     },
     skip: enableInternet,
     // ? null
