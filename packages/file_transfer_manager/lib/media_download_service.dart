@@ -43,7 +43,7 @@ class MediaDownloadService {
   final int? chunkSizeOverride;
   final PendingDownloadTotalsCallback? pendingDownloadsCallback;
 
-  /// LIFO queue for downloads: prioritize most-recently requested downloads, unless addToEnd is true.
+  /// LIFO queue for downloads: prioritize most-recently requested downloads, unless addAsLowestPriority is true.
   final List<_DownloadJob> _queueLIFO = [];
   final Map<String, _DownloadJob> _activeJobs = {};
   final _RequestLimiter _requestLimiter;
@@ -75,10 +75,7 @@ class MediaDownloadService {
   Future<File> enqueueDownload({
     required String remoteFileKey,
     String? fileName,
-
-    /// If true, adds to end of queue instead of prioritizing.
-    /// (false by default).
-    bool addToEnd = false,
+    bool addAsLowestPriority = false,
     required DownloadProgressCallback onProgress,
   }) {
     final activeJob = _activeJobs[remoteFileKey];
@@ -113,10 +110,10 @@ class MediaDownloadService {
       ),
     );
 
-    if (addToEnd) {
-      _queueLIFO.add(job);
-    } else {
+    if (addAsLowestPriority) {
       _queueLIFO.insert(0, job);
+    } else {
+      _queueLIFO.add(job);
     }
 
     _processQueue();
