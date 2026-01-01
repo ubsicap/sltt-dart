@@ -32,6 +32,7 @@ const maxConcurrency = 4;
 const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
 const _defaultDownloadConcurrency = 4;
 const _defaultDownloadRequestsConcurrency = 4;
+const _defaultUploadRequestsConcurrency = 4;
 
 /// Adaptive chunk size based on file size
 int chooseChunkSize(int fileSizeBytes) {

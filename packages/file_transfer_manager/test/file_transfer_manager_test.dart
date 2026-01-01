@@ -325,7 +325,7 @@ Future<void> _runDownloadTest({
   final downloadService = MediaDownloadService(
     apiClient: env.apiClient,
     cloudedBase: cloudedDir,
-    maxPartConcurrency: 3,
+    maxDownloadRequestsConcurrency: 3,
     chunkSizeOverride: 2 * 1024 * 1024,
   );
 

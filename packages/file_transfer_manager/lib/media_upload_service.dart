@@ -11,7 +11,7 @@ class MediaUploadService {
     required Directory cloudedBase,
     String Function(File file)? remoteFileKeyResolver,
     int partSizeBytes = _defaultPartSizeBytes,
-    int maxPartConcurrency = maxConcurrency,
+    int maxUploadRequestsConcurrency = _defaultUploadRequestsConcurrency,
     PendingUploadTotalsCallback? pendingTotalsCallback,
   }) {
     _singleton ??= MediaUploadService(
@@ -20,7 +20,7 @@ class MediaUploadService {
       cloudedBase: cloudedBase,
       remoteFileKeyResolver: remoteFileKeyResolver,
       partSizeBytes: partSizeBytes,
-      maxPartConcurrency: maxPartConcurrency,
+      maxUploadRequestsConcurrency: maxUploadRequestsConcurrency,
       pendingTotalsCallback: pendingTotalsCallback,
     );
     return _singleton!;
@@ -38,19 +38,26 @@ class MediaUploadService {
     required this.cloudedBase,
     this.remoteFileKeyResolver,
     this.partSizeBytes = _defaultPartSizeBytes,
-    this.maxPartConcurrency = maxConcurrency,
+    this.maxUploadRequestsConcurrency = _defaultUploadRequestsConcurrency,
     this.pendingTotalsCallback,
-  });
+  }) : _requestLimiter = _RequestLimiter(maxUploadRequestsConcurrency);
 
   final MediaApiClient apiClient;
   final Directory pendingUploadBase;
   final Directory cloudedBase;
   final String Function(File file)? remoteFileKeyResolver;
   final int partSizeBytes;
-  final int maxPartConcurrency;
+  final int maxUploadRequestsConcurrency;
   final PendingUploadTotalsCallback? pendingTotalsCallback;
 
-  bool _processing = false;
+  final Queue<File> _fileQueue = Queue();
+  final Set<String> _activeUploadPaths = {};
+  final _RequestLimiter _requestLimiter;
+  int _activeUploads = 0;
+  bool _processingQueue = false;
+  bool _admitMoreUploads = true;
+
+  bool _scanning = false;
   bool _rerunRequested = false;
   final Random _random = Random();
   bool _uploadsEnabled = false;
@@ -97,40 +104,68 @@ class MediaUploadService {
     _uploadWatch = pendingUploadBase.watch(recursive: true).listen((
       event,
     ) async {
-      if (_processing) {
-        return;
-      }
       await processPendingUploads();
     });
   }
 
   Future<void> processPendingUploads() async {
-    if (_processing) {
+    if (_scanning) {
       _rerunRequested = true;
       return;
     }
 
     _ensureUploadWatch();
-    _processing = true;
+    _scanning = true;
     try {
       _pendingFiles = 0;
       _pendingBytes = 0;
       final files = await _collectFiles();
+      final pending = files.where(
+        (file) => !_activeUploadPaths.contains(file.path),
+      );
+      _fileQueue
+        ..clear()
+        ..addAll(pending);
+      _admitMoreUploads = true;
       if (_uploadsEnabled) {
-        await _runWithConcurrency<File>(
-          items: files,
-          concurrency: maxPartConcurrency,
-          worker: _uploadFile,
-        );
+        _processQueue();
       }
     } finally {
-      _processing = false;
+      _scanning = false;
     }
 
     if (_rerunRequested) {
       _rerunRequested = false;
       await processPendingUploads();
     }
+  }
+
+  void _processQueue() {
+    if (_processingQueue || !_uploadsEnabled || !_admitMoreUploads) return;
+    _processingQueue = true;
+
+    Future<void>.microtask(() async {
+      try {
+        while (_uploadsEnabled &&
+            _admitMoreUploads &&
+            _activeUploads < maxUploadRequestsConcurrency &&
+            _fileQueue.isNotEmpty) {
+          final file = _fileQueue.removeFirst();
+          _activeUploads++;
+          _admitMoreUploads = false;
+          _activeUploadPaths.add(file.path);
+          _uploadFile(file).whenComplete(() {
+            _activeUploads--;
+            _admitMoreUploads = true;
+            _activeUploadPaths.remove(file.path);
+            _processingQueue = false;
+            _processQueue();
+          });
+        }
+      } finally {
+        _processingQueue = false;
+      }
+    });
   }
 
   Future<List<File>> _collectFiles() async {
@@ -207,6 +242,11 @@ class MediaUploadService {
       }
     }
 
+    if (missingParts.length < maxUploadRequestsConcurrency) {
+      _admitMoreUploads = true;
+      _processQueue();
+    }
+
     if (missingParts.isNotEmpty && existingParts.isNotEmpty) {
       missingParts.shuffle(_random);
     }
@@ -225,7 +265,7 @@ class MediaUploadService {
     if (missingParts.isNotEmpty) {
       await _runWithConcurrency<int>(
         items: missingParts,
-        concurrency: maxPartConcurrency,
+        concurrency: maxUploadRequestsConcurrency,
         worker: (partNumber) async {
           final eTag = await _uploadPart(
             file: file,
@@ -276,11 +316,17 @@ class MediaUploadService {
       }
 
       final stream = file.openRead(start, endExclusive);
-      final response = await apiClient.putStream(
-        url: signed.uploadPart!,
-        bytes: stream,
-        contentLength: length,
-      );
+      await _requestLimiter.acquire();
+      late HttpClientResponse response;
+      try {
+        response = await apiClient.putStream(
+          url: signed.uploadPart!,
+          bytes: stream,
+          contentLength: length,
+        );
+      } finally {
+        _requestLimiter.release();
+      }
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final eTag = response.headers.value('etag');
