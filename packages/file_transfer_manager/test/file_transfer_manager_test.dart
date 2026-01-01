@@ -68,6 +68,9 @@ void main() {
       final rand = Random(42);
       final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
       env.fakeServer!.completedObjects[remoteKey] = bytes;
+      print(
+        '[DEBUG] Offline seed complete for key=$remoteKey bytes=${bytes.length}',
+      );
       await _runDownloadTest(
         env: env,
         pendingDir: pendingDir,
@@ -96,6 +99,9 @@ void main() {
       );
       final bytes = List<int>.generate(2048, (i) => (i * 3) % 256);
       env.fakeServer!.completedObjects[remoteKey] = bytes;
+      print(
+        '[DEBUG] Offline seed complete for key=$remoteKey bytes=${bytes.length}',
+      );
       await _runStopsAndResumesDownloadProcessing(
         env: env,
         pendingDir: pendingDir,
@@ -119,6 +125,9 @@ void main() {
       final rand = Random(7);
       final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
       env.fakeServer!.completedObjects[remoteKey] = bytes;
+      print(
+        '[DEBUG] Offline seed complete for key=$remoteKey bytes=${bytes.length}',
+      );
       await _runResumesDownloadUsingExistingParts(
         env: env,
         pendingDir: pendingDir,
@@ -178,6 +187,9 @@ void main() {
         remoteKey: remoteKey,
         bytes: bytes,
       );
+      print(
+        '[DEBUG] Internet seed complete for key=$remoteKey bytes=${bytes.length}',
+      );
       await _runDownloadTest(
         env: env,
         pendingDir: pendingDir,
@@ -212,6 +224,9 @@ void main() {
         remoteKey: remoteKey,
         bytes: bytes,
       );
+      print(
+        '[DEBUG] Internet seed complete for key=$remoteKey bytes=${bytes.length}',
+      );
       await _runStopsAndResumesDownloadProcessing(
         env: env,
         pendingDir: pendingDir,
@@ -240,6 +255,9 @@ void main() {
         cloudedDir: cloudedDir,
         remoteKey: remoteKey,
         bytes: bytes,
+      );
+      print(
+        '[DEBUG] Internet seed complete for key=$remoteKey bytes=${bytes.length}',
       );
       await _runResumesDownloadUsingExistingParts(
         env: env,
@@ -293,6 +311,10 @@ Future<void> _runUploadTest({
     timestamp: timestamp,
   );
 
+  print(
+    '[DEBUG] _runUploadTest remoteKey=$remoteKey pendingDir=${pendingDir.path} cloudedDir=${cloudedDir.path}',
+  );
+
   final uploadService = MediaUploadService(
     apiClient: env.apiClient,
     pendingUploadBase: pendingDir,
@@ -320,6 +342,9 @@ Future<void> _runUploadTest({
   expect(await file.exists(), isFalse);
 
   final remoteBytes = await _fetchRemoteBytes(env.apiClient, remoteKey);
+  print(
+    '[DEBUG] _runUploadTest fetched remote bytes for $remoteKey length=${remoteBytes.length}',
+  );
   expect(remoteBytes, equals(content));
 
   await uploadService.dispose();
@@ -332,6 +357,7 @@ Future<void> _runDownloadTest({
   required String remoteKey,
   required List<int> bytes,
 }) async {
+  print('[DEBUG] _runDownloadTest remoteKey=$remoteKey bytes=${bytes.length}');
   final downloadService = MediaDownloadService(
     apiClient: env.apiClient,
     cloudedBase: cloudedDir,
@@ -425,6 +451,9 @@ Future<void> _runStopsAndResumesDownloadProcessing({
   required String remoteKey,
   required List<int> bytes,
 }) async {
+  print(
+    '[DEBUG] _runStopsAndResumesDownloadProcessing remoteKey=$remoteKey bytes=${bytes.length}',
+  );
   final downloadService = MediaDownloadService(
     apiClient: env.apiClient,
     cloudedBase: cloudedDir,
@@ -468,6 +497,9 @@ Future<void> _runResumesDownloadUsingExistingParts({
   required List<int> bytes,
   required int chunkSize,
 }) async {
+  print(
+    '[DEBUG] _runResumesDownloadUsingExistingParts remoteKey=$remoteKey bytes=${bytes.length} chunkSize=$chunkSize',
+  );
   final size = bytes.length;
   final resolvedFileName = p.basename(remoteKey);
   final downloadDir = Directory(
@@ -544,12 +576,17 @@ Future<void> _seedRemoteBytes({
   required String remoteKey,
   required List<int> bytes,
 }) async {
+  print(
+    '[DEBUG] _seedRemoteBytes remoteKey=$remoteKey bytes=${bytes.length} fakeServer=${env.fakeServer != null}',
+  );
   if (env.fakeServer != null) {
+    print('[DEBUG] _seedRemoteBytes seeding fakeServer for $remoteKey');
     env.fakeServer!.completedObjects[remoteKey] = bytes;
     return;
   }
 
   // Seed via upload when using real server.
+  print('[DEBUG] _seedRemoteBytes uploading seed file for $remoteKey');
   final seedFile = File(
     p.join(pendingDir.path, 'seed_${remoteKey.replaceAll('/', '_')}'),
   );
@@ -563,13 +600,19 @@ Future<void> _seedRemoteBytes({
     partSizeBytes: s3CompatiblePartSize,
   );
   await seedingUpload.startProcessingUploads();
-  await seedingUpload.dispose();
-
-  final localSeedCopy = File(
+  final cloudedSeedFile = File(
     p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
   );
-  if (await localSeedCopy.exists()) {
-    await localSeedCopy.delete();
+  // Wait for seed upload to finish by checking clouded file presence (max 10s)
+  final seedWaitStart = DateTime.now();
+  while (!await cloudedSeedFile.exists() &&
+      DateTime.now().difference(seedWaitStart).inSeconds < 10) {
+    await Future.delayed(const Duration(milliseconds: 100));
+  }
+  await seedingUpload.dispose();
+
+  if (await cloudedSeedFile.exists()) {
+    await cloudedSeedFile.delete();
   }
 
   // Wait for remote file to exist (HEAD returns 200) with timeout
@@ -588,10 +631,14 @@ Future<void> _seedRemoteBytes({
       if (headResponse.statusCode == 200) {
         break;
       }
-    } catch (_) {
+    } catch (e) {
+      print(
+        '[DEBUG] _seedRemoteBytes existence check failed for $remoteKey: $e',
+      );
       // ignore and retry
     }
     if (DateTime.now().difference(start) > timeout) {
+      print('[DEBUG] _seedRemoteBytes timeout waiting for $remoteKey');
       throw Exception('Timeout waiting for remote file $remoteKey to exist');
     }
     await Future.delayed(pollInterval);
