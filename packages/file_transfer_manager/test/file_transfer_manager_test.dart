@@ -56,10 +56,24 @@ void main() {
     });
 
     test('downloads chunked file and assembles locally', () async {
+      // Seed remote file before download
+      const testName = 'downloads chunked file and assembles locally';
+      final timestamp = DateTime.now();
+      final remoteKey = buildTestRemoteKey(
+        relativePath: 'media/bigfile.bin',
+        testName: testName,
+        timestamp: timestamp,
+      );
+      final size = 10 * 1024 * 1024 + 123;
+      final rand = Random(42);
+      final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
+      env.fakeServer!.completedObjects[remoteKey] = bytes;
       await _runDownloadTest(
         env: env,
         pendingDir: pendingDir,
         cloudedDir: cloudedDir,
+        remoteKey: remoteKey,
+        bytes: bytes,
       );
     });
 
@@ -72,18 +86,46 @@ void main() {
     });
 
     test('stops and resumes download processing', () async {
+      // Seed remote file before download
+      const testName = 'stops and resumes download processing';
+      final timestamp = DateTime.now();
+      final remoteKey = buildTestRemoteKey(
+        relativePath: 'media/pause.bin',
+        testName: testName,
+        timestamp: timestamp,
+      );
+      final bytes = List<int>.generate(2048, (i) => (i * 3) % 256);
+      env.fakeServer!.completedObjects[remoteKey] = bytes;
       await _runStopsAndResumesDownloadProcessing(
         env: env,
         pendingDir: pendingDir,
         cloudedDir: cloudedDir,
+        remoteKey: remoteKey,
+        bytes: bytes,
       );
     });
 
     test('resumes download using existing parts', () async {
+      // Seed remote file before download
+      const testName = 'resumes download using existing parts';
+      final timestamp = DateTime.now();
+      final remoteKey = buildTestRemoteKey(
+        relativePath: 'media/resume.bin',
+        testName: testName,
+        timestamp: timestamp,
+      );
+      final chunkSize = 2 * 1024 * 1024;
+      final size = 6 * 1024 * 1024 + 321;
+      final rand = Random(7);
+      final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
+      env.fakeServer!.completedObjects[remoteKey] = bytes;
       await _runResumesDownloadUsingExistingParts(
         env: env,
         pendingDir: pendingDir,
         cloudedDir: cloudedDir,
+        remoteKey: remoteKey,
+        bytes: bytes,
+        chunkSize: chunkSize,
       );
     });
   });
@@ -118,10 +160,30 @@ void main() {
     });
 
     test('downloads chunked file and assembles locally', () async {
+      // Seed remote file before download
+      const testName = 'downloads chunked file and assembles locally';
+      final timestamp = DateTime.now();
+      final remoteKey = buildTestRemoteKey(
+        relativePath: 'media/bigfile.bin',
+        testName: testName,
+        timestamp: timestamp,
+      );
+      final size = 10 * 1024 * 1024 + 123;
+      final rand = Random(42);
+      final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
+      await _seedRemoteBytes(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+        remoteKey: remoteKey,
+        bytes: bytes,
+      );
       await _runDownloadTest(
         env: env,
         pendingDir: pendingDir,
         cloudedDir: cloudedDir,
+        remoteKey: remoteKey,
+        bytes: bytes,
       );
     });
 
@@ -134,18 +196,58 @@ void main() {
     });
 
     test('stops and resumes download processing', () async {
+      // Seed remote file before download
+      const testName = 'stops and resumes download processing';
+      final timestamp = DateTime.now();
+      final remoteKey = buildTestRemoteKey(
+        relativePath: 'media/pause.bin',
+        testName: testName,
+        timestamp: timestamp,
+      );
+      final bytes = List<int>.generate(2048, (i) => (i * 3) % 256);
+      await _seedRemoteBytes(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+        remoteKey: remoteKey,
+        bytes: bytes,
+      );
       await _runStopsAndResumesDownloadProcessing(
         env: env,
         pendingDir: pendingDir,
         cloudedDir: cloudedDir,
+        remoteKey: remoteKey,
+        bytes: bytes,
       );
     });
 
     test('resumes download using existing parts', () async {
+      // Seed remote file before download
+      const testName = 'resumes download using existing parts';
+      final timestamp = DateTime.now();
+      final remoteKey = buildTestRemoteKey(
+        relativePath: 'media/resume.bin',
+        testName: testName,
+        timestamp: timestamp,
+      );
+      final chunkSize = 2 * 1024 * 1024;
+      final size = 6 * 1024 * 1024 + 321;
+      final rand = Random(7);
+      final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
+      await _seedRemoteBytes(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+        remoteKey: remoteKey,
+        bytes: bytes,
+      );
       await _runResumesDownloadUsingExistingParts(
         env: env,
         pendingDir: pendingDir,
         cloudedDir: cloudedDir,
+        remoteKey: remoteKey,
+        bytes: bytes,
+        chunkSize: chunkSize,
       );
     });
   }, skip: skipInternetTests);
@@ -227,42 +329,9 @@ Future<void> _runDownloadTest({
   required _Env env,
   required Directory pendingDir,
   required Directory cloudedDir,
+  required String remoteKey,
+  required List<int> bytes,
 }) async {
-  const testName = 'downloads chunked file and assembles locally';
-  final timestamp = DateTime.now();
-  final remoteKey = buildTestRemoteKey(
-    relativePath: 'media/bigfile.bin',
-    testName: testName,
-    timestamp: timestamp,
-  );
-  final size = 10 * 1024 * 1024 + 123; // chunked via override
-  final rand = Random(42);
-  final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
-
-  if (env.fakeServer != null) {
-    env.fakeServer!.completedObjects[remoteKey] = bytes;
-  } else {
-    final seedFile = File(p.join(pendingDir.path, 'seed.bin'));
-    await seedFile.parent.create(recursive: true);
-    await seedFile.writeAsBytes(bytes, flush: true);
-    final seedingUpload = MediaUploadService(
-      apiClient: env.apiClient,
-      pendingUploadBase: pendingDir,
-      cloudedBase: cloudedDir,
-      partSizeBytes: s3CompatiblePartSize,
-      remoteFileKeyResolver: (_) => remoteKey,
-    );
-    await seedingUpload.startProcessingUploads();
-    await seedingUpload.dispose();
-
-    final localSeedCopy = File(
-      p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
-    );
-    if (await localSeedCopy.exists()) {
-      await localSeedCopy.delete();
-    }
-  }
-
   final downloadService = MediaDownloadService(
     apiClient: env.apiClient,
     cloudedBase: cloudedDir,
@@ -353,24 +422,9 @@ Future<void> _runStopsAndResumesDownloadProcessing({
   required _Env env,
   required Directory pendingDir,
   required Directory cloudedDir,
+  required String remoteKey,
+  required List<int> bytes,
 }) async {
-  const testName = 'stops and resumes download processing';
-  final timestamp = DateTime.now();
-  final remoteKey = buildTestRemoteKey(
-    relativePath: 'media/pause.bin',
-    testName: testName,
-    timestamp: timestamp,
-  );
-
-  final bytes = List<int>.generate(2048, (i) => (i * 3) % 256);
-  await _seedRemoteBytes(
-    env: env,
-    pendingDir: pendingDir,
-    cloudedDir: cloudedDir,
-    remoteKey: remoteKey,
-    bytes: bytes,
-  );
-
   final downloadService = MediaDownloadService(
     apiClient: env.apiClient,
     cloudedBase: cloudedDir,
@@ -410,28 +464,11 @@ Future<void> _runResumesDownloadUsingExistingParts({
   required _Env env,
   required Directory pendingDir,
   required Directory cloudedDir,
+  required String remoteKey,
+  required List<int> bytes,
+  required int chunkSize,
 }) async {
-  const testName = 'resumes download using existing parts';
-  final timestamp = DateTime.now();
-  final remoteKey = buildTestRemoteKey(
-    relativePath: 'media/resume.bin',
-    testName: testName,
-    timestamp: timestamp,
-  );
-
-  final chunkSize = 2 * 1024 * 1024;
-  final size = 6 * 1024 * 1024 + 321; // 3 parts with remainder
-  final rand = Random(7);
-  final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
-
-  await _seedRemoteBytes(
-    env: env,
-    pendingDir: pendingDir,
-    cloudedDir: cloudedDir,
-    remoteKey: remoteKey,
-    bytes: bytes,
-  );
-
+  final size = bytes.length;
   final resolvedFileName = p.basename(remoteKey);
   final downloadDir = Directory(
     p.join(cloudedDir.path, '__downloading', resolvedFileName),
@@ -533,6 +570,31 @@ Future<void> _seedRemoteBytes({
   );
   if (await localSeedCopy.exists()) {
     await localSeedCopy.delete();
+  }
+
+  // Wait for remote file to exist (HEAD returns 200) with timeout
+  final timeout = Duration(seconds: 10);
+  final pollInterval = Duration(milliseconds: 100);
+  final start = DateTime.now();
+  while (true) {
+    try {
+      final urls = await env.apiClient.getUrls(
+        remoteFileKey: remoteKey,
+        clientMethods: ['head_object'],
+      );
+      final headUrl = urls.firstWhere((u) => u.headObject != null).headObject!;
+      final headRequest = await HttpClient().headUrl(headUrl);
+      final headResponse = await headRequest.close();
+      if (headResponse.statusCode == 200) {
+        break;
+      }
+    } catch (_) {
+      // ignore and retry
+    }
+    if (DateTime.now().difference(start) > timeout) {
+      throw Exception('Timeout waiting for remote file $remoteKey to exist');
+    }
+    await Future.delayed(pollInterval);
   }
 }
 
