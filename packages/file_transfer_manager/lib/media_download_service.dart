@@ -134,14 +134,36 @@ class MediaDownloadService {
           _activeJobs[job.remoteFileKey] = job;
           _activeDownloads++;
           _admitMoreJobs = false; // pause admitting until job signals readiness
-          _runSingleDownload(job).whenComplete(() {
-            _activeDownloads--;
-            _adjustPendingDownloads(-1);
-            _activeJobs.remove(job.remoteFileKey);
-            _admitMoreJobs = true;
-            _processingQueue = false;
-            _processQueue();
-          });
+          _runSingleDownload(job)
+              .then((_) {
+                _activeDownloads--;
+                _adjustPendingDownloads(-1);
+                _activeJobs.remove(job.remoteFileKey);
+                _admitMoreJobs = true;
+                _processingQueue = false;
+                _processQueue();
+              })
+              .catchError((error, stack) {
+                _activeDownloads--;
+                _processingQueue = false;
+                _admitMoreJobs = true;
+
+                if (error is _DownloadPausedException) {
+                  // Requeue incomplete job; do not decrement pending.
+                  _activeJobs.remove(job.remoteFileKey);
+                  _queueLIFO.add(job);
+                  _processQueue();
+                  return;
+                }
+
+                // Real failure: finish the job with error and adjust pending.
+                _adjustPendingDownloads(-1);
+                _activeJobs.remove(job.remoteFileKey);
+                if (!job.completer.isCompleted) {
+                  job.completer.completeError(error, stack);
+                }
+                _processQueue();
+              });
         }
       } finally {
         _processingQueue = false;
@@ -233,6 +255,9 @@ class MediaDownloadService {
         final destFile = File(p.join(targetDir.path, resolvedFileName));
         await _requestLimiter.acquire();
         try {
+          if (!_downloadsEnabled) {
+            throw _DownloadPausedException();
+          }
           final response = await _getWithRenewal(
             currentUrl: getUrl,
             expiresAt: expiresAt,
@@ -312,6 +337,10 @@ class MediaDownloadService {
 
       await loadExistingParts();
 
+      if (!_downloadsEnabled) {
+        throw _DownloadPausedException();
+      }
+
       void reportProgress(int partBytes) {
         partsCompleted++;
         bytesCompleted += partBytes;
@@ -329,6 +358,9 @@ class MediaDownloadService {
       Future<File> downloadPart(int partNumber) async {
         final start = (partNumber - 1) * chunkSize;
         final end = min(contentLength - 1, start + chunkSize - 1);
+        if (!_downloadsEnabled) {
+          throw _DownloadPausedException();
+        }
         await _requestLimiter.acquire();
         try {
           final response = await _getWithRenewal(
@@ -360,6 +392,9 @@ class MediaDownloadService {
 
       // Download last part first if missing.
       if (!existingParts.contains(totalParts)) {
+        if (!_downloadsEnabled) {
+          throw _DownloadPausedException();
+        }
         await downloadPart(totalParts);
       }
 
@@ -404,6 +439,10 @@ class MediaDownloadService {
       job.completer.complete(destFile);
       return destFile;
     } catch (e, st) {
+      if (e is _DownloadPausedException) {
+        // Do not complete the future; let caller requeue.
+        rethrow;
+      }
       if (!job.completer.isCompleted) {
         job.completer.completeError(e, st);
       }
@@ -505,6 +544,8 @@ class DownloadNotFoundException extends HttpException {
 
   final String remoteFileKey;
 }
+
+class _DownloadPausedException implements Exception {}
 
 typedef DownloadProgressCallback = void Function(DownloadProgress progress);
 
