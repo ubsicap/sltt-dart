@@ -65,112 +65,27 @@ void main() {
     });
 
     test('stops and resumes upload processing', () async {
-      final filePath = p.join(pendingDir.path, 'videos', 'pause.bin');
-      final file = File(filePath);
-      await file.parent.create(recursive: true);
-      final content = List<int>.generate(1024, (i) => i % 256);
-      await file.writeAsBytes(content, flush: true);
-
-      const testName = 'stops and resumes upload processing';
-      final timestamp = DateTime.now();
-      final remoteKey = buildTestRemoteKey(
-        relativePath: p.relative(file.path, from: pendingDir.path),
-        testName: testName,
-        timestamp: timestamp,
+      await _runStopsAndResumesUploadProcessing(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
       );
-
-      final uploadService = MediaUploadService(
-        apiClient: env.apiClient,
-        pendingUploadBase: pendingDir,
-        cloudedBase: cloudedDir,
-        remoteFileKeyResolver: (_) => remoteKey,
-      );
-
-      await uploadService.stopProcessingUploads();
-      await uploadService.processPendingUploads();
-
-      expect(await file.exists(), isTrue, reason: 'upload should be paused');
-
-      await uploadService.startProcessingUploads();
-
-      final cloudedFile = File(
-        p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
-      );
-      // Wait for file to appear in clouded dir (max 5s)
-      final start = DateTime.now();
-      while (!await cloudedFile.exists() &&
-          DateTime.now().difference(start).inSeconds < 5) {
-        await Future.delayed(const Duration(milliseconds: 50));
-      }
-      expect(await cloudedFile.exists(), isTrue);
-      expect(await cloudedFile.readAsBytes(), equals(content));
-      expect(await file.exists(), isFalse);
-
-      final remoteBytes = await _fetchRemoteBytes(env.apiClient, remoteKey);
-      expect(remoteBytes, equals(content));
-
-      await uploadService.dispose();
     });
 
     test('stops and resumes download processing', () async {
-      const testName = 'stops and resumes download processing';
-      final timestamp = DateTime.now();
-      final remoteKey = buildTestRemoteKey(
-        relativePath: 'media/pause.bin',
-        testName: testName,
-        timestamp: timestamp,
+      await _runStopsAndResumesDownloadProcessing(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
       );
+    });
 
-      final bytes = List<int>.generate(2048, (i) => (i * 3) % 256);
-      if (env.fakeServer != null) {
-        env.fakeServer!.completedObjects[remoteKey] = bytes;
-      } else {
-        final seedFile = File(p.join(pendingDir.path, 'seed_pause.bin'));
-        await seedFile.parent.create(recursive: true);
-        await seedFile.writeAsBytes(bytes, flush: true);
-        final seedingUpload = MediaUploadService(
-          apiClient: env.apiClient,
-          pendingUploadBase: pendingDir,
-          cloudedBase: cloudedDir,
-          remoteFileKeyResolver: (_) => remoteKey,
-        );
-        await seedingUpload.startProcessingUploads();
-        await seedingUpload.dispose();
-      }
-
-      final downloadService = MediaDownloadService(
-        apiClient: env.apiClient,
-        cloudedBase: cloudedDir,
+    test('resumes download using existing parts', () async {
+      await _runResumesDownloadUsingExistingParts(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
       );
-
-      downloadService.stopProcessingDownloads();
-
-      final downloadFuture = downloadService.enqueueDownload(
-        remoteFileKey: remoteKey,
-        onProgress: (_) {},
-      );
-
-      final destFile = File(
-        p.join(
-          cloudedDir.path,
-          p.basename(remoteKey).substring(0, 7),
-          p.basename(remoteKey),
-        ),
-      );
-
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(
-        await destFile.exists(),
-        isFalse,
-        reason: 'download should not start while stopped',
-      );
-
-      downloadService.resumeProcessingDownloads();
-      final file = await downloadFuture;
-
-      expect(file.path, equals(destFile.path));
-      expect(await file.exists(), isTrue);
-      expect(await file.readAsBytes(), equals(bytes));
     });
   });
 
@@ -216,86 +131,28 @@ void main() {
         );
       });
 
+      test('stops and resumes upload processing', () async {
+        await _runStopsAndResumesUploadProcessing(
+          env: env,
+          pendingDir: pendingDir,
+          cloudedDir: cloudedDir,
+        );
+      });
+
+      test('stops and resumes download processing', () async {
+        await _runStopsAndResumesDownloadProcessing(
+          env: env,
+          pendingDir: pendingDir,
+          cloudedDir: cloudedDir,
+        );
+      });
+
       test('resumes download using existing parts', () async {
-        const testName = 'resumes download using existing parts';
-        final timestamp = DateTime.now();
-        final remoteKey = buildTestRemoteKey(
-          relativePath: 'media/resume.bin',
-          testName: testName,
-          timestamp: timestamp,
+        await _runResumesDownloadUsingExistingParts(
+          env: env,
+          pendingDir: pendingDir,
+          cloudedDir: cloudedDir,
         );
-
-        final chunkSize = 2 * 1024 * 1024;
-        final size = 6 * 1024 * 1024 + 321; // 3 parts with remainder
-        final rand = Random(7);
-        final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
-
-        env.fakeServer!.completedObjects[remoteKey] = bytes;
-
-        final resolvedFileName = p.basename(remoteKey);
-        final downloadDir = Directory(
-          p.join(cloudedDir.path, '__downloading', resolvedFileName),
-        );
-        await downloadDir.create(recursive: true);
-
-        int partLength(int partNumber) {
-          final start = (partNumber - 1) * chunkSize;
-          final endExclusive = min(start + chunkSize, size);
-          return endExclusive - start;
-        }
-
-        // Seed parts 1 and 2 as already downloaded.
-        for (final partNumber in [1, 2]) {
-          final start = (partNumber - 1) * chunkSize;
-          final endExclusive = start + partLength(partNumber);
-          final partFile = File(
-            p.join(
-              downloadDir.path,
-              '$resolvedFileName-${partNumber.toString().padLeft(7, '0')}',
-            ),
-          );
-          await partFile.writeAsBytes(
-            bytes.sublist(start, endExclusive),
-            flush: true,
-          );
-        }
-
-        final progressUpdates = <DownloadProgress>[];
-
-        final downloadService = MediaDownloadService(
-          apiClient: env.apiClient,
-          cloudedBase: cloudedDir,
-          chunkSizeOverride: chunkSize,
-        );
-
-        final file = await downloadService.enqueueDownload(
-          remoteFileKey: remoteKey,
-          onProgress: (p) => progressUpdates.add(p),
-        );
-
-        expect(await file.exists(), isTrue);
-        expect(await file.readAsBytes(), equals(bytes));
-
-        final downloadingDir = Directory(
-          p.join(cloudedDir.path, '__downloading', resolvedFileName),
-        );
-        expect(await downloadingDir.exists(), isFalse);
-
-        final preDownloadedBytes = partLength(1) + partLength(2);
-        final resumedProgress = progressUpdates.firstWhere(
-          (p) => p.partsCompleted >= 0 && p.partsCompleted <= 2,
-          orElse: () => progressUpdates.last,
-        );
-        expect(resumedProgress.partsCompleted, greaterThanOrEqualTo(2));
-        expect(
-          resumedProgress.bytesCompleted,
-          greaterThanOrEqualTo(preDownloadedBytes),
-        );
-
-        final lastProgress = progressUpdates.last;
-        final totalParts = (size / chunkSize).ceil();
-        expect(lastProgress.partsCompleted, equals(totalParts));
-        expect(lastProgress.bytesCompleted, equals(size));
       });
     },
     skip: enableInternet,
@@ -448,6 +305,245 @@ Future<void> _runDownloadTest({
 
   expect(lastProgress.partsCompleted, equals(lastProgress.partsTotal));
   expect(lastProgress.bytesCompleted, equals(bytes.length));
+}
+
+Future<void> _runStopsAndResumesUploadProcessing({
+  required _Env env,
+  required Directory pendingDir,
+  required Directory cloudedDir,
+}) async {
+  final filePath = p.join(pendingDir.path, 'videos', 'pause.bin');
+  final file = File(filePath);
+  await file.parent.create(recursive: true);
+  final content = List<int>.generate(1024, (i) => i % 256);
+  await file.writeAsBytes(content, flush: true);
+
+  const testName = 'stops and resumes upload processing';
+  final timestamp = DateTime.now();
+  final remoteKey = buildTestRemoteKey(
+    relativePath: p.relative(file.path, from: pendingDir.path),
+    testName: testName,
+    timestamp: timestamp,
+  );
+
+  final uploadService = MediaUploadService(
+    apiClient: env.apiClient,
+    pendingUploadBase: pendingDir,
+    cloudedBase: cloudedDir,
+    remoteFileKeyResolver: (_) => remoteKey,
+  );
+
+  await uploadService.stopProcessingUploads();
+  await uploadService.processPendingUploads();
+
+  expect(await file.exists(), isTrue, reason: 'upload should be paused');
+
+  await uploadService.startProcessingUploads();
+
+  final cloudedFile = File(
+    p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
+  );
+  // Wait for file to appear in clouded dir (max 5s)
+  final start = DateTime.now();
+  while (!await cloudedFile.exists() &&
+      DateTime.now().difference(start).inSeconds < 5) {
+    await Future.delayed(const Duration(milliseconds: 50));
+  }
+  expect(await cloudedFile.exists(), isTrue);
+  expect(await cloudedFile.readAsBytes(), equals(content));
+  expect(await file.exists(), isFalse);
+
+  final remoteBytes = await _fetchRemoteBytes(env.apiClient, remoteKey);
+  expect(remoteBytes, equals(content));
+
+  await uploadService.dispose();
+}
+
+Future<void> _runStopsAndResumesDownloadProcessing({
+  required _Env env,
+  required Directory pendingDir,
+  required Directory cloudedDir,
+}) async {
+  const testName = 'stops and resumes download processing';
+  final timestamp = DateTime.now();
+  final remoteKey = buildTestRemoteKey(
+    relativePath: 'media/pause.bin',
+    testName: testName,
+    timestamp: timestamp,
+  );
+
+  final bytes = List<int>.generate(2048, (i) => (i * 3) % 256);
+  await _seedRemoteBytes(
+    env: env,
+    pendingDir: pendingDir,
+    cloudedDir: cloudedDir,
+    remoteKey: remoteKey,
+    bytes: bytes,
+  );
+
+  final downloadService = MediaDownloadService(
+    apiClient: env.apiClient,
+    cloudedBase: cloudedDir,
+  );
+
+  downloadService.stopProcessingDownloads();
+
+  final downloadFuture = downloadService.enqueueDownload(
+    remoteFileKey: remoteKey,
+    onProgress: (_) {},
+  );
+
+  final destFile = File(
+    p.join(
+      cloudedDir.path,
+      p.basename(remoteKey).substring(0, 7),
+      p.basename(remoteKey),
+    ),
+  );
+
+  await Future<void>.delayed(const Duration(milliseconds: 50));
+  expect(
+    await destFile.exists(),
+    isFalse,
+    reason: 'download should not start while stopped',
+  );
+
+  downloadService.resumeProcessingDownloads();
+  final file = await downloadFuture;
+
+  expect(file.path, equals(destFile.path));
+  expect(await file.exists(), isTrue);
+  expect(await file.readAsBytes(), equals(bytes));
+}
+
+Future<void> _runResumesDownloadUsingExistingParts({
+  required _Env env,
+  required Directory pendingDir,
+  required Directory cloudedDir,
+}) async {
+  const testName = 'resumes download using existing parts';
+  final timestamp = DateTime.now();
+  final remoteKey = buildTestRemoteKey(
+    relativePath: 'media/resume.bin',
+    testName: testName,
+    timestamp: timestamp,
+  );
+
+  final chunkSize = 2 * 1024 * 1024;
+  final size = 6 * 1024 * 1024 + 321; // 3 parts with remainder
+  final rand = Random(7);
+  final bytes = List<int>.generate(size, (_) => rand.nextInt(256));
+
+  await _seedRemoteBytes(
+    env: env,
+    pendingDir: pendingDir,
+    cloudedDir: cloudedDir,
+    remoteKey: remoteKey,
+    bytes: bytes,
+  );
+
+  final resolvedFileName = p.basename(remoteKey);
+  final downloadDir = Directory(
+    p.join(cloudedDir.path, '__downloading', resolvedFileName),
+  );
+  await downloadDir.create(recursive: true);
+
+  int partLength(int partNumber) {
+    final start = (partNumber - 1) * chunkSize;
+    final endExclusive = min(start + chunkSize, size);
+    return endExclusive - start;
+  }
+
+  // Seed parts 1 and 2 as already downloaded.
+  for (final partNumber in [1, 2]) {
+    final start = (partNumber - 1) * chunkSize;
+    final endExclusive = start + partLength(partNumber);
+    final partFile = File(
+      p.join(
+        downloadDir.path,
+        '$resolvedFileName-${partNumber.toString().padLeft(7, '0')}',
+      ),
+    );
+    await partFile.writeAsBytes(
+      bytes.sublist(start, endExclusive),
+      flush: true,
+    );
+  }
+
+  final progressUpdates = <DownloadProgress>[];
+
+  final downloadService = MediaDownloadService(
+    apiClient: env.apiClient,
+    cloudedBase: cloudedDir,
+    chunkSizeOverride: chunkSize,
+  );
+
+  downloadService.startProcessingDownloads();
+
+  final file = await downloadService.enqueueDownload(
+    remoteFileKey: remoteKey,
+    onProgress: (p) => progressUpdates.add(p),
+  );
+
+  expect(await file.exists(), isTrue);
+  expect(await file.readAsBytes(), equals(bytes));
+
+  final downloadingDir = Directory(
+    p.join(cloudedDir.path, '__downloading', resolvedFileName),
+  );
+  expect(await downloadingDir.exists(), isFalse);
+
+  final preDownloadedBytes = partLength(1) + partLength(2);
+  final resumedProgress = progressUpdates.lastWhere(
+    (p) => p.partsCompleted >= 2,
+    orElse: () => progressUpdates.last,
+  );
+  expect(resumedProgress.partsCompleted, greaterThanOrEqualTo(2));
+  expect(
+    resumedProgress.bytesCompleted,
+    greaterThanOrEqualTo(preDownloadedBytes),
+  );
+
+  final lastProgress = progressUpdates.last;
+  final totalParts = (size / chunkSize).ceil();
+  expect(lastProgress.partsCompleted, equals(totalParts));
+  expect(lastProgress.bytesCompleted, equals(size));
+}
+
+Future<void> _seedRemoteBytes({
+  required _Env env,
+  required Directory pendingDir,
+  required Directory cloudedDir,
+  required String remoteKey,
+  required List<int> bytes,
+}) async {
+  if (env.fakeServer != null) {
+    env.fakeServer!.completedObjects[remoteKey] = bytes;
+    return;
+  }
+
+  // Seed via upload when using real server.
+  final seedFile = File(
+    p.join(pendingDir.path, 'seed_${remoteKey.replaceAll('/', '_')}'),
+  );
+  await seedFile.parent.create(recursive: true);
+  await seedFile.writeAsBytes(bytes, flush: true);
+  final seedingUpload = MediaUploadService(
+    apiClient: env.apiClient,
+    pendingUploadBase: pendingDir,
+    cloudedBase: cloudedDir,
+    remoteFileKeyResolver: (_) => remoteKey,
+    partSizeBytes: s3CompatiblePartSize,
+  );
+  await seedingUpload.startProcessingUploads();
+  await seedingUpload.dispose();
+
+  final localSeedCopy = File(
+    p.joinAll([cloudedDir.path, ...remoteKey.split('/')]),
+  );
+  if (await localSeedCopy.exists()) {
+    await localSeedCopy.delete();
+  }
 }
 
 Future<_Env> _buildOfflineEnv() async {
