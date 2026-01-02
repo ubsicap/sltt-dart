@@ -88,7 +88,6 @@ class MediaDownloadService {
     if (existingIndex != -1) {
       final existingJob = _queueLIFO.removeAt(existingIndex);
       _queueLIFO.add(existingJob);
-      _adjustPendingDownloads();
       return existingJob.completer.future;
     }
 
@@ -114,12 +113,12 @@ class MediaDownloadService {
     } else {
       _queueLIFO.add(job);
     }
-    _adjustPendingDownloads();
     _processQueue();
     return job.completer.future;
   }
 
   void _processQueue() {
+    _adjustPendingDownloads();
     if (_processingQueue || !_downloadsEnabled || !_admitMoreJobs) return;
     _processingQueue = true;
 
@@ -139,7 +138,6 @@ class MediaDownloadService {
                 _activeJobs.remove(job.remoteFileKey);
                 _admitMoreJobs = true;
                 _processingQueue = false;
-                _adjustPendingDownloads();
                 _processQueue();
               })
               .catchError((error, stack) {
@@ -152,13 +150,11 @@ class MediaDownloadService {
                   // Requeue incomplete job; do not decrement pending.
                   _activeJobs.remove(job.remoteFileKey);
                   _queueLIFO.add(job);
-                  _adjustPendingDownloads();
                   _processQueue();
                   return;
                 }
 
                 // Real failure: finish the job with error and adjust pending.
-                _adjustPendingDownloads();
                 _activeJobs.remove(job.remoteFileKey);
                 if (!job.completer.isCompleted) {
                   job.completer.completeError(error, stack);
