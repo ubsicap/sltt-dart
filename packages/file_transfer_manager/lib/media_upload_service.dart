@@ -54,6 +54,8 @@ class MediaUploadService {
   final Set<String> _activeUploadPaths = {};
   final _RequestLimiter _requestLimiter;
   int _activeUploads = 0;
+  int get _pendingFiles => _fileQueue.length + _activeUploads;
+
   bool _processingQueue = false;
   bool _admitMoreUploads = true;
 
@@ -65,17 +67,10 @@ class MediaUploadService {
   void _reportTotals() =>
       pendingTotalsCallback?.call(_pendingFiles, _pendingBytes);
 
-  void _adjustPendingFiles(int delta) {
-    _pendingFiles = ((_pendingFiles + delta).clamp(0, 1 << 30));
-    _reportTotals();
-  }
-
   void _adjustPendingBytes(int delta) {
     _pendingBytes = ((_pendingBytes + delta).clamp(0, 1 << 62));
-    _reportTotals();
   }
 
-  int _pendingFiles = 0;
   int _pendingBytes = 0;
 
   void scanAndWatchPendingUploads() async {
@@ -121,7 +116,6 @@ class MediaUploadService {
     _ensureUploadWatch();
     _scanning = true;
     try {
-      _pendingFiles = 0;
       _pendingBytes = 0;
       final files = await _collectFiles();
       final pending = files.where(
@@ -130,6 +124,7 @@ class MediaUploadService {
       _fileQueue
         ..clear()
         ..addAll(pending);
+      _reportTotals();
       _admitMoreUploads = true;
       if (_uploadsEnabled) {
         _processQueue();
@@ -179,7 +174,6 @@ class MediaUploadService {
       followLinks: false,
     )) {
       if (entity is File) {
-        _pendingFiles++;
         _pendingBytes += await entity.length();
         files.add(entity);
       }
@@ -224,8 +218,8 @@ class MediaUploadService {
     final headResponse = await apiClient.head(headUrl);
     if (headResponse.statusCode == HttpStatus.ok) {
       _adjustPendingBytes(-fileSize);
-      _adjustPendingFiles(-1);
       await _moveToClouded(file, remoteFileKey);
+      _reportTotals();
       return;
     }
 
@@ -288,9 +282,8 @@ class MediaUploadService {
       uploadId: uploadId,
       parts: uploaded,
     );
-
-    _adjustPendingFiles(-1);
     await _moveToClouded(file, remoteFileKey);
+    _reportTotals();
   }
 
   Future<String> _uploadPart({
