@@ -64,6 +64,7 @@ class MediaUploadService {
   final Random _random = Random();
   bool _uploadsEnabled = false;
   StreamSubscription<FileSystemEvent>? _uploadWatch;
+
   void _reportTotals() =>
       pendingTotalsCallback?.call(_pendingFiles, _pendingBytes);
 
