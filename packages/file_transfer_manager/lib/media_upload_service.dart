@@ -78,6 +78,10 @@ class MediaUploadService {
   int _pendingFiles = 0;
   int _pendingBytes = 0;
 
+  void scanAndWatchPendingUploads() async {
+    unawaited(processPendingUploads());
+  }
+
   Future<void> watchAndProcess() async => startProcessingUploads();
 
   Future<void> startProcessingUploads() async {
