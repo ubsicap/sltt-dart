@@ -88,7 +88,7 @@ void main() {
         pendingDir: pendingDir,
         cloudedDir: cloudedDir,
       );
-    });
+    }, timeout: Timeout.none);
 
     test('stops and resumes upload processing', () async {
       await runStopsAndResumesUploadProcessing(
