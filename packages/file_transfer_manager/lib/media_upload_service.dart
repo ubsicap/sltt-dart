@@ -334,7 +334,7 @@ class MediaUploadService {
           url: signed.uploadPart!,
           bytes: Stream.value(partBytes),
           contentLength: length,
-          // headers: {'Content-MD5': contentMd5},
+          headers: {'Content-MD5': contentMd5},
         );
       } finally {
         _requestLimiter.release();
