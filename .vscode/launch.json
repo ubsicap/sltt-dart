@@ -58,7 +58,7 @@
                 "AWS_REGION": "us-east-1",
                 "DYNAMODB_REGION": "us-east-1",
                 "DYNAMODB_TABLE": "sltt-backend-changes-states-dev",
-                "MEDIA_BUCKET": "sltt-backend-media-${input:awsAccountId}",
+                "MEDIA_BUCKET": "sltt-backend-media-worm-${input:awsAccountId}",
                 "STAGE": "dev",
                 "USE_CLOUD_STORAGE": "true",
                 "LOCAL_DEBUGGER": "true"
@@ -83,7 +83,7 @@
                 "AWS_REGION": "us-east-1",
                 "DYNAMODB_REGION": "us-east-1",
                 "DYNAMODB_TABLE": "sltt-backend-changes-states-tst",
-                "MEDIA_BUCKET": "sltt-backend-media-${input:awsAccountId}",
+                "MEDIA_BUCKET": "sltt-backend-media-worm-${input:awsAccountId}",
                 "STAGE": "tst",
                 "USE_CLOUD_STORAGE": "true",
                 "LOCAL_DEBUGGER": "true"

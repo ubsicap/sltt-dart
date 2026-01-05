@@ -4,7 +4,7 @@ service: sltt-backend
 # No plugins needed - using manual build process
 
 custom:
-  mediaBucket: ${self:service}-media-${aws:accountId}
+  mediaBucket: ${self:service}-media-worm-${aws:accountId}
 
 provider:
   name: aws
@@ -130,12 +130,19 @@ resources:
           BlockPublicPolicy: true
           IgnorePublicAcls: true
           RestrictPublicBuckets: true
+        ObjectLockEnabled: true
         LifecycleConfiguration:
           Rules:
             - Id: AbortIncompleteMultipartUploads
               Status: Enabled
               AbortIncompleteMultipartUpload:
                 DaysAfterInitiation: 2
+        ObjectLockConfiguration:
+          ObjectLockEnabled: Enabled
+          Rule:
+            DefaultRetention:
+              Mode: GOVERNANCE
+              Years: 100
 
 # Package configuration
 package:
