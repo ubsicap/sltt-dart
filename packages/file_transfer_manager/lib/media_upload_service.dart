@@ -295,7 +295,20 @@ class MediaUploadService {
   }) async {
     final start = (partNumber - 1) * partSizeBytes;
     final endExclusive = min(start + partSizeBytes, await file.length());
-    final length = endExclusive - start;
+
+    // Read part bytes once to compute checksum and reuse for upload
+    final partBytes = await file.openRead(start, endExclusive).fold<List<int>>(
+      <int>[],
+      (prev, chunk) {
+        prev.addAll(chunk);
+        return prev;
+      },
+    );
+    final length = partBytes.length;
+
+    // Compute Content-MD5 for Object Lock / checksum enforcement
+    final md5Digest = md5.convert(partBytes);
+    final contentMd5 = base64.encode(md5Digest.bytes);
 
     var attempt = 0;
     while (true) {
@@ -305,6 +318,7 @@ class MediaUploadService {
         clientMethods: ['upload_part'],
         partNumber: partNumber,
         uploadId: uploadId,
+        headers: {'content-md5': contentMd5},
       );
 
       final signed = bundle.firstWhere((u) => u.uploadPart != null);
@@ -313,14 +327,14 @@ class MediaUploadService {
         continue;
       }
 
-      final stream = file.openRead(start, endExclusive);
       await _requestLimiter.acquire();
       late HttpClientResponse response;
       try {
         response = await apiClient.putStream(
           url: signed.uploadPart!,
-          bytes: stream,
+          bytes: Stream.value(partBytes),
           contentLength: length,
+          // headers: {'Content-MD5': contentMd5},
         );
       } finally {
         _requestLimiter.release();

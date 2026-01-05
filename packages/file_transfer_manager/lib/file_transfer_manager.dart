@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'package:crypto/crypto.dart';
 
 import 'package:path/path.dart' as p;
 
@@ -175,6 +176,7 @@ class MediaApiClient {
     required List<String> clientMethods,
     int? partNumber,
     String? uploadId,
+    Map<String, String>? headers,
   }) async {
     final uri = _path('/api/media/get-urls');
     final body = <String, dynamic>{
@@ -184,6 +186,7 @@ class MediaApiClient {
 
     if (partNumber != null) body['partNumber'] = partNumber;
     if (uploadId != null) body['uploadId'] = uploadId;
+    if (headers != null && headers.isNotEmpty) body['headers'] = headers;
 
     final data = await _postJson(uri, body);
     final urls = (data['urls'] as List<dynamic>? ?? [])
@@ -276,9 +279,11 @@ class MediaApiClient {
     required Uri url,
     required Stream<List<int>> bytes,
     required int contentLength,
+    Map<String, String>? headers,
   }) async {
     final request = await httpClient.putUrl(url);
     request.contentLength = contentLength;
+    headers?.forEach(request.headers.set);
     await request.addStream(bytes);
     return request.close();
   }

@@ -7,12 +7,14 @@ class MediaSignedUrlRequest {
     required this.clientMethods,
     this.partNumber,
     this.uploadId,
+    this.headers,
   });
 
   final String remoteFileKey;
   final Set<String> clientMethods;
   final int? partNumber;
   final String? uploadId;
+  final Map<String, String>? headers;
 }
 
 /// Single signed URL payload for a specific remote file key and method.

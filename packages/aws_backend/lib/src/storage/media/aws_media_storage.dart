@@ -96,10 +96,12 @@ class AwsMediaStorage extends BaseMediaStorage {
         throw ArgumentError('partNumber must be a positive integer');
       }
 
+      final headers = _canonicalizeHeaders(request.headers);
       uploadPartUrl = await _presignUri(
         method: AWSHttpMethod.put,
         key: key,
         query: {'uploadId': uploadId, 'partNumber': partNumber.toString()},
+        headers: headers,
       );
     }
 
@@ -425,12 +427,13 @@ class AwsMediaStorage extends BaseMediaStorage {
     required AWSHttpMethod method,
     required String key,
     Map<String, String>? query,
+    Map<String, String>? headers,
   }) async {
     final presigned = await _signer!.presign(
       AWSHttpRequest(
         method: method,
         uri: _objectUri(key, query),
-        headers: {'host': _host},
+        headers: headers ?? {'host': _host},
       ),
       credentialScope: AWSCredentialScope(
         region: region,
@@ -441,6 +444,17 @@ class AwsMediaStorage extends BaseMediaStorage {
     );
 
     return presigned;
+  }
+
+  Map<String, String>? _canonicalizeHeaders(Map<String, String>? headers) {
+    if (headers == null || headers.isEmpty) return {'host': _host};
+    final normalized = <String, String>{'host': _host};
+    headers.forEach((k, v) {
+      final key = k.toLowerCase().trim();
+      if (key.isEmpty) return;
+      normalized[key] = v;
+    });
+    return normalized;
   }
 
   Future<http.Response> _sendSigned(

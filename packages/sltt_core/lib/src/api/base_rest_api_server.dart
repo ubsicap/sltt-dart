@@ -551,6 +551,12 @@ abstract class BaseRestApiServer {
                 'description':
                     'Existing multipart uploadId (required for upload_part).',
               },
+              'headers': {
+                'type': 'object',
+                'additionalProperties': {'type': 'string'},
+                'description':
+                    'Optional headers to sign for upload_part (e.g., content-md5 or x-amz-checksum-*). Only supported for whitelisted checksum headers.',
+              },
             },
           },
           'response': {
@@ -1890,12 +1896,49 @@ abstract class BaseRestApiServer {
 
       final uploadId = (body['uploadId'] as String?)?.trim();
 
+      Map<String, String>? headers;
+      final headersRaw = body['headers'];
+      if (headersRaw != null) {
+        if (headersRaw is! Map) {
+          return _errorResponse(
+            'headers must be an object of string:string',
+            400,
+          );
+        }
+        const allowedHeaders = {
+          'content-md5',
+          'x-amz-checksum-crc32',
+          'x-amz-checksum-crc32c',
+          'x-amz-checksum-sha1',
+          'x-amz-checksum-sha256',
+        };
+        headers = {};
+        for (final entry in headersRaw.entries) {
+          final key = entry.key.toString().toLowerCase().trim();
+          final value = entry.value?.toString();
+          if (key.isEmpty || value == null || value.isEmpty) {
+            return _errorResponse(
+              'headers entries must be non-empty strings',
+              400,
+            );
+          }
+          if (!allowedHeaders.contains(key)) {
+            return _errorResponse(
+              'Unsupported header "$key". Allowed: ${allowedHeaders.join(', ')}',
+              400,
+            );
+          }
+          headers[key] = value;
+        }
+      }
+
       final resp = await mediaStorage.getSignedUrls(
         MediaSignedUrlRequest(
           remoteFileKey: remoteFileKey,
           clientMethods: clientMethods,
           partNumber: partNumber,
           uploadId: uploadId,
+          headers: headers,
         ),
       );
 
