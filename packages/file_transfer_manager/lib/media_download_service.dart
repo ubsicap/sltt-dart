@@ -581,10 +581,17 @@ class _DownloadJob {
 }
 
 class _RequestLimiter {
-  _RequestLimiter(int permits) : _permits = permits <= 0 ? 1 : permits;
+  _RequestLimiter(int permits)
+    : _maxPermits = permits <= 0 ? 1 : permits,
+      _permits = permits <= 0 ? 1 : permits;
 
+  final int _maxPermits;
   int _permits;
   final Queue<Completer<void>> _waiters = Queue();
+
+  int get inFlight => _maxPermits - _permits;
+  int get maxPermits => _maxPermits;
+  int get availablePermits => _permits;
 
   Future<void> acquire() {
     if (_permits > 0) {

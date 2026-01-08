@@ -241,7 +241,10 @@ class MediaUploadService {
       }
     }
 
-    if (missingParts.length < maxUploadRequestsConcurrency) {
+    final remainingUploadSlots = _requestLimiter.availablePermits;
+
+    if (remainingUploadSlots > 0 &&
+        missingParts.length <= remainingUploadSlots) {
       _admitMoreUploads = true;
       _processQueue();
     }
