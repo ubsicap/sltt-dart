@@ -235,8 +235,8 @@ class MediaDownloadService {
       final chunkSize = chunkSizeOverride ?? chooseChunkSize(contentLength);
       final totalParts = (contentLength / chunkSize).ceil();
 
-      final allowsAnotherJob = totalParts < maxDownloadRequestsConcurrency;
-      if (allowsAnotherJob) {
+      final remainingDownloadSlots = _requestLimiter.availablePermits;
+      if (remainingDownloadSlots > 0 && totalParts <= remainingDownloadSlots) {
         _admitMoreJobs = true;
         _processQueue();
       }
