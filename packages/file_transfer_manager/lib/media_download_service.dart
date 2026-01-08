@@ -579,35 +579,3 @@ class _DownloadJob {
   final DownloadProgressCallback onProgress;
   final Completer<File> completer = Completer<File>();
 }
-
-class _RequestLimiter {
-  _RequestLimiter(int permits)
-    : _maxPermits = permits <= 0 ? 1 : permits,
-      _permits = permits <= 0 ? 1 : permits;
-
-  final int _maxPermits;
-  int _permits;
-  final Queue<Completer<void>> _waiters = Queue();
-
-  int get inFlight => _maxPermits - _permits;
-  int get maxPermits => _maxPermits;
-  int get availablePermits => _permits;
-
-  Future<void> acquire() {
-    if (_permits > 0) {
-      _permits--;
-      return Future.value();
-    }
-    final completer = Completer<void>();
-    _waiters.add(completer);
-    return completer.future;
-  }
-
-  void release() {
-    if (_waiters.isNotEmpty) {
-      _waiters.removeFirst().complete();
-      return;
-    }
-    _permits++;
-  }
-}
