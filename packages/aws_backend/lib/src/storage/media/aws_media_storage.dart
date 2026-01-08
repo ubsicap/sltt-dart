@@ -12,17 +12,14 @@ class AwsMediaStorage extends BaseMediaStorage {
   AwsMediaStorage({
     required this.bucketName,
     required this.region,
-    bool enableTransferAcceleration = true,
     Duration presignedUrlDuration = const Duration(minutes: 15),
     http.Client? httpClient,
-  }) : _enableTransferAcceleration = enableTransferAcceleration,
-       _presignedUrlDuration = presignedUrlDuration,
+  }) : _presignedUrlDuration = presignedUrlDuration,
        _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null;
 
   final String bucketName;
   final String region;
-  final bool _enableTransferAcceleration;
   final Duration _presignedUrlDuration;
   static final S3ServiceConfiguration _s3Config = S3ServiceConfiguration(
     signPayload: false,
@@ -35,12 +32,7 @@ class AwsMediaStorage extends BaseMediaStorage {
   AWSCredentialsProvider? _credentialsProvider;
   bool _initialized = false;
 
-  String get _standardHost => '$bucketName.s3.$region.amazonaws.com';
-  String get _accelerateHost => '$bucketName.s3-accelerate.amazonaws.com';
-  String _endpointHost({bool useAccelerate = false}) =>
-      useAccelerate && _enableTransferAcceleration
-      ? _accelerateHost
-      : _standardHost;
+  String get _host => '$bucketName.s3.$region.amazonaws.com';
 
   @override
   Future<void> initialize() async {
@@ -104,17 +96,12 @@ class AwsMediaStorage extends BaseMediaStorage {
         throw ArgumentError('partNumber must be a positive integer');
       }
 
-      final accelerateHost = _endpointHost(useAccelerate: true);
-      final headers = _canonicalizeHeaders(
-        request.headers,
-        host: accelerateHost,
-      );
+      final headers = _canonicalizeHeaders(request.headers);
       uploadPartUrl = await _presignUri(
         method: AWSHttpMethod.put,
         key: key,
         query: {'uploadId': uploadId, 'partNumber': partNumber.toString()},
         headers: headers,
-        useAccelerate: true,
       );
     }
 
@@ -166,13 +153,8 @@ class AwsMediaStorage extends BaseMediaStorage {
 
     final request = AWSHttpRequest(
       method: AWSHttpMethod.get,
-      uri: Uri(
-        scheme: 'https',
-        host: _endpointHost(),
-        path: '/',
-        queryParameters: query,
-      ),
-      headers: {'host': _endpointHost()},
+      uri: Uri(scheme: 'https', host: _host, path: '/', queryParameters: query),
+      headers: {'host': _host},
     );
 
     final response = await _sendSigned(request);
@@ -264,7 +246,7 @@ class AwsMediaStorage extends BaseMediaStorage {
     final request = AWSHttpRequest(
       method: AWSHttpMethod.get,
       uri: _objectUri(key, query),
-      headers: {'host': _endpointHost()},
+      headers: {'host': _host},
     );
 
     final response = await _sendSigned(request);
@@ -332,7 +314,7 @@ class AwsMediaStorage extends BaseMediaStorage {
     final request = AWSHttpRequest(
       method: AWSHttpMethod.post,
       uri: _objectUri(key, {'uploads': ''}),
-      headers: {'host': _endpointHost()},
+      headers: {'host': _host},
     );
 
     final response = await _sendSigned(request);
@@ -394,7 +376,7 @@ class AwsMediaStorage extends BaseMediaStorage {
     final request = AWSHttpRequest(
       method: AWSHttpMethod.post,
       uri: _objectUri(key, {'uploadId': uploadId}),
-      headers: {'host': _endpointHost(), 'content-type': 'application/xml'},
+      headers: {'host': _host, 'content-type': 'application/xml'},
     );
 
     final response = await _sendSigned(request, body: payloadBytes);
@@ -416,14 +398,10 @@ class AwsMediaStorage extends BaseMediaStorage {
     );
   }
 
-  Uri _objectUri(
-    String key, [
-    Map<String, String>? query,
-    bool useAccelerate = false,
-  ]) {
+  Uri _objectUri(String key, [Map<String, String>? query]) {
     return Uri(
       scheme: 'https',
-      host: _endpointHost(useAccelerate: useAccelerate),
+      host: _host,
       path: '/$key',
       queryParameters: query,
     );
@@ -450,14 +428,12 @@ class AwsMediaStorage extends BaseMediaStorage {
     required String key,
     Map<String, String>? query,
     Map<String, String>? headers,
-    bool useAccelerate = false,
   }) async {
-    final host = _endpointHost(useAccelerate: useAccelerate);
     final presigned = await _signer!.presign(
       AWSHttpRequest(
         method: method,
-        uri: _objectUri(key, query, useAccelerate),
-        headers: headers ?? {'host': host},
+        uri: _objectUri(key, query),
+        headers: headers ?? {'host': _host},
       ),
       credentialScope: AWSCredentialScope(
         region: region,
@@ -470,12 +446,9 @@ class AwsMediaStorage extends BaseMediaStorage {
     return presigned;
   }
 
-  Map<String, String>? _canonicalizeHeaders(
-    Map<String, String>? headers, {
-    required String host,
-  }) {
-    if (headers == null || headers.isEmpty) return {'host': host};
-    final normalized = <String, String>{'host': host};
+  Map<String, String>? _canonicalizeHeaders(Map<String, String>? headers) {
+    if (headers == null || headers.isEmpty) return {'host': _host};
+    final normalized = <String, String>{'host': _host};
     headers.forEach((k, v) {
       final key = k.toLowerCase().trim();
       if (key.isEmpty) return;

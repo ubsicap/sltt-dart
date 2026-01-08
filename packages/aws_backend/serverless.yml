@@ -131,8 +131,6 @@ resources:
           IgnorePublicAcls: true
           RestrictPublicBuckets: true
         ObjectLockEnabled: true
-        AccelerateConfiguration:
-          AccelerationStatus: Enabled
         LifecycleConfiguration:
           Rules:
             - Id: AbortIncompleteMultipartUploads
