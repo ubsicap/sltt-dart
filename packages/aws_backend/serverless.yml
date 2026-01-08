@@ -137,6 +137,12 @@ resources:
               Status: Enabled
               AbortIncompleteMultipartUpload:
                 DaysAfterInitiation: 2
+            - Id: IntelligentTieringTransition
+              Status: Enabled
+              Filter: {}
+              Transitions:
+                - StorageClass: INTELLIGENT_TIERING
+                  TransitionInDays: 30
         ObjectLockConfiguration:
           ObjectLockEnabled: Enabled
           Rule:
