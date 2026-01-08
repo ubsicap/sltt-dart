@@ -236,7 +236,7 @@ class MediaDownloadService {
       final totalParts = (contentLength / chunkSize).ceil();
 
       final remainingDownloadSlots = _requestLimiter.availablePermits;
-      if (remainingDownloadSlots > 0 && totalParts <= remainingDownloadSlots) {
+      if (remainingDownloadSlots > 0 && totalParts < remainingDownloadSlots) {
         _admitMoreJobs = true;
         _processQueue();
       }

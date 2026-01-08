@@ -244,7 +244,7 @@ class MediaUploadService {
     final remainingUploadSlots = _requestLimiter.availablePermits;
 
     if (remainingUploadSlots > 0 &&
-        missingParts.length <= remainingUploadSlots) {
+        missingParts.length < remainingUploadSlots) {
       _admitMoreUploads = true;
       _processQueue();
     }
