@@ -3,8 +3,8 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'package:crypto/crypto.dart';
 
+import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
 part 'media_download_service.dart';
@@ -31,7 +31,6 @@ Future<void> concatenateFiles({
 
 const maxConcurrency = 4;
 const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
-const _defaultDownloadConcurrency = 4;
 const _defaultDownloadRequestsConcurrency = 4;
 const _defaultUploadRequestsConcurrency = 4;
 
