@@ -29,7 +29,9 @@ void main() {
   test('generateCid produces a stable-looking formatted id', () {
     final cid = generateCid(entityType: EntityType.portion);
     // Pattern: YYYY-mmdd-HHMMss-sss[_-]HH{user code: [A-Za-z]{2}}-{4chars}
-    final re = RegExp(r'^\d{4}-\d{4}-\d{6}-\d{3}[_\\-]\d{2}UK-[A-Za-z0-9]{4}-prtn-cid$');
+    final re = RegExp(
+      r'^\d{4}-\d{4}-\d{6}-\d{3}[_\\-]\d{2}UK-[A-Za-z0-9]{4}-prtn-cid$',
+    );
     expect(
       re.hasMatch(cid),
       isTrue,
@@ -47,5 +49,20 @@ void main() {
         reason: 'Roundtrip failed for ${e.value} (id=$id)',
       );
     }
+  });
+
+  test('EntityIdParts validate', () {
+    final entityId = '2026-0108-161325-580_06UK-XQZK-vidZ';
+    final entityIdParts = EntityIdParts(entityId: entityId);
+    expect(entityIdParts.YYYY, equals('2026'));
+    expect(entityIdParts.mmdd, equals('0108'));
+    expect(entityIdParts.HHMMss, equals('161325'));
+    expect(entityIdParts.zzz, equals('580'));
+    expect(entityIdParts.tzOffset, equals('_06'));
+    expect(entityIdParts.usrHash, equals('UK'));
+    expect(entityIdParts.randomPart, equals('XQZK'));
+    expect(entityIdParts.entitySuffix, equals('vidZ'));
+    expect(entityIdParts.entityType, equals(EntityType.video.value));
+    expect(() => entityIdParts.validate(), returnsNormally);
   });
 }

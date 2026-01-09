@@ -223,7 +223,7 @@ enum EntityType {
   /// Returns null if the entity ID doesn't follow the expected format
   static String? extractEntityTypeFromId(String entityId) {
     // Expected format: {base-cid}-{4-char-suffix}
-    final parts = entityId.split('-');
+    final parts = entityId.split(RegExp(r'[-_]'));
     if (parts.length >= 2) {
       final lastPart = parts.last;
       if (lastPart.length == 4) {
@@ -240,6 +240,55 @@ enum EntityType {
 
   @override
   String toString() => value;
+}
+
+/// Example 2026-0108-161325-580-06UK-XQZK-proj
+class EntityIdParts {
+  final String YYYY;
+  final String mmdd;
+  final String HHMMss;
+  final String zzz;
+
+  /// [_-]HH
+  final String tzOffset;
+
+  /// {UC}
+  final String usrHash;
+  final String randomPart;
+  final String entitySuffix;
+  final String entityType;
+  final String entityId;
+
+  void validate() {
+    if (entityId.length != 35) {
+      throw FormatException(
+        'Invalid entityId length: ${entityId.length}, expected 35',
+      );
+    }
+    // all other fields should have expected lengths
+    if (YYYY.length != 4 ||
+        mmdd.length != 4 ||
+        HHMMss.length != 6 ||
+        zzz.length != 3 ||
+        tzOffset.length != 3 ||
+        usrHash.length != 2 ||
+        randomPart.length != 4 ||
+        entitySuffix.length != 4) {
+      throw FormatException('Invalid entityId format: $entityId');
+    }
+  }
+
+  EntityIdParts({required this.entityId})
+    : YYYY = entityId.substring(0, 4),
+      mmdd = entityId.substring(5, 9),
+      HHMMss = entityId.substring(10, 16),
+      zzz = entityId.substring(17, 20),
+      tzOffset = entityId.substring(20, 23),
+      usrHash = entityId.substring(23, 25),
+      randomPart = entityId.substring(26, 30),
+      entitySuffix = entityId.substring(31, 35),
+      entityType =
+          EntityType.extractEntityTypeFromId(entityId) ?? kEntityTypeUnknown;
 }
 
 /// Generates a unique CID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HH{UC}-{4-character-random}
