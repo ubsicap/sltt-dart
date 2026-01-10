@@ -120,6 +120,12 @@ class MediaDownloadService {
 
   void _processQueue() {
     if (_retryLaterJobs.isNotEmpty) {
+      // if job got enqueued again remove from retry list
+      _retryLaterJobs.removeWhere(
+        (job) => _queueLIFO.any(
+          (queuedJob) => queuedJob.remoteFileKey == job.remoteFileKey,
+        ),
+      );
       final now = DateTime.now();
       final readyJobs = _retryLaterJobs.where((job) {
         final retryAt = job.retryAt;
