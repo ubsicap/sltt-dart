@@ -86,14 +86,18 @@ class MediaDownloadService {
   void startProcessingDownloads() {
     if (_retryLaterJobs.isNotEmpty) {
       // preserve top priority queue job
-      final topPriorityJob = _queueLIFO.removeLast();
+      final topPriorityJob = _queueLIFO.isNotEmpty
+          ? _queueLIFO.removeLast()
+          : null;
       // user re-started downloads, so just add retries back to the main queue
       for (final retryJob in _retryLaterJobs) {
         _queueLIFO.add(retryJob);
       }
       _retryLaterJobs.clear();
       // re-add preserved top priority job
-      _queueLIFO.add(topPriorityJob);
+      if (topPriorityJob != null) {
+        _queueLIFO.add(topPriorityJob);
+      }
     }
     // re-add current job as top priority
     _downloadsEnabled = true;
