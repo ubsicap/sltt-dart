@@ -52,9 +52,12 @@ class MediaDownloadService {
   bool _admitMoreJobs = true;
   int get _pendingDownloads => _queueLIFO.length + _activeJobs.length;
   bool _downloadsEnabled = false;
+  String _lastErrorMessage = '';
 
-  void _reportPendingDownloads() =>
-      pendingDownloadsCallback?.call(_pendingDownloads);
+  void _reportPendingDownloads() => pendingDownloadsCallback?.call(
+    files: _pendingDownloads,
+    errorMessage: _lastErrorMessage,
+  );
 
   void stopProcessingDownloads() {
     _downloadsEnabled = false;
@@ -115,6 +118,7 @@ class MediaDownloadService {
 
   void _processQueue() {
     _reportPendingDownloads();
+    _lastErrorMessage = ''; // clear last error on new processing attempt
     if (_processingQueue || !_downloadsEnabled || !_admitMoreJobs) return;
     _processingQueue = true;
 
@@ -142,13 +146,19 @@ class MediaDownloadService {
                 _admitMoreJobs = true;
 
                 if (error is _DownloadPausedException ||
-                    error is _DownloadTransientException) {
+                    error is _DownloadTransientException ||
+                    error is DownloadNotFoundException) {
                   // Requeue incomplete job; do not decrement pending.
+                  if (error is DownloadNotFoundException) {
+                    _lastErrorMessage = error.toString();
+                  }
                   _activeJobs.remove(job.remoteFileKey);
                   _queueLIFO.add(job);
                   _processQueue();
                   return;
                 }
+
+                _lastErrorMessage = error.toString();
 
                 // Real failure: finish the job with error and adjust pending.
                 _activeJobs.remove(job.remoteFileKey);
@@ -193,11 +203,22 @@ class MediaDownloadService {
 
       final headResponse = await apiClient.head(headUrl);
       if (headResponse.statusCode == HttpStatus.notFound) {
-        throw DownloadNotFoundException(
+        final newError = DownloadNotFoundException(
           remoteFileKey: job.remoteFileKey,
           statusCode: headResponse.statusCode,
           uri: headUrl,
         );
+        job.onProgress(
+          DownloadProgress(
+            partsCompleted: 0,
+            partsTotal: 0,
+            bytesCompleted: 0,
+            bytesTotal: 0,
+            bytesPerChunk: 0,
+            errorMessage: newError.toString(),
+          ),
+        );
+        throw newError;
       }
       if (headResponse.statusCode != HttpStatus.ok) {
         if (_isTransientStatus(headResponse.statusCode)) {
@@ -525,6 +546,7 @@ class DownloadProgress {
     required this.bytesCompleted,
     required this.bytesTotal,
     required this.bytesPerChunk,
+    this.errorMessage = '',
   });
 
   final int partsCompleted;
@@ -532,6 +554,7 @@ class DownloadProgress {
   final int bytesCompleted;
   final int bytesTotal;
   final int bytesPerChunk;
+  final String errorMessage;
 }
 
 class _RenewedUrl {
