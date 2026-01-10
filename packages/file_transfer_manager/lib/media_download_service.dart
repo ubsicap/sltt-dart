@@ -45,12 +45,14 @@ class MediaDownloadService {
 
   /// LIFO queue for downloads: prioritize most-recently requested downloads, unless addAsLowestPriority is true.
   final List<_DownloadJob> _queueLIFO = [];
+  final List<_DownloadJob> _retryLaterJobs = [];
   final Map<String, _DownloadJob> _activeJobs = {};
   final _RequestLimiter _requestLimiter;
   int _activeDownloads = 0;
   bool _processingQueue = false;
   bool _admitMoreJobs = true;
-  int get _pendingDownloads => _queueLIFO.length + _activeJobs.length;
+  int get _pendingDownloads =>
+      _queueLIFO.length + _activeJobs.length + _retryLaterJobs.length;
   bool _downloadsEnabled = false;
   String _lastErrorMessage = '';
 
@@ -117,6 +119,17 @@ class MediaDownloadService {
   }
 
   void _processQueue() {
+    if (_retryLaterJobs.isNotEmpty) {
+      final now = DateTime.now();
+      final readyJobs = _retryLaterJobs.where((job) {
+        final retryAt = job.retryAt;
+        return retryAt != null && now.isAfter(retryAt);
+      }).toList();
+      for (final job in readyJobs) {
+        _retryLaterJobs.remove(job);
+        _queueLIFO.add(job);
+      }
+    }
     _reportPendingDownloads();
     _lastErrorMessage = ''; // clear last error on new processing attempt
     if (_processingQueue || !_downloadsEnabled || !_admitMoreJobs) return;
@@ -148,16 +161,24 @@ class MediaDownloadService {
                 if (error is _DownloadPausedException ||
                     error is _DownloadTransientException ||
                     error is DownloadNotFoundException) {
+                  _activeJobs.remove(job.remoteFileKey);
                   // Requeue incomplete job; do not decrement pending.
                   if (error is DownloadNotFoundException) {
+                    job.lastErrorMessage = error.toString();
+                    job.retryAt = DateTime.now().add(
+                      const Duration(minutes: 1),
+                    );
+                    job.tries += 1;
+                    _retryLaterJobs.add(job);
                     _lastErrorMessage = error.toString();
+                  } else {
+                    _queueLIFO.add(job);
                   }
-                  _activeJobs.remove(job.remoteFileKey);
-                  _queueLIFO.add(job);
                   _processQueue();
                   return;
                 }
 
+                job.lastErrorMessage = error.toString();
                 _lastErrorMessage = error.toString();
 
                 // Real failure: finish the job with error and adjust pending.
@@ -593,8 +614,11 @@ class _DownloadJob {
     required this.onProgress,
   });
 
+  int tries = 0;
+  DateTime? retryAt;
   final String remoteFileKey;
   final String? fileName;
+  String? lastErrorMessage;
   final DownloadProgressCallback onProgress;
   final Completer<File> completer = Completer<File>();
 }
