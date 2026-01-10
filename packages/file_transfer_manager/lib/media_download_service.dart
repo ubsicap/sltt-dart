@@ -51,13 +51,27 @@ class MediaDownloadService {
   int _activeDownloads = 0;
   bool _processingQueue = false;
   bool _admitMoreJobs = true;
-  int get _pendingDownloads =>
-      _queueLIFO.length + _activeJobs.length + _retryLaterJobs.length;
   bool _downloadsEnabled = false;
   String _lastErrorMessage = '';
 
   void _reportPendingDownloads() => pendingDownloadsCallback?.call(
-    files: _pendingDownloads,
+    queuedFiles: _queueLIFO.map((job) => job.remoteFileKey).toList(),
+    inProgressFiles: _activeJobs.keys.toList(),
+    erroredFiles: _retryLaterJobs
+        .where(
+          (job) => [
+            RetryReason.transientError,
+            RetryReason.unknown,
+          ].contains(job.retryReason),
+        )
+        .map((job) {
+          return {
+            'remoteFileKey': job.remoteFileKey,
+            'errorMessage': job.lastErrorMessage ?? '',
+            'retryReason': job.retryReason.toString(),
+          };
+        })
+        .toList(),
     missingFiles: _retryLaterJobs
         .where((job) => job.retryReason == RetryReason.notFound)
         .map((job) => job.remoteFileKey)
