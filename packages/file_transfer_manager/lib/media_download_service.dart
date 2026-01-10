@@ -58,6 +58,10 @@ class MediaDownloadService {
 
   void _reportPendingDownloads() => pendingDownloadsCallback?.call(
     files: _pendingDownloads,
+    missingFiles: _retryLaterJobs
+        .where((job) => job.retryReason == RetryReason.notFound)
+        .map((job) => job.remoteFileKey)
+        .toList(),
     errorMessage: _lastErrorMessage,
   );
 

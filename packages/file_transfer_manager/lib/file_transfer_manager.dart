@@ -12,7 +12,11 @@ part 'media_upload_service.dart';
 
 typedef PendingUploadTotalsCallback = void Function(int files, int bytes);
 typedef PendingDownloadTotalsCallback =
-    void Function({required int files, String errorMessage});
+    void Function({
+      required int files,
+      String errorMessage,
+      List<String> missingFiles,
+    });
 
 /// fast and memory-efficient file concatenation
 Future<void> concatenateFiles({
