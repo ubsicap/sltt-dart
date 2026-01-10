@@ -183,6 +183,13 @@ class MediaDownloadService {
                   // Requeue incomplete job; do not decrement pending.
                   if (error is _DownloadTransientException ||
                       error is DownloadNotFoundException) {
+                    if (error is DownloadNotFoundException) {
+                      job.retryReason = RetryReason.notFound;
+                    } else if (error is _DownloadTransientException) {
+                      job.retryReason = RetryReason.transientError;
+                    } else {
+                      job.retryReason = RetryReason.unknown;
+                    }
                     job.lastErrorMessage = error.toString();
                     job.retryAt = DateTime.now().add(
                       const Duration(minutes: 1),
@@ -635,6 +642,7 @@ class _DownloadJob {
   });
 
   int tries = 0;
+  RetryReason? retryReason;
   DateTime? retryAt;
   final String remoteFileKey;
   final String? fileName;
@@ -642,3 +650,5 @@ class _DownloadJob {
   final DownloadProgressCallback onProgress;
   final Completer<File> completer = Completer<File>();
 }
+
+enum RetryReason { unknown, transientError, notFound }
