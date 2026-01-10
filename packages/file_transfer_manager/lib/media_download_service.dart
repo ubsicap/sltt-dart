@@ -66,6 +66,18 @@ class MediaDownloadService {
   }
 
   void startProcessingDownloads() {
+    if (_retryLaterJobs.isNotEmpty) {
+      // preserve top priority queue job
+      final topPriorityJob = _queueLIFO.removeLast();
+      // user re-started downloads, so just add retries back to the main queue
+      for (final retryJob in _retryLaterJobs) {
+        _queueLIFO.add(retryJob);
+      }
+      _retryLaterJobs.clear();
+      // re-add preserved top priority job
+      _queueLIFO.add(topPriorityJob);
+    }
+    // re-add current job as top priority
     _downloadsEnabled = true;
     _processQueue();
   }
@@ -179,11 +191,6 @@ class MediaDownloadService {
                     _retryLaterJobs.add(job);
                     _lastErrorMessage = error.toString();
                   } else {
-                    // user paused downloads, so just add retries back to the main queue
-                    for (final retryJob in _retryLaterJobs) {
-                      _queueLIFO.add(retryJob);
-                    }
-                    _retryLaterJobs.clear();
                     // re-add current job as top priority
                     _queueLIFO.add(job);
                   }
