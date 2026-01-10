@@ -56,10 +56,6 @@ class MediaDownloadService {
   void _reportPendingDownloads() =>
       pendingDownloadsCallback?.call(_pendingDownloads);
 
-  void _adjustPendingDownloads() {
-    _reportPendingDownloads();
-  }
-
   void stopProcessingDownloads() {
     _downloadsEnabled = false;
   }
@@ -118,7 +114,7 @@ class MediaDownloadService {
   }
 
   void _processQueue() {
-    _adjustPendingDownloads();
+    _reportPendingDownloads();
     if (_processingQueue || !_downloadsEnabled || !_admitMoreJobs) return;
     _processingQueue = true;
 
