@@ -169,7 +169,8 @@ class MediaDownloadService {
                     error is DownloadNotFoundException) {
                   _activeJobs.remove(job.remoteFileKey);
                   // Requeue incomplete job; do not decrement pending.
-                  if (error is DownloadNotFoundException) {
+                  if (error is _DownloadTransientException ||
+                      error is DownloadNotFoundException) {
                     job.lastErrorMessage = error.toString();
                     job.retryAt = DateTime.now().add(
                       const Duration(minutes: 1),
@@ -178,6 +179,12 @@ class MediaDownloadService {
                     _retryLaterJobs.add(job);
                     _lastErrorMessage = error.toString();
                   } else {
+                    // user paused downloads, so just add retries back to the main queue
+                    for (final retryJob in _retryLaterJobs) {
+                      _queueLIFO.add(retryJob);
+                    }
+                    _retryLaterJobs.clear();
+                    // re-add current job as top priority
                     _queueLIFO.add(job);
                   }
                   _processQueue();
