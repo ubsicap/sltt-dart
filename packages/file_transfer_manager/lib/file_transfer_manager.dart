@@ -41,22 +41,6 @@ const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
 const _defaultDownloadRequestsConcurrency = 4;
 const _defaultUploadRequestsConcurrency = 4;
 
-/// Adaptive chunk size for cross‑platform downloads (mobile + desktop)
-/// tuned for 4 parallel requests.
-int chooseChunkSize(int fileSizeBytes) {
-  // Minimum chunk size: 1 MB (avoid 0.5 MB when using 4 parallel streams)
-  if (fileSizeBytes < 20 * 1024 * 1024) return 1 * 1024 * 1024; // 1 MB
-
-  // Medium files: 2 MB chunks
-  if (fileSizeBytes < 200 * 1024 * 1024) return 2 * 1024 * 1024; // 2 MB
-
-  // Large files: 5 MB chunks
-  if (fileSizeBytes < 2 * 1024 * 1024 * 1024) return 5 * 1024 * 1024; // 5 MB
-
-  // Very large (multi‑GB) files: 8 MB chunks
-  return 8 * 1024 * 1024; // 8 MB
-}
-
 class SignedUrlBundle {
   SignedUrlBundle({
     required this.remoteFileKey,
