@@ -108,7 +108,6 @@ class MediaDownloadService {
 
   Future<File> enqueueDownload({
     required String remoteFileKey,
-    String? fileName,
     bool addAsLowestPriority = false,
     required DownloadProgressCallback onProgress,
   }) {
@@ -128,7 +127,7 @@ class MediaDownloadService {
 
     final job = _DownloadJob(
       remoteFileKey: remoteFileKey,
-      fileName: fileName,
+      fileName: p.basename(remoteFileKey),
       onProgress: onProgress,
     );
 
@@ -308,14 +307,8 @@ class MediaDownloadService {
       }
 
       final contentLength = int.parse(contentLengthStr);
-      final resolvedFileName = job.fileName ?? p.basename(job.remoteFileKey);
       final targetDir = Directory(
-        p.join(
-          cloudedBase.path,
-          resolvedFileName.length >= 7
-              ? resolvedFileName.substring(0, 7)
-              : resolvedFileName,
-        ),
+        p.normalize(p.join(cloudedBase.path, p.dirname(job.remoteFileKey))),
       );
       await targetDir.create(recursive: true);
 
@@ -339,7 +332,7 @@ class MediaDownloadService {
       );
 
       if (chunkSize >= contentLength) {
-        final destFile = File(p.join(targetDir.path, resolvedFileName));
+        final destFile = File(p.join(targetDir.path, job.fileName));
         await _requestLimiter.acquire();
         try {
           if (!_downloadsEnabled) {
@@ -375,7 +368,7 @@ class MediaDownloadService {
       }
 
       final downloadDir = Directory(
-        p.join(cloudedBase.path, '__downloading', resolvedFileName),
+        p.join(cloudedBase.path, '__downloading', job.fileName),
       );
       await downloadDir.create(recursive: true);
 
@@ -464,7 +457,7 @@ class MediaDownloadService {
           final partFile = File(
             p.join(
               downloadDir.path,
-              '$resolvedFileName-${partNumber.toString().padLeft(7, '0')}',
+              '${job.fileName}-${partNumber.toString().padLeft(7, '0')}',
             ),
           );
           final sink = partFile.openWrite();
@@ -504,13 +497,13 @@ class MediaDownloadService {
             (part) => File(
               p.join(
                 downloadDir.path,
-                '$resolvedFileName-${part.toString().padLeft(7, '0')}',
+                '${job.fileName}-${part.toString().padLeft(7, '0')}',
               ),
             ),
           )
           .toList();
 
-      final destFile = File(p.join(targetDir.path, resolvedFileName));
+      final destFile = File(p.join(targetDir.path, job.fileName));
       await concatenateFiles(parts: orderedParts, output: destFile);
 
       await downloadDir.delete(recursive: true);

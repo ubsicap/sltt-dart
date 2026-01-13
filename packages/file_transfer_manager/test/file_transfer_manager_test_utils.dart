@@ -492,13 +492,7 @@ Future<void> runStopsAndResumesDownloadProcessing({
     onProgress: (_) {},
   );
 
-  final destFile = File(
-    p.join(
-      cloudedDir.path,
-      p.basename(remoteKey).substring(0, 7),
-      p.basename(remoteKey),
-    ),
-  );
+  final destFile = File(p.normalize(p.join(cloudedDir.path, remoteKey)));
 
   await Future<void>.delayed(const Duration(milliseconds: 50));
   expect(
