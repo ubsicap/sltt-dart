@@ -55,6 +55,7 @@ class MediaDownloadService {
   String _lastErrorMessage = '';
 
   void _reportPendingDownloads() => pendingDownloadsCallback?.call(
+    isProcessing: _downloadsEnabled,
     queuedFiles: _queueLIFO.map((job) => job.remoteFileKey).toList(),
     inProgressFiles: _activeJobs.keys.toList(),
     erroredFiles: _retryLaterJobs

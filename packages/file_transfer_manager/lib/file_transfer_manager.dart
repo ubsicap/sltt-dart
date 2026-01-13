@@ -18,6 +18,7 @@ typedef PendingDownloadTotalsCallback =
       List<String> missingFiles,
       List<Map<String, String>> erroredFiles,
       List<String> inProgressFiles,
+      bool isProcessing,
     });
 
 /// fast and memory-efficient file concatenation
