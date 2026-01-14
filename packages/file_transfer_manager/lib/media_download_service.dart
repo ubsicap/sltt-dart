@@ -82,6 +82,7 @@ class MediaDownloadService {
 
   void stopProcessingDownloads() {
     _downloadsEnabled = false;
+    _reportPendingDownloads();
   }
 
   void startProcessingDownloads() {

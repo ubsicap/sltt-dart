@@ -73,6 +73,7 @@ class MediaUploadService {
 
   void _adjustPendingBytes(int delta) {
     _pendingBytes = ((_pendingBytes + delta).clamp(0, 1 << 62));
+    _reportTotals();
   }
 
   int _pendingBytes = 0;
@@ -93,6 +94,7 @@ class MediaUploadService {
   Future<void> stopProcessingUploads() async {
     _uploadsEnabled = false;
     _rerunRequested = false;
+    _reportTotals();
   }
 
   Future<void> dispose() async {
@@ -157,13 +159,27 @@ class MediaUploadService {
           _activeUploads++;
           _admitMoreUploads = false;
           _activeUploadPaths.add(file.path);
-          _uploadFile(file).whenComplete(() {
-            _activeUploads--;
-            _admitMoreUploads = true;
-            _activeUploadPaths.remove(file.path);
-            _processingQueue = false;
-            _processQueue();
-          });
+          _uploadFile(file)
+              .catchError((error, stackTrace) {
+                if (error is UploadPausedException) {
+                  // Re-enqueue the file for later processing
+                  _fileQueue.addFirst(file);
+                } else {
+                  // Log other errors
+                  // ignore: avoid_print
+                  print(
+                    'Error uploading file ${file.path}: $error\n$stackTrace',
+                  );
+                }
+              })
+              .whenComplete(() {
+                _activeUploads--;
+                _admitMoreUploads = true;
+                _activeUploadPaths.remove(file.path);
+                _reportTotals();
+                _processingQueue = false;
+                _processQueue();
+              });
         }
       } finally {
         _processingQueue = false;
@@ -227,10 +243,18 @@ class MediaUploadService {
       return;
     }
 
+    if (_uploadsEnabled == false) {
+      throw UploadPausedException();
+    }
+
     final listed = await apiClient.listParts(remoteFileKey: remoteFileKey);
     final existingParts = <int, String>{
       for (final part in listed.parts) part.partNumber: part.eTag,
     };
+
+    if (_uploadsEnabled == false) {
+      throw UploadPausedException();
+    }
 
     final uploadId =
         listed.uploadId ??
@@ -266,6 +290,10 @@ class MediaUploadService {
       (sum, partNumber) => sum + _partLength(fileSize, partNumber),
     );
     _adjustPendingBytes(missingBytes - fileSize);
+
+    if (_uploadsEnabled == false) {
+      throw UploadPausedException();
+    }
 
     if (missingParts.isNotEmpty) {
       await _runWithConcurrency<int>(
@@ -319,6 +347,10 @@ class MediaUploadService {
     var attempt = 0;
     while (true) {
       attempt++;
+      if (_uploadsEnabled == false) {
+        throw UploadPausedException();
+      }
+
       final bundle = await apiClient.getUrls(
         remoteFileKey: remoteFileKey,
         clientMethods: ['upload_part'],
@@ -336,6 +368,9 @@ class MediaUploadService {
       await _requestLimiter.acquire();
       late HttpClientResponse response;
       try {
+        if (_uploadsEnabled == false) {
+          throw UploadPausedException();
+        }
         response = await apiClient.putStream(
           url: signed.uploadPart!,
           bytes: Stream.value(partBytes),
@@ -396,3 +431,5 @@ class MediaUploadService {
     return p.toUri(relative).path;
   }
 }
+
+class UploadPausedException implements Exception {}
