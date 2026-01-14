@@ -54,7 +54,6 @@ class MediaUploadService {
   final Set<String> _activeUploadPaths = {};
   final _RequestLimiter _requestLimiter;
   int _activeUploads = 0;
-  int get _pendingFiles => _fileQueue.length + _activeUploads;
 
   bool _processingQueue = false;
   bool _admitMoreUploads = true;
