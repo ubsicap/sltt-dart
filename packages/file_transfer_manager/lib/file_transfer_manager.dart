@@ -10,7 +10,13 @@ import 'package:path/path.dart' as p;
 part 'media_download_service.dart';
 part 'media_upload_service.dart';
 
-typedef PendingUploadTotalsCallback = void Function(int files, int bytes);
+typedef PendingUploadTotalsCallback =
+    void Function({
+      List<String> queuedFiles,
+      List<String> inProgressFiles,
+      int bytes,
+      bool isProcessing,
+    });
 typedef PendingDownloadTotalsCallback =
     void Function({
       String errorMessage,

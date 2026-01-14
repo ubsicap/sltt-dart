@@ -65,8 +65,12 @@ class MediaUploadService {
   bool _uploadsEnabled = false;
   StreamSubscription<FileSystemEvent>? _uploadWatch;
 
-  void _reportTotals() =>
-      pendingTotalsCallback?.call(_pendingFiles, _pendingBytes);
+  void _reportTotals() => pendingTotalsCallback?.call(
+    queuedFiles: _fileQueue.map((file) => file.path).toList(),
+    inProgressFiles: _activeUploadPaths.toList(),
+    bytes: _pendingBytes,
+    isProcessing: _uploadsEnabled,
+  );
 
   void _adjustPendingBytes(int delta) {
     _pendingBytes = ((_pendingBytes + delta).clamp(0, 1 << 62));
