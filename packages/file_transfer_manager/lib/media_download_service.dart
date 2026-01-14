@@ -13,15 +13,23 @@ import 'package:path/path.dart' as p;
 
 const _defaultDownloadRequestsConcurrency = 4;
 
-typedef PendingDownloadTotalsCallback =
-    void Function({
-      String errorMessage,
-      List<String> queuedFiles,
-      List<String> missingFiles,
-      List<Map<String, String>> erroredFiles,
-      List<String> inProgressFiles,
-      bool isProcessing,
-    });
+class PendingDownloadTotalsMessage {
+  PendingDownloadTotalsMessage({
+    this.errorMessage = '',
+    this.queuedFiles = const [],
+    this.missingFiles = const [],
+    this.erroredFiles = const [],
+    this.inProgressFiles = const [],
+    this.isProcessing = false,
+  });
+
+  final String errorMessage;
+  final List<String> queuedFiles;
+  final List<String> missingFiles;
+  final List<Map<String, String>> erroredFiles;
+  final List<String> inProgressFiles;
+  final bool isProcessing;
+}
 
 class MediaDownloadService {
   static MediaDownloadService? _singleton;
@@ -34,14 +42,12 @@ class MediaDownloadService {
     required Directory cloudedBase,
     int maxDownloadRequestsConcurrency = _defaultDownloadRequestsConcurrency,
     int? chunkSizeOverride,
-    PendingDownloadTotalsCallback? pendingDownloadsCallback,
   }) {
     _singleton ??= MediaDownloadService(
       apiClient: apiClient,
       cloudedBase: cloudedBase,
       maxDownloadRequestsConcurrency: maxDownloadRequestsConcurrency,
       chunkSizeOverride: chunkSizeOverride,
-      pendingDownloadsCallback: pendingDownloadsCallback,
     );
     return _singleton!;
   }
@@ -57,14 +63,17 @@ class MediaDownloadService {
     required this.cloudedBase,
     this.maxDownloadRequestsConcurrency = _defaultDownloadRequestsConcurrency,
     this.chunkSizeOverride,
-    this.pendingDownloadsCallback,
   }) : _requestLimiter = RequestLimiter(maxDownloadRequestsConcurrency);
 
   final MediaApiClientCore apiClient;
   final Directory cloudedBase;
   final int maxDownloadRequestsConcurrency;
   final int? chunkSizeOverride;
-  final PendingDownloadTotalsCallback? pendingDownloadsCallback;
+  final _pendingDownloadTotalsEvents =
+      StreamController<PendingDownloadTotalsMessage>.broadcast();
+
+  Stream<PendingDownloadTotalsMessage> get pendingDownloadsStream =>
+      _pendingDownloadTotalsEvents.stream;
 
   /// LIFO queue for downloads: prioritize most-recently requested downloads, unless addAsLowestPriority is true.
   final List<_DownloadJob> _queueLIFO = [];
@@ -77,30 +86,40 @@ class MediaDownloadService {
   bool _downloadsEnabled = false;
   String _lastErrorMessage = '';
 
-  void _reportPendingDownloads() => pendingDownloadsCallback?.call(
-    isProcessing: _downloadsEnabled,
-    queuedFiles: _queueLIFO.map((job) => job.remoteFileKey).toList(),
-    inProgressFiles: _activeJobs.keys.toList(),
-    erroredFiles: _retryLaterJobs
-        .where(
-          (job) => [
-            RetryReason.transientError,
-            RetryReason.unknown,
-          ].contains(job.retryReason),
-        )
-        .map((job) {
-          return {
-            'remoteFileKey': job.remoteFileKey,
-            'errorMessage': job.lastErrorMessage ?? '',
-            'retryReason': job.retryReason.toString(),
-          };
-        })
-        .toList(),
-    missingFiles: _retryLaterJobs
-        .where((job) => job.retryReason == RetryReason.notFound)
-        .map((job) => job.remoteFileKey)
-        .toList(),
-    errorMessage: _lastErrorMessage,
+  void dispose() {
+    _downloadsEnabled = false;
+    _pendingDownloadTotalsEvents.close();
+  }
+
+  Stream<PendingDownloadTotalsMessage> get pendingDownloadTotalsEvents =>
+      _pendingDownloadTotalsEvents.stream;
+
+  void _reportPendingDownloads() => _pendingDownloadTotalsEvents.add(
+    PendingDownloadTotalsMessage(
+      isProcessing: _downloadsEnabled,
+      queuedFiles: _queueLIFO.map((job) => job.remoteFileKey).toList(),
+      inProgressFiles: _activeJobs.keys.toList(),
+      erroredFiles: _retryLaterJobs
+          .where(
+            (job) => [
+              RetryReason.transientError,
+              RetryReason.unknown,
+            ].contains(job.retryReason),
+          )
+          .map((job) {
+            return {
+              'remoteFileKey': job.remoteFileKey,
+              'errorMessage': job.lastErrorMessage ?? '',
+              'retryReason': job.retryReason.toString(),
+            };
+          })
+          .toList(),
+      missingFiles: _retryLaterJobs
+          .where((job) => job.retryReason == RetryReason.notFound)
+          .map((job) => job.remoteFileKey)
+          .toList(),
+      errorMessage: _lastErrorMessage,
+    ),
   );
 
   void stopProcessingDownloads() {
