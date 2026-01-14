@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -236,8 +237,6 @@ Future<void> runResumesDownloadUsingExistingParts({
     );
   }
 
-  final progressUpdates = <DownloadProgress>[];
-
   final downloadService = MediaDownloadService(
     apiClient: env.apiClient,
     cloudedBase: cloudedDir,
@@ -246,10 +245,12 @@ Future<void> runResumesDownloadUsingExistingParts({
 
   downloadService.startProcessingDownloads();
 
-  final file = await downloadService.enqueueDownload(
+  final progressStream = downloadService.enqueueDownload(
     remoteFileKey: remoteKey,
-    onProgress: (p) => progressUpdates.add(p),
   );
+
+  final progressUpdates = await progressStream.toList();
+  final file = File(progressUpdates.last.destFilePath!);
 
   expect(await file.exists(), isTrue);
   expect(await file.readAsBytes(), equals(bytes));

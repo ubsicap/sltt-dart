@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -448,18 +449,13 @@ Future<void> runDownloadTest({
 
   downloadService.startProcessingDownloads();
 
-  DownloadProgress lastProgress = DownloadProgress(
-    partsCompleted: -1,
-    partsTotal: 0,
-    bytesCompleted: 0,
-    bytesTotal: 0,
-    bytesPerChunk: 0,
+  final progressStream = downloadService.enqueueDownload(
+    remoteFileKey: remoteKey,
   );
 
-  final file = await downloadService.enqueueDownload(
-    remoteFileKey: remoteKey,
-    onProgress: (p) => lastProgress = p,
-  );
+  final progressUpdates = await progressStream.toList();
+  final lastProgress = progressUpdates.last;
+  final file = File(lastProgress.destFilePath!);
 
   expect(await file.exists(), isTrue);
   expect(await file.readAsBytes(), equals(bytes));
@@ -487,10 +483,10 @@ Future<void> runStopsAndResumesDownloadProcessing({
 
   downloadService.stopProcessingDownloads();
 
-  final downloadFuture = downloadService.enqueueDownload(
+  final downloadStream = downloadService.enqueueDownload(
     remoteFileKey: remoteKey,
-    onProgress: (_) {},
   );
+  final downloadFuture = downloadStream.last;
 
   final destFile = File(p.normalize(p.join(cloudedDir.path, remoteKey)));
 
@@ -502,9 +498,10 @@ Future<void> runStopsAndResumesDownloadProcessing({
   );
 
   downloadService.resumeProcessingDownloads();
-  final file = await downloadFuture;
+  final lastProgress = await downloadFuture;
+  final completedFile = File(lastProgress.destFilePath!);
 
-  expect(file.path, equals(destFile.path));
-  expect(await file.exists(), isTrue);
-  expect(await file.readAsBytes(), equals(bytes));
+  expect(completedFile.path, equals(destFile.path));
+  expect(await completedFile.exists(), isTrue);
+  expect(await completedFile.readAsBytes(), equals(bytes));
 }

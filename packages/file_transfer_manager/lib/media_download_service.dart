@@ -88,6 +88,21 @@ class MediaDownloadService {
 
   void dispose() {
     _downloadsEnabled = false;
+    final seen = <_DownloadJob>{};
+    void closeJob(_DownloadJob job) {
+      if (seen.contains(job)) return;
+      seen.add(job);
+      if (!job.progressController.isClosed) {
+        job.progressController.addError(
+          StateError('Download service disposed'),
+        );
+        job.progressController.close();
+      }
+    }
+
+    _activeJobs.values.forEach(closeJob);
+    _queueLIFO.forEach(closeJob);
+    _retryLaterJobs.forEach(closeJob);
     _pendingDownloadTotalsEvents.close();
   }
 
@@ -150,14 +165,13 @@ class MediaDownloadService {
 
   void resumeProcessingDownloads() => startProcessingDownloads();
 
-  Future<File> enqueueDownload({
+  Stream<DownloadProgress> enqueueDownload({
     required String remoteFileKey,
     bool addAsLowestPriority = false,
-    required DownloadProgressCallback onProgress,
   }) {
     final activeJob = _activeJobs[remoteFileKey];
     if (activeJob != null) {
-      return activeJob.completer.future;
+      return activeJob.progressStream;
     }
 
     final existingIndex = _queueLIFO.indexWhere(
@@ -166,17 +180,18 @@ class MediaDownloadService {
     if (existingIndex != -1) {
       final existingJob = _queueLIFO.removeAt(existingIndex);
       _queueLIFO.add(existingJob);
-      return existingJob.completer.future;
+      return existingJob.progressStream;
     }
 
+    final progressController = StreamController<DownloadProgress>();
     final job = _DownloadJob(
       remoteFileKey: remoteFileKey,
       fileName: p.basename(remoteFileKey),
-      onProgress: onProgress,
+      progressController: progressController,
     );
 
     // Signal queued state.
-    onProgress(
+    progressController.add(
       DownloadProgress(
         partsCompleted: -1,
         partsTotal: 0,
@@ -192,7 +207,7 @@ class MediaDownloadService {
       _queueLIFO.add(job);
     }
     _processQueue();
-    return job.completer.future;
+    return job.progressStream;
   }
 
   void _processQueue() {
@@ -278,6 +293,10 @@ class MediaDownloadService {
                 if (!job.completer.isCompleted) {
                   job.completer.completeError(error, stack);
                 }
+                if (!job.progressController.isClosed) {
+                  job.progressController.addError(error, stack);
+                  job.progressController.close();
+                }
                 _processQueue();
               });
         }
@@ -321,7 +340,7 @@ class MediaDownloadService {
           statusCode: headResponse.statusCode,
           uri: headUrl,
         );
-        job.onProgress(
+        job.progressController.add(
           DownloadProgress(
             partsCompleted: 0,
             partsTotal: 0,
@@ -365,7 +384,7 @@ class MediaDownloadService {
         _processQueue();
       }
 
-      job.onProgress(
+      job.progressController.add(
         DownloadProgress(
           partsCompleted: 0,
           partsTotal: totalParts,
@@ -398,16 +417,18 @@ class MediaDownloadService {
           _requestLimiter.release();
         }
 
-        job.onProgress(
+        job.progressController.add(
           DownloadProgress(
             partsCompleted: totalParts,
             partsTotal: totalParts,
             bytesCompleted: contentLength,
             bytesTotal: contentLength,
             bytesPerChunk: chunkSize,
+            destFilePath: destFile.path,
           ),
         );
         job.completer.complete(destFile);
+        await job.progressController.close();
         return destFile;
       }
 
@@ -447,7 +468,7 @@ class MediaDownloadService {
         }
 
         if (partsCompleted > 0) {
-          job.onProgress(
+          job.progressController.add(
             DownloadProgress(
               partsCompleted: partsCompleted,
               partsTotal: totalParts,
@@ -468,7 +489,7 @@ class MediaDownloadService {
       void reportProgress(int partBytes) {
         partsCompleted++;
         bytesCompleted += partBytes;
-        job.onProgress(
+        job.progressController.add(
           DownloadProgress(
             partsCompleted: partsCompleted,
             partsTotal: totalParts,
@@ -551,16 +572,18 @@ class MediaDownloadService {
       await concatenateFiles(parts: orderedParts, output: destFile);
 
       await downloadDir.delete(recursive: true);
-      job.onProgress(
+      job.progressController.add(
         DownloadProgress(
           partsCompleted: totalParts,
           partsTotal: totalParts,
           bytesCompleted: contentLength,
           bytesTotal: contentLength,
           bytesPerChunk: chunkSize,
+          destFilePath: destFile.path,
         ),
       );
       job.completer.complete(destFile);
+      await job.progressController.close();
       return destFile;
     } catch (e, st) {
       if (e is _DownloadPausedException || e is _DownloadTransientException) {
@@ -654,6 +677,7 @@ class DownloadProgress {
     required this.bytesTotal,
     required this.bytesPerChunk,
     this.errorMessage = '',
+    this.destFilePath,
   });
 
   final int partsCompleted;
@@ -662,6 +686,7 @@ class DownloadProgress {
   final int bytesTotal;
   final int bytesPerChunk;
   final String errorMessage;
+  final String? destFilePath;
 }
 
 class _RenewedUrl {
@@ -691,13 +716,11 @@ bool _isTransientStatus(int statusCode) {
       (statusCode >= 500 && statusCode < 600);
 }
 
-typedef DownloadProgressCallback = void Function(DownloadProgress progress);
-
 class _DownloadJob {
   _DownloadJob({
     required this.remoteFileKey,
     this.fileName,
-    required this.onProgress,
+    required this.progressController,
   });
 
   int tries = 0;
@@ -706,8 +729,10 @@ class _DownloadJob {
   final String remoteFileKey;
   final String? fileName;
   String? lastErrorMessage;
-  final DownloadProgressCallback onProgress;
+  final StreamController<DownloadProgress> progressController;
   final Completer<File> completer = Completer<File>();
+
+  Stream<DownloadProgress> get progressStream => progressController.stream;
 }
 
 enum RetryReason { unknown, transientError, notFound }
