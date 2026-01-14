@@ -12,13 +12,19 @@ import 'package:path/path.dart' as p;
 const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
 const _defaultUploadRequestsConcurrency = 4;
 
-typedef PendingUploadTotalsCallback =
-    void Function({
-      List<String> queuedFiles,
-      List<String> inProgressFiles,
-      int bytes,
-      bool isProcessing,
-    });
+class PendingUploadTotalsMessage {
+  PendingUploadTotalsMessage({
+    this.queuedFiles = const [],
+    this.inProgressFiles = const [],
+    this.bytes = 0,
+    this.isProcessing = false,
+  });
+
+  final List<String> queuedFiles;
+  final List<String> inProgressFiles;
+  final int bytes;
+  final bool isProcessing;
+}
 
 class MediaUploadService {
   static MediaUploadService? _singleton;
@@ -32,7 +38,6 @@ class MediaUploadService {
     String Function(File file)? remoteFileKeyResolver,
     int partSizeBytes = _defaultPartSizeBytes,
     int maxUploadRequestsConcurrency = _defaultUploadRequestsConcurrency,
-    PendingUploadTotalsCallback? pendingTotalsCallback,
   }) {
     _singleton ??= MediaUploadService(
       apiClient: apiClient,
@@ -41,7 +46,6 @@ class MediaUploadService {
       remoteFileKeyResolver: remoteFileKeyResolver,
       partSizeBytes: partSizeBytes,
       maxUploadRequestsConcurrency: maxUploadRequestsConcurrency,
-      pendingTotalsCallback: pendingTotalsCallback,
     );
     return _singleton!;
   }
@@ -59,7 +63,6 @@ class MediaUploadService {
     this.remoteFileKeyResolver,
     this.partSizeBytes = _defaultPartSizeBytes,
     this.maxUploadRequestsConcurrency = _defaultUploadRequestsConcurrency,
-    this.pendingTotalsCallback,
   }) : _requestLimiter = RequestLimiter(maxUploadRequestsConcurrency);
 
   final MediaApiClient apiClient;
@@ -68,7 +71,11 @@ class MediaUploadService {
   final String Function(File file)? remoteFileKeyResolver;
   final int partSizeBytes;
   final int maxUploadRequestsConcurrency;
-  final PendingUploadTotalsCallback? pendingTotalsCallback;
+  final _pendingUploadTotalsEvents =
+      StreamController<PendingUploadTotalsMessage>.broadcast();
+
+  Stream<PendingUploadTotalsMessage> get pendingUploadTotalsEvents =>
+      _pendingUploadTotalsEvents.stream;
 
   final Queue<File> _fileQueue = Queue();
   final Set<String> _activeUploadPaths = {};
@@ -84,11 +91,13 @@ class MediaUploadService {
   bool _uploadsEnabled = false;
   StreamSubscription<FileSystemEvent>? _uploadWatch;
 
-  void _reportTotals() => pendingTotalsCallback?.call(
-    queuedFiles: _fileQueue.map((file) => file.path).toList(),
-    inProgressFiles: _activeUploadPaths.toList(),
-    bytes: _pendingBytes,
-    isProcessing: _uploadsEnabled,
+  void _reportTotals() => _pendingUploadTotalsEvents.add(
+    PendingUploadTotalsMessage(
+      queuedFiles: _fileQueue.map((file) => file.path).toList(),
+      inProgressFiles: _activeUploadPaths.toList(),
+      bytes: _pendingBytes,
+      isProcessing: _uploadsEnabled,
+    ),
   );
 
   void _adjustPendingBytes(int delta) {
@@ -122,6 +131,7 @@ class MediaUploadService {
     _rerunRequested = false;
     await _uploadWatch?.cancel();
     _uploadWatch = null;
+    await _pendingUploadTotalsEvents.close();
   }
 
   void _ensureUploadWatch() {
