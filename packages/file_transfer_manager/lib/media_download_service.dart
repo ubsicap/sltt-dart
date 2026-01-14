@@ -1,4 +1,27 @@
-part of 'file_transfer_manager.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
+
+import 'package:file_transfer_manager/media_transfer_service_shared.dart'
+    show
+        RequestLimiter,
+        concatenateFiles,
+        runWithConcurrency,
+        MediaApiClientCore;
+import 'package:path/path.dart' as p;
+
+const _defaultDownloadRequestsConcurrency = 4;
+
+typedef PendingDownloadTotalsCallback =
+    void Function({
+      String errorMessage,
+      List<String> queuedFiles,
+      List<String> missingFiles,
+      List<Map<String, String>> erroredFiles,
+      List<String> inProgressFiles,
+      bool isProcessing,
+    });
 
 class MediaDownloadService {
   static MediaDownloadService? _singleton;
@@ -7,7 +30,7 @@ class MediaDownloadService {
   /// Subsequent calls reuse the first-created instance so download queue state
   /// is shared across the app.
   static MediaDownloadService ensureSingleton({
-    required MediaApiClient apiClient,
+    required MediaApiClientCore apiClient,
     required Directory cloudedBase,
     int maxDownloadRequestsConcurrency = _defaultDownloadRequestsConcurrency,
     int? chunkSizeOverride,
@@ -35,9 +58,9 @@ class MediaDownloadService {
     this.maxDownloadRequestsConcurrency = _defaultDownloadRequestsConcurrency,
     this.chunkSizeOverride,
     this.pendingDownloadsCallback,
-  }) : _requestLimiter = _RequestLimiter(maxDownloadRequestsConcurrency);
+  }) : _requestLimiter = RequestLimiter(maxDownloadRequestsConcurrency);
 
-  final MediaApiClient apiClient;
+  final MediaApiClientCore apiClient;
   final Directory cloudedBase;
   final int maxDownloadRequestsConcurrency;
   final int? chunkSizeOverride;
@@ -47,7 +70,7 @@ class MediaDownloadService {
   final List<_DownloadJob> _queueLIFO = [];
   final List<_DownloadJob> _retryLaterJobs = [];
   final Map<String, _DownloadJob> _activeJobs = {};
-  final _RequestLimiter _requestLimiter;
+  final RequestLimiter _requestLimiter;
   int _activeDownloads = 0;
   bool _processingQueue = false;
   bool _admitMoreJobs = true;
@@ -487,7 +510,7 @@ class MediaDownloadService {
       remainingParts.shuffle(Random());
 
       if (remainingParts.isNotEmpty) {
-        await _runWithConcurrency<int>(
+        await runWithConcurrency<int>(
           items: remainingParts,
           concurrency: maxDownloadRequestsConcurrency,
           worker: (part) => downloadPart(part).then((_) => null),

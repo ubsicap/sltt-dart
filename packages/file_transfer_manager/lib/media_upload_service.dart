@@ -1,4 +1,24 @@
-part of 'file_transfer_manager.dart';
+import 'dart:async';
+import 'dart:collection';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
+import 'package:file_transfer_manager/media_transfer_service_shared.dart'
+    show RequestLimiter, runWithConcurrency, MediaApiClientCore;
+import 'package:path/path.dart' as p;
+
+const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
+const _defaultUploadRequestsConcurrency = 4;
+
+typedef PendingUploadTotalsCallback =
+    void Function({
+      List<String> queuedFiles,
+      List<String> inProgressFiles,
+      int bytes,
+      bool isProcessing,
+    });
 
 class MediaUploadService {
   static MediaUploadService? _singleton;
@@ -40,7 +60,7 @@ class MediaUploadService {
     this.partSizeBytes = _defaultPartSizeBytes,
     this.maxUploadRequestsConcurrency = _defaultUploadRequestsConcurrency,
     this.pendingTotalsCallback,
-  }) : _requestLimiter = _RequestLimiter(maxUploadRequestsConcurrency);
+  }) : _requestLimiter = RequestLimiter(maxUploadRequestsConcurrency);
 
   final MediaApiClient apiClient;
   final Directory pendingUploadBase;
@@ -52,7 +72,7 @@ class MediaUploadService {
 
   final Queue<File> _fileQueue = Queue();
   final Set<String> _activeUploadPaths = {};
-  final _RequestLimiter _requestLimiter;
+  final RequestLimiter _requestLimiter;
   int _activeUploads = 0;
 
   bool _processingQueue = false;
@@ -296,7 +316,7 @@ class MediaUploadService {
     }
 
     if (missingParts.isNotEmpty) {
-      await _runWithConcurrency<int>(
+      await runWithConcurrency<int>(
         items: missingParts,
         concurrency: maxUploadRequestsConcurrency,
         worker: (partNumber) async {
@@ -433,3 +453,138 @@ class MediaUploadService {
 }
 
 class UploadPausedException implements Exception {}
+
+class ListedPart {
+  ListedPart({
+    required this.partNumber,
+    required this.size,
+    required this.eTag,
+    this.lastModified,
+  });
+
+  final int partNumber;
+  final int size;
+  final String eTag;
+  final DateTime? lastModified;
+}
+
+class ListPartsResponse {
+  ListPartsResponse({
+    required this.remoteFileKey,
+    this.uploadId,
+    required this.parts,
+    this.isTruncated = false,
+    this.cursor,
+  });
+
+  final String remoteFileKey;
+  final String? uploadId;
+  final List<ListedPart> parts;
+  final bool isTruncated;
+  final String? cursor;
+}
+
+class MultipartCreateResponse {
+  MultipartCreateResponse({
+    required this.remoteFileKey,
+    required this.uploadId,
+    this.bucket,
+  });
+
+  final String remoteFileKey;
+  final String uploadId;
+  final String? bucket;
+}
+
+class UploadedPartSummary {
+  UploadedPartSummary({required this.partNumber, required this.eTag});
+
+  final int partNumber;
+  final String eTag;
+}
+
+class MediaApiClient extends MediaApiClientCore {
+  MediaApiClient(super.baseUrl, {super.client});
+
+  Future<ListPartsResponse> listParts({
+    required String remoteFileKey,
+    String? uploadId,
+    String? cursor,
+  }) async {
+    final uri = getFullPath('/api/media/list-parts');
+    final body = <String, dynamic>{'remoteFileKey': remoteFileKey};
+    if (uploadId != null) body['uploadId'] = uploadId;
+    if (cursor != null) body['cursor'] = cursor;
+
+    final data = await postJson(uri, body);
+    final rawUploadId = (data['UploadId'] as String?) ?? uploadId;
+    final normalizedUploadId = rawUploadId == null || rawUploadId.isEmpty
+        ? null
+        : rawUploadId;
+    final partsJson = (data['Parts'] as List<dynamic>? ?? []);
+    final parts = partsJson.map((e) {
+      final m = e as Map<String, dynamic>;
+      DateTime? lastModified;
+      final last = m['LastModified'];
+      if (last is String) lastModified = DateTime.tryParse(last);
+      return ListedPart(
+        partNumber: (m['PartNumber'] as num).toInt(),
+        size: (m['Size'] as num).toInt(),
+        eTag: m['ETag'] as String,
+        lastModified: lastModified,
+      );
+    }).toList();
+
+    return ListPartsResponse(
+      remoteFileKey: data['Key'] as String? ?? remoteFileKey,
+      uploadId: normalizedUploadId,
+      parts: parts,
+      isTruncated: data['IsTruncated'] as bool? ?? false,
+      cursor: data['Cursor'] as String?,
+    );
+  }
+
+  Future<MultipartCreateResponse> createMultipart(String remoteFileKey) async {
+    final uri = getFullPath('/api/media/multipart-create');
+    final data = await postJson(uri, {'remoteFileKey': remoteFileKey});
+    return MultipartCreateResponse(
+      remoteFileKey: data['remoteFileKey'] as String? ?? remoteFileKey,
+      uploadId: data['uploadId'] as String,
+      bucket: data['bucket'] as String?,
+    );
+  }
+
+  Future<void> completeMultipart({
+    required String remoteFileKey,
+    required String uploadId,
+    required List<UploadedPartSummary> parts,
+  }) async {
+    final uri = getFullPath('/api/media/multipart-complete');
+    final body = {
+      'remoteFileKey': remoteFileKey,
+      'uploadId': uploadId,
+      'parts': parts
+          .map((p) => {'partNumber': p.partNumber, 'eTag': p.eTag})
+          .toList(),
+    };
+
+    await postJson(uri, body);
+  }
+
+  Future<HttpClientResponse> putStream({
+    required Uri url,
+    required Stream<List<int>> bytes,
+    required int contentLength,
+    Map<String, String>? headers,
+  }) async {
+    final request = await httpClient.putUrl(url);
+    request.contentLength = contentLength;
+    headers?.forEach(request.headers.set);
+    await request.addStream(bytes);
+    return request.close();
+  }
+
+  void close() {
+    httpClient.close(force: true);
+  }
+}
