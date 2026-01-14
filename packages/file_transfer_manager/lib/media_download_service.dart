@@ -84,7 +84,6 @@ class MediaDownloadService {
   bool _processingQueue = false;
   bool _admitMoreJobs = true;
   bool _downloadsEnabled = false;
-  String _lastErrorMessage = '';
 
   void dispose() {
     _downloadsEnabled = false;
@@ -109,33 +108,34 @@ class MediaDownloadService {
   Stream<PendingDownloadTotalsMessage> get pendingDownloadTotalsEvents =>
       _pendingDownloadTotalsEvents.stream;
 
-  void _reportPendingDownloads() => _pendingDownloadTotalsEvents.add(
-    PendingDownloadTotalsMessage(
-      isProcessing: _downloadsEnabled,
-      queuedFiles: _queueLIFO.map((job) => job.remoteFileKey).toList(),
-      inProgressFiles: _activeJobs.keys.toList(),
-      erroredFiles: _retryLaterJobs
-          .where(
-            (job) => [
-              RetryReason.transientError,
-              RetryReason.unknown,
-            ].contains(job.retryReason),
-          )
-          .map((job) {
-            return {
-              'remoteFileKey': job.remoteFileKey,
-              'errorMessage': job.lastErrorMessage ?? '',
-              'retryReason': job.retryReason.toString(),
-            };
-          })
-          .toList(),
-      missingFiles: _retryLaterJobs
-          .where((job) => job.retryReason == RetryReason.notFound)
-          .map((job) => job.remoteFileKey)
-          .toList(),
-      errorMessage: _lastErrorMessage,
-    ),
-  );
+  void _reportPendingDownloads({String errorMessage = ''}) =>
+      _pendingDownloadTotalsEvents.add(
+        PendingDownloadTotalsMessage(
+          isProcessing: _downloadsEnabled,
+          queuedFiles: _queueLIFO.map((job) => job.remoteFileKey).toList(),
+          inProgressFiles: _activeJobs.keys.toList(),
+          erroredFiles: _retryLaterJobs
+              .where(
+                (job) => [
+                  RetryReason.transientError,
+                  RetryReason.unknown,
+                ].contains(job.retryReason),
+              )
+              .map((job) {
+                return {
+                  'remoteFileKey': job.remoteFileKey,
+                  'errorMessage': job.lastErrorMessage ?? '',
+                  'retryReason': job.retryReason.toString(),
+                };
+              })
+              .toList(),
+          missingFiles: _retryLaterJobs
+              .where((job) => job.retryReason == RetryReason.notFound)
+              .map((job) => job.remoteFileKey)
+              .toList(),
+          errorMessage: errorMessage,
+        ),
+      );
 
   void stopProcessingDownloads() {
     _downloadsEnabled = false;
@@ -229,7 +229,6 @@ class MediaDownloadService {
       }
     }
     _reportPendingDownloads();
-    _lastErrorMessage = ''; // clear last error on new processing attempt
     if (_processingQueue || !_downloadsEnabled || !_admitMoreJobs) return;
     _processingQueue = true;
 
@@ -276,7 +275,7 @@ class MediaDownloadService {
                     );
                     job.tries += 1;
                     _retryLaterJobs.add(job);
-                    _lastErrorMessage = error.toString();
+                    _reportPendingDownloads(errorMessage: error.toString());
                   } else {
                     // re-add current job as top priority
                     _queueLIFO.add(job);
@@ -286,7 +285,7 @@ class MediaDownloadService {
                 }
 
                 job.lastErrorMessage = error.toString();
-                _lastErrorMessage = error.toString();
+                _reportPendingDownloads(errorMessage: error.toString());
 
                 // Real failure: finish the job with error and adjust pending.
                 _activeJobs.remove(job.remoteFileKey);

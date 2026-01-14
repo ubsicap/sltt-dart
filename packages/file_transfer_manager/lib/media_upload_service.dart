@@ -18,12 +18,14 @@ class PendingUploadTotalsMessage {
     this.inProgressFiles = const [],
     this.bytes = 0,
     this.isProcessing = false,
+    this.errorMessage = '',
   });
 
   final List<String> queuedFiles;
   final List<String> inProgressFiles;
   final int bytes;
   final bool isProcessing;
+  final String errorMessage;
 }
 
 class MediaUploadService {
@@ -91,14 +93,16 @@ class MediaUploadService {
   bool _uploadsEnabled = false;
   StreamSubscription<FileSystemEvent>? _uploadWatch;
 
-  void _reportTotals() => _pendingUploadTotalsEvents.add(
-    PendingUploadTotalsMessage(
-      queuedFiles: _fileQueue.map((file) => file.path).toList(),
-      inProgressFiles: _activeUploadPaths.toList(),
-      bytes: _pendingBytes,
-      isProcessing: _uploadsEnabled,
-    ),
-  );
+  void _reportTotals({String errorMessage = ''}) =>
+      _pendingUploadTotalsEvents.add(
+        PendingUploadTotalsMessage(
+          queuedFiles: _fileQueue.map((file) => file.path).toList(),
+          inProgressFiles: _activeUploadPaths.toList(),
+          bytes: _pendingBytes,
+          isProcessing: _uploadsEnabled,
+          errorMessage: errorMessage,
+        ),
+      );
 
   void _adjustPendingBytes(int delta) {
     _pendingBytes = ((_pendingBytes + delta).clamp(0, 1 << 62));
@@ -197,9 +201,12 @@ class MediaUploadService {
                 } else {
                   // Log other errors
                   // ignore: avoid_print
+                  final errorMessage =
+                      'Error uploading file ${file.path}: $error';
                   print(
                     'Error uploading file ${file.path}: $error\n$stackTrace',
                   );
+                  _reportTotals(errorMessage: errorMessage);
                 }
               })
               .whenComplete(() {
