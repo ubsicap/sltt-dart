@@ -146,21 +146,18 @@ class MediaDownloadService {
 
   void startProcessingDownloads() {
     if (_retryLaterJobs.isNotEmpty) {
-      // preserve top priority queue job
-      final topPriorityJob = _queueLIFO.isNotEmpty
-          ? _queueLIFO.removeLast()
-          : null;
       // user re-started downloads, so just add retries back to the main queue
-      for (final retryJob in _retryLaterJobs) {
-        _queueLIFO.add(retryJob);
-      }
+      final retryRemoteFileKeys = _retryLaterJobs
+          .map((job) => job.remoteFileKey)
+          .toSet();
       _retryLaterJobs.clear();
-      // re-add preserved top priority job
-      if (topPriorityJob != null) {
-        _queueLIFO.add(topPriorityJob);
+      for (final remoteFileKey in retryRemoteFileKeys) {
+        enqueueDownload(
+          remoteFileKey: remoteFileKey,
+          addAsLowestPriority: true,
+        );
       }
     }
-    // re-add current job as top priority
     _downloadsEnabled = true;
     _processQueue();
   }
