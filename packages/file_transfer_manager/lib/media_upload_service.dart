@@ -94,15 +94,17 @@ class MediaUploadService {
   StreamSubscription<FileSystemEvent>? _uploadWatch;
 
   void _reportTotals({String errorMessage = ''}) =>
-      _pendingUploadTotalsEvents.add(
-        PendingUploadTotalsMessage(
-          queuedFiles: _fileQueue.map((file) => file.path).toList(),
-          inProgressFiles: _activeUploadPaths.toList(),
-          bytes: _pendingBytes,
-          isProcessing: _uploadsEnabled,
-          errorMessage: errorMessage,
-        ),
-      );
+      _pendingUploadTotalsEvents.isClosed
+      ? null
+      : _pendingUploadTotalsEvents.add(
+          PendingUploadTotalsMessage(
+            queuedFiles: _fileQueue.map((file) => file.path).toList(),
+            inProgressFiles: _activeUploadPaths.toList(),
+            bytes: _pendingBytes,
+            isProcessing: _uploadsEnabled,
+            errorMessage: errorMessage,
+          ),
+        );
 
   void _adjustPendingBytes(int delta) {
     _pendingBytes = ((_pendingBytes + delta).clamp(0, 1 << 62));

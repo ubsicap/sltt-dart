@@ -109,33 +109,35 @@ class MediaDownloadService {
       _pendingDownloadTotalsEvents.stream;
 
   void _reportPendingDownloads({String errorMessage = ''}) =>
-      _pendingDownloadTotalsEvents.add(
-        PendingDownloadTotalsMessage(
-          isProcessing: _downloadsEnabled,
-          queuedFiles: _queueLIFO.map((job) => job.remoteFileKey).toList(),
-          inProgressFiles: _activeJobs.keys.toList(),
-          erroredFiles: _retryLaterJobs
-              .where(
-                (job) => [
-                  RetryReason.transientError,
-                  RetryReason.unknown,
-                ].contains(job.retryReason),
-              )
-              .map((job) {
-                return {
-                  'remoteFileKey': job.remoteFileKey,
-                  'errorMessage': job.lastErrorMessage ?? '',
-                  'retryReason': job.retryReason.toString(),
-                };
-              })
-              .toList(),
-          missingFiles: _retryLaterJobs
-              .where((job) => job.retryReason == RetryReason.notFound)
-              .map((job) => job.remoteFileKey)
-              .toList(),
-          errorMessage: errorMessage,
-        ),
-      );
+      _pendingDownloadTotalsEvents.isClosed
+      ? null
+      : _pendingDownloadTotalsEvents.add(
+          PendingDownloadTotalsMessage(
+            isProcessing: _downloadsEnabled,
+            queuedFiles: _queueLIFO.map((job) => job.remoteFileKey).toList(),
+            inProgressFiles: _activeJobs.keys.toList(),
+            erroredFiles: _retryLaterJobs
+                .where(
+                  (job) => [
+                    RetryReason.transientError,
+                    RetryReason.unknown,
+                  ].contains(job.retryReason),
+                )
+                .map((job) {
+                  return {
+                    'remoteFileKey': job.remoteFileKey,
+                    'errorMessage': job.lastErrorMessage ?? '',
+                    'retryReason': job.retryReason.toString(),
+                  };
+                })
+                .toList(),
+            missingFiles: _retryLaterJobs
+                .where((job) => job.retryReason == RetryReason.notFound)
+                .map((job) => job.remoteFileKey)
+                .toList(),
+            errorMessage: errorMessage,
+          ),
+        );
 
   void stopProcessingDownloads() {
     _downloadsEnabled = false;
@@ -191,15 +193,17 @@ class MediaDownloadService {
     );
 
     // Signal queued state.
-    progressController.add(
-      DownloadProgress(
-        partsCompleted: -1,
-        partsTotal: 0,
-        bytesCompleted: 0,
-        bytesTotal: 0,
-        bytesPerChunk: 0,
-      ),
-    );
+    progressController.isClosed
+        ? null
+        : progressController.add(
+            DownloadProgress(
+              partsCompleted: -1,
+              partsTotal: 0,
+              bytesCompleted: 0,
+              bytesTotal: 0,
+              bytesPerChunk: 0,
+            ),
+          );
 
     if (addAsLowestPriority) {
       _queueLIFO.insert(0, job);
