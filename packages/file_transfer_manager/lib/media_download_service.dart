@@ -77,7 +77,7 @@ class MediaDownloadService {
 
   /// LIFO queue for downloads: prioritize most-recently requested downloads, unless addAsLowestPriority is true.
   final List<_DownloadJob> _queueLIFO = [];
-  final List<_DownloadJob> _retryLaterJobs = [];
+  final Map<String, _RetryLater> _retryLaterJobs = {};
   final Map<String, _DownloadJob> _activeJobs = {};
   final RequestLimiter _requestLimiter;
   int _activeDownloads = 0;
@@ -85,8 +85,50 @@ class MediaDownloadService {
   bool _admitMoreJobs = true;
   bool _downloadsEnabled = false;
 
+  void _clearRetryLaterJobs({
+    bool cancelTimers = false,
+    bool removeEntries = true,
+  }) {
+    if (cancelTimers) {
+      for (final retry in _retryLaterJobs.values) {
+        retry.timer.cancel();
+      }
+    }
+    if (removeEntries) {
+      _retryLaterJobs.clear();
+    }
+  }
+
+  void _cancelRetryLaterJob(String remoteFileKey) {
+    final retry = _retryLaterJobs.remove(remoteFileKey);
+    retry?.timer.cancel();
+  }
+
+  void _scheduleRetry(_DownloadJob job) {
+    final now = DateTime.now();
+    final retryAt = job.retryAt;
+    final delay = retryAt == null
+        ? const Duration(minutes: 1)
+        : retryAt.isBefore(now)
+        ? Duration.zero
+        : retryAt.difference(now);
+
+    _cancelRetryLaterJob(job.remoteFileKey);
+
+    final timer = Timer(delay, () {
+      _cancelRetryLaterJob(job.remoteFileKey);
+      enqueueDownload(
+        remoteFileKey: job.remoteFileKey,
+        addAsLowestPriority: true,
+      );
+    });
+
+    _retryLaterJobs[job.remoteFileKey] = _RetryLater(job: job, timer: timer);
+  }
+
   void dispose() {
     _downloadsEnabled = false;
+    _clearRetryLaterJobs(cancelTimers: true, removeEntries: false);
     final seen = <_DownloadJob>{};
     void closeJob(_DownloadJob job) {
       if (seen.contains(job)) return;
@@ -101,7 +143,10 @@ class MediaDownloadService {
 
     _activeJobs.values.forEach(closeJob);
     _queueLIFO.forEach(closeJob);
-    _retryLaterJobs.forEach(closeJob);
+    for (final retry in _retryLaterJobs.values) {
+      closeJob(retry.job);
+    }
+    _retryLaterJobs.clear();
     _pendingDownloadTotalsEvents.close();
   }
 
@@ -116,14 +161,15 @@ class MediaDownloadService {
             isProcessing: _downloadsEnabled,
             queuedFiles: _queueLIFO.map((job) => job.remoteFileKey).toList(),
             inProgressFiles: _activeJobs.keys.toList(),
-            erroredFiles: _retryLaterJobs
+            erroredFiles: _retryLaterJobs.values
                 .where(
-                  (job) => [
+                  (retry) => [
                     RetryReason.transientError,
                     RetryReason.unknown,
-                  ].contains(job.retryReason),
+                  ].contains(retry.job.retryReason),
                 )
-                .map((job) {
+                .map((retry) {
+                  final job = retry.job;
                   return {
                     'remoteFileKey': job.remoteFileKey,
                     'errorMessage': job.lastErrorMessage ?? '',
@@ -131,9 +177,9 @@ class MediaDownloadService {
                   };
                 })
                 .toList(),
-            missingFiles: _retryLaterJobs
-                .where((job) => job.retryReason == RetryReason.notFound)
-                .map((job) => job.remoteFileKey)
+            missingFiles: _retryLaterJobs.values
+                .where((retry) => retry.job.retryReason == RetryReason.notFound)
+                .map((retry) => retry.job.remoteFileKey)
                 .toList(),
             errorMessage: errorMessage,
           ),
@@ -141,17 +187,16 @@ class MediaDownloadService {
 
   void stopProcessingDownloads() {
     _downloadsEnabled = false;
+    _clearRetryLaterJobs(cancelTimers: true, removeEntries: false);
     _reportPendingDownloads();
   }
 
   void startProcessingDownloads() {
     if (_retryLaterJobs.isNotEmpty) {
-      // user re-started downloads, so just add retries back to the main queue
-      final retryRemoteFileKeys = _retryLaterJobs
-          .map((job) => job.remoteFileKey)
-          .toSet();
-      _retryLaterJobs.clear();
-      for (final remoteFileKey in retryRemoteFileKeys) {
+      final retryRemoteFileKeys = _retryLaterJobs.keys.toList();
+      _clearRetryLaterJobs(cancelTimers: true);
+      // add them back in reverse order so last retry is processed first
+      for (final remoteFileKey in retryRemoteFileKeys.reversed) {
         enqueueDownload(
           remoteFileKey: remoteFileKey,
           addAsLowestPriority: true,
@@ -168,6 +213,8 @@ class MediaDownloadService {
     required String remoteFileKey,
     bool addAsLowestPriority = false,
   }) {
+    _cancelRetryLaterJob(remoteFileKey);
+
     final activeJob = _activeJobs[remoteFileKey];
     if (activeJob != null) {
       return activeJob.progressStream;
@@ -212,23 +259,6 @@ class MediaDownloadService {
   }
 
   void _processQueue() {
-    if (_retryLaterJobs.isNotEmpty) {
-      // if job got enqueued again remove from retry list
-      _retryLaterJobs.removeWhere(
-        (job) => _queueLIFO.any(
-          (queuedJob) => queuedJob.remoteFileKey == job.remoteFileKey,
-        ),
-      );
-      final now = DateTime.now();
-      final readyJobs = _retryLaterJobs.where((job) {
-        final retryAt = job.retryAt;
-        return retryAt != null && now.isAfter(retryAt);
-      }).toList();
-      for (final job in readyJobs) {
-        _retryLaterJobs.remove(job);
-        _queueLIFO.add(job);
-      }
-    }
     _reportPendingDownloads();
     if (_processingQueue || !_downloadsEnabled || !_admitMoreJobs) return;
     _processingQueue = true;
@@ -275,7 +305,7 @@ class MediaDownloadService {
                       const Duration(minutes: 1),
                     );
                     job.tries += 1;
-                    _retryLaterJobs.add(job);
+                    _scheduleRetry(job);
                     _reportPendingDownloads(errorMessage: error.toString());
                   } else {
                     // re-add current job as top priority
@@ -714,6 +744,13 @@ bool _isTransientStatus(int statusCode) {
   return statusCode == HttpStatus.requestTimeout ||
       statusCode == 429 ||
       (statusCode >= 500 && statusCode < 600);
+}
+
+class _RetryLater {
+  _RetryLater({required this.job, required this.timer});
+
+  final _DownloadJob job;
+  final Timer timer;
 }
 
 class _DownloadJob {
