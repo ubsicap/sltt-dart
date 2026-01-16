@@ -4,7 +4,7 @@ service: sltt-backend
 # No plugins needed - using manual build process
 
 custom:
-  mediaBucket: ${self:service}-media-worm-${aws:accountId}
+  mediaBucket: ${self:service}-media-worm-${aws:accountId}-${self:provider.stage}
 
 provider:
   name: aws
