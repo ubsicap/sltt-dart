@@ -32,6 +32,16 @@ void main() {
       await tempDir.delete(recursive: true);
     });
 
+    test('downloads single-chunk file', () async {
+      const testName = 'downloads single-chunk file';
+      await testSingleChunkDownload(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+        testName: testName,
+      );
+    });
+
     test('downloads chunked file and assembles locally', () async {
       const testName = 'downloads chunked file and assembles locally';
       final timestamp = DateTime.now();
@@ -115,6 +125,16 @@ void main() {
     tearDown(() async {
       await env.dispose();
       await tempDir.delete(recursive: true);
+    });
+
+    test('downloads single-chunk file', () async {
+      const testName = 'downloads single-chunk file';
+      await testSingleChunkDownload(
+        env: env,
+        pendingDir: pendingDir,
+        cloudedDir: cloudedDir,
+        testName: testName,
+      );
     });
 
     test('downloads chunked file and assembles locally', () async {
@@ -275,4 +295,55 @@ Future<void> runResumesDownloadUsingExistingParts({
   final totalParts = (size / chunkSize).ceil();
   expect(lastProgress.partsCompleted, equals(totalParts));
   expect(lastProgress.bytesCompleted, equals(size));
+}
+
+Future<void> testSingleChunkDownload({
+  required TestEnv env,
+  required Directory pendingDir,
+  required Directory cloudedDir,
+  required String testName,
+}) async {
+  final timestamp = DateTime.now();
+  final remoteKey = buildTestRemoteKey(
+    relativePath: 'media/single_chunk.bin',
+    testName: testName,
+    timestamp: timestamp,
+  );
+  final bytes = List<int>.generate(128 * 1024 + 13, (i) => i % 256);
+
+  await seedRemoteBytes(
+    env: env,
+    pendingDir: pendingDir,
+    cloudedDir: cloudedDir,
+    remoteKey: remoteKey,
+    bytes: bytes,
+  );
+
+  final downloadService = MediaDownloadService(
+    apiClient: env.apiClient,
+    cloudedBase: cloudedDir,
+    // Force a single part by setting chunk size larger than the payload.
+    chunkSizeOverride: bytes.length * 2,
+  );
+
+  downloadService.startProcessingDownloads();
+
+  final progressStream = downloadService.enqueueDownload(
+    remoteFileKey: remoteKey,
+  );
+
+  final progressUpdates = await progressStream.toList();
+  final lastProgress = progressUpdates.last;
+  final file = File(lastProgress.destFilePath!);
+
+  expect(await file.exists(), isTrue);
+  expect(await file.readAsBytes(), equals(bytes));
+  expect(lastProgress.partsTotal, equals(1));
+  expect(lastProgress.partsCompleted, equals(1));
+  expect(lastProgress.bytesCompleted, equals(bytes.length));
+
+  final downloadingDir = Directory(
+    p.join(cloudedDir.path, '__downloading', p.basename(remoteKey)),
+  );
+  expect(await downloadingDir.exists(), isFalse);
 }
