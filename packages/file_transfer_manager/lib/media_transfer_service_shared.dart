@@ -2,7 +2,13 @@ import 'dart:async' show Completer;
 import 'dart:collection' show Queue;
 import 'dart:convert' show jsonDecode, jsonEncode, utf8;
 import 'dart:io'
-    show File, HttpClient, HttpClientResponse, HttpException, ContentType;
+    show
+        File,
+        HttpClient,
+        HttpClientResponse,
+        HttpException,
+        ContentType,
+        FileSystemException;
 import 'dart:math' show min;
 
 /// fast and memory-efficient file concatenation
@@ -10,6 +16,26 @@ Future<void> concatenateFiles({
   required List<File> parts,
   required File output,
 }) async {
+  if (parts.isEmpty) return;
+
+  // Fast-path: a single part can simply be moved into place.
+  if (parts.length == 1) {
+    final single = parts.first;
+    if (single.path != output.path) {
+      await output.parent.create(recursive: true);
+      if (await output.exists()) {
+        await output.delete();
+      }
+      try {
+        await single.rename(output.path);
+        return;
+      } on FileSystemException {
+        // Fall back to streaming copy if rename fails (e.g., cross-volume move).
+      }
+    }
+  }
+
+  await output.parent.create(recursive: true);
   final sink = output.openWrite();
 
   try {
