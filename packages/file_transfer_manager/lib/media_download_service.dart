@@ -407,9 +407,20 @@ class MediaDownloadService {
 
       final chunkSize = chunkSizeOverride ?? chooseChunkSize(contentLength);
       final totalParts = (contentLength / chunkSize).ceil();
+      job.totalParts = totalParts;
+      // TODO: _reportProgress
 
-      final remainingDownloadSlots = _requestLimiter.availablePermits;
-      if (remainingDownloadSlots > 0 && totalParts < remainingDownloadSlots) {
+      // for each active job, sum all partsRemaining if not -1 otherwise totalParts to be safe
+      // (the current job is assumed to be in activeJobs already)
+      final overallPendingParts = _activeJobs.values.fold<int>(
+        0,
+        (sum, activeJob) =>
+            sum +
+            (activeJob.partsRemaining != -1
+                ? activeJob.partsRemaining
+                : activeJob.totalParts),
+      );
+      if (overallPendingParts < maxDownloadRequestsConcurrency) {
         _admitMoreJobs = true;
         _processQueue();
       }
@@ -495,6 +506,15 @@ class MediaDownloadService {
           } else {
             await entity.delete(); // discard corrupt/incomplete part
           }
+        }
+
+        job.partsCompleted = partsCompleted;
+        // TODO: _reportProgress
+
+        final remainingDownloadSlots = _requestLimiter.availablePermits;
+        if (remainingDownloadSlots > 0 && totalParts < remainingDownloadSlots) {
+          _admitMoreJobs = true;
+          _processQueue();
         }
 
         if (partsCompleted > 0) {
@@ -760,6 +780,11 @@ class _DownloadJob {
     required this.progressController,
   });
 
+int totalParts = -1;
+  int partsCompleted = -1;
+  int get partsRemaining => totalParts == -1 || partsCompleted == -1
+      ? -1
+      : totalParts - partsCompleted;
   int tries = 0;
   RetryReason? retryReason;
   DateTime? retryAt;
