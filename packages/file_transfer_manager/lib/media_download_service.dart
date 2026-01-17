@@ -435,44 +435,6 @@ class MediaDownloadService {
         ),
       );
 
-      if (chunkSize >= contentLength) {
-        final destFile = File(p.join(targetDir.path, job.fileName));
-        await _requestLimiter.acquire();
-        try {
-          if (!_downloadsEnabled) {
-            throw _DownloadPausedException();
-          }
-          final response = await _getWithRenewal(
-            currentUrl: getUrl,
-            expiresAt: expiresAt,
-            renewUrl: refreshGetUrl,
-            onRenewed: (url, newExpires) {
-              getUrl = url;
-              expiresAt = newExpires;
-            },
-          );
-          final sink = destFile.openWrite();
-          await sink.addStream(response);
-          await sink.close();
-        } finally {
-          _requestLimiter.release();
-        }
-
-        job.progressController.add(
-          DownloadProgress(
-            partsCompleted: totalParts,
-            partsTotal: totalParts,
-            bytesCompleted: contentLength,
-            bytesTotal: contentLength,
-            bytesPerChunk: chunkSize,
-            destFilePath: destFile.path,
-          ),
-        );
-        job.completer.complete(destFile);
-        await job.progressController.close();
-        return destFile;
-      }
-
       final downloadDir = Directory(
         p.join(cloudedBase.path, '__downloading', job.fileName),
       );
@@ -780,7 +742,7 @@ class _DownloadJob {
     required this.progressController,
   });
 
-int totalParts = -1;
+  int totalParts = -1;
   int partsCompleted = -1;
   int get partsRemaining => totalParts == -1 || partsCompleted == -1
       ? -1
