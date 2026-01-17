@@ -336,6 +336,22 @@ class MediaDownloadService {
     });
   }
 
+  void _reassessAdmissionBasedOnPendingParts() {
+    // for each active job, sum all partsRemaining if not -1 otherwise totalParts to be safe
+    final overallPendingParts = _activeJobs.values.fold<int>(
+      0,
+      (sum, activeJob) =>
+          sum +
+          (activeJob.partsRemaining != -1
+              ? activeJob.partsRemaining
+              : activeJob.totalParts),
+    );
+    if (overallPendingParts < maxDownloadRequestsConcurrency) {
+      _admitMoreJobs = true;
+      _processQueue();
+    }
+  }
+
   Future<File> _runSingleDownload(_DownloadJob job) async {
     try {
       final signed = await apiClient.getUrls(
@@ -410,20 +426,7 @@ class MediaDownloadService {
       job.totalParts = totalParts;
       // TODO: _reportProgress
 
-      // for each active job, sum all partsRemaining if not -1 otherwise totalParts to be safe
-      // (the current job is assumed to be in activeJobs already)
-      final overallPendingParts = _activeJobs.values.fold<int>(
-        0,
-        (sum, activeJob) =>
-            sum +
-            (activeJob.partsRemaining != -1
-                ? activeJob.partsRemaining
-                : activeJob.totalParts),
-      );
-      if (overallPendingParts < maxDownloadRequestsConcurrency) {
-        _admitMoreJobs = true;
-        _processQueue();
-      }
+      _reassessAdmissionBasedOnPendingParts();
 
       job.progressController.add(
         DownloadProgress(
@@ -472,12 +475,7 @@ class MediaDownloadService {
 
         job.partsCompleted = partsCompleted;
         // TODO: _reportProgress
-
-        final remainingDownloadSlots = _requestLimiter.availablePermits;
-        if (remainingDownloadSlots > 0 && totalParts < remainingDownloadSlots) {
-          _admitMoreJobs = true;
-          _processQueue();
-        }
+        _reassessAdmissionBasedOnPendingParts();
 
         if (partsCompleted > 0) {
           job.progressController.add(
