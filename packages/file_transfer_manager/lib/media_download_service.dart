@@ -8,7 +8,8 @@ import 'package:file_transfer_manager/media_transfer_service_shared.dart'
         RequestLimiter,
         concatenateFiles,
         runWithConcurrency,
-        MediaApiClientCore;
+        MediaApiClientCore,
+        TransferJob;
 import 'package:path/path.dart' as p;
 
 const _defaultDownloadRequestsConcurrency = 4;
@@ -76,9 +77,9 @@ class MediaDownloadService {
       _pendingDownloadTotalsEvents.stream;
 
   /// LIFO queue for downloads: prioritize most-recently requested downloads, unless addAsLowestPriority is true.
-  final List<_DownloadJob> _queueLIFO = [];
+  final List<TransferJob<DownloadProgress, File>> _queueLIFO = [];
   final Map<String, _RetryLater> _retryLaterJobs = {};
-  final Map<String, _DownloadJob> _activeJobs = {};
+  final Map<String, TransferJob<DownloadProgress, File>> _activeJobs = {};
   final RequestLimiter _requestLimiter;
   int _activeDownloads = 0;
   bool _processingQueue = false;
@@ -104,7 +105,7 @@ class MediaDownloadService {
     retry?.timer.cancel();
   }
 
-  void _scheduleRetry(_DownloadJob job) {
+  void _scheduleRetry(TransferJob<DownloadProgress, File> job) {
     final now = DateTime.now();
     final retryAt = job.retryAt;
     final delay = retryAt == null
@@ -129,8 +130,8 @@ class MediaDownloadService {
   void dispose() {
     _downloadsEnabled = false;
     _clearRetryLaterJobs(cancelTimers: true, removeEntries: false);
-    final seen = <_DownloadJob>{};
-    void closeJob(_DownloadJob job) {
+    final seen = <TransferJob<DownloadProgress, File>>{};
+    void closeJob(TransferJob<DownloadProgress, File> job) {
       if (seen.contains(job)) return;
       seen.add(job);
       if (!job.progressController.isClosed) {
@@ -230,10 +231,11 @@ class MediaDownloadService {
     }
 
     final progressController = StreamController<DownloadProgress>();
-    final job = _DownloadJob(
+    final job = TransferJob<DownloadProgress, File>(
       remoteFileKey: remoteFileKey,
       fileName: p.basename(remoteFileKey),
       progressController: progressController,
+      completer: Completer<File>(),
     );
 
     // Signal queued state.
@@ -352,7 +354,9 @@ class MediaDownloadService {
     }
   }
 
-  Future<File> _runSingleDownload(_DownloadJob job) async {
+  Future<File> _runSingleDownload(
+    TransferJob<DownloadProgress, File> job,
+  ) async {
     try {
       final signed = await apiClient.getUrls(
         remoteFileKey: job.remoteFileKey,
@@ -730,33 +734,11 @@ bool _isTransientStatus(int statusCode) {
 class _RetryLater {
   _RetryLater({required this.job, required this.timer});
 
-  final _DownloadJob job;
+  final TransferJob<DownloadProgress, File> job;
   final Timer timer;
 }
 
-class _DownloadJob {
-  _DownloadJob({
-    required this.remoteFileKey,
-    this.fileName,
-    required this.progressController,
-  });
-
-  int totalParts = -1;
-  int partsCompleted = -1;
-  int get partsRemaining => totalParts == -1 || partsCompleted == -1
-      ? -1
-      : totalParts - partsCompleted;
-  int tries = 0;
-  RetryReason? retryReason;
-  DateTime? retryAt;
-  final String remoteFileKey;
-  final String? fileName;
-  String? lastErrorMessage;
-  final StreamController<DownloadProgress> progressController;
-  final Completer<File> completer = Completer<File>();
-
-  Stream<DownloadProgress> get progressStream => progressController.stream;
-}
+// Download-specific retry reasons retained locally; TransferJob is shared.
 
 enum RetryReason { unknown, transientError, notFound }
 

@@ -1,4 +1,4 @@
-import 'dart:async' show Completer;
+import 'dart:async' show Completer, StreamController;
 import 'dart:collection' show Queue;
 import 'dart:convert' show jsonDecode, jsonEncode, utf8;
 import 'dart:io'
@@ -91,6 +91,33 @@ class SignedUrlBundle {
       expiresAt: expires,
     );
   }
+}
+
+/// Transfer job metadata shared by upload/download services.
+class TransferJob<TProgress, TResult> {
+  TransferJob({
+    required this.remoteFileKey,
+    this.fileName,
+    StreamController<TProgress>? progressController,
+    Completer<TResult>? completer,
+  }) : progressController = progressController ?? StreamController<TProgress>(),
+       completer = completer ?? Completer<TResult>();
+
+  int totalParts = -1;
+  int partsCompleted = -1;
+  int get partsRemaining => totalParts == -1 || partsCompleted == -1
+      ? -1
+      : totalParts - partsCompleted;
+  int tries = 0;
+  Object? retryReason;
+  DateTime? retryAt;
+  final String remoteFileKey;
+  final String? fileName;
+  String? lastErrorMessage;
+  final StreamController<TProgress> progressController;
+  final Completer<TResult> completer;
+
+  Stream<TProgress> get progressStream => progressController.stream;
 }
 
 class MediaApiClientCore {

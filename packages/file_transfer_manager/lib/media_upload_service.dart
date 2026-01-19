@@ -6,7 +6,7 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:file_transfer_manager/media_transfer_service_shared.dart'
-    show RequestLimiter, runWithConcurrency, MediaApiClientCore;
+    show RequestLimiter, runWithConcurrency, MediaApiClientCore, TransferJob;
 import 'package:path/path.dart' as p;
 
 const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
@@ -81,6 +81,7 @@ class MediaUploadService {
 
   final Queue<File> _fileQueue = Queue();
   final Set<String> _activeUploadPaths = {};
+  final Map<String, TransferJob<dynamic, dynamic>> _activeUploadJobs = {};
   final RequestLimiter _requestLimiter;
   int _activeUploads = 0;
 
@@ -265,110 +266,129 @@ class MediaUploadService {
   }
 
   Future<void> _uploadFile(File file) async {
-    final fileSize = await file.length();
     final remoteFileKey = _buildRemoteFileKey(file);
-
-    final persistedUploadId = await _readPersistedUploadId(file);
-
-    final headUrls = await apiClient.getUrls(
+    final job = TransferJob<void, void>(
       remoteFileKey: remoteFileKey,
-      clientMethods: ['head_object'],
+      fileName: p.basename(file.path),
+      progressController: StreamController<void>(),
+      completer: Completer<void>(),
     );
+    _activeUploadJobs[remoteFileKey] = job;
 
-    final headUrl = headUrls
-        .firstWhere((u) => u.headObject != null)
-        .headObject!;
-    final headResponse = await apiClient.head(headUrl);
-    if (headResponse.statusCode == HttpStatus.ok) {
-      _adjustPendingBytes(-fileSize);
+    try {
+      final fileSize = await file.length();
+
+      final persistedUploadId = await _readPersistedUploadId(file);
+
+      final headUrls = await apiClient.getUrls(
+        remoteFileKey: remoteFileKey,
+        clientMethods: ['head_object'],
+      );
+
+      final headUrl = headUrls
+          .firstWhere((u) => u.headObject != null)
+          .headObject!;
+      final headResponse = await apiClient.head(headUrl);
+      if (headResponse.statusCode == HttpStatus.ok) {
+        _adjustPendingBytes(-fileSize);
+        await _moveToClouded(file, remoteFileKey);
+        _reportTotals();
+        job.completer.complete();
+        return;
+      }
+
+      if (_uploadsEnabled == false) {
+        throw UploadPausedException();
+      }
+
+      final listed = await _listPartsExhaustive(
+        remoteFileKey: remoteFileKey,
+        uploadId: persistedUploadId,
+      );
+      final existingParts = <int, String>{
+        for (final part in listed.parts) part.partNumber: part.eTag,
+      };
+
+      if (_uploadsEnabled == false) {
+        throw UploadPausedException();
+      }
+
+      var uploadId = listed.uploadId;
+      if (uploadId == null || uploadId.isEmpty) {
+        uploadId = (await apiClient.createMultipart(remoteFileKey)).uploadId;
+      }
+      final resolvedUploadId = uploadId;
+      await _persistUploadId(file, resolvedUploadId);
+
+      final totalParts = (fileSize / partSizeBytes).ceil();
+      job.totalParts = totalParts;
+      job.partsCompleted = existingParts.length;
+      final missingParts = <int>[];
+      for (var partNumber = 1; partNumber <= totalParts; partNumber++) {
+        if (!existingParts.containsKey(partNumber)) {
+          missingParts.add(partNumber);
+        }
+      }
+
+      final remainingUploadSlots = _requestLimiter.availablePermits;
+
+      if (remainingUploadSlots > 0 &&
+          missingParts.length < remainingUploadSlots) {
+        _admitMoreUploads = true;
+        _processQueue();
+      }
+
+      if (missingParts.isNotEmpty && existingParts.isNotEmpty) {
+        missingParts.shuffle(_random);
+      }
+
+      final uploaded = <UploadedPartSummary>[
+        for (final entry in existingParts.entries)
+          UploadedPartSummary(partNumber: entry.key, eTag: entry.value),
+      ];
+
+      final missingBytes = missingParts.fold<int>(
+        0,
+        (sum, partNumber) => sum + _partLength(fileSize, partNumber),
+      );
+      _adjustPendingBytes(missingBytes - fileSize);
+
+      if (_uploadsEnabled == false) {
+        throw UploadPausedException();
+      }
+
+      if (missingParts.isNotEmpty) {
+        await runWithConcurrency<int>(
+          items: missingParts,
+          concurrency: maxUploadRequestsConcurrency,
+          worker: (partNumber) async {
+            final eTag = await _uploadPart(
+              file: file,
+              partNumber: partNumber,
+              uploadId: resolvedUploadId,
+              remoteFileKey: remoteFileKey,
+            );
+            uploaded.add(
+              UploadedPartSummary(partNumber: partNumber, eTag: eTag),
+            );
+            job.partsCompleted++;
+          },
+        );
+      }
+
+      uploaded.sort((a, b) => a.partNumber.compareTo(b.partNumber));
+      await apiClient.completeMultipart(
+        remoteFileKey: remoteFileKey,
+        uploadId: uploadId,
+        parts: uploaded,
+      );
+      await _deletePersistedUploadId(file);
       await _moveToClouded(file, remoteFileKey);
       _reportTotals();
-      return;
+      job.completer.complete();
+    } finally {
+      _activeUploadJobs.remove(remoteFileKey);
     }
-
-    if (_uploadsEnabled == false) {
-      throw UploadPausedException();
-    }
-
-    final listed = await _listPartsExhaustive(
-      remoteFileKey: remoteFileKey,
-      uploadId: persistedUploadId,
-    );
-    final existingParts = <int, String>{
-      for (final part in listed.parts) part.partNumber: part.eTag,
-    };
-
-    if (_uploadsEnabled == false) {
-      throw UploadPausedException();
-    }
-
-    var uploadId = listed.uploadId;
-    if (uploadId == null || uploadId.isEmpty) {
-      uploadId = (await apiClient.createMultipart(remoteFileKey)).uploadId;
-    }
-    final resolvedUploadId = uploadId;
-    await _persistUploadId(file, resolvedUploadId);
-
-    final totalParts = (fileSize / partSizeBytes).ceil();
-    final missingParts = <int>[];
-    for (var partNumber = 1; partNumber <= totalParts; partNumber++) {
-      if (!existingParts.containsKey(partNumber)) {
-        missingParts.add(partNumber);
-      }
-    }
-
-    final remainingUploadSlots = _requestLimiter.availablePermits;
-
-    if (remainingUploadSlots > 0 &&
-        missingParts.length < remainingUploadSlots) {
-      _admitMoreUploads = true;
-      _processQueue();
-    }
-
-    if (missingParts.isNotEmpty && existingParts.isNotEmpty) {
-      missingParts.shuffle(_random);
-    }
-
-    final uploaded = <UploadedPartSummary>[
-      for (final entry in existingParts.entries)
-        UploadedPartSummary(partNumber: entry.key, eTag: entry.value),
-    ];
-
-    final missingBytes = missingParts.fold<int>(
-      0,
-      (sum, partNumber) => sum + _partLength(fileSize, partNumber),
-    );
-    _adjustPendingBytes(missingBytes - fileSize);
-
-    if (_uploadsEnabled == false) {
-      throw UploadPausedException();
-    }
-
-    if (missingParts.isNotEmpty) {
-      await runWithConcurrency<int>(
-        items: missingParts,
-        concurrency: maxUploadRequestsConcurrency,
-        worker: (partNumber) async {
-          final eTag = await _uploadPart(
-            file: file,
-            partNumber: partNumber,
-            uploadId: resolvedUploadId,
-            remoteFileKey: remoteFileKey,
-          );
-          uploaded.add(UploadedPartSummary(partNumber: partNumber, eTag: eTag));
-        },
-      );
-    }
-
-    uploaded.sort((a, b) => a.partNumber.compareTo(b.partNumber));
-    await apiClient.completeMultipart(
-      remoteFileKey: remoteFileKey,
-      uploadId: uploadId,
-      parts: uploaded,
-    );
-    await _deletePersistedUploadId(file);
-    await _moveToClouded(file, remoteFileKey);
-    _reportTotals();
   }
 
   Future<String> _uploadPart({
