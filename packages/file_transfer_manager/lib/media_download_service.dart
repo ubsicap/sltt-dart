@@ -542,6 +542,7 @@ class MediaDownloadService {
           return partFile;
         } finally {
           _requestLimiter.release();
+          _reassessAdmissionBasedOnPendingParts();
         }
       }
 
