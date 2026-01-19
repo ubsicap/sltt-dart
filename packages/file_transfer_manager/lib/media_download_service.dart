@@ -497,6 +497,7 @@ class MediaDownloadService {
 
       void reportProgress(int partBytes) {
         partsCompleted++;
+        job.partsCompleted = partsCompleted;
         bytesCompleted += partBytes;
         job.progressController.add(
           DownloadProgress(
@@ -541,6 +542,7 @@ class MediaDownloadService {
           return partFile;
         } finally {
           _requestLimiter.release();
+          _reassessAdmissionBasedOnPendingParts();
         }
       }
 
