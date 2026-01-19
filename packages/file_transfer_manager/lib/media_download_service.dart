@@ -9,7 +9,8 @@ import 'package:file_transfer_manager/media_transfer_service_shared.dart'
         concatenateFiles,
         runWithConcurrency,
         MediaApiClientCore,
-        TransferJob;
+        TransferJob,
+        shouldAdmitMoreTransfers;
 import 'package:path/path.dart' as p;
 
 const _defaultDownloadRequestsConcurrency = 4;
@@ -339,16 +340,10 @@ class MediaDownloadService {
   }
 
   void _reassessAdmissionBasedOnPendingParts() {
-    // for each active job, sum all partsRemaining if not -1 otherwise totalParts to be safe
-    final overallPendingParts = _activeJobs.values.fold<int>(
-      0,
-      (sum, activeJob) =>
-          sum +
-          (activeJob.partsRemaining != -1
-              ? activeJob.partsRemaining
-              : activeJob.totalParts),
-    );
-    if (overallPendingParts < maxDownloadRequestsConcurrency) {
+    if (shouldAdmitMoreTransfers(
+      activeJobs: _activeJobs.values,
+      maxConcurrentRequests: maxDownloadRequestsConcurrency,
+    )) {
       _admitMoreJobs = true;
       _processQueue();
     }
@@ -546,7 +541,6 @@ class MediaDownloadService {
           return partFile;
         } finally {
           _requestLimiter.release();
-          _reassessAdmissionBasedOnPendingParts();
         }
       }
 

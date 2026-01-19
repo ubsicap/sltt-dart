@@ -120,6 +120,25 @@ class TransferJob<TProgress, TResult> {
   Stream<TProgress> get progressStream => progressController.stream;
 }
 
+/// Determines whether additional transfers can be admitted based on the
+/// remaining parts across active jobs and the maximum concurrent request
+/// budget.
+bool shouldAdmitMoreTransfers({
+  required Iterable<TransferJob<dynamic, dynamic>> activeJobs,
+  required int maxConcurrentRequests,
+}) {
+  final overallPendingParts = activeJobs.fold<int>(
+    0,
+    (sum, activeJob) =>
+        sum +
+        (activeJob.partsRemaining != -1
+            ? activeJob.partsRemaining
+            : activeJob.totalParts),
+  );
+
+  return overallPendingParts < maxConcurrentRequests;
+}
+
 class MediaApiClientCore {
   MediaApiClientCore(String baseUrl, {HttpClient? client})
     : baseUri = Uri.parse(baseUrl),

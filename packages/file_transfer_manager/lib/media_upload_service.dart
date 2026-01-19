@@ -6,7 +6,12 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:file_transfer_manager/media_transfer_service_shared.dart'
-    show RequestLimiter, runWithConcurrency, MediaApiClientCore, TransferJob;
+    show
+        RequestLimiter,
+        runWithConcurrency,
+        MediaApiClientCore,
+        TransferJob,
+        shouldAdmitMoreTransfers;
 import 'package:path/path.dart' as p;
 
 const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
@@ -182,6 +187,16 @@ class MediaUploadService {
     }
   }
 
+  void _reassessAdmissionBasedOnPendingParts() {
+    if (shouldAdmitMoreTransfers(
+      activeJobs: _activeUploadJobs.values,
+      maxConcurrentRequests: maxUploadRequestsConcurrency,
+    )) {
+      _admitMoreUploads = true;
+      _processQueue();
+    }
+  }
+
   void _processQueue() {
     if (_processingQueue || !_uploadsEnabled || !_admitMoreUploads) return;
     _processingQueue = true;
@@ -323,20 +338,14 @@ class MediaUploadService {
       final totalParts = (fileSize / partSizeBytes).ceil();
       job.totalParts = totalParts;
       job.partsCompleted = existingParts.length;
+      _reassessAdmissionBasedOnPendingParts();
       final missingParts = <int>[];
       for (var partNumber = 1; partNumber <= totalParts; partNumber++) {
         if (!existingParts.containsKey(partNumber)) {
           missingParts.add(partNumber);
         }
       }
-
-      final remainingUploadSlots = _requestLimiter.availablePermits;
-
-      if (remainingUploadSlots > 0 &&
-          missingParts.length < remainingUploadSlots) {
-        _admitMoreUploads = true;
-        _processQueue();
-      }
+      _reassessAdmissionBasedOnPendingParts();
 
       if (missingParts.isNotEmpty && existingParts.isNotEmpty) {
         missingParts.shuffle(_random);
@@ -372,6 +381,7 @@ class MediaUploadService {
               UploadedPartSummary(partNumber: partNumber, eTag: eTag),
             );
             job.partsCompleted++;
+            _reassessAdmissionBasedOnPendingParts();
           },
         );
       }
