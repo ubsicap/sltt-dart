@@ -605,7 +605,7 @@ abstract class BaseRestApiServer {
               'cursor': {
                 'type': 'string',
                 'description':
-                    'Pagination cursor to resume listing parts when previous response indicated more data.',
+                    'Pagination cursor to resume listing when more data exists, or when the backend is still paging through active multipart uploads to locate the matching uploadId for the provided remoteFileKey (responses may return an empty Parts array with a Cursor when still searching).',
               },
             },
           },
@@ -636,7 +636,7 @@ abstract class BaseRestApiServer {
               'Cursor': {
                 'type': 'string',
                 'description':
-                    'Set when further pagination is required; pass to the next request to continue.',
+                    'Set when further pagination is required. When UploadId is omitted, an empty Parts list plus Cursor indicates the backend is still paging through multipart uploads to locate the uploadId; pass Cursor to continue.',
               },
             },
           },

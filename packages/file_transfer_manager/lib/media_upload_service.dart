@@ -233,6 +233,8 @@ class MediaUploadService {
       followLinks: false,
     )) {
       if (entity is File) {
+        // Skip sidecar files that persist upload IDs between restarts.
+        if (entity.path.endsWith('.uploadId')) continue;
         _pendingBytes += await entity.length();
         files.add(entity);
       }
@@ -266,6 +268,8 @@ class MediaUploadService {
     final fileSize = await file.length();
     final remoteFileKey = _buildRemoteFileKey(file);
 
+    final persistedUploadId = await _readPersistedUploadId(file);
+
     final headUrls = await apiClient.getUrls(
       remoteFileKey: remoteFileKey,
       clientMethods: ['head_object'],
@@ -286,7 +290,10 @@ class MediaUploadService {
       throw UploadPausedException();
     }
 
-    final listed = await apiClient.listParts(remoteFileKey: remoteFileKey);
+    final listed = await _listPartsExhaustive(
+      remoteFileKey: remoteFileKey,
+      uploadId: persistedUploadId,
+    );
     final existingParts = <int, String>{
       for (final part in listed.parts) part.partNumber: part.eTag,
     };
@@ -295,9 +302,12 @@ class MediaUploadService {
       throw UploadPausedException();
     }
 
-    final uploadId =
-        listed.uploadId ??
-        (await apiClient.createMultipart(remoteFileKey)).uploadId;
+    var uploadId = listed.uploadId;
+    if (uploadId == null || uploadId.isEmpty) {
+      uploadId = (await apiClient.createMultipart(remoteFileKey)).uploadId;
+    }
+    final resolvedUploadId = uploadId;
+    await _persistUploadId(file, resolvedUploadId);
 
     final totalParts = (fileSize / partSizeBytes).ceil();
     final missingParts = <int>[];
@@ -342,7 +352,7 @@ class MediaUploadService {
           final eTag = await _uploadPart(
             file: file,
             partNumber: partNumber,
-            uploadId: uploadId,
+            uploadId: resolvedUploadId,
             remoteFileKey: remoteFileKey,
           );
           uploaded.add(UploadedPartSummary(partNumber: partNumber, eTag: eTag));
@@ -356,6 +366,7 @@ class MediaUploadService {
       uploadId: uploadId,
       parts: uploaded,
     );
+    await _deletePersistedUploadId(file);
     await _moveToClouded(file, remoteFileKey);
     _reportTotals();
   }
@@ -469,6 +480,72 @@ class MediaUploadService {
     final relative = p.relative(file.path, from: pendingUploadBase.path);
     return p.toUri(relative).path;
   }
+
+  Future<_ResolvedParts> _listPartsExhaustive({
+    required String remoteFileKey,
+    String? uploadId,
+  }) async {
+    var cursor = '';
+    var resolvedUploadId = uploadId;
+    final parts = <ListedPart>[];
+
+    while (true) {
+      final response = await apiClient.listParts(
+        remoteFileKey: remoteFileKey,
+        uploadId: resolvedUploadId,
+        cursor: cursor.isEmpty ? null : cursor,
+      );
+
+      if (resolvedUploadId == null || resolvedUploadId.isEmpty) {
+        if (response.uploadId != null && response.uploadId!.isNotEmpty) {
+          resolvedUploadId = response.uploadId;
+        }
+      }
+
+      parts.addAll(response.parts);
+
+      final hasCursor = response.cursor != null && response.cursor!.isNotEmpty;
+      final searchingForUploadId =
+          (resolvedUploadId == null || resolvedUploadId.isEmpty) && hasCursor;
+      final pagingParts = response.isTruncated && hasCursor;
+
+      if (searchingForUploadId || pagingParts) {
+        cursor = response.cursor!;
+        continue;
+      }
+
+      break;
+    }
+
+    return _ResolvedParts(uploadId: resolvedUploadId, parts: parts);
+  }
+
+  Future<String?> _readPersistedUploadId(File file) async {
+    final sidecar = File('${file.path}.uploadId');
+    if (!await sidecar.exists()) return null;
+    final contents = (await sidecar.readAsString()).trim();
+    return contents.isEmpty ? null : contents;
+  }
+
+  Future<void> _persistUploadId(File file, String uploadId) async {
+    final sidecar = File('${file.path}.uploadId');
+    await sidecar.parent.create(recursive: true);
+    await sidecar.writeAsString(uploadId, flush: true);
+  }
+
+  Future<void> _deletePersistedUploadId(File file) async {
+    final sidecar = File('${file.path}.uploadId');
+    if (await sidecar.exists()) {
+      await sidecar.delete();
+    }
+  }
+}
+
+class _ResolvedParts {
+  _ResolvedParts({required this.uploadId, required this.parts});
+
+  final String? uploadId;
+  final List<ListedPart> parts;
 }
 
 class UploadPausedException implements Exception {}
