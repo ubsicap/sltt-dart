@@ -634,10 +634,15 @@ class MediaDownloadService {
     } catch (e, st) {
       if (e is _DownloadReplaceActiveJob ||
           e is _DownloadPausedException ||
-          e is _DownloadTransientException) {
-        // Do not complete the future; let caller requeue.
+          e is _DownloadTransientException ||
+          e is DownloadNotFoundException) {
+        // Do not complete the future for retryables; completing it would
+        // surface an unhandled async error while the job is requeued and
+        // can cause tests/awaiters to fail unexpectedly.
         rethrow;
       }
+      // Complete the job future for terminal (non-retryable) failures so
+      // callers awaiting the result get the error instead of hanging forever.
       if (!job.completer.isCompleted) {
         job.completer.completeError(e, st);
       }

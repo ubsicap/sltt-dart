@@ -312,11 +312,19 @@ void main() {
 
     test('missing remote triggers not found handling', () async {
       final key = 'media/missing.bin';
+      final pendingFuture = service.pendingDownloadTotalsEvents.firstWhere(
+        (message) => message.missingFiles.contains(key),
+      );
       // no stub object added -> 404
       final progress = service.enqueueDownload(remoteFileKey: key);
 
-      await expectLater(progress, emitsThrough(isA<DownloadProgress>()));
-      await expectLater(progress, emitsError(isA<DownloadNotFoundException>()));
+      final errorProgress = await progress.firstWhere(
+        (update) => update.errorMessage.isNotEmpty,
+      );
+      expect(errorProgress.errorMessage, contains('Remote media missing'));
+
+      final pending = await pendingFuture;
+      expect(pending.missingFiles, contains(key));
     });
 
     test('non-retriable failure bubbles error', () async {
