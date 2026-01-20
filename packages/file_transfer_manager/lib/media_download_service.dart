@@ -233,6 +233,10 @@ class MediaDownloadService {
     }
 
     final progressController = StreamController<DownloadProgress>();
+    final completer = Completer<File>();
+    // Ensure completer errors are observed even when callers only listen
+    // to the progress stream, preventing unhandled async errors in tests.
+    completer.future.then((_) {}, onError: (_) {});
     final job = TransferJob<DownloadProgress, File>(
       remoteFileKey: remoteFileKey,
       fileName: p.basename(remoteFileKey),
@@ -241,7 +245,7 @@ class MediaDownloadService {
           ? TransferPriority.low
           : TransferPriority.normal,
       progressController: progressController,
-      completer: Completer<File>(),
+      completer: completer,
     );
 
     // Signal queued state.

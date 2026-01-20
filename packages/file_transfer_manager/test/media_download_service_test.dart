@@ -242,6 +242,7 @@ void main() {
     });
 
     tearDown(() async {
+      service.dispose();
       await stub.stop();
       await tempDir.delete(recursive: true);
     });
@@ -329,11 +330,21 @@ void main() {
 
     test('non-retriable failure bubbles error', () async {
       final key = 'media/fail.bin';
-      // Force GET to return 400 so _getWithRenewal throws HttpException.
-      stub.addObject(key, List<int>.filled(1024, 1), getStatuses: [400]);
+      // Force HEAD to return 400 so _runSingleDownload throws HttpException.
+      stub.addObject(
+        key,
+        List<int>.filled(1024, 1),
+        headStatus: HttpStatus.badRequest,
+      );
       final progress = service.enqueueDownload(remoteFileKey: key);
 
-      await expectLater(progress, emitsError(isA<HttpException>()));
+      await expectLater(
+        progress,
+        emitsInOrder([
+          isA<DownloadProgress>(),
+          emitsError(isA<HttpException>()),
+        ]),
+      );
     });
   });
 }
@@ -350,8 +361,9 @@ class StubDownloadServer {
     String key,
     List<int> bytes, {
     List<int> getStatuses = const [HttpStatus.ok],
+    int headStatus = HttpStatus.ok,
   }) {
-    _objects[key] = _StubObject(bytes, getStatuses);
+    _objects[key] = _StubObject(bytes, getStatuses, headStatus: headStatus);
   }
 
   static Future<StubDownloadServer> start() async {
@@ -392,6 +404,11 @@ class StubDownloadServer {
       final obj = _objects[key];
       if (obj == null) {
         request.response.statusCode = HttpStatus.notFound;
+        await request.response.close();
+        return;
+      }
+      if (obj.headStatus != HttpStatus.ok) {
+        request.response.statusCode = obj.headStatus;
         await request.response.close();
         return;
       }
@@ -451,10 +468,11 @@ class StubDownloadServer {
 }
 
 class _StubObject {
-  _StubObject(this.bytes, this.statuses);
+  _StubObject(this.bytes, this.statuses, {this.headStatus = HttpStatus.ok});
 
   final List<int> bytes;
   final List<int> statuses;
+  final int headStatus;
   int _idx = 0;
 
   int nextStatus() {
