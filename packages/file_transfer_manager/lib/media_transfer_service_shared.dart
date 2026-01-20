@@ -93,15 +93,20 @@ class SignedUrlBundle {
   }
 }
 
+enum TransferPriority { low, normal, high }
+
 /// Transfer job metadata shared by upload/download services.
 class TransferJob<TProgress, TResult> {
   TransferJob({
     required this.remoteFileKey,
     this.fileName,
+    this.priority = TransferPriority.normal,
+    DateTime? enqueuedAt,
     StreamController<TProgress>? progressController,
     Completer<TResult>? completer,
   }) : progressController = progressController ?? StreamController<TProgress>(),
-       completer = completer ?? Completer<TResult>();
+       completer = completer ?? Completer<TResult>(),
+       enqueuedAt = enqueuedAt ?? DateTime.now();
 
   int totalParts = -1;
   int partsCompleted = -1;
@@ -113,6 +118,8 @@ class TransferJob<TProgress, TResult> {
   DateTime? retryAt;
   final String remoteFileKey;
   final String? fileName;
+  final TransferPriority priority;
+  final DateTime enqueuedAt;
   String? lastErrorMessage;
   final StreamController<TProgress> progressController;
   final Completer<TResult> completer;

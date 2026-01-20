@@ -10,6 +10,7 @@ import 'package:file_transfer_manager/media_transfer_service_shared.dart'
         runWithConcurrency,
         MediaApiClientCore,
         TransferJob,
+        TransferPriority,
         shouldAdmitMoreTransfers;
 import 'package:path/path.dart' as p;
 
@@ -235,6 +236,10 @@ class MediaDownloadService {
     final job = TransferJob<DownloadProgress, File>(
       remoteFileKey: remoteFileKey,
       fileName: p.basename(remoteFileKey),
+      enqueuedAt: DateTime.now(),
+      priority: addAsLowestPriority
+          ? TransferPriority.low
+          : TransferPriority.normal,
       progressController: progressController,
       completer: Completer<File>(),
     );
@@ -289,31 +294,35 @@ class MediaDownloadService {
                 _processingQueue = false;
                 _admitMoreJobs = true;
 
-                if (error is _DownloadPausedException ||
-                    error is _DownloadTransientException ||
+                if (error is _DownloadReplaceActiveJob) {
+                  final removedActiveJob = _activeJobs.remove(
+                    job.remoteFileKey,
+                  );
+                  _enqueueByEnqueuedAt(removedActiveJob!);
+                  _processQueue();
+                  return;
+                } else if (error is _DownloadPausedException) {
+                  _activeJobs.remove(job.remoteFileKey);
+                  // Requeue incomplete job; do not decrement pending.
+                  _enqueueByEnqueuedAt(job);
+                  _processQueue();
+                  return;
+                } else if (error is _DownloadTransientException ||
                     error is DownloadNotFoundException) {
                   _activeJobs.remove(job.remoteFileKey);
                   // Requeue incomplete job; do not decrement pending.
-                  if (error is _DownloadTransientException ||
-                      error is DownloadNotFoundException) {
-                    if (error is DownloadNotFoundException) {
-                      job.retryReason = RetryReason.notFound;
-                    } else if (error is _DownloadTransientException) {
-                      job.retryReason = RetryReason.transientError;
-                    } else {
-                      job.retryReason = RetryReason.unknown;
-                    }
-                    job.lastErrorMessage = error.toString();
-                    job.retryAt = DateTime.now().add(
-                      const Duration(minutes: 1),
-                    );
-                    job.tries += 1;
-                    _scheduleRetry(job);
-                    _reportPendingDownloads(errorMessage: error.toString());
+                  if (error is DownloadNotFoundException) {
+                    job.retryReason = RetryReason.notFound;
+                  } else if (error is _DownloadTransientException) {
+                    job.retryReason = RetryReason.transientError;
                   } else {
-                    // re-add current job as top priority
-                    _queueLIFO.add(job);
+                    job.retryReason = RetryReason.unknown;
                   }
+                  job.lastErrorMessage = error.toString();
+                  job.retryAt = DateTime.now().add(const Duration(minutes: 1));
+                  job.tries += 1;
+                  _scheduleRetry(job);
+                  _reportPendingDownloads(errorMessage: error.toString());
                   _processQueue();
                   return;
                 }
@@ -347,6 +356,29 @@ class MediaDownloadService {
       _admitMoreJobs = true;
       _processQueue();
     }
+  }
+
+  void _enqueueByEnqueuedAt(TransferJob<DownloadProgress, File> job) {
+    final insertIndex = _queueLIFO.indexWhere(
+      (queued) => queued.enqueuedAt.isAfter(job.enqueuedAt),
+    );
+    _queueLIFO.insert(insertIndex == -1 ? _queueLIFO.length : insertIndex, job);
+  }
+
+  _DownloadReplaceActiveJob? _checkReplaceEnqueuedJobWithSelf(
+    TransferJob<DownloadProgress, File> activeJob,
+  ) {
+    if (_queueLIFO.isEmpty) return null;
+    final candidate = _queueLIFO.last;
+    final newerRequest = candidate.enqueuedAt.isAfter(activeJob.enqueuedAt);
+    final candidateHasPriority = candidate.priority != TransferPriority.low;
+    if (newerRequest && candidateHasPriority) {
+      throw _DownloadReplaceActiveJob(
+        jobToRemove: activeJob,
+        replacementJob: candidate,
+      );
+    }
+    return null;
   }
 
   Future<File> _runSingleDownload(
@@ -494,6 +526,7 @@ class MediaDownloadService {
       if (!_downloadsEnabled) {
         throw _DownloadPausedException();
       }
+      _checkReplaceEnqueuedJobWithSelf(job);
 
       void reportProgress(int partBytes) {
         partsCompleted++;
@@ -516,6 +549,7 @@ class MediaDownloadService {
         if (!_downloadsEnabled) {
           throw _DownloadPausedException();
         }
+        _checkReplaceEnqueuedJobWithSelf(job);
         await _requestLimiter.acquire();
         try {
           final response = await _getWithRenewal(
@@ -551,6 +585,7 @@ class MediaDownloadService {
         if (!_downloadsEnabled) {
           throw _DownloadPausedException();
         }
+        _checkReplaceEnqueuedJobWithSelf(job);
         await downloadPart(totalParts);
       }
 
@@ -597,7 +632,9 @@ class MediaDownloadService {
       await job.progressController.close();
       return destFile;
     } catch (e, st) {
-      if (e is _DownloadPausedException || e is _DownloadTransientException) {
+      if (e is _DownloadReplaceActiveJob ||
+          e is _DownloadPausedException ||
+          e is _DownloadTransientException) {
         // Do not complete the future; let caller requeue.
         rethrow;
       }
@@ -720,6 +757,16 @@ class DownloadNotFoundException extends HttpException {
 class _DownloadPausedException implements Exception {}
 
 class _DownloadTransientException implements Exception {}
+
+class _DownloadReplaceActiveJob implements Exception {
+  _DownloadReplaceActiveJob({
+    required this.jobToRemove,
+    required this.replacementJob,
+  });
+
+  final TransferJob<DownloadProgress, File> jobToRemove;
+  final TransferJob<DownloadProgress, File> replacementJob;
+}
 
 bool _isTransientStatus(int statusCode) {
   return statusCode == HttpStatus.requestTimeout ||
