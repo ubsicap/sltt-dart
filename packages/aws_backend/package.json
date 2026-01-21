@@ -19,6 +19,7 @@
     "info:tst": "npx serverless info --stage tst --aws-profile sltt-dart-dev",
     "info:dev": "npx serverless info --stage dev --aws-profile sltt-dart-dev",
     "info:prod": "npx serverless info --stage prod --aws-profile sltt-dart-prd",
+    "cloudfront-url:tst": "aws cloudformation describe-stacks --stack-name sltt-backend-tst --query \"Stacks[0].Outputs[?OutputKey=='MediaCloudFrontDomainName'].OutputValue\" --output text --profile sltt-dart-dev",
     "clean": "rm -f bootstrap && rm -rf .serverless",
   "generate-server-urls": "node ../../scripts/generate_server_urls.js",
     "test": "dart test"
