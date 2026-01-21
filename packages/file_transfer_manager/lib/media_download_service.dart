@@ -233,10 +233,6 @@ class MediaDownloadService {
     }
 
     final progressController = StreamController<DownloadProgress>();
-    final completer = Completer<File>();
-    // Ensure completer errors are observed even when callers only listen
-    // to the progress stream, preventing unhandled async errors in tests.
-    completer.future.then((_) {}, onError: (_) {});
     final job = TransferJob<DownloadProgress, File>(
       remoteFileKey: remoteFileKey,
       fileName: p.basename(remoteFileKey),
@@ -245,7 +241,6 @@ class MediaDownloadService {
           ? TransferPriority.low
           : TransferPriority.normal,
       progressController: progressController,
-      completer: completer,
     );
 
     // Signal queued state.
@@ -336,9 +331,6 @@ class MediaDownloadService {
 
                 // Real failure: finish the job with error and adjust pending.
                 _activeJobs.remove(job.remoteFileKey);
-                if (!job.completer.isCompleted) {
-                  job.completer.completeError(error, stack);
-                }
                 if (!job.progressController.isClosed) {
                   job.progressController.addError(error, stack);
                   job.progressController.close();
@@ -632,24 +624,9 @@ class MediaDownloadService {
           destFilePath: destFile.path,
         ),
       );
-      job.completer.complete(destFile);
       await job.progressController.close();
       return destFile;
-    } catch (e, st) {
-      if (e is _DownloadReplaceActiveJob ||
-          e is _DownloadPausedException ||
-          e is _DownloadTransientException ||
-          e is DownloadNotFoundException) {
-        // Do not complete the future for retryables; completing it would
-        // surface an unhandled async error while the job is requeued and
-        // can cause tests/awaiters to fail unexpectedly.
-        rethrow;
-      }
-      // Complete the job future for terminal (non-retryable) failures so
-      // callers awaiting the result get the error instead of hanging forever.
-      if (!job.completer.isCompleted) {
-        job.completer.completeError(e, st);
-      }
+    } catch (e, _) {
       rethrow;
     }
   }

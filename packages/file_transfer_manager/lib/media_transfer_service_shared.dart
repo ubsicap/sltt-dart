@@ -103,9 +103,7 @@ class TransferJob<TProgress, TResult> {
     this.priority = TransferPriority.normal,
     DateTime? enqueuedAt,
     StreamController<TProgress>? progressController,
-    Completer<TResult>? completer,
   }) : progressController = progressController ?? StreamController<TProgress>(),
-       completer = completer ?? Completer<TResult>(),
        enqueuedAt = enqueuedAt ?? DateTime.now();
 
   int totalParts = -1;
@@ -122,7 +120,6 @@ class TransferJob<TProgress, TResult> {
   final DateTime enqueuedAt;
   String? lastErrorMessage;
   final StreamController<TProgress> progressController;
-  final Completer<TResult> completer;
 
   Stream<TProgress> get progressStream => progressController.stream;
 }

@@ -286,7 +286,6 @@ class MediaUploadService {
       remoteFileKey: remoteFileKey,
       fileName: p.basename(file.path),
       progressController: StreamController<void>(),
-      completer: Completer<void>(),
     );
     _activeUploadJobs[remoteFileKey] = job;
 
@@ -308,7 +307,6 @@ class MediaUploadService {
         _adjustPendingBytes(-fileSize);
         await _moveToClouded(file, remoteFileKey);
         _reportTotals();
-        job.completer.complete();
         return;
       }
 
@@ -395,7 +393,6 @@ class MediaUploadService {
       await _deletePersistedUploadId(file);
       await _moveToClouded(file, remoteFileKey);
       _reportTotals();
-      job.completer.complete();
     } finally {
       _activeUploadJobs.remove(remoteFileKey);
     }
