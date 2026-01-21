@@ -150,6 +150,91 @@ resources:
             DefaultRetention:
               Mode: GOVERNANCE
               Years: 100
+    MediaBucketOriginAccessControl:
+      Type: AWS::CloudFront::OriginAccessControl
+      Properties:
+        OriginAccessControlConfig:
+          Name: ${self:service}-${self:provider.stage}-media-oac
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+    MediaCloudFrontCachePolicy:
+      Type: AWS::CloudFront::CachePolicy
+      Properties:
+        CachePolicyConfig:
+          Name: ${self:service}-${self:provider.stage}-media-cache
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+          MinTTL: 0
+          ParametersInCacheKeyAndForwardedToOrigin:
+            CookiesConfig:
+              CookieBehavior: none
+            HeadersConfig:
+              HeaderBehavior: none
+            QueryStringsConfig:
+              QueryStringBehavior: all
+            EnableAcceptEncodingGzip: true
+            EnableAcceptEncodingBrotli: true
+    MediaCloudFrontOriginRequestPolicy:
+      Type: AWS::CloudFront::OriginRequestPolicy
+      Properties:
+        OriginRequestPolicyConfig:
+          Name: ${self:service}-${self:provider.stage}-media-origin
+          CookiesConfig:
+            CookieBehavior: none
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: all
+    MediaCloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          Comment: ${self:service} media distribution (${self:provider.stage})
+          HttpVersion: http2
+          PriceClass: PriceClass_200
+          Origins:
+            - Id: MediaBucketOrigin
+              DomainName: ${self:custom.mediaBucket}.s3.${self:provider.region}.amazonaws.com
+              OriginAccessControlId: !Ref MediaBucketOriginAccessControl
+              S3OriginConfig: {}
+          DefaultCacheBehavior:
+            TargetOriginId: MediaBucketOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: !Ref MediaCloudFrontCachePolicy
+            OriginRequestPolicyId: !Ref MediaCloudFrontOriginRequestPolicy
+          ViewerCertificate:
+            CloudFrontDefaultCertificate: true
+    MediaBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: ${self:custom.mediaBucket}
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: AllowCloudFrontRead
+              Effect: Allow
+              Principal:
+                Service: cloudfront.amazonaws.com
+              Action:
+                - s3:GetObject
+              Resource:
+                - arn:aws:s3:::${self:custom.mediaBucket}/*
+              Condition:
+                StringEquals:
+                  AWS:SourceArn: arn:aws:cloudfront::${aws:accountId}:distribution/${MediaCloudFrontDistribution}
+  Outputs:
+    MediaCloudFrontDomainName:
+      Value: !GetAtt MediaCloudFrontDistribution.DomainName
+    MediaCloudFrontDistributionId:
+      Value: !Ref MediaCloudFrontDistribution
 
 # Package configuration
 package:
