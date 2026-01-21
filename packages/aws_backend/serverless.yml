@@ -5,6 +5,7 @@ service: sltt-backend
 
 custom:
   mediaBucket: ${self:service}-media-worm-${aws:accountId}-${self:provider.stage}
+  mediaCloudFrontPublicKey: ${ssm:/sltt/media/cloudfront/${self:provider.stage}/MEDIA_CLOUDFRONT_PUBLIC_KEY}
 
 provider:
   name: aws
@@ -22,6 +23,9 @@ provider:
     DYNAMODB_TABLE: ${self:service}-changes-states-${self:provider.stage}
     DYNAMODB_REGION: ${self:provider.region}
     MEDIA_BUCKET: ${self:custom.mediaBucket}
+    MEDIA_CLOUDFRONT_DOMAIN: d2qw2gududo3yq.cloudfront.net
+    MEDIA_CLOUDFRONT_KEY_PAIR_ID: K2VWGFBHY47GFG
+    MEDIA_CLOUDFRONT_PRIVATE_KEY: ${ssm:/sltt/media/cloudfront/${self:provider.stage}/MEDIA_CLOUDFRONT_PRIVATE_KEY}
 
   # IAM permissions for DynamoDB
   iamRoleStatements:
@@ -172,7 +176,7 @@ resources:
             HeadersConfig:
               HeaderBehavior: none
             QueryStringsConfig:
-              QueryStringBehavior: all
+              QueryStringBehavior: none
             EnableAcceptEncodingGzip: true
             EnableAcceptEncodingBrotli: true
     MediaCloudFrontOriginRequestPolicy:
@@ -185,7 +189,7 @@ resources:
           HeadersConfig:
             HeaderBehavior: none
           QueryStringsConfig:
-            QueryStringBehavior: all
+            QueryStringBehavior: none
     MediaCloudFrontDistribution:
       Type: AWS::CloudFront::Distribution
       Properties:
@@ -210,8 +214,25 @@ resources:
               - HEAD
             CachePolicyId: !Ref MediaCloudFrontCachePolicy
             OriginRequestPolicyId: !Ref MediaCloudFrontOriginRequestPolicy
+            TrustedKeyGroups:
+              - !Ref MediaCloudFrontKeyGroup
           ViewerCertificate:
             CloudFrontDefaultCertificate: true
+    MediaCloudFrontPublicKey:
+      Type: AWS::CloudFront::PublicKey
+      Properties:
+        PublicKeyConfig:
+          CallerReference: ${self:service}-${self:provider.stage}-media-public-key
+          Name: ${self:service}-${self:provider.stage}-media-public-key
+          EncodedKey: ${self:custom.mediaCloudFrontPublicKey}
+          Comment: ${self:service} media public key (${self:provider.stage})
+    MediaCloudFrontKeyGroup:
+      Type: AWS::CloudFront::KeyGroup
+      Properties:
+        KeyGroupConfig:
+          Name: ${self:service}-${self:provider.stage}-media-key-group
+          Items:
+            - !Ref MediaCloudFrontPublicKey
     MediaBucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
@@ -229,7 +250,7 @@ resources:
                 - arn:aws:s3:::${self:custom.mediaBucket}/*
               Condition:
                 StringEquals:
-                  AWS:SourceArn: arn:aws:cloudfront::${aws:accountId}:distribution/${MediaCloudFrontDistribution}
+                  AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${MediaCloudFrontDistribution}
   Outputs:
     MediaCloudFrontDomainName:
       Value: !GetAtt MediaCloudFrontDistribution.DomainName

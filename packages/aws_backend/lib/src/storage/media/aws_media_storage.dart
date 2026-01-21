@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:asn1lib/asn1lib.dart';
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
 import 'package:http/http.dart' as http;
+import 'package:pointycastle/export.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:xml/xml.dart';
 
@@ -12,13 +15,19 @@ class AwsMediaStorage extends BaseMediaStorage {
   AwsMediaStorage({
     required this.bucketName,
     required this.region,
+    String? cloudFrontDomain,
+    String? cloudFrontKeyPairId,
+    String? cloudFrontPrivateKey,
     bool enableTransferAcceleration = true,
     Duration presignedUrlDuration = const Duration(minutes: 15),
     http.Client? httpClient,
   }) : _enableTransferAcceleration = enableTransferAcceleration,
        _presignedUrlDuration = presignedUrlDuration,
        _httpClient = httpClient ?? http.Client(),
-       _ownsHttpClient = httpClient == null;
+       _ownsHttpClient = httpClient == null,
+       _cloudFrontDomain = cloudFrontDomain,
+       _cloudFrontKeyPairId = cloudFrontKeyPairId,
+       _cloudFrontPrivateKeyPem = cloudFrontPrivateKey;
 
   final String bucketName;
   final String region;
@@ -30,6 +39,11 @@ class AwsMediaStorage extends BaseMediaStorage {
 
   final http.Client _httpClient;
   final bool _ownsHttpClient;
+
+  String? _cloudFrontDomain;
+  String? _cloudFrontKeyPairId;
+  String? _cloudFrontPrivateKeyPem;
+  RSAPrivateKey? _cloudFrontPrivateKey;
 
   AWSSigV4Signer? _signer;
   AWSCredentialsProvider? _credentialsProvider;
@@ -60,6 +74,17 @@ class AwsMediaStorage extends BaseMediaStorage {
       AWSCredentials(accessKey, secretKey, sessionToken),
     );
     _signer = AWSSigV4Signer(credentialsProvider: _credentialsProvider!);
+
+    _cloudFrontDomain ??=
+      Platform.environment['MEDIA_CLOUDFRONT_DOMAIN'] ??
+      Platform.environment['CLOUDFRONT_DOMAIN'];
+    _cloudFrontKeyPairId ??=
+      Platform.environment['MEDIA_CLOUDFRONT_KEY_PAIR_ID'] ??
+      Platform.environment['CLOUDFRONT_KEY_PAIR_ID'];
+    _cloudFrontPrivateKeyPem ??=
+      Platform.environment['MEDIA_CLOUDFRONT_PRIVATE_KEY'] ??
+      Platform.environment['CLOUDFRONT_PRIVATE_KEY'];
+
     _initialized = true;
   }
 
@@ -87,11 +112,21 @@ class AwsMediaStorage extends BaseMediaStorage {
     String? uploadId;
 
     if (request.clientMethods.contains('head_object')) {
-      headUrl = await _presignUri(method: AWSHttpMethod.head, key: key);
+      headUrl = _cloudFrontSignedUrl(
+        method: AWSHttpMethod.head,
+        key: key,
+        expiresAt: expiresAt,
+      );
+      headUrl ??= await _presignUri(method: AWSHttpMethod.head, key: key);
     }
 
     if (request.clientMethods.contains('get_object')) {
-      getObjectUrl = await _presignUri(method: AWSHttpMethod.get, key: key);
+      getObjectUrl = _cloudFrontSignedUrl(
+        method: AWSHttpMethod.get,
+        key: key,
+        expiresAt: expiresAt,
+      );
+      getObjectUrl ??= await _presignUri(method: AWSHttpMethod.get, key: key);
     }
 
     if (request.clientMethods.contains('upload_part')) {
@@ -429,6 +464,126 @@ class AwsMediaStorage extends BaseMediaStorage {
     );
   }
 
+  Uri? _cloudFrontSignedUrl({
+    required AWSHttpMethod method,
+    required String key,
+    required DateTime expiresAt,
+  }) {
+    if (method != AWSHttpMethod.get && method != AWSHttpMethod.head) {
+      return null;
+    }
+    if (!_hasCloudFrontSigning) {
+      return null;
+    }
+
+    final domain = _normalizeCloudFrontDomain(_cloudFrontDomain!);
+    if (domain.isEmpty) {
+      return null;
+    }
+
+    final resource = Uri(
+      scheme: 'https',
+      host: domain,
+      path: '/$key',
+    );
+
+    return _signCloudFrontUrl(resource, expiresAt);
+  }
+
+  bool get _hasCloudFrontSigning {
+    final domain = _cloudFrontDomain;
+    final keyPairId = _cloudFrontKeyPairId;
+    final privateKey = _cloudFrontPrivateKeyPem;
+    return domain != null &&
+        domain.trim().isNotEmpty &&
+        keyPairId != null &&
+        keyPairId.trim().isNotEmpty &&
+        privateKey != null &&
+        privateKey.trim().isNotEmpty;
+  }
+
+  String _normalizeCloudFrontDomain(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return trimmed;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return Uri.parse(trimmed).host;
+    }
+    return trimmed;
+  }
+
+  Uri _signCloudFrontUrl(Uri resource, DateTime expiresAt) {
+    final expiryEpoch = expiresAt.toUtc().millisecondsSinceEpoch ~/ 1000;
+    final policy = _buildCloudFrontPolicy(resource, expiryEpoch);
+    final signature = _cloudFrontSignPolicy(policy);
+    final encodedSignature = _cloudFrontEncode(signature);
+
+    final params = <String, String>{
+      ...resource.queryParameters,
+      'Expires': expiryEpoch.toString(),
+      'Signature': encodedSignature,
+      'Key-Pair-Id': _cloudFrontKeyPairId!,
+    };
+
+    return resource.replace(queryParameters: params);
+  }
+
+  String _buildCloudFrontPolicy(Uri resource, int expiryEpoch) {
+    final resourceValue = resource.toString();
+    return '{"Statement":[{"Resource":"$resourceValue","Condition":{"DateLessThan":{"AWS:EpochTime":$expiryEpoch}}}]}';
+  }
+
+  Uint8List _cloudFrontSignPolicy(String policy) {
+    final key = _cloudFrontPrivateKey ??= _parseCloudFrontPrivateKey(
+      _cloudFrontPrivateKeyPem!,
+    );
+    final signer = Signer('SHA-1/RSA');
+    signer.init(true, PrivateKeyParameter<RSAPrivateKey>(key));
+    final signature = signer.generateSignature(
+      Uint8List.fromList(utf8.encode(policy)),
+    ) as RSASignature;
+    return signature.bytes;
+  }
+
+  RSAPrivateKey _parseCloudFrontPrivateKey(String pem) {
+    final normalized = pem.replaceAll('\n', '\n');
+    final stripped = normalized
+        .replaceAll(RegExp(r'-----BEGIN ([A-Z ]*)-----'), '')
+        .replaceAll(RegExp(r'-----END ([A-Z ]*)-----'), '')
+        .replaceAll(RegExp(r'\s'), '');
+
+    final derBytes = base64.decode(stripped);
+    return _decodePrivateKeyFromDer(Uint8List.fromList(derBytes));
+  }
+
+  RSAPrivateKey _decodePrivateKeyFromDer(Uint8List bytes) {
+    final parser = ASN1Parser(bytes);
+    final topLevel = parser.nextObject() as ASN1Sequence;
+    if (topLevel.elements.length == 3) {
+      final privateKeyOctet = topLevel.elements[2] as ASN1OctetString;
+      final innerParser = ASN1Parser(privateKeyOctet.valueBytes());
+      final innerSeq = innerParser.nextObject() as ASN1Sequence;
+      return _parsePkcs1PrivateKey(innerSeq);
+    }
+    return _parsePkcs1PrivateKey(topLevel);
+  }
+
+  RSAPrivateKey _parsePkcs1PrivateKey(ASN1Sequence sequence) {
+    final modulus = (sequence.elements[1] as ASN1Integer).valueAsBigInteger;
+    final privateExponent =
+        (sequence.elements[3] as ASN1Integer).valueAsBigInteger;
+    final p = (sequence.elements[4] as ASN1Integer).valueAsBigInteger;
+    final q = (sequence.elements[5] as ASN1Integer).valueAsBigInteger;
+
+    return RSAPrivateKey(modulus, privateExponent, p, q);
+  }
+
+  String _cloudFrontEncode(Uint8List input) {
+    return base64
+        .encode(input)
+        .replaceAll('+', '-')
+        .replaceAll('=', '_')
+        .replaceAll('/', '~');
+  }
   String _normalizeKey(String key) =>
       key.startsWith('/') ? key.substring(1) : key;
 

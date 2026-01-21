@@ -58,7 +58,10 @@
                 "AWS_REGION": "us-east-1",
                 "DYNAMODB_REGION": "us-east-1",
                 "DYNAMODB_TABLE": "sltt-backend-changes-states-dev",
-                "MEDIA_BUCKET": "sltt-backend-media-worm-${input:awsAccountId}",
+                "MEDIA_BUCKET": "sltt-backend-media-worm-${input:awsAccountId}-dev",
+                "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
+                "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",
+                "MEDIA_CLOUDFRONT_PRIVATE_KEY": "${input:mediaCloudFrontPrivateKey}",
                 "STAGE": "dev",
                 "USE_CLOUD_STORAGE": "true",
                 "LOCAL_DEBUGGER": "true"
@@ -83,7 +86,10 @@
                 "AWS_REGION": "us-east-1",
                 "DYNAMODB_REGION": "us-east-1",
                 "DYNAMODB_TABLE": "sltt-backend-changes-states-tst",
-                "MEDIA_BUCKET": "sltt-backend-media-worm-${input:awsAccountId}",
+                "MEDIA_BUCKET": "sltt-backend-media-worm-${input:awsAccountId}-tst",
+                "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
+                "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",
+                "MEDIA_CLOUDFRONT_PRIVATE_KEY": "${input:mediaCloudFrontPrivateKey}",
                 "STAGE": "tst",
                 "USE_CLOUD_STORAGE": "true",
                 "LOCAL_DEBUGGER": "true"
@@ -159,16 +165,6 @@
             "type": "promptString"
         },
         {
-            "id": "stage",
-            "description": "Deployment Stage",
-            "default": "dev",
-            "type": "pickString",
-            "options": [
-                "dev",
-                "prod"
-            ]
-        },
-        {
             "id": "port",
             "description": "Local Server Port",
             "default": "8080",
@@ -199,7 +195,21 @@
             "id": "cloudBaseUrl",
             "description": "CLOUD_BASE_URL e.g. http://localhost:8080 (leave empty to use kCloudDevUrl default)",
             "type": "promptString",
-            "default": ""
+        },
+        {
+            "id": "mediaCloudFrontDomain",
+            "description": "MEDIA_CLOUDFRONT_DOMAIN (e.g. dxxxxxxxxxxxx.cloudfront.net)",
+            "type": "promptString",
+        },
+        {
+            "id": "mediaCloudFrontKeyPairId",
+            "description": "MEDIA_CLOUDFRONT_KEY_PAIR_ID",
+            "type": "promptString",
+        },
+        {
+            "id": "mediaCloudFrontPrivateKey",
+            "description": "MEDIA_CLOUDFRONT_PRIVATE_KEY (PEM; you can paste with literal \\n)",
+            "type": "promptString",
         }
     ]
 }

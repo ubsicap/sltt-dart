@@ -56,5 +56,21 @@ AwsMediaStorage _createMediaStorageFromEnv() {
       Platform.environment['AWS_DEFAULT_REGION'] ??
       'us-east-1';
 
-  return AwsMediaStorage(bucketName: bucket, region: region);
+  final cloudFrontDomain =
+      Platform.environment['MEDIA_CLOUDFRONT_DOMAIN'] ??
+      Platform.environment['CLOUDFRONT_DOMAIN'];
+  final cloudFrontKeyPairId =
+      Platform.environment['MEDIA_CLOUDFRONT_KEY_PAIR_ID'] ??
+      Platform.environment['CLOUDFRONT_KEY_PAIR_ID'];
+  final cloudFrontPrivateKey =
+      Platform.environment['MEDIA_CLOUDFRONT_PRIVATE_KEY'] ??
+      Platform.environment['CLOUDFRONT_PRIVATE_KEY'];
+
+  return AwsMediaStorage(
+    bucketName: bucket,
+    region: region,
+    cloudFrontDomain: cloudFrontDomain,
+    cloudFrontKeyPairId: cloudFrontKeyPairId,
+    cloudFrontPrivateKey: cloudFrontPrivateKey,
+  );
 }

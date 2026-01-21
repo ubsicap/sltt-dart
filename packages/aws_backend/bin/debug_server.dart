@@ -80,9 +80,18 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
       Platform.environment['AWS_REGION'] ??
       Platform.environment['AWS_DEFAULT_REGION'] ??
       'us-east-1';
+  final cloudFrontDomain = Platform.environment['MEDIA_CLOUDFRONT_DOMAIN'];
+  final cloudFrontKeyPairId =
+      Platform.environment['MEDIA_CLOUDFRONT_KEY_PAIR_ID'];
+  final cloudFrontPrivateKey =
+      Platform.environment['MEDIA_CLOUDFRONT_PRIVATE_KEY'];
+
   final mediaStorage = AwsMediaStorage(
     bucketName: mediaBucket ?? '',
     region: mediaRegion,
+    cloudFrontDomain: cloudFrontDomain,
+    cloudFrontKeyPairId: cloudFrontKeyPairId,
+    cloudFrontPrivateKey: cloudFrontPrivateKey,
   );
 
   try {
@@ -96,6 +105,8 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('   USE_CLOUD_STORAGE: $useCloudStorage');
     print('   useLocalDynamoDB: ${storageInstance.useLocalDynamoDB}');
     print('   MEDIA_BUCKET: $mediaBucket');
+    print('   CLOUDFRONT_DOMAIN: $cloudFrontDomain');
+    print('   CLOUDFRONT_KEY_PAIR_ID: $cloudFrontKeyPairId');
 
     print('🗄️  Connecting to DynamoDB...');
 

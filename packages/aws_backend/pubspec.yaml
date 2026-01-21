@@ -26,6 +26,10 @@ dependencies:
   # JSON handling
   json_annotation: ^4.8.0
 
+  # CloudFront signed URL support
+  asn1lib: ^1.5.3
+  pointycastle: ^3.9.1
+
   # Shelf for REST API server
   shelf: ^1.4.2
   shelf_router: ^1.1.4
