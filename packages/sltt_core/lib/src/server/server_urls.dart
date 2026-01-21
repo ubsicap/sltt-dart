@@ -4,4 +4,4 @@
 // (populated by Serverless Framework). If you re-deploy, re-run the
 // generator script or set SLTT_REST_API_ID to regenerate this file.
 const String kCloudDevUrl =
-    'https://nfrkvnytpj.execute-api.us-east-1.amazonaws.com/tst';
+    'https://exz43jep09.execute-api.us-east-1.amazonaws.com/dev';
