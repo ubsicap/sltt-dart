@@ -183,6 +183,17 @@ The legacy single-stack config remains in [packages/aws_backend/serverless.yml](
 
 ### Deployment
 
+#### 0) cloudfront public/private key setup
+
+Before the first shared infra deploy (or whenever rotating keys), publish the
+CloudFront signing keys to SSM. Use the profile that owns the shared infra (e.g. sltt-dart-prd):
+
+```bash
+# One-time (or on rotation) for shared infra in prd
+npm run cloudfront:public-key-set-ssm:prd
+npm run cloudfront:private-key-set-ssm:prd
+```
+
 #### 1) Deploy shared infrastructure (once)
 
 ```bash
@@ -208,6 +219,17 @@ packages\aws_backend\scripts\grant_shared_infra_access.cmd 123456789012 sltt-sec
 
 ```bash
 npm run deploy:secondary:dev
+```
+
+If you maintain separate dev/tst CloudFront keys for testing, set them in SSM
+before deploying a secondary stack that points at those keys:
+
+```bash
+npm run cloudfront:public-key-set-ssm:dev
+npm run cloudfront:private-key-set-ssm:dev
+
+npm run cloudfront:public-key-set-ssm:tst
+npm run cloudfront:private-key-set-ssm:tst
 ```
 
 ```bash
