@@ -25,7 +25,9 @@ aws_backend/
 │   ├── demo_dynamodb.old                        # Archived local demo script
 │   ├── integration_demo.dart                    # Hybrid local/cloud demo
 │   └── aws_lambda_server.dart                   # AWS Lambda handler
-├── serverless.yml                              # Serverless Framework config
+├── serverless-shared-infra.yml                 # Shared infra (DynamoDB, S3, CloudFront)
+├── serverless-secondary-infra.yml              # Secondary API stack (Lambda only)
+├── serverless.yml                              # Legacy single-stack config
 └── pubspec.yaml                                # Minimal dependencies
 ```
 
@@ -141,7 +143,16 @@ Or use a single Lambda that handles multiple projects based on request context.
 
 ## Serverless Deployment
 
-The package includes a `serverless.yml` configuration optimized for AWS Lambda deployment:
+This package now uses two Serverless stacks:
+
+- **Shared infra**: [packages/aws_backend/serverless-shared-infra.yml](packages/aws_backend/serverless-shared-infra.yml)
+  - DynamoDB table
+  - S3 media bucket
+  - CloudFront distribution
+- **Secondary (API)**: [packages/aws_backend/serverless-secondary-infra.yml](packages/aws_backend/serverless-secondary-infra.yml)
+  - Lambda API deployment that references shared infra via SSM parameters
+
+The legacy single-stack config remains in [packages/aws_backend/serverless.yml](packages/aws_backend/serverless.yml).
 
 ### Prerequisites
 
@@ -172,18 +183,44 @@ The package includes a `serverless.yml` configuration optimized for AWS Lambda d
 
 ### Deployment
 
+#### 1) Deploy shared infrastructure (once)
+
 ```bash
-# Deploy to AWS with project-specific configuration
-serverless deploy --stage dev --aws-profile sltt-dart-dev
+npm run deploy:shared-infra
+```
+
+#### 2) Grant cross-account access (if needed)
+
+If a developer account needs to deploy the secondary API stack, run the access script
+from the shared infra account:
+
+```bash
+packages\aws_backend\scripts\grant_shared_infra_access.cmd <target-account-id> <target-role-name> [shared-infra-stage] [aws-profile] [aws-region]
+```
+
+Example:
+
+```bash
+packages\aws_backend\scripts\grant_shared_infra_access.cmd 123456789012 sltt-secondary-infra-dev-role prd sltt-dart-prd us-east-1
+```
+
+#### 3) Deploy the secondary API stack
+
+```bash
+npm run deploy:secondary:dev
+```
+
+```bash
+# Deploy to AWS with the secondary stack
+serverless deploy --config serverless-secondary-infra.yml --stage dev --aws-profile sltt-dart-dev
 
 # Or use the provided npm script (build + deploy)
-npm run deploy:dev
+npm run deploy:secondary:dev
 
-# The serverless-dart plugin will automatically:
-# 1. Build your Dart application (natively on Linux/WSL2, or in Docker on Windows/macOS)
-# 2. Compile to native binary using dart compile exe (or dart2native)
-# 3. Package as 'bootstrap' executable for AWS Lambda custom runtime
-# 4. Deploy to AWS with DynamoDB table creation
+# The build will:
+# 1. Compile the Dart application
+# 2. Package as 'bootstrap' for AWS Lambda custom runtime
+# 3. Deploy Lambda functions only (shared infra is separate)
 ```
 
 ### Platform-Specific Notes

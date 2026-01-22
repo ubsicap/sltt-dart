@@ -1,0 +1,338 @@
+# Serverless Framework configuration for SLTT shared infrastructure
+# This stack contains DynamoDB, S3, and CloudFront resources that are shared
+# across multiple API deployments (potentially in different AWS accounts)
+service: sltt-shared-infra
+
+custom:
+  # Fixed stage name - this infrastructure is shared across all API stages
+  infraStage: prd
+
+  # Resource naming without stage suffix since there's only one infrastructure
+  dynamoDbTable: ${self:service}-changes-states
+  mediaBucket: ${self:service}-media-worm-${aws:accountId}
+
+  # CloudFront public key from SSM (setup required before deployment)
+  mediaCloudFrontPublicKey: ${ssm:/sltt/media/cloudfront/${self:custom.infraStage}/MEDIA_CLOUDFRONT_PUBLIC_KEY}
+
+  # SSM parameter prefix for exporting infrastructure values
+  ssmPrefix: /sltt/infra/${self:custom.infraStage}
+
+provider:
+  name: aws
+  region: us-east-1
+  stage: ${self:custom.infraStage}
+
+  # No Lambda functions in this stack, but provider section is required
+  runtime: provided.al2
+
+resources:
+  Resources:
+    # DynamoDB table for change log entries - shared across all API deployments
+    ChangesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.dynamoDbTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+          - AttributeName: gsi1pk
+            AttributeType: S
+          - AttributeName: gsi1sk
+            AttributeType: S
+          - AttributeName: gsi2pk
+            AttributeType: S
+          - AttributeName: gsi2sk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - AttributeName: gsi1pk
+                KeyType: HASH
+              - AttributeName: gsi1sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GSI2
+            KeySchema:
+              - AttributeName: gsi2pk
+                KeyType: HASH
+              - AttributeName: gsi2sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+        Tags:
+          - Key: Service
+            Value: ${self:service}
+          - Key: Purpose
+            Value: Shared infrastructure for SLTT API deployments
+
+    # S3 bucket for media storage with WORM (Write Once Read Many) capabilities
+    MediaBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.mediaBucket}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        ObjectLockEnabled: true
+        AccelerateConfiguration:
+          AccelerationStatus: Enabled
+        LifecycleConfiguration:
+          Rules:
+            - Id: AbortIncompleteMultipartUploads
+              Status: Enabled
+              AbortIncompleteMultipartUpload:
+                DaysAfterInitiation: 2
+            - Id: IntelligentTieringTransition
+              Status: Enabled
+              Transitions:
+                - StorageClass: INTELLIGENT_TIERING
+                  TransitionInDays: 30
+        ObjectLockConfiguration:
+          ObjectLockEnabled: Enabled
+          Rule:
+            DefaultRetention:
+              Mode: GOVERNANCE
+              Years: 100
+
+    # CloudFront Origin Access Control for S3
+    MediaBucketOriginAccessControl:
+      Type: AWS::CloudFront::OriginAccessControl
+      Properties:
+        OriginAccessControlConfig:
+          Name: ${self:service}-media-oac
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+
+    # CloudFront cache policy for media content
+    MediaCloudFrontCachePolicy:
+      Type: AWS::CloudFront::CachePolicy
+      Properties:
+        CachePolicyConfig:
+          Name: ${self:service}-media-cache
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+          MinTTL: 0
+          ParametersInCacheKeyAndForwardedToOrigin:
+            CookiesConfig:
+              CookieBehavior: none
+            HeadersConfig:
+              HeaderBehavior: none
+            QueryStringsConfig:
+              QueryStringBehavior: none
+            EnableAcceptEncodingGzip: true
+            EnableAcceptEncodingBrotli: true
+
+    # CloudFront origin request policy
+    MediaCloudFrontOriginRequestPolicy:
+      Type: AWS::CloudFront::OriginRequestPolicy
+      Properties:
+        OriginRequestPolicyConfig:
+          Name: ${self:service}-media-origin
+          CookiesConfig:
+            CookieBehavior: none
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+    # CloudFront distribution for media delivery
+    MediaCloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          Comment: ${self:service} media distribution (shared)
+          HttpVersion: http2
+          PriceClass: PriceClass_200
+          Origins:
+            - Id: MediaBucketOrigin
+              DomainName: ${self:custom.mediaBucket}.s3.${self:provider.region}.amazonaws.com
+              OriginAccessControlId: !Ref MediaBucketOriginAccessControl
+              S3OriginConfig: {}
+          DefaultCacheBehavior:
+            TargetOriginId: MediaBucketOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            CachePolicyId: !Ref MediaCloudFrontCachePolicy
+            OriginRequestPolicyId: !Ref MediaCloudFrontOriginRequestPolicy
+            TrustedKeyGroups:
+              - !Ref MediaCloudFrontKeyGroup
+          ViewerCertificate:
+            CloudFrontDefaultCertificate: true
+
+    # CloudFront public key for signed URLs
+    MediaCloudFrontPublicKey:
+      Type: AWS::CloudFront::PublicKey
+      Properties:
+        PublicKeyConfig:
+          CallerReference: ${self:service}-media-public-key
+          Name: ${self:service}-media-public-key
+          EncodedKey: ${self:custom.mediaCloudFrontPublicKey}
+          Comment: ${self:service} media public key (shared)
+
+    # CloudFront key group
+    MediaCloudFrontKeyGroup:
+      Type: AWS::CloudFront::KeyGroup
+      Properties:
+        KeyGroupConfig:
+          Name: ${self:service}-media-key-group
+          Items:
+            - !Ref MediaCloudFrontPublicKey
+
+    # S3 bucket policy to allow CloudFront access
+    MediaBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: ${self:custom.mediaBucket}
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: AllowCloudFrontRead
+              Effect: Allow
+              Principal:
+                Service: cloudfront.amazonaws.com
+              Action:
+                - s3:GetObject
+              Resource:
+                - arn:aws:s3:::${self:custom.mediaBucket}/*
+              Condition:
+                StringEquals:
+                  AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${MediaCloudFrontDistribution}
+
+    # SSM Parameters to store infrastructure values for cross-account access
+    DynamoDbTableNameParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/dynamodb/table-name
+        Type: String
+        Value: !Ref ChangesTable
+        Description: DynamoDB table name for SLTT changes
+
+    DynamoDbTableArnParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/dynamodb/table-arn
+        Type: String
+        Value: !GetAtt ChangesTable.Arn
+        Description: DynamoDB table ARN for SLTT changes
+
+    MediaBucketNameParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/s3/bucket-name
+        Type: String
+        Value: !Ref MediaBucket
+        Description: S3 media bucket name
+
+    MediaBucketArnParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/s3/bucket-arn
+        Type: String
+        Value: !GetAtt MediaBucket.Arn
+        Description: S3 media bucket ARN
+
+    MediaCloudFrontDomainParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/cloudfront/domain
+        Type: String
+        Value: !GetAtt MediaCloudFrontDistribution.DomainName
+        Description: CloudFront distribution domain name
+
+    MediaCloudFrontKeyPairIdParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/cloudfront/keypair-id
+        Type: String
+        Value: !Ref MediaCloudFrontPublicKey
+        Description: CloudFront key pair ID for signed URLs
+
+    MediaCloudFrontPrivateKeyParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/cloudfront/private-key
+        Type: String
+        Value: ${ssm:/sltt/media/cloudfront/${self:custom.infraStage}/MEDIA_CLOUDFRONT_PRIVATE_KEY}
+        Description: CloudFront private key for signed URLs (copied from source parameter)
+
+    InfraRegionParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/region
+        Type: String
+        Value: ${self:provider.region}
+        Description: AWS region where infrastructure is deployed
+
+    InfraAccountIdParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/account-id
+        Type: String
+        Value: !Ref AWS::AccountId
+        Description: AWS account ID where infrastructure is deployed
+
+  Outputs:
+    # Export infrastructure values
+    DynamoDbTableName:
+      Description: DynamoDB table name
+      Value: !Ref ChangesTable
+      Export:
+        Name: ${self:service}-dynamodb-table-name
+
+    DynamoDbTableArn:
+      Description: DynamoDB table ARN
+      Value: !GetAtt ChangesTable.Arn
+      Export:
+        Name: ${self:service}-dynamodb-table-arn
+
+    MediaBucketName:
+      Description: S3 media bucket name
+      Value: !Ref MediaBucket
+      Export:
+        Name: ${self:service}-media-bucket-name
+
+    MediaBucketArn:
+      Description: S3 media bucket ARN
+      Value: !GetAtt MediaBucket.Arn
+      Export:
+        Name: ${self:service}-media-bucket-arn
+
+    MediaCloudFrontDomainName:
+      Description: CloudFront distribution domain name
+      Value: !GetAtt MediaCloudFrontDistribution.DomainName
+      Export:
+        Name: ${self:service}-cloudfront-domain
+
+    MediaCloudFrontDistributionId:
+      Description: CloudFront distribution ID
+      Value: !Ref MediaCloudFrontDistribution
+      Export:
+        Name: ${self:service}-cloudfront-distribution-id
+
+    MediaCloudFrontKeyPairId:
+      Description: CloudFront key pair ID
+      Value: !Ref MediaCloudFrontPublicKey
+      Export:
+        Name: ${self:service}-cloudfront-keypair-id

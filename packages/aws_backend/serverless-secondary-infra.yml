@@ -1,0 +1,95 @@
+# Serverless Framework configuration for SLTT secondary infrastructure
+# This stack contains API functions and references shared infrastructure
+# resources (DynamoDB, S3, CloudFront) from the shared infra account.
+service: sltt-secondary-infra
+
+custom:
+  # Shared infrastructure stage (fixed to prd by default)
+  sharedInfraStage: ${opt:sharedInfraStage, 'prd'}
+
+  # SSM parameter prefix for shared infrastructure values
+  sharedInfraSsmPrefix: /sltt/infra/${self:custom.sharedInfraStage}
+
+  # Shared infrastructure values from SSM (can be cross-account via SSM resource policy)
+  dynamoDbTable: ${ssm:${self:custom.sharedInfraSsmPrefix}/dynamodb/table-name}
+  dynamoDbTableArn: ${ssm:${self:custom.sharedInfraSsmPrefix}/dynamodb/table-arn}
+  mediaBucket: ${ssm:${self:custom.sharedInfraSsmPrefix}/s3/bucket-name}
+  mediaBucketArn: ${ssm:${self:custom.sharedInfraSsmPrefix}/s3/bucket-arn}
+  mediaCloudFrontDomain: ${ssm:${self:custom.sharedInfraSsmPrefix}/cloudfront/domain}
+  mediaCloudFrontKeyPairId: ${ssm:${self:custom.sharedInfraSsmPrefix}/cloudfront/keypair-id}
+  mediaCloudFrontPrivateKey: ${ssm:${self:custom.sharedInfraSsmPrefix}/cloudfront/private-key}
+  sharedInfraRegion: ${ssm:${self:custom.sharedInfraSsmPrefix}/region}
+
+provider:
+  name: aws
+  runtime: provided.al2  # Custom runtime for Dart compiled binary
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+
+  # Lambda function configuration
+  timeout: 29
+  memorySize: 512
+
+  # Environment variables
+  environment:
+    STAGE: ${self:provider.stage}
+    DYNAMODB_TABLE: ${self:custom.dynamoDbTable}
+    DYNAMODB_REGION: ${self:custom.sharedInfraRegion}
+    MEDIA_BUCKET: ${self:custom.mediaBucket}
+    MEDIA_CLOUDFRONT_DOMAIN: ${self:custom.mediaCloudFrontDomain}
+    MEDIA_CLOUDFRONT_KEY_PAIR_ID: ${self:custom.mediaCloudFrontKeyPairId}
+    MEDIA_CLOUDFRONT_PRIVATE_KEY: ${self:custom.mediaCloudFrontPrivateKey}
+
+  # IAM permissions for shared DynamoDB + S3 resources
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:BatchGetItem
+        - dynamodb:BatchWriteItem
+        - dynamodb:DescribeTable
+      Resource:
+        - ${self:custom.dynamoDbTableArn}
+        - ${self:custom.dynamoDbTableArn}/index/*
+    - Effect: Allow
+      Action:
+        - s3:AbortMultipartUpload
+        - s3:CreateMultipartUpload
+        - s3:GetObject
+        - s3:HeadObject
+        - s3:ListBucket
+        - s3:ListBucketMultipartUploads
+        - s3:ListMultipartUploadParts
+        - s3:PutObject
+        - s3:UploadPart
+      Resource:
+        - ${self:custom.mediaBucketArn}
+        - ${self:custom.mediaBucketArn}/*
+
+functions:
+  # Main API handler for SLTT changes
+  api:
+    handler: bootstrap  # Lambda custom runtime expects 'bootstrap' executable
+    events:
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors: true
+      - http:
+          path: /
+          method: ANY
+          cors: true
+
+# Package configuration
+package:
+  individually: false
+  include:
+    - bootstrap  # Include our compiled Dart executable
+  exclude:
+    - '**'  # Exclude everything by default
+    - '!bootstrap'  # Then explicitly include only bootstrap
