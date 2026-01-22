@@ -24,6 +24,8 @@
     "cloudfront:generate-rsa-public-key": "openssl rsa -pubout -in ../../../private_key.pem -out ../../../public_key.pem",
     "cloudfront:public-key-set-ssm:tst": "aws ssm put-parameter --name /sltt/media/cloudfront/tst/MEDIA_CLOUDFRONT_PUBLIC_KEY --type String --value file://../../../public_key.pem --overwrite --profile sltt-dart-dev",
     "cloudfront:private-key-set-ssm:tst": "aws ssm put-parameter --name /sltt/media/cloudfront/tst/MEDIA_CLOUDFRONT_PRIVATE_KEY --type SecureString --value file://../../../private_key.pem --overwrite --profile sltt-dart-dev",
+    "cloudfront:public-key-set-ssm:dev": "aws ssm put-parameter --name /sltt/media/cloudfront/dev/MEDIA_CLOUDFRONT_PUBLIC_KEY --type String --value file://../../../public_key.pem --overwrite --profile sltt-dart-dev",
+    "cloudfront:private-key-set-ssm:dev": "aws ssm put-parameter --name /sltt/media/cloudfront/dev/MEDIA_CLOUDFRONT_PRIVATE_KEY --type SecureString --value file://../../../private_key.pem --overwrite --profile sltt-dart-dev",
     "clean": "rm -f bootstrap && rm -rf .serverless",
   "generate-server-urls": "node ../../scripts/generate_server_urls.js",
     "test": "dart test"
