@@ -6,6 +6,12 @@ service: sltt-backend
 custom:
   mediaBucket: ${self:service}-media-worm-${aws:accountId}-${self:provider.stage}
   mediaCloudFrontPublicKey: ${ssm:/sltt/media/cloudfront/${self:provider.stage}/MEDIA_CLOUDFRONT_PUBLIC_KEY}
+  mediaCloudFrontDomainByStage:
+    dev: d22x8vmoxn2wwt.cloudfront.net
+    tst: d2qw2gududo3yq.cloudfront.net
+  mediaCloudFrontKeyPairIdByStage:
+    dev: K2O627RQB773RQ
+    tst: K2VWGFBHY47GFG
 
 provider:
   name: aws
@@ -23,8 +29,8 @@ provider:
     DYNAMODB_TABLE: ${self:service}-changes-states-${self:provider.stage}
     DYNAMODB_REGION: ${self:provider.region}
     MEDIA_BUCKET: ${self:custom.mediaBucket}
-    MEDIA_CLOUDFRONT_DOMAIN: d2qw2gududo3yq.cloudfront.net
-    MEDIA_CLOUDFRONT_KEY_PAIR_ID: K2VWGFBHY47GFG
+    MEDIA_CLOUDFRONT_DOMAIN: ${self:custom.mediaCloudFrontDomainByStage.${self:provider.stage}}
+    MEDIA_CLOUDFRONT_KEY_PAIR_ID: ${self:custom.mediaCloudFrontKeyPairIdByStage.${self:provider.stage}}
     MEDIA_CLOUDFRONT_PRIVATE_KEY: ${ssm:/sltt/media/cloudfront/${self:provider.stage}/MEDIA_CLOUDFRONT_PRIVATE_KEY}
 
   # IAM permissions for DynamoDB
