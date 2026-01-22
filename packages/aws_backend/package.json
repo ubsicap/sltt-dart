@@ -14,7 +14,9 @@
     "deploy:secondary:dev": "npm run build && npx serverless deploy --config serverless-secondary-infra.yml --stage dev --aws-profile sltt-dart-dev",
     "deploy:secondary:tst": "npm run build && npx serverless deploy --config serverless-secondary-infra.yml --stage tst --aws-profile sltt-dart-dev",
     "deploy:secondary:prod": "npm run build && npx serverless deploy --config serverless-secondary-infra.yml --stage prod --aws-profile sltt-dart-prd",
-    "shared-infra:grant-access": "scripts\\grant_shared_infra_access.cmd",
+    "shared-infra:grant-access": "node scripts/grant_shared_infra_access.js",
+    "shared-infra:grant-access:win": "node scripts/grant_shared_infra_access.js",
+    "shared-infra:grant-access:unix": "node scripts/grant_shared_infra_access.js",
     "deploy:dev": "npm run deploy:secondary:dev",
     "deploy:tst": "npm run deploy:secondary:tst",
     "deploy:prod": "npm run deploy:secondary:prod",
@@ -47,6 +49,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "serverless": "^4.4.7"
+    "serverless": "^4.4.7",
+    "cross-env": "^1.0.3"
   }
 }

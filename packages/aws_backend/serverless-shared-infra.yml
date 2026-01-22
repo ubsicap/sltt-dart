@@ -226,6 +226,7 @@ resources:
       Properties:
         Name: ${self:custom.ssmPrefix}/dynamodb/table-name
         Type: String
+        Tier: Advanced
         Value: !Ref ChangesTable
         Description: DynamoDB table name for SLTT changes
 
@@ -234,6 +235,7 @@ resources:
       Properties:
         Name: ${self:custom.ssmPrefix}/dynamodb/table-arn
         Type: String
+        Tier: Advanced
         Value: !GetAtt ChangesTable.Arn
         Description: DynamoDB table ARN for SLTT changes
 
@@ -242,6 +244,7 @@ resources:
       Properties:
         Name: ${self:custom.ssmPrefix}/s3/bucket-name
         Type: String
+        Tier: Advanced
         Value: !Ref MediaBucket
         Description: S3 media bucket name
 
@@ -250,6 +253,7 @@ resources:
       Properties:
         Name: ${self:custom.ssmPrefix}/s3/bucket-arn
         Type: String
+        Tier: Advanced
         Value: !GetAtt MediaBucket.Arn
         Description: S3 media bucket ARN
 
@@ -258,6 +262,7 @@ resources:
       Properties:
         Name: ${self:custom.ssmPrefix}/cloudfront/domain
         Type: String
+        Tier: Advanced
         Value: !GetAtt MediaCloudFrontDistribution.DomainName
         Description: CloudFront distribution domain name
 
@@ -266,6 +271,7 @@ resources:
       Properties:
         Name: ${self:custom.ssmPrefix}/cloudfront/keypair-id
         Type: String
+        Tier: Advanced
         Value: !Ref MediaCloudFrontPublicKey
         Description: CloudFront key pair ID for signed URLs
 
@@ -274,6 +280,7 @@ resources:
       Properties:
         Name: ${self:custom.ssmPrefix}/cloudfront/private-key
         Type: String
+        Tier: Advanced
         Value: ${ssm:/sltt/media/cloudfront/${self:custom.infraStage}/MEDIA_CLOUDFRONT_PRIVATE_KEY}
         Description: CloudFront private key for signed URLs (copied from source parameter)
 
@@ -282,6 +289,7 @@ resources:
       Properties:
         Name: ${self:custom.ssmPrefix}/region
         Type: String
+        Tier: Advanced
         Value: ${self:provider.region}
         Description: AWS region where infrastructure is deployed
 
@@ -290,6 +298,7 @@ resources:
       Properties:
         Name: ${self:custom.ssmPrefix}/account-id
         Type: String
+        Tier: Advanced
         Value: !Ref AWS::AccountId
         Description: AWS account ID where infrastructure is deployed
 

@@ -206,13 +206,19 @@ If a developer account needs to deploy the secondary API stack, run the access s
 from the shared infra account:
 
 ```bash
-packages\aws_backend\scripts\grant_shared_infra_access.cmd <target-account-id> <target-role-name> [shared-infra-stage] [aws-profile] [aws-region]
+node packages\aws_backend\scripts\grant_shared_infra_access.js <target-account-id> <target-role-name> [shared-infra-stage] [aws-profile] [aws-region]
 ```
 
 Example:
 
 ```bash
-packages\aws_backend\scripts\grant_shared_infra_access.cmd 123456789012 sltt-secondary-infra-dev-role prd sltt-dart-prd us-east-1
+node packages\aws_backend\scripts\grant_shared_infra_access.js 123456789012 sltt-secondary-infra-dev-role prd sltt-dart-prd us-east-1
+```
+
+or from package.json (pass args after `--`):
+
+```bash
+npm run shared-infra:grant-access -- 123456789012 sltt-secondary-infra-dev-role prd sltt-dart-prd us-east-1
 ```
 
 #### 3) Deploy the secondary API stack
