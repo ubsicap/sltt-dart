@@ -61,6 +61,7 @@ function main() {
   const region = String(args['region'] || 'us-east-1');
 
   const resourceArn = `arn:aws:ssm:${region}:${sharedAccount}:parameter/sltt/infra/${stage}/*`;
+  const crossAccountRoleArn = `arn:aws:iam::${sharedAccount}:role/sltt-shared-infra-cross-account-access`;
 
   const basePolicy = {
     Version: '2012-10-17',
@@ -69,6 +70,16 @@ function main() {
         Effect: 'Allow',
         Action: ['ssm:GetParameter', 'ssm:GetParameters'],
         Resource: resourceArn,
+      },
+      {
+        Effect: 'Allow',
+        Action: ['sts:AssumeRole'],
+        Resource: crossAccountRoleArn,
+        Condition: {
+          StringEquals: {
+            'sts:ExternalId': 'sltt-cross-account-access'
+          }
+        }
       },
     ],
   };

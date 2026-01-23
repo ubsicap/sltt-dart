@@ -117,6 +117,7 @@ function main() {
 
   const targetRoleArn = `arn:aws:iam::${targetAccountId}:role/${targetRoleName}`;
   const targetAccountRootArn = `arn:aws:iam::${targetAccountId}:root`;
+  const assumedRoleArnPattern = `arn:aws:sts::${targetAccountId}:assumed-role/${targetRoleName}/*`;
   // Resolve SSM principal ARN based on principalSpec (defaults to root)
   let ssmPrincipalArn = targetAccountRootArn;
   if (principalSpec && typeof principalSpec === 'string') {
@@ -172,7 +173,7 @@ function main() {
         ],
         Resource: [tableArn, `${tableArn}/index/*`],
         Condition: {
-          StringEquals: { 'aws:PrincipalArn': targetRoleArn },
+          ArnLike: { 'aws:PrincipalArn': [targetRoleArn, assumedRoleArnPattern] },
         },
       },
     ],
@@ -260,7 +261,7 @@ function main() {
     ],
     Resource: [bucketArn, `${bucketArn}/*`],
     Condition: {
-      StringEquals: { 'aws:PrincipalArn': targetRoleArn },
+      ArnLike: { 'aws:PrincipalArn': [targetRoleArn, assumedRoleArnPattern] },
     },
   });
 

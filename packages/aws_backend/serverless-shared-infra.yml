@@ -200,7 +200,7 @@ resources:
           Items:
             - !Ref MediaCloudFrontPublicKey
 
-    # S3 bucket policy to allow CloudFront access
+    # S3 bucket policy to allow CloudFront and secondary access
     MediaBucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
@@ -218,7 +218,77 @@ resources:
                 - arn:aws:s3:::${self:custom.mediaBucket}/*
               Condition:
                 StringEquals:
-                  AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${MediaCloudFrontDistribution}
+                  aws:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${MediaCloudFrontDistribution}
+            # Allow secondary deployments to read/write objects
+            - Sid: AllowSecondaryRead
+              Effect: Allow
+              Principal:
+                AWS: '*'
+              Action:
+                - s3:GetObject
+              Resource:
+                - !Sub '${MediaBucket.Arn}/*'
+              Condition:
+                ArnLike:
+                  'aws:PrincipalArn':
+                    # Direct role ARN from same account
+                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole'
+                    # Assumed-role ARN from same account
+                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole/*'
+                    # Cross-account: secondary account (sltt-epyle dev/tst)
+                    - 'arn:aws:sts::662482841188:assumed-role/sltt-secondary-infra-*-us-east-1-lambdaRole/*'
+            - Sid: AllowSecondaryWrite
+              Effect: Allow
+              Principal:
+                AWS: '*'
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub '${MediaBucket.Arn}/*'
+              Condition:
+                ArnLike:
+                  'aws:PrincipalArn':
+                    # Direct role ARN from same account
+                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole'
+                    # Assumed-role ARN from same account
+                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole/*'
+                    # Cross-account: secondary account (sltt-epyle dev/tst)
+                    - 'arn:aws:sts::662482841188:assumed-role/sltt-secondary-infra-*-us-east-1-lambdaRole/*'
+            - Sid: AllowSecondaryListBucket
+              Effect: Allow
+              Principal:
+                AWS: '*'
+              Action:
+                - s3:ListBucket
+              Resource:
+                - !GetAtt MediaBucket.Arn
+              Condition:
+                ArnLike:
+                  'aws:PrincipalArn':
+                    # Direct role ARN from same account
+                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole'
+                    # Assumed-role ARN from same account
+                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole/*'
+                    # Cross-account: secondary account (sltt-epyle dev/tst)
+                    - 'arn:aws:sts::662482841188:assumed-role/sltt-secondary-infra-*-us-east-1-lambdaRole/*'
+
+    # IAM policy to allow secondary deployments to read SSM parameters
+    # This is attached to the CrossAccountAccessRole to enable parameter reads
+    SsmParameterAccessPolicy:
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: ${self:service}-ssm-parameter-access
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource:
+                - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${self:custom.ssmPrefix}/*'
+        Roles:
+          - !Ref CrossAccountAccessRole
 
     # SSM Parameters to store infrastructure values for cross-account access
     DynamoDbTableNameParameter:
@@ -302,6 +372,78 @@ resources:
         Value: !Ref AWS::AccountId
         Description: AWS account ID where infrastructure is deployed
 
+    # IAM role for cross-account access (secondary accounts can assume this)
+    CrossAccountAccessRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:service}-cross-account-access
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            # Allow same account to assume with ExternalId
+            - Effect: Allow
+              Principal:
+                AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+              Action: sts:AssumeRole
+              Condition:
+                StringEquals:
+                  'sts:ExternalId': 'sltt-cross-account-access'
+            # Allow target account (662482841188) to assume with ExternalId
+            - Effect: Allow
+              Principal:
+                AWS: 'arn:aws:iam::662482841188:root'
+              Action: sts:AssumeRole
+              Condition:
+                StringEquals:
+                  'sts:ExternalId': 'sltt-cross-account-access'
+        Policies:
+          - PolicyName: DynamoDBAccess
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - dynamodb:GetItem
+                    - dynamodb:PutItem
+                    - dynamodb:UpdateItem
+                    - dynamodb:DeleteItem
+                    - dynamodb:Query
+                    - dynamodb:Scan
+                    - dynamodb:BatchGetItem
+                    - dynamodb:BatchWriteItem
+                    - dynamodb:DescribeTable
+                  Resource:
+                    - !GetAtt ChangesTable.Arn
+                    - !Sub '${ChangesTable.Arn}/index/*'
+          - PolicyName: S3Access
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - s3:AbortMultipartUpload
+                    - s3:CreateMultipartUpload
+                    - s3:GetObject
+                    - s3:HeadObject
+                    - s3:ListBucket
+                    - s3:ListBucketMultipartUploads
+                    - s3:ListMultipartUploadParts
+                    - s3:PutObject
+                    - s3:UploadPart
+                  Resource:
+                    - !GetAtt MediaBucket.Arn
+                    - !Sub '${MediaBucket.Arn}/*'
+
+    # Store cross-account role ARN in SSM for secondary stacks to reference
+    SsmCrossAccountRoleArn:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/cross-account-role-arn
+        Type: String
+        Tier: Advanced
+        Value: !GetAtt CrossAccountAccessRole.Arn
+        Description: ARN of role that secondary accounts can assume for cross-account access
+
   Outputs:
     # Export infrastructure values
     DynamoDbTableName:
@@ -345,6 +487,12 @@ resources:
       Value: !Ref MediaCloudFrontPublicKey
       Export:
         Name: ${self:service}-cloudfront-keypair-id
+
+    CrossAccountAccessRoleArn:
+      Description: ARN of IAM role for cross-account access
+      Value: !GetAtt CrossAccountAccessRole.Arn
+      Export:
+        Name: ${self:service}-cross-account-role-arn
 
     # Post-deployment instructions
     SsmParametersSetupCommand:

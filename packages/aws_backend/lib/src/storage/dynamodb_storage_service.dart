@@ -43,12 +43,14 @@ class DynamoDBStorageService extends BaseStorageService {
     this.useLocalDynamoDB = false,
     this.localEndpoint,
     http.Client? httpClient,
+    this.crossAccountCredentials,
   }) : _httpClient = httpClient ?? http.Client();
 
   final String tableName;
   final String region;
   final bool useLocalDynamoDB;
   final String? localEndpoint;
+  final AWSCredentials? crossAccountCredentials;
 
   final http.Client _httpClient;
 
@@ -1461,7 +1463,8 @@ class DynamoDBStorageService extends BaseStorageService {
 
         if (response.statusCode == 200) {
           final body =
-              jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+              jsonDecode(utf8.decode(response.bodyBytes))
+                  as Map<String, dynamic>;
           final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
 
           for (final item in items) {
@@ -1540,7 +1543,9 @@ class DynamoDBStorageService extends BaseStorageService {
       };
 
       if (indexName != null) payload['IndexName'] = indexName;
-      if (lastEvaluatedKey != null) payload['ExclusiveStartKey'] = lastEvaluatedKey;
+      if (lastEvaluatedKey != null) {
+        payload['ExclusiveStartKey'] = lastEvaluatedKey;
+      }
 
       int attempt = 0;
       int delayMs = baseDelayMs;
@@ -1549,7 +1554,9 @@ class DynamoDBStorageService extends BaseStorageService {
         final response = await _dynamoRequest('Query', payload);
 
         if (response.statusCode == 200) {
-          final body = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+          final body =
+              jsonDecode(utf8.decode(response.bodyBytes))
+                  as Map<String, dynamic>;
           final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
 
           for (final item in items) {
@@ -1854,15 +1861,20 @@ class DynamoDBStorageService extends BaseStorageService {
       return _httpClient.post(uri, headers: headers, body: body);
     }
 
-    final accessKey = Platform.environment['AWS_ACCESS_KEY_ID'];
-    final secretKey = Platform.environment['AWS_SECRET_ACCESS_KEY'];
-    final sessionToken = Platform.environment['AWS_SESSION_TOKEN'];
+    final AWSCredentials credentials;
+    if (crossAccountCredentials != null) {
+      credentials = crossAccountCredentials!;
+    } else {
+      final accessKey = Platform.environment['AWS_ACCESS_KEY_ID'];
+      final secretKey = Platform.environment['AWS_SECRET_ACCESS_KEY'];
+      final sessionToken = Platform.environment['AWS_SESSION_TOKEN'];
 
-    if (accessKey == null || secretKey == null) {
-      throw Exception('AWS credentials not available in environment');
+      if (accessKey == null || secretKey == null) {
+        throw Exception('AWS credentials not available in environment');
+      }
+
+      credentials = AWSCredentials(accessKey, secretKey, sessionToken);
     }
-
-    final credentials = AWSCredentials(accessKey, secretKey, sessionToken);
     final signer = AWSSigV4Signer(
       credentialsProvider: AWSCredentialsProvider(credentials),
     );

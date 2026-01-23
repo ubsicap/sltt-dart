@@ -17,15 +17,26 @@
 
 const { execSync } = require('node:child_process');
 const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
 
 function parseArgs() {
   const args = {};
-  process.argv.slice(2).forEach((arg) => {
+  const argv = process.argv.slice(2);
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
     if (arg.startsWith('--')) {
-      const [key, value] = arg.substring(2).split('=');
-      args[key] = value || true;
+      const key = arg.substring(2);
+      if (key.includes('=')) {
+        const [k, v] = key.split('=');
+        args[k] = v;
+      } else if (i + 1 < argv.length && !argv[i + 1].startsWith('--')) {
+        args[key] = argv[++i];
+      } else {
+        args[key] = true;
+      }
     }
-  });
+  }
   return args;
 }
 
@@ -41,6 +52,37 @@ function runAws(command, { profile, region } = {}) {
     throw new Error(
       `AWS command failed: ${fullCommand}\n${error.stderr || error.message}`
     );
+  }
+}
+
+function putSsmParameter(name, value, { profile, region } = {}) {
+  const profileArg = profile ? ` --profile ${profile}` : '';
+  const regionArg = region ? ` --region ${region}` : '';
+
+  // For values with special characters/newlines, write to temp file and use file:// syntax
+  if (value.includes('\n') || value.includes('"')) {
+    const tempFile = path.join(os.tmpdir(), `ssm-param-${Date.now()}.txt`);
+    try {
+      fs.writeFileSync(tempFile, value, 'utf8');
+      const command = `aws ssm put-parameter --name "${name}" --value file://${tempFile} --type String --overwrite${profileArg}${regionArg}`;
+      execSync(command, { stdio: ['ignore', 'pipe', 'pipe'] });
+    } finally {
+      // Clean up temp file
+      try {
+        fs.unlinkSync(tempFile);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+  } else {
+    const command = `aws ssm put-parameter --name "${name}" --value "${value}" --type String --overwrite${profileArg}${regionArg}`;
+    try {
+      execSync(command, { stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch (error) {
+      throw new Error(
+        `Failed to put SSM parameter: ${error.stderr || error.message}`
+      );
+    }
   }
 }
 
@@ -131,17 +173,29 @@ function main() {
       `ssm get-parameter --name "/sltt/media/cloudfront/${sharedInfraStage}/MEDIA_CLOUDFRONT_PRIVATE_KEY" --with-decryption --query "Parameter.Value" --output text`,
       { profile: awsProfile, region: awsRegion }
     );
-    if (privateKeyValue) {
-      runAws(
-        `ssm put-parameter --name "${cloudFrontPrivateKeyParamName}" --value "${privateKeyValue}" --type String --overwrite`,
-        { profile: awsProfile, region: awsRegion }
-      );
-      console.log(`  ✓ ${cloudFrontPrivateKeyParamName}`);
+    if (privateKeyValue && privateKeyValue.length > 0) {
+      // Use safe parameter setting for values with newlines
+      putSsmParameter(cloudFrontPrivateKeyParamName, privateKeyValue, {
+        profile: awsProfile,
+        region: awsRegion,
+      });
+      // Display truncated version for verification
+      const truncated = privateKeyValue.substring(0, 50) + '...';
+      console.log(`  ✓ ${cloudFrontPrivateKeyParamName} (already set - ${truncated})`);
+    } else {
+      throw new Error('CloudFront private key parameter is empty');
     }
-  } catch (e) {
-    console.log(
-      `  ⓘ ${cloudFrontPrivateKeyParamName} (skipped - source parameter not found)`
-    );
+  } catch (error) {
+    if (error.message.includes('ParameterNotFound')) {
+      console.log(`  ⓘ ${cloudFrontPrivateKeyParamName} (not yet set)`);
+      console.log(
+        `    To set it, run: npm run cloudfront:private-key-set-ssm:${sharedInfraStage}`
+      );
+    } else {
+      console.error(`  ✗ ${cloudFrontPrivateKeyParamName}`);
+      console.error(`    Error: ${error.message}`);
+      process.exit(1);
+    }
   }
 
   // Set account ID and region parameters if they don't exist
@@ -173,7 +227,7 @@ function main() {
   }
 
   console.log(
-    `\nDone. SSM parameters are ready for secondary deployments to reference.`
+    `\nDone. SSM parameters created. Run 'npm run setup:ssm-resource-policies' to enable cross-account access.`
   );
 }
 

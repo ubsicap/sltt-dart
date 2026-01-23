@@ -38,6 +38,8 @@ provider:
     STAGE: ${self:provider.stage}
     DYNAMODB_TABLE: ${self:custom.dynamoDbTable}
     DYNAMODB_REGION: ${self:custom.sharedInfraRegion}
+    SHARED_INFRA_ASSUME_ROLE_ARN: ${ssm:${self:custom.sharedInfraArnPath}/cross-account-role-arn}
+    ASSUME_ROLE_SESSION_NAME: sltt-secondary-infra-${self:provider.stage}
     MEDIA_BUCKET: ${self:custom.mediaBucket}
     MEDIA_CLOUDFRONT_DOMAIN: ${self:custom.mediaCloudFrontDomain}
     MEDIA_CLOUDFRONT_KEY_PAIR_ID: ${self:custom.mediaCloudFrontKeyPairId}
@@ -79,6 +81,11 @@ provider:
         - ssm:GetParameters
       Resource:
         - ${self:custom.sharedInfraArnPath}/*
+    - Effect: Allow
+      Action:
+        - sts:AssumeRole
+      Resource:
+        - ${ssm:${self:custom.sharedInfraArnPath}/cross-account-role-arn}
 
 functions:
   # Main API handler for SLTT changes

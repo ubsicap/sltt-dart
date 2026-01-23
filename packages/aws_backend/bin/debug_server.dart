@@ -71,7 +71,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
   final useLocalDynamoDB = useCloudStorage != 'true';
 
   // Create DynamoDB storage service
-  final storageInstance = StorageFactory.createStorage(
+  final storageInstance = await StorageFactory.createStorage(
     useLocalDynamoDB: useLocalDynamoDB,
   );
 

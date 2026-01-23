@@ -10,7 +10,7 @@ import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 /// consistent routing and endpoint behavior with local development.
 /// It can also be used by the local debugger when LOCAL_DEBUGGER=true.
 Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
-  final storage = StorageFactory.createStorage();
+  final storage = await StorageFactory.createStorage();
   final mediaStorage = _createMediaStorageFromEnv();
 
   try {
