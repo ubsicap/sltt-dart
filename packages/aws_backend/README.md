@@ -200,7 +200,17 @@ npm run cloudfront:private-key-set-ssm:prd
 npm run deploy:shared-infra
 ```
 
-#### 2) Grant cross-account access (if needed)
+#### 2) Populate shared SSM parameters (required)
+
+Run after the shared infra stack so `/sltt/infra/prd` exists in the shared account:
+
+```bash
+npm run setup:ssm-parameters
+```
+
+#### 3) Choose how secondary stacks read shared SSM values
+
+Option A: cross-account read (resource policies + IAM in target account)
 
 If a developer account needs to deploy the secondary API stack, run the access script
 from the shared infra account:
@@ -221,7 +231,13 @@ or from package.json (pass args after `--`):
 npm run shared-infra:grant-access -- 123456789012 sltt-secondary-infra-dev-role prd sltt-dart-prd us-east-1
 ```
 
-#### 3) Deploy the secondary API stack
+Option B: mirror SSM into the target account (simpler, no cross-account read)
+
+```bash
+npm run mirror:ssm-to-dev
+```
+
+#### 4) Deploy the secondary API stack
 
 ```bash
 npm run deploy:secondary:dev

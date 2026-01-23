@@ -345,3 +345,20 @@ resources:
       Value: !Ref MediaCloudFrontPublicKey
       Export:
         Name: ${self:service}-cloudfront-keypair-id
+
+    # Post-deployment instructions
+    SsmParametersSetupCommand:
+      Description: Run this command after deployment to set SSM parameters needed by secondary deployments
+      Value: npm run setup:ssm-parameters
+
+    SsmParametersUsedBySecondary:
+      Description: SSM parameters that secondary deployments will reference (ensure cross-account access is granted)
+      Value: |
+        /sltt/infra/prd/dynamodb/table-name
+        /sltt/infra/prd/dynamodb/table-arn
+        /sltt/infra/prd/s3/bucket-name
+        /sltt/infra/prd/s3/bucket-arn
+        /sltt/infra/prd/cloudfront/domain
+        /sltt/infra/prd/cloudfront/keypair-id
+        /sltt/infra/prd/cloudfront/private-key
+        /sltt/infra/prd/region

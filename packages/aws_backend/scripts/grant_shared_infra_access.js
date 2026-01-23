@@ -64,6 +64,8 @@ function main() {
     argv[2] || process.env.SHARED_INFRA_STAGE_ENV || 'prd';
   const awsProfile = argv[3] || process.env.AWS_PROFILE_ENV || 'sltt-dart-prd';
   const awsRegion = argv[4] || process.env.AWS_REGION_ENV || 'us-east-1';
+  // Optional principal override for SSM policies: root | user:<name> | role:<name>
+  const principalSpec = argv[5] || process.env.TARGET_PRINCIPAL_SPEC || 'root';
 
   if (!targetAccountId) {
     usage();
@@ -115,6 +117,18 @@ function main() {
 
   const targetRoleArn = `arn:aws:iam::${targetAccountId}:role/${targetRoleName}`;
   const targetAccountRootArn = `arn:aws:iam::${targetAccountId}:root`;
+  // Resolve SSM principal ARN based on principalSpec (defaults to root)
+  let ssmPrincipalArn = targetAccountRootArn;
+  if (principalSpec && typeof principalSpec === 'string') {
+    const [ptype, pname] = principalSpec.split(':');
+    if (ptype === 'user' && pname) {
+      ssmPrincipalArn = `arn:aws:iam::${targetAccountId}:user/${pname}`;
+    } else if (ptype === 'role' && pname) {
+      ssmPrincipalArn = `arn:aws:iam::${targetAccountId}:role/${pname}`;
+    } else if (ptype === 'root') {
+      ssmPrincipalArn = targetAccountRootArn;
+    }
+  }
 
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sltt-shared-infra-'));
   const ssmPolicyTemplatePath = path.join(tempDir, 'ssm_resource_policy.json');
@@ -198,7 +212,7 @@ function main() {
           {
             Sid: 'AllowCrossAccountSsmRead',
             Effect: 'Allow',
-            Principal: { AWS: targetAccountRootArn },
+            Principal: { AWS: ssmPrincipalArn },
             Action: [
               'ssm:GetParameter',
               'ssm:GetParameters',
