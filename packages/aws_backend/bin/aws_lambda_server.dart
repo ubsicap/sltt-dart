@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:aws_backend/aws_backend.dart';
+import 'package:aws_common/aws_common.dart' show AWSCredentials;
 import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 /// AWS Lambda handler for SLTT backend API.
@@ -10,17 +11,19 @@ import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 /// consistent routing and endpoint behavior with local development.
 /// It can also be used by the local debugger when LOCAL_DEBUGGER=true.
 Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
-  final storage = await StorageFactory.createStorage();
-  final mediaStorage = _createMediaStorageFromEnv();
+  final storageResult = await StorageFactory.createStorage();
+  final mediaStorage = _createMediaStorageFromEnv(
+    crossAccountCredentials: storageResult.crossAccountCredentials,
+  );
 
   try {
-    await storage.initialize();
+    await storageResult.storage.initialize();
     await mediaStorage.initialize();
 
     // Create AwsRestApiServer instance
     final server = AwsRestApiServer(
       serverName: 'AWS Lambda API',
-      storage: storage,
+      storage: storageResult.storage,
       mediaStorage: mediaStorage,
     );
 
@@ -41,11 +44,13 @@ Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
     };
   } finally {
     await mediaStorage.close();
-    await storage.close();
+    await storageResult.storage.close();
   }
 }
 
-AwsMediaStorage _createMediaStorageFromEnv() {
+AwsMediaStorage _createMediaStorageFromEnv({
+  required AWSCredentials? crossAccountCredentials,
+}) {
   final bucket = Platform.environment['MEDIA_BUCKET'];
   if (bucket == null || bucket.isEmpty) {
     throw StateError('MEDIA_BUCKET environment variable is required');
@@ -72,5 +77,6 @@ AwsMediaStorage _createMediaStorageFromEnv() {
     cloudFrontDomain: cloudFrontDomain,
     cloudFrontKeyPairId: cloudFrontKeyPairId,
     cloudFrontPrivateKey: cloudFrontPrivateKey,
+    credentials: crossAccountCredentials,
   );
 }

@@ -6,10 +6,18 @@ import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
 import 'package:http/http.dart' as http;
 
+/// Storage creation result with both storage service and cross-account credentials
+class StorageResult {
+  final DynamoDBStorageService storage;
+  final AWSCredentials? crossAccountCredentials;
+
+  StorageResult({required this.storage, required this.crossAccountCredentials});
+}
+
 /// Shared utility for creating DynamoDB storage service with consistent configuration
 class StorageFactory {
   /// Create a DynamoDB storage service using environment variables
-  static Future<DynamoDBStorageService> createStorage({
+  static Future<StorageResult> createStorage({
     bool useLocalDynamoDB = false,
   }) async {
     final tableName =
@@ -36,10 +44,15 @@ class StorageFactory {
       );
     }
 
-    return DynamoDBStorageService(
+    final storage = DynamoDBStorageService(
       tableName: tableName,
       region: region,
       useLocalDynamoDB: useLocal,
+      crossAccountCredentials: crossAccountCredentials,
+    );
+
+    return StorageResult(
+      storage: storage,
       crossAccountCredentials: crossAccountCredentials,
     );
   }

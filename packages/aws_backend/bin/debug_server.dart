@@ -71,9 +71,10 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
   final useLocalDynamoDB = useCloudStorage != 'true';
 
   // Create DynamoDB storage service
-  final storageInstance = await StorageFactory.createStorage(
+  final storageResult = await StorageFactory.createStorage(
     useLocalDynamoDB: useLocalDynamoDB,
   );
+  final storageInstance = storageResult.storage;
 
   final mediaBucket = Platform.environment['MEDIA_BUCKET'];
   final mediaRegion =
@@ -92,6 +93,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     cloudFrontDomain: cloudFrontDomain,
     cloudFrontKeyPairId: cloudFrontKeyPairId,
     cloudFrontPrivateKey: cloudFrontPrivateKey,
+    credentials: storageResult.crossAccountCredentials,
   );
 
   try {

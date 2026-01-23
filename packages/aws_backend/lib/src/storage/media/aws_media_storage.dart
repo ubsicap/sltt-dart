@@ -18,6 +18,7 @@ class AwsMediaStorage extends BaseMediaStorage {
     String? cloudFrontDomain,
     String? cloudFrontKeyPairId,
     String? cloudFrontPrivateKey,
+    AWSCredentials? credentials,
     bool enableTransferAcceleration = true,
     Duration presignedUrlDuration = const Duration(minutes: 15),
     http.Client? httpClient,
@@ -27,12 +28,14 @@ class AwsMediaStorage extends BaseMediaStorage {
        _ownsHttpClient = httpClient == null,
        _cloudFrontDomain = cloudFrontDomain,
        _cloudFrontKeyPairId = cloudFrontKeyPairId,
-       _cloudFrontPrivateKeyPem = cloudFrontPrivateKey;
+       _cloudFrontPrivateKeyPem = cloudFrontPrivateKey,
+       _credentials = credentials;
 
   final String bucketName;
   final String region;
   final bool _enableTransferAcceleration;
   final Duration _presignedUrlDuration;
+  final AWSCredentials? _credentials;
   static final S3ServiceConfiguration _s3Config = S3ServiceConfiguration(
     signPayload: false,
   );
@@ -60,6 +63,16 @@ class AwsMediaStorage extends BaseMediaStorage {
   Future<void> initialize() async {
     if (_initialized) return;
 
+    // Use provided cross-account credentials if available, otherwise fall back to environment
+    final credentials = _credentials ?? _getEnvironmentCredentials();
+
+    _credentialsProvider = AWSCredentialsProvider(credentials);
+    _signer = AWSSigV4Signer(credentialsProvider: _credentialsProvider!);
+    _initializeCloudFront();
+    _initialized = true;
+  }
+
+  AWSCredentials _getEnvironmentCredentials() {
     final accessKey = Platform.environment['AWS_ACCESS_KEY_ID'];
     final secretKey = Platform.environment['AWS_SECRET_ACCESS_KEY'];
     final sessionToken = Platform.environment['AWS_SESSION_TOKEN'];
@@ -70,22 +83,19 @@ class AwsMediaStorage extends BaseMediaStorage {
       );
     }
 
-    _credentialsProvider = AWSCredentialsProvider(
-      AWSCredentials(accessKey, secretKey, sessionToken),
-    );
-    _signer = AWSSigV4Signer(credentialsProvider: _credentialsProvider!);
+    return AWSCredentials(accessKey, secretKey, sessionToken);
+  }
 
+  void _initializeCloudFront() {
     _cloudFrontDomain ??=
-      Platform.environment['MEDIA_CLOUDFRONT_DOMAIN'] ??
-      Platform.environment['CLOUDFRONT_DOMAIN'];
+        Platform.environment['MEDIA_CLOUDFRONT_DOMAIN'] ??
+        Platform.environment['CLOUDFRONT_DOMAIN'];
     _cloudFrontKeyPairId ??=
-      Platform.environment['MEDIA_CLOUDFRONT_KEY_PAIR_ID'] ??
-      Platform.environment['CLOUDFRONT_KEY_PAIR_ID'];
+        Platform.environment['MEDIA_CLOUDFRONT_KEY_PAIR_ID'] ??
+        Platform.environment['CLOUDFRONT_KEY_PAIR_ID'];
     _cloudFrontPrivateKeyPem ??=
-      Platform.environment['MEDIA_CLOUDFRONT_PRIVATE_KEY'] ??
-      Platform.environment['CLOUDFRONT_PRIVATE_KEY'];
-
-    _initialized = true;
+        Platform.environment['MEDIA_CLOUDFRONT_PRIVATE_KEY'] ??
+        Platform.environment['CLOUDFRONT_PRIVATE_KEY'];
   }
 
   @override
@@ -481,11 +491,7 @@ class AwsMediaStorage extends BaseMediaStorage {
       return null;
     }
 
-    final resource = Uri(
-      scheme: 'https',
-      host: domain,
-      path: '/$key',
-    );
+    final resource = Uri(scheme: 'https', host: domain, path: '/$key');
 
     return _signCloudFrontUrl(resource, expiresAt);
   }
@@ -538,9 +544,9 @@ class AwsMediaStorage extends BaseMediaStorage {
     );
     final signer = Signer('SHA-1/RSA');
     signer.init(true, PrivateKeyParameter<RSAPrivateKey>(key));
-    final signature = signer.generateSignature(
-      Uint8List.fromList(utf8.encode(policy)),
-    ) as RSASignature;
+    final signature =
+        signer.generateSignature(Uint8List.fromList(utf8.encode(policy)))
+            as RSASignature;
     return signature.bytes;
   }
 
@@ -584,6 +590,7 @@ class AwsMediaStorage extends BaseMediaStorage {
         .replaceAll('=', '_')
         .replaceAll('/', '~');
   }
+
   String _normalizeKey(String key) =>
       key.startsWith('/') ? key.substring(1) : key;
 
