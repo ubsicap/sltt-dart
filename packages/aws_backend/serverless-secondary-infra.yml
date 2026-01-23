@@ -73,6 +73,12 @@ provider:
       Resource:
         - ${self:custom.mediaBucketArn}
         - ${self:custom.mediaBucketArn}/*
+    - Effect: Allow
+      Action:
+        - ssm:GetParameter
+        - ssm:GetParameters
+      Resource:
+        - ${self:custom.sharedInfraArnPath}/*
 
 functions:
   # Main API handler for SLTT changes
