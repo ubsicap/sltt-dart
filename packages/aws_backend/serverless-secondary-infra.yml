@@ -6,19 +6,22 @@ service: sltt-secondary-infra
 custom:
   # Shared infrastructure stage (fixed to prd by default)
   sharedInfraStage: ${opt:sharedInfraStage, 'prd'}
+  # Shared infra account (source of SSM params)
+  sharedInfraAccountId: ${opt:sharedInfraAccountId, '379334555674'}
 
   # SSM parameter prefix for shared infrastructure values
   sharedInfraSsmPrefix: /sltt/infra/${self:custom.sharedInfraStage}
+  sharedInfraArnPath: arn:aws:ssm:${self:provider.region}:${self:custom.sharedInfraAccountId}:parameter${self:custom.sharedInfraSsmPrefix}
 
   # Shared infrastructure values from SSM (can be cross-account via SSM resource policy)
-  dynamoDbTable: ${ssm:${self:custom.sharedInfraSsmPrefix}/dynamodb/table-name}
-  dynamoDbTableArn: ${ssm:${self:custom.sharedInfraSsmPrefix}/dynamodb/table-arn}
-  mediaBucket: ${ssm:${self:custom.sharedInfraSsmPrefix}/s3/bucket-name}
-  mediaBucketArn: ${ssm:${self:custom.sharedInfraSsmPrefix}/s3/bucket-arn}
-  mediaCloudFrontDomain: ${ssm:${self:custom.sharedInfraSsmPrefix}/cloudfront/domain}
-  mediaCloudFrontKeyPairId: ${ssm:${self:custom.sharedInfraSsmPrefix}/cloudfront/keypair-id}
-  mediaCloudFrontPrivateKey: ${ssm:${self:custom.sharedInfraSsmPrefix}/cloudfront/private-key}
-  sharedInfraRegion: ${ssm:${self:custom.sharedInfraSsmPrefix}/region}
+  dynamoDbTable: ${ssm:${self:custom.sharedInfraArnPath}/dynamodb/table-name}
+  dynamoDbTableArn: ${ssm:${self:custom.sharedInfraArnPath}/dynamodb/table-arn}
+  mediaBucket: ${ssm:${self:custom.sharedInfraArnPath}/s3/bucket-name}
+  mediaBucketArn: ${ssm:${self:custom.sharedInfraArnPath}/s3/bucket-arn}
+  mediaCloudFrontDomain: ${ssm:${self:custom.sharedInfraArnPath}/cloudfront/domain}
+  mediaCloudFrontKeyPairId: ${ssm:${self:custom.sharedInfraArnPath}/cloudfront/keypair-id}
+  mediaCloudFrontPrivateKey: ${ssm:${self:custom.sharedInfraArnPath}/cloudfront/private-key}
+  sharedInfraRegion: ${ssm:${self:custom.sharedInfraArnPath}/region}
 
 provider:
   name: aws
