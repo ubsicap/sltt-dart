@@ -4,5 +4,6 @@ library aws_backend;
 export 'src/api/aws_rest_api_server.dart';
 export 'src/storage/dynamodb_storage_service.dart';
 export 'src/storage/media/aws_media_storage.dart';
+export 'src/utils/aws_credentials_exception.dart';
 export 'src/utils/aws_credentials_service.dart';
 export 'src/utils/storage_factory.dart';

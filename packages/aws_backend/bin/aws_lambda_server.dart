@@ -11,11 +11,15 @@ import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 /// consistent routing and endpoint behavior with local development.
 /// It can also be used by the local debugger when LOCAL_DEBUGGER=true.
 Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
-  final credentials = await AwsCredentialsService().getOrCreateCredentials();
-  final storage = StorageFactory.createStorage(credentials: credentials);
-  final mediaStorage = _createMediaStorageFromEnv(credentials: credentials);
+  DynamoDBStorageService? storage;
+  AwsMediaStorage? mediaStorage;
 
   try {
+    // Get credentials first - may throw AwsCredentialsException
+    final credentials = await AwsCredentialsService().getOrCreateCredentials();
+    storage = StorageFactory.createStorage(credentials: credentials);
+    mediaStorage = _createMediaStorageFromEnv(credentials: credentials);
+
     await storage.initialize();
     await mediaStorage.initialize();
 
@@ -31,19 +35,31 @@ Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
     final response = await server.handleApiGatewayEvent(event, router);
 
     return response;
+  } on AwsCredentialsException catch (e, stackTrace) {
+    SlttLogger.logger.severe('Credentials error: $e', e, stackTrace);
+    return {
+      'statusCode': e.statusCode,
+      'headers': {'Content-Type': 'application/json'},
+      'body': jsonEncode({
+        'error': 'Authentication failed',
+        'message': e.message,
+        'timestamp': DateTime.now().toIso8601String(),
+      }),
+    };
   } catch (e, stackTrace) {
     SlttLogger.logger.severe('Handler error: $e', e, stackTrace);
     return {
       'statusCode': 500,
       'headers': {'Content-Type': 'application/json'},
       'body': jsonEncode({
-        'error': 'Internal server error: $e',
+        'error': 'Internal server error',
+        'message': e.toString(),
         'timestamp': DateTime.now().toIso8601String(),
       }),
     };
   } finally {
-    await mediaStorage.close();
-    await storage.close();
+    await mediaStorage?.close();
+    await storage?.close();
   }
 }
 

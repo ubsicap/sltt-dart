@@ -70,34 +70,37 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
   final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] ?? 'true';
   final useLocalDynamoDB = useCloudStorage != 'true';
 
-  // Create DynamoDB storage service
-  final credentials = await AwsCredentialsService().getOrCreateCredentials();
-  final storage = StorageFactory.createStorage(
-    credentials: credentials,
-    useLocalDynamoDB: useLocalDynamoDB,
-  );
-
-  final mediaBucket = Platform.environment['MEDIA_BUCKET'];
-  final mediaRegion =
-      Platform.environment['AWS_REGION'] ??
-      Platform.environment['AWS_DEFAULT_REGION'] ??
-      'us-east-1';
-  final cloudFrontDomain = Platform.environment['MEDIA_CLOUDFRONT_DOMAIN'];
-  final cloudFrontKeyPairId =
-      Platform.environment['MEDIA_CLOUDFRONT_KEY_PAIR_ID'];
-  final cloudFrontPrivateKey =
-      Platform.environment['MEDIA_CLOUDFRONT_PRIVATE_KEY'];
-
-  final mediaStorage = AwsMediaStorage(
-    bucketName: mediaBucket ?? '',
-    region: mediaRegion,
-    credentials: credentials,
-    cloudFrontDomain: cloudFrontDomain,
-    cloudFrontKeyPairId: cloudFrontKeyPairId,
-    cloudFrontPrivateKey: cloudFrontPrivateKey,
-  );
+  DynamoDBStorageService? storage;
+  AwsMediaStorage? mediaStorage;
 
   try {
+    // Get credentials first - may throw AwsCredentialsException
+    final credentials = await AwsCredentialsService().getOrCreateCredentials();
+    storage = StorageFactory.createStorage(
+      credentials: credentials,
+      useLocalDynamoDB: useLocalDynamoDB,
+    );
+
+    final mediaBucket = Platform.environment['MEDIA_BUCKET'];
+    final mediaRegion =
+        Platform.environment['AWS_REGION'] ??
+        Platform.environment['AWS_DEFAULT_REGION'] ??
+        'us-east-1';
+    final cloudFrontDomain = Platform.environment['MEDIA_CLOUDFRONT_DOMAIN'];
+    final cloudFrontKeyPairId =
+        Platform.environment['MEDIA_CLOUDFRONT_KEY_PAIR_ID'];
+    final cloudFrontPrivateKey =
+        Platform.environment['MEDIA_CLOUDFRONT_PRIVATE_KEY'];
+
+    mediaStorage = AwsMediaStorage(
+      bucketName: mediaBucket ?? '',
+      region: mediaRegion,
+      credentials: credentials,
+      cloudFrontDomain: cloudFrontDomain,
+      cloudFrontKeyPairId: cloudFrontKeyPairId,
+      cloudFrontPrivateKey: cloudFrontPrivateKey,
+    );
+
     if (mediaBucket == null || mediaBucket.isEmpty) {
       throw StateError('MEDIA_BUCKET environment variable is required');
     }
@@ -155,11 +158,17 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     while (true) {
       await Future.delayed(const Duration(seconds: 1));
     }
+  } on AwsCredentialsException catch (e, stackTrace) {
+    print('❌ Credentials error: $e');
+    print('Stack trace: $stackTrace');
+    await mediaStorage?.close();
+    await storage?.close();
+    exit(1);
   } catch (e, stackTrace) {
     print('❌ Error setting up debug environment: $e');
     print('Stack trace: $stackTrace');
-    await mediaStorage.close();
-    await storage.close();
+    await mediaStorage?.close();
+    await storage?.close();
     exit(1);
   }
 }

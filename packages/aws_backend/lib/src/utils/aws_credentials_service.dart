@@ -5,6 +5,8 @@ import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
 import 'package:http/http.dart' as http;
 
+import 'aws_credentials_exception.dart';
+
 /// Centralized service for acquiring and caching AWS credentials.
 ///
 /// Handles both environment credentials and cross-account STS AssumeRole.
@@ -63,7 +65,9 @@ class AwsCredentialsService {
     final sessionToken = Platform.environment['AWS_SESSION_TOKEN'];
 
     if (accessKey == null || secretKey == null) {
-      throw Exception('AWS credentials not available in environment');
+      throw AwsCredentialsException(
+        'AWS credentials not available in environment (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY required)',
+      );
     }
 
     return AWSCredentials(accessKey, secretKey, sessionToken);
@@ -76,7 +80,7 @@ class AwsCredentialsService {
     final sessionToken = Platform.environment['AWS_SESSION_TOKEN'];
 
     if (accessKey == null || secretKey == null) {
-      throw Exception(
+      throw AwsCredentialsException(
         'AWS credentials not available in environment for role assumption',
       );
     }
@@ -143,8 +147,9 @@ class AwsCredentialsService {
       final response = await http.Response.fromStream(streamed);
 
       if (response.statusCode != 200) {
-        throw Exception(
+        throw AwsCredentialsException(
           'STS AssumeRole failed: ${response.statusCode} ${response.body}',
+          statusCode: 403,
         );
       }
 
@@ -163,7 +168,10 @@ class AwsCredentialsService {
       if (accessKeyIdMatch == null ||
           secretAccessKeyMatch == null ||
           sessionTokenMatch == null) {
-        throw Exception('Failed to parse AssumeRole response');
+        throw AwsCredentialsException(
+          'Failed to parse AssumeRole response',
+          statusCode: 500,
+        );
       }
 
       return AWSCredentials(
