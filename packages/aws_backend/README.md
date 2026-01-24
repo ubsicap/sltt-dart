@@ -197,7 +197,7 @@ npm run cloudfront:private-key-set-ssm:prd
 #### 1) Deploy shared infrastructure (once)
 
 ```bash
-npm run deploy:shared-infra
+npm run deploy:sltt-dart-prd:shared-infra
 ```
 
 #### 2) Populate shared SSM parameters (required)
@@ -239,8 +239,20 @@ npm run mirror:ssm-to-dev
 
 #### 4) Deploy the secondary API stack
 
+Choose the appropriate deployment script based on your AWS profile and target stage:
+
 ```bash
-npm run deploy:secondary:dev
+# Deploy to dev stage using sltt-dart-prd profile
+npm run deploy:sltt-dart-prd:secondary:dev
+
+# Deploy to dev stage using sltt-dart-dev profile
+npm run deploy:sltt-dart-dev:secondary:dev
+
+# Deploy to tst stage using sltt-dart-dev profile
+npm run deploy:sltt-dart-dev:secondary:tst
+
+# Deploy to prod stage using sltt-dart-prd profile
+npm run deploy:sltt-dart-prd:secondary:prod
 ```
 
 If you maintain separate dev/tst CloudFront keys for testing, set them in SSM
@@ -254,9 +266,7 @@ npm run cloudfront:public-key-set-ssm:tst
 npm run cloudfront:private-key-set-ssm:tst
 ```
 
-```bash
-# Deploy to AWS with the secondary stack
-serverless deploy --config serverless-secondary-infra.yml --stage dev --aws-profile sltt-dart-dev
+**Note**: Each script combines build and deployment. The format is `deploy:<aws-profile>:secondary:<stage>`
 
 # Or use the provided npm script (build + deploy)
 npm run deploy:secondary:dev
