@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:aws_backend/aws_backend.dart';
+import 'package:sltt_core/sltt_core.dart';
 
 /// Debugger entrypoint for AWS backend that sets up environment variables
 /// from serverless deployment and runs a local shelf server for debugging.
@@ -11,6 +12,9 @@ import 'package:aws_backend/aws_backend.dart';
 /// This allows you to debug the AWS backend locally while connecting to the
 /// real DynamoDB table in AWS, with all environment variables properly set.
 Future<void> main(List<String> args) async {
+  // Enable debug logging for the debug server
+  SlttLogger.init(level: SlttLogLevel.fine);
+
   // Parse command line arguments
   String? awsProfile;
   String stage = 'dev';
