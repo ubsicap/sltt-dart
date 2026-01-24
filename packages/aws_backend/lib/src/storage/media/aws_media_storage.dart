@@ -15,27 +15,27 @@ class AwsMediaStorage extends BaseMediaStorage {
   AwsMediaStorage({
     required this.bucketName,
     required this.region,
+    required AWSCredentials credentials,
     String? cloudFrontDomain,
     String? cloudFrontKeyPairId,
     String? cloudFrontPrivateKey,
-    AWSCredentials? credentials,
     bool enableTransferAcceleration = true,
     Duration presignedUrlDuration = const Duration(minutes: 15),
     http.Client? httpClient,
-  }) : _enableTransferAcceleration = enableTransferAcceleration,
+  }) : _credentials = credentials,
+       _enableTransferAcceleration = enableTransferAcceleration,
        _presignedUrlDuration = presignedUrlDuration,
        _httpClient = httpClient ?? http.Client(),
        _ownsHttpClient = httpClient == null,
        _cloudFrontDomain = cloudFrontDomain,
        _cloudFrontKeyPairId = cloudFrontKeyPairId,
-       _cloudFrontPrivateKeyPem = cloudFrontPrivateKey,
-       _credentials = credentials;
+       _cloudFrontPrivateKeyPem = cloudFrontPrivateKey;
 
   final String bucketName;
   final String region;
+  final AWSCredentials _credentials;
   final bool _enableTransferAcceleration;
   final Duration _presignedUrlDuration;
-  final AWSCredentials? _credentials;
   static final S3ServiceConfiguration _s3Config = S3ServiceConfiguration(
     signPayload: false,
   );
@@ -63,27 +63,10 @@ class AwsMediaStorage extends BaseMediaStorage {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    // Use provided cross-account credentials if available, otherwise fall back to environment
-    final credentials = _credentials ?? _getEnvironmentCredentials();
-
-    _credentialsProvider = AWSCredentialsProvider(credentials);
+    _credentialsProvider = AWSCredentialsProvider(_credentials);
     _signer = AWSSigV4Signer(credentialsProvider: _credentialsProvider!);
     _initializeCloudFront();
     _initialized = true;
-  }
-
-  AWSCredentials _getEnvironmentCredentials() {
-    final accessKey = Platform.environment['AWS_ACCESS_KEY_ID'];
-    final secretKey = Platform.environment['AWS_SECRET_ACCESS_KEY'];
-    final sessionToken = Platform.environment['AWS_SESSION_TOKEN'];
-
-    if (accessKey == null || secretKey == null) {
-      throw UnsupportedError(
-        'AWS credentials are required for media storage (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY).',
-      );
-    }
-
-    return AWSCredentials(accessKey, secretKey, sessionToken);
   }
 
   void _initializeCloudFront() {

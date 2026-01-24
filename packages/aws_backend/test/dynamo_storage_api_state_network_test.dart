@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:aws_backend/src/models/dynamo_change_log_entry.dart'
     show dynamoChangeLogEntryFactoryRegistration;
 import 'package:aws_backend/src/storage/dynamodb_storage_service.dart';
+import 'package:aws_common/aws_common.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
@@ -66,6 +67,11 @@ void main() {
       tableName: testTableName,
       useLocalDynamoDB: true,
       localEndpoint: localEndpoint,
+      credentials: const AWSCredentials(
+        'test-key',
+        'test-secret',
+        'test-token',
+      ),
     );
 
     // Initialize will create the table if it doesn't exist when useLocalDynamoDB=true

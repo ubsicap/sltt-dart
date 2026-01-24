@@ -71,10 +71,11 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
   final useLocalDynamoDB = useCloudStorage != 'true';
 
   // Create DynamoDB storage service
-  final storageResult = await StorageFactory.createStorage(
+  final credentials = await AwsCredentialsService().getOrCreateCredentials();
+  final storage = StorageFactory.createStorage(
+    credentials: credentials,
     useLocalDynamoDB: useLocalDynamoDB,
   );
-  final storageInstance = storageResult.storage;
 
   final mediaBucket = Platform.environment['MEDIA_BUCKET'];
   final mediaRegion =
@@ -90,10 +91,10 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
   final mediaStorage = AwsMediaStorage(
     bucketName: mediaBucket ?? '',
     region: mediaRegion,
+    credentials: credentials,
     cloudFrontDomain: cloudFrontDomain,
     cloudFrontKeyPairId: cloudFrontKeyPairId,
     cloudFrontPrivateKey: cloudFrontPrivateKey,
-    credentials: storageResult.crossAccountCredentials,
   );
 
   try {
@@ -102,10 +103,10 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     }
 
     print('🗄️  Configuration:');
-    print('   Table: ${storageInstance.tableName}');
-    print('   Region: ${storageInstance.region}');
+    print('   Table: ${storage.tableName}');
+    print('   Region: ${storage.region}');
     print('   USE_CLOUD_STORAGE: $useCloudStorage');
-    print('   useLocalDynamoDB: ${storageInstance.useLocalDynamoDB}');
+    print('   useLocalDynamoDB: ${storage.useLocalDynamoDB}');
     print('   MEDIA_BUCKET: $mediaBucket');
     print('   CLOUDFRONT_DOMAIN: $cloudFrontDomain');
     print('   CLOUDFRONT_KEY_PAIR_ID: $cloudFrontKeyPairId');
@@ -113,14 +114,14 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('🗄️  Connecting to DynamoDB...');
 
     // Initialize storage
-    await storageInstance.initialize();
+    await storage.initialize();
     await mediaStorage.initialize();
     print('✅ DynamoDB connection established');
 
     // Create server instance
     final serverInstance = AwsRestApiServer(
       serverName: 'Debug AWS Backend',
-      storage: storageInstance,
+      storage: storage,
       mediaStorage: mediaStorage,
     );
 
@@ -129,7 +130,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     await serverInstance.start(port: port);
 
     print('✅ Debug server running on http://localhost:$port');
-    print('📡 Connected to AWS DynamoDB table: ${storageInstance.tableName}');
+    print('📡 Connected to AWS DynamoDB table: ${storage.tableName}');
     print('🐛 Ready for VS Code debugging!');
     print('');
     print('Available endpoints:');
@@ -158,7 +159,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('❌ Error setting up debug environment: $e');
     print('Stack trace: $stackTrace');
     await mediaStorage.close();
-    await storageInstance.close();
+    await storage.close();
     exit(1);
   }
 }

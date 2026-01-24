@@ -2,7 +2,15 @@ import 'package:aws_backend/aws_backend.dart';
 import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
 import 'package:aws_backend/src/models/dynamo_entity_state.dart';
 import 'package:aws_backend/src/models/dynamo_entity_state_serialization_registry.dart';
+import 'package:aws_common/aws_common.dart';
 import 'package:sltt_core/sltt_core.dart';
+
+// Dummy credentials for testing (only used when useLocalDynamoDB=true)
+const _testCredentials = AWSCredentials(
+  'test-key',
+  'test-secret',
+  'test-token',
+);
 
 class FakeDynamoDBStorageService extends DynamoDBStorageService {
   FakeDynamoDBStorageService()
@@ -10,6 +18,7 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
         tableName: 'test-table',
         region: 'us-east-1',
         useLocalDynamoDB: true,
+        credentials: _testCredentials,
       ) {
     // Ensure serialization factories are registered for tests that
     // deserialize/validate change-log entries without calling real storage

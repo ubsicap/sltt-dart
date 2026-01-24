@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:aws_common/aws_common.dart';
@@ -42,15 +41,15 @@ class DynamoDBStorageService extends BaseStorageService {
     this.region = 'us-east-1',
     this.useLocalDynamoDB = false,
     this.localEndpoint,
+    required this.credentials,
     http.Client? httpClient,
-    this.crossAccountCredentials,
   }) : _httpClient = httpClient ?? http.Client();
 
   final String tableName;
   final String region;
   final bool useLocalDynamoDB;
   final String? localEndpoint;
-  final AWSCredentials? crossAccountCredentials;
+  final AWSCredentials credentials;
 
   final http.Client _httpClient;
 
@@ -1861,20 +1860,6 @@ class DynamoDBStorageService extends BaseStorageService {
       return _httpClient.post(uri, headers: headers, body: body);
     }
 
-    final AWSCredentials credentials;
-    if (crossAccountCredentials != null) {
-      credentials = crossAccountCredentials!;
-    } else {
-      final accessKey = Platform.environment['AWS_ACCESS_KEY_ID'];
-      final secretKey = Platform.environment['AWS_SECRET_ACCESS_KEY'];
-      final sessionToken = Platform.environment['AWS_SESSION_TOKEN'];
-
-      if (accessKey == null || secretKey == null) {
-        throw Exception('AWS credentials not available in environment');
-      }
-
-      credentials = AWSCredentials(accessKey, secretKey, sessionToken);
-    }
     final signer = AWSSigV4Signer(
       credentialsProvider: AWSCredentialsProvider(credentials),
     );
