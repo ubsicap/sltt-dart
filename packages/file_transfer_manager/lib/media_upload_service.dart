@@ -13,6 +13,7 @@ import 'package:file_transfer_manager/media_transfer_service_shared.dart'
         TransferJob,
         shouldAdmitMoreTransfers;
 import 'package:path/path.dart' as p;
+import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 const _defaultPartSizeBytes = 5 * 1024 * 1024; // 5MB
 const _defaultUploadRequestsConcurrency = 4;
@@ -127,6 +128,7 @@ class MediaUploadService {
 
   Future<void> startProcessingUploads() async {
     _uploadsEnabled = true;
+    SlttLogger.logger.info('[MediaUpload] Started processing uploads');
     await processPendingUploads();
   }
 
@@ -135,6 +137,7 @@ class MediaUploadService {
   Future<void> stopProcessingUploads() async {
     _uploadsEnabled = false;
     _rerunRequested = false;
+    SlttLogger.logger.info('[MediaUpload] Stopped processing uploads');
     _reportTotals();
   }
 
@@ -218,11 +221,12 @@ class MediaUploadService {
                   _fileQueue.addFirst(file);
                 } else {
                   // Log other errors
-                  // ignore: avoid_print
                   final errorMessage =
                       'Error uploading file ${file.path}: $error';
-                  print(
-                    'Error uploading file ${file.path}: $error\n$stackTrace',
+                  SlttLogger.logger.severe(
+                    '[MediaUpload] Error uploading file ${file.path}: $error',
+                    error,
+                    stackTrace,
                   );
                   _reportTotals(errorMessage: errorMessage);
                 }
@@ -306,6 +310,9 @@ class MediaUploadService {
       if (headResponse.statusCode == HttpStatus.ok) {
         _adjustPendingBytes(-fileSize);
         await _moveToClouded(file, remoteFileKey);
+        SlttLogger.logger.fine(
+          '[MediaUpload] File already exists in cloud: $remoteFileKey',
+        );
         _reportTotals();
         return;
       }
@@ -392,6 +399,9 @@ class MediaUploadService {
       );
       await _deletePersistedUploadId(file);
       await _moveToClouded(file, remoteFileKey);
+      SlttLogger.logger.info(
+        '[MediaUpload] Successfully uploaded: $remoteFileKey',
+      );
       _reportTotals();
     } finally {
       _activeUploadJobs.remove(remoteFileKey);

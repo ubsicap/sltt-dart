@@ -13,6 +13,7 @@ import 'package:file_transfer_manager/media_transfer_service_shared.dart'
         TransferPriority,
         shouldAdmitMoreTransfers;
 import 'package:path/path.dart' as p;
+import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 const _defaultDownloadRequestsConcurrency = 4;
 
@@ -191,6 +192,7 @@ class MediaDownloadService {
   void stopProcessingDownloads() {
     _downloadsEnabled = false;
     _clearRetryLaterJobs(cancelTimers: true, removeEntries: false);
+    SlttLogger.logger.info('[MediaDownload] Stopped processing downloads');
     _reportPendingDownloads();
   }
 
@@ -207,6 +209,7 @@ class MediaDownloadService {
       }
     }
     _downloadsEnabled = true;
+    SlttLogger.logger.info('[MediaDownload] Started processing downloads');
     _processQueue();
   }
 
@@ -614,6 +617,9 @@ class MediaDownloadService {
       await concatenateFiles(parts: orderedParts, output: destFile);
 
       await downloadDir.delete(recursive: true);
+      SlttLogger.logger.info(
+        '[MediaDownload] Successfully downloaded: ${job.remoteFileKey}',
+      );
       job.progressController.add(
         DownloadProgress(
           partsCompleted: totalParts,
