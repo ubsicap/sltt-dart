@@ -25,6 +25,8 @@ void main() {
     'data_name_cloudAt_',
     'data_storedFilename_changeAt_',
     'data_storedFilename_cloudAt_',
+    'data_durationMs_changeAt_',
+    'data_durationMs_cloudAt_',
     'data_visibility_changeAt_',
     'data_visibility_cloudAt_',
     'data_rank_changeAt_',
@@ -67,6 +69,12 @@ void main() {
     'data_storedFilename_cid_',
     'data_storedFilename_changeBy_',
     'data_storedFilename_cloudAt_',
+    'data_durationMs',
+    'data_durationMs_dataSchemaRev_',
+    'data_durationMs_changeAt_',
+    'data_durationMs_cid_',
+    'data_durationMs_changeBy_',
+    'data_durationMs_cloudAt_',
     'data_visibility',
     'data_visibility_dataSchemaRev_',
     'data_visibility_changeAt_',
@@ -105,6 +113,8 @@ void main() {
     required DateTime expectedDataNameCloudAt,
     required DateTime expectedDataStoredFilenameChangeAt,
     required DateTime expectedDataStoredFilenameCloudAt,
+    required DateTime expectedDataDurationMsChangeAt,
+    required DateTime expectedDataDurationMsCloudAt,
     required DateTime expectedDataVisibilityChangeAt,
     required DateTime expectedDataVisibilityCloudAt,
     required DateTime expectedChangeAt,
@@ -141,6 +151,16 @@ void main() {
       state.data_storedFilename_cloudAt_,
       equals(expectedDataStoredFilenameCloudAt.toUtc()),
       reason: '${prefix}data_storedFilename_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_durationMs_changeAt_,
+      equals(expectedDataDurationMsChangeAt.toUtc()),
+      reason: '${prefix}data_durationMs_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_durationMs_cloudAt_,
+      equals(expectedDataDurationMsCloudAt.toUtc()),
+      reason: '${prefix}data_durationMs_cloudAt_ should be UTC',
     );
     expect(
       state.data_visibility_changeAt_,
@@ -233,6 +253,12 @@ void main() {
         final localDataStoredFilenameCloudAt = DateTime.now().subtract(
           const Duration(minutes: 17),
         );
+        final localDataDurationMsChangeAt = DateTime.now().subtract(
+          const Duration(minutes: 14),
+        );
+        final localDataDurationMsCloudAt = DateTime.now().subtract(
+          const Duration(minutes: 13),
+        );
         final localDataVisibilityChangeAt = DateTime.now().subtract(
           const Duration(minutes: 16),
         );
@@ -308,6 +334,15 @@ void main() {
           ),
           data_storedFilename_changeBy_: 'test-user-7',
           data_storedFilename_cloudAt_: localDataStoredFilenameCloudAt,
+          data_durationMs: 45000,
+          data_durationMs_dataSchemaRev_: 7,
+          data_durationMs_changeAt_: localDataDurationMsChangeAt,
+          data_durationMs_cid_: generateCid(
+            entityType: EntityType.video,
+            userId: 'test-user-7',
+          ),
+          data_durationMs_changeBy_: 'test-user-7',
+          data_durationMs_cloudAt_: localDataDurationMsCloudAt,
           data_visibility: ['test-user-7'],
           data_visibility_dataSchemaRev_: 7,
           data_visibility_changeAt_: localDataVisibilityChangeAt,
@@ -384,6 +419,8 @@ void main() {
           expectedDataNameCloudAt: localDataNameCloudAt,
           expectedDataStoredFilenameChangeAt: localDataStoredFilenameChangeAt,
           expectedDataStoredFilenameCloudAt: localDataStoredFilenameCloudAt,
+          expectedDataDurationMsChangeAt: localDataDurationMsChangeAt,
+          expectedDataDurationMsCloudAt: localDataDurationMsCloudAt,
           expectedDataVisibilityChangeAt: localDataVisibilityChangeAt,
           expectedDataVisibilityCloudAt: localDataVisibilityCloudAt,
           expectedChangeAt: localChangeAt,
@@ -426,6 +463,8 @@ void main() {
           expectedDataNameCloudAt: localDataNameCloudAt,
           expectedDataStoredFilenameChangeAt: localDataStoredFilenameChangeAt,
           expectedDataStoredFilenameCloudAt: localDataStoredFilenameCloudAt,
+          expectedDataDurationMsChangeAt: localDataDurationMsChangeAt,
+          expectedDataDurationMsCloudAt: localDataDurationMsCloudAt,
           expectedDataVisibilityChangeAt: localDataVisibilityChangeAt,
           expectedDataVisibilityCloudAt: localDataVisibilityCloudAt,
           expectedChangeAt: localChangeAt,

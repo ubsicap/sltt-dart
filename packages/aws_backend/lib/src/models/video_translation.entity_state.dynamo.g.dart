@@ -125,6 +125,30 @@ DynamoVideoDataEntityState _$DynamoVideoDataEntityStateFromJson(
       'data_storedFilename_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
+    data_durationMs: $checkedConvert(
+      'data_durationMs',
+      (v) => (v as num).toInt(),
+    ),
+    data_durationMs_dataSchemaRev_: $checkedConvert(
+      'data_durationMs_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_durationMs_changeAt_: $checkedConvert(
+      'data_durationMs_changeAt_',
+      (v) => DateTime.parse(v as String),
+    ),
+    data_durationMs_cid_: $checkedConvert(
+      'data_durationMs_cid_',
+      (v) => v as String?,
+    ),
+    data_durationMs_changeBy_: $checkedConvert(
+      'data_durationMs_changeBy_',
+      (v) => v as String,
+    ),
+    data_durationMs_cloudAt_: $checkedConvert(
+      'data_durationMs_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
     data_visibility: $checkedConvert(
       'data_visibility',
       (v) => (v as List<dynamic>).map((e) => e as String).toList(),
@@ -268,6 +292,14 @@ Map<String, dynamic> _$DynamoVideoDataEntityStateToJson(
   'data_storedFilename_cid_': instance.data_storedFilename_cid_,
   'data_storedFilename_changeBy_': instance.data_storedFilename_changeBy_,
   'data_storedFilename_cloudAt_': instance.data_storedFilename_cloudAt_
+      ?.toIso8601String(),
+  'data_durationMs': instance.data_durationMs,
+  'data_durationMs_dataSchemaRev_': instance.data_durationMs_dataSchemaRev_,
+  'data_durationMs_changeAt_': instance.data_durationMs_changeAt_
+      .toIso8601String(),
+  'data_durationMs_cid_': instance.data_durationMs_cid_,
+  'data_durationMs_changeBy_': instance.data_durationMs_changeBy_,
+  'data_durationMs_cloudAt_': instance.data_durationMs_cloudAt_
       ?.toIso8601String(),
   'data_visibility': instance.data_visibility,
   'data_visibility_dataSchemaRev_': instance.data_visibility_dataSchemaRev_,

@@ -9,11 +9,13 @@ class VideoTranslationData extends BaseDataFields {
   final String name;
   final List<String> visibility;
   final String storedFilename;
+  final int durationMs;
 
   VideoTranslationData({
     required this.name,
     required this.visibility,
     required this.storedFilename,
+    required this.durationMs,
     required super.parentId,
     required super.parentProp,
     required super.rank,

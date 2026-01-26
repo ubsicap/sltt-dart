@@ -108,208 +108,238 @@ const IsarVideoDataEntityStateSchema = CollectionSchema(
       name: r'data_deleted_dataSchemaRev_',
       type: IsarType.long,
     ),
-    r'data_name': PropertySchema(
+    r'data_durationMs': PropertySchema(
       id: 18,
+      name: r'data_durationMs',
+      type: IsarType.long,
+    ),
+    r'data_durationMs_changeAt_': PropertySchema(
+      id: 19,
+      name: r'data_durationMs_changeAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_durationMs_changeBy_': PropertySchema(
+      id: 20,
+      name: r'data_durationMs_changeBy_',
+      type: IsarType.string,
+    ),
+    r'data_durationMs_cid_': PropertySchema(
+      id: 21,
+      name: r'data_durationMs_cid_',
+      type: IsarType.string,
+    ),
+    r'data_durationMs_cloudAt_': PropertySchema(
+      id: 22,
+      name: r'data_durationMs_cloudAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_durationMs_dataSchemaRev_': PropertySchema(
+      id: 23,
+      name: r'data_durationMs_dataSchemaRev_',
+      type: IsarType.long,
+    ),
+    r'data_name': PropertySchema(
+      id: 24,
       name: r'data_name',
       type: IsarType.string,
     ),
     r'data_name_changeAt_': PropertySchema(
-      id: 19,
+      id: 25,
       name: r'data_name_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_name_changeBy_': PropertySchema(
-      id: 20,
+      id: 26,
       name: r'data_name_changeBy_',
       type: IsarType.string,
     ),
     r'data_name_cid_': PropertySchema(
-      id: 21,
+      id: 27,
       name: r'data_name_cid_',
       type: IsarType.string,
     ),
     r'data_name_cloudAt_': PropertySchema(
-      id: 22,
+      id: 28,
       name: r'data_name_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_name_dataSchemaRev_': PropertySchema(
-      id: 23,
+      id: 29,
       name: r'data_name_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_parentId': PropertySchema(
-      id: 24,
+      id: 30,
       name: r'data_parentId',
       type: IsarType.string,
     ),
     r'data_parentId_changeAt_': PropertySchema(
-      id: 25,
+      id: 31,
       name: r'data_parentId_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentId_changeBy_': PropertySchema(
-      id: 26,
+      id: 32,
       name: r'data_parentId_changeBy_',
       type: IsarType.string,
     ),
     r'data_parentId_cid_': PropertySchema(
-      id: 27,
+      id: 33,
       name: r'data_parentId_cid_',
       type: IsarType.string,
     ),
     r'data_parentId_cloudAt_': PropertySchema(
-      id: 28,
+      id: 34,
       name: r'data_parentId_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentId_dataSchemaRev_': PropertySchema(
-      id: 29,
+      id: 35,
       name: r'data_parentId_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_parentProp': PropertySchema(
-      id: 30,
+      id: 36,
       name: r'data_parentProp',
       type: IsarType.string,
     ),
     r'data_parentProp_changeAt_': PropertySchema(
-      id: 31,
+      id: 37,
       name: r'data_parentProp_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentProp_changeBy_': PropertySchema(
-      id: 32,
+      id: 38,
       name: r'data_parentProp_changeBy_',
       type: IsarType.string,
     ),
     r'data_parentProp_cid_': PropertySchema(
-      id: 33,
+      id: 39,
       name: r'data_parentProp_cid_',
       type: IsarType.string,
     ),
     r'data_parentProp_cloudAt_': PropertySchema(
-      id: 34,
+      id: 40,
       name: r'data_parentProp_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentProp_dataSchemaRev_': PropertySchema(
-      id: 35,
+      id: 41,
       name: r'data_parentProp_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_rank': PropertySchema(
-      id: 36,
+      id: 42,
       name: r'data_rank',
       type: IsarType.string,
     ),
     r'data_rank_changeAt_': PropertySchema(
-      id: 37,
+      id: 43,
       name: r'data_rank_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_rank_changeBy_': PropertySchema(
-      id: 38,
+      id: 44,
       name: r'data_rank_changeBy_',
       type: IsarType.string,
     ),
     r'data_rank_cid_': PropertySchema(
-      id: 39,
+      id: 45,
       name: r'data_rank_cid_',
       type: IsarType.string,
     ),
     r'data_rank_cloudAt_': PropertySchema(
-      id: 40,
+      id: 46,
       name: r'data_rank_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_rank_dataSchemaRev_': PropertySchema(
-      id: 41,
+      id: 47,
       name: r'data_rank_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_storedFilename': PropertySchema(
-      id: 42,
+      id: 48,
       name: r'data_storedFilename',
       type: IsarType.string,
     ),
     r'data_storedFilename_changeAt_': PropertySchema(
-      id: 43,
+      id: 49,
       name: r'data_storedFilename_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_storedFilename_changeBy_': PropertySchema(
-      id: 44,
+      id: 50,
       name: r'data_storedFilename_changeBy_',
       type: IsarType.string,
     ),
     r'data_storedFilename_cid_': PropertySchema(
-      id: 45,
+      id: 51,
       name: r'data_storedFilename_cid_',
       type: IsarType.string,
     ),
     r'data_storedFilename_cloudAt_': PropertySchema(
-      id: 46,
+      id: 52,
       name: r'data_storedFilename_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_storedFilename_dataSchemaRev_': PropertySchema(
-      id: 47,
+      id: 53,
       name: r'data_storedFilename_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_visibility': PropertySchema(
-      id: 48,
+      id: 54,
       name: r'data_visibility',
       type: IsarType.stringList,
     ),
     r'data_visibility_changeAt_': PropertySchema(
-      id: 49,
+      id: 55,
       name: r'data_visibility_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_visibility_changeBy_': PropertySchema(
-      id: 50,
+      id: 56,
       name: r'data_visibility_changeBy_',
       type: IsarType.string,
     ),
     r'data_visibility_cid_': PropertySchema(
-      id: 51,
+      id: 57,
       name: r'data_visibility_cid_',
       type: IsarType.string,
     ),
     r'data_visibility_cloudAt_': PropertySchema(
-      id: 52,
+      id: 58,
       name: r'data_visibility_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_visibility_dataSchemaRev_': PropertySchema(
-      id: 53,
+      id: 59,
       name: r'data_visibility_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'domainType': PropertySchema(
-      id: 54,
+      id: 60,
       name: r'domainType',
       type: IsarType.string,
     ),
     r'entityId': PropertySchema(
-      id: 55,
+      id: 61,
       name: r'entityId',
       type: IsarType.string,
     ),
     r'entityType': PropertySchema(
-      id: 56,
+      id: 62,
       name: r'entityType',
       type: IsarType.string,
     ),
     r'schemaVersion': PropertySchema(
-      id: 57,
+      id: 63,
       name: r'schemaVersion',
       type: IsarType.long,
     ),
     r'unknownJson': PropertySchema(
-      id: 58,
+      id: 64,
       name: r'unknownJson',
       type: IsarType.string,
     ),
@@ -364,6 +394,13 @@ int _isarVideoDataEntityStateEstimateSize(
   }
   {
     final value = object.data_deleted_cid_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.data_durationMs_changeBy_.length * 3;
+  {
+    final value = object.data_durationMs_cid_;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
     }
@@ -448,47 +485,53 @@ void _isarVideoDataEntityStateSerialize(
   writer.writeString(offsets[15], object.data_deleted_cid_);
   writer.writeDateTime(offsets[16], object.data_deleted_cloudAt_);
   writer.writeLong(offsets[17], object.data_deleted_dataSchemaRev_);
-  writer.writeString(offsets[18], object.data_name);
-  writer.writeDateTime(offsets[19], object.data_name_changeAt_);
-  writer.writeString(offsets[20], object.data_name_changeBy_);
-  writer.writeString(offsets[21], object.data_name_cid_);
-  writer.writeDateTime(offsets[22], object.data_name_cloudAt_);
-  writer.writeLong(offsets[23], object.data_name_dataSchemaRev_);
-  writer.writeString(offsets[24], object.data_parentId);
-  writer.writeDateTime(offsets[25], object.data_parentId_changeAt_);
-  writer.writeString(offsets[26], object.data_parentId_changeBy_);
-  writer.writeString(offsets[27], object.data_parentId_cid_);
-  writer.writeDateTime(offsets[28], object.data_parentId_cloudAt_);
-  writer.writeLong(offsets[29], object.data_parentId_dataSchemaRev_);
-  writer.writeString(offsets[30], object.data_parentProp);
-  writer.writeDateTime(offsets[31], object.data_parentProp_changeAt_);
-  writer.writeString(offsets[32], object.data_parentProp_changeBy_);
-  writer.writeString(offsets[33], object.data_parentProp_cid_);
-  writer.writeDateTime(offsets[34], object.data_parentProp_cloudAt_);
-  writer.writeLong(offsets[35], object.data_parentProp_dataSchemaRev_);
-  writer.writeString(offsets[36], object.data_rank);
-  writer.writeDateTime(offsets[37], object.data_rank_changeAt_);
-  writer.writeString(offsets[38], object.data_rank_changeBy_);
-  writer.writeString(offsets[39], object.data_rank_cid_);
-  writer.writeDateTime(offsets[40], object.data_rank_cloudAt_);
-  writer.writeLong(offsets[41], object.data_rank_dataSchemaRev_);
-  writer.writeString(offsets[42], object.data_storedFilename);
-  writer.writeDateTime(offsets[43], object.data_storedFilename_changeAt_);
-  writer.writeString(offsets[44], object.data_storedFilename_changeBy_);
-  writer.writeString(offsets[45], object.data_storedFilename_cid_);
-  writer.writeDateTime(offsets[46], object.data_storedFilename_cloudAt_);
-  writer.writeLong(offsets[47], object.data_storedFilename_dataSchemaRev_);
-  writer.writeStringList(offsets[48], object.data_visibility);
-  writer.writeDateTime(offsets[49], object.data_visibility_changeAt_);
-  writer.writeString(offsets[50], object.data_visibility_changeBy_);
-  writer.writeString(offsets[51], object.data_visibility_cid_);
-  writer.writeDateTime(offsets[52], object.data_visibility_cloudAt_);
-  writer.writeLong(offsets[53], object.data_visibility_dataSchemaRev_);
-  writer.writeString(offsets[54], object.domainType);
-  writer.writeString(offsets[55], object.entityId);
-  writer.writeString(offsets[56], object.entityType);
-  writer.writeLong(offsets[57], object.schemaVersion);
-  writer.writeString(offsets[58], object.unknownJson);
+  writer.writeLong(offsets[18], object.data_durationMs);
+  writer.writeDateTime(offsets[19], object.data_durationMs_changeAt_);
+  writer.writeString(offsets[20], object.data_durationMs_changeBy_);
+  writer.writeString(offsets[21], object.data_durationMs_cid_);
+  writer.writeDateTime(offsets[22], object.data_durationMs_cloudAt_);
+  writer.writeLong(offsets[23], object.data_durationMs_dataSchemaRev_);
+  writer.writeString(offsets[24], object.data_name);
+  writer.writeDateTime(offsets[25], object.data_name_changeAt_);
+  writer.writeString(offsets[26], object.data_name_changeBy_);
+  writer.writeString(offsets[27], object.data_name_cid_);
+  writer.writeDateTime(offsets[28], object.data_name_cloudAt_);
+  writer.writeLong(offsets[29], object.data_name_dataSchemaRev_);
+  writer.writeString(offsets[30], object.data_parentId);
+  writer.writeDateTime(offsets[31], object.data_parentId_changeAt_);
+  writer.writeString(offsets[32], object.data_parentId_changeBy_);
+  writer.writeString(offsets[33], object.data_parentId_cid_);
+  writer.writeDateTime(offsets[34], object.data_parentId_cloudAt_);
+  writer.writeLong(offsets[35], object.data_parentId_dataSchemaRev_);
+  writer.writeString(offsets[36], object.data_parentProp);
+  writer.writeDateTime(offsets[37], object.data_parentProp_changeAt_);
+  writer.writeString(offsets[38], object.data_parentProp_changeBy_);
+  writer.writeString(offsets[39], object.data_parentProp_cid_);
+  writer.writeDateTime(offsets[40], object.data_parentProp_cloudAt_);
+  writer.writeLong(offsets[41], object.data_parentProp_dataSchemaRev_);
+  writer.writeString(offsets[42], object.data_rank);
+  writer.writeDateTime(offsets[43], object.data_rank_changeAt_);
+  writer.writeString(offsets[44], object.data_rank_changeBy_);
+  writer.writeString(offsets[45], object.data_rank_cid_);
+  writer.writeDateTime(offsets[46], object.data_rank_cloudAt_);
+  writer.writeLong(offsets[47], object.data_rank_dataSchemaRev_);
+  writer.writeString(offsets[48], object.data_storedFilename);
+  writer.writeDateTime(offsets[49], object.data_storedFilename_changeAt_);
+  writer.writeString(offsets[50], object.data_storedFilename_changeBy_);
+  writer.writeString(offsets[51], object.data_storedFilename_cid_);
+  writer.writeDateTime(offsets[52], object.data_storedFilename_cloudAt_);
+  writer.writeLong(offsets[53], object.data_storedFilename_dataSchemaRev_);
+  writer.writeStringList(offsets[54], object.data_visibility);
+  writer.writeDateTime(offsets[55], object.data_visibility_changeAt_);
+  writer.writeString(offsets[56], object.data_visibility_changeBy_);
+  writer.writeString(offsets[57], object.data_visibility_cid_);
+  writer.writeDateTime(offsets[58], object.data_visibility_cloudAt_);
+  writer.writeLong(offsets[59], object.data_visibility_dataSchemaRev_);
+  writer.writeString(offsets[60], object.domainType);
+  writer.writeString(offsets[61], object.entityId);
+  writer.writeString(offsets[62], object.entityType);
+  writer.writeLong(offsets[63], object.schemaVersion);
+  writer.writeString(offsets[64], object.unknownJson);
 }
 
 IsarVideoDataEntityState _isarVideoDataEntityStateDeserialize(
@@ -516,48 +559,54 @@ IsarVideoDataEntityState _isarVideoDataEntityStateDeserialize(
     data_deleted_cid_: reader.readStringOrNull(offsets[15]),
     data_deleted_cloudAt_: reader.readDateTimeOrNull(offsets[16]),
     data_deleted_dataSchemaRev_: reader.readLongOrNull(offsets[17]),
-    data_name: reader.readString(offsets[18]),
-    data_name_changeAt_: reader.readDateTime(offsets[19]),
-    data_name_changeBy_: reader.readString(offsets[20]),
-    data_name_cid_: reader.readStringOrNull(offsets[21]),
-    data_name_cloudAt_: reader.readDateTimeOrNull(offsets[22]),
-    data_name_dataSchemaRev_: reader.readLongOrNull(offsets[23]),
-    data_parentId: reader.readString(offsets[24]),
-    data_parentId_changeAt_: reader.readDateTime(offsets[25]),
-    data_parentId_changeBy_: reader.readString(offsets[26]),
-    data_parentId_cid_: reader.readString(offsets[27]),
-    data_parentId_cloudAt_: reader.readDateTimeOrNull(offsets[28]),
-    data_parentId_dataSchemaRev_: reader.readLongOrNull(offsets[29]),
-    data_parentProp: reader.readString(offsets[30]),
-    data_parentProp_changeAt_: reader.readDateTime(offsets[31]),
-    data_parentProp_changeBy_: reader.readString(offsets[32]),
-    data_parentProp_cid_: reader.readString(offsets[33]),
-    data_parentProp_cloudAt_: reader.readDateTimeOrNull(offsets[34]),
-    data_parentProp_dataSchemaRev_: reader.readLongOrNull(offsets[35]),
-    data_rank: reader.readStringOrNull(offsets[36]),
-    data_rank_changeAt_: reader.readDateTimeOrNull(offsets[37]),
-    data_rank_changeBy_: reader.readStringOrNull(offsets[38]),
-    data_rank_cid_: reader.readStringOrNull(offsets[39]),
-    data_rank_cloudAt_: reader.readDateTimeOrNull(offsets[40]),
-    data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[41]),
-    data_storedFilename: reader.readString(offsets[42]),
-    data_storedFilename_changeAt_: reader.readDateTime(offsets[43]),
-    data_storedFilename_changeBy_: reader.readString(offsets[44]),
-    data_storedFilename_cid_: reader.readStringOrNull(offsets[45]),
-    data_storedFilename_cloudAt_: reader.readDateTimeOrNull(offsets[46]),
-    data_storedFilename_dataSchemaRev_: reader.readLongOrNull(offsets[47]),
-    data_visibility: reader.readStringList(offsets[48]) ?? [],
-    data_visibility_changeAt_: reader.readDateTime(offsets[49]),
-    data_visibility_changeBy_: reader.readString(offsets[50]),
-    data_visibility_cid_: reader.readString(offsets[51]),
-    data_visibility_cloudAt_: reader.readDateTimeOrNull(offsets[52]),
-    data_visibility_dataSchemaRev_: reader.readLongOrNull(offsets[53]),
-    domainType: reader.readString(offsets[54]),
-    entityId: reader.readString(offsets[55]),
-    entityType: reader.readStringOrNull(offsets[56]) ?? kEntityTypeVideo,
+    data_durationMs: reader.readLong(offsets[18]),
+    data_durationMs_changeAt_: reader.readDateTime(offsets[19]),
+    data_durationMs_changeBy_: reader.readString(offsets[20]),
+    data_durationMs_cid_: reader.readStringOrNull(offsets[21]),
+    data_durationMs_cloudAt_: reader.readDateTimeOrNull(offsets[22]),
+    data_durationMs_dataSchemaRev_: reader.readLongOrNull(offsets[23]),
+    data_name: reader.readString(offsets[24]),
+    data_name_changeAt_: reader.readDateTime(offsets[25]),
+    data_name_changeBy_: reader.readString(offsets[26]),
+    data_name_cid_: reader.readStringOrNull(offsets[27]),
+    data_name_cloudAt_: reader.readDateTimeOrNull(offsets[28]),
+    data_name_dataSchemaRev_: reader.readLongOrNull(offsets[29]),
+    data_parentId: reader.readString(offsets[30]),
+    data_parentId_changeAt_: reader.readDateTime(offsets[31]),
+    data_parentId_changeBy_: reader.readString(offsets[32]),
+    data_parentId_cid_: reader.readString(offsets[33]),
+    data_parentId_cloudAt_: reader.readDateTimeOrNull(offsets[34]),
+    data_parentId_dataSchemaRev_: reader.readLongOrNull(offsets[35]),
+    data_parentProp: reader.readString(offsets[36]),
+    data_parentProp_changeAt_: reader.readDateTime(offsets[37]),
+    data_parentProp_changeBy_: reader.readString(offsets[38]),
+    data_parentProp_cid_: reader.readString(offsets[39]),
+    data_parentProp_cloudAt_: reader.readDateTimeOrNull(offsets[40]),
+    data_parentProp_dataSchemaRev_: reader.readLongOrNull(offsets[41]),
+    data_rank: reader.readStringOrNull(offsets[42]),
+    data_rank_changeAt_: reader.readDateTimeOrNull(offsets[43]),
+    data_rank_changeBy_: reader.readStringOrNull(offsets[44]),
+    data_rank_cid_: reader.readStringOrNull(offsets[45]),
+    data_rank_cloudAt_: reader.readDateTimeOrNull(offsets[46]),
+    data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[47]),
+    data_storedFilename: reader.readString(offsets[48]),
+    data_storedFilename_changeAt_: reader.readDateTime(offsets[49]),
+    data_storedFilename_changeBy_: reader.readString(offsets[50]),
+    data_storedFilename_cid_: reader.readStringOrNull(offsets[51]),
+    data_storedFilename_cloudAt_: reader.readDateTimeOrNull(offsets[52]),
+    data_storedFilename_dataSchemaRev_: reader.readLongOrNull(offsets[53]),
+    data_visibility: reader.readStringList(offsets[54]) ?? [],
+    data_visibility_changeAt_: reader.readDateTime(offsets[55]),
+    data_visibility_changeBy_: reader.readString(offsets[56]),
+    data_visibility_cid_: reader.readString(offsets[57]),
+    data_visibility_cloudAt_: reader.readDateTimeOrNull(offsets[58]),
+    data_visibility_dataSchemaRev_: reader.readLongOrNull(offsets[59]),
+    domainType: reader.readString(offsets[60]),
+    entityId: reader.readString(offsets[61]),
+    entityType: reader.readStringOrNull(offsets[62]) ?? kEntityTypeVideo,
     id: id,
-    schemaVersion: reader.readLongOrNull(offsets[57]),
-    unknownJson: reader.readString(offsets[58]),
+    schemaVersion: reader.readLongOrNull(offsets[63]),
+    unknownJson: reader.readString(offsets[64]),
   );
   return object;
 }
@@ -606,7 +655,7 @@ P _isarVideoDataEntityStateDeserializeProp<P>(
     case 17:
       return (reader.readLongOrNull(offset)) as P;
     case 18:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 19:
       return (reader.readDateTime(offset)) as P;
     case 20:
@@ -624,7 +673,7 @@ P _isarVideoDataEntityStateDeserializeProp<P>(
     case 26:
       return (reader.readString(offset)) as P;
     case 27:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 28:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 29:
@@ -642,23 +691,23 @@ P _isarVideoDataEntityStateDeserializeProp<P>(
     case 35:
       return (reader.readLongOrNull(offset)) as P;
     case 36:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 37:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 38:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 39:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 40:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 41:
       return (reader.readLongOrNull(offset)) as P;
     case 42:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 43:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 44:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 45:
       return (reader.readStringOrNull(offset)) as P;
     case 46:
@@ -666,26 +715,38 @@ P _isarVideoDataEntityStateDeserializeProp<P>(
     case 47:
       return (reader.readLongOrNull(offset)) as P;
     case 48:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readString(offset)) as P;
     case 49:
       return (reader.readDateTime(offset)) as P;
     case 50:
       return (reader.readString(offset)) as P;
     case 51:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 52:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 53:
       return (reader.readLongOrNull(offset)) as P;
     case 54:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 55:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 56:
-      return (reader.readStringOrNull(offset) ?? kEntityTypeVideo) as P;
+      return (reader.readString(offset)) as P;
     case 57:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 58:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 59:
+      return (reader.readLongOrNull(offset)) as P;
+    case 60:
+      return (reader.readString(offset)) as P;
+    case 61:
+      return (reader.readString(offset)) as P;
+    case 62:
+      return (reader.readStringOrNull(offset) ?? kEntityTypeVideo) as P;
+    case 63:
+      return (reader.readLongOrNull(offset)) as P;
+    case 64:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -3280,6 +3341,761 @@ extension IsarVideoDataEntityStateQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'data_deleted_dataSchemaRev_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMsEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'data_durationMs', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMsGreaterThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_durationMs',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMsLessThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_durationMs',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMsBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_durationMs',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeAt_EqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_durationMs_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeAt_GreaterThan(DateTime value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_durationMs_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeAt_LessThan(DateTime value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_durationMs_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeAt_Between(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_durationMs_changeAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeBy_EqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_durationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeBy_GreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_durationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeBy_LessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_durationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeBy_Between(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_durationMs_changeBy_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeBy_StartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_durationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeBy_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_durationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeBy_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_durationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeBy_Matches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_durationMs_changeBy_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeBy_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_durationMs_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_changeBy_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_durationMs_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_durationMs_cid_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'data_durationMs_cid_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_EqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_durationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_durationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_durationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_durationMs_cid_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_StartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_durationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_durationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_durationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_durationMs_cid_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'data_durationMs_cid_', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cid_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_durationMs_cid_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cloudAt_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_durationMs_cloudAt_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cloudAt_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'data_durationMs_cloudAt_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cloudAt_EqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_durationMs_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cloudAt_GreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_durationMs_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cloudAt_LessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_durationMs_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_cloudAt_Between(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_durationMs_cloudAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_dataSchemaRev_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_durationMs_dataSchemaRev_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_dataSchemaRev_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_durationMs_dataSchemaRev_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_dataSchemaRev_EqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_durationMs_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_dataSchemaRev_GreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_durationMs_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_dataSchemaRev_LessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_durationMs_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  data_durationMs_dataSchemaRev_Between(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_durationMs_dataSchemaRev_',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -9702,6 +10518,90 @@ extension IsarVideoDataEntityStateQuerySortBy
   }
 
   QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_changeAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_changeAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_changeBy_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_changeBy_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_cid_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_cloudAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_cloudAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_dataSchemaRev_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByData_durationMs_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_dataSchemaRev_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
   sortByData_name() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_name', Sort.asc);
@@ -10522,6 +11422,90 @@ extension IsarVideoDataEntityStateQuerySortThenBy
   }
 
   QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_changeAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_changeAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_changeBy_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_changeBy_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_cid_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_cloudAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_cloudAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_dataSchemaRev_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByData_durationMs_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_durationMs_dataSchemaRev_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
   thenByData_name() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_name', Sort.asc);
@@ -11251,6 +12235,54 @@ extension IsarVideoDataEntityStateQueryWhereDistinct
   }
 
   QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QDistinct>
+  distinctByData_durationMs() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_durationMs');
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QDistinct>
+  distinctByData_durationMs_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_durationMs_changeAt_');
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QDistinct>
+  distinctByData_durationMs_changeBy_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_durationMs_changeBy_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QDistinct>
+  distinctByData_durationMs_cid_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_durationMs_cid_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QDistinct>
+  distinctByData_durationMs_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_durationMs_cloudAt_');
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QDistinct>
+  distinctByData_durationMs_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_durationMs_dataSchemaRev_');
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QDistinct>
   distinctByData_name({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'data_name', caseSensitive: caseSensitive);
@@ -11722,6 +12754,48 @@ extension IsarVideoDataEntityStateQueryProperty
     });
   }
 
+  QueryBuilder<IsarVideoDataEntityState, int, QQueryOperations>
+  data_durationMsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_durationMs');
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, DateTime, QQueryOperations>
+  data_durationMs_changeAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_durationMs_changeAt_');
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, String, QQueryOperations>
+  data_durationMs_changeBy_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_durationMs_changeBy_');
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, String?, QQueryOperations>
+  data_durationMs_cid_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_durationMs_cid_');
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, DateTime?, QQueryOperations>
+  data_durationMs_cloudAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_durationMs_cloudAt_');
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, int?, QQueryOperations>
+  data_durationMs_dataSchemaRev_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_durationMs_dataSchemaRev_');
+    });
+  }
+
   QueryBuilder<IsarVideoDataEntityState, String, QQueryOperations>
   data_nameProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -12137,6 +13211,30 @@ IsarVideoDataEntityState _$IsarVideoDataEntityStateFromJson(
       'data_storedFilename_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
+    data_durationMs: $checkedConvert(
+      'data_durationMs',
+      (v) => (v as num).toInt(),
+    ),
+    data_durationMs_dataSchemaRev_: $checkedConvert(
+      'data_durationMs_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_durationMs_changeAt_: $checkedConvert(
+      'data_durationMs_changeAt_',
+      (v) => DateTime.parse(v as String),
+    ),
+    data_durationMs_cid_: $checkedConvert(
+      'data_durationMs_cid_',
+      (v) => v as String?,
+    ),
+    data_durationMs_changeBy_: $checkedConvert(
+      'data_durationMs_changeBy_',
+      (v) => v as String,
+    ),
+    data_durationMs_cloudAt_: $checkedConvert(
+      'data_durationMs_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
     data_visibility: $checkedConvert(
       'data_visibility',
       (v) => (v as List<dynamic>).map((e) => e as String).toList(),
@@ -12281,6 +13379,14 @@ Map<String, dynamic> _$IsarVideoDataEntityStateToJson(
   'data_storedFilename_cid_': instance.data_storedFilename_cid_,
   'data_storedFilename_changeBy_': instance.data_storedFilename_changeBy_,
   'data_storedFilename_cloudAt_': instance.data_storedFilename_cloudAt_
+      ?.toIso8601String(),
+  'data_durationMs': instance.data_durationMs,
+  'data_durationMs_dataSchemaRev_': instance.data_durationMs_dataSchemaRev_,
+  'data_durationMs_changeAt_': instance.data_durationMs_changeAt_
+      .toIso8601String(),
+  'data_durationMs_cid_': instance.data_durationMs_cid_,
+  'data_durationMs_changeBy_': instance.data_durationMs_changeBy_,
+  'data_durationMs_cloudAt_': instance.data_durationMs_cloudAt_
       ?.toIso8601String(),
   'data_visibility': instance.data_visibility,
   'data_visibility_dataSchemaRev_': instance.data_visibility_dataSchemaRev_,

@@ -3,7 +3,6 @@
 import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
-
 import 'package:sync_manager/sync_manager.dart';
 
 part 'video_translation.entity_state.isar.g.dart';
@@ -30,6 +29,13 @@ class IsarVideoDataEntityState extends BaseEntityState {
   final String? data_storedFilename_cid_;
   final String data_storedFilename_changeBy_;
   final DateTime? data_storedFilename_cloudAt_;
+
+  final int data_durationMs;
+  final int? data_durationMs_dataSchemaRev_;
+  final DateTime data_durationMs_changeAt_;
+  final String? data_durationMs_cid_;
+  final String data_durationMs_changeBy_;
+  final DateTime? data_durationMs_cloudAt_;
 
   final List<String> data_visibility;
   final int? data_visibility_dataSchemaRev_;
@@ -77,6 +83,12 @@ class IsarVideoDataEntityState extends BaseEntityState {
     this.data_storedFilename_cid_,
     required this.data_storedFilename_changeBy_,
     DateTime? data_storedFilename_cloudAt_,
+    required this.data_durationMs,
+    this.data_durationMs_dataSchemaRev_,
+    required DateTime data_durationMs_changeAt_,
+    this.data_durationMs_cid_,
+    required this.data_durationMs_changeBy_,
+    DateTime? data_durationMs_cloudAt_,
     required this.data_visibility,
     this.data_visibility_dataSchemaRev_,
     required DateTime data_visibility_changeAt_,
@@ -103,6 +115,8 @@ class IsarVideoDataEntityState extends BaseEntityState {
        data_name_cloudAt_ = data_name_cloudAt_?.toUtc(),
        data_storedFilename_changeAt_ = data_storedFilename_changeAt_.toUtc(),
        data_storedFilename_cloudAt_ = data_storedFilename_cloudAt_?.toUtc(),
+       data_durationMs_changeAt_ = data_durationMs_changeAt_.toUtc(),
+       data_durationMs_cloudAt_ = data_durationMs_cloudAt_?.toUtc(),
        data_visibility_changeAt_ = data_visibility_changeAt_.toUtc(),
        data_visibility_cloudAt_ = data_visibility_cloudAt_?.toUtc();
 
@@ -113,6 +127,7 @@ class IsarVideoDataEntityState extends BaseEntityState {
     final j = toJson();
     j.putIfAbsent('data_name', () => '');
     j.putIfAbsent('data_storedFilename', () => '');
+    j.putIfAbsent('data_durationMs', () => 0);
     j.putIfAbsent('data_visibility', () => <String>[]);
     return j;
   }

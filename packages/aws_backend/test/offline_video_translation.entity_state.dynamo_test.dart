@@ -19,6 +19,7 @@ void main() {
             name: 'Video Name',
             storedFilename: 'video_name.mp4',
             visibility: ['user1', 'user2'],
+            durationMs: 45000,
             parentId: 'root',
             parentProp: 'videos',
             rank: 'aaaaz',

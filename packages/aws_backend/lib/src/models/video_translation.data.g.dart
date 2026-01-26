@@ -16,6 +16,7 @@ VideoTranslationData _$VideoTranslationDataFromJson(
       (v) => (v as List<dynamic>).map((e) => e as String).toList(),
     ),
     storedFilename: $checkedConvert('storedFilename', (v) => v as String),
+    durationMs: $checkedConvert('durationMs', (v) => (v as num).toInt()),
     parentId: $checkedConvert('parentId', (v) => v as String),
     parentProp: $checkedConvert('parentProp', (v) => v as String),
     rank: $checkedConvert('rank', (v) => v as String?),
@@ -34,4 +35,5 @@ Map<String, dynamic> _$VideoTranslationDataToJson(
   'name': instance.name,
   'visibility': instance.visibility,
   'storedFilename': instance.storedFilename,
+  'durationMs': instance.durationMs,
 };
