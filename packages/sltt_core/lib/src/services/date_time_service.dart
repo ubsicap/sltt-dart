@@ -7,13 +7,19 @@ class HlcTimestampGenerator {
   static DateTime _lastTimestamp = DateTime.now().toUtc();
 
   /// Generates a new (UTC) HLC timestamp.
-  static DateTime generate() {
+  static DateTime generate({int incrementMsForMonotonicity = 1}) {
     final now = DateTime.now().toUtc();
-    if (now.isAfter(_lastTimestamp)) {
+    if (now.isAfter(
+      _lastTimestamp.add(
+        Duration(milliseconds: incrementMsForMonotonicity - 1),
+      ),
+    )) {
       _lastTimestamp = now;
     } else {
-      // Increment last timestamp by 1 millisecond to ensure monotonicity
-      _lastTimestamp = _lastTimestamp.add(const Duration(milliseconds: 1));
+      // Increment last timestamp by incrementMsForMonotonicity
+      _lastTimestamp = _lastTimestamp.add(
+        Duration(milliseconds: incrementMsForMonotonicity),
+      );
     }
     return _lastTimestamp;
   }
