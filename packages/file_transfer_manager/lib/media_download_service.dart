@@ -103,9 +103,12 @@ class MediaDownloadService {
     }
   }
 
-  void _cancelRetryLaterJob(String remoteFileKey) {
+  TransferJob<DownloadProgress, File>? _cancelRetryLaterJob(
+    String remoteFileKey,
+  ) {
     final retry = _retryLaterJobs.remove(remoteFileKey);
     retry?.timer.cancel();
+    return retry?.job;
   }
 
   void _scheduleRetry(TransferJob<DownloadProgress, File> job) {
@@ -117,10 +120,9 @@ class MediaDownloadService {
         ? Duration.zero
         : retryAt.difference(now);
 
-    _cancelRetryLaterJob(job.remoteFileKey);
+    if (_retryLaterJobs.containsKey(job.remoteFileKey)) return;
 
     final timer = Timer(delay, () {
-      _cancelRetryLaterJob(job.remoteFileKey);
       enqueueDownload(
         remoteFileKey: job.remoteFileKey,
         addAsLowestPriority: true,
@@ -219,7 +221,7 @@ class MediaDownloadService {
     required String remoteFileKey,
     bool addAsLowestPriority = false,
   }) {
-    _cancelRetryLaterJob(remoteFileKey);
+    final retryJob = _cancelRetryLaterJob(remoteFileKey);
 
     final activeJob = _activeJobs[remoteFileKey];
     if (activeJob != null) {
@@ -235,7 +237,8 @@ class MediaDownloadService {
       return existingJob.progressStream;
     }
 
-    final progressController = StreamController<DownloadProgress>();
+    final progressController =
+        retryJob?.progressController ?? StreamController<DownloadProgress>();
     final job = TransferJob<DownloadProgress, File>(
       remoteFileKey: remoteFileKey,
       fileName: p.basename(remoteFileKey),
@@ -410,7 +413,10 @@ class MediaDownloadService {
       }
 
       final headResponse = await apiClient.head(headUrl);
-      if (headResponse.statusCode == HttpStatus.notFound) {
+      if ([
+        HttpStatus.notFound,
+        HttpStatus.forbidden,
+      ].contains(headResponse.statusCode)) {
         final newError = DownloadNotFoundException(
           remoteFileKey: job.remoteFileKey,
           statusCode: headResponse.statusCode,
@@ -630,7 +636,9 @@ class MediaDownloadService {
           destFilePath: destFile.path,
         ),
       );
-      await job.progressController.close();
+      // if client setup subscription but isn't able to read stream
+      // this could get stuck so use unawaited
+      unawaited(job.progressController.close());
       return destFile;
     } catch (e, _) {
       rethrow;
