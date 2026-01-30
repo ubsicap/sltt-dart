@@ -8,7 +8,6 @@ import 'package:sltt_core/sltt_core.dart';
 part 'passage_translation.data.g.dart';
 
 @JsonSerializable(includeIfNull: false, checked: true)
-// @SyncableEntityStateData(entityType: kEntityTypePassage)
 class PassageTranslationData extends BaseDataFields {
   final String name;
   final List<String> visibility;

@@ -4,7 +4,6 @@ import 'package:sltt_core/sltt_core.dart';
 part 'portion_translation.data.g.dart';
 
 @JsonSerializable(includeIfNull: false, checked: true)
-// @SyncableEntityStateData(entityType: kEntityTypePortion)
 class PortionTranslationData extends BaseDataFields {
   final String name;
   final List<String> visibility;

@@ -4,7 +4,6 @@ import 'package:sltt_core/sltt_core.dart';
 part 'video_translation.data.g.dart';
 
 @JsonSerializable(includeIfNull: false, checked: true)
-// @SyncableEntityStateData(entityType: kEntityTypeVideo)
 class VideoTranslationData extends BaseDataFields {
   final String name;
   final List<String> visibility;
