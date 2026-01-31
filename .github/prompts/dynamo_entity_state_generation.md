@@ -5,29 +5,39 @@ Follow this checklist to add DynamoDB entity state support and tests for a new e
 ---
 
 1. **Create the Data Model**
-   - Define a `*.data.dart` file for the entity using `@JsonSerializable`.
-   - Ensure all fields required for serialization are present and match the domain model.
+   - Copy the `*.data.dart` and `*.data.g.dart` files from sltt_standalone_app:
+     - Source: sltt-standalone-app/lib/sltt/models/*<entity>*.data.dart
+     - Target: packages/aws_backend/lib/src/models/<entity>.data.dart
+     - Target: packages/aws_backend/lib/src/models/<entity>.data.g.dart
+   - Ensure the `part` file name matches the target location.
 
 2. **Create the Dynamo Entity State Class**
-   - Create a file named `*.entity_state.dynamo.dart`.
+   - Create a file named `<entity>.entity_state.dynamo.dart` in packages/aws_backend/lib/src/models.
    - Define the Dynamo entity class, extending `BaseEntityState` and using `@JsonSerializable`.
-   - Implement all required fields, including change tracking and data fields.
-   - Add methods for serialization/deserialization (e.g., `fromJson`, `toJson`).
+   - Implement all required fields, including change tracking and data fields (mirror the data model).
+   - Add methods for serialization/deserialization (`fromJson`, `fromJsonBase`, `toJson`, `toJsonBase`, `toJsonSafe`).
 
 3. **Write Tests**
-   - Add a test for serialization/deserialization (e.g., `test/<entity>_entity_state.dynamo_test.dart`).
-   - Add a test for field coverage (e.g., `test/<entity>_entity_state.dynamo_field_coverage_test.dart`).
-   - Use `offline_portion_translation.entity_state.dynamo_test.dart` and `portion_translation.entity_state.dynamo_field_coverage_test.dart` as references.
+    - Add an offline serialization/deserialization test:
+       - packages/aws_backend/test/offline_<entity>.entity_state.dynamo_test.dart
+       - Use offline_portion_translation.entity_state.dynamo_test.dart as a reference.
+    - Add field-coverage tests:
+       - Offline: packages/aws_backend/test/offline_<entity>.entity_state.dynamo_field_coverage_test.dart
+       - Online: packages/aws_backend/test/<entity>.entity_state.dynamo_field_coverage_test.dart
+       - Use offline_portion_translation.entity_state.dynamo_field_coverage_test.dart and
+          portion_translation.entity_state.dynamo_field_coverage_test.dart as references.
 
 4. **Run Code Generation**
-   - Run `flutter pub run build_runner build` to generate the `*.g.dart` files.
+   - Run build runner in packages/aws_backend to generate `*.g.dart` files:
+     - `dart run build_runner build --delete-conflicting-outputs`
 
 5. **Register the Entity State**
-   - Register the new entity state class in `packages/aws_backend/lib/src/models/dynamo_entity_state_serialization_registry.dart` by adding a factory for your entity type, following the pattern for existing entities.
+   - Register the new entity state class in packages/aws_backend/lib/src/models/dynamo_entity_state_serialization_registry.dart
+     by adding a factory for your entity type, following the pattern for existing entities.
 
 6. **Verify Integration**
    - Ensure the new entity state class is properly integrated with the DynamoDB storage layer.
-   - Verify that all tests pass and the new entity is correctly stored and retrieved from DynamoDB.
+   - Verify that all Dynamo tests pass and the new entity is correctly stored and retrieved from DynamoDB.
 
 ---
 

@@ -1,0 +1,585 @@
+import 'package:aws_backend/src/models/note.entity_state.dynamo.dart';
+import 'package:sltt_core/sltt_core.dart';
+import 'package:test/test.dart';
+
+void main() {
+  const knownDateTimeFields = {
+    'change_changeAt',
+    'change_changeAt_orig_',
+    'change_storedAt',
+    'change_storedAt_orig_',
+    'change_cloudAt',
+    'data_title_changeAt_',
+    'data_title_cloudAt_',
+    'data_videoCommentId_changeAt_',
+    'data_videoCommentId_cloudAt_',
+    'data_textComment_changeAt_',
+    'data_textComment_cloudAt_',
+    'data_markerColorValue_changeAt_',
+    'data_markerColorValue_cloudAt_',
+    'data_markerShape_changeAt_',
+    'data_markerShape_cloudAt_',
+    'data_markerDescription_changeAt_',
+    'data_markerDescription_cloudAt_',
+    'data_positionMs_changeAt_',
+    'data_positionMs_cloudAt_',
+    'data_resolution_changeAt_',
+    'data_resolution_cloudAt_',
+    'data_rank_changeAt_',
+    'data_rank_cloudAt_',
+    'data_deleted_changeAt_',
+    'data_deleted_cloudAt_',
+    'data_parentId_changeAt_',
+    'data_parentId_cloudAt_',
+    'data_parentProp_changeAt_',
+    'data_parentProp_cloudAt_',
+  };
+
+  const knownNoteDataEntityStateFields = {
+    'entityId',
+    'entityType',
+    'domainType',
+    'unknownJson',
+    'schemaVersion',
+    'change_domainId',
+    'change_domainId_orig_',
+    'change_changeAt',
+    'change_changeAt_orig_',
+    'change_storedAt',
+    'change_storedAt_orig_',
+    'change_cid',
+    'change_cid_orig_',
+    'change_dataSchemaRev',
+    'change_cloudAt',
+    'change_changeBy',
+    'change_changeBy_orig_',
+    'data_title',
+    'data_title_dataSchemaRev_',
+    'data_title_changeAt_',
+    'data_title_cid_',
+    'data_title_changeBy_',
+    'data_title_cloudAt_',
+    'data_videoCommentId',
+    'data_videoCommentId_dataSchemaRev_',
+    'data_videoCommentId_changeAt_',
+    'data_videoCommentId_cid_',
+    'data_videoCommentId_changeBy_',
+    'data_videoCommentId_cloudAt_',
+    'data_textComment',
+    'data_textComment_dataSchemaRev_',
+    'data_textComment_changeAt_',
+    'data_textComment_cid_',
+    'data_textComment_changeBy_',
+    'data_textComment_cloudAt_',
+    'data_markerColorValue',
+    'data_markerColorValue_dataSchemaRev_',
+    'data_markerColorValue_changeAt_',
+    'data_markerColorValue_cid_',
+    'data_markerColorValue_changeBy_',
+    'data_markerColorValue_cloudAt_',
+    'data_markerShape',
+    'data_markerShape_dataSchemaRev_',
+    'data_markerShape_changeAt_',
+    'data_markerShape_cid_',
+    'data_markerShape_changeBy_',
+    'data_markerShape_cloudAt_',
+    'data_markerDescription',
+    'data_markerDescription_dataSchemaRev_',
+    'data_markerDescription_changeAt_',
+    'data_markerDescription_cid_',
+    'data_markerDescription_changeBy_',
+    'data_markerDescription_cloudAt_',
+    'data_positionMs',
+    'data_positionMs_dataSchemaRev_',
+    'data_positionMs_changeAt_',
+    'data_positionMs_cid_',
+    'data_positionMs_changeBy_',
+    'data_positionMs_cloudAt_',
+    'data_resolution',
+    'data_resolution_dataSchemaRev_',
+    'data_resolution_changeAt_',
+    'data_resolution_cid_',
+    'data_resolution_changeBy_',
+    'data_resolution_cloudAt_',
+    'data_rank',
+    'data_rank_dataSchemaRev_',
+    'data_rank_changeAt_',
+    'data_rank_cid_',
+    'data_rank_changeBy_',
+    'data_rank_cloudAt_',
+    'data_deleted',
+    'data_deleted_dataSchemaRev_',
+    'data_deleted_changeAt_',
+    'data_deleted_cid_',
+    'data_deleted_changeBy_',
+    'data_deleted_cloudAt_',
+    'data_parentId',
+    'data_parentId_dataSchemaRev_',
+    'data_parentId_changeAt_',
+    'data_parentId_cid_',
+    'data_parentId_changeBy_',
+    'data_parentId_cloudAt_',
+    'data_parentProp',
+    'data_parentProp_dataSchemaRev_',
+    'data_parentProp_changeAt_',
+    'data_parentProp_cid_',
+    'data_parentProp_changeBy_',
+    'data_parentProp_cloudAt_',
+  };
+
+  void expectAllDateTimeFieldsUtc(
+    DynamoNoteDataEntityState state, {
+    required DateTime expectedDataTitleChangeAt,
+    required DateTime expectedDataTitleCloudAt,
+    required DateTime expectedDataVideoCommentIdChangeAt,
+    required DateTime expectedDataVideoCommentIdCloudAt,
+    required DateTime expectedDataTextCommentChangeAt,
+    required DateTime expectedDataTextCommentCloudAt,
+    required DateTime expectedDataMarkerColorValueChangeAt,
+    required DateTime expectedDataMarkerColorValueCloudAt,
+    required DateTime expectedDataMarkerShapeChangeAt,
+    required DateTime expectedDataMarkerShapeCloudAt,
+    required DateTime expectedDataMarkerDescriptionChangeAt,
+    required DateTime expectedDataMarkerDescriptionCloudAt,
+    required DateTime expectedDataPositionMsChangeAt,
+    required DateTime expectedDataPositionMsCloudAt,
+    required DateTime expectedDataResolutionChangeAt,
+    required DateTime expectedDataResolutionCloudAt,
+    required DateTime expectedChangeAt,
+    required DateTime expectedCloudAt,
+    required DateTime expectedStoredAt,
+    required DateTime expectedDataRankChangeAt,
+    required DateTime expectedDataRankCloudAt,
+    required DateTime expectedDataDeletedChangeAt,
+    required DateTime expectedDataDeletedCloudAt,
+    required DateTime expectedDataParentIdChangeAt,
+    required DateTime expectedDataParentIdCloudAt,
+    required DateTime expectedDataParentPropChangeAt,
+    required DateTime expectedDataParentPropCloudAt,
+    String context = '',
+  }) {
+    final prefix = context.isEmpty ? '' : '$context: ';
+
+    expect(
+      state.data_title_changeAt_,
+      equals(expectedDataTitleChangeAt.toUtc()),
+      reason: '${prefix}data_title_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_title_cloudAt_,
+      equals(expectedDataTitleCloudAt.toUtc()),
+      reason: '${prefix}data_title_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_videoCommentId_changeAt_,
+      equals(expectedDataVideoCommentIdChangeAt.toUtc()),
+      reason: '${prefix}data_videoCommentId_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_videoCommentId_cloudAt_,
+      equals(expectedDataVideoCommentIdCloudAt.toUtc()),
+      reason: '${prefix}data_videoCommentId_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_textComment_changeAt_,
+      equals(expectedDataTextCommentChangeAt.toUtc()),
+      reason: '${prefix}data_textComment_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_textComment_cloudAt_,
+      equals(expectedDataTextCommentCloudAt.toUtc()),
+      reason: '${prefix}data_textComment_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_markerColorValue_changeAt_,
+      equals(expectedDataMarkerColorValueChangeAt.toUtc()),
+      reason: '${prefix}data_markerColorValue_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_markerColorValue_cloudAt_,
+      equals(expectedDataMarkerColorValueCloudAt.toUtc()),
+      reason: '${prefix}data_markerColorValue_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_markerShape_changeAt_,
+      equals(expectedDataMarkerShapeChangeAt.toUtc()),
+      reason: '${prefix}data_markerShape_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_markerShape_cloudAt_,
+      equals(expectedDataMarkerShapeCloudAt.toUtc()),
+      reason: '${prefix}data_markerShape_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_markerDescription_changeAt_,
+      equals(expectedDataMarkerDescriptionChangeAt.toUtc()),
+      reason: '${prefix}data_markerDescription_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_markerDescription_cloudAt_,
+      equals(expectedDataMarkerDescriptionCloudAt.toUtc()),
+      reason: '${prefix}data_markerDescription_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_positionMs_changeAt_,
+      equals(expectedDataPositionMsChangeAt.toUtc()),
+      reason: '${prefix}data_positionMs_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_positionMs_cloudAt_,
+      equals(expectedDataPositionMsCloudAt.toUtc()),
+      reason: '${prefix}data_positionMs_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_resolution_changeAt_,
+      equals(expectedDataResolutionChangeAt.toUtc()),
+      reason: '${prefix}data_resolution_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_resolution_cloudAt_,
+      equals(expectedDataResolutionCloudAt.toUtc()),
+      reason: '${prefix}data_resolution_cloudAt_ should be UTC',
+    );
+
+    expect(
+      state.change_changeAt,
+      equals(expectedChangeAt.toUtc()),
+      reason: '${prefix}change_changeAt should be UTC',
+    );
+    expect(
+      state.change_changeAt_orig_,
+      equals(expectedChangeAt.toUtc()),
+      reason: '${prefix}change_changeAt_orig_ should be UTC',
+    );
+    expect(
+      state.change_cloudAt,
+      equals(expectedCloudAt.toUtc()),
+      reason: '${prefix}change_cloudAt should be UTC',
+    );
+    expect(
+      state.change_storedAt,
+      equals(expectedStoredAt.toUtc()),
+      reason: '${prefix}change_storedAt should be UTC',
+    );
+    expect(
+      state.change_storedAt_orig_,
+      equals(expectedStoredAt.toUtc()),
+      reason: '${prefix}change_storedAt_orig_ should be UTC',
+    );
+    expect(
+      state.data_rank_changeAt_,
+      equals(expectedDataRankChangeAt.toUtc()),
+      reason: '${prefix}data_rank_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_rank_cloudAt_,
+      equals(expectedDataRankCloudAt.toUtc()),
+      reason: '${prefix}data_rank_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_deleted_changeAt_,
+      equals(expectedDataDeletedChangeAt.toUtc()),
+      reason: '${prefix}data_deleted_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_deleted_cloudAt_,
+      equals(expectedDataDeletedCloudAt.toUtc()),
+      reason: '${prefix}data_deleted_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_parentId_changeAt_,
+      equals(expectedDataParentIdChangeAt.toUtc()),
+      reason: '${prefix}data_parentId_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_parentId_cloudAt_,
+      equals(expectedDataParentIdCloudAt.toUtc()),
+      reason: '${prefix}data_parentId_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_parentProp_changeAt_,
+      equals(expectedDataParentPropChangeAt.toUtc()),
+      reason: '${prefix}data_parentProp_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_parentProp_cloudAt_,
+      equals(expectedDataParentPropCloudAt.toUtc()),
+      reason: '${prefix}data_parentProp_cloudAt_ should be UTC',
+    );
+  }
+
+  group('offline - DynamoNoteDataEntityState field coverage', () {
+    test('verifies all expected fields with UTC DateTime conversion', () {
+      final localChangeAt = DateTime.now();
+      final localCloudAt = DateTime.now().subtract(const Duration(hours: 1));
+      final localStoredAt = DateTime.now().subtract(
+        const Duration(minutes: 30),
+      );
+      final localDataTitleChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 15),
+      );
+      final localDataTitleCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 18),
+      );
+      final localDataVideoCommentIdChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 12),
+      );
+      final localDataVideoCommentIdCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 17),
+      );
+      final localDataTextCommentChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 14),
+      );
+      final localDataTextCommentCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 13),
+      );
+      final localDataMarkerColorValueChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 16),
+      );
+      final localDataMarkerColorValueCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 19),
+      );
+      final localDataMarkerShapeChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 11),
+      );
+      final localDataMarkerShapeCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 10),
+      );
+      final localDataMarkerDescriptionChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 9),
+      );
+      final localDataMarkerDescriptionCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 8),
+      );
+      final localDataPositionMsChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 7),
+      );
+      final localDataPositionMsCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 6),
+      );
+      final localDataResolutionChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 5),
+      );
+      final localDataResolutionCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 4),
+      );
+      final localDataRankChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 22),
+      );
+      final localDataRankCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 27),
+      );
+      final localDataDeletedChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 20),
+      );
+      final localDataDeletedCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 25),
+      );
+      final localDataParentIdChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 10),
+      );
+      final localDataParentIdCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 12),
+      );
+      final localDataParentPropChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 5),
+      );
+      final localDataParentPropCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 7),
+      );
+
+      final entry = DynamoNoteDataEntityState(
+        entityId: 'test-note-1',
+        entityType: kEntityTypeNote,
+        domainType: 'project',
+        unknownJson: '{}',
+        schemaVersion: 1,
+        change_domainId: '__test_note_state_coverage__',
+        change_domainId_orig_: '__test_note_state_coverage__',
+        change_changeAt: localChangeAt,
+        change_changeAt_orig_: localChangeAt,
+        change_storedAt: localStoredAt,
+        change_storedAt_orig_: localStoredAt,
+        change_cid: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        change_cid_orig_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-2',
+        ),
+        change_dataSchemaRev: 1,
+        change_cloudAt: localCloudAt,
+        change_changeBy: 'test-user-1',
+        change_changeBy_orig_: 'test-user-2',
+        data_title: 'Note Title',
+        data_title_dataSchemaRev_: 1,
+        data_title_changeAt_: localDataTitleChangeAt,
+        data_title_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_title_changeBy_: 'test-user-1',
+        data_title_cloudAt_: localDataTitleCloudAt,
+        data_videoCommentId: 'video-comment-1',
+        data_videoCommentId_dataSchemaRev_: 1,
+        data_videoCommentId_changeAt_: localDataVideoCommentIdChangeAt,
+        data_videoCommentId_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_videoCommentId_changeBy_: 'test-user-1',
+        data_videoCommentId_cloudAt_: localDataVideoCommentIdCloudAt,
+        data_textComment: 'Note text comment',
+        data_textComment_dataSchemaRev_: 1,
+        data_textComment_changeAt_: localDataTextCommentChangeAt,
+        data_textComment_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_textComment_changeBy_: 'test-user-1',
+        data_textComment_cloudAt_: localDataTextCommentCloudAt,
+        data_markerColorValue: 0xFF00FF00,
+        data_markerColorValue_dataSchemaRev_: 1,
+        data_markerColorValue_changeAt_: localDataMarkerColorValueChangeAt,
+        data_markerColorValue_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_markerColorValue_changeBy_: 'test-user-1',
+        data_markerColorValue_cloudAt_: localDataMarkerColorValueCloudAt,
+        data_markerShape: 'circle',
+        data_markerShape_dataSchemaRev_: 1,
+        data_markerShape_changeAt_: localDataMarkerShapeChangeAt,
+        data_markerShape_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_markerShape_changeBy_: 'test-user-1',
+        data_markerShape_cloudAt_: localDataMarkerShapeCloudAt,
+        data_markerDescription: 'Marker description',
+        data_markerDescription_dataSchemaRev_: 1,
+        data_markerDescription_changeAt_: localDataMarkerDescriptionChangeAt,
+        data_markerDescription_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_markerDescription_changeBy_: 'test-user-1',
+        data_markerDescription_cloudAt_: localDataMarkerDescriptionCloudAt,
+        data_positionMs: 1234,
+        data_positionMs_dataSchemaRev_: 1,
+        data_positionMs_changeAt_: localDataPositionMsChangeAt,
+        data_positionMs_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_positionMs_changeBy_: 'test-user-1',
+        data_positionMs_cloudAt_: localDataPositionMsCloudAt,
+        data_resolution: 'unresolved',
+        data_resolution_dataSchemaRev_: 1,
+        data_resolution_changeAt_: localDataResolutionChangeAt,
+        data_resolution_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_resolution_changeBy_: 'test-user-1',
+        data_resolution_cloudAt_: localDataResolutionCloudAt,
+        data_rank: 'aaaaz',
+        data_rank_dataSchemaRev_: 1,
+        data_rank_changeAt_: localDataRankChangeAt,
+        data_rank_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_rank_changeBy_: 'test-user-1',
+        data_rank_cloudAt_: localDataRankCloudAt,
+        data_deleted: false,
+        data_deleted_dataSchemaRev_: 1,
+        data_deleted_changeAt_: localDataDeletedChangeAt,
+        data_deleted_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_deleted_changeBy_: 'test-user-1',
+        data_deleted_cloudAt_: localDataDeletedCloudAt,
+        data_parentId: 'root',
+        data_parentId_dataSchemaRev_: 1,
+        data_parentId_changeAt_: localDataParentIdChangeAt,
+        data_parentId_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_parentId_changeBy_: 'test-user-1',
+        data_parentId_cloudAt_: localDataParentIdCloudAt,
+        data_parentProp: 'notes',
+        data_parentProp_dataSchemaRev_: 1,
+        data_parentProp_changeAt_: localDataParentPropChangeAt,
+        data_parentProp_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_parentProp_changeBy_: 'test-user-1',
+        data_parentProp_cloudAt_: localDataParentPropCloudAt,
+      );
+
+      expectAllDateTimeFieldsUtc(
+        entry,
+        expectedDataTitleChangeAt: localDataTitleChangeAt,
+        expectedDataTitleCloudAt: localDataTitleCloudAt,
+        expectedDataVideoCommentIdChangeAt: localDataVideoCommentIdChangeAt,
+        expectedDataVideoCommentIdCloudAt: localDataVideoCommentIdCloudAt,
+        expectedDataTextCommentChangeAt: localDataTextCommentChangeAt,
+        expectedDataTextCommentCloudAt: localDataTextCommentCloudAt,
+        expectedDataMarkerColorValueChangeAt: localDataMarkerColorValueChangeAt,
+        expectedDataMarkerColorValueCloudAt: localDataMarkerColorValueCloudAt,
+        expectedDataMarkerShapeChangeAt: localDataMarkerShapeChangeAt,
+        expectedDataMarkerShapeCloudAt: localDataMarkerShapeCloudAt,
+        expectedDataMarkerDescriptionChangeAt:
+            localDataMarkerDescriptionChangeAt,
+        expectedDataMarkerDescriptionCloudAt: localDataMarkerDescriptionCloudAt,
+        expectedDataPositionMsChangeAt: localDataPositionMsChangeAt,
+        expectedDataPositionMsCloudAt: localDataPositionMsCloudAt,
+        expectedDataResolutionChangeAt: localDataResolutionChangeAt,
+        expectedDataResolutionCloudAt: localDataResolutionCloudAt,
+        expectedChangeAt: localChangeAt,
+        expectedCloudAt: localCloudAt,
+        expectedStoredAt: localStoredAt,
+        expectedDataRankChangeAt: localDataRankChangeAt,
+        expectedDataRankCloudAt: localDataRankCloudAt,
+        expectedDataDeletedChangeAt: localDataDeletedChangeAt,
+        expectedDataDeletedCloudAt: localDataDeletedCloudAt,
+        expectedDataParentIdChangeAt: localDataParentIdChangeAt,
+        expectedDataParentIdCloudAt: localDataParentIdCloudAt,
+        expectedDataParentPropChangeAt: localDataParentPropChangeAt,
+        expectedDataParentPropCloudAt: localDataParentPropCloudAt,
+      );
+
+      final json = entry.toJson();
+      final jsonKeys = json.keys.toSet();
+
+      for (final field in knownNoteDataEntityStateFields) {
+        expect(
+          jsonKeys.contains(field),
+          isTrue,
+          reason: 'Expected field $field to be in JSON',
+        );
+      }
+
+      final unknownFields = jsonKeys.difference(knownNoteDataEntityStateFields);
+      expect(
+        unknownFields,
+        isEmpty,
+        reason: 'Unexpected fields in JSON: $unknownFields',
+      );
+
+      for (final dateTimeField in knownDateTimeFields) {
+        expect(
+          json[dateTimeField],
+          isA<String>(),
+          reason:
+              'DateTime field $dateTimeField should be serialized as string',
+        );
+      }
+    });
+  });
+}
