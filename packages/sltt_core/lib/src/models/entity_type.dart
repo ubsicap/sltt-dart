@@ -9,12 +9,16 @@ const String kEntityTypeProject = 'project';
 const String kEntityTypeProjectCollection = 'projects';
 const String kEntityTypeTeam = 'team';
 const String kEntityTypeTeamCollection = 'teams';
+const String kEntityTypeMarker = 'marker';
+const String kEntityTypeMarkerCollection = 'markers';
 const String kEntityTypePlan = 'plan';
 const String kEntityTypePlanCollection = 'plans';
 const String kEntityTypeStage = 'stage';
 const String kEntityTypeStageCollection = 'stages';
 const String kEntityTypeTask = 'task';
 const String kEntityTypeTaskCollection = 'tasks';
+const String kEntityTypeUser = 'user';
+const String kEntityTypeUserCollection = 'users';
 const String kEntityTypeMember = 'member';
 const String kEntityTypeMemberCollection = 'members';
 const String kEntityTypeMessage = 'message';
@@ -46,12 +50,16 @@ String? getCollectionByEntity(String entityType) {
       return kEntityTypeProjectCollection;
     case kEntityTypeTeam:
       return kEntityTypeTeamCollection;
+    case kEntityTypeMarker:
+      return kEntityTypeMarkerCollection;
     case kEntityTypePlan:
       return kEntityTypePlanCollection;
     case kEntityTypeStage:
       return kEntityTypeStageCollection;
     case kEntityTypeTask:
       return kEntityTypeTaskCollection;
+    case kEntityTypeUser:
+      return kEntityTypeUserCollection;
     case kEntityTypeMember:
       return kEntityTypeMemberCollection;
     case kEntityTypeMessage:
@@ -87,12 +95,16 @@ String? getEntityByCollection(String collectionName) {
       return kEntityTypeProject;
     case kEntityTypeTeamCollection:
       return kEntityTypeTeam;
+    case kEntityTypeMarkerCollection:
+      return kEntityTypeMarker;
     case kEntityTypePlanCollection:
       return kEntityTypePlan;
     case kEntityTypeStageCollection:
       return kEntityTypeStage;
     case kEntityTypeTaskCollection:
       return kEntityTypeTask;
+    case kEntityTypeUserCollection:
+      return kEntityTypeUser;
     case kEntityTypeMemberCollection:
       return kEntityTypeMember;
     case kEntityTypeMessageCollection:
@@ -129,9 +141,11 @@ enum EntityType {
   unknown(kEntityTypeUnknown),
   project(kEntityTypeProject),
   team(kEntityTypeTeam),
+  marker(kEntityTypeMarker),
   plan(kEntityTypePlan),
   stage(kEntityTypeStage),
   task(kEntityTypeTask),
+  user(kEntityTypeUser),
   member(kEntityTypeMember),
   message(kEntityTypeMessage),
   portion(kEntityTypePortion),
@@ -155,9 +169,11 @@ enum EntityType {
   static const Map<String, String> suffixMapping = {
     kEntityTypeProject: 'proj',
     kEntityTypeTeam: 'team',
+    kEntityTypeMarker: 'mrkr',
     kEntityTypePlan: 'plan',
     kEntityTypeStage: 'stag',
     kEntityTypeTask: 'task',
+    kEntityTypeUser: 'user',
     kEntityTypeMember: 'memb',
     kEntityTypeMessage: 'mesg',
     kEntityTypePortion: 'prtn',
