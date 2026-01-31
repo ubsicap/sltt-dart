@@ -19,9 +19,7 @@ void main() {
             title: 'Note Title',
             videoCommentId: 'video-comment-1',
             textComment: 'Note text comment',
-            markerColorValue: 0xFF00FF00,
-            markerShape: 'circle',
-            markerDescription: 'Marker description',
+            markerId: 'marker-1',
             positionMs: 1234,
             resolution: 'unresolved',
             parentId: 'video-1',
@@ -127,9 +125,9 @@ void main() {
                 'data_positionMs_changeAt_ should match the original UTC time',
           );
           expect(
-            testEntityState.data_markerShape,
-            equals('circle'),
-            reason: 'marker shape should be correctly deserialized',
+            testEntityState.data_markerId,
+            equals('marker-1'),
+            reason: 'marker id should be correctly deserialized',
           );
           expect(
             serializedJson['data_title'],

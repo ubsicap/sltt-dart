@@ -32,26 +32,12 @@ class DynamoNoteDataEntityState extends BaseEntityState {
   final String data_textComment_changeBy_;
   final DateTime? data_textComment_cloudAt_;
 
-  final int data_markerColorValue;
-  final int? data_markerColorValue_dataSchemaRev_;
-  final DateTime data_markerColorValue_changeAt_;
-  final String? data_markerColorValue_cid_;
-  final String data_markerColorValue_changeBy_;
-  final DateTime? data_markerColorValue_cloudAt_;
-
-  final String data_markerShape;
-  final int? data_markerShape_dataSchemaRev_;
-  final DateTime data_markerShape_changeAt_;
-  final String? data_markerShape_cid_;
-  final String data_markerShape_changeBy_;
-  final DateTime? data_markerShape_cloudAt_;
-
-  final String data_markerDescription;
-  final int? data_markerDescription_dataSchemaRev_;
-  final DateTime data_markerDescription_changeAt_;
-  final String? data_markerDescription_cid_;
-  final String data_markerDescription_changeBy_;
-  final DateTime? data_markerDescription_cloudAt_;
+  final String data_markerId;
+  final int? data_markerId_dataSchemaRev_;
+  final DateTime data_markerId_changeAt_;
+  final String? data_markerId_cid_;
+  final String data_markerId_changeBy_;
+  final DateTime? data_markerId_cloudAt_;
 
   final int data_positionMs;
   final int? data_positionMs_dataSchemaRev_;
@@ -111,24 +97,12 @@ class DynamoNoteDataEntityState extends BaseEntityState {
     this.data_textComment_cid_,
     required this.data_textComment_changeBy_,
     DateTime? data_textComment_cloudAt_,
-    required this.data_markerColorValue,
-    this.data_markerColorValue_dataSchemaRev_,
-    required DateTime data_markerColorValue_changeAt_,
-    this.data_markerColorValue_cid_,
-    required this.data_markerColorValue_changeBy_,
-    DateTime? data_markerColorValue_cloudAt_,
-    required this.data_markerShape,
-    this.data_markerShape_dataSchemaRev_,
-    required DateTime data_markerShape_changeAt_,
-    this.data_markerShape_cid_,
-    required this.data_markerShape_changeBy_,
-    DateTime? data_markerShape_cloudAt_,
-    required this.data_markerDescription,
-    this.data_markerDescription_dataSchemaRev_,
-    required DateTime data_markerDescription_changeAt_,
-    this.data_markerDescription_cid_,
-    required this.data_markerDescription_changeBy_,
-    DateTime? data_markerDescription_cloudAt_,
+    required this.data_markerId,
+    this.data_markerId_dataSchemaRev_,
+    required DateTime data_markerId_changeAt_,
+    this.data_markerId_cid_,
+    required this.data_markerId_changeBy_,
+    DateTime? data_markerId_cloudAt_,
     required this.data_positionMs,
     this.data_positionMs_dataSchemaRev_,
     required DateTime data_positionMs_changeAt_,
@@ -163,15 +137,8 @@ class DynamoNoteDataEntityState extends BaseEntityState {
        data_videoCommentId_cloudAt_ = data_videoCommentId_cloudAt_?.toUtc(),
        data_textComment_changeAt_ = data_textComment_changeAt_.toUtc(),
        data_textComment_cloudAt_ = data_textComment_cloudAt_?.toUtc(),
-       data_markerColorValue_changeAt_ = data_markerColorValue_changeAt_
-           .toUtc(),
-       data_markerColorValue_cloudAt_ = data_markerColorValue_cloudAt_?.toUtc(),
-       data_markerShape_changeAt_ = data_markerShape_changeAt_.toUtc(),
-       data_markerShape_cloudAt_ = data_markerShape_cloudAt_?.toUtc(),
-       data_markerDescription_changeAt_ = data_markerDescription_changeAt_
-           .toUtc(),
-       data_markerDescription_cloudAt_ = data_markerDescription_cloudAt_
-           ?.toUtc(),
+       data_markerId_changeAt_ = data_markerId_changeAt_.toUtc(),
+       data_markerId_cloudAt_ = data_markerId_cloudAt_?.toUtc(),
        data_positionMs_changeAt_ = data_positionMs_changeAt_.toUtc(),
        data_positionMs_cloudAt_ = data_positionMs_cloudAt_?.toUtc(),
        data_resolution_changeAt_ = data_resolution_changeAt_.toUtc(),
@@ -183,9 +150,7 @@ class DynamoNoteDataEntityState extends BaseEntityState {
   Map<String, dynamic> toJsonSafe() {
     final j = toJson();
     j.putIfAbsent('data_title', () => '');
-    j.putIfAbsent('data_markerColorValue', () => 0);
-    j.putIfAbsent('data_markerShape', () => '');
-    j.putIfAbsent('data_markerDescription', () => '');
+    j.putIfAbsent('data_markerId', () => '');
     j.putIfAbsent('data_positionMs', () => 0);
     j.putIfAbsent('data_resolution', () => '');
     return j;

@@ -146,73 +146,25 @@ DynamoNoteDataEntityState _$DynamoNoteDataEntityStateFromJson(
       'data_textComment_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
-    data_markerColorValue: $checkedConvert(
-      'data_markerColorValue',
-      (v) => (v as num).toInt(),
-    ),
-    data_markerColorValue_dataSchemaRev_: $checkedConvert(
-      'data_markerColorValue_dataSchemaRev_',
+    data_markerId: $checkedConvert('data_markerId', (v) => v as String),
+    data_markerId_dataSchemaRev_: $checkedConvert(
+      'data_markerId_dataSchemaRev_',
       (v) => (v as num?)?.toInt(),
     ),
-    data_markerColorValue_changeAt_: $checkedConvert(
-      'data_markerColorValue_changeAt_',
+    data_markerId_changeAt_: $checkedConvert(
+      'data_markerId_changeAt_',
       (v) => DateTime.parse(v as String),
     ),
-    data_markerColorValue_cid_: $checkedConvert(
-      'data_markerColorValue_cid_',
+    data_markerId_cid_: $checkedConvert(
+      'data_markerId_cid_',
       (v) => v as String?,
     ),
-    data_markerColorValue_changeBy_: $checkedConvert(
-      'data_markerColorValue_changeBy_',
+    data_markerId_changeBy_: $checkedConvert(
+      'data_markerId_changeBy_',
       (v) => v as String,
     ),
-    data_markerColorValue_cloudAt_: $checkedConvert(
-      'data_markerColorValue_cloudAt_',
-      (v) => v == null ? null : DateTime.parse(v as String),
-    ),
-    data_markerShape: $checkedConvert('data_markerShape', (v) => v as String),
-    data_markerShape_dataSchemaRev_: $checkedConvert(
-      'data_markerShape_dataSchemaRev_',
-      (v) => (v as num?)?.toInt(),
-    ),
-    data_markerShape_changeAt_: $checkedConvert(
-      'data_markerShape_changeAt_',
-      (v) => DateTime.parse(v as String),
-    ),
-    data_markerShape_cid_: $checkedConvert(
-      'data_markerShape_cid_',
-      (v) => v as String?,
-    ),
-    data_markerShape_changeBy_: $checkedConvert(
-      'data_markerShape_changeBy_',
-      (v) => v as String,
-    ),
-    data_markerShape_cloudAt_: $checkedConvert(
-      'data_markerShape_cloudAt_',
-      (v) => v == null ? null : DateTime.parse(v as String),
-    ),
-    data_markerDescription: $checkedConvert(
-      'data_markerDescription',
-      (v) => v as String,
-    ),
-    data_markerDescription_dataSchemaRev_: $checkedConvert(
-      'data_markerDescription_dataSchemaRev_',
-      (v) => (v as num?)?.toInt(),
-    ),
-    data_markerDescription_changeAt_: $checkedConvert(
-      'data_markerDescription_changeAt_',
-      (v) => DateTime.parse(v as String),
-    ),
-    data_markerDescription_cid_: $checkedConvert(
-      'data_markerDescription_cid_',
-      (v) => v as String?,
-    ),
-    data_markerDescription_changeBy_: $checkedConvert(
-      'data_markerDescription_changeBy_',
-      (v) => v as String,
-    ),
-    data_markerDescription_cloudAt_: $checkedConvert(
-      'data_markerDescription_cloudAt_',
+    data_markerId_cloudAt_: $checkedConvert(
+      'data_markerId_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
     data_positionMs: $checkedConvert(
@@ -388,32 +340,12 @@ Map<String, dynamic> _$DynamoNoteDataEntityStateToJson(
   'data_textComment_changeBy_': instance.data_textComment_changeBy_,
   'data_textComment_cloudAt_': instance.data_textComment_cloudAt_
       ?.toIso8601String(),
-  'data_markerColorValue': instance.data_markerColorValue,
-  'data_markerColorValue_dataSchemaRev_':
-      instance.data_markerColorValue_dataSchemaRev_,
-  'data_markerColorValue_changeAt_': instance.data_markerColorValue_changeAt_
-      .toIso8601String(),
-  'data_markerColorValue_cid_': instance.data_markerColorValue_cid_,
-  'data_markerColorValue_changeBy_': instance.data_markerColorValue_changeBy_,
-  'data_markerColorValue_cloudAt_': instance.data_markerColorValue_cloudAt_
-      ?.toIso8601String(),
-  'data_markerShape': instance.data_markerShape,
-  'data_markerShape_dataSchemaRev_': instance.data_markerShape_dataSchemaRev_,
-  'data_markerShape_changeAt_': instance.data_markerShape_changeAt_
-      .toIso8601String(),
-  'data_markerShape_cid_': instance.data_markerShape_cid_,
-  'data_markerShape_changeBy_': instance.data_markerShape_changeBy_,
-  'data_markerShape_cloudAt_': instance.data_markerShape_cloudAt_
-      ?.toIso8601String(),
-  'data_markerDescription': instance.data_markerDescription,
-  'data_markerDescription_dataSchemaRev_':
-      instance.data_markerDescription_dataSchemaRev_,
-  'data_markerDescription_changeAt_': instance.data_markerDescription_changeAt_
-      .toIso8601String(),
-  'data_markerDescription_cid_': instance.data_markerDescription_cid_,
-  'data_markerDescription_changeBy_': instance.data_markerDescription_changeBy_,
-  'data_markerDescription_cloudAt_': instance.data_markerDescription_cloudAt_
-      ?.toIso8601String(),
+  'data_markerId': instance.data_markerId,
+  'data_markerId_dataSchemaRev_': instance.data_markerId_dataSchemaRev_,
+  'data_markerId_changeAt_': instance.data_markerId_changeAt_.toIso8601String(),
+  'data_markerId_cid_': instance.data_markerId_cid_,
+  'data_markerId_changeBy_': instance.data_markerId_changeBy_,
+  'data_markerId_cloudAt_': instance.data_markerId_cloudAt_?.toIso8601String(),
   'data_positionMs': instance.data_positionMs,
   'data_positionMs_dataSchemaRev_': instance.data_positionMs_dataSchemaRev_,
   'data_positionMs_changeAt_': instance.data_positionMs_changeAt_

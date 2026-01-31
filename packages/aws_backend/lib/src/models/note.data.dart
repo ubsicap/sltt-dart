@@ -13,10 +13,8 @@ class NoteData extends BaseDataFields {
   /// Optional textual description for the note.
   final String? textComment;
 
-  /// Marker representation stored in simple fields for serialization.
-  final int markerColorValue;
-  final String markerShape;
-  final String markerDescription;
+  /// Marker reference stored as a single id for serialization.
+  final String markerId;
 
   /// Position within the video in milliseconds.
   final int positionMs;
@@ -28,9 +26,7 @@ class NoteData extends BaseDataFields {
     required this.title,
     this.videoCommentId,
     this.textComment,
-    required this.markerColorValue,
-    required this.markerShape,
-    required this.markerDescription,
+    required this.markerId,
     required this.positionMs,
     required this.resolution,
     required super.parentId,

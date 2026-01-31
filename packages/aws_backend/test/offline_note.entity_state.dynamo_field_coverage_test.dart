@@ -15,12 +15,8 @@ void main() {
     'data_videoCommentId_cloudAt_',
     'data_textComment_changeAt_',
     'data_textComment_cloudAt_',
-    'data_markerColorValue_changeAt_',
-    'data_markerColorValue_cloudAt_',
-    'data_markerShape_changeAt_',
-    'data_markerShape_cloudAt_',
-    'data_markerDescription_changeAt_',
-    'data_markerDescription_cloudAt_',
+    'data_markerId_changeAt_',
+    'data_markerId_cloudAt_',
     'data_positionMs_changeAt_',
     'data_positionMs_cloudAt_',
     'data_resolution_changeAt_',
@@ -71,24 +67,12 @@ void main() {
     'data_textComment_cid_',
     'data_textComment_changeBy_',
     'data_textComment_cloudAt_',
-    'data_markerColorValue',
-    'data_markerColorValue_dataSchemaRev_',
-    'data_markerColorValue_changeAt_',
-    'data_markerColorValue_cid_',
-    'data_markerColorValue_changeBy_',
-    'data_markerColorValue_cloudAt_',
-    'data_markerShape',
-    'data_markerShape_dataSchemaRev_',
-    'data_markerShape_changeAt_',
-    'data_markerShape_cid_',
-    'data_markerShape_changeBy_',
-    'data_markerShape_cloudAt_',
-    'data_markerDescription',
-    'data_markerDescription_dataSchemaRev_',
-    'data_markerDescription_changeAt_',
-    'data_markerDescription_cid_',
-    'data_markerDescription_changeBy_',
-    'data_markerDescription_cloudAt_',
+    'data_markerId',
+    'data_markerId_dataSchemaRev_',
+    'data_markerId_changeAt_',
+    'data_markerId_cid_',
+    'data_markerId_changeBy_',
+    'data_markerId_cloudAt_',
     'data_positionMs',
     'data_positionMs_dataSchemaRev_',
     'data_positionMs_changeAt_',
@@ -135,12 +119,8 @@ void main() {
     required DateTime expectedDataVideoCommentIdCloudAt,
     required DateTime expectedDataTextCommentChangeAt,
     required DateTime expectedDataTextCommentCloudAt,
-    required DateTime expectedDataMarkerColorValueChangeAt,
-    required DateTime expectedDataMarkerColorValueCloudAt,
-    required DateTime expectedDataMarkerShapeChangeAt,
-    required DateTime expectedDataMarkerShapeCloudAt,
-    required DateTime expectedDataMarkerDescriptionChangeAt,
-    required DateTime expectedDataMarkerDescriptionCloudAt,
+    required DateTime expectedDataMarkerIdChangeAt,
+    required DateTime expectedDataMarkerIdCloudAt,
     required DateTime expectedDataPositionMsChangeAt,
     required DateTime expectedDataPositionMsCloudAt,
     required DateTime expectedDataResolutionChangeAt,
@@ -191,34 +171,14 @@ void main() {
       reason: '${prefix}data_textComment_cloudAt_ should be UTC',
     );
     expect(
-      state.data_markerColorValue_changeAt_,
-      equals(expectedDataMarkerColorValueChangeAt.toUtc()),
-      reason: '${prefix}data_markerColorValue_changeAt_ should be UTC',
+      state.data_markerId_changeAt_,
+      equals(expectedDataMarkerIdChangeAt.toUtc()),
+      reason: '${prefix}data_markerId_changeAt_ should be UTC',
     );
     expect(
-      state.data_markerColorValue_cloudAt_,
-      equals(expectedDataMarkerColorValueCloudAt.toUtc()),
-      reason: '${prefix}data_markerColorValue_cloudAt_ should be UTC',
-    );
-    expect(
-      state.data_markerShape_changeAt_,
-      equals(expectedDataMarkerShapeChangeAt.toUtc()),
-      reason: '${prefix}data_markerShape_changeAt_ should be UTC',
-    );
-    expect(
-      state.data_markerShape_cloudAt_,
-      equals(expectedDataMarkerShapeCloudAt.toUtc()),
-      reason: '${prefix}data_markerShape_cloudAt_ should be UTC',
-    );
-    expect(
-      state.data_markerDescription_changeAt_,
-      equals(expectedDataMarkerDescriptionChangeAt.toUtc()),
-      reason: '${prefix}data_markerDescription_changeAt_ should be UTC',
-    );
-    expect(
-      state.data_markerDescription_cloudAt_,
-      equals(expectedDataMarkerDescriptionCloudAt.toUtc()),
-      reason: '${prefix}data_markerDescription_cloudAt_ should be UTC',
+      state.data_markerId_cloudAt_,
+      equals(expectedDataMarkerIdCloudAt.toUtc()),
+      reason: '${prefix}data_markerId_cloudAt_ should be UTC',
     );
     expect(
       state.data_positionMs_changeAt_,
@@ -333,23 +293,11 @@ void main() {
       final localDataTextCommentCloudAt = DateTime.now().subtract(
         const Duration(minutes: 13),
       );
-      final localDataMarkerColorValueChangeAt = DateTime.now().subtract(
+      final localDataMarkerIdChangeAt = DateTime.now().subtract(
         const Duration(minutes: 16),
       );
-      final localDataMarkerColorValueCloudAt = DateTime.now().subtract(
+      final localDataMarkerIdCloudAt = DateTime.now().subtract(
         const Duration(minutes: 19),
-      );
-      final localDataMarkerShapeChangeAt = DateTime.now().subtract(
-        const Duration(minutes: 11),
-      );
-      final localDataMarkerShapeCloudAt = DateTime.now().subtract(
-        const Duration(minutes: 10),
-      );
-      final localDataMarkerDescriptionChangeAt = DateTime.now().subtract(
-        const Duration(minutes: 9),
-      );
-      final localDataMarkerDescriptionCloudAt = DateTime.now().subtract(
-        const Duration(minutes: 8),
       );
       final localDataPositionMsChangeAt = DateTime.now().subtract(
         const Duration(minutes: 7),
@@ -439,33 +387,15 @@ void main() {
         ),
         data_textComment_changeBy_: 'test-user-1',
         data_textComment_cloudAt_: localDataTextCommentCloudAt,
-        data_markerColorValue: 0xFF00FF00,
-        data_markerColorValue_dataSchemaRev_: 1,
-        data_markerColorValue_changeAt_: localDataMarkerColorValueChangeAt,
-        data_markerColorValue_cid_: generateCid(
+        data_markerId: 'marker-1',
+        data_markerId_dataSchemaRev_: 1,
+        data_markerId_changeAt_: localDataMarkerIdChangeAt,
+        data_markerId_cid_: generateCid(
           entityType: EntityType.note,
           userId: 'test-user-1',
         ),
-        data_markerColorValue_changeBy_: 'test-user-1',
-        data_markerColorValue_cloudAt_: localDataMarkerColorValueCloudAt,
-        data_markerShape: 'circle',
-        data_markerShape_dataSchemaRev_: 1,
-        data_markerShape_changeAt_: localDataMarkerShapeChangeAt,
-        data_markerShape_cid_: generateCid(
-          entityType: EntityType.note,
-          userId: 'test-user-1',
-        ),
-        data_markerShape_changeBy_: 'test-user-1',
-        data_markerShape_cloudAt_: localDataMarkerShapeCloudAt,
-        data_markerDescription: 'Marker description',
-        data_markerDescription_dataSchemaRev_: 1,
-        data_markerDescription_changeAt_: localDataMarkerDescriptionChangeAt,
-        data_markerDescription_cid_: generateCid(
-          entityType: EntityType.note,
-          userId: 'test-user-1',
-        ),
-        data_markerDescription_changeBy_: 'test-user-1',
-        data_markerDescription_cloudAt_: localDataMarkerDescriptionCloudAt,
+        data_markerId_changeBy_: 'test-user-1',
+        data_markerId_cloudAt_: localDataMarkerIdCloudAt,
         data_positionMs: 1234,
         data_positionMs_dataSchemaRev_: 1,
         data_positionMs_changeAt_: localDataPositionMsChangeAt,
@@ -530,13 +460,8 @@ void main() {
         expectedDataVideoCommentIdCloudAt: localDataVideoCommentIdCloudAt,
         expectedDataTextCommentChangeAt: localDataTextCommentChangeAt,
         expectedDataTextCommentCloudAt: localDataTextCommentCloudAt,
-        expectedDataMarkerColorValueChangeAt: localDataMarkerColorValueChangeAt,
-        expectedDataMarkerColorValueCloudAt: localDataMarkerColorValueCloudAt,
-        expectedDataMarkerShapeChangeAt: localDataMarkerShapeChangeAt,
-        expectedDataMarkerShapeCloudAt: localDataMarkerShapeCloudAt,
-        expectedDataMarkerDescriptionChangeAt:
-            localDataMarkerDescriptionChangeAt,
-        expectedDataMarkerDescriptionCloudAt: localDataMarkerDescriptionCloudAt,
+        expectedDataMarkerIdChangeAt: localDataMarkerIdChangeAt,
+        expectedDataMarkerIdCloudAt: localDataMarkerIdCloudAt,
         expectedDataPositionMsChangeAt: localDataPositionMsChangeAt,
         expectedDataPositionMsCloudAt: localDataPositionMsCloudAt,
         expectedDataResolutionChangeAt: localDataResolutionChangeAt,
