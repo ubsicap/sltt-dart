@@ -1,3 +1,4 @@
+import 'package:aws_backend/src/models/marker.entity_state.dynamo.dart';
 import 'package:aws_backend/src/models/note.entity_state.dynamo.dart';
 import 'package:aws_backend/src/models/passage_translation.entity_state.dynamo.dart';
 import 'package:aws_backend/src/models/portion_translation.entity_state.dynamo.dart';
@@ -47,6 +48,14 @@ final bool _dynamoSerializationRegistration = (() {
         (json) => DynamoVideoDataEntityState.fromJsonBase(json),
         (state) => (state as DynamoVideoDataEntityState).toJson(),
         (state) => (state as DynamoVideoDataEntityState).toJsonBase(),
+      );
+    } else if (entityType == EntityType.marker) {
+      registerEntityStateFactory(
+        entityType,
+        (json) => DynamoMarkerDataEntityState.fromJson(json),
+        (json) => DynamoMarkerDataEntityState.fromJsonBase(json),
+        (state) => (state as DynamoMarkerDataEntityState).toJson(),
+        (state) => (state as DynamoMarkerDataEntityState).toJsonBase(),
       );
     } else if (entityType == EntityType.note) {
       registerEntityStateFactory(
