@@ -5,6 +5,8 @@ import 'package:path/path.dart' as path;
 import 'package:sltt_core/src/models/base_entity_state.dart';
 import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/localhost_rest_api_server.dart';
+import 'package:sync_manager/src/models/marker.entity_state.isar.dart'
+    show IsarMarkerDataEntityStateSchema;
 import 'package:sync_manager/src/models/note.entity_state.isar.dart'
     show IsarNoteDataEntityStateSchema;
 import 'package:sync_manager/src/models/passage_translation.entity_state.isar.dart';
@@ -93,6 +95,7 @@ void main(List<String> args) async {
       IsarPassageDataEntityStateSchema,
       IsarVideoDataEntityStateSchema,
       IsarNoteDataEntityStateSchema,
+      IsarMarkerDataEntityStateSchema,
       // Add any other schemas specific to sltt-standalone-app here
     ];
   } else {
