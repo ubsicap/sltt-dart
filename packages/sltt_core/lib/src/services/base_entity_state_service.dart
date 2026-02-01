@@ -49,3 +49,10 @@ BaseEntityState deserializeEntityStateSafely(Map<String, dynamic> json) {
     rethrow;
   }
 }
+
+/// Return the list of registered `EntityType` keys that have entity state
+/// factories registered. This is intended for storage implementations to
+/// surface which entity types they can handle as persisted entity states.
+List<EntityType> getRegisteredEntityStateTypes() {
+  return _entityStateFactories.keys.toList(growable: false);
+}

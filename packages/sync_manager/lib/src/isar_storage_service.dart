@@ -146,6 +146,13 @@ class IsarStorageService extends BaseStorageService {
   String getStorageType() => 'local';
 
   @override
+  Future<List<String>> getSupportedEntityTypes() async {
+    // Return the registered entity types from the Isar entity state registry
+    final types = _entityStateRegistry.registeredEntityTypes();
+    return types.map((e) => e.value).toList(growable: false);
+  }
+
+  @override
   Future<String> getStorageId() async => _storageId;
 
   @override

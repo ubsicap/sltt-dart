@@ -154,6 +154,47 @@ class SyncManager {
         '[SyncManager] Found ${changesToSync.length} changes to outsync',
       );
 
+      // Check supported entity types: ensure cloud supports the entity types
+      // we're about to send. If any outgoing change references an entity
+      // type that the cloud does not support as an entity state, abort and
+      // return an error. TODO: consider allowing partial outsyncs for the
+      // supported subset in the future.
+      List<String> cloudSupported = [];
+      try {
+        final resp = await _dio.get(
+          '$_cloudStorageUrl/api/domains/project/entities',
+        );
+        if (resp.statusCode == 200 && resp.data != null) {
+          final body = resp.data as Map<String, dynamic>;
+          final list = body['entityTypes'];
+          if (list is List) {
+            cloudSupported = List<String>.from(list.map((e) => e.toString()));
+          }
+        }
+      } catch (e) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Failed to fetch cloud supported entity types: $e',
+        );
+      }
+
+      final outgoingTypes = changesToSync.map((c) => c.entityType).toSet();
+      final unsupported = outgoingTypes
+          .where((t) => !cloudSupported.contains(t))
+          .toSet();
+      if (unsupported.isNotEmpty) {
+        final message =
+            'Outsync aborted: cloud does not support entity types: ${unsupported.join(', ')}';
+        SlttLogger.logger.severe('[SyncManager] $message');
+        return OutsyncResult(
+          success: false,
+          changesRequested: changesToSync,
+          changeSummary: null,
+          deletedLocalChanges: [],
+          message: message,
+          error: message,
+        );
+      }
+
       // Send changes to cloud storage using typed API model
       final srcStorageId = await _localStorage.getStorageId();
       final req = CreateChangesRequest(

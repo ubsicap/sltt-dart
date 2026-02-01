@@ -44,6 +44,12 @@ class InMemoryStorage implements BaseStorageService {
   Future<String> ensureStorageId() async => storageId;
 
   @override
+  Future<List<String>> getSupportedEntityTypes() async {
+    // In-memory test storage supports all registered entity types by default
+    return EntityType.allValues;
+  }
+
+  @override
   Future<BaseEntityState?> getEntityState({
     required String domainType,
     required String domainId,

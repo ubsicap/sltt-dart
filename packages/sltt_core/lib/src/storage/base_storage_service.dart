@@ -252,6 +252,12 @@ abstract class BaseStorageService {
   Future<BaseChangeLogEntry> testStoreChangeFromJson({
     required Map<String, dynamic> changeJson,
   });
+
+  /// Return a list of supported entity type string values that this storage
+  /// backend can persist as entity states (e.g. ['note','video',...]). This
+  /// is used by API layers and sync logic to determine compatibility between
+  /// storages.
+  Future<List<String>> getSupportedEntityTypes();
 }
 
 /// Return type for updateChangeLogAndStates: lists of change log entries and entity states.

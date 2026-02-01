@@ -107,6 +107,14 @@ class DynamoDBStorageService extends BaseStorageService {
   String getStorageType() => 'cloud';
 
   @override
+  Future<List<String>> getSupportedEntityTypes() async {
+    // Ensure serializers are registered and return the registered types
+    ensureDynamoSerializersRegistered();
+    final types = getRegisteredEntityStateTypes();
+    return types.map((e) => e.value).toList(growable: false);
+  }
+
+  @override
   Future<String> getStorageId() async {
     if (_storageId != null) return _storageId!;
     return ensureStorageId();

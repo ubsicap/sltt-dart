@@ -1703,17 +1703,11 @@ abstract class BaseRestApiServer {
         return _errorResponse('Domain type is required', 400);
       }
 
-      // Get supported entity types for this domainType
-      late final List<String> entityTypes;
-      if (domainType == 'project') {
-        entityTypes = EntityType.allValues;
-      } else {
-        entityTypes = [];
-        return _errorResponse('Unsupported domain type: $domainType', 400);
-      }
+      // Ask underlying storage which entity types it supports for entity states
+      final supported = await storage.getSupportedEntityTypes();
 
       return Response.ok(
-        jsonEncode({'domainType': domainType, 'entityTypes': entityTypes}),
+        jsonEncode({'domainType': domainType, 'entityTypes': supported}),
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {
