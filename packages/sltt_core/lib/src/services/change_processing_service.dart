@@ -169,7 +169,6 @@ class ChangeProcessingService {
         changes: changes,
         storageMode: storageMode,
         srcStorageType: srcStorageType,
-        storage: storage,
       );
 
       if (preValidationResult != null) {
@@ -723,7 +722,6 @@ class ChangeProcessingService {
     required List<Map<String, dynamic>> changes,
     required String storageMode,
     required String srcStorageType,
-    required BaseStorageService storage,
   }) async {
     final invalidStorageIds = <int>[];
     final List<int> invalidStateChanged = [];
@@ -733,8 +731,6 @@ class ChangeProcessingService {
     // enforce that all changes in a single call to storeChanges share the
     // same domainType (simplifies batch storage implementations).
     final domainTypes = <String>{};
-    // Track encountered entity types -> indices for better error messages
-    final Map<String, List<int>> entityTypeToIndices = {};
     for (int i = 0; i < changes.length; i++) {
       final changeData = changes[i];
       try {
@@ -756,10 +752,6 @@ class ChangeProcessingService {
         // kChangeOperationError) so that partial deserialization failures do
         // not prevent the domainType check from running on the valid entries.
         domainTypes.add(changeLogEntry.domainType);
-
-        // Track entityType occurrences for validation against storage
-        final et = changeLogEntry.entityType;
-        entityTypeToIndices.putIfAbsent(et, () => []).add(i);
 
         // Validate other storageMode issues
         if (storageMode == 'sync') {
@@ -845,36 +837,6 @@ class ChangeProcessingService {
         errorMessage:
             'All changes in a single request to storeChanges must have the same domainType. Found domainTypes: ${domainTypes.join(', ')}',
         errorCode: 400,
-      );
-    }
-
-    // Validate that the storage backend supports the entity types present
-    // in the incoming changes. If any entityType is not supported, abort
-    // with an error. TODO: consider allowing partial processing for the
-    // supported subset and returning per-cid results instead of failing
-    // the whole batch.
-    try {
-      final supported = await storage.getSupportedEntityTypes();
-      final unsupported = entityTypeToIndices.keys
-          .where((et) => !supported.contains(et))
-          .toList(growable: false);
-      if (unsupported.isNotEmpty) {
-        final indices =
-            unsupported
-                .expand((et) => entityTypeToIndices[et] ?? [])
-                .toList(growable: false)
-              ..sort();
-        return ChangeProcessingResult(
-          errorMessage:
-              'One or more changes reference unsupported entity types for this storage backend: ${unsupported.join(', ')} (change indices: ${indices.join(', ')})',
-          errorCode: 400,
-        );
-      }
-    } catch (e) {
-      // If storage fails to report supported types, treat as validation error
-      return ChangeProcessingResult(
-        errorMessage: 'Failed to validate supported entity types: $e',
-        errorCode: 500,
       );
     }
 
