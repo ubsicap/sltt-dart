@@ -31,10 +31,22 @@ void registerEntityStateFactory(
 BaseEntityState deserializeEntityStateSafely(Map<String, dynamic> json) {
   final raw = json['entityType'];
   final parsed = raw is String ? EntityType.tryFromString(raw) : null;
-  final entityType = parsed ?? EntityType.unknown;
-  final pair = _entityStateFactories[entityType];
+  final entityType = parsed ?? EntityType.missing;
+  final pair =
+      _entityStateFactories[entityType] ??
+      _entityStateFactories[EntityType.unknown];
   if (pair == null) {
-    throw Exception('No registered entity state factory for $entityType');
+    throw Exception(
+      'No entity state factory registered for entity type `$entityType`.',
+    );
+  }
+  if (parsed == EntityType.unknown) {
+    throw Exception('entityType `unknown` is reserved for unregistered types.');
+  }
+  if (parsed == EntityType.missing) {
+    throw Exception(
+      'entityType `missing` is reserved for missing entityType field data.',
+    );
   }
   try {
     return deserializeWithUnknownFieldData(

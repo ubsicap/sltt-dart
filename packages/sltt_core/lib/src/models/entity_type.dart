@@ -4,6 +4,8 @@ import 'package:sltt_core/sltt_core.dart';
 
 // Top-level constants for entity type string values. Use these wherever a
 // stable string literal for an entity type is needed to avoid duplication.
+
+const String kEntityTypeMissing = 'missing';
 const String kEntityTypeUnknown = 'unknown';
 const String kEntityTypeProject = 'project';
 const String kEntityTypeProjectCollection = 'projects';
@@ -138,6 +140,7 @@ String? getEntityByCollection(String collectionName) {
 /// Each entity type will eventually have its own schema and collections.
 enum EntityType {
   /// Unknown value for forward compatibility when clients send newer entity types
+  missing(kEntityTypeMissing),
   unknown(kEntityTypeUnknown),
   project(kEntityTypeProject),
   team(kEntityTypeTeam),
