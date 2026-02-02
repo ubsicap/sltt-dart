@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:aws_backend/aws_backend.dart';
 import 'package:shelf_router/shelf_router.dart';
+import 'package:sltt_core/sltt_core.dart' show getRegisteredEntityStateTypes;
 import 'package:test/test.dart';
 
 import 'helpers/fake_storage.dart';
@@ -77,7 +78,10 @@ void main() {
       final body =
           jsonDecode(response['body'] as String) as Map<String, dynamic>;
       expect(body['domainType'], equals('project'));
-      expect(body['entityTypes'], isA<List<dynamic>>());
+      expect(
+        body['entityTypes'],
+        getRegisteredEntityStateTypes().map((esType) => esType.value),
+      );
       expect((body['entityTypes'] as List).isNotEmpty, isTrue);
     });
 
