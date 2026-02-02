@@ -151,7 +151,7 @@ abstract class BaseRestApiServer {
     // TODO: /api/changes/sync vs. /api/changes/save
     router.post('/api/changes', _handleCreateChanges);
     router.get('/api/domains', _handleGetDomainsAndTheirCollections);
-    router.get('/api/domains/<domainType>/entities', _handleGetEntities);
+    router.get('/api/entities/<domainType>', _handleGetEntities);
     router.get('/api/<domainCollection>', _handleGetDomainIds);
 
     /// Generalized domain-scoped endpoints
@@ -1066,7 +1066,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/domains/{domainType}/entities',
+          'path': '/api/entities/{domainType}',
           'description': 'Get list of supported entity types for a domain',
           'parameters': [
             {

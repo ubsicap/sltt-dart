@@ -66,10 +66,10 @@ void main() {
       expect((body['domains'] as List).contains('project'), isTrue);
     });
 
-    test('GET /api/domains/project/entities returns entity types', () async {
+    test('GET /api/entities/project returns project entity types', () async {
       final response = await server.handleApiGatewayEvent({
         'httpMethod': 'GET',
-        'path': '/api/domains/project/entities',
+        'path': '/api/entities/project',
         'headers': <String, String>{},
       }, router);
 
