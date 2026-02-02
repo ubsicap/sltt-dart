@@ -1,3 +1,4 @@
+import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 import 'package:sltt_core/src/models/base_entity_state.dart';
 import 'package:sltt_core/src/models/entity_type.dart';
 import 'package:sltt_core/src/models/serializable_group.dart';
@@ -6,7 +7,7 @@ import 'package:sltt_core/src/services/json_serialization_service.dart';
 final Map<EntityType, SerializableGroup<BaseEntityState>>
 _entityStateFactories = {};
 
-/// Register a factory pair for a specific [entityType] to deserialize
+/// Register a factory group for a specific [entityType] to deserialize
 /// `BaseEntityState` subclasses.
 void registerEntityStateFactory(
   EntityType entityType,
@@ -32,13 +33,11 @@ BaseEntityState deserializeEntityStateSafely(Map<String, dynamic> json) {
   final raw = json['entityType'];
   final parsed = raw is String ? EntityType.tryFromString(raw) : null;
   final entityType = parsed ?? EntityType.missing;
-  final pair =
+  final group =
       _entityStateFactories[entityType] ??
       _entityStateFactories[EntityType.unknown];
-  if (pair == null) {
-    throw Exception(
-      'No entity state factory registered for entity type `$entityType`.',
-    );
+  if (group == null) {
+    throw Exception('No entity state factory registered for entityType=$raw');
   }
   if (parsed == EntityType.unknown) {
     throw Exception('entityType `unknown` is reserved for unregistered types.');
@@ -48,11 +47,19 @@ BaseEntityState deserializeEntityStateSafely(Map<String, dynamic> json) {
       'entityType `missing` is reserved for missing entityType field data.',
     );
   }
+  final groupKey = _entityStateFactories[entityType] != null
+      ? entityType
+      : EntityType.unknown;
+  if (groupKey == EntityType.unknown) {
+    SlttLogger.logger.warning(
+      'Deserializing entity state with unregistered entityType="$raw"',
+    );
+  }
   try {
     return deserializeWithUnknownFieldData(
-      pair.fromJsonBase,
+      group.fromJsonBase,
       json,
-      pair.toJsonBase,
+      group.toJsonBase,
     );
   } catch (e) {
     // Entity-state specific deserialization errors are not recovered here.
@@ -67,4 +74,10 @@ BaseEntityState deserializeEntityStateSafely(Map<String, dynamic> json) {
 /// surface which entity types they can handle as persisted entity states.
 List<EntityType> getRegisteredEntityStateTypes() {
   return _entityStateFactories.keys.toList(growable: false);
+}
+
+SerializableGroup<BaseEntityState>? getSerializableGroup(
+  EntityType entityType,
+) {
+  return _entityStateFactories[entityType];
 }
