@@ -41,6 +41,10 @@ class IsarStorageService extends BaseStorageService {
   /// full path to database file
   get databasePath => _initialized ? _dbPath : null;
 
+  /// Direct access to the underlying Isar instance (for read-only queries).
+  /// Callers should ensure storage is initialized before accessing.
+  Isar get isar => _isar;
+
   @override
   int get batchPutChangesLimit => 10000;
 
