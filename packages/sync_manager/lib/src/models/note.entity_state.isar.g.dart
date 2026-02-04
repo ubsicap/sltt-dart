@@ -511,7 +511,12 @@ int _isarNoteDataEntityStateEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
-  bytesCount += 3 + object.data_textComment_changeBy_.length * 3;
+  {
+    final value = object.data_textComment_changeBy_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   {
     final value = object.data_textComment_cid_;
     if (value != null) {
@@ -532,7 +537,12 @@ int _isarNoteDataEntityStateEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
-  bytesCount += 3 + object.data_videoCommentId_changeBy_.length * 3;
+  {
+    final value = object.data_videoCommentId_changeBy_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   {
     final value = object.data_videoCommentId_cid_;
     if (value != null) {
@@ -693,8 +703,8 @@ IsarNoteDataEntityState _isarNoteDataEntityStateDeserialize(
     data_resolution_cloudAt_: reader.readDateTimeOrNull(offsets[52]),
     data_resolution_dataSchemaRev_: reader.readLongOrNull(offsets[53]),
     data_textComment: reader.readStringOrNull(offsets[54]),
-    data_textComment_changeAt_: reader.readDateTime(offsets[55]),
-    data_textComment_changeBy_: reader.readString(offsets[56]),
+    data_textComment_changeAt_: reader.readDateTimeOrNull(offsets[55]),
+    data_textComment_changeBy_: reader.readStringOrNull(offsets[56]),
     data_textComment_cid_: reader.readStringOrNull(offsets[57]),
     data_textComment_cloudAt_: reader.readDateTimeOrNull(offsets[58]),
     data_textComment_dataSchemaRev_: reader.readLongOrNull(offsets[59]),
@@ -705,8 +715,8 @@ IsarNoteDataEntityState _isarNoteDataEntityStateDeserialize(
     data_title_cloudAt_: reader.readDateTimeOrNull(offsets[64]),
     data_title_dataSchemaRev_: reader.readLongOrNull(offsets[65]),
     data_videoCommentId: reader.readStringOrNull(offsets[66]),
-    data_videoCommentId_changeAt_: reader.readDateTime(offsets[67]),
-    data_videoCommentId_changeBy_: reader.readString(offsets[68]),
+    data_videoCommentId_changeAt_: reader.readDateTimeOrNull(offsets[67]),
+    data_videoCommentId_changeBy_: reader.readStringOrNull(offsets[68]),
     data_videoCommentId_cid_: reader.readStringOrNull(offsets[69]),
     data_videoCommentId_cloudAt_: reader.readDateTimeOrNull(offsets[70]),
     data_videoCommentId_dataSchemaRev_: reader.readLongOrNull(offsets[71]),
@@ -838,9 +848,9 @@ P _isarNoteDataEntityStateDeserializeProp<P>(
     case 54:
       return (reader.readStringOrNull(offset)) as P;
     case 55:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 56:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 57:
       return (reader.readStringOrNull(offset)) as P;
     case 58:
@@ -862,9 +872,9 @@ P _isarNoteDataEntityStateDeserializeProp<P>(
     case 66:
       return (reader.readStringOrNull(offset)) as P;
     case 67:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 68:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 69:
       return (reader.readStringOrNull(offset)) as P;
     case 70:
@@ -8743,7 +8753,35 @@ extension IsarNoteDataEntityStateQueryFilter
     IsarNoteDataEntityState,
     QAfterFilterCondition
   >
-  data_textComment_changeAt_EqualTo(DateTime value) {
+  data_textComment_changeAt_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_textComment_changeAt_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_textComment_changeAt_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_textComment_changeAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_textComment_changeAt_EqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.equalTo(
@@ -8760,7 +8798,7 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_textComment_changeAt_GreaterThan(
-    DateTime value, {
+    DateTime? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -8779,7 +8817,7 @@ extension IsarNoteDataEntityStateQueryFilter
     IsarNoteDataEntityState,
     QAfterFilterCondition
   >
-  data_textComment_changeAt_LessThan(DateTime value, {bool include = false}) {
+  data_textComment_changeAt_LessThan(DateTime? value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.lessThan(
@@ -8797,8 +8835,8 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_textComment_changeAt_Between(
-    DateTime lower,
-    DateTime upper, {
+    DateTime? lower,
+    DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -8820,7 +8858,38 @@ extension IsarNoteDataEntityStateQueryFilter
     IsarNoteDataEntityState,
     QAfterFilterCondition
   >
-  data_textComment_changeBy_EqualTo(String value, {bool caseSensitive = true}) {
+  data_textComment_changeBy_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_textComment_changeBy_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_textComment_changeBy_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_textComment_changeBy_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_textComment_changeBy_EqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.equalTo(
@@ -8838,7 +8907,7 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_textComment_changeBy_GreaterThan(
-    String value, {
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -8860,7 +8929,7 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_textComment_changeBy_LessThan(
-    String value, {
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -8882,8 +8951,8 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_textComment_changeBy_Between(
-    String lower,
-    String upper, {
+    String? lower,
+    String? upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
@@ -10492,7 +10561,37 @@ extension IsarNoteDataEntityStateQueryFilter
     IsarNoteDataEntityState,
     QAfterFilterCondition
   >
-  data_videoCommentId_changeAt_EqualTo(DateTime value) {
+  data_videoCommentId_changeAt_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentId_changeAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentId_changeAt_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentId_changeAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentId_changeAt_EqualTo(DateTime? value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.equalTo(
@@ -10509,7 +10608,7 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_videoCommentId_changeAt_GreaterThan(
-    DateTime value, {
+    DateTime? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -10529,7 +10628,7 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_videoCommentId_changeAt_LessThan(
-    DateTime value, {
+    DateTime? value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -10549,8 +10648,8 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_videoCommentId_changeAt_Between(
-    DateTime lower,
-    DateTime upper, {
+    DateTime? lower,
+    DateTime? upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -10572,8 +10671,38 @@ extension IsarNoteDataEntityStateQueryFilter
     IsarNoteDataEntityState,
     QAfterFilterCondition
   >
+  data_videoCommentId_changeBy_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentId_changeBy_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentId_changeBy_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentId_changeBy_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
   data_videoCommentId_changeBy_EqualTo(
-    String value, {
+    String? value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -10593,7 +10722,7 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_videoCommentId_changeBy_GreaterThan(
-    String value, {
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -10615,7 +10744,7 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_videoCommentId_changeBy_LessThan(
-    String value, {
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -10637,8 +10766,8 @@ extension IsarNoteDataEntityStateQueryFilter
     QAfterFilterCondition
   >
   data_videoCommentId_changeBy_Between(
-    String lower,
-    String upper, {
+    String? lower,
+    String? upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
@@ -15331,14 +15460,14 @@ extension IsarNoteDataEntityStateQueryProperty
     });
   }
 
-  QueryBuilder<IsarNoteDataEntityState, DateTime, QQueryOperations>
+  QueryBuilder<IsarNoteDataEntityState, DateTime?, QQueryOperations>
   data_textComment_changeAt_Property() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'data_textComment_changeAt_');
     });
   }
 
-  QueryBuilder<IsarNoteDataEntityState, String, QQueryOperations>
+  QueryBuilder<IsarNoteDataEntityState, String?, QQueryOperations>
   data_textComment_changeBy_Property() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'data_textComment_changeBy_');
@@ -15415,14 +15544,14 @@ extension IsarNoteDataEntityStateQueryProperty
     });
   }
 
-  QueryBuilder<IsarNoteDataEntityState, DateTime, QQueryOperations>
+  QueryBuilder<IsarNoteDataEntityState, DateTime?, QQueryOperations>
   data_videoCommentId_changeAt_Property() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'data_videoCommentId_changeAt_');
     });
   }
 
-  QueryBuilder<IsarNoteDataEntityState, String, QQueryOperations>
+  QueryBuilder<IsarNoteDataEntityState, String?, QQueryOperations>
   data_videoCommentId_changeBy_Property() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'data_videoCommentId_changeBy_');
@@ -15599,7 +15728,7 @@ IsarNoteDataEntityState _$IsarNoteDataEntityStateFromJson(
     ),
     data_videoCommentId_changeAt_: $checkedConvert(
       'data_videoCommentId_changeAt_',
-      (v) => DateTime.parse(v as String),
+      (v) => v == null ? null : DateTime.parse(v as String),
     ),
     data_videoCommentId_cid_: $checkedConvert(
       'data_videoCommentId_cid_',
@@ -15607,7 +15736,7 @@ IsarNoteDataEntityState _$IsarNoteDataEntityStateFromJson(
     ),
     data_videoCommentId_changeBy_: $checkedConvert(
       'data_videoCommentId_changeBy_',
-      (v) => v as String,
+      (v) => v as String?,
     ),
     data_videoCommentId_cloudAt_: $checkedConvert(
       'data_videoCommentId_cloudAt_',
@@ -15620,7 +15749,7 @@ IsarNoteDataEntityState _$IsarNoteDataEntityStateFromJson(
     ),
     data_textComment_changeAt_: $checkedConvert(
       'data_textComment_changeAt_',
-      (v) => DateTime.parse(v as String),
+      (v) => v == null ? null : DateTime.parse(v as String),
     ),
     data_textComment_cid_: $checkedConvert(
       'data_textComment_cid_',
@@ -15628,7 +15757,7 @@ IsarNoteDataEntityState _$IsarNoteDataEntityStateFromJson(
     ),
     data_textComment_changeBy_: $checkedConvert(
       'data_textComment_changeBy_',
-      (v) => v as String,
+      (v) => v as String?,
     ),
     data_textComment_cloudAt_: $checkedConvert(
       'data_textComment_cloudAt_',
@@ -15816,7 +15945,7 @@ Map<String, dynamic> _$IsarNoteDataEntityStateToJson(
   'data_videoCommentId_dataSchemaRev_':
       instance.data_videoCommentId_dataSchemaRev_,
   'data_videoCommentId_changeAt_': instance.data_videoCommentId_changeAt_
-      .toIso8601String(),
+      ?.toIso8601String(),
   'data_videoCommentId_cid_': instance.data_videoCommentId_cid_,
   'data_videoCommentId_changeBy_': instance.data_videoCommentId_changeBy_,
   'data_videoCommentId_cloudAt_': instance.data_videoCommentId_cloudAt_
@@ -15824,7 +15953,7 @@ Map<String, dynamic> _$IsarNoteDataEntityStateToJson(
   'data_textComment': instance.data_textComment,
   'data_textComment_dataSchemaRev_': instance.data_textComment_dataSchemaRev_,
   'data_textComment_changeAt_': instance.data_textComment_changeAt_
-      .toIso8601String(),
+      ?.toIso8601String(),
   'data_textComment_cid_': instance.data_textComment_cid_,
   'data_textComment_changeBy_': instance.data_textComment_changeBy_,
   'data_textComment_cloudAt_': instance.data_textComment_cloudAt_

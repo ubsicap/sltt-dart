@@ -111,7 +111,7 @@ DynamoNoteDataEntityState _$DynamoNoteDataEntityStateFromJson(
     ),
     data_videoCommentId_changeAt_: $checkedConvert(
       'data_videoCommentId_changeAt_',
-      (v) => DateTime.parse(v as String),
+      (v) => v == null ? null : DateTime.parse(v as String),
     ),
     data_videoCommentId_cid_: $checkedConvert(
       'data_videoCommentId_cid_',
@@ -119,7 +119,7 @@ DynamoNoteDataEntityState _$DynamoNoteDataEntityStateFromJson(
     ),
     data_videoCommentId_changeBy_: $checkedConvert(
       'data_videoCommentId_changeBy_',
-      (v) => v as String,
+      (v) => v as String?,
     ),
     data_videoCommentId_cloudAt_: $checkedConvert(
       'data_videoCommentId_cloudAt_',
@@ -132,7 +132,7 @@ DynamoNoteDataEntityState _$DynamoNoteDataEntityStateFromJson(
     ),
     data_textComment_changeAt_: $checkedConvert(
       'data_textComment_changeAt_',
-      (v) => DateTime.parse(v as String),
+      (v) => v == null ? null : DateTime.parse(v as String),
     ),
     data_textComment_cid_: $checkedConvert(
       'data_textComment_cid_',
@@ -140,7 +140,7 @@ DynamoNoteDataEntityState _$DynamoNoteDataEntityStateFromJson(
     ),
     data_textComment_changeBy_: $checkedConvert(
       'data_textComment_changeBy_',
-      (v) => v as String,
+      (v) => v as String?,
     ),
     data_textComment_cloudAt_: $checkedConvert(
       'data_textComment_cloudAt_',
@@ -327,7 +327,7 @@ Map<String, dynamic> _$DynamoNoteDataEntityStateToJson(
   'data_videoCommentId_dataSchemaRev_':
       instance.data_videoCommentId_dataSchemaRev_,
   'data_videoCommentId_changeAt_': instance.data_videoCommentId_changeAt_
-      .toIso8601String(),
+      ?.toIso8601String(),
   'data_videoCommentId_cid_': instance.data_videoCommentId_cid_,
   'data_videoCommentId_changeBy_': instance.data_videoCommentId_changeBy_,
   'data_videoCommentId_cloudAt_': instance.data_videoCommentId_cloudAt_
@@ -335,7 +335,7 @@ Map<String, dynamic> _$DynamoNoteDataEntityStateToJson(
   'data_textComment': instance.data_textComment,
   'data_textComment_dataSchemaRev_': instance.data_textComment_dataSchemaRev_,
   'data_textComment_changeAt_': instance.data_textComment_changeAt_
-      .toIso8601String(),
+      ?.toIso8601String(),
   'data_textComment_cid_': instance.data_textComment_cid_,
   'data_textComment_changeBy_': instance.data_textComment_changeBy_,
   'data_textComment_cloudAt_': instance.data_textComment_cloudAt_

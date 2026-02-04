@@ -27,16 +27,16 @@ class IsarNoteDataEntityState extends BaseEntityState {
 
   final String? data_videoCommentId;
   final int? data_videoCommentId_dataSchemaRev_;
-  final DateTime data_videoCommentId_changeAt_;
+  final DateTime? data_videoCommentId_changeAt_;
   final String? data_videoCommentId_cid_;
-  final String data_videoCommentId_changeBy_;
+  final String? data_videoCommentId_changeBy_;
   final DateTime? data_videoCommentId_cloudAt_;
 
   final String? data_textComment;
   final int? data_textComment_dataSchemaRev_;
-  final DateTime data_textComment_changeAt_;
+  final DateTime? data_textComment_changeAt_;
   final String? data_textComment_cid_;
-  final String data_textComment_changeBy_;
+  final String? data_textComment_changeBy_;
   final DateTime? data_textComment_cloudAt_;
 
   final String data_markerId;
@@ -95,15 +95,15 @@ class IsarNoteDataEntityState extends BaseEntityState {
     DateTime? data_title_cloudAt_,
     this.data_videoCommentId,
     this.data_videoCommentId_dataSchemaRev_,
-    required DateTime data_videoCommentId_changeAt_,
+    DateTime? data_videoCommentId_changeAt_,
     this.data_videoCommentId_cid_,
-    required this.data_videoCommentId_changeBy_,
+    this.data_videoCommentId_changeBy_,
     DateTime? data_videoCommentId_cloudAt_,
     this.data_textComment,
     this.data_textComment_dataSchemaRev_,
-    required DateTime data_textComment_changeAt_,
+    DateTime? data_textComment_changeAt_,
     this.data_textComment_cid_,
-    required this.data_textComment_changeBy_,
+    this.data_textComment_changeBy_,
     DateTime? data_textComment_cloudAt_,
     required this.data_markerId,
     this.data_markerId_dataSchemaRev_,
@@ -141,9 +141,9 @@ class IsarNoteDataEntityState extends BaseEntityState {
     super.data_rank_dataSchemaRev_,
   }) : data_title_changeAt_ = data_title_changeAt_.toUtc(),
        data_title_cloudAt_ = data_title_cloudAt_?.toUtc(),
-       data_videoCommentId_changeAt_ = data_videoCommentId_changeAt_.toUtc(),
+       data_videoCommentId_changeAt_ = data_videoCommentId_changeAt_?.toUtc(),
        data_videoCommentId_cloudAt_ = data_videoCommentId_cloudAt_?.toUtc(),
-       data_textComment_changeAt_ = data_textComment_changeAt_.toUtc(),
+       data_textComment_changeAt_ = data_textComment_changeAt_?.toUtc(),
        data_textComment_cloudAt_ = data_textComment_cloudAt_?.toUtc(),
        data_markerId_changeAt_ = data_markerId_changeAt_.toUtc(),
        data_markerId_cloudAt_ = data_markerId_cloudAt_?.toUtc(),
