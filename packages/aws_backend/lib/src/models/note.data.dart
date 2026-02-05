@@ -32,6 +32,7 @@ class NoteData extends BaseDataFields {
     required super.parentId,
     required super.parentProp,
     required super.rank,
+    super.deleted,
   });
 
   factory NoteData.fromJson(Map<String, dynamic> json) =>

@@ -15,8 +15,8 @@ MarkerData _$MarkerDataFromJson(Map<String, dynamic> json) =>
         parentId: $checkedConvert('parentId', (v) => v as String),
         parentProp: $checkedConvert('parentProp', (v) => v as String),
         rank: $checkedConvert('rank', (v) => v as String?),
+        deleted: $checkedConvert('deleted', (v) => v as bool?),
       );
-      $checkedConvert('deleted', (v) => val.deleted = v as bool?);
       return val;
     });
 

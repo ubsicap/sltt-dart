@@ -17,6 +17,7 @@ class MarkerData extends BaseDataFields {
     required super.parentId,
     required super.parentProp,
     required super.rank,
+    super.deleted,
   });
 
   factory MarkerData.fromJson(Map<String, dynamic> json) =>
