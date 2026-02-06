@@ -13,6 +13,10 @@ void main() {
     'data_title_cloudAt_',
     'data_videoCommentId_changeAt_',
     'data_videoCommentId_cloudAt_',
+    'data_videoCommentStoredFilename_changeAt_',
+    'data_videoCommentStoredFilename_cloudAt_',
+    'data_videoCommentDurationMs_changeAt_',
+    'data_videoCommentDurationMs_cloudAt_',
     'data_textComment_changeAt_',
     'data_textComment_cloudAt_',
     'data_markerId_changeAt_',
@@ -61,6 +65,18 @@ void main() {
     'data_videoCommentId_cid_',
     'data_videoCommentId_changeBy_',
     'data_videoCommentId_cloudAt_',
+    'data_videoCommentStoredFilename',
+    'data_videoCommentStoredFilename_dataSchemaRev_',
+    'data_videoCommentStoredFilename_changeAt_',
+    'data_videoCommentStoredFilename_cid_',
+    'data_videoCommentStoredFilename_changeBy_',
+    'data_videoCommentStoredFilename_cloudAt_',
+    'data_videoCommentDurationMs',
+    'data_videoCommentDurationMs_dataSchemaRev_',
+    'data_videoCommentDurationMs_changeAt_',
+    'data_videoCommentDurationMs_cid_',
+    'data_videoCommentDurationMs_changeBy_',
+    'data_videoCommentDurationMs_cloudAt_',
     'data_textComment',
     'data_textComment_dataSchemaRev_',
     'data_textComment_changeAt_',
@@ -117,6 +133,10 @@ void main() {
     required DateTime expectedDataTitleCloudAt,
     required DateTime expectedDataVideoCommentIdChangeAt,
     required DateTime expectedDataVideoCommentIdCloudAt,
+    required DateTime expectedDataVideoCommentStoredFilenameChangeAt,
+    required DateTime expectedDataVideoCommentStoredFilenameCloudAt,
+    required DateTime expectedDataVideoCommentDurationMsChangeAt,
+    required DateTime expectedDataVideoCommentDurationMsCloudAt,
     required DateTime expectedDataTextCommentChangeAt,
     required DateTime expectedDataTextCommentCloudAt,
     required DateTime expectedDataMarkerIdChangeAt,
@@ -159,6 +179,27 @@ void main() {
       state.data_videoCommentId_cloudAt_,
       equals(expectedDataVideoCommentIdCloudAt.toUtc()),
       reason: '${prefix}data_videoCommentId_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_videoCommentStoredFilename_changeAt_,
+      equals(expectedDataVideoCommentStoredFilenameChangeAt.toUtc()),
+      reason:
+          '${prefix}data_videoCommentStoredFilename_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_videoCommentStoredFilename_cloudAt_,
+      equals(expectedDataVideoCommentStoredFilenameCloudAt.toUtc()),
+      reason: '${prefix}data_videoCommentStoredFilename_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_videoCommentDurationMs_changeAt_,
+      equals(expectedDataVideoCommentDurationMsChangeAt.toUtc()),
+      reason: '${prefix}data_videoCommentDurationMs_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_videoCommentDurationMs_cloudAt_,
+      equals(expectedDataVideoCommentDurationMsCloudAt.toUtc()),
+      reason: '${prefix}data_videoCommentDurationMs_cloudAt_ should be UTC',
     );
     expect(
       state.data_textComment_changeAt_,
@@ -287,6 +328,16 @@ void main() {
       final localDataVideoCommentIdCloudAt = DateTime.now().subtract(
         const Duration(minutes: 17),
       );
+      final localDataVideoCommentStoredFilenameChangeAt = DateTime.now()
+          .subtract(const Duration(minutes: 11));
+      final localDataVideoCommentStoredFilenameCloudAt = DateTime.now()
+          .subtract(const Duration(minutes: 13));
+      final localDataVideoCommentDurationMsChangeAt = DateTime.now().subtract(
+        const Duration(minutes: 10),
+      );
+      final localDataVideoCommentDurationMsCloudAt = DateTime.now().subtract(
+        const Duration(minutes: 14),
+      );
       final localDataTextCommentChangeAt = DateTime.now().subtract(
         const Duration(minutes: 14),
       );
@@ -378,6 +429,28 @@ void main() {
         ),
         data_videoCommentId_changeBy_: 'test-user-1',
         data_videoCommentId_cloudAt_: localDataVideoCommentIdCloudAt,
+        data_videoCommentStoredFilename: 'video-comment-1.mp4',
+        data_videoCommentStoredFilename_dataSchemaRev_: 1,
+        data_videoCommentStoredFilename_changeAt_:
+            localDataVideoCommentStoredFilenameChangeAt,
+        data_videoCommentStoredFilename_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_videoCommentStoredFilename_changeBy_: 'test-user-1',
+        data_videoCommentStoredFilename_cloudAt_:
+            localDataVideoCommentStoredFilenameCloudAt,
+        data_videoCommentDurationMs: 5000,
+        data_videoCommentDurationMs_dataSchemaRev_: 1,
+        data_videoCommentDurationMs_changeAt_:
+            localDataVideoCommentDurationMsChangeAt,
+        data_videoCommentDurationMs_cid_: generateCid(
+          entityType: EntityType.note,
+          userId: 'test-user-1',
+        ),
+        data_videoCommentDurationMs_changeBy_: 'test-user-1',
+        data_videoCommentDurationMs_cloudAt_:
+            localDataVideoCommentDurationMsCloudAt,
         data_textComment: 'Note text comment',
         data_textComment_dataSchemaRev_: 1,
         data_textComment_changeAt_: localDataTextCommentChangeAt,
@@ -458,6 +531,14 @@ void main() {
         expectedDataTitleCloudAt: localDataTitleCloudAt,
         expectedDataVideoCommentIdChangeAt: localDataVideoCommentIdChangeAt,
         expectedDataVideoCommentIdCloudAt: localDataVideoCommentIdCloudAt,
+        expectedDataVideoCommentStoredFilenameChangeAt:
+            localDataVideoCommentStoredFilenameChangeAt,
+        expectedDataVideoCommentStoredFilenameCloudAt:
+            localDataVideoCommentStoredFilenameCloudAt,
+        expectedDataVideoCommentDurationMsChangeAt:
+            localDataVideoCommentDurationMsChangeAt,
+        expectedDataVideoCommentDurationMsCloudAt:
+            localDataVideoCommentDurationMsCloudAt,
         expectedDataTextCommentChangeAt: localDataTextCommentChangeAt,
         expectedDataTextCommentCloudAt: localDataTextCommentCloudAt,
         expectedDataMarkerIdChangeAt: localDataMarkerIdChangeAt,

@@ -11,6 +11,14 @@ NoteData _$NoteDataFromJson(Map<String, dynamic> json) =>
       final val = NoteData(
         title: $checkedConvert('title', (v) => v as String),
         videoCommentId: $checkedConvert('videoCommentId', (v) => v as String?),
+        videoCommentStoredFilename: $checkedConvert(
+          'videoCommentStoredFilename',
+          (v) => v as String?,
+        ),
+        videoCommentDurationMs: $checkedConvert(
+          'videoCommentDurationMs',
+          (v) => (v as num?)?.toInt(),
+        ),
         textComment: $checkedConvert('textComment', (v) => v as String?),
         markerId: $checkedConvert('markerId', (v) => v as String),
         positionMs: $checkedConvert('positionMs', (v) => (v as num).toInt()),
@@ -30,6 +38,8 @@ Map<String, dynamic> _$NoteDataToJson(NoteData instance) => <String, dynamic>{
   'deleted': ?instance.deleted,
   'title': instance.title,
   'videoCommentId': ?instance.videoCommentId,
+  'videoCommentStoredFilename': ?instance.videoCommentStoredFilename,
+  'videoCommentDurationMs': ?instance.videoCommentDurationMs,
   'textComment': ?instance.textComment,
   'markerId': instance.markerId,
   'positionMs': instance.positionMs,

@@ -125,6 +125,54 @@ DynamoNoteDataEntityState _$DynamoNoteDataEntityStateFromJson(
       'data_videoCommentId_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
+    data_videoCommentStoredFilename: $checkedConvert(
+      'data_videoCommentStoredFilename',
+      (v) => v as String?,
+    ),
+    data_videoCommentStoredFilename_dataSchemaRev_: $checkedConvert(
+      'data_videoCommentStoredFilename_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_videoCommentStoredFilename_changeAt_: $checkedConvert(
+      'data_videoCommentStoredFilename_changeAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_videoCommentStoredFilename_cid_: $checkedConvert(
+      'data_videoCommentStoredFilename_cid_',
+      (v) => v as String?,
+    ),
+    data_videoCommentStoredFilename_changeBy_: $checkedConvert(
+      'data_videoCommentStoredFilename_changeBy_',
+      (v) => v as String?,
+    ),
+    data_videoCommentStoredFilename_cloudAt_: $checkedConvert(
+      'data_videoCommentStoredFilename_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_videoCommentDurationMs: $checkedConvert(
+      'data_videoCommentDurationMs',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_videoCommentDurationMs_dataSchemaRev_: $checkedConvert(
+      'data_videoCommentDurationMs_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_videoCommentDurationMs_changeAt_: $checkedConvert(
+      'data_videoCommentDurationMs_changeAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_videoCommentDurationMs_cid_: $checkedConvert(
+      'data_videoCommentDurationMs_cid_',
+      (v) => v as String?,
+    ),
+    data_videoCommentDurationMs_changeBy_: $checkedConvert(
+      'data_videoCommentDurationMs_changeBy_',
+      (v) => v as String?,
+    ),
+    data_videoCommentDurationMs_cloudAt_: $checkedConvert(
+      'data_videoCommentDurationMs_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
     data_textComment: $checkedConvert('data_textComment', (v) => v as String?),
     data_textComment_dataSchemaRev_: $checkedConvert(
       'data_textComment_dataSchemaRev_',
@@ -331,6 +379,31 @@ Map<String, dynamic> _$DynamoNoteDataEntityStateToJson(
   'data_videoCommentId_cid_': instance.data_videoCommentId_cid_,
   'data_videoCommentId_changeBy_': instance.data_videoCommentId_changeBy_,
   'data_videoCommentId_cloudAt_': instance.data_videoCommentId_cloudAt_
+      ?.toIso8601String(),
+  'data_videoCommentStoredFilename': instance.data_videoCommentStoredFilename,
+  'data_videoCommentStoredFilename_dataSchemaRev_':
+      instance.data_videoCommentStoredFilename_dataSchemaRev_,
+  'data_videoCommentStoredFilename_changeAt_': instance
+      .data_videoCommentStoredFilename_changeAt_
+      ?.toIso8601String(),
+  'data_videoCommentStoredFilename_cid_':
+      instance.data_videoCommentStoredFilename_cid_,
+  'data_videoCommentStoredFilename_changeBy_':
+      instance.data_videoCommentStoredFilename_changeBy_,
+  'data_videoCommentStoredFilename_cloudAt_': instance
+      .data_videoCommentStoredFilename_cloudAt_
+      ?.toIso8601String(),
+  'data_videoCommentDurationMs': instance.data_videoCommentDurationMs,
+  'data_videoCommentDurationMs_dataSchemaRev_':
+      instance.data_videoCommentDurationMs_dataSchemaRev_,
+  'data_videoCommentDurationMs_changeAt_': instance
+      .data_videoCommentDurationMs_changeAt_
+      ?.toIso8601String(),
+  'data_videoCommentDurationMs_cid_': instance.data_videoCommentDurationMs_cid_,
+  'data_videoCommentDurationMs_changeBy_':
+      instance.data_videoCommentDurationMs_changeBy_,
+  'data_videoCommentDurationMs_cloudAt_': instance
+      .data_videoCommentDurationMs_cloudAt_
       ?.toIso8601String(),
   'data_textComment': instance.data_textComment,
   'data_textComment_dataSchemaRev_': instance.data_textComment_dataSchemaRev_,

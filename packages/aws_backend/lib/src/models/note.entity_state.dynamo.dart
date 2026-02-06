@@ -25,6 +25,20 @@ class DynamoNoteDataEntityState extends BaseEntityState {
   final String? data_videoCommentId_changeBy_;
   final DateTime? data_videoCommentId_cloudAt_;
 
+  final String? data_videoCommentStoredFilename;
+  final int? data_videoCommentStoredFilename_dataSchemaRev_;
+  final DateTime? data_videoCommentStoredFilename_changeAt_;
+  final String? data_videoCommentStoredFilename_cid_;
+  final String? data_videoCommentStoredFilename_changeBy_;
+  final DateTime? data_videoCommentStoredFilename_cloudAt_;
+
+  final int? data_videoCommentDurationMs;
+  final int? data_videoCommentDurationMs_dataSchemaRev_;
+  final DateTime? data_videoCommentDurationMs_changeAt_;
+  final String? data_videoCommentDurationMs_cid_;
+  final String? data_videoCommentDurationMs_changeBy_;
+  final DateTime? data_videoCommentDurationMs_cloudAt_;
+
   final String? data_textComment;
   final int? data_textComment_dataSchemaRev_;
   final DateTime? data_textComment_changeAt_;
@@ -91,6 +105,18 @@ class DynamoNoteDataEntityState extends BaseEntityState {
     this.data_videoCommentId_cid_,
     this.data_videoCommentId_changeBy_,
     DateTime? data_videoCommentId_cloudAt_,
+    this.data_videoCommentStoredFilename,
+    this.data_videoCommentStoredFilename_dataSchemaRev_,
+    DateTime? data_videoCommentStoredFilename_changeAt_,
+    this.data_videoCommentStoredFilename_cid_,
+    this.data_videoCommentStoredFilename_changeBy_,
+    DateTime? data_videoCommentStoredFilename_cloudAt_,
+    this.data_videoCommentDurationMs,
+    this.data_videoCommentDurationMs_dataSchemaRev_,
+    DateTime? data_videoCommentDurationMs_changeAt_,
+    this.data_videoCommentDurationMs_cid_,
+    this.data_videoCommentDurationMs_changeBy_,
+    DateTime? data_videoCommentDurationMs_cloudAt_,
     this.data_textComment,
     this.data_textComment_dataSchemaRev_,
     DateTime? data_textComment_changeAt_,
@@ -135,6 +161,14 @@ class DynamoNoteDataEntityState extends BaseEntityState {
        data_title_cloudAt_ = data_title_cloudAt_?.toUtc(),
        data_videoCommentId_changeAt_ = data_videoCommentId_changeAt_?.toUtc(),
        data_videoCommentId_cloudAt_ = data_videoCommentId_cloudAt_?.toUtc(),
+       data_videoCommentStoredFilename_changeAt_ =
+           data_videoCommentStoredFilename_changeAt_?.toUtc(),
+       data_videoCommentStoredFilename_cloudAt_ =
+           data_videoCommentStoredFilename_cloudAt_?.toUtc(),
+       data_videoCommentDurationMs_changeAt_ =
+           data_videoCommentDurationMs_changeAt_?.toUtc(),
+       data_videoCommentDurationMs_cloudAt_ =
+           data_videoCommentDurationMs_cloudAt_?.toUtc(),
        data_textComment_changeAt_ = data_textComment_changeAt_?.toUtc(),
        data_textComment_cloudAt_ = data_textComment_cloudAt_?.toUtc(),
        data_markerId_changeAt_ = data_markerId_changeAt_.toUtc(),

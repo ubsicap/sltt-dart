@@ -348,58 +348,118 @@ const IsarNoteDataEntityStateSchema = CollectionSchema(
       name: r'data_title_dataSchemaRev_',
       type: IsarType.long,
     ),
-    r'data_videoCommentId': PropertySchema(
+    r'data_videoCommentDurationMs': PropertySchema(
       id: 66,
+      name: r'data_videoCommentDurationMs',
+      type: IsarType.long,
+    ),
+    r'data_videoCommentDurationMs_changeAt_': PropertySchema(
+      id: 67,
+      name: r'data_videoCommentDurationMs_changeAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_videoCommentDurationMs_changeBy_': PropertySchema(
+      id: 68,
+      name: r'data_videoCommentDurationMs_changeBy_',
+      type: IsarType.string,
+    ),
+    r'data_videoCommentDurationMs_cid_': PropertySchema(
+      id: 69,
+      name: r'data_videoCommentDurationMs_cid_',
+      type: IsarType.string,
+    ),
+    r'data_videoCommentDurationMs_cloudAt_': PropertySchema(
+      id: 70,
+      name: r'data_videoCommentDurationMs_cloudAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_videoCommentDurationMs_dataSchemaRev_': PropertySchema(
+      id: 71,
+      name: r'data_videoCommentDurationMs_dataSchemaRev_',
+      type: IsarType.long,
+    ),
+    r'data_videoCommentId': PropertySchema(
+      id: 72,
       name: r'data_videoCommentId',
       type: IsarType.string,
     ),
     r'data_videoCommentId_changeAt_': PropertySchema(
-      id: 67,
+      id: 73,
       name: r'data_videoCommentId_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_videoCommentId_changeBy_': PropertySchema(
-      id: 68,
+      id: 74,
       name: r'data_videoCommentId_changeBy_',
       type: IsarType.string,
     ),
     r'data_videoCommentId_cid_': PropertySchema(
-      id: 69,
+      id: 75,
       name: r'data_videoCommentId_cid_',
       type: IsarType.string,
     ),
     r'data_videoCommentId_cloudAt_': PropertySchema(
-      id: 70,
+      id: 76,
       name: r'data_videoCommentId_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_videoCommentId_dataSchemaRev_': PropertySchema(
-      id: 71,
+      id: 77,
       name: r'data_videoCommentId_dataSchemaRev_',
       type: IsarType.long,
     ),
+    r'data_videoCommentStoredFilename': PropertySchema(
+      id: 78,
+      name: r'data_videoCommentStoredFilename',
+      type: IsarType.string,
+    ),
+    r'data_videoCommentStoredFilename_changeAt_': PropertySchema(
+      id: 79,
+      name: r'data_videoCommentStoredFilename_changeAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_videoCommentStoredFilename_changeBy_': PropertySchema(
+      id: 80,
+      name: r'data_videoCommentStoredFilename_changeBy_',
+      type: IsarType.string,
+    ),
+    r'data_videoCommentStoredFilename_cid_': PropertySchema(
+      id: 81,
+      name: r'data_videoCommentStoredFilename_cid_',
+      type: IsarType.string,
+    ),
+    r'data_videoCommentStoredFilename_cloudAt_': PropertySchema(
+      id: 82,
+      name: r'data_videoCommentStoredFilename_cloudAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_videoCommentStoredFilename_dataSchemaRev_': PropertySchema(
+      id: 83,
+      name: r'data_videoCommentStoredFilename_dataSchemaRev_',
+      type: IsarType.long,
+    ),
     r'domainType': PropertySchema(
-      id: 72,
+      id: 84,
       name: r'domainType',
       type: IsarType.string,
     ),
     r'entityId': PropertySchema(
-      id: 73,
+      id: 85,
       name: r'entityId',
       type: IsarType.string,
     ),
     r'entityType': PropertySchema(
-      id: 74,
+      id: 86,
       name: r'entityType',
       type: IsarType.string,
     ),
     r'schemaVersion': PropertySchema(
-      id: 75,
+      id: 87,
       name: r'schemaVersion',
       type: IsarType.long,
     ),
     r'unknownJson': PropertySchema(
-      id: 76,
+      id: 88,
       name: r'unknownJson',
       type: IsarType.string,
     ),
@@ -532,6 +592,18 @@ int _isarNoteDataEntityStateEstimateSize(
     }
   }
   {
+    final value = object.data_videoCommentDurationMs_changeBy_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.data_videoCommentDurationMs_cid_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.data_videoCommentId;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
@@ -545,6 +617,24 @@ int _isarNoteDataEntityStateEstimateSize(
   }
   {
     final value = object.data_videoCommentId_cid_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.data_videoCommentStoredFilename;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.data_videoCommentStoredFilename_changeBy_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.data_videoCommentStoredFilename_cid_;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
     }
@@ -628,17 +718,50 @@ void _isarNoteDataEntityStateSerialize(
   writer.writeString(offsets[63], object.data_title_cid_);
   writer.writeDateTime(offsets[64], object.data_title_cloudAt_);
   writer.writeLong(offsets[65], object.data_title_dataSchemaRev_);
-  writer.writeString(offsets[66], object.data_videoCommentId);
-  writer.writeDateTime(offsets[67], object.data_videoCommentId_changeAt_);
-  writer.writeString(offsets[68], object.data_videoCommentId_changeBy_);
-  writer.writeString(offsets[69], object.data_videoCommentId_cid_);
-  writer.writeDateTime(offsets[70], object.data_videoCommentId_cloudAt_);
-  writer.writeLong(offsets[71], object.data_videoCommentId_dataSchemaRev_);
-  writer.writeString(offsets[72], object.domainType);
-  writer.writeString(offsets[73], object.entityId);
-  writer.writeString(offsets[74], object.entityType);
-  writer.writeLong(offsets[75], object.schemaVersion);
-  writer.writeString(offsets[76], object.unknownJson);
+  writer.writeLong(offsets[66], object.data_videoCommentDurationMs);
+  writer.writeDateTime(
+    offsets[67],
+    object.data_videoCommentDurationMs_changeAt_,
+  );
+  writer.writeString(offsets[68], object.data_videoCommentDurationMs_changeBy_);
+  writer.writeString(offsets[69], object.data_videoCommentDurationMs_cid_);
+  writer.writeDateTime(
+    offsets[70],
+    object.data_videoCommentDurationMs_cloudAt_,
+  );
+  writer.writeLong(
+    offsets[71],
+    object.data_videoCommentDurationMs_dataSchemaRev_,
+  );
+  writer.writeString(offsets[72], object.data_videoCommentId);
+  writer.writeDateTime(offsets[73], object.data_videoCommentId_changeAt_);
+  writer.writeString(offsets[74], object.data_videoCommentId_changeBy_);
+  writer.writeString(offsets[75], object.data_videoCommentId_cid_);
+  writer.writeDateTime(offsets[76], object.data_videoCommentId_cloudAt_);
+  writer.writeLong(offsets[77], object.data_videoCommentId_dataSchemaRev_);
+  writer.writeString(offsets[78], object.data_videoCommentStoredFilename);
+  writer.writeDateTime(
+    offsets[79],
+    object.data_videoCommentStoredFilename_changeAt_,
+  );
+  writer.writeString(
+    offsets[80],
+    object.data_videoCommentStoredFilename_changeBy_,
+  );
+  writer.writeString(offsets[81], object.data_videoCommentStoredFilename_cid_);
+  writer.writeDateTime(
+    offsets[82],
+    object.data_videoCommentStoredFilename_cloudAt_,
+  );
+  writer.writeLong(
+    offsets[83],
+    object.data_videoCommentStoredFilename_dataSchemaRev_,
+  );
+  writer.writeString(offsets[84], object.domainType);
+  writer.writeString(offsets[85], object.entityId);
+  writer.writeString(offsets[86], object.entityType);
+  writer.writeLong(offsets[87], object.schemaVersion);
+  writer.writeString(offsets[88], object.unknownJson);
 }
 
 IsarNoteDataEntityState _isarNoteDataEntityStateDeserialize(
@@ -714,18 +837,44 @@ IsarNoteDataEntityState _isarNoteDataEntityStateDeserialize(
     data_title_cid_: reader.readStringOrNull(offsets[63]),
     data_title_cloudAt_: reader.readDateTimeOrNull(offsets[64]),
     data_title_dataSchemaRev_: reader.readLongOrNull(offsets[65]),
-    data_videoCommentId: reader.readStringOrNull(offsets[66]),
-    data_videoCommentId_changeAt_: reader.readDateTimeOrNull(offsets[67]),
-    data_videoCommentId_changeBy_: reader.readStringOrNull(offsets[68]),
-    data_videoCommentId_cid_: reader.readStringOrNull(offsets[69]),
-    data_videoCommentId_cloudAt_: reader.readDateTimeOrNull(offsets[70]),
-    data_videoCommentId_dataSchemaRev_: reader.readLongOrNull(offsets[71]),
-    domainType: reader.readString(offsets[72]),
-    entityId: reader.readString(offsets[73]),
-    entityType: reader.readStringOrNull(offsets[74]) ?? kEntityTypeNote,
+    data_videoCommentDurationMs: reader.readLongOrNull(offsets[66]),
+    data_videoCommentDurationMs_changeAt_: reader.readDateTimeOrNull(
+      offsets[67],
+    ),
+    data_videoCommentDurationMs_changeBy_: reader.readStringOrNull(offsets[68]),
+    data_videoCommentDurationMs_cid_: reader.readStringOrNull(offsets[69]),
+    data_videoCommentDurationMs_cloudAt_: reader.readDateTimeOrNull(
+      offsets[70],
+    ),
+    data_videoCommentDurationMs_dataSchemaRev_: reader.readLongOrNull(
+      offsets[71],
+    ),
+    data_videoCommentId: reader.readStringOrNull(offsets[72]),
+    data_videoCommentId_changeAt_: reader.readDateTimeOrNull(offsets[73]),
+    data_videoCommentId_changeBy_: reader.readStringOrNull(offsets[74]),
+    data_videoCommentId_cid_: reader.readStringOrNull(offsets[75]),
+    data_videoCommentId_cloudAt_: reader.readDateTimeOrNull(offsets[76]),
+    data_videoCommentId_dataSchemaRev_: reader.readLongOrNull(offsets[77]),
+    data_videoCommentStoredFilename: reader.readStringOrNull(offsets[78]),
+    data_videoCommentStoredFilename_changeAt_: reader.readDateTimeOrNull(
+      offsets[79],
+    ),
+    data_videoCommentStoredFilename_changeBy_: reader.readStringOrNull(
+      offsets[80],
+    ),
+    data_videoCommentStoredFilename_cid_: reader.readStringOrNull(offsets[81]),
+    data_videoCommentStoredFilename_cloudAt_: reader.readDateTimeOrNull(
+      offsets[82],
+    ),
+    data_videoCommentStoredFilename_dataSchemaRev_: reader.readLongOrNull(
+      offsets[83],
+    ),
+    domainType: reader.readString(offsets[84]),
+    entityId: reader.readString(offsets[85]),
+    entityType: reader.readStringOrNull(offsets[86]) ?? kEntityTypeNote,
     id: id,
-    schemaVersion: reader.readLongOrNull(offsets[75]),
-    unknownJson: reader.readString(offsets[76]),
+    schemaVersion: reader.readLongOrNull(offsets[87]),
+    unknownJson: reader.readString(offsets[88]),
   );
   return object;
 }
@@ -870,7 +1019,7 @@ P _isarNoteDataEntityStateDeserializeProp<P>(
     case 65:
       return (reader.readLongOrNull(offset)) as P;
     case 66:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 67:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 68:
@@ -882,14 +1031,38 @@ P _isarNoteDataEntityStateDeserializeProp<P>(
     case 71:
       return (reader.readLongOrNull(offset)) as P;
     case 72:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 73:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 74:
-      return (reader.readStringOrNull(offset) ?? kEntityTypeNote) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 75:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 76:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 77:
+      return (reader.readLongOrNull(offset)) as P;
+    case 78:
+      return (reader.readStringOrNull(offset)) as P;
+    case 79:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 80:
+      return (reader.readStringOrNull(offset)) as P;
+    case 81:
+      return (reader.readStringOrNull(offset)) as P;
+    case 82:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 83:
+      return (reader.readLongOrNull(offset)) as P;
+    case 84:
+      return (reader.readString(offset)) as P;
+    case 85:
+      return (reader.readString(offset)) as P;
+    case 86:
+      return (reader.readStringOrNull(offset) ?? kEntityTypeNote) as P;
+    case 87:
+      return (reader.readLongOrNull(offset)) as P;
+    case 88:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -10351,6 +10524,902 @@ extension IsarNoteDataEntityStateQueryFilter
     IsarNoteDataEntityState,
     QAfterFilterCondition
   >
+  data_videoCommentDurationMsIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_videoCommentDurationMs'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMsIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentDurationMs',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMsEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentDurationMs',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMsGreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentDurationMs',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMsLessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentDurationMs',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMsBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentDurationMs',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeAt_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentDurationMs_changeAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeAt_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentDurationMs_changeAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeAt_EqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentDurationMs_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeAt_GreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentDurationMs_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeAt_LessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentDurationMs_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeAt_Between(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentDurationMs_changeAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentDurationMs_changeBy_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentDurationMs_changeBy_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_EqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentDurationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentDurationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentDurationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentDurationMs_changeBy_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_StartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_videoCommentDurationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_EndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_videoCommentDurationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_Contains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_videoCommentDurationMs_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_Matches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_videoCommentDurationMs_changeBy_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentDurationMs_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_changeBy_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_videoCommentDurationMs_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentDurationMs_cid_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentDurationMs_cid_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_EqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentDurationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentDurationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentDurationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentDurationMs_cid_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_StartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_videoCommentDurationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_EndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_videoCommentDurationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_Contains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_videoCommentDurationMs_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_Matches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_videoCommentDurationMs_cid_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentDurationMs_cid_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cid_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_videoCommentDurationMs_cid_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cloudAt_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentDurationMs_cloudAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cloudAt_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentDurationMs_cloudAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cloudAt_EqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentDurationMs_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cloudAt_GreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentDurationMs_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cloudAt_LessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentDurationMs_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_cloudAt_Between(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentDurationMs_cloudAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_dataSchemaRev_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentDurationMs_dataSchemaRev_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_dataSchemaRev_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentDurationMs_dataSchemaRev_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_dataSchemaRev_EqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentDurationMs_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_dataSchemaRev_GreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentDurationMs_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_dataSchemaRev_LessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentDurationMs_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentDurationMs_dataSchemaRev_Between(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentDurationMs_dataSchemaRev_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
   data_videoCommentIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -11323,6 +12392,1032 @@ extension IsarNoteDataEntityStateQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'data_videoCommentId_dataSchemaRev_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentStoredFilename',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentStoredFilename',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentStoredFilename',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentStoredFilename',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_videoCommentStoredFilename',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_videoCommentStoredFilename',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameContains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_videoCommentStoredFilename',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameMatches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_videoCommentStoredFilename',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentStoredFilename',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilenameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_videoCommentStoredFilename',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeAt_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentStoredFilename_changeAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeAt_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentStoredFilename_changeAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeAt_EqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentStoredFilename_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeAt_GreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeAt_LessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeAt_Between(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentStoredFilename_changeAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentStoredFilename_changeBy_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentStoredFilename_changeBy_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_EqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentStoredFilename_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentStoredFilename_changeBy_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_StartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_videoCommentStoredFilename_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_EndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_videoCommentStoredFilename_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_Contains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_videoCommentStoredFilename_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_Matches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_videoCommentStoredFilename_changeBy_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentStoredFilename_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_changeBy_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_videoCommentStoredFilename_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentStoredFilename_cid_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentStoredFilename_cid_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_EqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentStoredFilename_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentStoredFilename_cid_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_StartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_videoCommentStoredFilename_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_EndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_videoCommentStoredFilename_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_Contains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_videoCommentStoredFilename_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_Matches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_videoCommentStoredFilename_cid_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentStoredFilename_cid_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cid_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_videoCommentStoredFilename_cid_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cloudAt_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentStoredFilename_cloudAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cloudAt_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentStoredFilename_cloudAt_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cloudAt_EqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentStoredFilename_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cloudAt_GreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cloudAt_LessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_cloudAt_Between(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentStoredFilename_cloudAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_dataSchemaRev_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_videoCommentStoredFilename_dataSchemaRev_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_dataSchemaRev_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_videoCommentStoredFilename_dataSchemaRev_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_dataSchemaRev_EqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_videoCommentStoredFilename_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_dataSchemaRev_GreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_dataSchemaRev_LessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_videoCommentStoredFilename_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterFilterCondition
+  >
+  data_videoCommentStoredFilename_dataSchemaRev_Between(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_videoCommentStoredFilename_dataSchemaRev_',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -13168,6 +15263,111 @@ extension IsarNoteDataEntityStateQuerySortBy
   }
 
   QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentDurationMs', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentDurationMs', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_changeAt_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_changeAt_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_changeBy_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_changeBy_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentDurationMs_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentDurationMs_cid_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentDurationMs_cloudAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_cloudAt_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_dataSchemaRev_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentDurationMs_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_dataSchemaRev_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
   sortByData_videoCommentId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_videoCommentId', Sort.asc);
@@ -13248,6 +15448,117 @@ extension IsarNoteDataEntityStateQuerySortBy
   sortByData_videoCommentId_dataSchemaRev_Desc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_videoCommentId_dataSchemaRev_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentStoredFilename', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilenameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentStoredFilename', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_changeAt_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_changeAt_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_changeBy_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_changeBy_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentStoredFilename_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_cid_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_cloudAt_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_cloudAt_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_dataSchemaRev_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  sortByData_videoCommentStoredFilename_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_dataSchemaRev_',
+        Sort.desc,
+      );
     });
   }
 
@@ -14254,6 +16565,111 @@ extension IsarNoteDataEntityStateQuerySortThenBy
   }
 
   QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentDurationMs', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentDurationMs', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_changeAt_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_changeAt_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_changeBy_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_changeBy_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentDurationMs_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentDurationMs_cid_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentDurationMs_cloudAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_cloudAt_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_dataSchemaRev_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentDurationMs_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentDurationMs_dataSchemaRev_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
   thenByData_videoCommentId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_videoCommentId', Sort.asc);
@@ -14334,6 +16750,117 @@ extension IsarNoteDataEntityStateQuerySortThenBy
   thenByData_videoCommentId_dataSchemaRev_Desc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_videoCommentId_dataSchemaRev_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentStoredFilename', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilenameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentStoredFilename', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_changeAt_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_changeAt_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_changeBy_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_changeBy_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_videoCommentStoredFilename_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_cid_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_cloudAt_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_cloudAt_',
+        Sort.desc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_dataSchemaRev_',
+        Sort.asc,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QAfterSortBy>
+  thenByData_videoCommentStoredFilename_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(
+        r'data_videoCommentStoredFilename_dataSchemaRev_',
+        Sort.desc,
+      );
     });
   }
 
@@ -14976,6 +17503,54 @@ extension IsarNoteDataEntityStateQueryWhereDistinct
   }
 
   QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentDurationMs() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_videoCommentDurationMs');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentDurationMs_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_videoCommentDurationMs_changeAt_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentDurationMs_changeBy_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_videoCommentDurationMs_changeBy_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentDurationMs_cid_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_videoCommentDurationMs_cid_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentDurationMs_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_videoCommentDurationMs_cloudAt_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentDurationMs_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_videoCommentDurationMs_dataSchemaRev_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
   distinctByData_videoCommentId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(
@@ -15023,6 +17598,61 @@ extension IsarNoteDataEntityStateQueryWhereDistinct
   distinctByData_videoCommentId_dataSchemaRev_() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'data_videoCommentId_dataSchemaRev_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentStoredFilename({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_videoCommentStoredFilename',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentStoredFilename_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_videoCommentStoredFilename_changeAt_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentStoredFilename_changeBy_({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_videoCommentStoredFilename_changeBy_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentStoredFilename_cid_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_videoCommentStoredFilename_cid_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentStoredFilename_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_videoCommentStoredFilename_cloudAt_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, IsarNoteDataEntityState, QDistinct>
+  distinctByData_videoCommentStoredFilename_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_videoCommentStoredFilename_dataSchemaRev_',
+      );
     });
   }
 
@@ -15537,6 +18167,50 @@ extension IsarNoteDataEntityStateQueryProperty
     });
   }
 
+  QueryBuilder<IsarNoteDataEntityState, int?, QQueryOperations>
+  data_videoCommentDurationMsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_videoCommentDurationMs');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, DateTime?, QQueryOperations>
+  data_videoCommentDurationMs_changeAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_videoCommentDurationMs_changeAt_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, String?, QQueryOperations>
+  data_videoCommentDurationMs_changeBy_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_videoCommentDurationMs_changeBy_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, String?, QQueryOperations>
+  data_videoCommentDurationMs_cid_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_videoCommentDurationMs_cid_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, DateTime?, QQueryOperations>
+  data_videoCommentDurationMs_cloudAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_videoCommentDurationMs_cloudAt_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, int?, QQueryOperations>
+  data_videoCommentDurationMs_dataSchemaRev_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(
+        r'data_videoCommentDurationMs_dataSchemaRev_',
+      );
+    });
+  }
+
   QueryBuilder<IsarNoteDataEntityState, String?, QQueryOperations>
   data_videoCommentIdProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -15576,6 +18250,54 @@ extension IsarNoteDataEntityStateQueryProperty
   data_videoCommentId_dataSchemaRev_Property() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'data_videoCommentId_dataSchemaRev_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, String?, QQueryOperations>
+  data_videoCommentStoredFilenameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_videoCommentStoredFilename');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, DateTime?, QQueryOperations>
+  data_videoCommentStoredFilename_changeAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(
+        r'data_videoCommentStoredFilename_changeAt_',
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, String?, QQueryOperations>
+  data_videoCommentStoredFilename_changeBy_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(
+        r'data_videoCommentStoredFilename_changeBy_',
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, String?, QQueryOperations>
+  data_videoCommentStoredFilename_cid_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_videoCommentStoredFilename_cid_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, DateTime?, QQueryOperations>
+  data_videoCommentStoredFilename_cloudAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_videoCommentStoredFilename_cloudAt_');
+    });
+  }
+
+  QueryBuilder<IsarNoteDataEntityState, int?, QQueryOperations>
+  data_videoCommentStoredFilename_dataSchemaRev_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(
+        r'data_videoCommentStoredFilename_dataSchemaRev_',
+      );
     });
   }
 
@@ -15740,6 +18462,54 @@ IsarNoteDataEntityState _$IsarNoteDataEntityStateFromJson(
     ),
     data_videoCommentId_cloudAt_: $checkedConvert(
       'data_videoCommentId_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_videoCommentStoredFilename: $checkedConvert(
+      'data_videoCommentStoredFilename',
+      (v) => v as String?,
+    ),
+    data_videoCommentStoredFilename_dataSchemaRev_: $checkedConvert(
+      'data_videoCommentStoredFilename_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_videoCommentStoredFilename_changeAt_: $checkedConvert(
+      'data_videoCommentStoredFilename_changeAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_videoCommentStoredFilename_cid_: $checkedConvert(
+      'data_videoCommentStoredFilename_cid_',
+      (v) => v as String?,
+    ),
+    data_videoCommentStoredFilename_changeBy_: $checkedConvert(
+      'data_videoCommentStoredFilename_changeBy_',
+      (v) => v as String?,
+    ),
+    data_videoCommentStoredFilename_cloudAt_: $checkedConvert(
+      'data_videoCommentStoredFilename_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_videoCommentDurationMs: $checkedConvert(
+      'data_videoCommentDurationMs',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_videoCommentDurationMs_dataSchemaRev_: $checkedConvert(
+      'data_videoCommentDurationMs_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_videoCommentDurationMs_changeAt_: $checkedConvert(
+      'data_videoCommentDurationMs_changeAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_videoCommentDurationMs_cid_: $checkedConvert(
+      'data_videoCommentDurationMs_cid_',
+      (v) => v as String?,
+    ),
+    data_videoCommentDurationMs_changeBy_: $checkedConvert(
+      'data_videoCommentDurationMs_changeBy_',
+      (v) => v as String?,
+    ),
+    data_videoCommentDurationMs_cloudAt_: $checkedConvert(
+      'data_videoCommentDurationMs_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
     data_textComment: $checkedConvert('data_textComment', (v) => v as String?),
@@ -15957,6 +18727,31 @@ Map<String, dynamic> _$IsarNoteDataEntityStateToJson(
   'data_textComment_cid_': instance.data_textComment_cid_,
   'data_textComment_changeBy_': instance.data_textComment_changeBy_,
   'data_textComment_cloudAt_': instance.data_textComment_cloudAt_
+      ?.toIso8601String(),
+  'data_videoCommentStoredFilename': instance.data_videoCommentStoredFilename,
+  'data_videoCommentStoredFilename_dataSchemaRev_':
+      instance.data_videoCommentStoredFilename_dataSchemaRev_,
+  'data_videoCommentStoredFilename_changeAt_': instance
+      .data_videoCommentStoredFilename_changeAt_
+      ?.toIso8601String(),
+  'data_videoCommentStoredFilename_cid_':
+      instance.data_videoCommentStoredFilename_cid_,
+  'data_videoCommentStoredFilename_changeBy_':
+      instance.data_videoCommentStoredFilename_changeBy_,
+  'data_videoCommentStoredFilename_cloudAt_': instance
+      .data_videoCommentStoredFilename_cloudAt_
+      ?.toIso8601String(),
+  'data_videoCommentDurationMs': instance.data_videoCommentDurationMs,
+  'data_videoCommentDurationMs_dataSchemaRev_':
+      instance.data_videoCommentDurationMs_dataSchemaRev_,
+  'data_videoCommentDurationMs_changeAt_': instance
+      .data_videoCommentDurationMs_changeAt_
+      ?.toIso8601String(),
+  'data_videoCommentDurationMs_cid_': instance.data_videoCommentDurationMs_cid_,
+  'data_videoCommentDurationMs_changeBy_':
+      instance.data_videoCommentDurationMs_changeBy_,
+  'data_videoCommentDurationMs_cloudAt_': instance
+      .data_videoCommentDurationMs_cloudAt_
       ?.toIso8601String(),
   'data_markerId': instance.data_markerId,
   'data_markerId_dataSchemaRev_': instance.data_markerId_dataSchemaRev_,

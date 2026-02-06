@@ -18,6 +18,8 @@ void main() {
           final data = NoteData(
             title: 'Note Title',
             videoCommentId: 'video-comment-1',
+            videoCommentStoredFilename: 'video-comment-1.mp4',
+            videoCommentDurationMs: 5000,
             textComment: 'Note text comment',
             markerId: 'marker-1',
             positionMs: 1234,
@@ -130,9 +132,29 @@ void main() {
             reason: 'marker id should be correctly deserialized',
           );
           expect(
+            testEntityState.data_videoCommentStoredFilename,
+            equals('video-comment-1.mp4'),
+            reason: 'stored filename should be correctly deserialized',
+          );
+          expect(
+            testEntityState.data_videoCommentDurationMs,
+            equals(5000),
+            reason: 'video duration should be correctly deserialized',
+          );
+          expect(
             serializedJson['data_title'],
             equals('Note Title'),
             reason: 'title field should be correctly serialized',
+          );
+          expect(
+            serializedJson['data_videoCommentStoredFilename'],
+            equals('video-comment-1.mp4'),
+            reason: 'video filename should be included in serialized output',
+          );
+          expect(
+            serializedJson['data_videoCommentDurationMs'],
+            equals(5000),
+            reason: 'video duration should be included in serialized output',
           );
 
           expectAllDateTimeFieldsAreUtc(serializedJson);

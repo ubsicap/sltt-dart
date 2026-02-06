@@ -9,6 +9,8 @@ class NoteData extends BaseDataFields {
 
   /// Optional id/reference to an uploaded video for this note (stored elsewhere).
   final String? videoCommentId;
+  final String? videoCommentStoredFilename;
+  final int? videoCommentDurationMs;
 
   /// Optional textual description for the note.
   final String? textComment;
@@ -25,6 +27,8 @@ class NoteData extends BaseDataFields {
   NoteData({
     required this.title,
     this.videoCommentId,
+    this.videoCommentStoredFilename,
+    this.videoCommentDurationMs,
     this.textComment,
     required this.markerId,
     required this.positionMs,
