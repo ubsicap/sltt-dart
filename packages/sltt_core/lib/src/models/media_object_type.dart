@@ -1,18 +1,17 @@
 import 'id_service.dart';
 
-const String kMediaObjectTypeVideoTranslation = 'videoTranslation';
 const String kMediaObjectTypeVideoComment = 'videoComment';
 const String kMediaObjectTypeVideoChat = 'videoChat';
-const String kMediaObjectTypeBlob = 'blob';
 
 /// Example: use CoreIdParts from id_service.dart for parsing media object IDs
 typedef MediaObjectIdParts = CoreIdParts;
 
+/// NOTE: `videoTranslation` should use EntityType.video instead
+/// since it's entity is bound to one video translation
 enum MediaObjectType {
-  videoTranslation(kMediaObjectTypeVideoTranslation),
   videoComment(kMediaObjectTypeVideoComment),
   videoChat(kMediaObjectTypeVideoChat),
-  blob(kMediaObjectTypeBlob);
+  unknown('unknown');
 
   const MediaObjectType(this.value);
   final String value;
@@ -22,10 +21,8 @@ enum MediaObjectType {
   /// 'dc' => document,
   /// 'dr' => drawing
   static const Map<String, String> suffixMapping = {
-    kMediaObjectTypeVideoTranslation: 'viTr',
     kMediaObjectTypeVideoComment: 'viCm',
     kMediaObjectTypeVideoChat: 'viCh',
-    kMediaObjectTypeBlob: 'blob',
   };
 
   /// Generate a unique media object ID with embedded entity type short suffix
