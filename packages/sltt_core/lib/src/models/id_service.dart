@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:sltt_core/sltt_core.dart' show generateRandomChars;
+
 /// Generates a unique core ID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HH{UC}-{4-character-random}
 /// ({String? userId}) embed 2 character hash of the userId after the timezone hour offset, 'UK' by default
 /// Generates a unique core ID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HH{UC}-{4-character-random}-{suffix}
@@ -32,18 +34,6 @@ String generateCoreId({String? userId, required String suffix}) {
         )
       : 'UK';
   return '$datePart$timezonePart$userCode-$randomPart-$suffix';
-}
-
-/// Generates a random string of [length] using [chars] and [rng].
-String generateRandomChars(int length, {String? chars, Random? rng}) {
-  const defaultChars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  final charSet = chars ?? defaultChars;
-  final random = rng ?? Random();
-  return List.generate(
-    length,
-    (_) => charSet[random.nextInt(charSet.length)],
-  ).join();
 }
 
 /// Extracts the YYYY (year) part from an id string.
