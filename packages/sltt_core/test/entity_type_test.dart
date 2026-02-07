@@ -9,7 +9,10 @@ void main() {
         .where(
           (e) =>
               !EntityType.suffixMapping.containsKey(e.value) &&
-              e.value != 'unknown',
+              ![
+                EntityType.unknown.value,
+                EntityType.missing.value,
+              ].contains(e.value),
         )
         .map((e) => e.value)
         .toList();
@@ -40,7 +43,9 @@ void main() {
   });
 
   test('generateEntityId and extractEntityTypeFromId roundtrip', () {
-    for (final e in EntityType.values.where((e) => e != EntityType.unknown)) {
+    for (final e in EntityType.values.where(
+      (e) => ![EntityType.unknown, EntityType.missing].contains(e),
+    )) {
       final id = EntityType.generateEntityId(entityType: e);
       final extracted = EntityType.extractEntityTypeFromId(id);
       expect(
@@ -51,18 +56,5 @@ void main() {
     }
   });
 
-  test('EntityIdParts validate', () {
-    final entityId = '2026-0108-161325-580_06UK-XQZK-vidZ';
-    final entityIdParts = EntityIdParts(entityId: entityId);
-    expect(entityIdParts.YYYY, equals('2026'));
-    expect(entityIdParts.mmdd, equals('0108'));
-    expect(entityIdParts.HHMMss, equals('161325'));
-    expect(entityIdParts.zzz, equals('580'));
-    expect(entityIdParts.tzOffset, equals('_06'));
-    expect(entityIdParts.usrHash, equals('UK'));
-    expect(entityIdParts.randomPart, equals('XQZK'));
-    expect(entityIdParts.entitySuffix, equals('vidZ'));
-    expect(entityIdParts.entityType, equals(EntityType.video.value));
-    expect(() => entityIdParts.validate(), returnsNormally);
-  });
+  // CoreIdParts validate test moved to id_service_test.dart
 }

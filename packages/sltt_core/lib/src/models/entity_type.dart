@@ -1,6 +1,6 @@
-import 'dart:math';
+// import 'dart:math';
 
-import 'package:sltt_core/sltt_core.dart';
+import 'id_service.dart';
 
 // Top-level constants for entity type string values. Use these wherever a
 // stable string literal for an entity type is needed to avoid duplication.
@@ -45,8 +45,6 @@ const String kEntityTypeNote = 'note';
 const String kEntityTypeNoteCollection = 'notes';
 const String kEntityTypeComment = 'comment';
 const String kEntityTypeCommentCollection = 'comments';
-const String kEntityTypeVideoComment = 'video_comment';
-const String kEntityTypeVideoCommentCollection = 'video_comments';
 
 String? getCollectionByEntity(String entityType) {
   switch (entityType) {
@@ -88,8 +86,6 @@ String? getCollectionByEntity(String entityType) {
       return kEntityTypeNoteCollection;
     case kEntityTypeComment:
       return kEntityTypeCommentCollection;
-    case kEntityTypeVideoComment:
-      return kEntityTypeVideoCommentCollection;
     default:
       return null;
   }
@@ -135,8 +131,6 @@ String? getEntityByCollection(String collectionName) {
       return kEntityTypeNote;
     case kEntityTypeCommentCollection:
       return kEntityTypeComment;
-    case kEntityTypeVideoCommentCollection:
-      return kEntityTypeVideoComment;
     default:
       return null;
   }
@@ -146,7 +140,6 @@ String? getEntityByCollection(String collectionName) {
 /// Each entity type will eventually have its own schema and collections.
 enum EntityType {
   /// Unknown value for forward compatibility when clients send newer entity types
-  missing(kEntityTypeMissing),
   unknown(kEntityTypeUnknown),
   project(kEntityTypeProject),
   team(kEntityTypeTeam),
@@ -167,7 +160,7 @@ enum EntityType {
   gloss(kEntityTypeGloss),
   note(kEntityTypeNote),
   comment(kEntityTypeComment),
-  videoComment(kEntityTypeVideoComment);
+  missing(kEntityTypeMissing);
 
   const EntityType(this.value);
 
@@ -196,7 +189,6 @@ enum EntityType {
     kEntityTypeGloss: 'glos',
     kEntityTypeNote: 'note',
     kEntityTypeComment: 'cmnt',
-    kEntityTypeVideoComment: 'vidc',
   };
 
   /// Get the 4-character suffix for this entity type
@@ -242,24 +234,18 @@ enum EntityType {
     String? userId,
   }) {
     final suffix = getSuffix(entityType: entityType);
-    final coreId = generateCoreId(userId: userId);
-    return '$coreId-$suffix';
+    final entityId = generateCoreId(userId: userId, suffix: suffix);
+    return entityId;
   }
 
   /// Extract entity type suffix from an entity ID
   /// Returns null if the entity ID doesn't follow the expected format
   static String? extractEntityTypeFromId(String entityId) {
-    // Expected format: {base-cid}-{4-char-suffix}
-    final parts = entityId.split(RegExp(r'[-_]'));
-    if (parts.length >= 2) {
-      final lastPart = parts.last;
-      if (lastPart.length == 4) {
-        // Find the entity type that matches this suffix
-        for (final entry in suffixMapping.entries) {
-          if (entry.value == lastPart) {
-            return entry.key;
-          }
-        }
+    // Use extractSuffix utility for suffix extraction
+    final suffix = extractSuffix(entityId);
+    for (final entry in suffixMapping.entries) {
+      if (entry.value == suffix) {
+        return entry.key;
       }
     }
     return null;
@@ -269,93 +255,9 @@ enum EntityType {
   String toString() => value;
 }
 
-/// Example 2026-0108-161325-580-06UK-XQZK-proj
-class EntityIdParts {
-  final String YYYY;
-  final String mmdd;
-  final String HHMMss;
-  final String zzz;
-
-  /// [_-]HH
-  final String tzOffset;
-
-  /// {UC}
-  final String usrHash;
-  final String randomPart;
-  final String entitySuffix;
-  final String entityType;
-  final String entityId;
-
-  void validate() {
-    if (entityId.length != 35) {
-      throw FormatException(
-        'Invalid entityId length: ${entityId.length}, expected 35',
-      );
-    }
-    // all other fields should have expected lengths
-    if (YYYY.length != 4 ||
-        mmdd.length != 4 ||
-        HHMMss.length != 6 ||
-        zzz.length != 3 ||
-        tzOffset.length != 3 ||
-        usrHash.length != 2 ||
-        randomPart.length != 4 ||
-        entitySuffix.length != 4) {
-      throw FormatException('Invalid entityId format: $entityId');
-    }
-  }
-
-  EntityIdParts({required this.entityId})
-    : YYYY = entityId.substring(0, 4),
-      mmdd = entityId.substring(5, 9),
-      HHMMss = entityId.substring(10, 16),
-      zzz = entityId.substring(17, 20),
-      tzOffset = entityId.substring(20, 23),
-      usrHash = entityId.substring(23, 25),
-      randomPart = entityId.substring(26, 30),
-      entitySuffix = entityId.substring(31, 35),
-      entityType =
-          EntityType.extractEntityTypeFromId(entityId) ?? kEntityTypeUnknown;
-}
-
-/// Generates a unique CID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HH{UC}-{4-character-random}
-/// ({String? userId}) embed 2 character hash of the userId after the timezone hour offset, 'UK' by default
-String generateCoreId({String? userId}) {
-  final now = HlcTimestampGenerator.generate();
-  final local = now.toLocal();
-
-  // Format: YYYY-mmdd-HHMMss-sss
-  final datePart =
-      '${local.year.toString().padLeft(4, '0')}-'
-      '${local.month.toString().padLeft(2, '0')}${local.day.toString().padLeft(2, '0')}-'
-      '${local.hour.toString().padLeft(2, '0')}${local.minute.toString().padLeft(2, '0')}${local.second.toString().padLeft(2, '0')}-'
-      '${local.millisecond.toString().padLeft(3, '0')}';
-
-  // Timezone offset: ±HHmm
-  final offset = local.timeZoneOffset;
-
-  /// NOTE: '+' is not as url safe as '_'
-  final offsetSign = offset.isNegative ? '-' : '_';
-  final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
-  // final offsetMinutes = (offset.inMinutes.abs() % 60).toString().padLeft(
-  //   2,
-  //   '0',
-  // );
-  final timezonePart = '$offsetSign$offsetHours';
-
-  // 4-character random part
-  final rng = /* timestamp != null ? Random(timestamp.millisecond) : */
-      Random();
-  final randomPart = generateRandomChars(4, rng: rng);
-  final userCode = (userId != null)
-      ? generateRandomChars(
-          2,
-          chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-          rng: Random(1234567890) /* stable for same userId */,
-        )
-      : 'UK' /* unknown */;
-  return '$datePart$timezonePart$userCode-$randomPart';
-}
+// Example: use CoreIdParts from id_service.dart for parsing entity IDs
+typedef EntityIdParts = CoreIdParts;
+// generateCoreId is now in id_service.dart
 
 /// Generate a unique CID (Change Log Entry ID) with embedded entity type suffix
 /// Format: YYYY-mmdd-HHMMss-sss[_-]HH{UC}-{4chars}-{entity-short}-cid
