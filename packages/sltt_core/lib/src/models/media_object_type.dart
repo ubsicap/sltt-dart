@@ -3,6 +3,9 @@ const String kMediaObjectTypeVideoComment = 'videoComment';
 const String kMediaObjectTypeVideoChat = 'videoChat';
 const String kMediaObjectTypeBlob = 'blob';
 
+/// Example: use CoreIdParts from id_service.dart for parsing media object IDs
+typedef MediaObjectIdParts = CoreIdParts;
+
 enum MediaObjectType {
   videoTranslation(kMediaObjectTypeVideoTranslation),
   videoComment(kMediaObjectTypeVideoComment),
