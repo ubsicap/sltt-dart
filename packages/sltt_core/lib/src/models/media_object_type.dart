@@ -1,3 +1,5 @@
+import 'id_service.dart';
+
 const String kMediaObjectTypeVideoTranslation = 'videoTranslation';
 const String kMediaObjectTypeVideoComment = 'videoComment';
 const String kMediaObjectTypeVideoChat = 'videoChat';
