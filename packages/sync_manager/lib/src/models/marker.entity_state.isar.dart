@@ -38,6 +38,12 @@ class IsarMarkerDataEntityState extends BaseEntityState {
   final String? data_description_cid_;
   final String data_description_changeBy_;
   final DateTime? data_description_cloudAt_;
+  final String? data_replacementId;
+  final int? data_replacementId_dataSchemaRev_;
+  final DateTime? data_replacementId_changeAt_;
+  final String? data_replacementId_cid_;
+  final String? data_replacementId_changeBy_;
+  final DateTime? data_replacementId_cloudAt_;
 
   IsarMarkerDataEntityState({
     super.schemaVersion,
@@ -84,6 +90,12 @@ class IsarMarkerDataEntityState extends BaseEntityState {
     this.data_description_cid_,
     required this.data_description_changeBy_,
     DateTime? data_description_cloudAt_,
+    this.data_replacementId,
+    this.data_replacementId_dataSchemaRev_,
+    DateTime? data_replacementId_changeAt_,
+    this.data_replacementId_cid_,
+    this.data_replacementId_changeBy_,
+    DateTime? data_replacementId_cloudAt_,
     super.change_cloudAt,
     super.change_dataSchemaRev,
     super.data_deleted,
@@ -105,7 +117,9 @@ class IsarMarkerDataEntityState extends BaseEntityState {
        data_shape_changeAt_ = data_shape_changeAt_.toUtc(),
        data_shape_cloudAt_ = data_shape_cloudAt_?.toUtc(),
        data_description_changeAt_ = data_description_changeAt_.toUtc(),
-       data_description_cloudAt_ = data_description_cloudAt_?.toUtc();
+       data_description_cloudAt_ = data_description_cloudAt_?.toUtc(),
+       data_replacementId_changeAt_ = data_replacementId_changeAt_?.toUtc(),
+       data_replacementId_cloudAt_ = data_replacementId_cloudAt_?.toUtc();
 
   static IsarMarkerDataEntityState fromJsonBase(Map<String, dynamic> json) =>
       _$IsarMarkerDataEntityStateFromJson(json);

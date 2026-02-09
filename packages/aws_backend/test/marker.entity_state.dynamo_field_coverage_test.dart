@@ -76,6 +76,7 @@ void main() {
         expect(base.containsKey('data_colorValue'), isTrue);
         expect(base.containsKey('data_shape'), isTrue);
         expect(base.containsKey('data_description'), isTrue);
+        expect(base.containsKey('data_replacementId'), isTrue);
       },
     );
   });

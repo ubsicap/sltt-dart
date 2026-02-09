@@ -12,6 +12,7 @@ MarkerData _$MarkerDataFromJson(Map<String, dynamic> json) =>
         colorValue: $checkedConvert('colorValue', (v) => (v as num).toInt()),
         shape: $checkedConvert('shape', (v) => v as String),
         description: $checkedConvert('description', (v) => v as String),
+        replacementId: $checkedConvert('replacementId', (v) => v as String?),
         parentId: $checkedConvert('parentId', (v) => v as String),
         parentProp: $checkedConvert('parentProp', (v) => v as String),
         rank: $checkedConvert('rank', (v) => v as String?),
@@ -29,4 +30,5 @@ Map<String, dynamic> _$MarkerDataToJson(MarkerData instance) =>
       'colorValue': instance.colorValue,
       'shape': instance.shape,
       'description': instance.description,
+      'replacementId': ?instance.replacementId,
     };

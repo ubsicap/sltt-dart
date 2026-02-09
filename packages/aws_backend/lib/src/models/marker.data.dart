@@ -9,11 +9,13 @@ class MarkerData extends BaseDataFields {
   final int colorValue;
   final String shape;
   final String description;
+  final String? replacementId;
 
   MarkerData({
     required this.colorValue,
     required this.shape,
     required this.description,
+    this.replacementId,
     required super.parentId,
     required super.parentProp,
     required super.rank,

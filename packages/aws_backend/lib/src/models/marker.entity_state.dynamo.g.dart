@@ -146,6 +146,30 @@ DynamoMarkerDataEntityState _$DynamoMarkerDataEntityStateFromJson(
       'data_description_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
+    data_replacementId: $checkedConvert(
+      'data_replacementId',
+      (v) => v as String?,
+    ),
+    data_replacementId_dataSchemaRev_: $checkedConvert(
+      'data_replacementId_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_replacementId_changeAt_: $checkedConvert(
+      'data_replacementId_changeAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_replacementId_cid_: $checkedConvert(
+      'data_replacementId_cid_',
+      (v) => v as String?,
+    ),
+    data_replacementId_changeBy_: $checkedConvert(
+      'data_replacementId_changeBy_',
+      (v) => v as String?,
+    ),
+    data_replacementId_cloudAt_: $checkedConvert(
+      'data_replacementId_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
     change_cloudAt: $checkedConvert(
       'change_cloudAt',
       (v) => v == null ? null : DateTime.parse(v as String),
@@ -272,5 +296,14 @@ Map<String, dynamic> _$DynamoMarkerDataEntityStateToJson(
   'data_description_cid_': instance.data_description_cid_,
   'data_description_changeBy_': instance.data_description_changeBy_,
   'data_description_cloudAt_': instance.data_description_cloudAt_
+      ?.toIso8601String(),
+  'data_replacementId': instance.data_replacementId,
+  'data_replacementId_dataSchemaRev_':
+      instance.data_replacementId_dataSchemaRev_,
+  'data_replacementId_changeAt_': instance.data_replacementId_changeAt_
+      ?.toIso8601String(),
+  'data_replacementId_cid_': instance.data_replacementId_cid_,
+  'data_replacementId_changeBy_': instance.data_replacementId_changeBy_,
+  'data_replacementId_cloudAt_': instance.data_replacementId_cloudAt_
       ?.toIso8601String(),
 };
