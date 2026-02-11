@@ -1,5 +1,7 @@
 import 'package:aws_backend/src/models/marker.entity_state.dynamo.dart';
 import 'package:aws_backend/src/models/note.entity_state.dynamo.dart';
+import 'package:aws_backend/src/models/note_comment_chat.entity_state.dynamo.dart';
+import 'package:aws_backend/src/models/note_comment_emoji_reacted.entity_state.dynamo.dart';
 import 'package:aws_backend/src/models/passage_translation.entity_state.dynamo.dart';
 import 'package:aws_backend/src/models/portion_translation.entity_state.dynamo.dart';
 import 'package:aws_backend/src/models/video_translation.entity_state.dynamo.dart';
@@ -62,6 +64,21 @@ final bool _dynamoSerializationRegistration = (() {
     (json) => DynamoNoteDataEntityState.fromJsonBase(json),
     (state) => (state as DynamoNoteDataEntityState).toJson(),
     (state) => (state as DynamoNoteDataEntityState).toJsonBase(),
+  );
+  registerEntityStateFactory(
+    EntityType.comment,
+    (json) => DynamoNoteCommentChatDataEntityState.fromJson(json),
+    (json) => DynamoNoteCommentChatDataEntityState.fromJsonBase(json),
+    (state) => (state as DynamoNoteCommentChatDataEntityState).toJson(),
+    (state) => (state as DynamoNoteCommentChatDataEntityState).toJsonBase(),
+  );
+  registerEntityStateFactory(
+    EntityType.commentReaction,
+    (json) => DynamoNoteCommentEmojiReactedDataEntityState.fromJson(json),
+    (json) => DynamoNoteCommentEmojiReactedDataEntityState.fromJsonBase(json),
+    (state) => (state as DynamoNoteCommentEmojiReactedDataEntityState).toJson(),
+    (state) =>
+        (state as DynamoNoteCommentEmojiReactedDataEntityState).toJsonBase(),
   );
   return true;
 })();

@@ -31,11 +31,14 @@ Follow this checklist to add DynamoDB entity state support and tests for a new e
    - Run build runner in packages/aws_backend to generate `*.g.dart` files:
      - `dart run build_runner build --delete-conflicting-outputs`
 
-5. **Register the Entity State**
+5. **Run Analyze and Fix**
+   - Run `dart analyze` and `dart fix --apply` to catch and clean up issues.
+
+6. **Register the Entity State**
    - Register the new entity state class in packages/aws_backend/lib/src/models/dynamo_entity_state_serialization_registry.dart
      by adding a factory for your entity type, following the pattern for existing entities.
 
-6. **Verify Integration**
+7. **Verify Integration**
    - Ensure the new entity state class is properly integrated with the DynamoDB storage layer.
    - Verify that all Dynamo tests pass and the new entity is correctly stored and retrieved from DynamoDB.
 
