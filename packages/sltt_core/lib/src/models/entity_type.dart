@@ -45,6 +45,8 @@ const String kEntityTypeNote = 'note';
 const String kEntityTypeNoteCollection = 'notes';
 const String kEntityTypeComment = 'comment';
 const String kEntityTypeCommentCollection = 'comments';
+const String kEntityTypeCommentReaction = 'comment_reaction';
+const String kEntityTypeCommentReactionCollection = 'comment_reactions';
 
 String? getCollectionByEntity(String entityType) {
   switch (entityType) {
@@ -86,6 +88,8 @@ String? getCollectionByEntity(String entityType) {
       return kEntityTypeNoteCollection;
     case kEntityTypeComment:
       return kEntityTypeCommentCollection;
+    case kEntityTypeCommentReaction:
+      return kEntityTypeCommentReactionCollection;
     default:
       return null;
   }
@@ -131,6 +135,8 @@ String? getEntityByCollection(String collectionName) {
       return kEntityTypeNote;
     case kEntityTypeCommentCollection:
       return kEntityTypeComment;
+    case kEntityTypeCommentReactionCollection:
+      return kEntityTypeCommentReaction;
     default:
       return null;
   }
@@ -160,6 +166,7 @@ enum EntityType {
   gloss(kEntityTypeGloss),
   note(kEntityTypeNote),
   comment(kEntityTypeComment),
+  commentReaction(kEntityTypeCommentReaction),
   missing(kEntityTypeMissing);
 
   const EntityType(this.value);
@@ -189,6 +196,7 @@ enum EntityType {
     kEntityTypeGloss: 'glos',
     kEntityTypeNote: 'note',
     kEntityTypeComment: 'cmnt',
+    kEntityTypeCommentReaction: 'cmRe',
   };
 
   /// Get the 4-character suffix for this entity type
