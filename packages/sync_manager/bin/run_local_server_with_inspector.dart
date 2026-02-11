@@ -9,6 +9,10 @@ import 'package:sync_manager/src/models/marker.entity_state.isar.dart'
     show IsarMarkerDataEntityStateSchema;
 import 'package:sync_manager/src/models/note.entity_state.isar.dart'
     show IsarNoteDataEntityStateSchema;
+import 'package:sync_manager/src/models/note_comment_chat.entity_state.isar.dart'
+    show IsarNoteCommentChatDataEntityStateSchema;
+import 'package:sync_manager/src/models/note_comment_emoji_reacted.entity_state.isar.dart'
+    show IsarNoteCommentEmojiReactedDataEntityStateSchema;
 import 'package:sync_manager/src/models/passage_translation.entity_state.isar.dart';
 import 'package:sync_manager/src/models/portion_translation.entity_state.isar.dart';
 import 'package:sync_manager/src/models/video_translation.entity_state.isar.dart';
@@ -96,6 +100,8 @@ void main(List<String> args) async {
       IsarVideoDataEntityStateSchema,
       IsarNoteDataEntityStateSchema,
       IsarMarkerDataEntityStateSchema,
+      IsarNoteCommentChatDataEntityStateSchema,
+      IsarNoteCommentEmojiReactedDataEntityStateSchema,
       // Add any other schemas specific to sltt-standalone-app here
     ];
   } else {
