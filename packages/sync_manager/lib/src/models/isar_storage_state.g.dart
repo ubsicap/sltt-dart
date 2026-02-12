@@ -51,7 +51,7 @@ const IsarStorageStateSchema = CollectionSchema(
   getId: _isarStorageStateGetId,
   getLinks: _isarStorageStateGetLinks,
   attach: _isarStorageStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarStorageStateEstimateSize(

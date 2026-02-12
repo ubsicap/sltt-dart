@@ -461,7 +461,7 @@ const IsarPassageDataEntityStateSchema = CollectionSchema(
   getId: _isarPassageDataEntityStateGetId,
   getLinks: _isarPassageDataEntityStateGetLinks,
   attach: _isarPassageDataEntityStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarPassageDataEntityStateEstimateSize(

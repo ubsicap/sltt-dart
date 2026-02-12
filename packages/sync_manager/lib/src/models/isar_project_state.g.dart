@@ -280,7 +280,7 @@ const IsarProjectStateSchema = CollectionSchema(
   getId: _isarProjectStateGetId,
   getLinks: _isarProjectStateGetLinks,
   attach: _isarProjectStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarProjectStateEstimateSize(
