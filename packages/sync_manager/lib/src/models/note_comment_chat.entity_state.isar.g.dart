@@ -401,7 +401,7 @@ const IsarNoteCommentChatDataEntityStateSchema = CollectionSchema(
   getId: _isarNoteCommentChatDataEntityStateGetId,
   getLinks: _isarNoteCommentChatDataEntityStateGetLinks,
   attach: _isarNoteCommentChatDataEntityStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarNoteCommentChatDataEntityStateEstimateSize(

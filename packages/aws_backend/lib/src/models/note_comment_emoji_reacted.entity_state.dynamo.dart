@@ -17,6 +17,20 @@ class DynamoNoteCommentEmojiReactedDataEntityState extends BaseEntityState {
   final String data_emoji_changeBy_;
   final DateTime? data_emoji_cloudAt_;
 
+  final String data_commentId;
+  final int? data_commentId_dataSchemaRev_;
+  final DateTime data_commentId_changeAt_;
+  final String? data_commentId_cid_;
+  final String data_commentId_changeBy_;
+  final DateTime? data_commentId_cloudAt_;
+
+  final String data_noteId;
+  final int? data_noteId_dataSchemaRev_;
+  final DateTime data_noteId_changeAt_;
+  final String? data_noteId_cid_;
+  final String data_noteId_changeBy_;
+  final DateTime? data_noteId_cloudAt_;
+
   DynamoNoteCommentEmojiReactedDataEntityState({
     super.schemaVersion,
     super.entityType = kEntityTypeCommentReaction,
@@ -49,6 +63,18 @@ class DynamoNoteCommentEmojiReactedDataEntityState extends BaseEntityState {
     this.data_emoji_cid_,
     required this.data_emoji_changeBy_,
     DateTime? data_emoji_cloudAt_,
+    required this.data_commentId,
+    this.data_commentId_dataSchemaRev_,
+    required DateTime data_commentId_changeAt_,
+    this.data_commentId_cid_,
+    required this.data_commentId_changeBy_,
+    DateTime? data_commentId_cloudAt_,
+    required this.data_noteId,
+    this.data_noteId_dataSchemaRev_,
+    required DateTime data_noteId_changeAt_,
+    this.data_noteId_cid_,
+    required this.data_noteId_changeBy_,
+    DateTime? data_noteId_cloudAt_,
     super.change_cloudAt,
     super.change_dataSchemaRev,
     super.data_deleted,
@@ -66,7 +92,11 @@ class DynamoNoteCommentEmojiReactedDataEntityState extends BaseEntityState {
     super.data_rank_cloudAt_,
     super.data_rank_dataSchemaRev_,
   }) : data_emoji_changeAt_ = data_emoji_changeAt_.toUtc(),
-       data_emoji_cloudAt_ = data_emoji_cloudAt_?.toUtc();
+       data_emoji_cloudAt_ = data_emoji_cloudAt_?.toUtc(),
+       data_commentId_changeAt_ = data_commentId_changeAt_.toUtc(),
+       data_commentId_cloudAt_ = data_commentId_cloudAt_?.toUtc(),
+       data_noteId_changeAt_ = data_noteId_changeAt_.toUtc(),
+       data_noteId_cloudAt_ = data_noteId_cloudAt_?.toUtc();
 
   static DynamoNoteCommentEmojiReactedDataEntityState fromJsonBase(
     Map<String, dynamic> json,
@@ -75,6 +105,8 @@ class DynamoNoteCommentEmojiReactedDataEntityState extends BaseEntityState {
   Map<String, dynamic> toJsonSafe() {
     final j = toJson();
     j.putIfAbsent('data_emoji', () => '');
+    j.putIfAbsent('data_commentId', () => '');
+    j.putIfAbsent('data_noteId', () => '');
     return j;
   }
 

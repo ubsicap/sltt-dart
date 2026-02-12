@@ -104,6 +104,45 @@ _$DynamoNoteCommentEmojiReactedDataEntityStateFromJson(
       'data_emoji_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
+    data_commentId: $checkedConvert('data_commentId', (v) => v as String),
+    data_commentId_dataSchemaRev_: $checkedConvert(
+      'data_commentId_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_commentId_changeAt_: $checkedConvert(
+      'data_commentId_changeAt_',
+      (v) => DateTime.parse(v as String),
+    ),
+    data_commentId_cid_: $checkedConvert(
+      'data_commentId_cid_',
+      (v) => v as String?,
+    ),
+    data_commentId_changeBy_: $checkedConvert(
+      'data_commentId_changeBy_',
+      (v) => v as String,
+    ),
+    data_commentId_cloudAt_: $checkedConvert(
+      'data_commentId_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_noteId: $checkedConvert('data_noteId', (v) => v as String),
+    data_noteId_dataSchemaRev_: $checkedConvert(
+      'data_noteId_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_noteId_changeAt_: $checkedConvert(
+      'data_noteId_changeAt_',
+      (v) => DateTime.parse(v as String),
+    ),
+    data_noteId_cid_: $checkedConvert('data_noteId_cid_', (v) => v as String?),
+    data_noteId_changeBy_: $checkedConvert(
+      'data_noteId_changeBy_',
+      (v) => v as String,
+    ),
+    data_noteId_cloudAt_: $checkedConvert(
+      'data_noteId_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
     change_cloudAt: $checkedConvert(
       'change_cloudAt',
       (v) => v == null ? null : DateTime.parse(v as String),
@@ -215,4 +254,18 @@ Map<String, dynamic> _$DynamoNoteCommentEmojiReactedDataEntityStateToJson(
   'data_emoji_cid_': instance.data_emoji_cid_,
   'data_emoji_changeBy_': instance.data_emoji_changeBy_,
   'data_emoji_cloudAt_': instance.data_emoji_cloudAt_?.toIso8601String(),
+  'data_commentId': instance.data_commentId,
+  'data_commentId_dataSchemaRev_': instance.data_commentId_dataSchemaRev_,
+  'data_commentId_changeAt_': instance.data_commentId_changeAt_
+      .toIso8601String(),
+  'data_commentId_cid_': instance.data_commentId_cid_,
+  'data_commentId_changeBy_': instance.data_commentId_changeBy_,
+  'data_commentId_cloudAt_': instance.data_commentId_cloudAt_
+      ?.toIso8601String(),
+  'data_noteId': instance.data_noteId,
+  'data_noteId_dataSchemaRev_': instance.data_noteId_dataSchemaRev_,
+  'data_noteId_changeAt_': instance.data_noteId_changeAt_.toIso8601String(),
+  'data_noteId_cid_': instance.data_noteId_cid_,
+  'data_noteId_changeBy_': instance.data_noteId_changeBy_,
+  'data_noteId_cloudAt_': instance.data_noteId_cloudAt_?.toIso8601String(),
 };

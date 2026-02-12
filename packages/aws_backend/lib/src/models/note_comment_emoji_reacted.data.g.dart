@@ -11,6 +11,8 @@ NoteCommentEmojiReactedData _$NoteCommentEmojiReactedDataFromJson(
 ) => $checkedCreate('NoteCommentEmojiReactedData', json, ($checkedConvert) {
   final val = NoteCommentEmojiReactedData(
     emoji: $checkedConvert('emoji', (v) => v as String),
+    commentId: $checkedConvert('commentId', (v) => v as String),
+    noteId: $checkedConvert('noteId', (v) => v as String),
     parentId: $checkedConvert('parentId', (v) => v as String),
     parentProp: $checkedConvert('parentProp', (v) => v as String),
     rank: $checkedConvert('rank', (v) => v as String?),
@@ -27,4 +29,6 @@ Map<String, dynamic> _$NoteCommentEmojiReactedDataToJson(
   'rank': ?instance.rank,
   'deleted': ?instance.deleted,
   'emoji': instance.emoji,
+  'commentId': instance.commentId,
+  'noteId': instance.noteId,
 };

@@ -78,178 +78,238 @@ const IsarNoteCommentEmojiReactedDataEntityStateSchema = CollectionSchema(
       name: r'change_storedAt_orig_',
       type: IsarType.dateTime,
     ),
-    r'data_deleted': PropertySchema(
+    r'data_commentId': PropertySchema(
       id: 12,
+      name: r'data_commentId',
+      type: IsarType.string,
+    ),
+    r'data_commentId_changeAt_': PropertySchema(
+      id: 13,
+      name: r'data_commentId_changeAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_commentId_changeBy_': PropertySchema(
+      id: 14,
+      name: r'data_commentId_changeBy_',
+      type: IsarType.string,
+    ),
+    r'data_commentId_cid_': PropertySchema(
+      id: 15,
+      name: r'data_commentId_cid_',
+      type: IsarType.string,
+    ),
+    r'data_commentId_cloudAt_': PropertySchema(
+      id: 16,
+      name: r'data_commentId_cloudAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_commentId_dataSchemaRev_': PropertySchema(
+      id: 17,
+      name: r'data_commentId_dataSchemaRev_',
+      type: IsarType.long,
+    ),
+    r'data_deleted': PropertySchema(
+      id: 18,
       name: r'data_deleted',
       type: IsarType.bool,
     ),
     r'data_deleted_changeAt_': PropertySchema(
-      id: 13,
+      id: 19,
       name: r'data_deleted_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_deleted_changeBy_': PropertySchema(
-      id: 14,
+      id: 20,
       name: r'data_deleted_changeBy_',
       type: IsarType.string,
     ),
     r'data_deleted_cid_': PropertySchema(
-      id: 15,
+      id: 21,
       name: r'data_deleted_cid_',
       type: IsarType.string,
     ),
     r'data_deleted_cloudAt_': PropertySchema(
-      id: 16,
+      id: 22,
       name: r'data_deleted_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_deleted_dataSchemaRev_': PropertySchema(
-      id: 17,
+      id: 23,
       name: r'data_deleted_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_emoji': PropertySchema(
-      id: 18,
+      id: 24,
       name: r'data_emoji',
       type: IsarType.string,
     ),
     r'data_emoji_changeAt_': PropertySchema(
-      id: 19,
+      id: 25,
       name: r'data_emoji_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_emoji_changeBy_': PropertySchema(
-      id: 20,
+      id: 26,
       name: r'data_emoji_changeBy_',
       type: IsarType.string,
     ),
     r'data_emoji_cid_': PropertySchema(
-      id: 21,
+      id: 27,
       name: r'data_emoji_cid_',
       type: IsarType.string,
     ),
     r'data_emoji_cloudAt_': PropertySchema(
-      id: 22,
+      id: 28,
       name: r'data_emoji_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_emoji_dataSchemaRev_': PropertySchema(
-      id: 23,
+      id: 29,
       name: r'data_emoji_dataSchemaRev_',
       type: IsarType.long,
     ),
+    r'data_noteId': PropertySchema(
+      id: 30,
+      name: r'data_noteId',
+      type: IsarType.string,
+    ),
+    r'data_noteId_changeAt_': PropertySchema(
+      id: 31,
+      name: r'data_noteId_changeAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_noteId_changeBy_': PropertySchema(
+      id: 32,
+      name: r'data_noteId_changeBy_',
+      type: IsarType.string,
+    ),
+    r'data_noteId_cid_': PropertySchema(
+      id: 33,
+      name: r'data_noteId_cid_',
+      type: IsarType.string,
+    ),
+    r'data_noteId_cloudAt_': PropertySchema(
+      id: 34,
+      name: r'data_noteId_cloudAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_noteId_dataSchemaRev_': PropertySchema(
+      id: 35,
+      name: r'data_noteId_dataSchemaRev_',
+      type: IsarType.long,
+    ),
     r'data_parentId': PropertySchema(
-      id: 24,
+      id: 36,
       name: r'data_parentId',
       type: IsarType.string,
     ),
     r'data_parentId_changeAt_': PropertySchema(
-      id: 25,
+      id: 37,
       name: r'data_parentId_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentId_changeBy_': PropertySchema(
-      id: 26,
+      id: 38,
       name: r'data_parentId_changeBy_',
       type: IsarType.string,
     ),
     r'data_parentId_cid_': PropertySchema(
-      id: 27,
+      id: 39,
       name: r'data_parentId_cid_',
       type: IsarType.string,
     ),
     r'data_parentId_cloudAt_': PropertySchema(
-      id: 28,
+      id: 40,
       name: r'data_parentId_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentId_dataSchemaRev_': PropertySchema(
-      id: 29,
+      id: 41,
       name: r'data_parentId_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_parentProp': PropertySchema(
-      id: 30,
+      id: 42,
       name: r'data_parentProp',
       type: IsarType.string,
     ),
     r'data_parentProp_changeAt_': PropertySchema(
-      id: 31,
+      id: 43,
       name: r'data_parentProp_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentProp_changeBy_': PropertySchema(
-      id: 32,
+      id: 44,
       name: r'data_parentProp_changeBy_',
       type: IsarType.string,
     ),
     r'data_parentProp_cid_': PropertySchema(
-      id: 33,
+      id: 45,
       name: r'data_parentProp_cid_',
       type: IsarType.string,
     ),
     r'data_parentProp_cloudAt_': PropertySchema(
-      id: 34,
+      id: 46,
       name: r'data_parentProp_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_parentProp_dataSchemaRev_': PropertySchema(
-      id: 35,
+      id: 47,
       name: r'data_parentProp_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'data_rank': PropertySchema(
-      id: 36,
+      id: 48,
       name: r'data_rank',
       type: IsarType.string,
     ),
     r'data_rank_changeAt_': PropertySchema(
-      id: 37,
+      id: 49,
       name: r'data_rank_changeAt_',
       type: IsarType.dateTime,
     ),
     r'data_rank_changeBy_': PropertySchema(
-      id: 38,
+      id: 50,
       name: r'data_rank_changeBy_',
       type: IsarType.string,
     ),
     r'data_rank_cid_': PropertySchema(
-      id: 39,
+      id: 51,
       name: r'data_rank_cid_',
       type: IsarType.string,
     ),
     r'data_rank_cloudAt_': PropertySchema(
-      id: 40,
+      id: 52,
       name: r'data_rank_cloudAt_',
       type: IsarType.dateTime,
     ),
     r'data_rank_dataSchemaRev_': PropertySchema(
-      id: 41,
+      id: 53,
       name: r'data_rank_dataSchemaRev_',
       type: IsarType.long,
     ),
     r'domainType': PropertySchema(
-      id: 42,
+      id: 54,
       name: r'domainType',
       type: IsarType.string,
     ),
     r'entityId': PropertySchema(
-      id: 43,
+      id: 55,
       name: r'entityId',
       type: IsarType.string,
     ),
     r'entityType': PropertySchema(
-      id: 44,
+      id: 56,
       name: r'entityType',
       type: IsarType.string,
     ),
     r'schemaVersion': PropertySchema(
-      id: 45,
+      id: 57,
       name: r'schemaVersion',
       type: IsarType.long,
     ),
     r'unknownJson': PropertySchema(
-      id: 46,
+      id: 58,
       name: r'unknownJson',
       type: IsarType.string,
     ),
@@ -281,7 +341,7 @@ const IsarNoteCommentEmojiReactedDataEntityStateSchema = CollectionSchema(
   getId: _isarNoteCommentEmojiReactedDataEntityStateGetId,
   getLinks: _isarNoteCommentEmojiReactedDataEntityStateGetLinks,
   attach: _isarNoteCommentEmojiReactedDataEntityStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarNoteCommentEmojiReactedDataEntityStateEstimateSize(
@@ -296,6 +356,14 @@ int _isarNoteCommentEmojiReactedDataEntityStateEstimateSize(
   bytesCount += 3 + object.change_cid_orig_.length * 3;
   bytesCount += 3 + object.change_domainId.length * 3;
   bytesCount += 3 + object.change_domainId_orig_.length * 3;
+  bytesCount += 3 + object.data_commentId.length * 3;
+  bytesCount += 3 + object.data_commentId_changeBy_.length * 3;
+  {
+    final value = object.data_commentId_cid_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   {
     final value = object.data_deleted_changeBy_;
     if (value != null) {
@@ -312,6 +380,14 @@ int _isarNoteCommentEmojiReactedDataEntityStateEstimateSize(
   bytesCount += 3 + object.data_emoji_changeBy_.length * 3;
   {
     final value = object.data_emoji_cid_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.data_noteId.length * 3;
+  bytesCount += 3 + object.data_noteId_changeBy_.length * 3;
+  {
+    final value = object.data_noteId_cid_;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
     }
@@ -365,41 +441,53 @@ void _isarNoteCommentEmojiReactedDataEntityStateSerialize(
   writer.writeString(offsets[9], object.change_domainId_orig_);
   writer.writeDateTime(offsets[10], object.change_storedAt);
   writer.writeDateTime(offsets[11], object.change_storedAt_orig_);
-  writer.writeBool(offsets[12], object.data_deleted);
-  writer.writeDateTime(offsets[13], object.data_deleted_changeAt_);
-  writer.writeString(offsets[14], object.data_deleted_changeBy_);
-  writer.writeString(offsets[15], object.data_deleted_cid_);
-  writer.writeDateTime(offsets[16], object.data_deleted_cloudAt_);
-  writer.writeLong(offsets[17], object.data_deleted_dataSchemaRev_);
-  writer.writeString(offsets[18], object.data_emoji);
-  writer.writeDateTime(offsets[19], object.data_emoji_changeAt_);
-  writer.writeString(offsets[20], object.data_emoji_changeBy_);
-  writer.writeString(offsets[21], object.data_emoji_cid_);
-  writer.writeDateTime(offsets[22], object.data_emoji_cloudAt_);
-  writer.writeLong(offsets[23], object.data_emoji_dataSchemaRev_);
-  writer.writeString(offsets[24], object.data_parentId);
-  writer.writeDateTime(offsets[25], object.data_parentId_changeAt_);
-  writer.writeString(offsets[26], object.data_parentId_changeBy_);
-  writer.writeString(offsets[27], object.data_parentId_cid_);
-  writer.writeDateTime(offsets[28], object.data_parentId_cloudAt_);
-  writer.writeLong(offsets[29], object.data_parentId_dataSchemaRev_);
-  writer.writeString(offsets[30], object.data_parentProp);
-  writer.writeDateTime(offsets[31], object.data_parentProp_changeAt_);
-  writer.writeString(offsets[32], object.data_parentProp_changeBy_);
-  writer.writeString(offsets[33], object.data_parentProp_cid_);
-  writer.writeDateTime(offsets[34], object.data_parentProp_cloudAt_);
-  writer.writeLong(offsets[35], object.data_parentProp_dataSchemaRev_);
-  writer.writeString(offsets[36], object.data_rank);
-  writer.writeDateTime(offsets[37], object.data_rank_changeAt_);
-  writer.writeString(offsets[38], object.data_rank_changeBy_);
-  writer.writeString(offsets[39], object.data_rank_cid_);
-  writer.writeDateTime(offsets[40], object.data_rank_cloudAt_);
-  writer.writeLong(offsets[41], object.data_rank_dataSchemaRev_);
-  writer.writeString(offsets[42], object.domainType);
-  writer.writeString(offsets[43], object.entityId);
-  writer.writeString(offsets[44], object.entityType);
-  writer.writeLong(offsets[45], object.schemaVersion);
-  writer.writeString(offsets[46], object.unknownJson);
+  writer.writeString(offsets[12], object.data_commentId);
+  writer.writeDateTime(offsets[13], object.data_commentId_changeAt_);
+  writer.writeString(offsets[14], object.data_commentId_changeBy_);
+  writer.writeString(offsets[15], object.data_commentId_cid_);
+  writer.writeDateTime(offsets[16], object.data_commentId_cloudAt_);
+  writer.writeLong(offsets[17], object.data_commentId_dataSchemaRev_);
+  writer.writeBool(offsets[18], object.data_deleted);
+  writer.writeDateTime(offsets[19], object.data_deleted_changeAt_);
+  writer.writeString(offsets[20], object.data_deleted_changeBy_);
+  writer.writeString(offsets[21], object.data_deleted_cid_);
+  writer.writeDateTime(offsets[22], object.data_deleted_cloudAt_);
+  writer.writeLong(offsets[23], object.data_deleted_dataSchemaRev_);
+  writer.writeString(offsets[24], object.data_emoji);
+  writer.writeDateTime(offsets[25], object.data_emoji_changeAt_);
+  writer.writeString(offsets[26], object.data_emoji_changeBy_);
+  writer.writeString(offsets[27], object.data_emoji_cid_);
+  writer.writeDateTime(offsets[28], object.data_emoji_cloudAt_);
+  writer.writeLong(offsets[29], object.data_emoji_dataSchemaRev_);
+  writer.writeString(offsets[30], object.data_noteId);
+  writer.writeDateTime(offsets[31], object.data_noteId_changeAt_);
+  writer.writeString(offsets[32], object.data_noteId_changeBy_);
+  writer.writeString(offsets[33], object.data_noteId_cid_);
+  writer.writeDateTime(offsets[34], object.data_noteId_cloudAt_);
+  writer.writeLong(offsets[35], object.data_noteId_dataSchemaRev_);
+  writer.writeString(offsets[36], object.data_parentId);
+  writer.writeDateTime(offsets[37], object.data_parentId_changeAt_);
+  writer.writeString(offsets[38], object.data_parentId_changeBy_);
+  writer.writeString(offsets[39], object.data_parentId_cid_);
+  writer.writeDateTime(offsets[40], object.data_parentId_cloudAt_);
+  writer.writeLong(offsets[41], object.data_parentId_dataSchemaRev_);
+  writer.writeString(offsets[42], object.data_parentProp);
+  writer.writeDateTime(offsets[43], object.data_parentProp_changeAt_);
+  writer.writeString(offsets[44], object.data_parentProp_changeBy_);
+  writer.writeString(offsets[45], object.data_parentProp_cid_);
+  writer.writeDateTime(offsets[46], object.data_parentProp_cloudAt_);
+  writer.writeLong(offsets[47], object.data_parentProp_dataSchemaRev_);
+  writer.writeString(offsets[48], object.data_rank);
+  writer.writeDateTime(offsets[49], object.data_rank_changeAt_);
+  writer.writeString(offsets[50], object.data_rank_changeBy_);
+  writer.writeString(offsets[51], object.data_rank_cid_);
+  writer.writeDateTime(offsets[52], object.data_rank_cloudAt_);
+  writer.writeLong(offsets[53], object.data_rank_dataSchemaRev_);
+  writer.writeString(offsets[54], object.domainType);
+  writer.writeString(offsets[55], object.entityId);
+  writer.writeString(offsets[56], object.entityType);
+  writer.writeLong(offsets[57], object.schemaVersion);
+  writer.writeString(offsets[58], object.unknownJson);
 }
 
 IsarNoteCommentEmojiReactedDataEntityState
@@ -422,43 +510,55 @@ _isarNoteCommentEmojiReactedDataEntityStateDeserialize(
     change_domainId_orig_: reader.readString(offsets[9]),
     change_storedAt: reader.readDateTime(offsets[10]),
     change_storedAt_orig_: reader.readDateTime(offsets[11]),
-    data_deleted: reader.readBoolOrNull(offsets[12]),
-    data_deleted_changeAt_: reader.readDateTimeOrNull(offsets[13]),
-    data_deleted_changeBy_: reader.readStringOrNull(offsets[14]),
-    data_deleted_cid_: reader.readStringOrNull(offsets[15]),
-    data_deleted_cloudAt_: reader.readDateTimeOrNull(offsets[16]),
-    data_deleted_dataSchemaRev_: reader.readLongOrNull(offsets[17]),
-    data_emoji: reader.readString(offsets[18]),
-    data_emoji_changeAt_: reader.readDateTime(offsets[19]),
-    data_emoji_changeBy_: reader.readString(offsets[20]),
-    data_emoji_cid_: reader.readStringOrNull(offsets[21]),
-    data_emoji_cloudAt_: reader.readDateTimeOrNull(offsets[22]),
-    data_emoji_dataSchemaRev_: reader.readLongOrNull(offsets[23]),
-    data_parentId: reader.readString(offsets[24]),
-    data_parentId_changeAt_: reader.readDateTime(offsets[25]),
-    data_parentId_changeBy_: reader.readString(offsets[26]),
-    data_parentId_cid_: reader.readString(offsets[27]),
-    data_parentId_cloudAt_: reader.readDateTimeOrNull(offsets[28]),
-    data_parentId_dataSchemaRev_: reader.readLongOrNull(offsets[29]),
-    data_parentProp: reader.readString(offsets[30]),
-    data_parentProp_changeAt_: reader.readDateTime(offsets[31]),
-    data_parentProp_changeBy_: reader.readString(offsets[32]),
-    data_parentProp_cid_: reader.readString(offsets[33]),
-    data_parentProp_cloudAt_: reader.readDateTimeOrNull(offsets[34]),
-    data_parentProp_dataSchemaRev_: reader.readLongOrNull(offsets[35]),
-    data_rank: reader.readStringOrNull(offsets[36]),
-    data_rank_changeAt_: reader.readDateTimeOrNull(offsets[37]),
-    data_rank_changeBy_: reader.readStringOrNull(offsets[38]),
-    data_rank_cid_: reader.readStringOrNull(offsets[39]),
-    data_rank_cloudAt_: reader.readDateTimeOrNull(offsets[40]),
-    data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[41]),
-    domainType: reader.readString(offsets[42]),
-    entityId: reader.readString(offsets[43]),
+    data_commentId: reader.readString(offsets[12]),
+    data_commentId_changeAt_: reader.readDateTime(offsets[13]),
+    data_commentId_changeBy_: reader.readString(offsets[14]),
+    data_commentId_cid_: reader.readStringOrNull(offsets[15]),
+    data_commentId_cloudAt_: reader.readDateTimeOrNull(offsets[16]),
+    data_commentId_dataSchemaRev_: reader.readLongOrNull(offsets[17]),
+    data_deleted: reader.readBoolOrNull(offsets[18]),
+    data_deleted_changeAt_: reader.readDateTimeOrNull(offsets[19]),
+    data_deleted_changeBy_: reader.readStringOrNull(offsets[20]),
+    data_deleted_cid_: reader.readStringOrNull(offsets[21]),
+    data_deleted_cloudAt_: reader.readDateTimeOrNull(offsets[22]),
+    data_deleted_dataSchemaRev_: reader.readLongOrNull(offsets[23]),
+    data_emoji: reader.readString(offsets[24]),
+    data_emoji_changeAt_: reader.readDateTime(offsets[25]),
+    data_emoji_changeBy_: reader.readString(offsets[26]),
+    data_emoji_cid_: reader.readStringOrNull(offsets[27]),
+    data_emoji_cloudAt_: reader.readDateTimeOrNull(offsets[28]),
+    data_emoji_dataSchemaRev_: reader.readLongOrNull(offsets[29]),
+    data_noteId: reader.readString(offsets[30]),
+    data_noteId_changeAt_: reader.readDateTime(offsets[31]),
+    data_noteId_changeBy_: reader.readString(offsets[32]),
+    data_noteId_cid_: reader.readStringOrNull(offsets[33]),
+    data_noteId_cloudAt_: reader.readDateTimeOrNull(offsets[34]),
+    data_noteId_dataSchemaRev_: reader.readLongOrNull(offsets[35]),
+    data_parentId: reader.readString(offsets[36]),
+    data_parentId_changeAt_: reader.readDateTime(offsets[37]),
+    data_parentId_changeBy_: reader.readString(offsets[38]),
+    data_parentId_cid_: reader.readString(offsets[39]),
+    data_parentId_cloudAt_: reader.readDateTimeOrNull(offsets[40]),
+    data_parentId_dataSchemaRev_: reader.readLongOrNull(offsets[41]),
+    data_parentProp: reader.readString(offsets[42]),
+    data_parentProp_changeAt_: reader.readDateTime(offsets[43]),
+    data_parentProp_changeBy_: reader.readString(offsets[44]),
+    data_parentProp_cid_: reader.readString(offsets[45]),
+    data_parentProp_cloudAt_: reader.readDateTimeOrNull(offsets[46]),
+    data_parentProp_dataSchemaRev_: reader.readLongOrNull(offsets[47]),
+    data_rank: reader.readStringOrNull(offsets[48]),
+    data_rank_changeAt_: reader.readDateTimeOrNull(offsets[49]),
+    data_rank_changeBy_: reader.readStringOrNull(offsets[50]),
+    data_rank_cid_: reader.readStringOrNull(offsets[51]),
+    data_rank_cloudAt_: reader.readDateTimeOrNull(offsets[52]),
+    data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[53]),
+    domainType: reader.readString(offsets[54]),
+    entityId: reader.readString(offsets[55]),
     entityType:
-        reader.readStringOrNull(offsets[44]) ?? kEntityTypeCommentReaction,
+        reader.readStringOrNull(offsets[56]) ?? kEntityTypeCommentReaction,
     id: id,
-    schemaVersion: reader.readLongOrNull(offsets[45]),
-    unknownJson: reader.readString(offsets[46]),
+    schemaVersion: reader.readLongOrNull(offsets[57]),
+    unknownJson: reader.readString(offsets[58]),
   );
   return object;
 }
@@ -495,11 +595,11 @@ P _isarNoteCommentEmojiReactedDataEntityStateDeserializeProp<P>(
     case 11:
       return (reader.readDateTime(offset)) as P;
     case 12:
-      return (reader.readBoolOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 13:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 14:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 15:
       return (reader.readStringOrNull(offset)) as P;
     case 16:
@@ -507,11 +607,11 @@ P _isarNoteCommentEmojiReactedDataEntityStateDeserializeProp<P>(
     case 17:
       return (reader.readLongOrNull(offset)) as P;
     case 18:
-      return (reader.readString(offset)) as P;
+      return (reader.readBoolOrNull(offset)) as P;
     case 19:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 20:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 21:
       return (reader.readStringOrNull(offset)) as P;
     case 22:
@@ -525,7 +625,7 @@ P _isarNoteCommentEmojiReactedDataEntityStateDeserializeProp<P>(
     case 26:
       return (reader.readString(offset)) as P;
     case 27:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 28:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 29:
@@ -537,19 +637,19 @@ P _isarNoteCommentEmojiReactedDataEntityStateDeserializeProp<P>(
     case 32:
       return (reader.readString(offset)) as P;
     case 33:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 34:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 35:
       return (reader.readLongOrNull(offset)) as P;
     case 36:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 37:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 38:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 39:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 40:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 41:
@@ -557,13 +657,37 @@ P _isarNoteCommentEmojiReactedDataEntityStateDeserializeProp<P>(
     case 42:
       return (reader.readString(offset)) as P;
     case 43:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 44:
+      return (reader.readString(offset)) as P;
+    case 45:
+      return (reader.readString(offset)) as P;
+    case 46:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 47:
+      return (reader.readLongOrNull(offset)) as P;
+    case 48:
+      return (reader.readStringOrNull(offset)) as P;
+    case 49:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 50:
+      return (reader.readStringOrNull(offset)) as P;
+    case 51:
+      return (reader.readStringOrNull(offset)) as P;
+    case 52:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 53:
+      return (reader.readLongOrNull(offset)) as P;
+    case 54:
+      return (reader.readString(offset)) as P;
+    case 55:
+      return (reader.readString(offset)) as P;
+    case 56:
       return (reader.readStringOrNull(offset) ?? kEntityTypeCommentReaction)
           as P;
-    case 45:
+    case 57:
       return (reader.readLongOrNull(offset)) as P;
-    case 46:
+    case 58:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2426,6 +2550,865 @@ extension IsarNoteCommentEmojiReactedDataEntityStateQueryFilter
     IsarNoteCommentEmojiReactedDataEntityState,
     QAfterFilterCondition
   >
+  data_commentIdEqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_commentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentIdGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_commentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_commentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentIdBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_commentId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentIdStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_commentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentIdEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_commentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_commentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_commentId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'data_commentId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'data_commentId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeAt_EqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_commentId_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeAt_GreaterThan(DateTime value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_commentId_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeAt_LessThan(DateTime value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_commentId_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeAt_Between(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_commentId_changeAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeBy_EqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_commentId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeBy_GreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_commentId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeBy_LessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_commentId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeBy_Between(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_commentId_changeBy_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeBy_StartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_commentId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeBy_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_commentId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeBy_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_commentId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeBy_Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_commentId_changeBy_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeBy_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_commentId_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_changeBy_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_commentId_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_commentId_cid_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'data_commentId_cid_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_EqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_commentId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_commentId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_commentId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_commentId_cid_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_StartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_commentId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_commentId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_commentId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_commentId_cid_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'data_commentId_cid_', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cid_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_commentId_cid_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cloudAt_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_commentId_cloudAt_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cloudAt_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'data_commentId_cloudAt_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cloudAt_EqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_commentId_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cloudAt_GreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_commentId_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cloudAt_LessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_commentId_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_cloudAt_Between(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_commentId_cloudAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_dataSchemaRev_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(
+          property: r'data_commentId_dataSchemaRev_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_dataSchemaRev_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_commentId_dataSchemaRev_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_dataSchemaRev_EqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_commentId_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_dataSchemaRev_GreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_commentId_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_dataSchemaRev_LessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_commentId_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_commentId_dataSchemaRev_Between(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_commentId_dataSchemaRev_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
   data_deletedIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -4013,6 +4996,854 @@ extension IsarNoteCommentEmojiReactedDataEntityStateQueryFilter
       return query.addFilterCondition(
         FilterCondition.between(
           property: r'data_emoji_dataSchemaRev_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteIdEqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_noteId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteIdGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_noteId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_noteId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteIdBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_noteId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteIdStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_noteId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteIdEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_noteId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_noteId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_noteId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'data_noteId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'data_noteId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeAt_EqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_noteId_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeAt_GreaterThan(DateTime value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_noteId_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeAt_LessThan(DateTime value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_noteId_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeAt_Between(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_noteId_changeAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeBy_EqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_noteId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeBy_GreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_noteId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeBy_LessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_noteId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeBy_Between(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_noteId_changeBy_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeBy_StartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_noteId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeBy_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_noteId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeBy_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_noteId_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeBy_Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_noteId_changeBy_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeBy_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'data_noteId_changeBy_', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_changeBy_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_noteId_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_noteId_cid_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'data_noteId_cid_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_EqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_noteId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_noteId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_noteId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_noteId_cid_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_StartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_noteId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_noteId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_noteId_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_noteId_cid_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'data_noteId_cid_', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cid_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'data_noteId_cid_', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cloudAt_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_noteId_cloudAt_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cloudAt_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'data_noteId_cloudAt_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cloudAt_EqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_noteId_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cloudAt_GreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_noteId_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cloudAt_LessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_noteId_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_cloudAt_Between(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_noteId_cloudAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_dataSchemaRev_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_noteId_dataSchemaRev_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_dataSchemaRev_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_noteId_dataSchemaRev_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_dataSchemaRev_EqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_noteId_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_dataSchemaRev_GreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_noteId_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_dataSchemaRev_LessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_noteId_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterFilterCondition
+  >
+  data_noteId_dataSchemaRev_Between(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_noteId_dataSchemaRev_',
           lower: lower,
           includeLower: includeLower,
           upper: upper,
@@ -7789,6 +9620,138 @@ extension IsarNoteCommentEmojiReactedDataEntityStateQuerySortBy
     IsarNoteCommentEmojiReactedDataEntityState,
     QAfterSortBy
   >
+  sortByData_commentId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentId_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_changeAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentId_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_changeAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentId_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_changeBy_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentId_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_changeBy_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentId_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentId_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_cid_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentId_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_cloudAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentId_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_cloudAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentId_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_dataSchemaRev_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_commentId_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_dataSchemaRev_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
   sortByData_deleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_deleted', Sort.asc);
@@ -8045,6 +10008,138 @@ extension IsarNoteCommentEmojiReactedDataEntityStateQuerySortBy
   sortByData_emoji_dataSchemaRev_Desc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_emoji_dataSchemaRev_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_changeAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_changeAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_changeBy_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_changeBy_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_cid_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_cloudAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_cloudAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_dataSchemaRev_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_noteId_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_dataSchemaRev_', Sort.desc);
     });
   }
 
@@ -8831,6 +10926,138 @@ extension IsarNoteCommentEmojiReactedDataEntityStateQuerySortThenBy
     IsarNoteCommentEmojiReactedDataEntityState,
     QAfterSortBy
   >
+  thenByData_commentId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentId_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_changeAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentId_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_changeAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentId_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_changeBy_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentId_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_changeBy_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentId_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentId_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_cid_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentId_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_cloudAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentId_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_cloudAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentId_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_dataSchemaRev_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_commentId_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_commentId_dataSchemaRev_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
   thenByData_deleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_deleted', Sort.asc);
@@ -9087,6 +11314,138 @@ extension IsarNoteCommentEmojiReactedDataEntityStateQuerySortThenBy
   thenByData_emoji_dataSchemaRev_Desc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'data_emoji_dataSchemaRev_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_changeAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_changeAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_changeBy_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_changeBy_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_cid_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_cloudAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_cloudAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_dataSchemaRev_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_noteId_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_noteId_dataSchemaRev_', Sort.desc);
     });
   }
 
@@ -9778,6 +12137,81 @@ extension IsarNoteCommentEmojiReactedDataEntityStateQueryWhereDistinct
     IsarNoteCommentEmojiReactedDataEntityState,
     QDistinct
   >
+  distinctByData_commentId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_commentId',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_commentId_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_commentId_changeAt_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_commentId_changeBy_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_commentId_changeBy_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_commentId_cid_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_commentId_cid_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_commentId_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_commentId_cloudAt_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_commentId_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_commentId_dataSchemaRev_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
   distinctByData_deleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'data_deleted');
@@ -9914,6 +12348,78 @@ extension IsarNoteCommentEmojiReactedDataEntityStateQueryWhereDistinct
   distinctByData_emoji_dataSchemaRev_() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'data_emoji_dataSchemaRev_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_noteId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_noteId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_noteId_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_noteId_changeAt_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_noteId_changeBy_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_noteId_changeBy_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_noteId_cid_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_noteId_cid_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_noteId_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_noteId_cloudAt_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    IsarNoteCommentEmojiReactedDataEntityState,
+    QDistinct
+  >
+  distinctByData_noteId_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_noteId_dataSchemaRev_');
     });
   }
 
@@ -10347,6 +12853,72 @@ extension IsarNoteCommentEmojiReactedDataEntityStateQueryProperty
 
   QueryBuilder<
     IsarNoteCommentEmojiReactedDataEntityState,
+    String,
+    QQueryOperations
+  >
+  data_commentIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_commentId');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    DateTime,
+    QQueryOperations
+  >
+  data_commentId_changeAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_commentId_changeAt_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    String,
+    QQueryOperations
+  >
+  data_commentId_changeBy_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_commentId_changeBy_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    String?,
+    QQueryOperations
+  >
+  data_commentId_cid_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_commentId_cid_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    DateTime?,
+    QQueryOperations
+  >
+  data_commentId_cloudAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_commentId_cloudAt_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    int?,
+    QQueryOperations
+  >
+  data_commentId_dataSchemaRev_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_commentId_dataSchemaRev_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
     bool?,
     QQueryOperations
   >
@@ -10474,6 +13046,72 @@ extension IsarNoteCommentEmojiReactedDataEntityStateQueryProperty
   data_emoji_dataSchemaRev_Property() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'data_emoji_dataSchemaRev_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    String,
+    QQueryOperations
+  >
+  data_noteIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_noteId');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    DateTime,
+    QQueryOperations
+  >
+  data_noteId_changeAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_noteId_changeAt_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    String,
+    QQueryOperations
+  >
+  data_noteId_changeBy_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_noteId_changeBy_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    String?,
+    QQueryOperations
+  >
+  data_noteId_cid_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_noteId_cid_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    DateTime?,
+    QQueryOperations
+  >
+  data_noteId_cloudAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_noteId_cloudAt_');
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteCommentEmojiReactedDataEntityState,
+    int?,
+    QQueryOperations
+  >
+  data_noteId_dataSchemaRev_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_noteId_dataSchemaRev_');
     });
   }
 
@@ -10837,6 +13475,45 @@ _$IsarNoteCommentEmojiReactedDataEntityStateFromJson(
       'data_emoji_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
+    data_commentId: $checkedConvert('data_commentId', (v) => v as String),
+    data_commentId_dataSchemaRev_: $checkedConvert(
+      'data_commentId_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_commentId_changeAt_: $checkedConvert(
+      'data_commentId_changeAt_',
+      (v) => DateTime.parse(v as String),
+    ),
+    data_commentId_cid_: $checkedConvert(
+      'data_commentId_cid_',
+      (v) => v as String?,
+    ),
+    data_commentId_changeBy_: $checkedConvert(
+      'data_commentId_changeBy_',
+      (v) => v as String,
+    ),
+    data_commentId_cloudAt_: $checkedConvert(
+      'data_commentId_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_noteId: $checkedConvert('data_noteId', (v) => v as String),
+    data_noteId_dataSchemaRev_: $checkedConvert(
+      'data_noteId_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_noteId_changeAt_: $checkedConvert(
+      'data_noteId_changeAt_',
+      (v) => DateTime.parse(v as String),
+    ),
+    data_noteId_cid_: $checkedConvert('data_noteId_cid_', (v) => v as String?),
+    data_noteId_changeBy_: $checkedConvert(
+      'data_noteId_changeBy_',
+      (v) => v as String,
+    ),
+    data_noteId_cloudAt_: $checkedConvert(
+      'data_noteId_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
     change_cloudAt: $checkedConvert(
       'change_cloudAt',
       (v) => v == null ? null : DateTime.parse(v as String),
@@ -10949,4 +13626,18 @@ Map<String, dynamic> _$IsarNoteCommentEmojiReactedDataEntityStateToJson(
   'data_emoji_cid_': instance.data_emoji_cid_,
   'data_emoji_changeBy_': instance.data_emoji_changeBy_,
   'data_emoji_cloudAt_': instance.data_emoji_cloudAt_?.toIso8601String(),
+  'data_commentId': instance.data_commentId,
+  'data_commentId_dataSchemaRev_': instance.data_commentId_dataSchemaRev_,
+  'data_commentId_changeAt_': instance.data_commentId_changeAt_
+      .toIso8601String(),
+  'data_commentId_cid_': instance.data_commentId_cid_,
+  'data_commentId_changeBy_': instance.data_commentId_changeBy_,
+  'data_commentId_cloudAt_': instance.data_commentId_cloudAt_
+      ?.toIso8601String(),
+  'data_noteId': instance.data_noteId,
+  'data_noteId_dataSchemaRev_': instance.data_noteId_dataSchemaRev_,
+  'data_noteId_changeAt_': instance.data_noteId_changeAt_.toIso8601String(),
+  'data_noteId_cid_': instance.data_noteId_cid_,
+  'data_noteId_changeBy_': instance.data_noteId_changeBy_,
+  'data_noteId_cloudAt_': instance.data_noteId_cloudAt_?.toIso8601String(),
 };

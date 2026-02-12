@@ -17,7 +17,9 @@ void main() {
           final localChangeAt = localTime.add(const Duration(minutes: 1));
           final data = NoteCommentEmojiReactedData(
             emoji: '👍',
-            parentId: 'comment-1',
+            commentId: 'comment-1',
+            noteId: 'note-1',
+            parentId: 'note-1',
             parentProp: kEntityTypeCommentReactionCollection,
             rank: 'aaaaz',
           );

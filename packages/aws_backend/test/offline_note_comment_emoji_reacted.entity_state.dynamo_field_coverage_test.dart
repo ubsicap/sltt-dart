@@ -11,6 +11,10 @@ void main() {
     'change_cloudAt',
     'data_emoji_changeAt_',
     'data_emoji_cloudAt_',
+    'data_commentId_changeAt_',
+    'data_commentId_cloudAt_',
+    'data_noteId_changeAt_',
+    'data_noteId_cloudAt_',
     'data_rank_changeAt_',
     'data_rank_cloudAt_',
     'data_deleted_changeAt_',
@@ -45,6 +49,18 @@ void main() {
     'data_emoji_cid_',
     'data_emoji_changeBy_',
     'data_emoji_cloudAt_',
+    'data_commentId',
+    'data_commentId_dataSchemaRev_',
+    'data_commentId_changeAt_',
+    'data_commentId_cid_',
+    'data_commentId_changeBy_',
+    'data_commentId_cloudAt_',
+    'data_noteId',
+    'data_noteId_dataSchemaRev_',
+    'data_noteId_changeAt_',
+    'data_noteId_cid_',
+    'data_noteId_changeBy_',
+    'data_noteId_cloudAt_',
     'data_rank',
     'data_rank_dataSchemaRev_',
     'data_rank_changeAt_',
@@ -78,6 +94,10 @@ void main() {
     required DateTime expectedStoredAt,
     required DateTime expectedDataEmojiChangeAt,
     required DateTime expectedDataEmojiCloudAt,
+    required DateTime expectedDataCommentIdChangeAt,
+    required DateTime expectedDataCommentIdCloudAt,
+    required DateTime expectedDataNoteIdChangeAt,
+    required DateTime expectedDataNoteIdCloudAt,
     required DateTime expectedDataRankChangeAt,
     required DateTime expectedDataRankCloudAt,
     required DateTime expectedDataDeletedChangeAt,
@@ -97,6 +117,22 @@ void main() {
       equals(expectedDataEmojiChangeAt.toUtc()),
     );
     expect(state.data_emoji_cloudAt_, equals(expectedDataEmojiCloudAt.toUtc()));
+    expect(
+      state.data_commentId_changeAt_,
+      equals(expectedDataCommentIdChangeAt.toUtc()),
+    );
+    expect(
+      state.data_commentId_cloudAt_,
+      equals(expectedDataCommentIdCloudAt.toUtc()),
+    );
+    expect(
+      state.data_noteId_changeAt_,
+      equals(expectedDataNoteIdChangeAt.toUtc()),
+    );
+    expect(
+      state.data_noteId_cloudAt_,
+      equals(expectedDataNoteIdCloudAt.toUtc()),
+    );
     expect(state.data_rank_changeAt_, equals(expectedDataRankChangeAt.toUtc()));
     expect(state.data_rank_cloudAt_, equals(expectedDataRankCloudAt.toUtc()));
     expect(
@@ -161,6 +197,18 @@ void main() {
           data_emoji_cid_: 'cid-emoji',
           data_emoji_changeBy_: 'user1',
           data_emoji_cloudAt_: localCloudAt,
+          data_commentId: 'comment-1',
+          data_commentId_dataSchemaRev_: 1,
+          data_commentId_changeAt_: localDataChangeAt,
+          data_commentId_cid_: 'cid-comment-id',
+          data_commentId_changeBy_: 'user1',
+          data_commentId_cloudAt_: localCloudAt,
+          data_noteId: 'note-1',
+          data_noteId_dataSchemaRev_: 1,
+          data_noteId_changeAt_: localDataChangeAt,
+          data_noteId_cid_: 'cid-note-id',
+          data_noteId_changeBy_: 'user1',
+          data_noteId_cloudAt_: localCloudAt,
           data_rank: 'aaaaz',
           data_rank_dataSchemaRev_: 1,
           data_rank_changeAt_: localDataChangeAt,
@@ -173,7 +221,7 @@ void main() {
           data_deleted_cid_: 'cid-deleted',
           data_deleted_changeBy_: 'user1',
           data_deleted_cloudAt_: localCloudAt,
-          data_parentId: 'comment-1',
+          data_parentId: 'note-1',
           data_parentId_dataSchemaRev_: 1,
           data_parentId_changeAt_: localDataChangeAt,
           data_parentId_cid_: 'cid-parent',
@@ -194,6 +242,10 @@ void main() {
           expectedStoredAt: localStoredAt,
           expectedDataEmojiChangeAt: localDataChangeAt,
           expectedDataEmojiCloudAt: localCloudAt,
+          expectedDataCommentIdChangeAt: localDataChangeAt,
+          expectedDataCommentIdCloudAt: localCloudAt,
+          expectedDataNoteIdChangeAt: localDataChangeAt,
+          expectedDataNoteIdCloudAt: localCloudAt,
           expectedDataRankChangeAt: localDataChangeAt,
           expectedDataRankCloudAt: localCloudAt,
           expectedDataDeletedChangeAt: localDataChangeAt,
