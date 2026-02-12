@@ -275,7 +275,7 @@ const IsarDocumentStateSchema = CollectionSchema(
   getId: _isarDocumentStateGetId,
   getLinks: _isarDocumentStateGetLinks,
   attach: _isarDocumentStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarDocumentStateEstimateSize(

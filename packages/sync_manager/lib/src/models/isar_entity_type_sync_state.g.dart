@@ -96,7 +96,7 @@ const IsarEntityTypeSyncStateSchema = CollectionSchema(
   getId: _isarEntityTypeSyncStateGetId,
   getLinks: _isarEntityTypeSyncStateGetLinks,
   attach: _isarEntityTypeSyncStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarEntityTypeSyncStateEstimateSize(

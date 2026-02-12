@@ -280,7 +280,7 @@ const IsarTaskStateSchema = CollectionSchema(
   getId: _isarTaskStateGetId,
   getLinks: _isarTaskStateGetLinks,
   attach: _isarTaskStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarTaskStateEstimateSize(

@@ -311,7 +311,7 @@ const IsarPortionDataEntityStateSchema = CollectionSchema(
   getId: _isarPortionDataEntityStateGetId,
   getLinks: _isarPortionDataEntityStateGetLinks,
   attach: _isarPortionDataEntityStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarPortionDataEntityStateEstimateSize(

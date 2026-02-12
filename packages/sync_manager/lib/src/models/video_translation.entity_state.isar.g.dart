@@ -371,7 +371,7 @@ const IsarVideoDataEntityStateSchema = CollectionSchema(
   getId: _isarVideoDataEntityStateGetId,
   getLinks: _isarVideoDataEntityStateGetLinks,
   attach: _isarVideoDataEntityStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarVideoDataEntityStateEstimateSize(

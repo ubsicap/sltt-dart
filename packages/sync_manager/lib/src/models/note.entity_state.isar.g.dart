@@ -491,7 +491,7 @@ const IsarNoteDataEntityStateSchema = CollectionSchema(
   getId: _isarNoteDataEntityStateGetId,
   getLinks: _isarNoteDataEntityStateGetLinks,
   attach: _isarNoteDataEntityStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarNoteDataEntityStateEstimateSize(

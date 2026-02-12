@@ -68,7 +68,7 @@ const CursorSyncStateSchema = CollectionSchema(
   getId: _cursorSyncStateGetId,
   getLinks: _cursorSyncStateGetLinks,
   attach: _cursorSyncStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _cursorSyncStateEstimateSize(

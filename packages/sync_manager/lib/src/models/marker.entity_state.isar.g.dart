@@ -371,7 +371,7 @@ const IsarMarkerDataEntityStateSchema = CollectionSchema(
   getId: _isarMarkerDataEntityStateGetId,
   getLinks: _isarMarkerDataEntityStateGetLinks,
   attach: _isarMarkerDataEntityStateAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarMarkerDataEntityStateEstimateSize(

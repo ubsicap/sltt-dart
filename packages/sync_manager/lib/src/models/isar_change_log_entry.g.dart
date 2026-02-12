@@ -127,7 +127,7 @@ const IsarChangeLogEntrySchema = CollectionSchema(
   getId: _isarChangeLogEntryGetId,
   getLinks: _isarChangeLogEntryGetLinks,
   attach: _isarChangeLogEntryAttach,
-  version: '3.3.0-dev.2',
+  version: '3.3.0',
 );
 
 int _isarChangeLogEntryEstimateSize(
