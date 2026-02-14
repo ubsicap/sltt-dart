@@ -17,7 +17,8 @@ void main() {
           final localChangeAt = localTime.add(const Duration(minutes: 1));
           final data = NoteCommentChatData(
             text: 'Hello',
-            videoId: 'video-id-1',
+            videoStoredFilename: 'video-id-1',
+            videoDurationMs: 1500,
             dateMs: localTime.millisecondsSinceEpoch,
             visibleToUserIds: ['user2'],
             notifiedUserIds: ['user3'],
@@ -107,9 +108,10 @@ void main() {
             reason: 'text field should be correctly deserialized',
           );
           expect(
-            testEntityState.data_videoId,
+            testEntityState.data_videoStoredFilename,
             equals('video-id-1'),
-            reason: 'videoId field should be correctly deserialized',
+            reason:
+                'videoStoredFilename field should be correctly deserialized',
           );
           expect(
             testEntityState.data_dateMs,

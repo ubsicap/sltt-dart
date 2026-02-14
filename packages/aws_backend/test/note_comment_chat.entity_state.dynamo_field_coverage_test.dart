@@ -23,8 +23,10 @@ void main() {
     'change_cloudAt',
     'data_text_changeAt_',
     'data_text_cloudAt_',
-    'data_videoId_changeAt_',
-    'data_videoId_cloudAt_',
+    'data_videoStoredFilename_changeAt_',
+    'data_videoStoredFilename_cloudAt_',
+    'data_videoDurationMs_changeAt_',
+    'data_videoDurationMs_cloudAt_',
     'data_dateMs_changeAt_',
     'data_dateMs_cloudAt_',
     'data_visibleToUserIds_changeAt_',
@@ -65,12 +67,18 @@ void main() {
     'data_text_cid_',
     'data_text_changeBy_',
     'data_text_cloudAt_',
-    'data_videoId',
-    'data_videoId_dataSchemaRev_',
-    'data_videoId_changeAt_',
-    'data_videoId_cid_',
-    'data_videoId_changeBy_',
-    'data_videoId_cloudAt_',
+    'data_videoStoredFilename',
+    'data_videoStoredFilename_dataSchemaRev_',
+    'data_videoStoredFilename_changeAt_',
+    'data_videoStoredFilename_cid_',
+    'data_videoStoredFilename_changeBy_',
+    'data_videoStoredFilename_cloudAt_',
+    'data_videoDurationMs',
+    'data_videoDurationMs_dataSchemaRev_',
+    'data_videoDurationMs_changeAt_',
+    'data_videoDurationMs_cid_',
+    'data_videoDurationMs_changeBy_',
+    'data_videoDurationMs_cloudAt_',
     'data_dateMs',
     'data_dateMs_dataSchemaRev_',
     'data_dateMs_changeAt_',
@@ -122,8 +130,10 @@ void main() {
     required DateTime expectedStoredAt,
     required DateTime expectedDataTextChangeAt,
     required DateTime expectedDataTextCloudAt,
-    required DateTime expectedDataVideoIdChangeAt,
-    required DateTime expectedDataVideoIdCloudAt,
+    required DateTime expectedDataVideoStoredFilenameChangeAt,
+    required DateTime expectedDataVideoStoredFilenameCloudAt,
+    required DateTime expectedDataVideoDurationMsChangeAt,
+    required DateTime expectedDataVideoDurationMsCloudAt,
     required DateTime expectedDataDateMsChangeAt,
     required DateTime expectedDataDateMsCloudAt,
     required DateTime expectedDataVisibleToChangeAt,
@@ -153,14 +163,24 @@ void main() {
       reason: '${prefix}data_text_cloudAt_ should be UTC',
     );
     expect(
-      state.data_videoId_changeAt_,
-      equals(expectedDataVideoIdChangeAt.toUtc()),
-      reason: '${prefix}data_videoId_changeAt_ should be UTC',
+      state.data_videoStoredFilename_changeAt_,
+      equals(expectedDataVideoStoredFilenameChangeAt.toUtc()),
+      reason: '${prefix}data_videoStoredFilename_changeAt_ should be UTC',
     );
     expect(
-      state.data_videoId_cloudAt_,
-      equals(expectedDataVideoIdCloudAt.toUtc()),
-      reason: '${prefix}data_videoId_cloudAt_ should be UTC',
+      state.data_videoStoredFilename_cloudAt_,
+      equals(expectedDataVideoStoredFilenameCloudAt.toUtc()),
+      reason: '${prefix}data_videoStoredFilename_cloudAt_ should be UTC',
+    );
+    expect(
+      state.data_videoDurationMs_changeAt_,
+      equals(expectedDataVideoDurationMsChangeAt.toUtc()),
+      reason: '${prefix}data_videoDurationMs_changeAt_ should be UTC',
+    );
+    expect(
+      state.data_videoDurationMs_cloudAt_,
+      equals(expectedDataVideoDurationMsCloudAt.toUtc()),
+      reason: '${prefix}data_videoDurationMs_cloudAt_ should be UTC',
     );
     expect(
       state.data_dateMs_changeAt_,
@@ -267,12 +287,16 @@ void main() {
         final localDataTextCloudAt = DateTime.now().subtract(
           const Duration(minutes: 18),
         );
-        final localDataVideoIdChangeAt = DateTime.now().subtract(
+        final localDataVideoStoredFilenameChangeAt = DateTime.now().subtract(
           const Duration(minutes: 16),
         );
-        final localDataVideoIdCloudAt = DateTime.now().subtract(
+        final localDataVideoStoredFilenameCloudAt = DateTime.now().subtract(
           const Duration(minutes: 19),
         );
+        final localDataVideoDurationMsChangeAt =
+            localDataVideoStoredFilenameChangeAt;
+        final localDataVideoDurationMsCloudAt =
+            localDataVideoStoredFilenameCloudAt;
         final localDataDateMsChangeAt = DateTime.now().subtract(
           const Duration(minutes: 14),
         );
@@ -351,15 +375,26 @@ void main() {
           ),
           data_text_changeBy_: 'test-user-7',
           data_text_cloudAt_: localDataTextCloudAt,
-          data_videoId: 'video-id-1',
-          data_videoId_dataSchemaRev_: 7,
-          data_videoId_changeAt_: localDataVideoIdChangeAt,
-          data_videoId_cid_: generateCid(
+          data_videoStoredFilename: 'video-id-1',
+          data_videoStoredFilename_dataSchemaRev_: 7,
+          data_videoStoredFilename_changeAt_:
+              localDataVideoStoredFilenameChangeAt,
+          data_videoStoredFilename_cid_: generateCid(
             entityType: EntityType.comment,
             userId: 'test-user-7',
           ),
-          data_videoId_changeBy_: 'test-user-7',
-          data_videoId_cloudAt_: localDataVideoIdCloudAt,
+          data_videoStoredFilename_changeBy_: 'test-user-7',
+          data_videoStoredFilename_cloudAt_:
+              localDataVideoStoredFilenameCloudAt,
+          data_videoDurationMs: 1500,
+          data_videoDurationMs_dataSchemaRev_: 7,
+          data_videoDurationMs_changeAt_: localDataVideoDurationMsChangeAt,
+          data_videoDurationMs_cid_: generateCid(
+            entityType: EntityType.comment,
+            userId: 'test-user-7',
+          ),
+          data_videoDurationMs_changeBy_: 'test-user-7',
+          data_videoDurationMs_cloudAt_: localDataVideoDurationMsCloudAt,
           data_dateMs: 1234,
           data_dateMs_dataSchemaRev_: 7,
           data_dateMs_changeAt_: localDataDateMsChangeAt,
@@ -453,8 +488,12 @@ void main() {
           storedState,
           expectedDataTextChangeAt: localDataTextChangeAt,
           expectedDataTextCloudAt: localDataTextCloudAt,
-          expectedDataVideoIdChangeAt: localDataVideoIdChangeAt,
-          expectedDataVideoIdCloudAt: localDataVideoIdCloudAt,
+          expectedDataVideoStoredFilenameChangeAt:
+              localDataVideoStoredFilenameChangeAt,
+          expectedDataVideoStoredFilenameCloudAt:
+              localDataVideoStoredFilenameCloudAt,
+          expectedDataVideoDurationMsChangeAt: localDataVideoDurationMsChangeAt,
+          expectedDataVideoDurationMsCloudAt: localDataVideoDurationMsCloudAt,
           expectedDataDateMsChangeAt: localDataDateMsChangeAt,
           expectedDataDateMsCloudAt: localDataDateMsCloudAt,
           expectedDataVisibleToChangeAt: localDataVisibleToChangeAt,
@@ -501,8 +540,12 @@ void main() {
           retrieved,
           expectedDataTextChangeAt: localDataTextChangeAt,
           expectedDataTextCloudAt: localDataTextCloudAt,
-          expectedDataVideoIdChangeAt: localDataVideoIdChangeAt,
-          expectedDataVideoIdCloudAt: localDataVideoIdCloudAt,
+          expectedDataVideoStoredFilenameChangeAt:
+              localDataVideoStoredFilenameChangeAt,
+          expectedDataVideoStoredFilenameCloudAt:
+              localDataVideoStoredFilenameCloudAt,
+          expectedDataVideoDurationMsChangeAt: localDataVideoDurationMsChangeAt,
+          expectedDataVideoDurationMsCloudAt: localDataVideoDurationMsCloudAt,
           expectedDataDateMsChangeAt: localDataDateMsChangeAt,
           expectedDataDateMsCloudAt: localDataDateMsCloudAt,
           expectedDataVisibleToChangeAt: localDataVisibleToChangeAt,
@@ -548,15 +591,37 @@ void main() {
           retrieved.data_text_changeBy_,
           equals(entry.data_text_changeBy_),
         );
-        expect(retrieved.data_videoId, equals(entry.data_videoId));
         expect(
-          retrieved.data_videoId_dataSchemaRev_,
-          equals(entry.data_videoId_dataSchemaRev_),
+          retrieved.data_videoStoredFilename,
+          equals(entry.data_videoStoredFilename),
         );
-        expect(retrieved.data_videoId_cid_, equals(entry.data_videoId_cid_));
         expect(
-          retrieved.data_videoId_changeBy_,
-          equals(entry.data_videoId_changeBy_),
+          retrieved.data_videoStoredFilename_dataSchemaRev_,
+          equals(entry.data_videoStoredFilename_dataSchemaRev_),
+        );
+        expect(
+          retrieved.data_videoStoredFilename_cid_,
+          equals(entry.data_videoStoredFilename_cid_),
+        );
+        expect(
+          retrieved.data_videoStoredFilename_changeBy_,
+          equals(entry.data_videoStoredFilename_changeBy_),
+        );
+        expect(
+          retrieved.data_videoDurationMs,
+          equals(entry.data_videoDurationMs),
+        );
+        expect(
+          retrieved.data_videoDurationMs_dataSchemaRev_,
+          equals(entry.data_videoDurationMs_dataSchemaRev_),
+        );
+        expect(
+          retrieved.data_videoDurationMs_cid_,
+          equals(entry.data_videoDurationMs_cid_),
+        );
+        expect(
+          retrieved.data_videoDurationMs_changeBy_,
+          equals(entry.data_videoDurationMs_changeBy_),
         );
         expect(retrieved.data_dateMs, equals(entry.data_dateMs));
         expect(

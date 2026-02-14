@@ -17,12 +17,19 @@ class DynamoNoteCommentChatDataEntityState extends BaseEntityState {
   final String data_text_changeBy_;
   final DateTime? data_text_cloudAt_;
 
-  final String data_videoId;
-  final int? data_videoId_dataSchemaRev_;
-  final DateTime data_videoId_changeAt_;
-  final String? data_videoId_cid_;
-  final String data_videoId_changeBy_;
-  final DateTime? data_videoId_cloudAt_;
+  final String? data_videoStoredFilename;
+  final int? data_videoStoredFilename_dataSchemaRev_;
+  final DateTime? data_videoStoredFilename_changeAt_;
+  final String? data_videoStoredFilename_cid_;
+  final String? data_videoStoredFilename_changeBy_;
+  final DateTime? data_videoStoredFilename_cloudAt_;
+
+  final int? data_videoDurationMs;
+  final int? data_videoDurationMs_dataSchemaRev_;
+  final DateTime? data_videoDurationMs_changeAt_;
+  final String? data_videoDurationMs_cid_;
+  final String? data_videoDurationMs_changeBy_;
+  final DateTime? data_videoDurationMs_cloudAt_;
 
   final int data_dateMs;
   final int? data_dateMs_dataSchemaRev_;
@@ -77,12 +84,18 @@ class DynamoNoteCommentChatDataEntityState extends BaseEntityState {
     this.data_text_cid_,
     required this.data_text_changeBy_,
     DateTime? data_text_cloudAt_,
-    required this.data_videoId,
-    this.data_videoId_dataSchemaRev_,
-    required DateTime data_videoId_changeAt_,
-    this.data_videoId_cid_,
-    required this.data_videoId_changeBy_,
-    DateTime? data_videoId_cloudAt_,
+    this.data_videoStoredFilename,
+    this.data_videoStoredFilename_dataSchemaRev_,
+    DateTime? data_videoStoredFilename_changeAt_,
+    this.data_videoStoredFilename_cid_,
+    this.data_videoStoredFilename_changeBy_,
+    DateTime? data_videoStoredFilename_cloudAt_,
+    this.data_videoDurationMs,
+    this.data_videoDurationMs_dataSchemaRev_,
+    DateTime? data_videoDurationMs_changeAt_,
+    this.data_videoDurationMs_cid_,
+    this.data_videoDurationMs_changeBy_,
+    DateTime? data_videoDurationMs_cloudAt_,
     required this.data_dateMs,
     this.data_dateMs_dataSchemaRev_,
     required DateTime data_dateMs_changeAt_,
@@ -119,27 +132,29 @@ class DynamoNoteCommentChatDataEntityState extends BaseEntityState {
     super.data_rank_dataSchemaRev_,
   }) : data_text_changeAt_ = data_text_changeAt_.toUtc(),
        data_text_cloudAt_ = data_text_cloudAt_?.toUtc(),
-       data_videoId_changeAt_ = data_videoId_changeAt_.toUtc(),
-       data_videoId_cloudAt_ = data_videoId_cloudAt_?.toUtc(),
+       data_videoStoredFilename_changeAt_ = data_videoStoredFilename_changeAt_
+           ?.toUtc(),
+       data_videoStoredFilename_cloudAt_ = data_videoStoredFilename_cloudAt_
+           ?.toUtc(),
+       data_videoDurationMs_changeAt_ = data_videoDurationMs_changeAt_?.toUtc(),
+       data_videoDurationMs_cloudAt_ = data_videoDurationMs_cloudAt_?.toUtc(),
        data_dateMs_changeAt_ = data_dateMs_changeAt_.toUtc(),
        data_dateMs_cloudAt_ = data_dateMs_cloudAt_?.toUtc(),
-       data_visibleToUserIds_changeAt_ =
-           data_visibleToUserIds_changeAt_?.toUtc(),
-       data_visibleToUserIds_cloudAt_ =
-           data_visibleToUserIds_cloudAt_?.toUtc(),
+       data_visibleToUserIds_changeAt_ = data_visibleToUserIds_changeAt_
+           ?.toUtc(),
+       data_visibleToUserIds_cloudAt_ = data_visibleToUserIds_cloudAt_?.toUtc(),
        data_notifiedUserIds_changeAt_ = data_notifiedUserIds_changeAt_.toUtc(),
-       data_notifiedUserIds_cloudAt_ =
-           data_notifiedUserIds_cloudAt_?.toUtc();
+       data_notifiedUserIds_cloudAt_ = data_notifiedUserIds_cloudAt_?.toUtc();
 
   static DynamoNoteCommentChatDataEntityState fromJsonBase(
     Map<String, dynamic> json,
-  ) =>
-      _$DynamoNoteCommentChatDataEntityStateFromJson(json);
+  ) => _$DynamoNoteCommentChatDataEntityStateFromJson(json);
 
   Map<String, dynamic> toJsonSafe() {
     final j = toJson();
     j.putIfAbsent('data_text', () => '');
-    j.putIfAbsent('data_videoId', () => '');
+    j.putIfAbsent('data_videoStoredFilename', () => '');
+    j.putIfAbsent('data_videoDurationMs', () => 0);
     j.putIfAbsent('data_dateMs', () => 0);
     j.putIfAbsent('data_notifiedUserIds', () => <String>[]);
     return j;
@@ -147,18 +162,17 @@ class DynamoNoteCommentChatDataEntityState extends BaseEntityState {
 
   factory DynamoNoteCommentChatDataEntityState.fromJson(
     Map<String, dynamic> json,
-  ) =>
-      deserializeWithUnknownFieldData(
-        _$DynamoNoteCommentChatDataEntityStateFromJson,
-        json,
-        _$DynamoNoteCommentChatDataEntityStateToJson,
-      );
+  ) => deserializeWithUnknownFieldData(
+    _$DynamoNoteCommentChatDataEntityStateFromJson,
+    json,
+    _$DynamoNoteCommentChatDataEntityStateToJson,
+  );
 
   @override
   Map<String, dynamic> toJson() => serializeWithUnknownFieldData(
-        this,
-        _$DynamoNoteCommentChatDataEntityStateToJson,
-      );
+    this,
+    _$DynamoNoteCommentChatDataEntityStateToJson,
+  );
 
   @override
   Map<String, dynamic> toJsonBase() =>

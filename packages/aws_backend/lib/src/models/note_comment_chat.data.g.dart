@@ -9,8 +9,15 @@ part of 'note_comment_chat.data.dart';
 NoteCommentChatData _$NoteCommentChatDataFromJson(Map<String, dynamic> json) =>
     $checkedCreate('NoteCommentChatData', json, ($checkedConvert) {
       final val = NoteCommentChatData(
-        text: $checkedConvert('text', (v) => v as String),
-        videoId: $checkedConvert('videoId', (v) => v as String),
+        text: $checkedConvert('text', (v) => v as String?),
+        videoStoredFilename: $checkedConvert(
+          'videoStoredFilename',
+          (v) => v as String?,
+        ),
+        videoDurationMs: $checkedConvert(
+          'videoDurationMs',
+          (v) => (v as num?)?.toInt(),
+        ),
         dateMs: $checkedConvert('dateMs', (v) => (v as num).toInt()),
         visibleToUserIds: $checkedConvert(
           'visibleToUserIds',
@@ -35,8 +42,9 @@ Map<String, dynamic> _$NoteCommentChatDataToJson(
   'parentProp': instance.parentProp,
   'rank': ?instance.rank,
   'deleted': ?instance.deleted,
-  'text': instance.text,
-  'videoId': instance.videoId,
+  'text': ?instance.text,
+  'videoStoredFilename': ?instance.videoStoredFilename,
+  'videoDurationMs': ?instance.videoDurationMs,
   'dateMs': instance.dateMs,
   'visibleToUserIds': ?instance.visibleToUserIds,
   'notifiedUserIds': instance.notifiedUserIds,

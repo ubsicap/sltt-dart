@@ -104,25 +104,52 @@ _$DynamoNoteCommentChatDataEntityStateFromJson(
       'data_text_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
-    data_videoId: $checkedConvert('data_videoId', (v) => v as String),
-    data_videoId_dataSchemaRev_: $checkedConvert(
-      'data_videoId_dataSchemaRev_',
-      (v) => (v as num?)?.toInt(),
-    ),
-    data_videoId_changeAt_: $checkedConvert(
-      'data_videoId_changeAt_',
-      (v) => DateTime.parse(v as String),
-    ),
-    data_videoId_cid_: $checkedConvert(
-      'data_videoId_cid_',
+    data_videoStoredFilename: $checkedConvert(
+      'data_videoStoredFilename',
       (v) => v as String?,
     ),
-    data_videoId_changeBy_: $checkedConvert(
-      'data_videoId_changeBy_',
-      (v) => v as String,
+    data_videoStoredFilename_dataSchemaRev_: $checkedConvert(
+      'data_videoStoredFilename_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
     ),
-    data_videoId_cloudAt_: $checkedConvert(
-      'data_videoId_cloudAt_',
+    data_videoStoredFilename_changeAt_: $checkedConvert(
+      'data_videoStoredFilename_changeAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_videoStoredFilename_cid_: $checkedConvert(
+      'data_videoStoredFilename_cid_',
+      (v) => v as String?,
+    ),
+    data_videoStoredFilename_changeBy_: $checkedConvert(
+      'data_videoStoredFilename_changeBy_',
+      (v) => v as String?,
+    ),
+    data_videoStoredFilename_cloudAt_: $checkedConvert(
+      'data_videoStoredFilename_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_videoDurationMs: $checkedConvert(
+      'data_videoDurationMs',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_videoDurationMs_dataSchemaRev_: $checkedConvert(
+      'data_videoDurationMs_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_videoDurationMs_changeAt_: $checkedConvert(
+      'data_videoDurationMs_changeAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
+    data_videoDurationMs_cid_: $checkedConvert(
+      'data_videoDurationMs_cid_',
+      (v) => v as String?,
+    ),
+    data_videoDurationMs_changeBy_: $checkedConvert(
+      'data_videoDurationMs_changeBy_',
+      (v) => v as String?,
+    ),
+    data_videoDurationMs_cloudAt_: $checkedConvert(
+      'data_videoDurationMs_cloudAt_',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
     data_dateMs: $checkedConvert('data_dateMs', (v) => (v as num).toInt()),
@@ -302,12 +329,27 @@ Map<String, dynamic> _$DynamoNoteCommentChatDataEntityStateToJson(
   'data_text_cid_': instance.data_text_cid_,
   'data_text_changeBy_': instance.data_text_changeBy_,
   'data_text_cloudAt_': instance.data_text_cloudAt_?.toIso8601String(),
-  'data_videoId': instance.data_videoId,
-  'data_videoId_dataSchemaRev_': instance.data_videoId_dataSchemaRev_,
-  'data_videoId_changeAt_': instance.data_videoId_changeAt_.toIso8601String(),
-  'data_videoId_cid_': instance.data_videoId_cid_,
-  'data_videoId_changeBy_': instance.data_videoId_changeBy_,
-  'data_videoId_cloudAt_': instance.data_videoId_cloudAt_?.toIso8601String(),
+  'data_videoStoredFilename': instance.data_videoStoredFilename,
+  'data_videoStoredFilename_dataSchemaRev_':
+      instance.data_videoStoredFilename_dataSchemaRev_,
+  'data_videoStoredFilename_changeAt_': instance
+      .data_videoStoredFilename_changeAt_
+      ?.toIso8601String(),
+  'data_videoStoredFilename_cid_': instance.data_videoStoredFilename_cid_,
+  'data_videoStoredFilename_changeBy_':
+      instance.data_videoStoredFilename_changeBy_,
+  'data_videoStoredFilename_cloudAt_': instance
+      .data_videoStoredFilename_cloudAt_
+      ?.toIso8601String(),
+  'data_videoDurationMs': instance.data_videoDurationMs,
+  'data_videoDurationMs_dataSchemaRev_':
+      instance.data_videoDurationMs_dataSchemaRev_,
+  'data_videoDurationMs_changeAt_': instance.data_videoDurationMs_changeAt_
+      ?.toIso8601String(),
+  'data_videoDurationMs_cid_': instance.data_videoDurationMs_cid_,
+  'data_videoDurationMs_changeBy_': instance.data_videoDurationMs_changeBy_,
+  'data_videoDurationMs_cloudAt_': instance.data_videoDurationMs_cloudAt_
+      ?.toIso8601String(),
   'data_dateMs': instance.data_dateMs,
   'data_dateMs_dataSchemaRev_': instance.data_dateMs_dataSchemaRev_,
   'data_dateMs_changeAt_': instance.data_dateMs_changeAt_.toIso8601String(),

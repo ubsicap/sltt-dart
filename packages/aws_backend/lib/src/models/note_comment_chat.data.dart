@@ -5,15 +5,17 @@ part 'note_comment_chat.data.g.dart';
 
 @JsonSerializable(includeIfNull: false, checked: true)
 class NoteCommentChatData extends BaseDataFields {
-  final String text;
-  final String videoId;
+  final String? text;
+  final String? videoStoredFilename;
+  final int? videoDurationMs;
   final int dateMs;
   final List<String>? visibleToUserIds;
   final List<String> notifiedUserIds;
 
   NoteCommentChatData({
-    required this.text,
-    required this.videoId,
+    this.text,
+    this.videoStoredFilename,
+    this.videoDurationMs,
     required this.dateMs,
     this.visibleToUserIds,
     required this.notifiedUserIds,
