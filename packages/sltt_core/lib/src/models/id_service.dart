@@ -30,7 +30,7 @@ String generateCoreId({String? userId, required String suffix}) {
       ? generateRandomChars(
           2,
           chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-          rng: Random(1234567890),
+          rng: Random(userId.hashCode),
         )
       : 'UK';
   return '$datePart$timezonePart$userCode-$randomPart-$suffix';
