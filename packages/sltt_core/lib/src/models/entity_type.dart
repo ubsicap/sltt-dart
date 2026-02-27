@@ -5,6 +5,11 @@ import 'id_service.dart';
 // Top-level constants for entity type string values. Use these wherever a
 // stable string literal for an entity type is needed to avoid duplication.
 
+// User entities
+const String kEntityTypeUserProfile = 'user_profile';
+const String kEntityTypeUserProfileCollection = 'user_profiles';
+
+// Project entities
 const String kEntityTypeMissing = 'missing';
 const String kEntityTypeUnknown = 'unknown';
 const String kEntityTypeProject = 'project';
@@ -50,6 +55,8 @@ const String kEntityTypeCommentReactionCollection = 'comment_reactions';
 
 String? getCollectionByEntity(String entityType) {
   switch (entityType) {
+    case kEntityTypeUserProfile:
+      return kEntityTypeUserProfileCollection;
     case kEntityTypeProject:
       return kEntityTypeProjectCollection;
     case kEntityTypeTeam:
@@ -97,6 +104,8 @@ String? getCollectionByEntity(String entityType) {
 
 String? getEntityByCollection(String collectionName) {
   switch (collectionName) {
+    case kEntityTypeUserProfileCollection:
+      return kEntityTypeUserProfile;
     case kEntityTypeProjectCollection:
       return kEntityTypeProject;
     case kEntityTypeTeamCollection:
@@ -147,6 +156,7 @@ String? getEntityByCollection(String collectionName) {
 enum EntityType {
   /// Unknown value for forward compatibility when clients send newer entity types
   unknown(kEntityTypeUnknown),
+  userProfile(kEntityTypeUserProfile),
   project(kEntityTypeProject),
   team(kEntityTypeTeam),
   marker(kEntityTypeMarker),
@@ -177,6 +187,7 @@ enum EntityType {
   /// Entity type suffix mapping for consistent entity ID generation
   /// Uses most representative 4 characters, padding with Z where needed
   static const Map<String, String> suffixMapping = {
+    kEntityTypeUserProfile: 'uPro',
     kEntityTypeProject: 'proj',
     kEntityTypeTeam: 'team',
     kEntityTypeMarker: 'mrkr',
