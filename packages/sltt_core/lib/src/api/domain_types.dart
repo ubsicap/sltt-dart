@@ -2,8 +2,11 @@
 const String kDomainProject = 'project';
 const String kCollectionProject = 'projects';
 
+const String kDomainUser = 'user';
+const String kCollectionUser = 'users';
+
 /// Returns all supported domain types.
-List<String> getAllDomainTypes() => [kDomainProject];
+List<String> getAllDomainTypes() => [kDomainProject, kDomainUser];
 
 /// Returns the collection name for a given domain type.
 /// Example: getCollectionByDomain('project') → 'projects'
@@ -11,6 +14,8 @@ String? getCollectionByDomain(String domainType) {
   switch (domainType) {
     case kDomainProject:
       return kCollectionProject;
+    case kDomainUser:
+      return kCollectionUser;
     default:
       return null;
   }
@@ -22,6 +27,8 @@ String? getDomainByCollection(String collectionName) {
   switch (collectionName) {
     case kCollectionProject:
       return kDomainProject;
+    case kCollectionUser:
+      return kDomainUser;
     default:
       return null;
   }
