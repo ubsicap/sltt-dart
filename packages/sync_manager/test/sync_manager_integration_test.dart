@@ -552,7 +552,7 @@ Future<void> testUserDomainDownsync({
     dataJson: stableStringify(
       BaseDataFields(parentId: 'root', parentProp: 'user_preferences').toJson(),
     ),
-    userId: 'tester',
+    userId: '__test_x',
     operation: 'create',
     domainType: 'user',
     entityType: EntityType.userPreferences,
