@@ -8,6 +8,8 @@ import 'id_service.dart';
 // User entities
 const String kEntityTypeUserProfile = 'user_profile';
 const String kEntityTypeUserProfileCollection = 'user_profiles';
+const String kEntityTypeUserPreferences = 'user_preferences';
+const String kEntityTypeUserPreferencesCollection = 'user_preferences';
 
 // Project entities
 const String kEntityTypeMissing = 'missing';
@@ -57,6 +59,8 @@ String? getCollectionByEntity(String entityType) {
   switch (entityType) {
     case kEntityTypeUserProfile:
       return kEntityTypeUserProfileCollection;
+    case kEntityTypeUserPreferences:
+      return kEntityTypeUserPreferencesCollection;
     case kEntityTypeProject:
       return kEntityTypeProjectCollection;
     case kEntityTypeTeam:
@@ -106,6 +110,8 @@ String? getEntityByCollection(String collectionName) {
   switch (collectionName) {
     case kEntityTypeUserProfileCollection:
       return kEntityTypeUserProfile;
+    case kEntityTypeUserPreferencesCollection:
+      return kEntityTypeUserPreferences;
     case kEntityTypeProjectCollection:
       return kEntityTypeProject;
     case kEntityTypeTeamCollection:
@@ -157,6 +163,7 @@ enum EntityType {
   /// Unknown value for forward compatibility when clients send newer entity types
   unknown(kEntityTypeUnknown),
   userProfile(kEntityTypeUserProfile),
+  userPreferences(kEntityTypeUserPreferences),
   project(kEntityTypeProject),
   team(kEntityTypeTeam),
   marker(kEntityTypeMarker),
@@ -188,6 +195,7 @@ enum EntityType {
   /// Uses most representative 4 characters, padding with Z where needed
   static const Map<String, String> suffixMapping = {
     kEntityTypeUserProfile: 'uPro',
+    kEntityTypeUserPreferences: 'uPre',
     kEntityTypeProject: 'proj',
     kEntityTypeTeam: 'team',
     kEntityTypeMarker: 'mrkr',
