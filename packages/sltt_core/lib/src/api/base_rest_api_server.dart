@@ -962,10 +962,6 @@ abstract class BaseRestApiServer {
               'changeStats': {
                 'type': 'object',
                 'properties': {
-                  'total': {
-                    'type': 'integer',
-                    'description': 'Total number of changes for this project',
-                  },
                   'creates': {
                     'type': 'integer',
                     'description': 'Number of create operations',
@@ -978,11 +974,44 @@ abstract class BaseRestApiServer {
                     'type': 'integer',
                     'description': 'Number of delete operations',
                   },
+                  'total': {
+                    'type': 'integer',
+                    'description': 'Total number of changes for this project',
+                  },
+                  'latestChangeAt': {
+                    'type': 'string',
+                    'format': 'ISO8601',
+                    'description':
+                        'Timestamp of the most recent change for this project',
+                  },
+                  'latestSeq': {
+                    'type': 'integer',
+                    'description':
+                        'Highest sequence number applied for this project',
+                  },
                 },
               },
               'entityTypeStats': {
                 'type': 'object',
-                'description': 'Statistics grouped by entity type',
+                'properties': {
+                  'entityTypes': {
+                    'type': 'object',
+                    'description': 'Map of entity type -> per-type statistics',
+                  },
+                  'totals': {
+                    'type': 'object',
+                    'properties': {
+                      'creates': {'type': 'integer'},
+                      'updates': {'type': 'integer'},
+                      'deletes': {'type': 'integer'},
+                      'total': {'type': 'integer'},
+                      'latestChangeAt': {'type': 'string', 'format': 'ISO8601'},
+                      'latestSeq': {'type': 'integer'},
+                    },
+                  },
+                },
+                'description':
+                    'Per-entity-type and aggregated totals for this project',
               },
               'timestamp': {
                 'type': 'string',
