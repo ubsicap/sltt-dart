@@ -104,6 +104,18 @@ void main() {
     );
 
     test(
+      '[isar] downsync [user preferences]: downsync user_preferences domain',
+      () async {
+        await testUserDomainDownsync(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useCloudDb: false,
+        );
+      },
+    );
+
+    test(
       '[isar] full sync [create]: save local changes > outsync to cloud > downsync same',
       () async {
         await testFullSyncCreate(
@@ -203,6 +215,18 @@ void main() {
       '[cloud] downsync [create]: save cloud changes > downsync to local',
       () async {
         await testDownsyncCreate(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useCloudDb: true,
+        );
+      },
+    );
+
+    test(
+      '[cloud] downsync [user preferences]: downsync user_preferences domain',
+      () async {
+        await testUserDomainDownsync(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
@@ -417,6 +441,7 @@ Future<void> testDownsyncCreate({
     ),
     userId: 'test',
     operation: 'create',
+    fromJson: ProjectDataFields.fromJson,
   );
   final syncManager = SyncManager.instance;
   await syncManager.initialize();
@@ -501,6 +526,69 @@ Future<void> testDownsyncCreate({
   );
 
   await getCurrentEntityStateAndCheckCloudAt(local, projectId);
+}
+
+/// Test downsync flow for user_preferences domain
+Future<void> testUserDomainDownsync({
+  required String cloudBaseUrl,
+  required String srcStorageId,
+  required String srcStorageType,
+  bool useCloudDb = false,
+}) async {
+  final domainId = 'default_preferences';
+
+  // Reset test domain when using Cloud
+  if (useCloudDb) {
+    await resetTestProject(cloudBaseUrl, domainId, domainType: 'users');
+  }
+
+  final cloudChange = await saveCloudChangeViaHttp(
+    cloudBaseUrl: cloudBaseUrl,
+    srcStorageType: srcStorageType,
+    srcStorageId: srcStorageId,
+    domainId: domainId,
+    entityId: domainId,
+    changeAt: DateTime.now(),
+    dataJson: stableStringify(
+      BaseDataFields(parentId: 'root', parentProp: 'user_preferences').toJson(),
+    ),
+    userId: 'tester',
+    operation: 'create',
+    domainType: 'user',
+    entityType: EntityType.userPreferences,
+    fromJson: UnknownDataFields.fromJson,
+  );
+
+  final syncManager = SyncManager.instance;
+  await syncManager.initialize();
+  syncManager.configureCloudUrl(cloudBaseUrl);
+
+  final downsyncResult = await syncManager.downsyncFromCloud(
+    domainIds: [domainId],
+    domainType: 'user',
+  );
+
+  expect(
+    downsyncResult.success,
+    isTrue,
+    reason: 'User domain downsync should succeed: ${downsyncResult.error}',
+  );
+
+  final local = LocalStorageService.instance;
+  final domains = await local.getAllDomainIds(domainType: 'user');
+  expect(domains, contains(domainId));
+
+  final state = await local.getEntityState(
+    entityType: kEntityTypeUserPreferences,
+    entityId: domainId,
+    domainType: 'user',
+    domainId: domainId,
+  );
+  expect(
+    state,
+    isNotNull,
+    reason: 'User preferences state should exist locally',
+  );
 }
 
 /// Test full sync [create]: save local changes > outsync to cloud > downsync same
@@ -686,6 +774,7 @@ Future<void> testFullSyncUpdate({
     }),
     userId: 'cloud-full',
     operation: 'create',
+    fromJson: ProjectDataFields.fromJson,
   );
   await syncManager.initialize();
   syncManager.configureCloudUrl(cloudBaseUrl);
@@ -888,6 +977,7 @@ Future<void> testFullSyncOutdated({
     }),
     userId: 'cloud-full',
     operation: kChangeOperationCreate,
+    fromJson: ProjectDataFields.fromJson,
   );
 
   await syncManager.initialize();
@@ -972,6 +1062,7 @@ Future<void> testFullSyncOutdated({
     }),
     userId: 'cloud-full',
     operation: 'update',
+    fromJson: ProjectDataFields.fromJson,
   );
 
   // first downsync from cloud to get the trump change
@@ -1176,6 +1267,7 @@ Future<void> testFullSyncPartialUpdate({
     }),
     userId: 'cloud-full',
     operation: 'create',
+    fromJson: ProjectDataFields.fromJson,
   );
 
   await syncManager.initialize();
@@ -1269,6 +1361,7 @@ Future<void> testFullSyncPartialUpdate({
     }),
     userId: 'cloud-full',
     operation: 'update',
+    fromJson: ProjectDataFields.fromJson,
   );
 
   final fullSyncResult = await syncManager.performFullSync(
@@ -1548,7 +1641,8 @@ Map<String, dynamic> expectedStateFromChange(
 
 /// Save a cloud change via HTTP POST to /api/changes endpoint.
 /// This allows tests to work with both local in-process servers and remote AWS endpoints.
-Future<IsarChangeLogEntry> saveCloudChangeViaHttp({
+Future<IsarChangeLogEntry>
+saveCloudChangeViaHttp<TData extends BaseDataFields>({
   required String cloudBaseUrl,
   required String srcStorageType,
   required String srcStorageId,
@@ -1558,22 +1652,21 @@ Future<IsarChangeLogEntry> saveCloudChangeViaHttp({
   required String dataJson,
   required String userId,
   required String operation,
+  required TData Function(Map<String, dynamic>) fromJson,
+  String domainType = 'project',
+  EntityType entityType = EntityType.project,
 }) async {
   final cloudSaveChange =
-      ChangeLogEntryFactoryService.forChangeSave<
-        IsarChangeLogEntry,
-        Id,
-        ProjectDataFields
-      >(
+      ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id, TData>(
         factory: IsarChangeLogEntry.new,
-        domainType: 'project',
+        domainType: domainType,
         domainId: domainId,
-        entityType: 'project',
+        entityType: entityType.value,
         entityId: entityId,
         changeBy: userId,
         changeAt: changeAt,
-        cid: generateCid(entityType: EntityType.project, userId: userId),
-        data: ProjectDataFields.fromJson(jsonDecode(dataJson)),
+        cid: generateCid(entityType: entityType, userId: userId),
+        data: fromJson(jsonDecode(dataJson)),
         operation: operation,
       );
 
