@@ -86,7 +86,7 @@ void main() {
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: false,
+          useCloudDb: false,
         );
       },
     );
@@ -98,7 +98,7 @@ void main() {
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: false,
+          useCloudDb: false,
         );
       },
     );
@@ -110,7 +110,7 @@ void main() {
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: false,
+          useCloudDb: false,
         );
       },
       timeout: Timeout.none,
@@ -123,7 +123,7 @@ void main() {
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: false,
+          useCloudDb: false,
         );
       },
       timeout: Timeout.none,
@@ -136,7 +136,7 @@ void main() {
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: false,
+          useCloudDb: false,
         );
       },
       timeout: Timeout.none,
@@ -149,15 +149,15 @@ void main() {
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: false,
+          useCloudDb: false,
         );
       },
       timeout: Timeout.none,
     );
   });
 
-  // Group 2: Tests with DynamoDB-backed cloud storage (HTTP)
-  group('[dynamodb] SyncManager integration (DynamoDB cloud)', () {
+  // Group 2: Tests with cloud storage (HTTP)
+  group('[cloud] SyncManager integration', () {
     late String cloudBaseUrl;
     late String srcStorageId;
     late String srcStorageType;
@@ -188,76 +188,76 @@ void main() {
     });
 
     test(
-      '[dynamodb] outsync [create]: save local changes > outsync to cloud',
+      '[cloud] outsync [create]: save local changes > outsync to cloud',
       () async {
         await testOutsyncCreate(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: true,
+          useCloudDb: true,
         );
       },
     );
 
     test(
-      '[dynamodb] downsync [create]: save cloud changes > downsync to local',
+      '[cloud] downsync [create]: save cloud changes > downsync to local',
       () async {
         await testDownsyncCreate(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: true,
+          useCloudDb: true,
         );
       },
     );
 
     test(
-      '[dynamodb] full sync [create]: save local changes > outsync to cloud > downsync same',
+      '[cloud] full sync [create]: save local changes > outsync to cloud > downsync same',
       () async {
         await testFullSyncCreate(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: true,
+          useCloudDb: true,
         );
       },
       timeout: Timeout.none,
     );
 
     test(
-      '[dynamodb] full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
+      '[cloud] full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
       () async {
         await testFullSyncUpdate(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: true,
+          useCloudDb: true,
         );
       },
       timeout: Timeout.none,
     );
 
     test(
-      '[dynamodb] full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
+      '[cloud] full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
       () async {
         await testFullSyncOutdated(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: true,
+          useCloudDb: true,
         );
       },
       timeout: Timeout.none,
     );
 
     test(
-      '[dynamodb] full sync [pUpdate]: cloud save > downsync > local save [rank, nameLocal] > cloud save [rank] > upsync - pUpdate nameLocal > downsynced cloud changes',
+      '[cloud] full sync [pUpdate]: cloud save > downsync > local save [rank, nameLocal] > cloud save [rank] > upsync - pUpdate nameLocal > downsynced cloud changes',
       () async {
         await testFullSyncPartialUpdate(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
-          useDynamoDb: true,
+          useCloudDb: true,
         );
       },
       timeout: Timeout.none,
@@ -274,7 +274,7 @@ Future<void> testOutsyncCreate({
   required String cloudBaseUrl,
   required String srcStorageId,
   required String srcStorageType,
-  bool useDynamoDb = false,
+  bool useCloudDb = false,
 }) async {
   final syncManager = SyncManager.instance;
   final local = LocalStorageService.instance;
@@ -282,8 +282,8 @@ Future<void> testOutsyncCreate({
 
   const projectId = '__test_outsync_create';
 
-  // Reset project if using DynamoDB
-  if (useDynamoDb) {
+  // Reset project if using Cloud
+  if (useCloudDb) {
     await resetTestProject(cloudBaseUrl, projectId);
   }
 
@@ -396,12 +396,12 @@ Future<void> testDownsyncCreate({
   required String cloudBaseUrl,
   required String srcStorageId,
   required String srcStorageType,
-  bool useDynamoDb = false,
+  bool useCloudDb = false,
 }) async {
   final projectId = '__test_downsync_create';
 
-  // Reset project if using DynamoDB
-  if (useDynamoDb) {
+  // Reset project if using Cloud
+  if (useCloudDb) {
     await resetTestProject(cloudBaseUrl, projectId);
   }
 
@@ -508,7 +508,7 @@ Future<void> testFullSyncCreate({
   required String cloudBaseUrl,
   required String srcStorageId,
   required String srcStorageType,
-  bool useDynamoDb = false,
+  bool useCloudDb = false,
 }) async {
   final syncManager = SyncManager.instance;
   final local = LocalStorageService.instance;
@@ -517,8 +517,8 @@ Future<void> testFullSyncCreate({
 
   const projectId = '__test_full_sync_create';
 
-  // Reset project if using DynamoDB
-  if (useDynamoDb) {
+  // Reset project if using Cloud
+  if (useCloudDb) {
     await resetTestProject(cloudBaseUrl, projectId);
   }
 
@@ -658,7 +658,7 @@ Future<void> testFullSyncUpdate({
   required String cloudBaseUrl,
   required String srcStorageId,
   required String srcStorageType,
-  bool useDynamoDb = false,
+  bool useCloudDb = false,
 }) async {
   final syncManager = SyncManager.instance;
   final local = LocalStorageService.instance;
@@ -668,8 +668,8 @@ Future<void> testFullSyncUpdate({
   final cloudChangeAt = DateTime.now().subtract(const Duration(minutes: 1));
   const expectedNameLocalUpdate = 'Edited by local-full';
 
-  // Reset project if using DynamoDB
-  if (useDynamoDb) {
+  // Reset project if using Cloud
+  if (useCloudDb) {
     await resetTestProject(cloudBaseUrl, projectId);
   }
 
@@ -859,7 +859,7 @@ Future<void> testFullSyncOutdated({
   required String cloudBaseUrl,
   required String srcStorageId,
   required String srcStorageType,
-  bool useDynamoDb = false,
+  bool useCloudDb = false,
 }) async {
   final syncManager = SyncManager.instance;
   final local = LocalStorageService.instance;
@@ -869,8 +869,8 @@ Future<void> testFullSyncOutdated({
 
   const projectId = '__test_full_cloud_local_outdated';
 
-  // Reset project if using DynamoDB
-  if (useDynamoDb) {
+  // Reset project if using Cloud
+  if (useCloudDb) {
     await resetTestProject(cloudBaseUrl, projectId);
   }
 
@@ -1140,7 +1140,7 @@ Future<void> testFullSyncPartialUpdate({
   required String cloudBaseUrl,
   required String srcStorageId,
   required String srcStorageType,
-  bool useDynamoDb = false,
+  bool useCloudDb = false,
 }) async {
   final syncManager = SyncManager.instance;
   final local = LocalStorageService.instance;
@@ -1155,8 +1155,8 @@ Future<void> testFullSyncPartialUpdate({
   final cloudChangeAt2 = localChangeAt.add(const Duration(minutes: 1));
   final cloudChange2Rank = '2';
 
-  // Reset project if using DynamoDB
-  if (useDynamoDb) {
+  // Reset project if using Cloud
+  if (useCloudDb) {
     await resetTestProject(cloudBaseUrl, projectId);
   }
 
@@ -1367,7 +1367,7 @@ Future<void> testFullSyncPartialUpdate({
   );
 }
 
-/// Helper function to reset/delete a test project domain (for DynamoDB tests).
+/// Helper function to reset/delete a test project domain (for Cloud tests).
 ///
 /// This calls the `/api/storage/__test/reset/{domainType}/{domainId}` endpoint
 /// to delete all data for a test domain. The endpoint only allows deletion of
