@@ -128,7 +128,10 @@ class SyncManager {
   // Get all projects that have changes to sync
 
   // Outsync changes from outsyncs to cloud storage
-  Future<OutsyncResult> outsyncToCloud({List<String>? domainIds}) async {
+  Future<OutsyncResult> outsyncToCloud({
+    List<String>? domainIds,
+    String domainType = 'project',
+  }) async {
     late final List<IsarChangeLogEntry> changesToSync;
     try {
       SlttLogger.logger.info('[SyncManager] Starting outsync to cloud...');
@@ -240,6 +243,7 @@ class SyncManager {
   // Downsync changes from cloud storage to local state
   Future<DownsyncResult> downsyncFromCloud({
     List<String>? domainIds,
+    String domainType = 'project',
     Function? onProgress,
   }) async {
     ProjectCursorChanges projectCursorChanges = {};
@@ -252,48 +256,54 @@ class SyncManager {
           '[SyncManager] Downsync limited to specified domainIds: $domainIds',
         );
       } else {
-        SlttLogger.logger.info('[SyncManager] Downsyncing all projects: ');
-        // First, get all projects from the cloud storage (authoritative source)
-        // /api/<domainCollection>', _handleGetDomainIds
-        final projectsResponse = await _dio.get(
-          '$_cloudStorageUrl/api/projects',
+        SlttLogger.logger.info(
+          '[SyncManager] Downsyncing all domains of type: $domainType',
         );
-        if (projectsResponse.statusCode != 200) {
+
+        final collection = getCollectionByDomain(domainType);
+        if (collection == null) {
+          throw ArgumentError('Unknown domainType: $domainType');
+        }
+
+        // First, get all domain ids from the cloud storage (authoritative source)
+        final response = await _dio.get('$_cloudStorageUrl/api/$collection');
+        if (response.statusCode != 200) {
           throw Exception(
-            'Failed to get projects from cloud: ${projectsResponse.statusCode}',
+            'Failed to get $collection ids from cloud: ${response.statusCode}',
           );
         }
 
-        final projectsResponseData =
-            projectsResponse.data as Map<String, dynamic>;
-        final projects = (projectsResponseData['items'] as List<dynamic>)
-            .cast<String>();
+        final responseData = response.data as Map<String, dynamic>;
+        final ids = (responseData['items'] as List<dynamic>).cast<String>();
         SlttLogger.logger.info(
-          '[SyncManager] Found ${projects.length} projects in cloud: $projects',
+          '[SyncManager] Found ${ids.length} $collection ids: $ids',
         );
 
-        if (projects.isEmpty) {
+        if (ids.isEmpty) {
           SlttLogger.logger.info(
-            '[SyncManager] No projects found in cloud to downsync',
+            '[SyncManager] No $collection found in cloud to downsync',
           );
           return DownsyncResult(
             success: true,
             projectCursorChanges: {},
             storageSummaries: {},
-            message: 'No projects found in cloud to downsync',
+            message: 'No $collection found in cloud to downsync',
             error: null,
             errorStackTrace: null,
           );
         }
-        domainIds = projects.toList();
+        domainIds = ids.toList();
       }
 
       // For each project, downsync its changes with cursor-based pagination
-      for (final projectId in domainIds) {
-        SlttLogger.logger.info('[SyncManager] Downsyncing project: $projectId');
+      final collection = getCollectionByDomain(domainType) ?? 'projects';
+      for (final domainId in domainIds) {
+        SlttLogger.logger.info(
+          '[SyncManager] Downsyncing $domainType: $domainId',
+        );
 
         // Get the last sync state for this specific project
-        final syncState = await _localStorage.getCursorSyncState(projectId);
+        final syncState = await _localStorage.getCursorSyncState(domainId);
         int lastSeq = syncState?.seq ?? 0;
         String cid = syncState?.cid ?? '';
         DateTime changeAt =
@@ -311,10 +321,10 @@ class SyncManager {
         bool hasMore = false;
         // Continue fetching with cursor until no more changes
         do {
-          final encodedProjectId = Uri.encodeComponent(projectId);
+          final encodedDomainId = Uri.encodeComponent(domainId);
           // router.get('/api/changes/<domainCollection>/<domainId>', _handleGetChanges);
           final url =
-              '$_cloudStorageUrl/api/changes/projects/$encodedProjectId?stateChanged=true&cursor=$cursor';
+              '$_cloudStorageUrl/api/changes/$collection/$encodedDomainId?stateChanged=true&cursor=$cursor';
 
           final response = await _dio.get(url);
           final changesResponseData = response.data as Map<String, dynamic>;
@@ -340,13 +350,13 @@ class SyncManager {
 
             if (changesBatch.isEmpty) {
               SlttLogger.logger.fine(
-                '[SyncManager] No more changes for project $projectId',
+                '[SyncManager] No more changes for $domainType $domainId',
               );
               if (lastSeq < highestSeqForProject) {
                 // Update sync state even if no changes were returned
                 await _localStorage.upsertCursorSyncState(
-                  domainType: 'project',
-                  domainId: projectId,
+                  domainType: domainType,
+                  domainId: domainId,
                   srcStorageType: srcStorageType,
                   srcStorageId: srcStorageId,
                   seq: highestSeqForProject,
@@ -354,7 +364,7 @@ class SyncManager {
                   changeAt: changeAt,
                 );
                 SlttLogger.logger.fine(
-                  '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
+                  '[SyncManager] Updated sync state for $domainType $domainId: lastSeq=$highestSeqForProject',
                 );
               }
               break;
@@ -364,8 +374,7 @@ class SyncManager {
             final incomingChanges = changesBatch
                 .cast<Map<String, dynamic>>()
                 .toList();
-
-            projectCursorChanges['$projectId/$cursor'] = incomingChanges;
+            projectCursorChanges['$domainId/$cursor'] = incomingChanges;
 
             // Apply changes directly to state storage
             final results = await ChangeProcessingService.storeChanges(
@@ -381,7 +390,7 @@ class SyncManager {
             // TODO: how to handle more gracefully so we don't get stuck?
             if (results.isError) {
               final error =
-                  'Downsync processing error for project $projectId: '
+                  'Downsync processing error for $domainType $domainId: '
                   '${results.errorMessage}'
                   '${const JsonEncoder.withIndent('  ').convert(results.resultsSummary?.toJson())}';
               SlttLogger.logger.severe(error);
@@ -389,24 +398,24 @@ class SyncManager {
                 success: false,
                 projectCursorChanges: projectCursorChanges,
                 storageSummaries: storageSummaries,
-                message: 'Downsync processing error for project $projectId',
+                message: 'Downsync processing error for $domainType $domainId',
                 error: error,
                 errorStackTrace: null,
               );
             }
 
-            storageSummaries['$projectId/$cursor'] = results.resultsSummary;
+            storageSummaries['$domainId/$cursor'] = results.resultsSummary;
             totalChangesForProject += incomingChanges.length;
 
             SlttLogger.logger.info(
-              '[SyncManager] Applied ${incomingChanges.length} changes for project $projectId (batch)',
+              '[SyncManager] Applied ${incomingChanges.length} changes for $domainType $domainId (batch)',
             );
 
             // Update sync state for this project if we processed any changes
             if (totalChangesForProject > 0) {
               await _localStorage.upsertCursorSyncState(
-                domainType: 'project',
-                domainId: projectId,
+                domainType: domainType,
+                domainId: domainId,
                 srcStorageType: srcStorageType,
                 srcStorageId: srcStorageId,
                 seq: highestSeqForProject,
@@ -414,12 +423,12 @@ class SyncManager {
                 changeAt: changeAt,
               );
               SlttLogger.logger.fine(
-                '[SyncManager] Updated sync state for project $projectId: lastSeq=$highestSeqForProject',
+                '[SyncManager] Updated sync state for $domainType $domainId: lastSeq=$highestSeqForProject',
               );
             }
 
             onProgress?.call(
-              projectId,
+              domainId,
               totalChangesForProject + incomingChanges.length,
             );
 
@@ -427,21 +436,18 @@ class SyncManager {
             cursor = nextCursor.toString();
           } else {
             SlttLogger.logger.warning(
-              '[SyncManager] Failed to downsync project $projectId: ${response.statusCode}',
+              '[SyncManager] Failed to downsync $domainType $domainId: ${response.statusCode}',
             );
             break; // Exit cursor loop for this project
           }
         } while (hasMore);
-
         SlttLogger.logger.info(
-          '[SyncManager] Completed downsyncing project $projectId: $totalChangesForProject total changes',
+          '[SyncManager] Completed downsyncing $domainType $domainId: $totalChangesForProject total changes',
         );
       }
-
       final totalDownloadedCount = projectCursorChanges.values
           .expand((changes) => changes)
           .length;
-
       SlttLogger.logger.info(
         '[SyncManager] Downsync completed. Total changes: $totalDownloadedCount',
       );
@@ -451,7 +457,7 @@ class SyncManager {
         projectCursorChanges: projectCursorChanges,
         storageSummaries: storageSummaries,
         message:
-            'Successfully downsynced $totalDownloadedCount changes from ${domainIds.length} projects',
+            'Successfully downsynced $totalDownloadedCount changes from ${domainIds.length} $domainType(s)',
         error: null,
         errorStackTrace: null,
       );
@@ -470,14 +476,23 @@ class SyncManager {
   }
 
   // Perform full sync: outsync first, then downsync
-  Future<FullSyncResult> performFullSync({List<String>? domainIds}) async {
+  Future<FullSyncResult> performFullSync({
+    List<String>? domainIds,
+    String domainType = 'project',
+  }) async {
     SlttLogger.logger.info('[SyncManager] Starting full sync...');
 
     // Step 1: Outsync to cloud (deletes local changes immediately)
-    final outsyncResult = await outsyncToCloud(domainIds: domainIds);
+    final outsyncResult = await outsyncToCloud(
+      domainIds: domainIds,
+      domainType: domainType,
+    );
 
     // Step 2: Downsync from cloud
-    final downsyncResult = await downsyncFromCloud(domainIds: domainIds);
+    final downsyncResult = await downsyncFromCloud(
+      domainIds: domainIds,
+      domainType: domainType,
+    );
 
     // Use the already computed deleted local sequences from outsync result
     final finalOutsyncResult = OutsyncResult(
@@ -497,34 +512,42 @@ class SyncManager {
     );
   }
 
-  Future<List<String>> getSyncedProjects() async {
-    final projects = await _localStorage.getAllDomainIds(domainType: 'project');
-    return projects;
+  Future<List<String>> getSyncedDomainIds({
+    String domainType = 'project',
+  }) async {
+    final ids = await _localStorage.getAllDomainIds(domainType: domainType);
+    return ids;
   }
 
+  // Backwards-compatible wrapper
+  Future<List<String>> getSyncedProjects() async =>
+      getSyncedDomainIds(domainType: 'project');
+
   // Check sync status and statistics
-  Future<SyncStatus> getSyncStatus(String projectId) async {
+  Future<SyncStatus> getSyncStatus(
+    String domainId, {
+    String domainType = 'project',
+  }) async {
     try {
       final localChangeStats = await _localStorage.getChangeStats(
-        domainType: 'project',
-        domainId: projectId,
+        domainType: domainType,
+        domainId: domainId,
       );
 
       final localStateStats = await _localStorage.getStateStats(
-        domainType: 'project',
-        domainId: projectId,
+        domainType: domainType,
+        domainId: domainId,
       );
 
-      final localCursorState = await _localStorage.getCursorSyncState(
-        projectId,
-      );
+      final localCursorState = await _localStorage.getCursorSyncState(domainId);
 
       // Try to get cloud storage stats
       EntityTypeSummary? cloudChangeStats;
       EntityTypeStats? cloudStateStats;
       try {
+        final collection = getCollectionByDomain(domainType) ?? 'projects';
         final response = await _dio.get(
-          '$_cloudStorageUrl/api/stats/projects/$projectId',
+          '$_cloudStorageUrl/api/stats/$collection/$domainId',
         );
         if (response.statusCode == 200) {
           final stats = response.data as Map<String, dynamic>;

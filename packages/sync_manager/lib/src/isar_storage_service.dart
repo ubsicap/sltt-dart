@@ -1268,7 +1268,7 @@ class IsarStorageService extends BaseStorageService {
     return domainIds.toList()..sort();
   }
 
-  /// Get sync state for a specific project
+  /// Get sync state for a specific domainId
   Future<CursorSyncState?> getCursorSyncState(String domainId) async {
     return await _isar
         .collection<CursorSyncState>()
@@ -1277,7 +1277,7 @@ class IsarStorageService extends BaseStorageService {
         .findFirst();
   }
 
-  /// Create or update sync state for a project
+  /// Create or update sync state for a domainId
   Future<CursorSyncState> upsertCursorSyncState({
     required String domainType,
     required String domainId,
@@ -1341,8 +1341,8 @@ class IsarStorageService extends BaseStorageService {
     return await _isar.syncStates.where().findAll();
   }
 
-  /// Delete sync state for a project
-  Future<bool> deleteSyncState(String projectId) async {
+  /// Delete sync state for a domainId
+  Future<bool> deleteSyncState(String domainId) async {
     // TODO: Implement when fixing sync state management
     return false;
   }
