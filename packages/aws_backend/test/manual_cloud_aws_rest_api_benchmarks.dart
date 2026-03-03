@@ -26,12 +26,12 @@ void main() {
     setUpAll(() async {
       dynamoChangeLogEntryFactoryRegistration;
       // Reset project domain so benchmark starts clean
-      await resetTestProject(baseUrl, projectId);
+      await resetTestDomainData(baseUrl, projectId);
     });
 
     tearDownAll(() async {
       // Optionally clean after benchmark
-      await resetTestProject(baseUrl, projectId);
+      await resetTestDomainData(baseUrl, projectId);
     });
 
     PassageTranslationData makePassage(int i) => PassageTranslationData(

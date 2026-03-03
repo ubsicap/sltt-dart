@@ -274,7 +274,7 @@ void main() {
     test(
       'stores and retrieves with all expected fields - DynamoNoteCommentChatDataEntityState',
       () async {
-        await resetTestProject(baseUrl, testDomainId);
+        await resetTestDomainData(baseUrl, testDomainId);
 
         final localChangeAt = DateTime.now();
         final localCloudAt = DateTime.now().subtract(const Duration(hours: 1));

@@ -13,27 +13,29 @@ import 'package:sltt_core/sltt_core.dart';
 ///
 /// Example:
 /// ```dart
-/// await resetTestProject(baseUrl, '__test_my_project__');
+/// await resetTestDomainData(baseUrl, '__test_my_project__');
 /// ```
-Future<void> resetTestProject(
+Future<void> resetTestDomainData(
   Uri baseUrl,
-  String projectId, {
+  String domainId, {
   String domainType = 'projects',
 }) async {
   try {
     final uri = Uri.parse(
-      '$baseUrl/api/storage/__test/reset/$domainType/$projectId',
+      '$baseUrl/api/storage/__test/reset/$domainType/$domainId',
     );
     final res = await http.delete(uri).timeout(const Duration(seconds: 15));
 
     // If server returned a non-success status, throw to make the failure
     // visible immediately instead of letting the test hang or proceed.
     if (res.statusCode >= 400) {
-      throw Exception('resetTestProject failed: ${res.statusCode} ${res.body}');
+      throw Exception(
+        'resetTestDomainData failed: ${res.statusCode} ${res.body}',
+      );
     }
   } on TimeoutException catch (e) {
     throw Exception(
-      'resetTestProject timed out calling ${baseUrl.toString()}: $e',
+      'resetTestDomainData timed out calling ${baseUrl.toString()}: $e',
     );
   }
 }
@@ -45,8 +47,8 @@ Future<void> resetTestProject(
 ///
 /// Parameters:
 /// - [baseUrl]: The base URL of the API server
-/// - [projectId]: The project domain ID (should start with `__test` for tests)
-/// - [projectData]: Optional project data fields (defaults to basic test data)
+/// - [domainId]: The project domain ID (should start with `__test` for tests)
+/// - [entityData]: Optional project data fields (defaults to basic test data)
 /// - [changeBy]: The user making the change (defaults to 'userId')
 /// - [srcStorageType]: Source storage type (defaults to 'cloud')
 /// - [srcStorageId]: Source storage ID (defaults to 'test')
@@ -55,32 +57,34 @@ Future<void> resetTestProject(
 ///
 /// Example:
 /// ```dart
-/// final response = await saveProjectChange(
+/// final response = await saveDomainChange(
 ///   baseUrl,
 ///   '__test_my_project__',
 /// );
 /// expect(response.statusCode, anyOf([200, 201]));
 /// ```
-Future<http.Response> saveProjectChange(
+Future<http.Response> saveDomainChange(
   Uri baseUrl,
-  String projectId, {
-  BaseDataFields? projectData,
+  String domainId, {
+  BaseDataFields? entityData,
   String changeBy = 'userId',
   String srcStorageType = 'cloud',
   String srcStorageId = 'test',
+  DomainType domainType = DomainType.project,
+  EntityType entityType = EntityType.project,
 }) async {
   final data =
-      projectData ??
+      entityData ??
       BaseDataFields(parentId: 'parentId', parentProp: 'parentProp');
 
   return saveChanges<BaseDataFields>(
     baseUrl,
-    domainType: 'project',
-    domainId: projectId,
+    domainType: domainType.value,
+    domainId: domainId,
     changesToSave: [
       SaveChangeRequest<BaseDataFields>(
-        entityType: 'project',
-        entityId: projectId,
+        entityType: entityType.value,
+        entityId: domainId,
         data: data,
         changeBy: changeBy,
       ),

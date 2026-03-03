@@ -20,18 +20,59 @@ void main() {
   });
 
   group('AWS REST /api/state integration', () {
+    test('POST api/changes > GET /api/state/users/<user_id>/users', () async {
+      final userId = '__test_user_state__';
+      await resetTestDomainData(baseUrl, userId);
+
+      final userData = BaseDataFields(
+        parentId: 'parentId',
+        parentProp: 'parentProp',
+      );
+
+      final responseSeed = await saveDomainChange(
+        baseUrl,
+        domainType: DomainType.user,
+        userId,
+        entityData: userData,
+        entityType: EntityType.userPreferences,
+      );
+
+      if (responseSeed.statusCode != 200 && responseSeed.statusCode != 201) {
+        fail(
+          'Failed to save domain change, status code: ${responseSeed.statusCode}, body: ${responseSeed.body}',
+        );
+      }
+
+      final resp = await http.get(
+        Uri.parse('$baseUrl/api/state/users/$userId/user_preferences'),
+        headers: {'Accept': 'application/json'},
+      );
+      expect(resp.statusCode, anyOf([200, 404]));
+
+      if (resp.statusCode == 200) {
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        expect(body['items'], isA<List>());
+        final items = body['items'] as List;
+
+        // Should return exactly 1 user entity
+        expect(items.length, equals(1));
+        expect(body.containsKey('hasMore'), isTrue);
+        expect(body['hasMore'], isFalse);
+      }
+    });
+
     test(
-      'POST api/changes > GET /api/state/projects/<project_id>/projects',
+      'POST api/changes/projects > GET /api/state/projects/<project_id>/projects',
       () async {
         final projectId = '__test_post_changes_get_state__';
-        await resetTestProject(baseUrl, projectId);
+        await resetTestDomainData(baseUrl, projectId);
 
-        final projectData = BaseDataFields(
+        final entityData = BaseDataFields(
           parentId: 'parentId',
           parentProp: 'parentProp',
         );
 
-        await saveProjectChange(baseUrl, projectId, projectData: projectData);
+        await saveDomainChange(baseUrl, projectId, entityData: entityData);
 
         final resp = await http.get(
           Uri.parse('$baseUrl/api/state/projects/$projectId/projects'),
@@ -55,7 +96,7 @@ void main() {
 
     test('GET /api/state with parentId parameter', () async {
       final projectId = '__test_state_parentId__';
-      await resetTestProject(baseUrl, projectId);
+      await resetTestDomainData(baseUrl, projectId);
 
       // Create a portion entity with a specific parentId
       final portionData = PortionTranslationData(
@@ -145,7 +186,7 @@ void main() {
       'GET /api/state with limit parameter',
       () async {
         final projectId = '__test_state_limit__';
-        await resetTestProject(baseUrl, projectId);
+        await resetTestDomainData(baseUrl, projectId);
 
         // Create 5 different portion entities within the same project
         for (int i = 1; i <= 5; i++) {
@@ -222,7 +263,7 @@ void main() {
       'GET /api/state with cursor parameter',
       () async {
         final projectId = '__test_state_cursor__';
-        await resetTestProject(baseUrl, projectId);
+        await resetTestDomainData(baseUrl, projectId);
 
         // Create 6 different portion entities within the same project for pagination
         for (int i = 1; i <= 6; i++) {
@@ -340,7 +381,7 @@ void main() {
       'GET /api/state with storedAfter parameter',
       () async {
         final projectId = '__test_state_stored_after__';
-        await resetTestProject(baseUrl, projectId);
+        await resetTestDomainData(baseUrl, projectId);
 
         // Record initial timestamp
         final beforeFirstBatch = DateTime.now().toUtc();

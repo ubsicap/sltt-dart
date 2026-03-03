@@ -35,18 +35,18 @@ void main() {
     test(
       'POST minimal valid payload returns 200 or 201',
       () async {
-        final projectData = BaseDataFields(
+        final entityData = BaseDataFields(
           parentId: 'parentId',
           parentProp: 'parentProp',
         );
         final projectId = '__test_project_post_minimal_valid_payload__';
 
-        await resetTestProject(baseUrl, projectId);
+        await resetTestDomainData(baseUrl, projectId);
 
-        final resp = await saveProjectChange(
+        final resp = await saveDomainChange(
           baseUrl,
           projectId,
-          projectData: projectData,
+          entityData: entityData,
         );
 
         expect(resp.statusCode, anyOf([200, 201]), reason: 'Got ${resp.body}');
@@ -59,20 +59,20 @@ void main() {
       'POST and GET multiple changes',
       () async {
         final projectId = '__test_multiple_changes__';
-        await resetTestProject(baseUrl, projectId);
+        await resetTestDomainData(baseUrl, projectId);
 
         // Create multiple changes for the same project by varying rank and changeBy
         final numChanges = 3;
         for (int i = 1; i <= numChanges; i++) {
-          final projectData = BaseDataFields(
+          final entityData = BaseDataFields(
             parentId: 'root',
             parentProp: 'projects',
             rank: 'rank$i',
           );
-          final resp = await saveProjectChange(
+          final resp = await saveDomainChange(
             baseUrl,
             projectId,
-            projectData: projectData,
+            entityData: entityData,
             changeBy: 'user$i',
           );
           expect(resp.statusCode, anyOf([200, 201]));
@@ -152,19 +152,19 @@ void main() {
       'GET changes with limit parameter',
       () async {
         final projectId = '__test_changes_limit__';
-        await resetTestProject(baseUrl, projectId);
+        await resetTestDomainData(baseUrl, projectId);
 
         // Create 5 changes for the same project by varying rank and changeBy
         for (int i = 1; i <= 5; i++) {
-          final projectData = BaseDataFields(
+          final entityData = BaseDataFields(
             parentId: 'root',
             parentProp: 'projects',
             rank: 'rank$i',
           );
-          await saveProjectChange(
+          await saveDomainChange(
             baseUrl,
             projectId,
-            projectData: projectData,
+            entityData: entityData,
             changeBy: 'user$i',
           );
         }
@@ -248,19 +248,19 @@ void main() {
       'GET changes with cursor parameter',
       () async {
         final projectId = '__test_changes_cursor__';
-        await resetTestProject(baseUrl, projectId);
+        await resetTestDomainData(baseUrl, projectId);
 
         // Create 6 changes for the same project to ensure we have enough for pagination
         for (int i = 1; i <= 6; i++) {
-          final projectData = BaseDataFields(
+          final entityData = BaseDataFields(
             parentId: 'root',
             parentProp: 'projects',
             rank: 'rank$i',
           );
-          await saveProjectChange(
+          await saveDomainChange(
             baseUrl,
             projectId,
-            projectData: projectData,
+            entityData: entityData,
             changeBy: 'user$i',
           );
         }
@@ -408,13 +408,13 @@ void main() {
       'POST with client-provided seq value ignores it and assigns new seq',
       () async {
         final projectId = '__test_seq_always_bump__';
-        await resetTestProject(baseUrl, projectId);
+        await resetTestDomainData(baseUrl, projectId);
 
         // Create first change normally to establish seq=1
-        final resp1 = await saveProjectChange(
+        final resp1 = await saveDomainChange(
           baseUrl,
           projectId,
-          projectData: BaseDataFields(
+          entityData: BaseDataFields(
             parentId: 'root',
             parentProp: 'projects',
             rank: 'rank1',

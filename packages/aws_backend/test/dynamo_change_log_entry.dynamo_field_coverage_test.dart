@@ -73,7 +73,7 @@ void main() {
   group('DynamoChangeLogEntry DateTime UTC Conversion', () {
     test('stores and retrieves with all DateTime fields converted to UTC', () async {
       // Reset test data to ensure clean state
-      await resetTestProject(baseUrl, testDomainId);
+      await resetTestDomainData(baseUrl, testDomainId);
 
       // Create local (non-UTC) DateTimes for testing
       final localChangeAt = DateTime.now(); // Local time

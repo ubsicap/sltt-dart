@@ -17,7 +17,7 @@ void main() {
       'GET stats for empty project returns consistent empty stats',
       () async {
         final projectId = '__test_empty_stats_proj__';
-        await resetTestProject(baseUrl, projectId);
+        await resetTestDomainData(baseUrl, projectId);
 
         // Call stats endpoint multiple times
         for (int i = 0; i < 3; i++) {

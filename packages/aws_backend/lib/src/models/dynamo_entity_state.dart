@@ -5,6 +5,8 @@ import 'package:sltt_core/sltt_core.dart';
 
 part 'dynamo_entity_state.g.dart';
 
+typedef UnknownEntityState = DynamoEntityState;
+
 /// Basic DynamoDB implementation of EntityState
 /// should typically only be used for tests and
 /// temporarily as a default entityType state handler.

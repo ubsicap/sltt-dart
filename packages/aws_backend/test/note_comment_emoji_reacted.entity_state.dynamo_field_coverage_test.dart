@@ -216,7 +216,7 @@ void main() {
       test(
         'stores and retrieves with all expected fields - DynamoNoteCommentEmojiReactedDataEntityState',
         () async {
-          await resetTestProject(baseUrl, testDomainId);
+          await resetTestDomainData(baseUrl, testDomainId);
 
           final localChangeAt = DateTime.now();
           final localCloudAt = DateTime.now().subtract(

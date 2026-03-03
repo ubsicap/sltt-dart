@@ -19,7 +19,7 @@ import 'package:test/test.dart';
 
 import '../../sltt_core/test/helpers/api_changes_network_suite.dart'
     show ApiChangesNetworkTestSuite;
-import 'helpers/test_utils.dart' show resetTestProject;
+import 'helpers/test_utils.dart' show resetTestDomainData;
 
 class TestServer extends BaseRestApiServer {
   TestServer({
@@ -133,7 +133,7 @@ void main() {
         await stateTests['returns empty list for entityCollection with no states']!(
           setup: (String domainId) async {
             final base = await resolveBaseUrl();
-            await resetTestProject(base, domainId);
+            await resetTestDomainData(base, domainId);
           },
         );
       });
@@ -144,7 +144,7 @@ void main() {
           await stateTests['returns seeded entity state by entityCollection and entityId']!(
             setup: (String domainId) async {
               final base = await resolveBaseUrl();
-              await resetTestProject(base, domainId);
+              await resetTestDomainData(base, domainId);
             },
           );
         },
@@ -154,7 +154,7 @@ void main() {
         await stateTests['filters by parentId when parameter is provided']!(
           setup: (String domainId) async {
             final base = await resolveBaseUrl();
-            await resetTestProject(base, domainId);
+            await resetTestDomainData(base, domainId);
           },
         );
       });
@@ -163,7 +163,7 @@ void main() {
         await stateTests['filters by storedAfter timestamp']!(
           setup: (String domainId) async {
             final base = await resolveBaseUrl();
-            await resetTestProject(base, domainId);
+            await resetTestDomainData(base, domainId);
           },
         );
       });
@@ -172,7 +172,7 @@ void main() {
         await stateTests['storedAfter + pagination returns correct filtered page']!(
           setup: (String domainId) async {
             final base = await resolveBaseUrl();
-            await resetTestProject(base, domainId);
+            await resetTestDomainData(base, domainId);
           },
         );
       });
@@ -181,7 +181,7 @@ void main() {
         await stateTests['storedAfter with old timestamp returns all items']!(
           setup: (String domainId) async {
             final base = await resolveBaseUrl();
-            await resetTestProject(base, domainId);
+            await resetTestDomainData(base, domainId);
           },
         );
       });
@@ -190,7 +190,7 @@ void main() {
         await stateTests['storedAfter with future timestamp returns empty']!(
           setup: (String domainId) async {
             final base = await resolveBaseUrl();
-            await resetTestProject(base, domainId);
+            await resetTestDomainData(base, domainId);
           },
         );
       });

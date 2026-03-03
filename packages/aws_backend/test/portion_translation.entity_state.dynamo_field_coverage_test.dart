@@ -198,7 +198,7 @@ void main() {
       'stores and retrieves with all expected fields - DynamoPortionDataEntityState',
       () async {
         // Reset test data to ensure clean state
-        await resetTestProject(baseUrl, testDomainId);
+        await resetTestDomainData(baseUrl, testDomainId);
 
         // Create individual local (non-UTC) DateTimes for testing - each field gets unique value
         final localChangeAt = DateTime.now(); // Local time
