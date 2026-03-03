@@ -1,5 +1,9 @@
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/models/user_preferences.entity_state.isar.dart'
+    show
+        registerIsarUserPreferencesDataEntityStateStorageGroup,
+        IsarUserPreferencesDataEntityStateSchema;
 
 import 'isar_entity_state_storage_group.dart';
 import 'models/isar_document_state.dart';
@@ -10,6 +14,7 @@ import 'models/isar_task_state.dart';
 /// so calling code can open Isar with all necessary schemas before
 /// registering storage groups.
 final List<CollectionSchema> entityStateSchemas = [
+  IsarUserPreferencesDataEntityStateSchema,
   IsarProjectStateSchema,
   IsarDocumentStateSchema,
   IsarTaskStateSchema,
@@ -20,6 +25,7 @@ void registerAllIsarEntityStateStorageGroups(
   IsarEntityStateStorageRegistry registry,
   Isar isar,
 ) {
+  registerIsarUserPreferencesDataEntityStateStorageGroup(registry, isar);
   registry.register(
     IsarEntityStateStorageGroup<IsarProjectState>(
       entityType: EntityType.project,

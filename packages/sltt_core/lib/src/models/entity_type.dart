@@ -6,10 +6,14 @@ import 'id_service.dart';
 // stable string literal for an entity type is needed to avoid duplication.
 
 // User entities
+const String kEntityTypeUser = 'user';
+const String kEntityTypeUserCollection = 'users';
 const String kEntityTypeUserProfile = 'user_profile';
 const String kEntityTypeUserProfileCollection = 'user_profiles';
 const String kEntityTypeUserPreferences = 'user_preferences';
 const String kEntityTypeUserPreferencesCollection = 'user_preferences';
+
+const String kEntityIdDefaultUserPreferences = 'default_preferences';
 
 // Project entities
 const String kEntityTypeMissing = 'missing';
@@ -26,8 +30,6 @@ const String kEntityTypeStage = 'stage';
 const String kEntityTypeStageCollection = 'stages';
 const String kEntityTypeTask = 'task';
 const String kEntityTypeTaskCollection = 'tasks';
-const String kEntityTypeUser = 'user';
-const String kEntityTypeUserCollection = 'users';
 const String kEntityTypeMember = 'member';
 const String kEntityTypeMemberCollection = 'members';
 const String kEntityTypeMessage = 'message';

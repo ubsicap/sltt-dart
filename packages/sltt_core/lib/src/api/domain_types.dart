@@ -5,6 +5,38 @@ const String kCollectionProject = 'projects';
 const String kDomainUser = 'user';
 const String kCollectionUser = 'users';
 
+enum DomainType {
+  project(value: kDomainProject),
+  user(value: kDomainUser),
+  unknown(value: 'unknown');
+
+  final String value;
+
+  const DomainType({required this.value});
+
+  static DomainType tryFromString(String value) {
+    switch (value) {
+      case kDomainProject:
+        return DomainType.project;
+      case kDomainUser:
+        return DomainType.user;
+      default:
+        return DomainType.unknown;
+    }
+  }
+
+  String get collectionName {
+    switch (this) {
+      case DomainType.project:
+        return kCollectionProject;
+      case DomainType.user:
+        return kCollectionUser;
+      case DomainType.unknown:
+        throw Exception('Unknown domain type does not have a collection name');
+    }
+  }
+}
+
 /// Returns all supported domain types.
 List<String> getAllDomainTypes() => [kDomainProject, kDomainUser];
 

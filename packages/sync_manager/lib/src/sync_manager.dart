@@ -266,7 +266,9 @@ class SyncManager {
         }
 
         // First, get all domain ids from the cloud storage (authoritative source)
-        final response = await _dio.get('$_cloudStorageUrl/api/$collection');
+        final response = await _dio.get(
+          '$_cloudStorageUrl/api/ids/$collection',
+        );
         if (response.statusCode != 200) {
           throw Exception(
             'Failed to get $collection ids from cloud: ${response.statusCode}',

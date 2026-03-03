@@ -308,7 +308,7 @@ Future<void> testOutsyncCreate({
 
   // Reset project if using Cloud
   if (useCloudDb) {
-    await resetTestProject(cloudBaseUrl, projectId);
+    await resetDomainId(cloudBaseUrl, projectId);
   }
 
   final changeBy = 'test';
@@ -426,7 +426,7 @@ Future<void> testDownsyncCreate({
 
   // Reset project if using Cloud
   if (useCloudDb) {
-    await resetTestProject(cloudBaseUrl, projectId);
+    await resetDomainId(cloudBaseUrl, projectId);
   }
 
   final cloudChange = await saveCloudChangeViaHttp(
@@ -535,26 +535,30 @@ Future<void> testUserDomainDownsync({
   required String srcStorageType,
   bool useCloudDb = false,
 }) async {
-  final domainId = 'default_preferences';
+  final userId = '__test_user_preferences';
 
   // Reset test domain when using Cloud
   if (useCloudDb) {
-    await resetTestProject(cloudBaseUrl, domainId, domainType: 'users');
+    await resetDomainId(
+      cloudBaseUrl,
+      userId,
+      domainType: DomainType.user.value,
+    );
   }
 
   final cloudChange = await saveCloudChangeViaHttp(
     cloudBaseUrl: cloudBaseUrl,
     srcStorageType: srcStorageType,
     srcStorageId: srcStorageId,
-    domainId: domainId,
-    entityId: domainId,
+    domainId: userId,
+    entityId: kEntityIdDefaultUserPreferences,
     changeAt: DateTime.now(),
     dataJson: stableStringify(
       BaseDataFields(parentId: 'root', parentProp: 'user_preferences').toJson(),
     ),
     userId: '__test_x',
     operation: 'create',
-    domainType: 'user',
+    domainType: DomainType.user,
     entityType: EntityType.userPreferences,
     fromJson: UnknownDataFields.fromJson,
   );
@@ -564,8 +568,8 @@ Future<void> testUserDomainDownsync({
   syncManager.configureCloudUrl(cloudBaseUrl);
 
   final downsyncResult = await syncManager.downsyncFromCloud(
-    domainIds: [domainId],
-    domainType: 'user',
+    domainIds: [userId],
+    domainType: DomainType.user.value,
   );
 
   expect(
@@ -575,19 +579,43 @@ Future<void> testUserDomainDownsync({
   );
 
   final local = LocalStorageService.instance;
-  final domains = await local.getAllDomainIds(domainType: 'user');
-  expect(domains, contains(domainId));
+  final domains = await local.getAllDomainIds(
+    domainType: DomainType.user.value,
+  );
+  expect(domains, contains(userId));
 
   final state = await local.getEntityState(
     entityType: kEntityTypeUserPreferences,
-    entityId: domainId,
-    domainType: 'user',
-    domainId: domainId,
+    entityId: kEntityIdDefaultUserPreferences,
+    domainType: DomainType.user.value,
+    domainId: userId,
   );
   expect(
     state,
     isNotNull,
     reason: 'User preferences state should exist locally',
+  );
+
+  // confirm cloud state totals
+  final status = await syncManager.getSyncStatus(
+    userId,
+    domainType: DomainType.user.value,
+  );
+  final cloudTotals = status.cloudStateStats?.totals;
+  expect(
+    cloudTotals?.toJson(),
+    equals({
+      'creates': 1,
+      'updates': 0,
+      'deletes': 0,
+      'total': 1,
+      'latestChangeAt': const UtcDateTimeConverter().toJson(
+        cloudChange.changeAt,
+      ),
+      'latestSeq': 1,
+    }),
+    reason:
+        'After user domain downsync, user $userId should have 1 total cloud change',
   );
 }
 
@@ -607,7 +635,7 @@ Future<void> testFullSyncCreate({
 
   // Reset project if using Cloud
   if (useCloudDb) {
-    await resetTestProject(cloudBaseUrl, projectId);
+    await resetDomainId(cloudBaseUrl, projectId);
   }
 
   final localChange =
@@ -758,7 +786,7 @@ Future<void> testFullSyncUpdate({
 
   // Reset project if using Cloud
   if (useCloudDb) {
-    await resetTestProject(cloudBaseUrl, projectId);
+    await resetDomainId(cloudBaseUrl, projectId);
   }
 
   await saveCloudChangeViaHttp(
@@ -960,7 +988,7 @@ Future<void> testFullSyncOutdated({
 
   // Reset project if using Cloud
   if (useCloudDb) {
-    await resetTestProject(cloudBaseUrl, projectId);
+    await resetDomainId(cloudBaseUrl, projectId);
   }
 
   // Save a cloud change that should be downsynced
@@ -1248,7 +1276,7 @@ Future<void> testFullSyncPartialUpdate({
 
   // Reset project if using Cloud
   if (useCloudDb) {
-    await resetTestProject(cloudBaseUrl, projectId);
+    await resetDomainId(cloudBaseUrl, projectId);
   }
 
   // Save first cloud change that contains 'nameLocal' field that local can overwrite
@@ -1465,19 +1493,19 @@ Future<void> testFullSyncPartialUpdate({
 /// This calls the `/api/storage/__test/reset/{domainType}/{domainId}` endpoint
 /// to delete all data for a test domain. The endpoint only allows deletion of
 /// domains with IDs starting with `__test`.
-Future<void> resetTestProject(
+Future<void> resetDomainId(
   String baseUrl,
-  String projectId, {
-  String domainType = 'projects',
+  String domainId, {
+  String domainType = kDomainProject,
 }) async {
   final result = await http.delete(
-    Uri.parse('$baseUrl/api/storage/__test/reset/$domainType/$projectId'),
+    Uri.parse('$baseUrl/api/storage/__test/reset/$domainType/$domainId'),
   );
   expect(
     result.statusCode,
     equals(200),
     reason:
-        'Resetting test project $projectId should return HTTP 200, but got ${result.statusCode}: ${result.body}',
+        'Resetting test domain $domainId should return HTTP 200, but got ${result.statusCode}: ${result.body}',
   );
 }
 
@@ -1653,13 +1681,13 @@ saveCloudChangeViaHttp<TData extends BaseDataFields>({
   required String userId,
   required String operation,
   required TData Function(Map<String, dynamic>) fromJson,
-  String domainType = 'project',
+  DomainType domainType = DomainType.project,
   EntityType entityType = EntityType.project,
 }) async {
   final cloudSaveChange =
       ChangeLogEntryFactoryService.forChangeSave<IsarChangeLogEntry, Id, TData>(
         factory: IsarChangeLogEntry.new,
-        domainType: domainType,
+        domainType: domainType.value,
         domainId: domainId,
         entityType: entityType.value,
         entityId: entityId,

@@ -31,7 +31,7 @@ abstract class BaseRestApiServer {
   /// Extract and URL decode `domainId` from request parameters.
   ///
   /// For backwards compatibility this will also accept the legacy
-  /// `projectId` path parameter (used by routes like `/api/projects/<projectId>/...`).
+  /// `projectId` path parameter (used by routes like `/api/changes/projects/<projectId>...`).
   /// Callers should prefer using `domainId` in new routes; this compatibility
   /// behavior is intentionally localized here so we can remove it later once
   /// all callers and tests move to the new domain-scoped routes.
@@ -152,6 +152,8 @@ abstract class BaseRestApiServer {
     router.post('/api/changes', _handleCreateChanges);
     router.get('/api/domains', _handleGetDomainsAndTheirCollections);
     router.get('/api/entities/<domainType>', _handleGetEntities);
+    router.get('/api/ids/<domainCollection>', _handleGetDomainIds);
+    // obsoleted route for backwards compatibility - to be removed after migration
     router.get('/api/<domainCollection>', _handleGetDomainIds);
 
     /// Generalized domain-scoped endpoints
@@ -709,9 +711,11 @@ abstract class BaseRestApiServer {
         // Generalized domain-scoped endpoints
         {
           'method': 'GET',
-          'path': '/api/{domainCollection}',
+          'path': '/api/ids/{domainCollection}',
+          'obsoletedPaths': ['/api/{domainCollection}'],
           'description':
               'List domain IDs for the given collection (e.g., projects)',
+          'examplePaths': ['/api/ids/users', '/api/ids/projects'],
           'response': {
             'type': 'object',
             'properties': {
@@ -843,7 +847,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/projects',
+          'path': '/api/ids/projects',
           'description': 'Get list of all projects that have changes',
           'response': {
             'type': 'object',
@@ -941,7 +945,11 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/projects/{projectId}/stats',
+          'path': '/api/stats/{domainCollection}/{domainId}/',
+          'examplePaths': [
+            '/api/stats/users/{userId}',
+            '/api/stats/projects/{projectId}',
+          ],
           'description':
               'Get statistics about changes and entity types for a project',
           'parameters': [

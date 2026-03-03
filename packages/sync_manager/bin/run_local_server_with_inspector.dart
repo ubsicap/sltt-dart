@@ -15,6 +15,8 @@ import 'package:sync_manager/src/models/note_comment_emoji_reacted.entity_state.
     show IsarNoteCommentEmojiReactedDataEntityStateSchema;
 import 'package:sync_manager/src/models/passage_translation.entity_state.isar.dart';
 import 'package:sync_manager/src/models/portion_translation.entity_state.isar.dart';
+import 'package:sync_manager/src/models/user_preferences.entity_state.isar.dart'
+    show IsarUserPreferencesDataEntityStateSchema;
 import 'package:sync_manager/src/models/video_translation.entity_state.isar.dart';
 
 void main(List<String> args) async {
@@ -95,6 +97,7 @@ void main(List<String> args) async {
   providedEntityStateSchemas;
   if (dbPath.contains('sltt-standalone-app')) {
     providedEntityStateSchemas = [
+      IsarUserPreferencesDataEntityStateSchema,
       IsarPortionDataEntityStateSchema,
       IsarPassageDataEntityStateSchema,
       IsarVideoDataEntityStateSchema,
@@ -129,7 +132,7 @@ void main(List<String> args) async {
   print('   GET  /health                            - Health check');
   print('   GET  /api/help                          - API documentation');
   print('   POST /api/changes                       - Create changes');
-  print('   GET  /api/projects                      - List all projects');
+  print('   GET  /api/ids/projects                      - List all projects');
   print('   GET  /api/changes/projects/{id}         - Get project changes');
   print('   GET  /api/state/projects/{id}/portions  - Get entity states');
   print('');

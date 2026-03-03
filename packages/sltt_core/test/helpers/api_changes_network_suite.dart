@@ -271,7 +271,7 @@ class ApiChangesNetworkTestSuite {
               );
             },
       },
-      'GET /api/projects/<projectId>/changes': {
+      'GET /api/changes/projects/<projectId>': {
         'returns empty list for project with no changes':
             ({setup, tearDown}) async {
               final domainId = '__test_get_project_changes_empty';

@@ -144,7 +144,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('   GET  /health                            - Health check');
     print('   GET  /api/help                          - API documentation');
     print('   POST /api/changes                       - Create changes');
-    print('   GET  /api/projects                      - List all projects');
+    print('   GET  /api/ids/projects                  - List all projects');
     print('   GET  /api/changes/projects/{id}         - Get project changes');
     print('   GET  /api/state/projects/{id}/portions  - Get entity states');
     print('');

@@ -17,10 +17,10 @@ void main() {
       router = server.getRouter();
     });
 
-    test('GET /api/projects returns domain ids', () async {
+    test('GET /api/ids/projects returns domain ids', () async {
       final response = await server.handleApiGatewayEvent({
         'httpMethod': 'GET',
-        'path': '/api/projects',
+        'path': '/api/ids/projects',
         'headers': <String, String>{},
       }, router);
 
