@@ -542,7 +542,7 @@ Future<void> testUserDomainDownsync({
     await resetDomainId(
       cloudBaseUrl,
       userId,
-      domainType: DomainType.user.value,
+      domainCollection: kCollectionUser,
     );
   }
 
@@ -1490,16 +1490,16 @@ Future<void> testFullSyncPartialUpdate({
 
 /// Helper function to reset/delete a test project domain (for Cloud tests).
 ///
-/// This calls the `/api/storage/__test/reset/{domainType}/{domainId}` endpoint
+/// This calls the `/api/storage/__test/reset/{domainCollection}/{domainId}` endpoint
 /// to delete all data for a test domain. The endpoint only allows deletion of
 /// domains with IDs starting with `__test`.
 Future<void> resetDomainId(
   String baseUrl,
   String domainId, {
-  String domainType = kDomainProject,
+  String domainCollection = kCollectionProject,
 }) async {
   final result = await http.delete(
-    Uri.parse('$baseUrl/api/storage/__test/reset/$domainType/$domainId'),
+    Uri.parse('$baseUrl/api/storage/__test/reset/$domainCollection/$domainId'),
   );
   expect(
     result.statusCode,

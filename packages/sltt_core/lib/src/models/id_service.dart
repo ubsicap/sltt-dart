@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:math';
 
 import 'package:sltt_core/sltt_core.dart' show generateRandomChars;

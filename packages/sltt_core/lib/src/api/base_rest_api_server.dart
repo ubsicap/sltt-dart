@@ -41,15 +41,6 @@ abstract class BaseRestApiServer {
     if (domainIdRaw != null && domainIdRaw.isNotEmpty) {
       return Uri.decodeComponent(domainIdRaw);
     }
-
-    // Fall back to the legacy `projectId` path parameter if present. This
-    // keeps existing tests and clients working until the codebase is fully
-    // migrated to domain-scoped routes.
-    final projectIdRaw = request.params['projectId'];
-    if (projectIdRaw != null && projectIdRaw.isNotEmpty) {
-      return Uri.decodeComponent(projectIdRaw);
-    }
-
     return null;
   }
 
@@ -223,7 +214,7 @@ abstract class BaseRestApiServer {
       'type': 'object',
       'properties': {
         'seq': {'type': 'integer', 'description': 'Sequence number'},
-        'projectId': {'type': 'string', 'description': 'Project identifier'},
+        'domainId': {'type': 'string', 'description': 'Domain identifier'},
         'entityType': {'type': 'string', 'description': 'Type of entity'},
         'operation': {
           'type': 'string',
@@ -963,9 +954,14 @@ abstract class BaseRestApiServer {
           'response': {
             'type': 'object',
             'properties': {
-              'projectId': {
+              '{domainType}Id': {
                 'type': 'string',
-                'description': 'The project identifier',
+                'description':
+                    'The domain identifier (e.g., userId, projectId)',
+              },
+              'domainId': {
+                'type': 'string',
+                'description': 'The domain identifier',
               },
               'changeStats': {
                 'type': 'object',
@@ -1047,9 +1043,14 @@ abstract class BaseRestApiServer {
           'response': {
             'type': 'object',
             'properties': {
-              'projectId': {
+              '{domainType}Id': {
                 'type': 'string',
-                'description': 'The domain/project identifier',
+                'description':
+                    'The domain identifier (e.g., userId, projectId)',
+              },
+              'domainId': {
+                'type': 'string',
+                'description': 'The domain identifier',
               },
               'entityType': {
                 'type': 'string',
@@ -1645,7 +1646,8 @@ abstract class BaseRestApiServer {
 
       return Response.ok(
         jsonEncode({
-          'projectId': domainId,
+          'domainId': domainId,
+          '${domainType}Id': domainId,
           'changeStats': changeStatsJson,
           'entityTypeStats': entityTypeStatsJson,
           'timestamp': DateTime.now().toUtc().toIso8601String(),
@@ -1762,8 +1764,8 @@ abstract class BaseRestApiServer {
         return _errorResponse(resolved['error'] as String, 400);
       }
       final domainType = resolved['domainType'] as String;
-      final projectId = _extractDomainId(request);
-      if (projectId == null || projectId.isEmpty) {
+      final domainId = _extractDomainId(request);
+      if (domainId == null || domainId.isEmpty) {
         return _errorResponse('Domain ID is required', 400);
       }
 
@@ -1811,7 +1813,7 @@ abstract class BaseRestApiServer {
       // Get entity state data
       final stateData = await storage.getEntityStates(
         domainType: domainType,
-        domainId: projectId,
+        domainId: domainId,
         entityType: decodedEntityType,
         cursor: cursor,
         limit: limit,
@@ -1822,7 +1824,8 @@ abstract class BaseRestApiServer {
 
       return Response.ok(
         jsonEncode({
-          'projectId': projectId,
+          'domainId': domainId,
+          '${domainType}Id': domainId,
           'entityType': decodedEntityType,
           'items': jsonDecode(stableStringify(stateData['items'])),
           'cursor': stateData['nextCursor'],
@@ -1846,8 +1849,8 @@ abstract class BaseRestApiServer {
         return _errorResponse(resolved['error'] as String, 400);
       }
       final domainType = resolved['domainType'] as String;
-      final projectId = _extractDomainId(request);
-      if (projectId == null || projectId.isEmpty) {
+      final domainId = _extractDomainId(request);
+      if (domainId == null || domainId.isEmpty) {
         return _errorResponse('Domain ID is required', 400);
       }
 
@@ -1866,14 +1869,15 @@ abstract class BaseRestApiServer {
       // Get entity state data
       final stateData = await storage.getEntityState(
         domainType: domainType,
-        domainId: projectId,
+        domainId: domainId,
         entityType: entityType,
         entityId: entityId,
       );
 
       return Response.ok(
         jsonEncode({
-          'projectId': projectId,
+          'domainId': domainId,
+          '${domainType}Id': domainId,
           'entityType': entityType,
           'entityId': entityId,
           'state': stateData?.toJson(),

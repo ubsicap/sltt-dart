@@ -134,8 +134,8 @@ class StateUpdateItem {
 @JsonSerializable()
 class ChangeObject {
   final int? seq;
-  @JsonKey(name: 'projectId')
-  final String? projectId;
+  @JsonKey(name: 'domainId')
+  final String? domainId;
   final String? entityType;
   final String? operation;
   final String? entityId;
@@ -145,7 +145,7 @@ class ChangeObject {
 
   ChangeObject({
     this.seq,
-    this.projectId,
+    this.domainId,
     this.entityType,
     this.operation,
     this.entityId,
@@ -213,24 +213,24 @@ class ProjectsResponse {
 }
 
 @JsonSerializable(explicitToJson: true)
-class ProjectStatsResponse {
-  final String projectId;
+class DomainStatsResponse {
+  final String domainId;
   final EntityTypeSummary? changeStats;
   final EntityTypeStats? entityTypeStats;
   final String? timestamp;
   final String? storageType;
 
-  ProjectStatsResponse({
-    required this.projectId,
+  DomainStatsResponse({
+    required this.domainId,
     this.changeStats,
     this.entityTypeStats,
     this.timestamp,
     this.storageType,
   });
 
-  factory ProjectStatsResponse.fromJson(Map<String, dynamic> json) =>
-      _$ProjectStatsResponseFromJson(json);
-  Map<String, dynamic> toJson() => _$ProjectStatsResponseToJson(this);
+  factory DomainStatsResponse.fromJson(Map<String, dynamic> json) =>
+      _$DomainStatsResponseFromJson(json);
+  Map<String, dynamic> toJson() => _$DomainStatsResponseToJson(this);
 }
 
 @JsonSerializable()

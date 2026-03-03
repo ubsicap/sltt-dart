@@ -553,7 +553,7 @@ class SyncManager {
         );
         if (response.statusCode == 200) {
           final stats = response.data as Map<String, dynamic>;
-          final ps = ProjectStatsResponse.fromJson(stats);
+          final ps = DomainStatsResponse.fromJson(stats);
           cloudStateStats = ps.entityTypeStats;
           cloudChangeStats = ps.changeStats;
         }

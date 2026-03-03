@@ -133,7 +133,7 @@ Map<String, dynamic> _$StateUpdateItemToJson(StateUpdateItem instance) =>
 
 ChangeObject _$ChangeObjectFromJson(Map<String, dynamic> json) => ChangeObject(
   seq: (json['seq'] as num?)?.toInt(),
-  projectId: json['projectId'] as String?,
+  domainId: json['domainId'] as String?,
   entityType: json['entityType'] as String?,
   operation: json['operation'] as String?,
   entityId: json['entityId'] as String?,
@@ -145,7 +145,7 @@ ChangeObject _$ChangeObjectFromJson(Map<String, dynamic> json) => ChangeObject(
 Map<String, dynamic> _$ChangeObjectToJson(ChangeObject instance) =>
     <String, dynamic>{
       'seq': instance.seq,
-      'projectId': instance.projectId,
+      'domainId': instance.domainId,
       'entityType': instance.entityType,
       'operation': instance.operation,
       'entityId': instance.entityId,
@@ -203,26 +203,27 @@ Map<String, dynamic> _$ProjectsResponseToJson(ProjectsResponse instance) =>
       'timestamp': instance.timestamp,
     };
 
-ProjectStatsResponse _$ProjectStatsResponseFromJson(
-  Map<String, dynamic> json,
-) => ProjectStatsResponse(
-  projectId: json['projectId'] as String,
-  changeStats: json['changeStats'] == null
-      ? null
-      : EntityTypeSummary.fromJson(json['changeStats'] as Map<String, dynamic>),
-  entityTypeStats: json['entityTypeStats'] == null
-      ? null
-      : EntityTypeStats.fromJson(
-          json['entityTypeStats'] as Map<String, dynamic>,
-        ),
-  timestamp: json['timestamp'] as String?,
-  storageType: json['storageType'] as String?,
-);
+DomainStatsResponse _$DomainStatsResponseFromJson(Map<String, dynamic> json) =>
+    DomainStatsResponse(
+      domainId: json['domainId'] as String,
+      changeStats: json['changeStats'] == null
+          ? null
+          : EntityTypeSummary.fromJson(
+              json['changeStats'] as Map<String, dynamic>,
+            ),
+      entityTypeStats: json['entityTypeStats'] == null
+          ? null
+          : EntityTypeStats.fromJson(
+              json['entityTypeStats'] as Map<String, dynamic>,
+            ),
+      timestamp: json['timestamp'] as String?,
+      storageType: json['storageType'] as String?,
+    );
 
-Map<String, dynamic> _$ProjectStatsResponseToJson(
-  ProjectStatsResponse instance,
+Map<String, dynamic> _$DomainStatsResponseToJson(
+  DomainStatsResponse instance,
 ) => <String, dynamic>{
-  'projectId': instance.projectId,
+  'domainId': instance.domainId,
   'changeStats': instance.changeStats?.toJson(),
   'entityTypeStats': instance.entityTypeStats?.toJson(),
   'timestamp': instance.timestamp,
