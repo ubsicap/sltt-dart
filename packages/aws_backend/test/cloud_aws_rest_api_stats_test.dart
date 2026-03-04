@@ -39,6 +39,7 @@ void main() {
             body,
             equals({
               'projectId': projectId,
+              'domainId': projectId,
               'changeStats': {
                 'creates': 0,
                 'updates': 0,
