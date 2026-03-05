@@ -198,28 +198,58 @@ const IsarUserPreferencesDataEntityStateSchema = CollectionSchema(
       name: r'data_rank_dataSchemaRev_',
       type: IsarType.long,
     ),
-    r'domainType': PropertySchema(
+    r'data_uiLocale': PropertySchema(
       id: 36,
+      name: r'data_uiLocale',
+      type: IsarType.string,
+    ),
+    r'data_uiLocale_changeAt_': PropertySchema(
+      id: 37,
+      name: r'data_uiLocale_changeAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_uiLocale_changeBy_': PropertySchema(
+      id: 38,
+      name: r'data_uiLocale_changeBy_',
+      type: IsarType.string,
+    ),
+    r'data_uiLocale_cid_': PropertySchema(
+      id: 39,
+      name: r'data_uiLocale_cid_',
+      type: IsarType.string,
+    ),
+    r'data_uiLocale_cloudAt_': PropertySchema(
+      id: 40,
+      name: r'data_uiLocale_cloudAt_',
+      type: IsarType.dateTime,
+    ),
+    r'data_uiLocale_dataSchemaRev_': PropertySchema(
+      id: 41,
+      name: r'data_uiLocale_dataSchemaRev_',
+      type: IsarType.long,
+    ),
+    r'domainType': PropertySchema(
+      id: 42,
       name: r'domainType',
       type: IsarType.string,
     ),
     r'entityId': PropertySchema(
-      id: 37,
+      id: 43,
       name: r'entityId',
       type: IsarType.string,
     ),
     r'entityType': PropertySchema(
-      id: 38,
+      id: 44,
       name: r'entityType',
       type: IsarType.string,
     ),
     r'schemaVersion': PropertySchema(
-      id: 39,
+      id: 45,
       name: r'schemaVersion',
       type: IsarType.long,
     ),
     r'unknownJson': PropertySchema(
-      id: 40,
+      id: 46,
       name: r'unknownJson',
       type: IsarType.string,
     ),
@@ -237,6 +267,29 @@ const IsarUserPreferencesDataEntityStateSchema = CollectionSchema(
       unique: true,
       replace: false,
       properties: [
+        IndexPropertySchema(
+          name: r'entityId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
+      ],
+    ),
+    r'change_domainId_data_parentId_entityId': IndexSchema(
+      id: 3628626482037321153,
+      name: r'change_domainId_data_parentId_entityId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'change_domainId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
+        IndexPropertySchema(
+          name: r'data_parentId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
         IndexPropertySchema(
           name: r'entityId',
           type: IndexType.hash,
@@ -302,6 +355,14 @@ int _isarUserPreferencesDataEntityStateEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.data_uiLocale.length * 3;
+  bytesCount += 3 + object.data_uiLocale_changeBy_.length * 3;
+  {
+    final value = object.data_uiLocale_cid_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.domainType.length * 3;
   bytesCount += 3 + object.entityId.length * 3;
   bytesCount += 3 + object.entityType.length * 3;
@@ -351,11 +412,17 @@ void _isarUserPreferencesDataEntityStateSerialize(
   writer.writeString(offsets[33], object.data_rank_cid_);
   writer.writeDateTime(offsets[34], object.data_rank_cloudAt_);
   writer.writeLong(offsets[35], object.data_rank_dataSchemaRev_);
-  writer.writeString(offsets[36], object.domainType);
-  writer.writeString(offsets[37], object.entityId);
-  writer.writeString(offsets[38], object.entityType);
-  writer.writeLong(offsets[39], object.schemaVersion);
-  writer.writeString(offsets[40], object.unknownJson);
+  writer.writeString(offsets[36], object.data_uiLocale);
+  writer.writeDateTime(offsets[37], object.data_uiLocale_changeAt_);
+  writer.writeString(offsets[38], object.data_uiLocale_changeBy_);
+  writer.writeString(offsets[39], object.data_uiLocale_cid_);
+  writer.writeDateTime(offsets[40], object.data_uiLocale_cloudAt_);
+  writer.writeLong(offsets[41], object.data_uiLocale_dataSchemaRev_);
+  writer.writeString(offsets[42], object.domainType);
+  writer.writeString(offsets[43], object.entityId);
+  writer.writeString(offsets[44], object.entityType);
+  writer.writeLong(offsets[45], object.schemaVersion);
+  writer.writeString(offsets[46], object.unknownJson);
 }
 
 IsarUserPreferencesDataEntityState
@@ -402,13 +469,19 @@ _isarUserPreferencesDataEntityStateDeserialize(
     data_rank_cid_: reader.readStringOrNull(offsets[33]),
     data_rank_cloudAt_: reader.readDateTimeOrNull(offsets[34]),
     data_rank_dataSchemaRev_: reader.readLongOrNull(offsets[35]),
-    domainType: reader.readString(offsets[36]),
-    entityId: reader.readStringOrNull(offsets[37]) ?? 'default_preferences',
+    data_uiLocale: reader.readString(offsets[36]),
+    data_uiLocale_changeAt_: reader.readDateTime(offsets[37]),
+    data_uiLocale_changeBy_: reader.readString(offsets[38]),
+    data_uiLocale_cid_: reader.readStringOrNull(offsets[39]),
+    data_uiLocale_cloudAt_: reader.readDateTimeOrNull(offsets[40]),
+    data_uiLocale_dataSchemaRev_: reader.readLongOrNull(offsets[41]),
+    domainType: reader.readString(offsets[42]),
+    entityId: reader.readString(offsets[43]),
     entityType:
-        reader.readStringOrNull(offsets[38]) ?? kEntityTypeUserPreferences,
+        reader.readStringOrNull(offsets[44]) ?? kEntityTypeUserPreferences,
     id: id,
-    schemaVersion: reader.readLongOrNull(offsets[39]),
-    unknownJson: reader.readString(offsets[40]),
+    schemaVersion: reader.readLongOrNull(offsets[45]),
+    unknownJson: reader.readString(offsets[46]),
   );
   return object;
 }
@@ -495,13 +568,25 @@ P _isarUserPreferencesDataEntityStateDeserializeProp<P>(
     case 36:
       return (reader.readString(offset)) as P;
     case 37:
-      return (reader.readStringOrNull(offset) ?? 'default_preferences') as P;
+      return (reader.readDateTime(offset)) as P;
     case 38:
+      return (reader.readString(offset)) as P;
+    case 39:
+      return (reader.readStringOrNull(offset)) as P;
+    case 40:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 41:
+      return (reader.readLongOrNull(offset)) as P;
+    case 42:
+      return (reader.readString(offset)) as P;
+    case 43:
+      return (reader.readString(offset)) as P;
+    case 44:
       return (reader.readStringOrNull(offset) ?? kEntityTypeUserPreferences)
           as P;
-    case 39:
+    case 45:
       return (reader.readLongOrNull(offset)) as P;
-    case 40:
+    case 46:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -761,6 +846,209 @@ extension IsarUserPreferencesDataEntityStateQueryWhere
                 indexName: r'entityId',
                 lower: [],
                 upper: [entityId],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdEqualToAnyData_parentIdEntityId(String change_domainId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'change_domainId_data_parentId_entityId',
+          value: [change_domainId],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdNotEqualToAnyData_parentIdEntityId(String change_domainId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [],
+                upper: [change_domainId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [],
+                upper: [change_domainId],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdData_parentIdEqualToAnyEntityId(
+    String change_domainId,
+    String data_parentId,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'change_domainId_data_parentId_entityId',
+          value: [change_domainId, data_parentId],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdEqualToData_parentIdNotEqualToAnyEntityId(
+    String change_domainId,
+    String data_parentId,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId],
+                upper: [change_domainId, data_parentId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId],
+                includeLower: false,
+                upper: [change_domainId],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId],
+                includeLower: false,
+                upper: [change_domainId],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId],
+                upper: [change_domainId, data_parentId],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdData_parentIdEntityIdEqualTo(
+    String change_domainId,
+    String data_parentId,
+    String entityId,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'change_domainId_data_parentId_entityId',
+          value: [change_domainId, data_parentId, entityId],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdData_parentIdEqualToEntityIdNotEqualTo(
+    String change_domainId,
+    String data_parentId,
+    String entityId,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId],
+                upper: [change_domainId, data_parentId, entityId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId, entityId],
+                includeLower: false,
+                upper: [change_domainId, data_parentId],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId, entityId],
+                includeLower: false,
+                upper: [change_domainId, data_parentId],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId],
+                upper: [change_domainId, data_parentId, entityId],
                 includeUpper: false,
               ),
             );
@@ -5700,6 +5988,857 @@ extension IsarUserPreferencesDataEntityStateQueryFilter
     IsarUserPreferencesDataEntityState,
     QAfterFilterCondition
   >
+  data_uiLocaleEqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_uiLocale',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocaleGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_uiLocale',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocaleLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_uiLocale',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocaleBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_uiLocale',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocaleStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_uiLocale',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocaleEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_uiLocale',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocaleContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_uiLocale',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocaleMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_uiLocale',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocaleIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'data_uiLocale', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocaleIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'data_uiLocale', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeAt_EqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_uiLocale_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeAt_GreaterThan(DateTime value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_uiLocale_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeAt_LessThan(DateTime value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_uiLocale_changeAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeAt_Between(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_uiLocale_changeAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeBy_EqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_uiLocale_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeBy_GreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_uiLocale_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeBy_LessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_uiLocale_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeBy_Between(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_uiLocale_changeBy_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeBy_StartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_uiLocale_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeBy_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_uiLocale_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeBy_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_uiLocale_changeBy_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeBy_Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_uiLocale_changeBy_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeBy_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_uiLocale_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_changeBy_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'data_uiLocale_changeBy_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_uiLocale_cid_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'data_uiLocale_cid_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_EqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_uiLocale_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_uiLocale_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_uiLocale_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_uiLocale_cid_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_StartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'data_uiLocale_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'data_uiLocale_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'data_uiLocale_cid_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'data_uiLocale_cid_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'data_uiLocale_cid_', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cid_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'data_uiLocale_cid_', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cloudAt_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_uiLocale_cloudAt_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cloudAt_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'data_uiLocale_cloudAt_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cloudAt_EqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_uiLocale_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cloudAt_GreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_uiLocale_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cloudAt_LessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_uiLocale_cloudAt_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_cloudAt_Between(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_uiLocale_cloudAt_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_dataSchemaRev_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'data_uiLocale_dataSchemaRev_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_dataSchemaRev_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(
+          property: r'data_uiLocale_dataSchemaRev_',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_dataSchemaRev_EqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'data_uiLocale_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_dataSchemaRev_GreaterThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'data_uiLocale_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_dataSchemaRev_LessThan(int? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'data_uiLocale_dataSchemaRev_',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
+  data_uiLocale_dataSchemaRev_Between(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'data_uiLocale_dataSchemaRev_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterFilterCondition
+  >
   domainTypeEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -7408,6 +8547,138 @@ extension IsarUserPreferencesDataEntityStateQuerySortBy
     IsarUserPreferencesDataEntityState,
     QAfterSortBy
   >
+  sortByData_uiLocale() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocaleDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocale_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_changeAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocale_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_changeAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocale_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_changeBy_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocale_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_changeBy_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocale_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocale_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_cid_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocale_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_cloudAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocale_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_cloudAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocale_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_dataSchemaRev_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  sortByData_uiLocale_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_dataSchemaRev_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
   sortByDomainType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'domainType', Sort.asc);
@@ -8318,6 +9589,138 @@ extension IsarUserPreferencesDataEntityStateQuerySortThenBy
     IsarUserPreferencesDataEntityState,
     QAfterSortBy
   >
+  thenByData_uiLocale() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocaleDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocale_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_changeAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocale_changeAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_changeAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocale_changeBy_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_changeBy_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocale_changeBy_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_changeBy_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocale_cid_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_cid_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocale_cid_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_cid_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocale_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_cloudAt_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocale_cloudAt_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_cloudAt_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocale_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_dataSchemaRev_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
+  thenByData_uiLocale_dataSchemaRev_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'data_uiLocale_dataSchemaRev_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QAfterSortBy
+  >
   thenByDomainType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'domainType', Sort.asc);
@@ -8899,6 +10302,81 @@ extension IsarUserPreferencesDataEntityStateQueryWhereDistinct
     IsarUserPreferencesDataEntityState,
     QDistinct
   >
+  distinctByData_uiLocale({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_uiLocale',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QDistinct
+  >
+  distinctByData_uiLocale_changeAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_uiLocale_changeAt_');
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QDistinct
+  >
+  distinctByData_uiLocale_changeBy_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_uiLocale_changeBy_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QDistinct
+  >
+  distinctByData_uiLocale_cid_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'data_uiLocale_cid_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QDistinct
+  >
+  distinctByData_uiLocale_cloudAt_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_uiLocale_cloudAt_');
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QDistinct
+  >
+  distinctByData_uiLocale_dataSchemaRev_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'data_uiLocale_dataSchemaRev_');
+    });
+  }
+
+  QueryBuilder<
+    IsarUserPreferencesDataEntityState,
+    IsarUserPreferencesDataEntityState,
+    QDistinct
+  >
   distinctByDomainType({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'domainType', caseSensitive: caseSensitive);
@@ -9217,6 +10695,48 @@ extension IsarUserPreferencesDataEntityStateQueryProperty
   }
 
   QueryBuilder<IsarUserPreferencesDataEntityState, String, QQueryOperations>
+  data_uiLocaleProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_uiLocale');
+    });
+  }
+
+  QueryBuilder<IsarUserPreferencesDataEntityState, DateTime, QQueryOperations>
+  data_uiLocale_changeAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_uiLocale_changeAt_');
+    });
+  }
+
+  QueryBuilder<IsarUserPreferencesDataEntityState, String, QQueryOperations>
+  data_uiLocale_changeBy_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_uiLocale_changeBy_');
+    });
+  }
+
+  QueryBuilder<IsarUserPreferencesDataEntityState, String?, QQueryOperations>
+  data_uiLocale_cid_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_uiLocale_cid_');
+    });
+  }
+
+  QueryBuilder<IsarUserPreferencesDataEntityState, DateTime?, QQueryOperations>
+  data_uiLocale_cloudAt_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_uiLocale_cloudAt_');
+    });
+  }
+
+  QueryBuilder<IsarUserPreferencesDataEntityState, int?, QQueryOperations>
+  data_uiLocale_dataSchemaRev_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'data_uiLocale_dataSchemaRev_');
+    });
+  }
+
+  QueryBuilder<IsarUserPreferencesDataEntityState, String, QQueryOperations>
   domainTypeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'domainType');
@@ -9274,10 +10794,7 @@ IsarUserPreferencesDataEntityState _$IsarUserPreferencesDataEntityStateFromJson(
       'id',
       (v) => (v as num?)?.toInt() ?? Isar.autoIncrement,
     ),
-    entityId: $checkedConvert(
-      'entityId',
-      (v) => v as String? ?? 'default_preferences',
-    ),
+    entityId: $checkedConvert('entityId', (v) => v as String),
     domainType: $checkedConvert('domainType', (v) => v as String),
     change_domainId: $checkedConvert('change_domainId', (v) => v as String),
     change_domainId_orig_: $checkedConvert(
@@ -9342,6 +10859,27 @@ IsarUserPreferencesDataEntityState _$IsarUserPreferencesDataEntityStateFromJson(
       (v) => v as String,
     ),
     unknownJson: $checkedConvert('unknownJson', (v) => v as String),
+    data_uiLocale: $checkedConvert('data_uiLocale', (v) => v as String),
+    data_uiLocale_dataSchemaRev_: $checkedConvert(
+      'data_uiLocale_dataSchemaRev_',
+      (v) => (v as num?)?.toInt(),
+    ),
+    data_uiLocale_changeAt_: $checkedConvert(
+      'data_uiLocale_changeAt_',
+      (v) => DateTime.parse(v as String),
+    ),
+    data_uiLocale_cid_: $checkedConvert(
+      'data_uiLocale_cid_',
+      (v) => v as String?,
+    ),
+    data_uiLocale_changeBy_: $checkedConvert(
+      'data_uiLocale_changeBy_',
+      (v) => v as String,
+    ),
+    data_uiLocale_cloudAt_: $checkedConvert(
+      'data_uiLocale_cloudAt_',
+      (v) => v == null ? null : DateTime.parse(v as String),
+    ),
     change_cloudAt: $checkedConvert(
       'change_cloudAt',
       (v) => v == null ? null : DateTime.parse(v as String),
@@ -9408,7 +10946,6 @@ Map<String, dynamic> _$IsarUserPreferencesDataEntityStateToJson(
   'domainType': instance.domainType,
   'unknownJson': instance.unknownJson,
   'schemaVersion': instance.schemaVersion,
-  'change_domainId': instance.change_domainId,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
   'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),
@@ -9448,4 +10985,11 @@ Map<String, dynamic> _$IsarUserPreferencesDataEntityStateToJson(
       ?.toIso8601String(),
   'id': instance.id,
   'entityId': instance.entityId,
+  'change_domainId': instance.change_domainId,
+  'data_uiLocale': instance.data_uiLocale,
+  'data_uiLocale_dataSchemaRev_': instance.data_uiLocale_dataSchemaRev_,
+  'data_uiLocale_changeAt_': instance.data_uiLocale_changeAt_.toIso8601String(),
+  'data_uiLocale_cid_': instance.data_uiLocale_cid_,
+  'data_uiLocale_changeBy_': instance.data_uiLocale_changeBy_,
+  'data_uiLocale_cloudAt_': instance.data_uiLocale_cloudAt_?.toIso8601String(),
 };

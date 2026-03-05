@@ -4,6 +4,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
+
 import 'package:sync_manager/sync_manager.dart';
 
 part 'note.entity_state.isar.g.dart';
@@ -16,6 +17,12 @@ class IsarNoteDataEntityState extends BaseEntityState {
   @override
   @Index(unique: true)
   final String entityId;
+
+  @override
+  @Index(
+    composite: [CompositeIndex('data_parentId'), CompositeIndex('entityId')],
+  )
+  String get change_domainId => super.change_domainId;
 
   // data fields (mirror of NoteData)
   final String data_title;
@@ -230,10 +237,10 @@ void registerIsarNoteDataEntityStateStorageGroup(
           collection: (isar) => isar.isarNoteDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarNoteDataEntityStates
+              .where()
+              .entityIdEqualTo(entityId)
               .filter()
               .change_domainIdEqualTo(projectId)
-              .and()
-              .entityIdEqualTo(entityId)
               .findFirst(),
           findByDomainWithPagination:
               ({
@@ -244,12 +251,35 @@ void registerIsarNoteDataEntityStateStorageGroup(
                 String? parentProp,
                 DateTime? storedAfter,
               }) async {
+                if (parentId != null) {
+                  var query = isar.isarNoteDataEntityStates
+                      .where()
+                      .change_domainIdData_parentIdEqualToAnyEntityId(
+                        domainId,
+                        parentId,
+                      )
+                      .filter()
+                      .change_domainIdEqualTo(domainId);
+                  if (parentProp != null) {
+                    query = query.and().data_parentPropEqualTo(parentProp);
+                  }
+                  if (storedAfter != null) {
+                    query = query.and().change_storedAtGreaterThan(storedAfter);
+                  }
+                  if (cursor != null) {
+                    query = query.and().entityIdGreaterThan(cursor);
+                  }
+                  return await query
+                      .sortByEntityId()
+                      .limit(limit ?? 100)
+                      .findAll();
+                }
+
                 var query = isar.isarNoteDataEntityStates
+                    .where()
+                    .change_domainIdEqualToAnyData_parentIdEntityId(domainId)
                     .filter()
                     .change_domainIdEqualTo(domainId);
-                if (parentId != null) {
-                  query = query.and().data_parentIdEqualTo(parentId);
-                }
                 if (parentProp != null) {
                   query = query.and().data_parentPropEqualTo(parentProp);
                 }
@@ -271,8 +301,8 @@ void registerIsarNoteDataEntityStateStorageGroup(
           },
           deleteByDomain: ({required domainId, required domainType}) async =>
               await isar.isarNoteDataEntityStates
-                  .filter()
-                  .change_domainIdEqualTo(domainId)
+                  .where()
+                  .change_domainIdEqualToAnyData_parentIdEntityId(domainId)
                   .deleteAll(),
           lazyListenToEntityChanges:
               ({
@@ -285,12 +315,22 @@ void registerIsarNoteDataEntityStateStorageGroup(
                 String? parentId,
                 String? parentProp,
               }) {
-                var query = isar.isarNoteDataEntityStates
-                    .filter()
-                    .change_domainIdEqualTo(domainId);
-                if (parentId != null) {
-                  query = query.and().data_parentIdEqualTo(parentId);
-                }
+                var query = parentId != null
+                    ? isar.isarNoteDataEntityStates
+                          .where()
+                          .change_domainIdData_parentIdEqualToAnyEntityId(
+                            domainId,
+                            parentId,
+                          )
+                          .filter()
+                          .change_domainIdEqualTo(domainId)
+                    : isar.isarNoteDataEntityStates
+                          .where()
+                          .change_domainIdEqualToAnyData_parentIdEntityId(
+                            domainId,
+                          )
+                          .filter()
+                          .change_domainIdEqualTo(domainId);
                 if (parentProp != null) {
                   query = query.and().data_parentPropEqualTo(parentProp);
                 }

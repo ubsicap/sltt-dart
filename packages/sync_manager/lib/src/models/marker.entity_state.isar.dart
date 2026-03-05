@@ -17,6 +17,12 @@ class IsarMarkerDataEntityState extends BaseEntityState {
   @Index(unique: true)
   final String entityId;
 
+  @override
+  @Index(
+    composite: [CompositeIndex('data_parentId'), CompositeIndex('entityId')],
+  )
+  String get change_domainId => super.change_domainId;
+
   // data fields (mirror of MarkerData)
   final int data_colorValue;
   final int? data_colorValue_dataSchemaRev_;
@@ -163,10 +169,10 @@ void registerIsarMarkerDataEntityStateStorageGroup(
           collection: (isar) => isar.isarMarkerDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarMarkerDataEntityStates
+              .where()
+              .entityIdEqualTo(entityId)
               .filter()
               .change_domainIdEqualTo(projectId)
-              .and()
-              .entityIdEqualTo(entityId)
               .findFirst(),
           findByDomainWithPagination:
               ({
@@ -177,12 +183,35 @@ void registerIsarMarkerDataEntityStateStorageGroup(
                 String? parentProp,
                 DateTime? storedAfter,
               }) async {
+                if (parentId != null) {
+                  var query = isar.isarMarkerDataEntityStates
+                      .where()
+                      .change_domainIdData_parentIdEqualToAnyEntityId(
+                        domainId,
+                        parentId,
+                      )
+                      .filter()
+                      .change_domainIdEqualTo(domainId);
+                  if (parentProp != null) {
+                    query = query.and().data_parentPropEqualTo(parentProp);
+                  }
+                  if (storedAfter != null) {
+                    query = query.and().change_storedAtGreaterThan(storedAfter);
+                  }
+                  if (cursor != null) {
+                    query = query.and().entityIdGreaterThan(cursor);
+                  }
+                  return await query
+                      .sortByEntityId()
+                      .limit(limit ?? 100)
+                      .findAll();
+                }
+
                 var query = isar.isarMarkerDataEntityStates
+                    .where()
+                    .change_domainIdEqualToAnyData_parentIdEntityId(domainId)
                     .filter()
                     .change_domainIdEqualTo(domainId);
-                if (parentId != null) {
-                  query = query.and().data_parentIdEqualTo(parentId);
-                }
                 if (parentProp != null) {
                   query = query.and().data_parentPropEqualTo(parentProp);
                 }
@@ -204,8 +233,8 @@ void registerIsarMarkerDataEntityStateStorageGroup(
           },
           deleteByDomain: ({required domainId, required domainType}) async =>
               await isar.isarMarkerDataEntityStates
-                  .filter()
-                  .change_domainIdEqualTo(domainId)
+                  .where()
+                  .change_domainIdEqualToAnyData_parentIdEntityId(domainId)
                   .deleteAll(),
           lazyListenToEntityChanges:
               ({
@@ -218,12 +247,22 @@ void registerIsarMarkerDataEntityStateStorageGroup(
                 String? parentId,
                 String? parentProp,
               }) {
-                var query = isar.isarMarkerDataEntityStates
-                    .filter()
-                    .change_domainIdEqualTo(domainId);
-                if (parentId != null) {
-                  query = query.and().data_parentIdEqualTo(parentId);
-                }
+                var query = parentId != null
+                    ? isar.isarMarkerDataEntityStates
+                          .where()
+                          .change_domainIdData_parentIdEqualToAnyEntityId(
+                            domainId,
+                            parentId,
+                          )
+                          .filter()
+                          .change_domainIdEqualTo(domainId)
+                    : isar.isarMarkerDataEntityStates
+                          .where()
+                          .change_domainIdEqualToAnyData_parentIdEntityId(
+                            domainId,
+                          )
+                          .filter()
+                          .change_domainIdEqualTo(domainId);
                 if (parentProp != null) {
                   query = query.and().data_parentPropEqualTo(parentProp);
                 }

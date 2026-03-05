@@ -484,6 +484,29 @@ const IsarNoteDataEntityStateSchema = CollectionSchema(
         ),
       ],
     ),
+    r'change_domainId_data_parentId_entityId': IndexSchema(
+      id: 3628626482037321153,
+      name: r'change_domainId_data_parentId_entityId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'change_domainId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
+        IndexPropertySchema(
+          name: r'data_parentId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
+        IndexPropertySchema(
+          name: r'entityId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
+      ],
+    ),
   },
   links: {},
   embeddedSchemas: {},
@@ -1309,6 +1332,209 @@ extension IsarNoteDataEntityStateQueryWhere
                 indexName: r'entityId',
                 lower: [],
                 upper: [entityId],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdEqualToAnyData_parentIdEntityId(String change_domainId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'change_domainId_data_parentId_entityId',
+          value: [change_domainId],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdNotEqualToAnyData_parentIdEntityId(String change_domainId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [],
+                upper: [change_domainId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [],
+                upper: [change_domainId],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdData_parentIdEqualToAnyEntityId(
+    String change_domainId,
+    String data_parentId,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'change_domainId_data_parentId_entityId',
+          value: [change_domainId, data_parentId],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdEqualToData_parentIdNotEqualToAnyEntityId(
+    String change_domainId,
+    String data_parentId,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId],
+                upper: [change_domainId, data_parentId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId],
+                includeLower: false,
+                upper: [change_domainId],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId],
+                includeLower: false,
+                upper: [change_domainId],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId],
+                upper: [change_domainId, data_parentId],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdData_parentIdEntityIdEqualTo(
+    String change_domainId,
+    String data_parentId,
+    String entityId,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'change_domainId_data_parentId_entityId',
+          value: [change_domainId, data_parentId, entityId],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarNoteDataEntityState,
+    IsarNoteDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdData_parentIdEqualToEntityIdNotEqualTo(
+    String change_domainId,
+    String data_parentId,
+    String entityId,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId],
+                upper: [change_domainId, data_parentId, entityId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId, entityId],
+                includeLower: false,
+                upper: [change_domainId, data_parentId],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId, entityId],
+                includeLower: false,
+                upper: [change_domainId, data_parentId],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_data_parentId_entityId',
+                lower: [change_domainId, data_parentId],
+                upper: [change_domainId, data_parentId, entityId],
                 includeUpper: false,
               ),
             );
@@ -18665,7 +18891,6 @@ Map<String, dynamic> _$IsarNoteDataEntityStateToJson(
   'domainType': instance.domainType,
   'unknownJson': instance.unknownJson,
   'schemaVersion': instance.schemaVersion,
-  'change_domainId': instance.change_domainId,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
   'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),
@@ -18705,6 +18930,7 @@ Map<String, dynamic> _$IsarNoteDataEntityStateToJson(
       ?.toIso8601String(),
   'id': instance.id,
   'entityId': instance.entityId,
+  'change_domainId': instance.change_domainId,
   'data_title': instance.data_title,
   'data_title_dataSchemaRev_': instance.data_title_dataSchemaRev_,
   'data_title_changeAt_': instance.data_title_changeAt_.toIso8601String(),

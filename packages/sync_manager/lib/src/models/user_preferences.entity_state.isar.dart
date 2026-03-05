@@ -3,6 +3,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
+
 import 'package:sync_manager/sync_manager.dart';
 
 part 'user_preferences.entity_state.isar.g.dart';
@@ -16,13 +17,24 @@ class IsarUserPreferencesDataEntityState extends BaseEntityState {
   @Index(unique: true)
   final String entityId;
 
-  // TODO: add the actual data_{preference} fields here
+  @override
+  @Index(
+    composite: [CompositeIndex('data_parentId'), CompositeIndex('entityId')],
+  )
+  String get change_domainId => super.change_domainId;
+
+  final String data_uiLocale;
+  final int? data_uiLocale_dataSchemaRev_;
+  final DateTime data_uiLocale_changeAt_;
+  final String? data_uiLocale_cid_;
+  final String data_uiLocale_changeBy_;
+  final DateTime? data_uiLocale_cloudAt_;
 
   IsarUserPreferencesDataEntityState({
     super.schemaVersion,
     super.entityType = kEntityTypeUserPreferences,
     this.id = Isar.autoIncrement,
-    this.entityId = kEntityIdDefaultUserPreferences,
+    required this.entityId,
     required super.domainType,
     required super.change_domainId,
     required super.change_domainId_orig_,
@@ -45,6 +57,12 @@ class IsarUserPreferencesDataEntityState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     required super.unknownJson,
+    required this.data_uiLocale,
+    this.data_uiLocale_dataSchemaRev_,
+    required DateTime data_uiLocale_changeAt_,
+    this.data_uiLocale_cid_,
+    required this.data_uiLocale_changeBy_,
+    DateTime? data_uiLocale_cloudAt_,
     super.change_cloudAt,
     super.change_dataSchemaRev,
     super.data_deleted,
@@ -61,7 +79,8 @@ class IsarUserPreferencesDataEntityState extends BaseEntityState {
     super.data_rank_cid_,
     super.data_rank_cloudAt_,
     super.data_rank_dataSchemaRev_,
-  });
+  }) : data_uiLocale_changeAt_ = data_uiLocale_changeAt_.toUtc(),
+       data_uiLocale_cloudAt_ = data_uiLocale_cloudAt_?.toUtc();
 
   static IsarUserPreferencesDataEntityState fromJsonBase(
     Map<String, dynamic> json,
@@ -102,10 +121,10 @@ void registerIsarUserPreferencesDataEntityStateStorageGroup(
           collection: (isar) => isar.isarUserPreferencesDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarUserPreferencesDataEntityStates
+              .where()
+              .entityIdEqualTo(entityId)
               .filter()
               .change_domainIdEqualTo(projectId)
-              .and()
-              .entityIdEqualTo(entityId)
               .findFirst(),
           findByDomainWithPagination:
               ({
@@ -116,12 +135,35 @@ void registerIsarUserPreferencesDataEntityStateStorageGroup(
                 String? parentProp,
                 DateTime? storedAfter,
               }) async {
+                if (parentId != null) {
+                  var query = isar.isarUserPreferencesDataEntityStates
+                      .where()
+                      .change_domainIdData_parentIdEqualToAnyEntityId(
+                        domainId,
+                        parentId,
+                      )
+                      .filter()
+                      .change_domainIdEqualTo(domainId);
+                  if (parentProp != null) {
+                    query = query.and().data_parentPropEqualTo(parentProp);
+                  }
+                  if (storedAfter != null) {
+                    query = query.and().change_storedAtGreaterThan(storedAfter);
+                  }
+                  if (cursor != null) {
+                    query = query.and().entityIdGreaterThan(cursor);
+                  }
+                  return await query
+                      .sortByEntityId()
+                      .limit(limit ?? 100)
+                      .findAll();
+                }
+
                 var query = isar.isarUserPreferencesDataEntityStates
+                    .where()
+                    .change_domainIdEqualToAnyData_parentIdEntityId(domainId)
                     .filter()
                     .change_domainIdEqualTo(domainId);
-                if (parentId != null) {
-                  query = query.and().data_parentIdEqualTo(parentId);
-                }
                 if (parentProp != null) {
                   query = query.and().data_parentPropEqualTo(parentProp);
                 }
@@ -145,8 +187,8 @@ void registerIsarUserPreferencesDataEntityStateStorageGroup(
           },
           deleteByDomain: ({required domainId, required domainType}) async =>
               await isar.isarUserPreferencesDataEntityStates
-                  .filter()
-                  .change_domainIdEqualTo(domainId)
+                  .where()
+                  .change_domainIdEqualToAnyData_parentIdEntityId(domainId)
                   .deleteAll(),
           lazyListenToEntityChanges:
               ({
@@ -159,12 +201,22 @@ void registerIsarUserPreferencesDataEntityStateStorageGroup(
                 String? parentId,
                 String? parentProp,
               }) {
-                var query = isar.isarUserPreferencesDataEntityStates
-                    .filter()
-                    .change_domainIdEqualTo(domainId);
-                if (parentId != null) {
-                  query = query.and().data_parentIdEqualTo(parentId);
-                }
+                var query = parentId != null
+                    ? isar.isarUserPreferencesDataEntityStates
+                          .where()
+                          .change_domainIdData_parentIdEqualToAnyEntityId(
+                            domainId,
+                            parentId,
+                          )
+                          .filter()
+                          .change_domainIdEqualTo(domainId)
+                    : isar.isarUserPreferencesDataEntityStates
+                          .where()
+                          .change_domainIdEqualToAnyData_parentIdEntityId(
+                            domainId,
+                          )
+                          .filter()
+                          .change_domainIdEqualTo(domainId);
                 if (parentProp != null) {
                   query = query.and().data_parentPropEqualTo(parentProp);
                 }

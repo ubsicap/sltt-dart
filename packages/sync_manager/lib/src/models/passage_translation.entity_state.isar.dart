@@ -5,6 +5,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
+
 import 'package:sync_manager/sync_manager.dart';
 
 part 'passage_translation.entity_state.isar.g.dart';
@@ -17,6 +18,12 @@ class IsarPassageDataEntityState extends BaseEntityState {
   @override
   @Index(unique: true)
   final String entityId;
+
+  @override
+  @Index(
+    composite: [CompositeIndex('data_parentId'), CompositeIndex('entityId')],
+  )
+  String get change_domainId => super.change_domainId;
 
   // data fields (mirror of PassageTranslationData)
   final String data_name;
@@ -178,7 +185,7 @@ class IsarPassageDataEntityState extends BaseEntityState {
   Map<String, dynamic> toJsonSafe() {
     final j = toJson();
     j.putIfAbsent('data_name', () => '');
-    j.putIfAbsent('data_visibility', () => <String>[]);
+    j.putIfAbsent('data_visibility', () => '');
     return j;
   }
 
@@ -213,10 +220,10 @@ void registerIsarPassageDataEntityStateStorageGroup(
           collection: (isar) => isar.isarPassageDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarPassageDataEntityStates
+              .where()
+              .entityIdEqualTo(entityId)
               .filter()
               .change_domainIdEqualTo(projectId)
-              .and()
-              .entityIdEqualTo(entityId)
               .findFirst(),
           findByDomainWithPagination:
               ({
@@ -227,12 +234,35 @@ void registerIsarPassageDataEntityStateStorageGroup(
                 String? parentProp,
                 DateTime? storedAfter,
               }) async {
+                if (parentId != null) {
+                  var query = isar.isarPassageDataEntityStates
+                      .where()
+                      .change_domainIdData_parentIdEqualToAnyEntityId(
+                        domainId,
+                        parentId,
+                      )
+                      .filter()
+                      .change_domainIdEqualTo(domainId);
+                  if (parentProp != null) {
+                    query = query.and().data_parentPropEqualTo(parentProp);
+                  }
+                  if (storedAfter != null) {
+                    query = query.and().change_storedAtGreaterThan(storedAfter);
+                  }
+                  if (cursor != null) {
+                    query = query.and().entityIdGreaterThan(cursor);
+                  }
+                  return await query
+                      .sortByEntityId()
+                      .limit(limit ?? 100)
+                      .findAll();
+                }
+
                 var query = isar.isarPassageDataEntityStates
+                    .where()
+                    .change_domainIdEqualToAnyData_parentIdEntityId(domainId)
                     .filter()
                     .change_domainIdEqualTo(domainId);
-                if (parentId != null) {
-                  query = query.and().data_parentIdEqualTo(parentId);
-                }
                 if (parentProp != null) {
                   query = query.and().data_parentPropEqualTo(parentProp);
                 }
@@ -254,8 +284,8 @@ void registerIsarPassageDataEntityStateStorageGroup(
           },
           deleteByDomain: ({required domainId, required domainType}) async =>
               await isar.isarPassageDataEntityStates
-                  .filter()
-                  .change_domainIdEqualTo(domainId)
+                  .where()
+                  .change_domainIdEqualToAnyData_parentIdEntityId(domainId)
                   .deleteAll(),
           lazyListenToEntityChanges:
               ({
@@ -268,12 +298,22 @@ void registerIsarPassageDataEntityStateStorageGroup(
                 String? parentId,
                 String? parentProp,
               }) {
-                var query = isar.isarPassageDataEntityStates
-                    .filter()
-                    .change_domainIdEqualTo(domainId);
-                if (parentId != null) {
-                  query = query.and().data_parentIdEqualTo(parentId);
-                }
+                var query = parentId != null
+                    ? isar.isarPassageDataEntityStates
+                          .where()
+                          .change_domainIdData_parentIdEqualToAnyEntityId(
+                            domainId,
+                            parentId,
+                          )
+                          .filter()
+                          .change_domainIdEqualTo(domainId)
+                    : isar.isarPassageDataEntityStates
+                          .where()
+                          .change_domainIdEqualToAnyData_parentIdEntityId(
+                            domainId,
+                          )
+                          .filter()
+                          .change_domainIdEqualTo(domainId);
                 if (parentProp != null) {
                   query = query.and().data_parentPropEqualTo(parentProp);
                 }
