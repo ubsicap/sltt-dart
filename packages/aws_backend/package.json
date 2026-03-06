@@ -56,7 +56,9 @@
     "s3:ls-export": "node scripts/s3_export_ops.js ls",
     "s3:download-export": "node scripts/s3_export_ops.js download",
     "dynamodb:json-to-parquet": "python scripts/dynamodb_json_to_parquet.py --input ./diag-export",
-    "dynamodb:json-to-parquet:overwrite": "python scripts/dynamodb_json_to_parquet.py --input ./diag-export --overwrite"
+    "dynamodb:json-to-parquet:overwrite": "python scripts/dynamodb_json_to_parquet.py --input ./diag-export --overwrite",
+    "dynamodb:parquet-combine": "python scripts/combine_parquet_exports.py --input ./diag-export/AWSDynamoDB-parquet --output ./diag-export/AWSDynamoDB-parquet-combined.parquet",
+    "dynamodb:parquet-combine:overwrite": "python scripts/combine_parquet_exports.py --input ./diag-export/AWSDynamoDB-parquet --output ./diag-export/AWSDynamoDB-parquet-combined.parquet --overwrite"
   },
   "keywords": [],
   "author": "",
