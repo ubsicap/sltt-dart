@@ -272,6 +272,19 @@ resources:
                     # Cross-account: secondary account (sltt-epyle dev/tst)
                     - 'arn:aws:sts::662482841188:assumed-role/sltt-secondary-infra-*-us-east-1-lambdaRole/*'
 
+            # Allow DynamoDB service to export table to S3
+            - Sid: AllowDynamoDBExport
+              Effect: Allow
+              Principal:
+                Service: dynamodb.amazonaws.com
+              Action:
+                - s3:PutObject
+                - s3:ListBucket
+                - s3:GetBucketLocation
+              Resource:
+                - arn:aws:s3:::${self:custom.mediaBucket}
+                - arn:aws:s3:::${self:custom.mediaBucket}/*
+
     # IAM policy to allow secondary deployments to read SSM parameters
     # This is attached to the CrossAccountAccessRole to enable parameter reads
     SsmParameterAccessPolicy:

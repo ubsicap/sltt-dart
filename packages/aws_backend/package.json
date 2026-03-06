@@ -49,7 +49,12 @@
     "cloudfront:private-key-set-ssm:prd": "aws ssm put-parameter --name /sltt/media/cloudfront/prd/MEDIA_CLOUDFRONT_PRIVATE_KEY --type SecureString --value file://../../../private_key.pem --overwrite --profile sltt-dart-prd",
     "clean": "rm -f bootstrap && rm -rf .serverless",
     "generate-server-urls": "node ../../scripts/generate_server_urls.js",
-    "test": "dart test"
+    "test": "dart test",
+    "dynamodb:export": "node scripts/s3_export_ops.js export",
+    "dynamodb:status": "node scripts/s3_export_ops.js status",
+    "dynamodb:poll-export": "node scripts/s3_export_ops.js status poll",
+    "s3:ls-export": "node scripts/s3_export_ops.js ls",
+    "s3:download-export": "node scripts/s3_export_ops.js download"
   },
   "keywords": [],
   "author": "",
