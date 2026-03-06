@@ -54,7 +54,9 @@
     "dynamodb:status": "node scripts/s3_export_ops.js status",
     "dynamodb:poll-export": "node scripts/s3_export_ops.js status poll",
     "s3:ls-export": "node scripts/s3_export_ops.js ls",
-    "s3:download-export": "node scripts/s3_export_ops.js download"
+    "s3:download-export": "node scripts/s3_export_ops.js download",
+    "dynamodb:json-to-parquet": "python scripts/dynamodb_json_to_parquet.py --input ./diag-export",
+    "dynamodb:json-to-parquet:overwrite": "python scripts/dynamodb_json_to_parquet.py --input ./diag-export --overwrite"
   },
   "keywords": [],
   "author": "",
