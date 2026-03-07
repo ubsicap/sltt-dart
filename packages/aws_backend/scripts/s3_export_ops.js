@@ -7,6 +7,15 @@ const action = process.argv[2];
 const profile = process.env.AWS_PROFILE || 'sltt-dart-prd';
 const region = process.env.AWS_REGION || 'us-east-1';
 
+const MESSAGES = {
+  USAGE: 'Usage: node scripts/s3_export_ops.js <export|status|ls|download|exports>',
+  DEFAULTS: 'DEFAULTS: TABLE_ARN=arn:aws:dynamodb:us-east-1:379334555674:table/sltt-shared-infra-changes-states, S3_BUCKET=sltt-shared-infra-media-worm-379334555674, S3_PREFIX=dynamodb-exports/diag',
+  WRITTEN_LAST_EXPORT: 'Wrote ./last_export_arn; you can set EXPORT_ARN from it or re-run other scripts.',
+  USING_LAST_EXPORT: 'Using ./last_export_arn',
+  ERROR_NO_LAST: 'ERROR: ./last_export_arn not found. Run `node scripts/s3_export_ops.js export` first.',
+  NO_EXPORTS_FOUND: 'No exports found'
+};
+
 function run(cmd, opts = {}) {
   return execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'], ...opts }).trim();
 }
@@ -29,9 +38,9 @@ function writeLastExportArn(arn) {
 
 try {
   if (action === 'help' || !action) {
-    console.log('Usage: node scripts/s3_export_ops.js <export|status|ls|download>');
+    console.log(MESSAGES.USAGE);
     console.log('  export: Start a new export of the DynamoDB table to S3. Requires TABLE_ARN, S3_BUCKET, and S3_PREFIX env vars or defaults.');
-    console.log('DEFAULTS: TABLE_ARN=arn:aws:dynamodb:us-east-1:379334555674:table/sltt-shared-infra-changes-states, S3_BUCKET=sltt-shared-infra-media-worm-379334555674, S3_PREFIX=dynamodb-exports/diag');
+    console.log(MESSAGES.DEFAULTS);
     console.log('  status: Check the status of the export specified by EXPORT_ARN env var or last_export_arn file.');
     console.log('  ls: List the objects in the S3 export specified by EXPORT_ARN env var or last_export_arn file.');
     console.log('  download: Download the objects from the S3 export specified by EXPORT_ARN env var or last_export_arn file.');
@@ -46,18 +55,88 @@ try {
     const exportArn = run(`aws dynamodb export-table-to-point-in-time --table-arn ${tableArn} --s3-bucket ${bucket} --s3-prefix ${prefix} --export-format DYNAMODB_JSON --profile ${profile} --region ${region} --query ExportDescription.ExportArn --output text`);
     console.log('Export started. ExportArn:', exportArn);
     writeLastExportArn(exportArn);
-    console.log('Wrote ./last_export_arn; you can set EXPORT_ARN from it or re-run other scripts.');
-    console.log('Using ExportArn:', exportArn);
+    console.log(MESSAGES.WRITTEN_LAST_EXPORT);
+    console.log(MESSAGES.USING_LAST_EXPORT, exportArn);
     process.exit(0);
+  }
+
+  if (action === 'exports') {
+    // parse --limit or --limit=X
+    let limit = 5;
+    for (let i = 3; i < process.argv.length; i++) {
+      const a = process.argv[i];
+      if (!a) continue;
+      if (a.indexOf('--limit=') === 0) {
+        const v = a.split('=')[1];
+        limit = parseInt(v, 10) || limit;
+      } else if (a === '--limit' && process.argv[i + 1]) {
+        limit = parseInt(process.argv[i + 1], 10) || limit;
+      }
+    }
+    if (!limit || limit < 1) limit = 5;
+
+    const tableArn = process.env.TABLE_ARN || 'arn:aws:dynamodb:us-east-1:379334555674:table/sltt-shared-infra-changes-states';
+    console.log(`Listing last ${limit} exports for table ${tableArn}...`);
+
+    try {
+      const out = run(`aws dynamodb list-exports --table-arn ${tableArn} --profile ${profile} --region ${region} --output json`);
+      const data = JSON.parse(out || '{}');
+      const summaries = Array.isArray(data.ExportSummaries) ? data.ExportSummaries : [];
+      if (summaries.length === 0) {
+        console.log(MESSAGES.NO_EXPORTS_FOUND);
+        process.exit(0);
+      }
+
+      const describedExports = summaries.map(summary => {
+        const arn = summary.ExportArn;
+        if (!arn) {
+          return {
+            exportArn: '<no-arn>',
+            exportStatus: summary.ExportStatus || '<no-status>',
+            exportType: summary.ExportType || '<no-type>',
+            startTime: '<no-start-time>',
+            exportTime: '<no-export-time>',
+            s3Bucket: '<no-bucket>',
+            s3Prefix: '<no-prefix>'
+          };
+        }
+
+        const describedOut = run(`aws dynamodb describe-export --export-arn ${arn} --profile ${profile} --region ${region} --output json`);
+        const described = JSON.parse(describedOut || '{}');
+        const exportDescription = described.ExportDescription || {};
+
+        return {
+          exportArn: exportDescription.ExportArn || arn,
+          exportStatus: exportDescription.ExportStatus || summary.ExportStatus || '<no-status>',
+          exportType: exportDescription.ExportType || summary.ExportType || '<no-type>',
+          startTime: exportDescription.StartTime || '<no-start-time>',
+          exportTime: exportDescription.ExportTime || '<no-export-time>',
+          s3Bucket: exportDescription.S3Bucket || '<no-bucket>',
+          s3Prefix: exportDescription.S3Prefix || '<no-prefix>'
+        };
+      });
+
+      describedExports.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+
+      describedExports.slice(0, limit).forEach(exportInfo => {
+        console.log(
+          `${exportInfo.startTime}  Status=${exportInfo.exportStatus}  Type=${exportInfo.exportType}  ExportTime=${exportInfo.exportTime}  ExportArn=${exportInfo.exportArn}  Bucket=${exportInfo.s3Bucket}  Prefix=${exportInfo.s3Prefix}`
+        );
+      });
+      process.exit(0);
+    } catch (e) {
+      console.error('ERROR listing exports:', e && e.message ? e.message : e);
+      process.exit(1);
+    }
   }
 
   if (action === 'status') {
     const exportArn = readLastExportArn();
     if (!exportArn) {
-      console.error('ERROR: ./last_export_arn not found. Run `node scripts/s3_export_ops.js export` first.');
+      console.error(MESSAGES.ERROR_NO_LAST);
       process.exit(2);
     }
-    console.log('Using ExportArn:', exportArn);
+    console.log(MESSAGES.USING_LAST_EXPORT, exportArn);
 
     const shouldPoll = process.argv[3] === 'poll' || process.env.POLL === '1' || process.env.POLL === 'true';
     const pollInterval = parseInt(process.env.POLL_INTERVAL_SECONDS || '10', 10);
@@ -111,10 +190,10 @@ try {
   // For ls/download we support falling back to last_export_arn
   const exportArn = readLastExportArn();
   if (!exportArn) {
-    console.error('ERROR: ./last_export_arn not found. Run `node scripts/s3_export_ops.js export` first.');
+    console.error(MESSAGES.ERROR_NO_LAST);
     process.exit(2);
   }
-  console.log('Using ExportArn:', exportArn);
+  console.log(MESSAGES.USING_LAST_EXPORT, exportArn);
 
   const bucket = run(`aws dynamodb describe-export --export-arn ${exportArn} --profile ${profile} --region ${region} --query ExportDescription.S3Bucket --output text`);
   const prefix = run(`aws dynamodb describe-export --export-arn ${exportArn} --profile ${profile} --region ${region} --query ExportDescription.S3Prefix --output text`);
@@ -138,8 +217,8 @@ try {
     console.log(`Downloading ${s3uri} -> ${dest}`);
     try { execSync(`mkdir "${dest}" 2>nul || true`); } catch (e) {}
     execSync(`aws s3 cp ${s3uri} ${dest} --profile ${profile} --region ${region} --recursive`, { stdio: 'inherit' });
-  } else {
-    console.error('Usage: node scripts/s3_export_ops.js <export|status|ls|download>');
+    } else {
+    console.error(MESSAGES.USAGE);
     process.exit(2);
   }
 } catch (err) {

@@ -1,18 +1,9 @@
 #!/usr/bin/env python3
-"""Convert DynamoDB JSON export files to Parquet.
+"""Global-schema converter for DynamoDB JSON exports -> single Parquet file.
 
-This script recursively scans an input AWSDynamoDB folder, reads DynamoDB JSON
-line files (supports .json and .json.gz), converts each item to plain JSON-like
-objects, and writes a mirrored .parquet file tree under an output folder.
-
-Default behavior:
-- Input root:  ./diag-export (auto-detects ./diag-export/AWSDynamoDB if present)
-- Output root: ./diag-export/AWSDynamoDB-parquet
-
-Example:
-    python scripts/dynamodb_json_to_parquet.py \
-        --input ./diag-export \
-    --output ./diag-export/AWSDynamoDB-parquet
+This script scans all input DynamoDB JSON export files, collects the union of
+all observed keys, normalizes rows to include every key (missing -> None), and
+writes one Parquet file with a stable global schema.
 """
 
 from __future__ import annotations
@@ -21,91 +12,197 @@ import argparse
 import base64
 import gzip
 import json
-from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Iterable, Iterator
+from typing import Any, Iterator
 
-try:
-    import pyarrow as pa
-    import pyarrow.parquet as pq
-except ImportError as exc:
-    raise SystemExit(
-        "Missing dependency: pyarrow. Install it with `pip install pyarrow`."
-    ) from exc
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 
-SUPPORTED_SUFFIXES = (".json", ".json.gz")
+SCRIPT_DIR = Path(__file__).resolve().parent
+AWS_BACKEND_DIR = SCRIPT_DIR.parent
+LAST_EXPORT_ARN_PATH = AWS_BACKEND_DIR / "last_export_arn"
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Recursively convert DynamoDB JSON export files to Parquet and mirror "
-            "folder structure under AWSDynamoDB-parquet."
-        )
-    )
-    parser.add_argument(
-        "--input",
-        "-i",
-        default="./diag-export",
-        help=(
-            "Input folder. Can be either ./diag-export or ./diag-export/AWSDynamoDB "
-            "(default: ./diag-export)"
-        ),
-    )
-    parser.add_argument(
-        "--output",
-        "-o",
-        default=None,
-        help=(
-            "Output root folder for mirrored parquet files "
-            "(default: ./diag-export/AWSDynamoDB-parquet)"
-        ),
-    )
-    parser.add_argument(
-        "--compression",
-        default="snappy",
-        choices=["snappy", "gzip", "brotli", "zstd", "lz4", "none"],
-        help="Parquet compression codec (default: snappy)",
-    )
-    parser.add_argument(
-        "--overwrite",
-        action="store_true",
-        help="Overwrite existing parquet files.",
-    )
-    return parser.parse_args()
-
-
-def is_supported_input_file(path: Path) -> bool:
-    lower = path.name.lower()
-    return lower.endswith(SUPPORTED_SUFFIXES)
-
-
-def open_text_file(path: Path):
-    if path.name.lower().endswith(".gz"):
-        return gzip.open(path, "rt", encoding="utf-8")
-    return path.open("r", encoding="utf-8")
-
-
-def to_best_number(raw: str) -> Any:
-    if any(ch in raw for ch in (".", "e", "E")):
-        try:
-            return float(raw)
-        except ValueError:
-            return raw
+def read_last_export_arn() -> str | None:
     try:
-        return int(raw)
-    except ValueError:
-        try:
-            dec = Decimal(raw)
-            if dec == dec.to_integral_value():
-                return int(dec)
-            return float(dec)
-        except (InvalidOperation, ValueError):
-            return raw
+        return LAST_EXPORT_ARN_PATH.read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
 
 
-def from_dynamodb_attribute(attr: Any) -> Any:
+def get_export_id_from_arn(export_arn: str | None) -> str | None:
+    if not export_arn:
+        return None
+    parts = export_arn.strip().split("/")
+    return parts[-1] if parts else None
+
+
+def _contains_json_export_files(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+    for child in path.iterdir():
+        if child.is_file() and child.name.lower().endswith((".json", ".json.gz")):
+            return True
+    return False
+
+
+def _find_export_folder_in_path(path: Path) -> str | None:
+    for part in path.parts:
+        if "-" not in part:
+            continue
+        left, _, right = part.partition("-")
+        if left.isdigit() and right:
+            return part
+    return None
+
+
+def resolve_export_input_dir(input_path: str | Path, input_label: str = "--input") -> Path:
+    candidate = Path(input_path).resolve()
+    last_export_arn = read_last_export_arn()
+    last_export_id = get_export_id_from_arn(last_export_arn)
+    path_export_id = _find_export_folder_in_path(candidate)
+
+    if _contains_json_export_files(candidate):
+        if last_export_arn:
+            print(f"Bypassing ./last_export_arn ({last_export_arn}) because {input_label} already points to a data directory: {candidate}")
+            if path_export_id == last_export_id:
+                print(f"{input_label} matches the last export sub_folder: {last_export_id}")
+            elif path_export_id and last_export_id:
+                print(
+                    f"Mismatch: {input_label} points to export sub_folder {path_export_id}, "
+                    f"but ./last_export_arn points to {last_export_id}"
+                )
+        return candidate
+
+    if path_export_id and last_export_id:
+        if path_export_id == last_export_id:
+            print(f"{input_label} matches the last export sub_folder: {last_export_id}")
+        else:
+            print(
+                f"Mismatch: {input_label} includes export sub_folder {path_export_id}, "
+                f"but ./last_export_arn points to {last_export_id}"
+            )
+
+    if last_export_id:
+        candidate_data_dirs = [
+            candidate / "AWSDynamoDB" / last_export_id / "data",
+            candidate / last_export_id / "data",
+        ]
+        for data_dir in candidate_data_dirs:
+            if _contains_json_export_files(data_dir):
+                print(f"Resolved {input_label} via ./last_export_arn ({last_export_arn}) to {data_dir}")
+                return data_dir
+
+        print(
+            f"Mismatch: no subtree like AWSDynamoDB/{last_export_id}/data/*.json.gz exists under {candidate}; "
+            f"./last_export_arn={last_export_arn}"
+        )
+
+    return candidate
+
+
+def find_default_roundtrip_input_file() -> Path | None:
+    last_export_arn = read_last_export_arn()
+    last_export_id = get_export_id_from_arn(last_export_arn)
+    if not last_export_id:
+        return None
+
+    data_dir = AWS_BACKEND_DIR / "diag-export" / "AWSDynamoDB" / last_export_id / "data"
+    if not data_dir.is_dir():
+        return None
+
+    for path in sorted(data_dir.glob("*.json.gz")):
+        return path
+    for path in sorted(data_dir.glob("*.json")):
+        return path
+    return None
+
+
+def _value_kind(value: Any) -> str:
+    if value is None:
+        return "none"
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, int):
+        return "int"
+    if isinstance(value, float):
+        return "float"
+    if isinstance(value, str):
+        return "str"
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return "bytes"
+    if isinstance(value, list):
+        return "list"
+    if isinstance(value, dict):
+        return "dict"
+    return type(value).__name__
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return base64.b64encode(bytes(value)).decode("ascii")
+    if isinstance(value, list):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    return value
+
+
+def _stringify_dynamic(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    safe = _json_safe(value)
+    return json.dumps(safe, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def normalize_rows_for_arrow(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
+    """Normalize rows for Arrow by stringifying mixed-type columns.
+
+    Returns:
+    - normalized rows
+    - sorted list of columns that were stringified due to mixed kinds
+    """
+    if not rows:
+        return [], []
+
+    all_keys: set[str] = set()
+    for row in rows:
+        all_keys.update(row.keys())
+
+    key_kinds: dict[str, set[str]] = {k: set() for k in all_keys}
+    for row in rows:
+        for k in all_keys:
+            key_kinds[k].add(_value_kind(row.get(k)))
+
+    stringify_keys: set[str] = set()
+    for k, kinds in key_kinds.items():
+        kinds_no_none = {x for x in kinds if x != "none"}
+        if len(kinds_no_none) <= 1:
+            continue
+        numeric_only = kinds_no_none.issubset({"int", "float"})
+        if not numeric_only:
+            stringify_keys.add(k)
+
+    ordered_keys = sorted(all_keys)
+    normalized: list[dict[str, Any]] = []
+    for row in rows:
+        out: dict[str, Any] = {}
+        for key in ordered_keys:
+            val = row.get(key)
+            if key in stringify_keys:
+                out[key] = _stringify_dynamic(val)
+            else:
+                out[key] = val
+        normalized.append(out)
+
+    return normalized, sorted(stringify_keys)
+
+
+def convert_attr(attr: Any) -> Any:
+    """Convert a DynamoDB attribute-value dict to a native Python value."""
     if not isinstance(attr, dict) or len(attr) != 1:
         return attr
 
@@ -114,7 +211,13 @@ def from_dynamodb_attribute(attr: Any) -> Any:
     if dtype == "S":
         return value
     if dtype == "N":
-        return to_best_number(str(value))
+        try:
+            return int(value)
+        except ValueError:
+            try:
+                return float(value)
+            except ValueError:
+                return value
     if dtype == "BOOL":
         return bool(value)
     if dtype == "NULL":
@@ -127,156 +230,139 @@ def from_dynamodb_attribute(attr: Any) -> Any:
     if dtype == "SS":
         return list(value)
     if dtype == "NS":
-        return [to_best_number(str(v)) for v in value]
+        out = []
+        for item in value:
+            try:
+                out.append(int(item))
+            except ValueError:
+                try:
+                    out.append(float(item))
+                except ValueError:
+                    out.append(item)
+        return out
     if dtype == "BS":
         decoded = []
-        for entry in value:
+        for item in value:
             try:
-                decoded.append(base64.b64decode(entry))
+                decoded.append(base64.b64decode(item))
             except Exception:
-                decoded.append(entry)
+                decoded.append(item)
         return decoded
     if dtype == "L":
-        return [from_dynamodb_attribute(v) for v in value]
+        return [convert_attr(item) for item in value]
     if dtype == "M":
-        return {k: from_dynamodb_attribute(v) for k, v in value.items()}
+        return {k: convert_attr(v) for k, v in value.items()}
 
     return value
 
 
-def from_export_line_obj(obj: dict[str, Any]) -> dict[str, Any] | None:
+def convert_item(obj: dict[str, Any]) -> dict[str, Any] | None:
+    """Convert a DynamoDB export line object into a plain row dict."""
     item = obj.get("Item")
     if not isinstance(item, dict):
         return None
-    return {k: from_dynamodb_attribute(v) for k, v in item.items()}
+    return {k: convert_attr(v) for k, v in item.items()}
 
 
-def iter_item_rows(path: Path) -> Iterator[dict[str, Any]]:
-    with open_text_file(path) as handle:
-        for line_no, line in enumerate(handle, start=1):
+def open_json_lines(path: Path) -> Iterator[dict[str, Any]]:
+    """Yield parsed JSON objects from .json or .json.gz files."""
+    if path.name.lower().endswith(".gz"):
+        handle = gzip.open(path, "rt", encoding="utf-8")
+    else:
+        handle = path.open("r", encoding="utf-8")
+
+    with handle:
+        for line in handle:
             raw = line.strip()
             if not raw:
                 continue
             try:
-                obj = json.loads(raw)
+                yield json.loads(raw)
             except json.JSONDecodeError:
-                # This file is likely not line-delimited item data.
-                if line_no == 1:
-                    return
                 continue
 
-            row = from_export_line_obj(obj)
+
+def iter_items(root: Path) -> Iterator[dict[str, Any]]:
+    """Iterate converted item rows under a root directory."""
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        lower = path.name.lower()
+        if not (lower.endswith(".json") or lower.endswith(".json.gz")):
+            continue
+        for obj in open_json_lines(path):
+            row = convert_item(obj)
             if row is not None:
                 yield row
 
 
-def output_path_for(input_file: Path, input_root: Path, output_root: Path) -> Path:
-    rel = input_file.relative_to(input_root)
-    name = rel.name
+def convert_dynamodb_export(input_dir: str, output_parquet: str, compression: str) -> int:
+    input_root = resolve_export_input_dir(input_dir)
+    output_file = Path(output_parquet).resolve()
 
-    if name.lower().endswith(".json.gz"):
-        parquet_name = name[: -len(".json.gz")] + ".parquet"
-    elif name.lower().endswith(".json"):
-        parquet_name = name[: -len(".json")] + ".parquet"
-    else:
-        parquet_name = name + ".parquet"
+    rows: list[dict[str, Any]] = []
 
-    return output_root.joinpath(rel.parent, parquet_name)
+    for row in iter_items(input_root):
+        rows.append(row)
 
-
-def convert_file(
-    input_file: Path,
-    input_root: Path,
-    output_root: Path,
-    compression: str,
-    overwrite: bool,
-) -> tuple[bool, str]:
-    output_file = output_path_for(input_file, input_root, output_root)
-    if output_file.exists() and not overwrite:
-        return False, f"skip exists: {output_file}"
-
-    rows = list(iter_item_rows(input_file))
     if not rows:
-        return False, f"skip no item rows: {input_file}"
+        print(f"No rows found under: {input_root}")
+        return 2
+
+    normalized, stringified_keys = normalize_rows_for_arrow(rows)
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
-    table = pa.Table.from_pylist(rows)
-
+    table = pa.Table.from_pylist(normalized)
     codec = None if compression == "none" else compression
     pq.write_table(table, output_file, compression=codec)
 
-    return True, f"ok {input_file} -> {output_file} ({len(rows)} rows)"
-
-
-def find_input_files(root: Path) -> Iterable[Path]:
-    for path in root.rglob("*"):
-        if path.is_file() and is_supported_input_file(path):
-            yield path
-
-
-def resolve_input_root(raw_input: Path) -> Path:
-    # Allow passing either ./diag-export or ./diag-export/AWSDynamoDB.
-    aws_subdir = raw_input / "AWSDynamoDB"
-    if aws_subdir.exists() and aws_subdir.is_dir():
-        return aws_subdir
-    return raw_input
-
-
-def resolve_output_root(raw_input: Path, input_root: Path, raw_output: str | None) -> Path:
-    if raw_output:
-        return Path(raw_output).resolve()
-
-    # If input was ./diag-export/AWSDynamoDB, output should be ./diag-export/AWSDynamoDB-parquet.
-    # If input was ./diag-export, and AWSDynamoDB auto-detected, output should still be under ./diag-export.
-    if input_root.name == "AWSDynamoDB":
-        parent = input_root.parent
-    else:
-        parent = raw_input
-    return (parent / "AWSDynamoDB-parquet").resolve()
-
-
-def main() -> int:
-    args = parse_args()
-
-    raw_input = Path(args.input).resolve()
-    input_root = resolve_input_root(raw_input)
-    output_root = resolve_output_root(raw_input, input_root, args.output)
-
-    if not input_root.exists() or not input_root.is_dir():
-        print(f"ERROR: input folder does not exist or is not a directory: {input_root}")
-        return 2
-
-    converted = 0
-    skipped = 0
-
-    files = sorted(find_input_files(input_root))
-    if not files:
-        print(f"No .json/.json.gz files found under: {input_root}")
-        return 0
-
-    for file_path in files:
-        did_convert, message = convert_file(
-            file_path,
-            input_root=input_root,
-            output_root=output_root,
-            compression=args.compression,
-            overwrite=args.overwrite,
-        )
-        print(message)
-        if did_convert:
-            converted += 1
-        else:
-            skipped += 1
-
-    print(
-        "\nDone. "
-        f"Converted={converted} "
-        f"Skipped={skipped} "
-        f"InputRoot={input_root} "
-        f"OutputRoot={output_root}"
-    )
+    print(f"Wrote {len(rows)} rows -> {output_file}")
+    print(f"Columns: {len(table.column_names)}")
+    if stringified_keys:
+        print(f"Stringified mixed-type columns: {len(stringified_keys)}")
     return 0
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True, help="Path to AWSDynamoDB directory containing export subfolders")
+    parser.add_argument("--output", required=True, help="Output folder for Parquet file (will be named {exportId}.parquet)")
+    parser.add_argument("--exportId", help="Export subfolder to use (default: last_export_arn)")
+    parser.add_argument("--overwrite", action="store_true", help="Remove existing output file before writing")
+    parser.add_argument(
+        "--compression",
+        default="zstd",
+        choices=["snappy", "gzip", "brotli", "zstd", "lz4", "none"],
+        help="Parquet compression codec (default: zstd)",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    args = parse_args()
+    input_root = Path(args.input).resolve()
+    if input_root.name != "AWSDynamoDB":
+        print(f"ERROR: --input must be the AWSDynamoDB directory, got: {input_root}")
+        raise SystemExit(2)
+
+    export_id = args.exportId or get_export_id_from_arn(read_last_export_arn())
+    if not export_id:
+        print("ERROR: No exportId provided and ./last_export_arn is missing or invalid.")
+        raise SystemExit(2)
+
+    export_dir = input_root / export_id / "data"
+    if not export_dir.is_dir():
+        print(f"ERROR: Export directory not found: {export_dir}")
+        raise SystemExit(2)
+
+    output_folder = Path(args.output).resolve()
+    output_folder.mkdir(parents=True, exist_ok=True)
+    output_file = output_folder / f"{export_id}.parquet"
+    if args.overwrite and output_file.exists():
+        try:
+            output_file.unlink()
+        except Exception as exc:
+            print(f"Warning: failed to remove existing output file: {output_file}: {exc}")
+
+    rc = convert_dynamodb_export(str(export_dir), str(output_file), args.compression)
+    raise SystemExit(rc)

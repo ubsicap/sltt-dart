@@ -53,12 +53,11 @@
     "dynamodb:export": "node scripts/s3_export_ops.js export",
     "dynamodb:status": "node scripts/s3_export_ops.js status",
     "dynamodb:poll-export": "node scripts/s3_export_ops.js status poll",
+    "dynamodb:ls-last-exports": "node scripts/s3_export_ops.js exports --limit 2",
     "s3:ls-export": "node scripts/s3_export_ops.js ls",
     "s3:download-export": "node scripts/s3_export_ops.js download",
-    "dynamodb:json-to-parquet": "python scripts/dynamodb_json_to_parquet.py --input ./diag-export",
-    "dynamodb:json-to-parquet:overwrite": "python scripts/dynamodb_json_to_parquet.py --input ./diag-export --overwrite",
-    "dynamodb:parquet-combine": "python scripts/combine_parquet_exports.py --input ./diag-export/AWSDynamoDB-parquet --output ./diag-export/AWSDynamoDB-parquet-combined.parquet",
-    "dynamodb:parquet-combine:overwrite": "python scripts/combine_parquet_exports.py --input ./diag-export/AWSDynamoDB-parquet --output ./diag-export/AWSDynamoDB-parquet-combined.parquet --overwrite"
+    "dynamodb:json-to-parquet": "python scripts/dynamodb_json_to_parquet.py --input ./diag-export/AWSDynamoDB --output ./diag-export/",
+    "roundtrip_test": "python scripts/roundtrip_test.py"
   },
   "keywords": [],
   "author": "",
