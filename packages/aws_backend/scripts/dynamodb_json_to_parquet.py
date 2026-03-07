@@ -173,18 +173,38 @@ def normalize_rows_for_arrow(rows: list[dict[str, Any]]) -> tuple[list[dict[str,
         all_keys.update(row.keys())
 
     key_kinds: dict[str, set[str]] = {k: set() for k in all_keys}
+    # For debug: collect non-list values for data_visibility
+    data_visibility_nonlist = []
     for row in rows:
         for k in all_keys:
-            key_kinds[k].add(_value_kind(row.get(k)))
+            val = row.get(k)
+            # Normalize data_visibility: if value is string '[]', treat as empty list (data backwards-compatibility)
+            if k == "data_visibility" and val == "[]":
+                val = []
+                row[k] = val
+            kind = _value_kind(val)
+            key_kinds[k].add(kind)
+            if k == "data_visibility" and kind != "list" and val is not None:
+                data_visibility_nonlist.append(val)
 
     stringify_keys: set[str] = set()
+    list_nullable_keys: set[str] = set()
     for k, kinds in key_kinds.items():
         kinds_no_none = {x for x in kinds if x != "none"}
         if len(kinds_no_none) <= 1:
+            # Keep list columns query-friendly by normalizing missing values to []
+            # when the only non-null kind seen is list.
+            if kinds_no_none == {"list"}:
+                list_nullable_keys.add(k)
             continue
         numeric_only = kinds_no_none.issubset({"int", "float"})
         if not numeric_only:
             stringify_keys.add(k)
+    # Debug print for data_visibility
+    if "data_visibility" in key_kinds:
+        print("[DEBUG] data_visibility types:", key_kinds["data_visibility"])
+        if data_visibility_nonlist:
+            print("[DEBUG] data_visibility non-list values (sample):", data_visibility_nonlist[:10])
 
     ordered_keys = sorted(all_keys)
     normalized: list[dict[str, Any]] = []
@@ -192,8 +212,13 @@ def normalize_rows_for_arrow(rows: list[dict[str, Any]]) -> tuple[list[dict[str,
         out: dict[str, Any] = {}
         for key in ordered_keys:
             val = row.get(key)
+            # Normalize data_visibility: if value is string '[]', treat as empty list (data backwards-compatibility)
+            if key == "data_visibility" and val == "[]":
+                val = []
             if key in stringify_keys:
                 out[key] = _stringify_dynamic(val)
+            elif key in list_nullable_keys and val is None:
+                out[key] = []
             else:
                 out[key] = val
         normalized.append(out)
@@ -319,7 +344,7 @@ def convert_dynamodb_export(input_dir: str, output_parquet: str, compression: st
     print(f"Wrote {len(rows)} rows -> {output_file}")
     print(f"Columns: {len(table.column_names)}")
     if stringified_keys:
-        print(f"Stringified mixed-type columns: {len(stringified_keys)}")
+        print(f"Stringified mixed-type columns: {stringified_keys}")
     return 0
 
 
