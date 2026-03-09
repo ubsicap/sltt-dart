@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/models/user_preferences.data.dart';
 // helper removed; tests now use LocalStorageService.instance for seeding
 
 // Integration tests for SyncManager using a local cloud server launched by
@@ -169,7 +170,7 @@ void main() {
   });
 
   // Group 2: Tests with cloud storage (HTTP)
-  group('[cloud] SyncManager integration', () {
+  group('[aws_backend] SyncManager integration', () {
     late String cloudBaseUrl;
     late String srcStorageId;
     late String srcStorageType;
@@ -200,7 +201,7 @@ void main() {
     });
 
     test(
-      '[cloud] outsync [create]: save local changes > outsync to cloud',
+      '[aws_backend] outsync [create]: save local changes > outsync to cloud',
       () async {
         await testOutsyncCreate(
           cloudBaseUrl: cloudBaseUrl,
@@ -212,7 +213,7 @@ void main() {
     );
 
     test(
-      '[cloud] downsync [create]: save cloud changes > downsync to local',
+      '[aws_backend] downsync [create]: save cloud changes > downsync to local',
       () async {
         await testDownsyncCreate(
           cloudBaseUrl: cloudBaseUrl,
@@ -224,7 +225,7 @@ void main() {
     );
 
     test(
-      '[cloud] downsync [user preferences]: downsync user_preferences domain',
+      '[aws_backend] downsync [user preferences]: downsync user_preferences domain',
       () async {
         await testUserDomainDownsync(
           cloudBaseUrl: cloudBaseUrl,
@@ -236,7 +237,7 @@ void main() {
     );
 
     test(
-      '[cloud] full sync [create]: save local changes > outsync to cloud > downsync same',
+      '[aws_backend] full sync [create]: save local changes > outsync to cloud > downsync same',
       () async {
         await testFullSyncCreate(
           cloudBaseUrl: cloudBaseUrl,
@@ -249,7 +250,7 @@ void main() {
     );
 
     test(
-      '[cloud] full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
+      '[aws_backend] full sync [update]: cloud save > downsync > local save > outsync to cloud > downsynced cloud changes',
       () async {
         await testFullSyncUpdate(
           cloudBaseUrl: cloudBaseUrl,
@@ -262,7 +263,7 @@ void main() {
     );
 
     test(
-      '[cloud] full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
+      '[aws_backend] full sync [outdated]: save cloud change > downsync > save local changes > save cloud change > upsync local changes - OUTDATED > downsynced cloud changes',
       () async {
         await testFullSyncOutdated(
           cloudBaseUrl: cloudBaseUrl,
@@ -275,7 +276,7 @@ void main() {
     );
 
     test(
-      '[cloud] full sync [pUpdate]: cloud save > downsync > local save [rank, nameLocal] > cloud save [rank] > upsync - pUpdate nameLocal > downsynced cloud changes',
+      '[aws_backend] full sync [pUpdate]: cloud save > downsync > local save [rank, nameLocal] > cloud save [rank] > upsync - pUpdate nameLocal > downsynced cloud changes',
       () async {
         await testFullSyncPartialUpdate(
           cloudBaseUrl: cloudBaseUrl,
@@ -554,13 +555,17 @@ Future<void> testUserDomainDownsync({
     entityId: kEntityIdDefaultUserPreferences,
     changeAt: DateTime.now(),
     dataJson: stableStringify(
-      BaseDataFields(parentId: 'root', parentProp: 'user_preferences').toJson(),
+      UserPreferencesData(
+        parentId: 'root',
+        parentProp: 'user_preferences',
+        uiLocale: 'en-US',
+      ).toJson(),
     ),
     userId: '__test_x',
     operation: 'create',
     domainType: DomainType.user,
     entityType: EntityType.userPreferences,
-    fromJson: UnknownDataFields.fromJson,
+    fromJson: UserPreferencesData.fromJson,
   );
 
   final syncManager = SyncManager.instance;
