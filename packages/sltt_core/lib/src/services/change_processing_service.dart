@@ -762,7 +762,9 @@ class ChangeProcessingService {
             invalidStorageIds.add(i);
           }
           if (changeLogEntry.stateChanged == false) {
-            invalidStateChanged.add(i);
+            // invalidStateChanged.add(i);
+            // For now, allow stateChanged to be false in sync mode since some
+            // this could happen for seeding or other edge cases (user set clock backward in time or daylight savings transition?)
           }
           if (changeLogEntry.seq <= 0) {
             // syncing assumes seq has already been provided
