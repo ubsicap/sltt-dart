@@ -125,6 +125,31 @@ class SyncManager {
     }
   }
 
+  Map<String, String?> _handleError(
+    String context,
+    dynamic e,
+    StackTrace stackTrace,
+  ) {
+    final response = (e as dynamic).response;
+    if (response != null) {
+      SlttLogger.logger.severe(
+        '[SyncManager] [$context] [Error ${response.statusCode} (${response.statusMessage})] Error details: $response',
+      );
+    } else {
+      SlttLogger.logger.severe(
+        '[SyncManager] [$context] Error details: ${e.toString()}',
+      );
+    }
+    SlttLogger.logger.severe(
+      '[SyncManager] [$context] Stack trace: $stackTrace',
+    );
+
+    return {
+      'error': (e as dynamic).response?.toString() ?? e.toString(),
+      'errorStackTrace': stackTrace.toString(),
+    };
+  }
+
   // Get all projects that have changes to sync
 
   // Outsync changes from outsyncs to cloud storage
@@ -223,19 +248,15 @@ class SyncManager {
         );
       }
     } catch (e, stackTrace) {
-      SlttLogger.logger.severe('[SyncManager] Outsync failed: $e');
-      SlttLogger.logger.severe('[SyncManager] Stack trace: $stackTrace');
+      final handled = _handleError('OutsyncToCloud', e, stackTrace);
       return OutsyncResult(
         success: false,
         changeSummary: null,
         changesRequested: changesToSync,
         deletedLocalChanges: [],
         message: 'Outsync failed: $e',
-        error:
-            (e as dynamic).response?.toString() ??
-            e.toString(), // Capture original error
-        errorStackTrace: stackTrace
-            .toString(), // Include error stack for debugging
+        error: handled['error'],
+        errorStackTrace: handled['errorStackTrace'],
       );
     }
   }
@@ -464,15 +485,14 @@ class SyncManager {
         errorStackTrace: null,
       );
     } catch (e, stackTrace) {
-      SlttLogger.logger.severe('[SyncManager] Downsync failed: $e');
-      SlttLogger.logger.severe('[SyncManager] Stack trace: $stackTrace');
+      final handled = _handleError('DownsyncFromCloud', e, stackTrace);
       return DownsyncResult(
         success: false,
         projectCursorChanges: projectCursorChanges,
         storageSummaries: storageSummaries,
         message: 'Downsync failed: $e',
-        error: e.toString(),
-        errorStackTrace: stackTrace.toString(),
+        error: handled['error'],
+        errorStackTrace: handled['errorStackTrace'],
       );
     }
   }
