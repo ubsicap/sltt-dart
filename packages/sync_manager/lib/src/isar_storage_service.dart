@@ -886,10 +886,7 @@ class IsarStorageService extends BaseStorageService {
       creates: totalCreates,
       updates: totalUpdates,
       deletes: totalDeletes,
-      total: perType.values.fold<int>(
-        0,
-        (prev, element) => prev + (element['total'] as int? ?? 0),
-      ),
+      total: changes.length,
       latestChangeAt:
           mostRecentChangeAt?.toIso8601String() ?? '1970-01-01T00:00:00Z',
       latestSeq: mostRecentSeq,

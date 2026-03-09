@@ -579,6 +579,41 @@ void main() {
       );
       expect(seed3.isSuccess, isTrue, reason: seed3.errorMessage);
 
+      // Add an outdated change for entity-2 (earlier changeAt than the
+      // already-applied update) and verify it's persisted as 'outdated'.
+      final outdatedPayload = changePayload(
+        projectId: projectId,
+        entityType: 'task',
+        entityId: 'entity-2',
+        changeAt: baseTime, // earlier than r2's changeAt (baseTime + 1m)
+        operation: 'update',
+        data: {'nameLocal': 'Outdated Name'},
+      );
+
+      final or = await ChangeProcessingService.storeChanges(
+        storageMode: 'save',
+        changes: [outdatedPayload],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(or.isSuccess, isTrue, reason: or.errorMessage);
+
+      final outdatedCid = outdatedPayload['cid'] as String;
+      final persistedOutdated = await storage.getChange(
+        domainType: 'project',
+        domainId: projectId,
+        cid: outdatedCid,
+      );
+      expect(
+        persistedOutdated,
+        isNotNull,
+        reason: 'Outdated change was not persisted',
+      );
+      expect(persistedOutdated!.operation, equals('outdated'));
+
       final deletePayload = changePayload(
         projectId: projectId,
         entityType: 'task',
@@ -636,7 +671,13 @@ void main() {
           (seed3.resultsSummary!.created.length);
       final expectedUpdates = r2.resultsSummary!.updated.length;
       final expectedDeletes = dr.resultsSummary!.deleted.length;
-      final expectedTotal = expectedCreates + expectedUpdates + expectedDeletes;
+      final allChanges = await storage.getChangesWithCursor(
+        domainType: 'project',
+        domainId: projectId,
+        cursor: null,
+        limit: 1000,
+      );
+      final expectedTotal = allChanges.length;
 
       expect(statsDyn.totals.total, equals(expectedTotal));
       expect(statsDyn.totals.creates, equals(expectedCreates));

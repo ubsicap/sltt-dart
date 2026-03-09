@@ -288,7 +288,7 @@ class InMemoryStorage implements BaseStorageService {
       creates: totalCreates,
       updates: totalUpdates,
       deletes: totalDeletes,
-      total: totalCreates + totalUpdates + totalDeletes,
+      total: changes.length,
       latestChangeAt:
           mostRecentChangeAt?.toIso8601String() ?? '1970-01-01T00:00:00Z',
       latestSeq: mostRecentSeq,
