@@ -163,6 +163,7 @@ class SyncManager {
 
       // Get changes for sync
       changesToSync = await _localStorage.getChangesForSync(
+        domainIds: domainIds,
         limit:
             120 /* 10x (average 4Kb per item) batch writes 12 changes + 12 state updates (25 per-batch write limit) */,
       );

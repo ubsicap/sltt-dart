@@ -331,6 +331,24 @@ Future<void> testOutsyncCreate({
         operation: 'create',
       );
 
+  final changeOtherDomainId =
+      ChangeLogEntryFactoryService.forChangeSave<
+        IsarChangeLogEntry,
+        Id,
+        BaseDataFields
+      >(
+        factory: IsarChangeLogEntry.new,
+        domainType: 'project',
+        domainId: '${projectId}_other',
+        entityType: 'project',
+        entityId: '${projectId}_other',
+        changeBy: changeBy,
+        changeAt: DateTime.now(),
+        cid: generateCid(entityType: EntityType.project, userId: changeBy),
+        data: BaseDataFields(parentId: 'root', parentProp: 'projects'),
+        operation: 'create',
+      );
+
   final localSaveResult = await ChangeProcessingService.storeChanges(
     storageMode: 'save',
     changes: [change.toJson()],
@@ -362,10 +380,43 @@ Future<void> testOutsyncCreate({
     expectedStateUpdates: expectedStateFromChange(change),
   );
 
+  final localSaveResultOther = await ChangeProcessingService.storeChanges(
+    storageMode: 'save',
+    changes: [changeOtherDomainId.toJson()],
+    srcStorageType: srcStorageType,
+    srcStorageId: srcStorageId,
+    storage: local,
+    includeChangeUpdates: true,
+    includeStateUpdates: true,
+  );
+
+  final savedChangeUpdatesOther = [
+    {
+      'cid': changeOtherDomainId.cid,
+      'updates': {
+        'operation': changeOtherDomainId.operation,
+        'operationInfoJson': '{"outdatedBys":[],"noOpFields":[]}',
+        'stateChanged': true,
+        'storageId': localStorageId,
+        'cloudAt': null,
+        'storedAt': isA<String>(),
+        'dataJson': changeOtherDomainId.dataJson,
+      },
+    },
+  ];
+
+  await verifyLocalChangeSaved(
+    localSaveResult: localSaveResultOther,
+    localChange: changeOtherDomainId,
+    local: local,
+    expectedChangeUpdates: savedChangeUpdatesOther,
+    expectedStateUpdates: expectedStateFromChange(changeOtherDomainId),
+  );
+
   await syncManager.initialize();
   syncManager.configureCloudUrl(cloudBaseUrl);
 
-  final result = await syncManager.outsyncToCloud();
+  final result = await syncManager.outsyncToCloud(domainIds: [projectId]);
 
   expect(
     result.success,
@@ -413,6 +464,21 @@ Future<void> testOutsyncCreate({
     }),
     reason:
         'After successful outsync, project $projectId should have change logs in the cloud',
+  );
+
+  final statusOther = await syncManager.getSyncStatus('${projectId}_other');
+  expect(
+    statusOther.cloudStateStats?.totals.toJson(),
+    equals({
+      'creates': 0,
+      'updates': 0,
+      'deletes': 0,
+      'total': 0,
+      'latestChangeAt': '1970-01-01T00:00:00Z',
+      'latestSeq': -1,
+    }),
+    reason:
+        'Outsync of $projectId should not affect cloud state stats of ${projectId}_other',
   );
 }
 
