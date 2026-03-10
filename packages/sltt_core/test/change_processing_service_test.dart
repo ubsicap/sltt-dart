@@ -1352,6 +1352,138 @@ void main() {
           },
         );
 
+        Future<Object?> runOutdatedScenario({
+          required String projectId,
+          required String entityId,
+          String? actionForOutdatedChanges,
+          bool expectPersisted = true,
+        }) async {
+          await localStorage.initialize();
+
+          final later = DateTime.now().toUtc();
+          final earlier = later.subtract(const Duration(minutes: 1));
+
+          final initial = {
+            'domainId': projectId,
+            'domainType': 'project',
+            'entityType': 'task',
+            'entityId': entityId,
+            'changeBy': 'tester',
+            'changeAt': later.toIso8601String(),
+            'cid': genCidFor('task'),
+            'storageId': '',
+            'operation': 'create',
+            'operationInfoJson': '{}',
+            'stateChanged': true,
+            'unknownJson': '{}',
+            'dataJson':
+                '{"nameLocal":"init","parentId":"root","parentProp":"pList"}',
+          };
+
+          final r1 = await ChangeProcessingService.storeChanges(
+            changes: [initial],
+            storage: localStorage,
+            storageMode: 'save',
+            srcStorageType: 'local',
+            srcStorageId: 'test-src',
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+          expect(r1.isSuccess, isTrue, reason: r1.errorMessage);
+
+          final outdated = {
+            'domainId': projectId,
+            'domainType': 'project',
+            'entityType': 'task',
+            'entityId': entityId,
+            'changeBy': 'tester',
+            'changeAt': earlier.toIso8601String(),
+            'cid': genCidFor('task'),
+            'storageId': '',
+            'operation': 'update',
+            'operationInfoJson': '{}',
+            'stateChanged': false,
+            'unknownJson': '{}',
+            'dataJson':
+                '{"nameLocal":"outdated","parentId":"root","parentProp":"pList"}',
+          };
+
+          late ChangeProcessingResult r2;
+          if (actionForOutdatedChanges != null) {
+            r2 = await ChangeProcessingService.storeChanges(
+              changes: [outdated],
+              storage: localStorage,
+              storageMode: 'save',
+              actionForOutdatedChanges: actionForOutdatedChanges,
+              srcStorageType: 'local',
+              srcStorageId: 'test-src',
+              includeChangeUpdates: false,
+              includeStateUpdates: false,
+            );
+          } else {
+            r2 = await ChangeProcessingService.storeChanges(
+              changes: [outdated],
+              storage: localStorage,
+              storageMode: 'save',
+              srcStorageType: 'local',
+              srcStorageId: 'test-src',
+              includeChangeUpdates: false,
+              includeStateUpdates: false,
+            );
+          }
+          expect(r2.isSuccess, isTrue, reason: r2.errorMessage);
+
+          final persisted = await localStorage.getChange(
+            domainType: 'project',
+            domainId: projectId,
+            cid: outdated['cid'] as String,
+          );
+
+          if (expectPersisted) {
+            expect(persisted, isNotNull);
+            expect(persisted?.operation, equals('outdated'));
+            return persisted is Map<String, dynamic>
+                ? persisted
+                : persisted?.toJson();
+          } else {
+            expect(persisted, isNull);
+            return null;
+          }
+        }
+
+        test(
+          'outdated change - actionForOutdatedChanges=keep persists change',
+          () async {
+            await runOutdatedScenario(
+              projectId: 'proj-outdated-keep',
+              entityId: 'ent-out-1',
+              actionForOutdatedChanges: 'keep',
+              expectPersisted: true,
+            );
+          },
+        );
+
+        test(
+          'outdated change - actionForOutdatedChanges=skip does not persist',
+          () async {
+            await runOutdatedScenario(
+              projectId: 'proj-outdated-skip',
+              entityId: 'ent-out-2',
+              actionForOutdatedChanges: 'skip',
+              expectPersisted: false,
+            );
+          },
+        );
+
+        test('outdated change - unspecified defaults to keep', () async {
+          await runOutdatedScenario(
+            projectId: 'proj-outdated-default',
+            entityId: 'ent-out-3',
+            actionForOutdatedChanges: null,
+            expectPersisted: true,
+          );
+        });
+
         test('save mode - should reject changes with unknownJson - 1', () async {
           // Test that local storage in save mode rejects changes with unknownJson
 

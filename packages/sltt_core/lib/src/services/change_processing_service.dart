@@ -112,6 +112,9 @@ class ChangeProcessingService {
     /// changes to `save` or `sync`
     required List<Map<String, dynamic>> changes,
 
+    /// `keep` or `skip` changes that are 'outdated'
+    String actionForOutdatedChanges = 'keep',
+
     /// `local` or `cloud`
     required String srcStorageType,
     required String srcStorageId,
@@ -395,6 +398,8 @@ class ChangeProcessingService {
                 targetStorageType == 'local' &&
                     storageMode == 'save' &&
                     result.operationCounts.noOp == 1 ||
+                actionForOutdatedChanges == 'skip' &&
+                    result.operationCounts.outdated == 1 ||
                 targetStorageType == 'local' &&
                     storageMode ==
                         'sync' /* for now, don't store incoming sync changes in the local change log */ ||
