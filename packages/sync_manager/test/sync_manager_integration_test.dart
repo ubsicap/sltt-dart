@@ -474,7 +474,9 @@ Future<void> testOutsyncCreate({
       'updates': 0,
       'deletes': 0,
       'total': 0,
-      'latestChangeAt': '1970-01-01T00:00:00Z',
+      'latestChangeAt': useCloudDb
+          ? '1970-01-01T00:00:00.000Z'
+          : '1970-01-01T00:00:00Z',
       'latestSeq': -1,
     }),
     reason:
