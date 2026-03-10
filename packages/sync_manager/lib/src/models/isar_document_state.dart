@@ -12,6 +12,14 @@ part 'isar_document_state.g.dart';
 @Collection()
 @JsonSerializable(includeIfNull: true, checked: true)
 class IsarDocumentState extends BaseIsarEntityState {
+  @override
+  @Index(composite: [CompositeIndex('entityId')], unique: true)
+  @Index(
+    composite: [CompositeIndex('data_parentId'), CompositeIndex('entityId')],
+    unique: true,
+  )
+  String get change_domainId => super.change_domainId;
+
   // Document-specific fields
   String? data_title;
   DateTime? data_title_changeAt_;

@@ -426,6 +426,130 @@ void main() {
     });
   });
 
+  group('IsarStorageService batchGetEntityState domain isolation', () {
+    Future<void> seedTaskState({
+      required String domainId,
+      required String entityId,
+      required String nameLocal,
+      required DateTime changeAt,
+    }) async {
+      final result = await ChangeProcessingService.storeChanges(
+        storageMode: 'save',
+        changes: [
+          changePayload(
+            projectId: domainId,
+            entityType: 'task',
+            entityId: entityId,
+            changeAt: changeAt,
+            operation: 'create',
+            data: {
+              'nameLocal': nameLocal,
+              'parentId': 'root',
+              'parentProp': 'pList',
+            },
+          ),
+        ],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(result.isSuccess, isTrue, reason: result.errorMessage);
+    }
+
+    test('does not leak same entityId across different domainIds', () async {
+      const sharedEntityId = '__test_multi_domainIds_eid_seed_1';
+      const domain1 = '__test_multi_domainIds_1';
+      const domain2 = '__test_multi_domainIds_2';
+
+      await seedTaskState(
+        domainId: domain1,
+        entityId: sharedEntityId,
+        nameLocal: 'Task in domain 1',
+        changeAt: baseTime,
+      );
+
+      // batchGetEntityState is keyed by entityId, so same-entityId
+      // cross-domain checks are verified via separate calls.
+      final d1 = await storage.batchGetEntityState(
+        keys: [
+          (
+            domainType: 'project',
+            domainId: domain1,
+            entityType: 'task',
+            entityId: sharedEntityId,
+          ),
+        ],
+      );
+      final d1State = d1[sharedEntityId];
+      expect(d1State, isNotNull);
+      expect(d1State!.toJson()['change_domainId'], equals(domain1));
+      expect(d1State.toJson()['data_nameLocal'], equals('Task in domain 1'));
+
+      // Same entityId in another domain should not resolve to domain1's state.
+      final d2 = await storage.batchGetEntityState(
+        keys: [
+          (
+            domainType: 'project',
+            domainId: domain2,
+            entityType: 'task',
+            entityId: sharedEntityId,
+          ),
+        ],
+      );
+      expect(d2[sharedEntityId], isNull);
+    });
+
+    test(
+      'returns correct states for multi-domain batch with unique entityIds',
+      () async {
+        const domain1 = '__test_batch_domain_1';
+        const domain2 = '__test_batch_domain_2';
+        const entity1 = 'entity-domain-1';
+        const entity2 = 'entity-domain-2';
+
+        await seedTaskState(
+          domainId: domain1,
+          entityId: entity1,
+          nameLocal: 'Task A',
+          changeAt: baseTime,
+        );
+        await seedTaskState(
+          domainId: domain2,
+          entityId: entity2,
+          nameLocal: 'Task B',
+          changeAt: baseTime.add(const Duration(minutes: 1)),
+        );
+
+        final result = await storage.batchGetEntityState(
+          keys: [
+            (
+              domainType: 'project',
+              domainId: domain1,
+              entityType: 'task',
+              entityId: entity1,
+            ),
+            (
+              domainType: 'project',
+              domainId: domain2,
+              entityType: 'task',
+              entityId: entity2,
+            ),
+          ],
+        );
+
+        expect(result[entity1], isNotNull);
+        expect(result[entity1]!.toJson()['change_domainId'], equals(domain1));
+        expect(result[entity1]!.toJson()['data_nameLocal'], equals('Task A'));
+
+        expect(result[entity2], isNotNull);
+        expect(result[entity2]!.toJson()['change_domainId'], equals(domain2));
+        expect(result[entity2]!.toJson()['data_nameLocal'], equals('Task B'));
+      },
+    );
+  });
+
   group('IsarStorageService Statistics and Project Operations', () {
     test('change-log deletion leaves state counters intact', () async {
       final projectId = 'proj-separation';

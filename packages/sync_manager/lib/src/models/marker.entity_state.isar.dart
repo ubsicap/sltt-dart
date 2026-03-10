@@ -14,12 +14,14 @@ class IsarMarkerDataEntityState extends BaseEntityState {
   Id id;
 
   @override
-  @Index(unique: true)
+  @Index(unique: false)
   final String entityId;
 
   @override
+  @Index(composite: [CompositeIndex('entityId')], unique: true)
   @Index(
     composite: [CompositeIndex('data_parentId'), CompositeIndex('entityId')],
+    unique: true,
   )
   String get change_domainId => super.change_domainId;
 
@@ -226,11 +228,12 @@ void registerIsarMarkerDataEntityStateStorageGroup(
                     .limit(limit ?? 100)
                     .findAll();
               },
-          getAllByEntityId: (isar, entityIds) async {
-            final results = await isar.isarMarkerDataEntityStates
-                .getAllByEntityId(entityIds);
-            return results.whereType<IsarMarkerDataEntityState>().toList();
-          },
+          getAllByChange_domainIdEntityId:
+              (isar, List<String> domainIds, List<String> entityIds) async {
+                final results = await isar.isarMarkerDataEntityStates
+                    .getAllByChange_domainIdEntityId(domainIds, entityIds);
+                return results.whereType<IsarMarkerDataEntityState>().toList();
+              },
           deleteByDomain: ({required domainId, required domainType}) async =>
               await isar.isarMarkerDataEntityStates
                   .where()

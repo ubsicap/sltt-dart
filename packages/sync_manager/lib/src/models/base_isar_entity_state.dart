@@ -10,7 +10,7 @@ abstract class BaseIsarEntityState extends BaseEntityState {
 
   /// Primary key - entityId with entity type abbreviation
   @override
-  @Index(unique: true)
+  @Index(unique: false)
   final String entityId;
 
   BaseIsarEntityState({

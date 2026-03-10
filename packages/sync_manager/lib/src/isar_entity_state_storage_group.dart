@@ -1,7 +1,10 @@
+// ignore_for_file: non_constant_identifier_names
 import 'dart:async';
 
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
+
+typedef EntityIdDomainPair = ({String entityId, String domainId});
 
 /// Storage group for Isar entity state operations
 ///
@@ -48,7 +51,12 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   })
   findByDomainWithPagination;
 
-  final Future<List<T>> Function(Isar, List<String>) getAllByEntityId;
+  final Future<List<T>> Function(
+    Isar,
+    List<String> domainIds,
+    List<String> entityIds,
+  )
+  getAllByChange_domainIdEntityId;
 
   final StreamSubscription<void> Function({
     required String domainType,
@@ -73,7 +81,7 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
     required this.collection,
     required this.findByDomainAndEntity,
     required this.findByDomainWithPagination,
-    required this.getAllByEntityId,
+    required this.getAllByChange_domainIdEntityId,
     required this.deleteByDomain,
     this.lazyListenToEntityChanges,
   });

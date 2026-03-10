@@ -42,10 +42,12 @@ void registerAllIsarEntityStateStorageGroups(
           .and()
           .entityIdEqualTo(entityId)
           .findFirst(),
-      getAllByEntityId: (Isar db, List<String> entityIds) async {
-        final results = await db.isarProjectStates.getAllByEntityId(entityIds);
-        return results.whereType<IsarProjectState>().toList();
-      },
+      getAllByChange_domainIdEntityId:
+          (Isar db, List<String> domainIds, List<String> entityIds) async {
+            final results = await db.isarProjectStates
+                .getAllByChange_domainIdEntityId(domainIds, entityIds);
+            return results.whereType<IsarProjectState>().toList();
+          },
       findByDomainWithPagination:
           ({
             required String domainId,
@@ -96,10 +98,12 @@ void registerAllIsarEntityStateStorageGroups(
           .and()
           .entityIdEqualTo(entityId)
           .findFirst(),
-      getAllByEntityId: (Isar db, List<String> entityIds) async {
-        final results = await db.isarDocumentStates.getAllByEntityId(entityIds);
-        return results.whereType<IsarDocumentState>().toList();
-      },
+      getAllByChange_domainIdEntityId:
+          (Isar db, List<String> domainIds, List<String> entityIds) async {
+            final results = await db.isarDocumentStates
+                .getAllByChange_domainIdEntityId(domainIds, entityIds);
+            return results.whereType<IsarDocumentState>().toList();
+          },
       findByDomainWithPagination:
           ({
             required String domainId,
@@ -149,10 +153,12 @@ void registerAllIsarEntityStateStorageGroups(
           .and()
           .entityIdEqualTo(entityId)
           .findFirst(),
-      getAllByEntityId: (Isar db, List<String> entityIds) async {
-        final results = await db.isarTaskStates.getAllByEntityId(entityIds);
-        return results.whereType<IsarTaskState>().toList();
-      },
+      getAllByChange_domainIdEntityId:
+          (Isar db, List<String> domainIds, List<String> entityIds) async {
+            final results = await db.isarTaskStates
+                .getAllByChange_domainIdEntityId(domainIds, entityIds);
+            return results.whereType<IsarTaskState>().toList();
+          },
       findByDomainWithPagination:
           ({
             required String domainId,

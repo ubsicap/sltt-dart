@@ -622,7 +622,8 @@ class IsarStorageService extends BaseStorageService {
   }) async {
     if (keys.isEmpty) return <String, BaseEntityState?>{};
 
-    // Group keys by entityType to leverage per-collection batch queries
+    // Group keys by entityType to leverage storage-group batch lookups while
+    // still respecting requested domainIds.
     final grouped =
         <
           String,
@@ -641,7 +642,6 @@ class IsarStorageService extends BaseStorageService {
 
     final out = <String, BaseEntityState?>{};
 
-    // For each entityType, use getAllByEntityId for efficient batch retrieval
     for (final entry in grouped.entries) {
       final entityTypeString = entry.key;
       final items = entry.value;
@@ -653,7 +653,7 @@ class IsarStorageService extends BaseStorageService {
       final storageGroup = _entityStateRegistry.get(entityTypeEnum);
 
       if (storageGroup == null) {
-        // Unknown type: fall back to individual retrieval
+        // Unknown type: fall back to individual retrieval.
         for (final k in items) {
           final state = await _getSingleState(
             domainType: k.domainType,
@@ -666,20 +666,25 @@ class IsarStorageService extends BaseStorageService {
         continue;
       }
 
-      // Use getAllByEntityId for efficient batch retrieval
+      final domainIds = items.map((k) => k.domainId).toList();
       final entityIds = items.map((k) => k.entityId).toList();
-      final results = await storageGroup.getAllByEntityId(_isar, entityIds);
+      final fetched = await storageGroup.getAllByChange_domainIdEntityId(
+        _isar,
+        domainIds,
+        entityIds,
+      );
 
-      // Map results by entityId
-      for (final state in results) {
-        out[state.entityId] = state;
+      final exactByComposite = <String, BaseEntityState>{};
+      for (final state in fetched) {
+        final key = '${state.change_domainId}|${state.entityId}';
+        exactByComposite[key] = state;
       }
 
-      // Ensure all requested ids present; fill missing with null
       for (final k in items) {
-        out.putIfAbsent(k.entityId, () => null);
+        out[k.entityId] = exactByComposite['${k.domainId}|${k.entityId}'];
       }
     }
+
     return out;
   }
 

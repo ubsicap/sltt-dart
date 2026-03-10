@@ -127,6 +127,13 @@ void main() {
       );
 
       test(
+        'domain-isolated entity ids: same entityId in different domainIds stays create',
+        () async {
+          await postTests['domain-isolated entity ids: same entityId in different domainIds stays create']!();
+        },
+      );
+
+      test(
         'save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)',
         () async {
           await postTests['save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)']!();
@@ -257,6 +264,7 @@ void main() {
       // This should match the suiteTestNames set
       final actuallyRunTestNames = {
         'with includeChangeUpdates/includeStateUpdates returns summaries',
+        'domain-isolated entity ids: same entityId in different domainIds stays create',
         'save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)',
         'sync mode: returns success with errors in summary (returnErrorIfInResultsSummary=false)',
         'returns empty list for project with no changes',

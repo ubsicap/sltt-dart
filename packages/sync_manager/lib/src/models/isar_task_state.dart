@@ -12,6 +12,14 @@ part 'isar_task_state.g.dart';
 @Collection()
 @JsonSerializable(includeIfNull: true, checked: true)
 class IsarTaskState extends BaseIsarEntityState {
+  @override
+  @Index(composite: [CompositeIndex('entityId')], unique: true)
+  @Index(
+    composite: [CompositeIndex('data_parentId'), CompositeIndex('entityId')],
+    unique: true,
+  )
+  String get change_domainId => super.change_domainId;
+
   // Task-specific fields
   String data_nameLocal;
   DateTime data_nameLocal_changeAt_;

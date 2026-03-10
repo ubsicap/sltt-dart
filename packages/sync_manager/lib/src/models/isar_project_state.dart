@@ -14,8 +14,16 @@ class IsarProjectState extends BaseEntityState {
 
   /// Primary key - entityId with entity type abbreviation
   @override
-  @Index(unique: true)
+  @Index(unique: false)
   final String entityId;
+
+  @override
+  @Index(composite: [CompositeIndex('entityId')], unique: true)
+  @Index(
+    composite: [CompositeIndex('data_parentId'), CompositeIndex('entityId')],
+    unique: true,
+  )
+  String get change_domainId => super.change_domainId;
 
   // Project-specific fields
   final String? data_nameLocal;

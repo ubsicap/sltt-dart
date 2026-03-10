@@ -3,7 +3,6 @@
 import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
-
 import 'package:sync_manager/sync_manager.dart';
 
 part 'video_translation.entity_state.isar.g.dart';
@@ -14,12 +13,14 @@ class IsarVideoDataEntityState extends BaseEntityState {
   Id id;
 
   @override
-  @Index(unique: true)
+  @Index(unique: false)
   final String entityId;
 
   @override
+  @Index(composite: [CompositeIndex('entityId')], unique: true)
   @Index(
     composite: [CompositeIndex('data_parentId'), CompositeIndex('entityId')],
+    unique: true,
   )
   String get change_domainId => super.change_domainId;
 
@@ -228,11 +229,12 @@ void registerIsarVideoDataEntityStateStorageGroup(
                     .limit(limit ?? 100)
                     .findAll();
               },
-          getAllByEntityId: (isar, entityIds) async {
-            final results = await isar.isarVideoDataEntityStates
-                .getAllByEntityId(entityIds);
-            return results.whereType<IsarVideoDataEntityState>().toList();
-          },
+          getAllByChange_domainIdEntityId:
+              (isar, List<String> domainIds, List<String> entityIds) async {
+                final results = await isar.isarVideoDataEntityStates
+                    .getAllByChange_domainIdEntityId(domainIds, entityIds);
+                return results.whereType<IsarVideoDataEntityState>().toList();
+              },
           deleteByDomain: ({required domainId, required domainType}) async =>
               await isar.isarVideoDataEntityStates
                   .where()

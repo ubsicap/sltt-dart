@@ -444,9 +444,27 @@ const IsarPassageDataEntityStateSchema = CollectionSchema(
     r'entityId': IndexSchema(
       id: 745355021660786263,
       name: r'entityId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'entityId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
+      ],
+    ),
+    r'change_domainId_entityId': IndexSchema(
+      id: -6715042500448220763,
+      name: r'change_domainId_entityId',
       unique: true,
       replace: false,
       properties: [
+        IndexPropertySchema(
+          name: r'change_domainId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
         IndexPropertySchema(
           name: r'entityId',
           type: IndexType.hash,
@@ -457,7 +475,7 @@ const IsarPassageDataEntityStateSchema = CollectionSchema(
     r'change_domainId_data_parentId_entityId': IndexSchema(
       id: 3628626482037321153,
       name: r'change_domainId_data_parentId_entityId',
-      unique: false,
+      unique: true,
       replace: false,
       properties: [
         IndexPropertySchema(
@@ -969,66 +987,316 @@ void _isarPassageDataEntityStateAttach(
 
 extension IsarPassageDataEntityStateByIndex
     on IsarCollection<IsarPassageDataEntityState> {
-  Future<IsarPassageDataEntityState?> getByEntityId(String entityId) {
-    return getByIndex(r'entityId', [entityId]);
+  Future<IsarPassageDataEntityState?> getByChange_domainIdEntityId(
+    String change_domainId,
+    String entityId,
+  ) {
+    return getByIndex(r'change_domainId_entityId', [change_domainId, entityId]);
   }
 
-  IsarPassageDataEntityState? getByEntityIdSync(String entityId) {
-    return getByIndexSync(r'entityId', [entityId]);
+  IsarPassageDataEntityState? getByChange_domainIdEntityIdSync(
+    String change_domainId,
+    String entityId,
+  ) {
+    return getByIndexSync(r'change_domainId_entityId', [
+      change_domainId,
+      entityId,
+    ]);
   }
 
-  Future<bool> deleteByEntityId(String entityId) {
-    return deleteByIndex(r'entityId', [entityId]);
+  Future<bool> deleteByChange_domainIdEntityId(
+    String change_domainId,
+    String entityId,
+  ) {
+    return deleteByIndex(r'change_domainId_entityId', [
+      change_domainId,
+      entityId,
+    ]);
   }
 
-  bool deleteByEntityIdSync(String entityId) {
-    return deleteByIndexSync(r'entityId', [entityId]);
+  bool deleteByChange_domainIdEntityIdSync(
+    String change_domainId,
+    String entityId,
+  ) {
+    return deleteByIndexSync(r'change_domainId_entityId', [
+      change_domainId,
+      entityId,
+    ]);
   }
 
-  Future<List<IsarPassageDataEntityState?>> getAllByEntityId(
+  Future<List<IsarPassageDataEntityState?>> getAllByChange_domainIdEntityId(
+    List<String> change_domainIdValues,
     List<String> entityIdValues,
   ) {
-    final values = entityIdValues.map((e) => [e]).toList();
-    return getAllByIndex(r'entityId', values);
+    final len = change_domainIdValues.length;
+    assert(
+      entityIdValues.length == len,
+      'All index values must have the same length',
+    );
+    final values = <List<dynamic>>[];
+    for (var i = 0; i < len; i++) {
+      values.add([change_domainIdValues[i], entityIdValues[i]]);
+    }
+
+    return getAllByIndex(r'change_domainId_entityId', values);
   }
 
-  List<IsarPassageDataEntityState?> getAllByEntityIdSync(
+  List<IsarPassageDataEntityState?> getAllByChange_domainIdEntityIdSync(
+    List<String> change_domainIdValues,
     List<String> entityIdValues,
   ) {
-    final values = entityIdValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'entityId', values);
+    final len = change_domainIdValues.length;
+    assert(
+      entityIdValues.length == len,
+      'All index values must have the same length',
+    );
+    final values = <List<dynamic>>[];
+    for (var i = 0; i < len; i++) {
+      values.add([change_domainIdValues[i], entityIdValues[i]]);
+    }
+
+    return getAllByIndexSync(r'change_domainId_entityId', values);
   }
 
-  Future<int> deleteAllByEntityId(List<String> entityIdValues) {
-    final values = entityIdValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'entityId', values);
+  Future<int> deleteAllByChange_domainIdEntityId(
+    List<String> change_domainIdValues,
+    List<String> entityIdValues,
+  ) {
+    final len = change_domainIdValues.length;
+    assert(
+      entityIdValues.length == len,
+      'All index values must have the same length',
+    );
+    final values = <List<dynamic>>[];
+    for (var i = 0; i < len; i++) {
+      values.add([change_domainIdValues[i], entityIdValues[i]]);
+    }
+
+    return deleteAllByIndex(r'change_domainId_entityId', values);
   }
 
-  int deleteAllByEntityIdSync(List<String> entityIdValues) {
-    final values = entityIdValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'entityId', values);
+  int deleteAllByChange_domainIdEntityIdSync(
+    List<String> change_domainIdValues,
+    List<String> entityIdValues,
+  ) {
+    final len = change_domainIdValues.length;
+    assert(
+      entityIdValues.length == len,
+      'All index values must have the same length',
+    );
+    final values = <List<dynamic>>[];
+    for (var i = 0; i < len; i++) {
+      values.add([change_domainIdValues[i], entityIdValues[i]]);
+    }
+
+    return deleteAllByIndexSync(r'change_domainId_entityId', values);
   }
 
-  Future<Id> putByEntityId(IsarPassageDataEntityState object) {
-    return putByIndex(r'entityId', object);
+  Future<Id> putByChange_domainIdEntityId(IsarPassageDataEntityState object) {
+    return putByIndex(r'change_domainId_entityId', object);
   }
 
-  Id putByEntityIdSync(
+  Id putByChange_domainIdEntityIdSync(
     IsarPassageDataEntityState object, {
     bool saveLinks = true,
   }) {
-    return putByIndexSync(r'entityId', object, saveLinks: saveLinks);
+    return putByIndexSync(
+      r'change_domainId_entityId',
+      object,
+      saveLinks: saveLinks,
+    );
   }
 
-  Future<List<Id>> putAllByEntityId(List<IsarPassageDataEntityState> objects) {
-    return putAllByIndex(r'entityId', objects);
+  Future<List<Id>> putAllByChange_domainIdEntityId(
+    List<IsarPassageDataEntityState> objects,
+  ) {
+    return putAllByIndex(r'change_domainId_entityId', objects);
   }
 
-  List<Id> putAllByEntityIdSync(
+  List<Id> putAllByChange_domainIdEntityIdSync(
     List<IsarPassageDataEntityState> objects, {
     bool saveLinks = true,
   }) {
-    return putAllByIndexSync(r'entityId', objects, saveLinks: saveLinks);
+    return putAllByIndexSync(
+      r'change_domainId_entityId',
+      objects,
+      saveLinks: saveLinks,
+    );
+  }
+
+  Future<IsarPassageDataEntityState?> getByChange_domainIdData_parentIdEntityId(
+    String change_domainId,
+    String data_parentId,
+    String entityId,
+  ) {
+    return getByIndex(r'change_domainId_data_parentId_entityId', [
+      change_domainId,
+      data_parentId,
+      entityId,
+    ]);
+  }
+
+  IsarPassageDataEntityState? getByChange_domainIdData_parentIdEntityIdSync(
+    String change_domainId,
+    String data_parentId,
+    String entityId,
+  ) {
+    return getByIndexSync(r'change_domainId_data_parentId_entityId', [
+      change_domainId,
+      data_parentId,
+      entityId,
+    ]);
+  }
+
+  Future<bool> deleteByChange_domainIdData_parentIdEntityId(
+    String change_domainId,
+    String data_parentId,
+    String entityId,
+  ) {
+    return deleteByIndex(r'change_domainId_data_parentId_entityId', [
+      change_domainId,
+      data_parentId,
+      entityId,
+    ]);
+  }
+
+  bool deleteByChange_domainIdData_parentIdEntityIdSync(
+    String change_domainId,
+    String data_parentId,
+    String entityId,
+  ) {
+    return deleteByIndexSync(r'change_domainId_data_parentId_entityId', [
+      change_domainId,
+      data_parentId,
+      entityId,
+    ]);
+  }
+
+  Future<List<IsarPassageDataEntityState?>>
+  getAllByChange_domainIdData_parentIdEntityId(
+    List<String> change_domainIdValues,
+    List<String> data_parentIdValues,
+    List<String> entityIdValues,
+  ) {
+    final len = change_domainIdValues.length;
+    assert(
+      data_parentIdValues.length == len && entityIdValues.length == len,
+      'All index values must have the same length',
+    );
+    final values = <List<dynamic>>[];
+    for (var i = 0; i < len; i++) {
+      values.add([
+        change_domainIdValues[i],
+        data_parentIdValues[i],
+        entityIdValues[i],
+      ]);
+    }
+
+    return getAllByIndex(r'change_domainId_data_parentId_entityId', values);
+  }
+
+  List<IsarPassageDataEntityState?>
+  getAllByChange_domainIdData_parentIdEntityIdSync(
+    List<String> change_domainIdValues,
+    List<String> data_parentIdValues,
+    List<String> entityIdValues,
+  ) {
+    final len = change_domainIdValues.length;
+    assert(
+      data_parentIdValues.length == len && entityIdValues.length == len,
+      'All index values must have the same length',
+    );
+    final values = <List<dynamic>>[];
+    for (var i = 0; i < len; i++) {
+      values.add([
+        change_domainIdValues[i],
+        data_parentIdValues[i],
+        entityIdValues[i],
+      ]);
+    }
+
+    return getAllByIndexSync(r'change_domainId_data_parentId_entityId', values);
+  }
+
+  Future<int> deleteAllByChange_domainIdData_parentIdEntityId(
+    List<String> change_domainIdValues,
+    List<String> data_parentIdValues,
+    List<String> entityIdValues,
+  ) {
+    final len = change_domainIdValues.length;
+    assert(
+      data_parentIdValues.length == len && entityIdValues.length == len,
+      'All index values must have the same length',
+    );
+    final values = <List<dynamic>>[];
+    for (var i = 0; i < len; i++) {
+      values.add([
+        change_domainIdValues[i],
+        data_parentIdValues[i],
+        entityIdValues[i],
+      ]);
+    }
+
+    return deleteAllByIndex(r'change_domainId_data_parentId_entityId', values);
+  }
+
+  int deleteAllByChange_domainIdData_parentIdEntityIdSync(
+    List<String> change_domainIdValues,
+    List<String> data_parentIdValues,
+    List<String> entityIdValues,
+  ) {
+    final len = change_domainIdValues.length;
+    assert(
+      data_parentIdValues.length == len && entityIdValues.length == len,
+      'All index values must have the same length',
+    );
+    final values = <List<dynamic>>[];
+    for (var i = 0; i < len; i++) {
+      values.add([
+        change_domainIdValues[i],
+        data_parentIdValues[i],
+        entityIdValues[i],
+      ]);
+    }
+
+    return deleteAllByIndexSync(
+      r'change_domainId_data_parentId_entityId',
+      values,
+    );
+  }
+
+  Future<Id> putByChange_domainIdData_parentIdEntityId(
+    IsarPassageDataEntityState object,
+  ) {
+    return putByIndex(r'change_domainId_data_parentId_entityId', object);
+  }
+
+  Id putByChange_domainIdData_parentIdEntityIdSync(
+    IsarPassageDataEntityState object, {
+    bool saveLinks = true,
+  }) {
+    return putByIndexSync(
+      r'change_domainId_data_parentId_entityId',
+      object,
+      saveLinks: saveLinks,
+    );
+  }
+
+  Future<List<Id>> putAllByChange_domainIdData_parentIdEntityId(
+    List<IsarPassageDataEntityState> objects,
+  ) {
+    return putAllByIndex(r'change_domainId_data_parentId_entityId', objects);
+  }
+
+  List<Id> putAllByChange_domainIdData_parentIdEntityIdSync(
+    List<IsarPassageDataEntityState> objects, {
+    bool saveLinks = true,
+  }) {
+    return putAllByIndexSync(
+      r'change_domainId_data_parentId_entityId',
+      objects,
+      saveLinks: saveLinks,
+    );
   }
 }
 
@@ -1198,6 +1466,135 @@ extension IsarPassageDataEntityStateQueryWhere
                 indexName: r'entityId',
                 lower: [],
                 upper: [entityId],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdEqualToAnyEntityId(String change_domainId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'change_domainId_entityId',
+          value: [change_domainId],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdNotEqualToAnyEntityId(String change_domainId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_entityId',
+                lower: [],
+                upper: [change_domainId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_entityId',
+                lower: [change_domainId],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_entityId',
+                lower: [change_domainId],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_entityId',
+                lower: [],
+                upper: [change_domainId],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdEntityIdEqualTo(String change_domainId, String entityId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'change_domainId_entityId',
+          value: [change_domainId, entityId],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterWhereClause
+  >
+  change_domainIdEqualToEntityIdNotEqualTo(
+    String change_domainId,
+    String entityId,
+  ) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_entityId',
+                lower: [change_domainId],
+                upper: [change_domainId, entityId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_entityId',
+                lower: [change_domainId, entityId],
+                includeLower: false,
+                upper: [change_domainId],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_entityId',
+                lower: [change_domainId, entityId],
+                includeLower: false,
+                upper: [change_domainId],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'change_domainId_entityId',
+                lower: [change_domainId],
+                upper: [change_domainId, entityId],
                 includeUpper: false,
               ),
             );

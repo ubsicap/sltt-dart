@@ -250,6 +250,16 @@ class ApiChangesNetworkTestSuite {
                 tearDown: tearDown,
               );
             },
+        'domain-isolated entity ids: same entityId in different domainIds stays create':
+            ({setup, tearDown}) async {
+              final domainId = '__test_multi_domainIds_1';
+              await _runTestWithLifecycle(
+                domainId,
+                _testPostChangesDomainIsolationWithSharedEntityId,
+                setup: setup,
+                tearDown: tearDown,
+              );
+            },
         'save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)':
             ({setup, tearDown}) async {
               final domainId = '__test_return_error_save_mode';
@@ -615,6 +625,81 @@ class ApiChangesNetworkTestSuite {
     expect(json['stateUpdates'], isA<List>());
     expect((json['changeUpdates'] as List).first, contains('cid'));
     expect((json['stateUpdates'] as List).first, contains('cid'));
+  }
+
+  Future<void> _testPostChangesDomainIsolationWithSharedEntityId({
+    required String domainId,
+  }) async {
+    final domainId1 = '__test_multi_domainIds_1';
+    final domainId2 = '__test_multi_domainIds_2';
+    const sharedEntityId = '__test_multi_domainIds_eid_seed_1';
+    final t1 = DateTime.now().toUtc();
+    final t2 = t1.add(const Duration(seconds: 1));
+
+    final firstChange = {
+      'domainId': domainId1,
+      'domainType': 'project',
+      'entityType': 'task',
+      'entityId': sharedEntityId,
+      'changeBy': 'tester',
+      'changeAt': t1.toIso8601String(),
+      'cid': '$domainCollection-${generateCid(entityType: EntityType.task)}',
+      'storageId': 'local',
+      'operation': 'create',
+      'operationInfoJson': '{}',
+      'stateChanged': false,
+      'unknownJson': '{}',
+      'dataJson': jsonEncode({
+        'nameLocal': 'Seed 1',
+        'parentId': 'root',
+        'parentProp': 'pList',
+      }),
+    };
+
+    final secondChange = {
+      'domainId': domainId2,
+      'domainType': 'project',
+      'entityType': 'task',
+      'entityId': sharedEntityId,
+      'changeBy': 'tester',
+      'changeAt': t2.toIso8601String(),
+      'cid': '$domainCollection-${generateCid(entityType: EntityType.task)}',
+      'storageId': 'local',
+      'operation': 'create',
+      'operationInfoJson': '{}',
+      'stateChanged': false,
+      'unknownJson': '{}',
+      'dataJson': jsonEncode({
+        'nameLocal': 'Seed 2',
+        'parentId': 'root',
+        'parentProp': 'pList',
+      }),
+    };
+
+    final firstJson = await postSingleChange(firstChange);
+    if (firstJson.containsKey('error')) {
+      final errors = firstJson['error'];
+      fail('First change resulted in errors: $errors in response: $firstJson');
+    }
+    final firstUpdates = firstJson['changeUpdates'] as List<dynamic>;
+    expect(firstUpdates, isNotEmpty);
+    expect(
+      (firstUpdates.first as Map<String, dynamic>)['updates']['operation'],
+      equals('create'),
+      reason: 'First change should be create',
+    );
+
+    final secondJson = await postSingleChange(secondChange);
+    final secondUpdates = secondJson['changeUpdates'] as List<dynamic>;
+    expect(secondUpdates, isNotEmpty);
+    final secondOp =
+        (secondUpdates.first as Map<String, dynamic>)['updates']['operation'];
+    expect(
+      secondOp,
+      equals('create'),
+      reason:
+          'Second change with same entityId but different domainId must stay create (not update/outdated)',
+    );
   }
 
   Future<void> _testReturnErrorIfInResultsSummarySaveMode({
