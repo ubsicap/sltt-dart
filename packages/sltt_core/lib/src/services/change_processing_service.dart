@@ -767,9 +767,10 @@ class ChangeProcessingService {
             invalidStorageIds.add(i);
           }
           if (changeLogEntry.stateChanged == false) {
-            // invalidStateChanged.add(i);
-            // For now, allow stateChanged to be false in sync mode since some
+            // we could allow stateChanged to be false in sync mode (e.g. for outdated) since some
             // this could happen for seeding or other edge cases (user set clock backward in time or daylight savings transition?)
+            // but that would required broader changes to only try to update storedAt/cloudAt
+            invalidStateChanged.add(i);
           }
           if (changeLogEntry.seq <= 0) {
             // syncing assumes seq has already been provided
