@@ -18,7 +18,6 @@ import 'models/isar_task_state.dart';
 /// so calling code can open Isar with all necessary schemas before
 /// registering storage groups.
 final List<CollectionSchema> entityStateSchemas = [
-  IsarUnknownEntityStateSchema,
   IsarUserPreferencesDataEntityStateSchema,
   IsarProjectStateSchema,
   IsarDocumentStateSchema,

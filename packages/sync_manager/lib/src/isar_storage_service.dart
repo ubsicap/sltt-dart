@@ -72,6 +72,7 @@ class IsarStorageService extends BaseStorageService {
       IsarEntityTypeSyncStateSchema,
       CursorSyncStateSchema,
       client.IsarChangeLogEntrySchema,
+      IsarUnknownEntityStateSchema,
       ...schemasToUse,
     ];
 
@@ -90,6 +91,7 @@ class IsarStorageService extends BaseStorageService {
     _entityStateRegistry.clear();
     registerIsarChangeLogSerializableGroup();
     if (registerStorageGroups != null) {
+      registerIsarUnknownEntityStateStorageGroup(_entityStateRegistry, _isar);
       registerStorageGroups(_entityStateRegistry, _isar);
     } else {
       // Fall back to default registration
@@ -103,6 +105,16 @@ class IsarStorageService extends BaseStorageService {
 
     // Ensure storage ID is set
     _storageId = await ensureStorageId();
+
+    // Log registered storage groups and their entity types
+    final registeredGroups = _entityStateRegistry.registeredEntityTypes();
+    SlttLogger.logger.info(
+      '[$_logPrefix] Registered Isar entity state storage groups: $registeredGroups',
+    );
+
+    // Perform unknown entity state migration on initialization
+    // in case we have registered new storage groups that can resolve previously unknown entities.
+    await migrateUnknownEntityStates();
   }
 
   /// Migrates rows from the IsarUnknownEntityState collection into concrete
@@ -119,6 +131,10 @@ class IsarStorageService extends BaseStorageService {
         'IsarStorageService must be initialized before migration',
       );
     }
+
+    SlttLogger.logger.info(
+      '[$_logPrefix] Starting unknown entity state migration with batch size $maxRowsPerBatch',
+    );
     if (maxRowsPerBatch <= 0) {
       throw ArgumentError.value(
         maxRowsPerBatch,
