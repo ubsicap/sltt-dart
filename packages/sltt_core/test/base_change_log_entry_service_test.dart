@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:sltt_core/src/services/base_change_log_entry_service.dart';
 import 'package:test/test.dart';
 
@@ -29,31 +27,21 @@ void main() {
       toSafeJson: (orig) => {
         // default safe shape the concrete model can parse
         ...orig,
-        'entityType': 'unknown',
-        'operation': 'hold',
-        'operationInfoJson': jsonEncode({
-          ...(jsonDecode(orig['operationInfoJson'] ?? '{}')),
-          'hold': 'entityType',
-          'entityType': orig['entityType'],
-        }),
+        // Do not inject 'hold' or change operation; preserve original
+        // operation and let caller-side logic decide how to handle unknown
+        // entityType strings.
+        'operationInfoJson': (orig['operationInfoJson'] ?? '{}'),
         'dataJson': (orig['dataJson'] ?? '{}'),
         'unknownJson': (orig['unknownJson'] ?? '{}'),
       },
     );
 
-    // After deserialization, operation should be 'hold'
-    expect(result.operation, equals('hold'));
-    // entityType should be EntityType.unknown
-    expect(result.entityType.toString().contains('unknown'), isTrue);
-    // operationInfo should contain the raw entityType value
-    expect(
-      result.getOperationInfo(),
-      equals({
-        'prev': 'stuff',
-        'hold': 'entityType',
-        'entityType': 'brandNewType',
-      }),
-    );
+    // After deserialization, operation should remain the original value
+    expect(result.operation, equals('update'));
+    // entityType should preserve the original raw string
+    expect(result.entityType, equals('brandNewType'));
+    // operationInfo should preserve the original info and not require 'hold'
+    expect(result.getOperationInfo(), equals({'prev': 'stuff'}));
   });
 
   test('deserializeChangeLogEntrySafely recovers from factory error', () {
