@@ -5,6 +5,7 @@ import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/isar_entity_type_sync_state.dart';
 import 'package:sync_manager/src/models/isar_storage_state.dart';
+import 'package:sync_manager/src/models/unknown_entity_state.isar.dart';
 import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:sync_manager/sync_manager.dart';
 
@@ -102,6 +103,138 @@ class IsarStorageService extends BaseStorageService {
 
     // Ensure storage ID is set
     _storageId = await ensureStorageId();
+  }
+
+  /// Migrates rows from the IsarUnknownEntityState collection into concrete
+  /// entity collections when the row's raw entityType resolves to a registered
+  /// storage group.
+  ///
+  /// Rows with unresolved/unsupported entity types are left in
+  /// IsarUnknownEntityState.
+  Future<UnknownEntityStateMigrationResult> migrateUnknownEntityStates({
+    int maxRowsPerBatch = 200,
+  }) async {
+    if (!_initialized) {
+      throw StateError(
+        'IsarStorageService must be initialized before migration',
+      );
+    }
+    if (maxRowsPerBatch <= 0) {
+      throw ArgumentError.value(
+        maxRowsPerBatch,
+        'maxRowsPerBatch',
+        'must be greater than 0',
+      );
+    }
+
+    int rowsScanned = 0;
+    int rowsMigrated = 0;
+    int rowsDeleted = 0;
+    int rowsSkipped = 0;
+    int rowsFailed = 0;
+    Id lastSeenId = Isar.minId;
+
+    final cachedStorageGroupByRawType =
+        <String, IsarEntityStateStorageGroup?>{};
+
+    while (true) {
+      final chunk = await _isar.isarUnknownEntityStates
+          .where()
+          .idGreaterThan(lastSeenId)
+          .limit(maxRowsPerBatch)
+          .findAll();
+
+      if (chunk.isEmpty) {
+        break;
+      }
+      lastSeenId = chunk.last.id;
+
+      final statesToPutByRawType = <String, List<BaseEntityState>>{};
+      final idsToDelete = <Id>[];
+
+      for (final row in chunk) {
+        rowsScanned++;
+        final rawEntityType = row.entityType;
+
+        if (rawEntityType == EntityType.unknown.value) {
+          rowsSkipped++;
+          continue;
+        }
+
+        IsarEntityStateStorageGroup? storageGroup;
+        if (cachedStorageGroupByRawType.containsKey(rawEntityType)) {
+          storageGroup = cachedStorageGroupByRawType[rawEntityType];
+        } else {
+          final parsed = EntityType.tryFromString(rawEntityType);
+          storageGroup = parsed == null || parsed == EntityType.unknown
+              ? null
+              : _entityStateRegistry.get(parsed);
+          cachedStorageGroupByRawType[rawEntityType] = storageGroup;
+        }
+
+        if (storageGroup == null) {
+          rowsSkipped++;
+          continue;
+        }
+
+        try {
+          final migrated = storageGroup.fromJson(row.toJson());
+          statesToPutByRawType
+              .putIfAbsent(rawEntityType, () => <BaseEntityState>[])
+              .add(migrated);
+          idsToDelete.add(row.id);
+        } catch (e) {
+          rowsFailed++;
+          SlttLogger.logger.warning(
+            '[$_logPrefix] Failed to migrate unknown entity state id=${row.id} '
+            'entityType=$rawEntityType: $e',
+          );
+        }
+      }
+
+      if (idsToDelete.isEmpty) {
+        continue;
+      }
+
+      await _isar.writeTxn(() async {
+        for (final entry in statesToPutByRawType.entries) {
+          final storageGroup = cachedStorageGroupByRawType[entry.key];
+          if (storageGroup == null || entry.value.isEmpty) continue;
+          await storageGroup.putAll(entry.value);
+        }
+
+        final deletedInTxn = await _isar.isarUnknownEntityStates.deleteAll(
+          idsToDelete,
+        );
+        rowsDeleted += deletedInTxn;
+      });
+
+      rowsMigrated += idsToDelete.length;
+    }
+
+    final Set<String> migratedTypes = cachedStorageGroupByRawType.entries
+        .where((e) => e.value != null)
+        .map((e) => e.key)
+        .toSet();
+    final skippedTypes = cachedStorageGroupByRawType.entries
+        .where((e) => e.value == null)
+        .map((e) => e.key)
+        .toSet();
+    SlttLogger.logger.info(
+      '[$_logPrefix] Unknown-entity migration done: scanned=$rowsScanned '
+      'migrated=$rowsMigrated deleted=$rowsDeleted types migrated=$migratedTypes '
+      'skipped=$rowsSkipped failed=$rowsFailed types skipped=$skippedTypes',
+    );
+
+    return UnknownEntityStateMigrationResult(
+      rowsScanned: rowsScanned,
+      rowsMigrated: rowsMigrated,
+      rowsDeleted: rowsDeleted,
+      rowsSkipped: rowsSkipped,
+      rowsFailed: rowsFailed,
+      migratedEntityTypes: migratedTypes,
+      skippedEntityTypes: skippedTypes,
+    );
   }
 
   /// Helper method to convert IsarChangeLogEntry to BaseChangeLogEntry
@@ -1561,4 +1694,24 @@ class CloudStorageService extends IsarStorageService {
     await super.close();
     _instance = null;
   }
+}
+
+class UnknownEntityStateMigrationResult {
+  final int rowsScanned;
+  final int rowsMigrated;
+  final int rowsDeleted;
+  final int rowsSkipped;
+  final int rowsFailed;
+  final Set<String> migratedEntityTypes;
+  final Set<String> skippedEntityTypes;
+
+  const UnknownEntityStateMigrationResult({
+    required this.rowsScanned,
+    required this.rowsMigrated,
+    required this.rowsDeleted,
+    required this.rowsSkipped,
+    required this.rowsFailed,
+    required this.migratedEntityTypes,
+    required this.skippedEntityTypes,
+  });
 }
