@@ -1211,16 +1211,12 @@ class IsarStorageService extends BaseStorageService {
       orElse: () => EntityType.unknown,
     );
 
-    if (entityTypeEnum == EntityType.unknown) {
-      SlttLogger.logger.warning(
-        'getEntityState - Unknown entity type: "$entityType"',
-      );
-      return null;
-    }
-
     final storageGroup = _entityStateRegistry.get(entityTypeEnum);
     if (storageGroup == null) {
-      throw Exception('Storage group not found: $entityTypeEnum');
+      SlttLogger.logger.warning(
+        'getEntityState - No storage group for entity type: "$entityType"',
+      );
+      return null;
     }
 
     // Use the type-safe finder function instead of dynamic collection access

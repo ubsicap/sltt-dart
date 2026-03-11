@@ -8,6 +8,7 @@ import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 import 'package:sync_manager/src/models/isar_storage_state.dart';
 import 'package:sync_manager/src/models/isar_task_state.dart';
+import 'package:sync_manager/src/models/unknown_entity_state.isar.dart';
 import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:test/test.dart';
 
@@ -1694,5 +1695,194 @@ void main() {
       storage = IsarStorageService(testDbName, 'Test');
       await storage.initialize();
     });
+  });
+
+  group('IsarStorageService Unknown Entity Type (totallyRandom)', () {
+    const domainId = '__test_totally_random_domain';
+    const entityId = '__test_totally_random_entity_1';
+    const unknownEntityType = 'totallyRandom';
+
+    Future<void> seedUnknownEntity() async {
+      final r = await ChangeProcessingService.storeChanges(
+        storageMode: 'save',
+        changes: [
+          changePayload(
+            projectId: domainId,
+            entityType: unknownEntityType,
+            entityId: entityId,
+            changeAt: baseTime,
+            operation: 'create',
+            data: {'parentId': 'root', 'parentProp': 'pList'},
+          ),
+        ],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(r.isSuccess, isTrue, reason: r.errorMessage);
+    }
+
+    test('storeChanges succeeds for totallyRandom entityType', () async {
+      final r = await ChangeProcessingService.storeChanges(
+        storageMode: 'save',
+        changes: [
+          changePayload(
+            projectId: domainId,
+            entityType: unknownEntityType,
+            entityId: entityId,
+            changeAt: baseTime,
+            operation: 'create',
+            data: {'parentId': 'root', 'parentProp': 'pList'},
+          ),
+        ],
+        srcStorageType: 'local',
+        srcStorageId: 'local-client',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      expect(r.isSuccess, isTrue, reason: r.errorMessage);
+      expect(r.resultsSummary!.created, isNotEmpty);
+    });
+
+    test(
+      'getEntityState returns IsarUnknownEntityState for totallyRandom',
+      () async {
+        await seedUnknownEntity();
+
+        final state = await storage.getEntityState(
+          domainType: 'project',
+          domainId: domainId,
+          entityType: unknownEntityType,
+          entityId: entityId,
+        );
+
+        expect(state, isNotNull);
+        expect(state, isA<IsarUnknownEntityState>());
+        expect(state!.entityType, equals(unknownEntityType));
+        expect(state.entityId, equals(entityId));
+        expect(state.change_domainId, equals(domainId));
+      },
+    );
+
+    test(
+      'getEntityState round-trips entityType through serialize/deserialize',
+      () async {
+        await seedUnknownEntity();
+
+        final state = await storage.getEntityState(
+          domainType: 'project',
+          domainId: domainId,
+          entityType: unknownEntityType,
+          entityId: entityId,
+        );
+
+        expect(state, isNotNull);
+        final json = state!.toJson();
+        expect(json['entityType'], equals(unknownEntityType));
+
+        final roundTripped = IsarUnknownEntityState.fromJson(json);
+        expect(roundTripped.entityType, equals(unknownEntityType));
+        expect(roundTripped.entityId, equals(entityId));
+      },
+    );
+
+    test(
+      'batchGetEntityState returns IsarUnknownEntityState for totallyRandom',
+      () async {
+        await seedUnknownEntity();
+
+        final results = await storage.batchGetEntityState(
+          keys: [
+            (
+              domainType: 'project',
+              domainId: domainId,
+              entityType: unknownEntityType,
+              entityId: entityId,
+            ),
+          ],
+        );
+
+        expect(results.containsKey(entityId), isTrue);
+        final state = results[entityId];
+        expect(state, isNotNull);
+        expect(state, isA<IsarUnknownEntityState>());
+        expect(state!.entityType, equals(unknownEntityType));
+        expect(state.change_domainId, equals(domainId));
+      },
+    );
+
+    test(
+      'batchGetEntityState returns null for missing totallyRandom entity',
+      () async {
+        await seedUnknownEntity();
+
+        const missingId = '__test_totally_random_entity_MISSING';
+        final results = await storage.batchGetEntityState(
+          keys: [
+            (
+              domainType: 'project',
+              domainId: domainId,
+              entityType: unknownEntityType,
+              entityId: missingId,
+            ),
+          ],
+        );
+
+        expect(results.containsKey(missingId), isTrue);
+        expect(results[missingId], isNull);
+      },
+    );
+
+    test(
+      'batchGetEntityState handles mix of known and totallyRandom types',
+      () async {
+        // Seed a task (known type) and a totallyRandom entity
+        final taskResult = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [
+            changePayload(
+              projectId: domainId,
+              entityType: 'task',
+              entityId: 'task-alongside-random',
+              changeAt: baseTime,
+              operation: 'create',
+            ),
+          ],
+          srcStorageType: 'local',
+          srcStorageId: 'local-client',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(taskResult.isSuccess, isTrue, reason: taskResult.errorMessage);
+        await seedUnknownEntity();
+
+        final results = await storage.batchGetEntityState(
+          keys: [
+            (
+              domainType: 'project',
+              domainId: domainId,
+              entityType: 'task',
+              entityId: 'task-alongside-random',
+            ),
+            (
+              domainType: 'project',
+              domainId: domainId,
+              entityType: unknownEntityType,
+              entityId: entityId,
+            ),
+          ],
+        );
+
+        expect(results['task-alongside-random'], isNotNull);
+        expect(results['task-alongside-random'], isA<IsarTaskState>());
+        expect(results[entityId], isNotNull);
+        expect(results[entityId], isA<IsarUnknownEntityState>());
+        expect(results[entityId]!.entityType, equals(unknownEntityType));
+      },
+    );
   });
 }
