@@ -14,6 +14,15 @@ import 'package:sync_manager/sync_manager.dart';
 import 'models/isar_change_log_entry.dart' as client;
 import 'register_entity_states.dart';
 
+// ignore: constant_identifier_names
+enum SchemaStatus {
+  NoInfo,
+  MissingHasBackup,
+  MissingHasNoBackup,
+  Add,
+  NoChange,
+}
+
 class IsarStorageService extends BaseStorageService {
   final String _databaseName;
   final String _logPrefix;
@@ -40,16 +49,108 @@ class IsarStorageService extends BaseStorageService {
 
   static SchemasInfo calculateSchemasInfo({
     required List<CollectionSchema> incomingSchemas,
+    required bool calculateFileInfoSchemaStatus,
+    String? fileInfoDirectoryPath,
+    String? fileInfoDatabaseName,
   }) {
     final coreSchemaNames = _sortedDistinctSchemaNames(coreSchemas);
     final schemaNames = _sortedDistinctSchemaNames([
       ...coreSchemas,
       ...incomingSchemas,
     ]);
+
+    var fileInfoSchemasPath = '';
+    var fileInfoBackupPath = '';
+    var fileInfoSchemaNames = <String>[];
+    var fileInfoCoreSchemaNames = <String>[];
+    var schemaStatus = SchemaStatus.NoInfo;
+
+    if (calculateFileInfoSchemaStatus) {
+      if (fileInfoDirectoryPath == null || fileInfoDatabaseName == null) {
+        throw ArgumentError(
+          'fileInfoDirectoryPath and fileInfoDatabaseName are required '
+          'when calculateFileInfoSchemaStatus=true',
+        );
+      }
+
+      final manifestPath =
+          '$fileInfoDirectoryPath/$fileInfoDatabaseName.isar.schemas';
+      final manifestFile = File(manifestPath);
+      if (manifestFile.existsSync()) {
+        fileInfoSchemasPath = manifestPath;
+        try {
+          final decoded = jsonDecode(manifestFile.readAsStringSync());
+          if (decoded is Map<String, dynamic>) {
+            final rawSchemaNames = decoded['schemaNames'];
+            if (rawSchemaNames is List) {
+              fileInfoSchemaNames =
+                  rawSchemaNames
+                      .whereType<String>()
+                      .map((e) => e.trim())
+                      .where((e) => e.isNotEmpty)
+                      .toSet()
+                      .toList()
+                    ..sort();
+            }
+
+            final rawCoreSchemaNames = decoded['coreSchemaNames'];
+            if (rawCoreSchemaNames is List) {
+              fileInfoCoreSchemaNames =
+                  rawCoreSchemaNames
+                      .whereType<String>()
+                      .map((e) => e.trim())
+                      .where((e) => e.isNotEmpty)
+                      .toSet()
+                      .toList()
+                    ..sort();
+            }
+          }
+        } catch (_) {
+          fileInfoSchemaNames = <String>[];
+          fileInfoCoreSchemaNames = <String>[];
+        }
+      }
+
+      final fileSet = fileInfoSchemaNames.toSet();
+      final incomingSet = schemaNames.toSet();
+      final incomingMissingComparedWithFile = fileSet.difference(incomingSet);
+
+      if (fileInfoSchemaNames.isEmpty) {
+        schemaStatus = SchemaStatus.Add;
+      } else if (incomingMissingComparedWithFile.isNotEmpty) {
+        final requestedHash = _schemaNamesCrc32(schemaNames);
+        final requestedDbBackup = File(
+          '$fileInfoDirectoryPath/$fileInfoDatabaseName.isar.$requestedHash.bak',
+        );
+        final requestedManifestBackup = File(
+          '$manifestPath.$requestedHash.bak',
+        );
+        final hasRequestedBackups =
+            requestedDbBackup.existsSync() &&
+            requestedManifestBackup.existsSync();
+        if (hasRequestedBackups) {
+          fileInfoBackupPath = requestedManifestBackup.path;
+          schemaStatus = SchemaStatus.MissingHasBackup;
+        } else {
+          schemaStatus = SchemaStatus.MissingHasNoBackup;
+        }
+      } else if (incomingSet.length == fileSet.length &&
+          incomingSet.containsAll(fileSet)) {
+        schemaStatus = SchemaStatus.NoChange;
+      } else {
+        schemaStatus = SchemaStatus.Add;
+      }
+    }
+
     return SchemasInfo(
       schemaNames: schemaNames,
       coreSchemaNames: coreSchemaNames,
       schemaNamesCrc32: _schemaNamesCrc32(schemaNames),
+      fileInfoSchemasPath: fileInfoSchemasPath,
+      fileInfoBackupPath: fileInfoBackupPath,
+      fileInfoSchemaNames: fileInfoSchemaNames,
+      fileInfoCoreSchemaNames: fileInfoCoreSchemaNames,
+      schemaStatus: schemaStatus,
     );
   }
 
@@ -97,12 +198,14 @@ class IsarStorageService extends BaseStorageService {
 
     final requestedSchemasInfo = IsarStorageService.calculateSchemasInfo(
       incomingSchemas: incomingSchemas,
+      calculateFileInfoSchemaStatus: true,
+      fileInfoDirectoryPath: dir.path,
+      fileInfoDatabaseName: _databaseName,
     );
-    final requestedSchemaNames = requestedSchemasInfo.schemaNames;
     await _protectDatabaseAgainstSchemaRegression(
       directoryPath: dir.path,
       requestedIncomingSchemas: incomingSchemas,
-      requestedSchemaNames: requestedSchemaNames,
+      requestedSchemasInfo: requestedSchemasInfo,
       strict: !backupAndSwitchOnMissingSchemas,
     );
 
@@ -171,50 +274,6 @@ class IsarStorageService extends BaseStorageService {
     return crc32.convert(utf8.encode(input)).toString();
   }
 
-  bool _isSameSchemaNames(List<String> a, List<String> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
-
-  bool _isSupersetSchemaNames(
-    List<String> maybeSuperset,
-    List<String> maybeSubset,
-  ) {
-    if (maybeSuperset.length < maybeSubset.length) return false;
-    final set = maybeSuperset.toSet();
-    for (final schemaName in maybeSubset) {
-      if (!set.contains(schemaName)) return false;
-    }
-    return true;
-  }
-
-  Future<List<String>?> _readSchemaManifest(File manifestFile) async {
-    if (!await manifestFile.exists()) return null;
-    try {
-      final decoded = jsonDecode(await manifestFile.readAsString());
-      if (decoded is! Map<String, dynamic>) return null;
-      final rawNames = decoded['schemaNames'];
-      if (rawNames is! List) return null;
-      final names =
-          rawNames
-              .whereType<String>()
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty)
-              .toSet()
-              .toList()
-            ..sort();
-      return names;
-    } catch (e) {
-      SlttLogger.logger.warning(
-        '[$_logPrefix] Failed reading schema manifest ${manifestFile.path}: $e',
-      );
-      return null;
-    }
-  }
-
   Future<void> _writeSchemaManifest(
     File manifestFile, {
     required List<CollectionSchema> incomingSchemas,
@@ -222,6 +281,7 @@ class IsarStorageService extends BaseStorageService {
     final payload = jsonEncode(
       IsarStorageService.calculateSchemasInfo(
         incomingSchemas: incomingSchemas,
+        calculateFileInfoSchemaStatus: false,
       ).toJson(),
     );
     await manifestFile.writeAsString('$payload\n', flush: true);
@@ -243,13 +303,18 @@ class IsarStorageService extends BaseStorageService {
   Future<void> _protectDatabaseAgainstSchemaRegression({
     required String directoryPath,
     required List<CollectionSchema> requestedIncomingSchemas,
-    required List<String> requestedSchemaNames,
+    required SchemasInfo requestedSchemasInfo,
     bool strict = false,
   }) async {
     final manifestFile = File(_schemaManifestPath(directoryPath));
-    final currentSchemaNames = await _readSchemaManifest(manifestFile);
+    final requestedSchemaNames = requestedSchemasInfo.schemaNames;
 
-    if (currentSchemaNames == null) {
+    if (requestedSchemasInfo.schemaStatus == SchemaStatus.NoChange) {
+      return;
+    }
+
+    if (requestedSchemasInfo.schemaStatus == SchemaStatus.Add ||
+        requestedSchemasInfo.schemaStatus == SchemaStatus.NoInfo) {
       await _writeSchemaManifest(
         manifestFile,
         incomingSchemas: requestedIncomingSchemas,
@@ -257,18 +322,7 @@ class IsarStorageService extends BaseStorageService {
       return;
     }
 
-    if (_isSameSchemaNames(currentSchemaNames, requestedSchemaNames)) {
-      return;
-    }
-
-    if (_isSupersetSchemaNames(requestedSchemaNames, currentSchemaNames)) {
-      await _writeSchemaManifest(
-        manifestFile,
-        incomingSchemas: requestedIncomingSchemas,
-      );
-      return;
-    }
-
+    final currentSchemaNames = requestedSchemasInfo.fileInfoSchemaNames;
     if (strict) {
       throw StateError(
         'IsarStorageService: Schema mismatch detected. Existing: '
@@ -296,10 +350,7 @@ class IsarStorageService extends BaseStorageService {
         overwrite: true,
       );
 
-      final hasRequestedBackups =
-          await requestedDbBackup.exists() &&
-          await requestedManifestBackup.exists();
-      if (hasRequestedBackups) {
+      if (requestedSchemasInfo.schemaStatus == SchemaStatus.MissingHasBackup) {
         await requestedDbBackup.copy(dbFile.path);
         await requestedManifestBackup.copy(manifestFile.path);
         SlttLogger.logger.warning(
@@ -1968,6 +2019,11 @@ class SchemasInfo {
     required this.schemaNames,
     required this.coreSchemaNames,
     required this.schemaNamesCrc32,
+    required this.fileInfoSchemasPath,
+    required this.fileInfoBackupPath,
+    required this.fileInfoSchemaNames,
+    required this.fileInfoCoreSchemaNames,
+    required this.schemaStatus,
   }) : coreSchemaNamesLength = coreSchemaNames.length,
        schemaNamesLength = schemaNames.length;
 
@@ -1976,6 +2032,11 @@ class SchemasInfo {
   final int coreSchemaNamesLength;
   final int schemaNamesLength;
   final String schemaNamesCrc32;
+  final String fileInfoSchemasPath;
+  final String fileInfoBackupPath;
+  final List<String> fileInfoSchemaNames;
+  final List<String> fileInfoCoreSchemaNames;
+  final SchemaStatus schemaStatus;
 
   Map<String, dynamic> toJson() => {
     'schemaNames': schemaNames,
@@ -1983,5 +2044,10 @@ class SchemasInfo {
     'coreSchemaNamesLength': coreSchemaNamesLength,
     'schemaNamesLength': schemaNamesLength,
     'schemaNamesCrc32': schemaNamesCrc32,
+    'fileInfoSchemasPath': fileInfoSchemasPath,
+    'fileInfoBackupPath': fileInfoBackupPath,
+    'fileInfoSchemaNames': fileInfoSchemaNames,
+    'fileInfoCoreSchemaNames': fileInfoCoreSchemaNames,
+    'schemaStatus': schemaStatus.name,
   };
 }

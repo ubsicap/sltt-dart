@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:hashlib/hashlib.dart';
@@ -15,28 +14,21 @@ void main() {
   String dbPath() => '${tempDir.path}/$dbName.isar';
   String schemaPath() => '${tempDir.path}/$dbName.isar.schemas';
 
+  SchemasInfo calculateInfo(
+    List<CollectionSchema> incomingSchemas, {
+    bool withFileInfo = false,
+  }) {
+    return IsarStorageService.calculateSchemasInfo(
+      incomingSchemas: incomingSchemas,
+      calculateFileInfoSchemaStatus: withFileInfo,
+      fileInfoDirectoryPath: withFileInfo ? tempDir.path : null,
+      fileInfoDatabaseName: withFileInfo ? dbName : null,
+    );
+  }
+
   String schemaHash(List<String> schemaNames) {
     final input = schemaNames.join('|');
     return crc32.convert(input.codeUnits).toString();
-  }
-
-  Future<Map<String, dynamic>> readSchemaInfo() async {
-    final file = File(schemaPath());
-    expect(
-      await file.exists(),
-      isTrue,
-      reason: '.isar.schemas file is missing',
-    );
-    final decoded =
-        jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-    return decoded;
-  }
-
-  Future<List<String>> readSchemaNames() async {
-    final decoded = await readSchemaInfo();
-    final names = (decoded['schemaNames'] as List).whereType<String>().toList()
-      ..sort();
-    return names;
   }
 
   Future<void> initializeWith(
@@ -74,9 +66,7 @@ void main() {
         IsarTaskStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
 
-      final actualInfo = IsarStorageService.calculateSchemasInfo(
-        incomingSchemas: expectedIncomingSchemas,
-      );
+      final actualInfo = calculateInfo(expectedIncomingSchemas);
       final schemaNames = actualInfo.schemaNames;
 
       expect(schemaNames, equals([...schemaNames]..sort()));
@@ -98,17 +88,16 @@ void main() {
       await initializeWith([
         IsarTaskStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
-      final initialInfo = IsarStorageService.calculateSchemasInfo(
-        incomingSchemas: [IsarTaskStateSchema],
-      );
+      final initialInfo = calculateInfo([IsarTaskStateSchema]);
 
       await initializeWith([
         IsarTaskStateSchema,
         IsarProjectStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
-      final expandedInfo = IsarStorageService.calculateSchemasInfo(
-        incomingSchemas: [IsarTaskStateSchema, IsarProjectStateSchema],
-      );
+      final expandedInfo = calculateInfo([
+        IsarTaskStateSchema,
+        IsarProjectStateSchema,
+      ]);
 
       final initialNames = initialInfo.schemaNames;
       final expandedNames = expandedInfo.schemaNames;
@@ -128,7 +117,11 @@ void main() {
         IsarTaskStateSchema,
         IsarProjectStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
-      final oldNames = await readSchemaNames();
+      final oldInfo = calculateInfo([
+        IsarTaskStateSchema,
+        IsarProjectStateSchema,
+      ], withFileInfo: true);
+      final oldNames = oldInfo.fileInfoSchemaNames;
       final oldHash = schemaHash(oldNames);
 
       await initializeWith([
@@ -143,7 +136,10 @@ void main() {
       await initializeWith([
         IsarTaskStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
-      final taskOnlyNames = await readSchemaNames();
+      final taskOnlyInfo = calculateInfo([
+        IsarTaskStateSchema,
+      ], withFileInfo: true);
+      final taskOnlyNames = taskOnlyInfo.fileInfoSchemaNames;
       final taskOnlyHash = schemaHash(taskOnlyNames);
 
       await File(dbPath()).copy('${dbPath()}.$taskOnlyHash.bak');
@@ -153,7 +149,11 @@ void main() {
         IsarTaskStateSchema,
         IsarProjectStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
-      final expandedNames = await readSchemaNames();
+      final expandedInfo = calculateInfo([
+        IsarTaskStateSchema,
+        IsarProjectStateSchema,
+      ], withFileInfo: true);
+      final expandedNames = expandedInfo.fileInfoSchemaNames;
       final expandedHash = schemaHash(expandedNames);
 
       expect(expandedHash, isNot(equals(taskOnlyHash)));
@@ -165,7 +165,10 @@ void main() {
         IsarTaskStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
 
-      final restoredNames = await readSchemaNames();
+      final restoredInfo = calculateInfo([
+        IsarTaskStateSchema,
+      ], withFileInfo: true);
+      final restoredNames = restoredInfo.fileInfoSchemaNames;
       expect(restoredNames, equals(taskOnlyNames));
       expect(await File('${dbPath()}.$expandedHash.bak').exists(), isTrue);
       expect(await File('${schemaPath()}.$expandedHash.bak').exists(), isTrue);
@@ -176,7 +179,11 @@ void main() {
         IsarTaskStateSchema,
         IsarProjectStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
-      final oldNames = await readSchemaNames();
+      final oldInfo = calculateInfo([
+        IsarTaskStateSchema,
+        IsarProjectStateSchema,
+      ], withFileInfo: true);
+      final oldNames = oldInfo.fileInfoSchemaNames;
       final oldHash = schemaHash(oldNames);
 
       await expectLater(
@@ -188,7 +195,10 @@ void main() {
 
       expect(await File('${dbPath()}.$oldHash.bak').exists(), isFalse);
       expect(await File('${schemaPath()}.$oldHash.bak').exists(), isFalse);
-      expect(await readSchemaNames(), equals(oldNames));
+      final strictInfo = calculateInfo([
+        IsarTaskStateSchema,
+      ], withFileInfo: true);
+      expect(strictInfo.fileInfoSchemaNames, equals(oldNames));
     });
 
     test('does not throw in strict mode when schemas match exactly', () async {
@@ -200,8 +210,83 @@ void main() {
         IsarTaskStateSchema,
       ], backupAndSwitchOnMissingSchemas: false);
 
-      final names = await readSchemaNames();
+      final info = calculateInfo([IsarTaskStateSchema], withFileInfo: true);
+      final names = info.fileInfoSchemaNames;
       expect(names, contains(IsarTaskStateSchema.name));
     });
+
+    test('schema status is NoInfo when file status is not requested', () async {
+      final info = calculateInfo([IsarTaskStateSchema]);
+      expect(info.schemaStatus, SchemaStatus.NoInfo);
+      expect(info.fileInfoSchemasPath, isEmpty);
+      expect(info.fileInfoBackupPath, isEmpty);
+      expect(info.fileInfoSchemaNames, isEmpty);
+      expect(info.fileInfoCoreSchemaNames, isEmpty);
+    });
+
+    test(
+      'schema status is Add for first initialize with no schema file',
+      () async {
+        final info = calculateInfo([IsarTaskStateSchema], withFileInfo: true);
+        expect(info.schemaStatus, SchemaStatus.Add);
+        expect(info.fileInfoSchemasPath, isEmpty);
+        expect(info.fileInfoSchemaNames, isEmpty);
+        expect(info.fileInfoCoreSchemaNames, isEmpty);
+      },
+    );
+
+    test(
+      'schema status is NoChange when incoming matches file schema names',
+      () async {
+        await initializeWith([
+          IsarTaskStateSchema,
+        ], backupAndSwitchOnMissingSchemas: true);
+
+        final info = calculateInfo([IsarTaskStateSchema], withFileInfo: true);
+        expect(info.schemaStatus, SchemaStatus.NoChange);
+        expect(info.fileInfoSchemasPath, isNotEmpty);
+        expect(info.fileInfoSchemaNames, equals(info.schemaNames));
+      },
+    );
+
+    test(
+      'schema status is MissingHasNoBackup when incoming misses schemas and no backup exists',
+      () async {
+        await initializeWith([
+          IsarTaskStateSchema,
+          IsarProjectStateSchema,
+        ], backupAndSwitchOnMissingSchemas: true);
+
+        final info = calculateInfo([IsarTaskStateSchema], withFileInfo: true);
+        expect(info.schemaStatus, SchemaStatus.MissingHasNoBackup);
+        expect(info.fileInfoBackupPath, isEmpty);
+      },
+    );
+
+    test(
+      'schema status is MissingHasBackup when incoming misses schemas and backup exists',
+      () async {
+        await initializeWith([
+          IsarTaskStateSchema,
+        ], backupAndSwitchOnMissingSchemas: true);
+        final taskOnlyInfo = calculateInfo([
+          IsarTaskStateSchema,
+        ], withFileInfo: true);
+        final taskOnlyHash = schemaHash(taskOnlyInfo.fileInfoSchemaNames);
+
+        await File(dbPath()).copy('${dbPath()}.$taskOnlyHash.bak');
+        await File(schemaPath()).copy('${schemaPath()}.$taskOnlyHash.bak');
+
+        await initializeWith([
+          IsarTaskStateSchema,
+          IsarProjectStateSchema,
+        ], backupAndSwitchOnMissingSchemas: true);
+
+        final info = calculateInfo([IsarTaskStateSchema], withFileInfo: true);
+        expect(info.schemaStatus, SchemaStatus.MissingHasBackup);
+        expect(info.fileInfoBackupPath, isNotEmpty);
+        expect(await File(info.fileInfoBackupPath).exists(), isTrue);
+      },
+    );
   });
 }
