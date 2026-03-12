@@ -1,9 +1,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/unknown_entity_state.isar.dart'
-    show
-        registerIsarUnknownEntityStateStorageGroup,
-        IsarUnknownEntityStateSchema;
+    show registerIsarUnknownEntityStateStorageGroup;
 import 'package:sync_manager/src/models/user_preferences.entity_state.isar.dart'
     show
         registerIsarUserPreferencesDataEntityStateStorageGroup,
