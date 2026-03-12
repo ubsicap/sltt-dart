@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:isar_community/isar.dart';
@@ -76,6 +77,12 @@ class IsarStorageService extends BaseStorageService {
       ...schemasToUse,
     ];
 
+    final requestedSchemaNames = _sortedSchemaNames(schemas);
+    await _protectDatabaseAgainstSchemaRegression(
+      directoryPath: dir.path,
+      requestedSchemaNames: requestedSchemaNames,
+    );
+
     // Initialize Isar with all schemas
     _isar = await Isar.open(
       schemas,
@@ -84,6 +91,10 @@ class IsarStorageService extends BaseStorageService {
       inspector: inspector,
     );
     _dbPath = '${dir.path}/$_databaseName.isar';
+    await _writeSchemaManifest(
+      File(_schemaManifestPath(dir.path)),
+      requestedSchemaNames,
+    );
 
     // Register storage groups with the initialized Isar instance. Always
     // start from a clean registry so re-initialization doesn't duplicate
@@ -115,6 +126,155 @@ class IsarStorageService extends BaseStorageService {
     // Perform unknown entity state migration on initialization
     // in case we have registered new storage groups that can resolve previously unknown entities.
     await migrateUnknownEntityStates();
+  }
+
+  List<String> _sortedSchemaNames(List<CollectionSchema> schemas) {
+    final schemaNames = schemas.map((s) => s.name).toSet().toList()..sort();
+    return schemaNames;
+  }
+
+  String _schemaManifestPath(String directoryPath) {
+    return '$directoryPath/$_databaseName.isar.schemas';
+  }
+
+  String _schemaHash(List<String> schemaNames) {
+    final input = schemaNames.join('|');
+    var hash = 0x811c9dc5;
+    for (final codeUnit in input.codeUnits) {
+      hash ^= codeUnit;
+      hash = (hash * 0x01000193) & 0xffffffff;
+    }
+    return hash.toRadixString(16).padLeft(8, '0');
+  }
+
+  bool _isSameSchemaNames(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  bool _isSupersetSchemaNames(
+    List<String> maybeSuperset,
+    List<String> maybeSubset,
+  ) {
+    if (maybeSuperset.length < maybeSubset.length) return false;
+    final set = maybeSuperset.toSet();
+    for (final schemaName in maybeSubset) {
+      if (!set.contains(schemaName)) return false;
+    }
+    return true;
+  }
+
+  Future<List<String>?> _readSchemaManifest(File manifestFile) async {
+    if (!await manifestFile.exists()) return null;
+    try {
+      final decoded = jsonDecode(await manifestFile.readAsString());
+      if (decoded is! Map<String, dynamic>) return null;
+      final rawNames = decoded['schemaNames'];
+      if (rawNames is! List) return null;
+      final names =
+          rawNames
+              .whereType<String>()
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+      return names;
+    } catch (e) {
+      SlttLogger.logger.warning(
+        '[$_logPrefix] Failed reading schema manifest ${manifestFile.path}: $e',
+      );
+      return null;
+    }
+  }
+
+  Future<void> _writeSchemaManifest(
+    File manifestFile,
+    List<String> schemaNames,
+  ) async {
+    final payload = jsonEncode({'schemaNames': schemaNames});
+    await manifestFile.writeAsString('$payload\n', flush: true);
+  }
+
+  Future<bool> _copyFileIfExists(
+    File source,
+    File destination, {
+    bool overwrite = false,
+  }) async {
+    if (!await source.exists()) return false;
+    if (overwrite && await destination.exists()) {
+      await destination.delete();
+    }
+    await source.copy(destination.path);
+    return true;
+  }
+
+  Future<void> _protectDatabaseAgainstSchemaRegression({
+    required String directoryPath,
+    required List<String> requestedSchemaNames,
+  }) async {
+    final manifestFile = File(_schemaManifestPath(directoryPath));
+    final currentSchemaNames = await _readSchemaManifest(manifestFile);
+
+    if (currentSchemaNames == null) {
+      await _writeSchemaManifest(manifestFile, requestedSchemaNames);
+      return;
+    }
+
+    if (_isSameSchemaNames(currentSchemaNames, requestedSchemaNames)) {
+      return;
+    }
+
+    if (_isSupersetSchemaNames(requestedSchemaNames, currentSchemaNames)) {
+      await _writeSchemaManifest(manifestFile, requestedSchemaNames);
+      return;
+    }
+
+    final dbFile = File('$directoryPath/$_databaseName.isar');
+    final currentHash = _schemaHash(currentSchemaNames);
+    final requestedHash = _schemaHash(requestedSchemaNames);
+
+    final currentDbBackup = File('${dbFile.path}.$currentHash.bak');
+    final currentManifestBackup = File('${manifestFile.path}.$currentHash.bak');
+    final requestedDbBackup = File('${dbFile.path}.$requestedHash.bak');
+    final requestedManifestBackup = File(
+      '${manifestFile.path}.$requestedHash.bak',
+    );
+
+    try {
+      await _copyFileIfExists(dbFile, currentDbBackup, overwrite: true);
+      await _copyFileIfExists(
+        manifestFile,
+        currentManifestBackup,
+        overwrite: true,
+      );
+
+      final hasRequestedBackups =
+          await requestedDbBackup.exists() &&
+          await requestedManifestBackup.exists();
+      if (hasRequestedBackups) {
+        await requestedDbBackup.copy(dbFile.path);
+        await requestedManifestBackup.copy(manifestFile.path);
+        SlttLogger.logger.warning(
+          '[$_logPrefix] Schema mismatch detected. Restored Isar DB from backup '
+          'for hash=$requestedHash. currentSchemas=$currentSchemaNames '
+          'requestedSchemas=$requestedSchemaNames',
+        );
+      } else {
+        SlttLogger.logger.warning(
+          '[$_logPrefix] Schema mismatch detected. Created backup '
+          'for hash=$currentHash and continuing with requested schema set. '
+          'currentSchemas=$currentSchemaNames requestedSchemas=$requestedSchemaNames',
+        );
+      }
+    } catch (e) {
+      SlttLogger.logger.warning(
+        '[$_logPrefix] Failed schema-guard backup/restore flow: $e',
+      );
+    }
   }
 
   /// Migrates rows from the IsarUnknownEntityState collection into concrete
@@ -1223,6 +1383,7 @@ class IsarStorageService extends BaseStorageService {
 
     final isarFile = File('$dirPath/$databaseName.isar');
     final isarLck = File('$dirPath/$databaseName.isar-lck');
+    final schemaFile = File('$dirPath/$databaseName.isar.schemas');
     final dbDir = Directory('$dirPath/$databaseName');
 
     Future<bool> tryDeleteFile(File f) async {
@@ -1247,13 +1408,38 @@ class IsarStorageService extends BaseStorageService {
       }
     }
 
+    Future<bool> tryDeleteBackups() async {
+      try {
+        if (!await dir.exists()) return true;
+        await for (final entity in dir.list(followLinks: false)) {
+          if (entity is! File) continue;
+          final name = entity.uri.pathSegments.isNotEmpty
+              ? entity.uri.pathSegments.last
+              : entity.path;
+          final matchesDbBackup =
+              name.startsWith('$databaseName.isar.') && name.endsWith('.bak');
+          final matchesSchemaBackup =
+              name.startsWith('$databaseName.isar.schemas.') &&
+              name.endsWith('.bak');
+          if (matchesDbBackup || matchesSchemaBackup) {
+            await entity.delete();
+          }
+        }
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
     bool removed = false;
     while (DateTime.now().isBefore(end)) {
       final f1 = await tryDeleteFile(isarFile);
       final f2 = await tryDeleteFile(isarLck);
+      final f3 = await tryDeleteFile(schemaFile);
       final d1 = await tryDeleteDir(dbDir);
+      final b1 = await tryDeleteBackups();
 
-      if (f1 && f2 && d1) {
+      if (f1 && f2 && f3 && d1 && b1) {
         removed = true;
         break;
       }
