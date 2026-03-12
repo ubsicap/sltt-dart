@@ -14,15 +14,6 @@ import 'package:sync_manager/sync_manager.dart';
 import 'models/isar_change_log_entry.dart' as client;
 import 'register_entity_states.dart';
 
-// ignore: constant_identifier_names
-enum SchemaStatus {
-  noInfo,
-  missingHasBackup,
-  missingHasNoBackup,
-  addIncoming,
-  noChanges,
-}
-
 class IsarStorageService extends BaseStorageService {
   final String _databaseName;
   final String _logPrefix;
@@ -64,6 +55,8 @@ class IsarStorageService extends BaseStorageService {
     var fileInfoSchemaNames = <String>[];
     var fileInfoCoreSchemaNames = <String>[];
     var schemaStatus = SchemaStatus.noInfo;
+
+    final schemaNamesCrc32String = _schemaNamesCrc32(schemaNames);
 
     if (calculateFileInfoSchemaStatus) {
       if (fileInfoDirectoryPath == null || fileInfoDatabaseName == null) {
@@ -118,12 +111,21 @@ class IsarStorageService extends BaseStorageService {
       if (fileInfoSchemaNames.isEmpty) {
         schemaStatus = SchemaStatus.addIncoming;
       } else if (incomingMissingComparedWithFile.isNotEmpty) {
-        final requestedHash = _schemaNamesCrc32(schemaNames);
         final requestedDbBackup = File(
-          '$fileInfoDirectoryPath/$fileInfoDatabaseName.isar.$requestedHash.bak',
+          _isarFileBackupPath(
+            filePath: '$fileInfoDirectoryPath/$fileInfoDatabaseName.isar',
+            coreSchemaCount: coreSchemaNames.length,
+            incomingSchemaCount: incomingSchemas.length,
+            schemaHash: schemaNamesCrc32String,
+          ),
         );
         final requestedManifestBackup = File(
-          '$manifestPath.$requestedHash.bak',
+          _isarFileBackupPath(
+            filePath: manifestPath,
+            coreSchemaCount: coreSchemaNames.length,
+            incomingSchemaCount: incomingSchemas.length,
+            schemaHash: schemaNamesCrc32String,
+          ),
         );
         final hasRequestedBackups =
             requestedDbBackup.existsSync() &&
@@ -145,7 +147,7 @@ class IsarStorageService extends BaseStorageService {
     return SchemasInfo(
       schemaNames: schemaNames,
       coreSchemaNames: coreSchemaNames,
-      schemaNamesCrc32: _schemaNamesCrc32(schemaNames),
+      schemaNamesCrc32: schemaNamesCrc32String,
       fileInfoSchemasPath: fileInfoSchemasPath,
       fileInfoBackupPath: fileInfoBackupPath,
       fileInfoSchemaNames: fileInfoSchemaNames,
@@ -274,6 +276,15 @@ class IsarStorageService extends BaseStorageService {
     return crc32.convert(utf8.encode(input)).toString();
   }
 
+  static String _isarFileBackupPath({
+    required String filePath,
+    required int coreSchemaCount,
+    required int incomingSchemaCount,
+    required String schemaHash,
+  }) {
+    return '$filePath.${coreSchemaCount}_${incomingSchemaCount}_$schemaHash.bak';
+  }
+
   Future<void> _writeSchemaManifest(
     File manifestFile, {
     required List<CollectionSchema> incomingSchemas,
@@ -334,12 +345,44 @@ class IsarStorageService extends BaseStorageService {
     final dbFile = File('$directoryPath/$_databaseName.isar');
     final currentHash = _schemaHash(currentSchemaNames);
     final requestedHash = _schemaHash(requestedSchemaNames);
+    final currentCoreSchemaCount =
+        requestedSchemasInfo.fileInfoCoreSchemaNames.isNotEmpty
+        ? requestedSchemasInfo.fileInfoCoreSchemaNames.length
+        : requestedSchemasInfo.coreSchemaNames.length;
+    final currentIncomingSchemaCount =
+        currentSchemaNames.length - currentCoreSchemaCount;
 
-    final currentDbBackup = File('${dbFile.path}.$currentHash.bak');
-    final currentManifestBackup = File('${manifestFile.path}.$currentHash.bak');
-    final requestedDbBackup = File('${dbFile.path}.$requestedHash.bak');
+    final currentDbBackup = File(
+      _isarFileBackupPath(
+        filePath: dbFile.path,
+        coreSchemaCount: currentCoreSchemaCount,
+        incomingSchemaCount: currentIncomingSchemaCount,
+        schemaHash: currentHash,
+      ),
+    );
+    final currentManifestBackup = File(
+      _isarFileBackupPath(
+        filePath: manifestFile.path,
+        coreSchemaCount: currentCoreSchemaCount,
+        incomingSchemaCount: currentIncomingSchemaCount,
+        schemaHash: currentHash,
+      ),
+    );
+    final requestedDbBackup = File(
+      _isarFileBackupPath(
+        filePath: dbFile.path,
+        coreSchemaCount: requestedSchemasInfo.coreSchemaNames.length,
+        incomingSchemaCount: requestedIncomingSchemas.length,
+        schemaHash: requestedHash,
+      ),
+    );
     final requestedManifestBackup = File(
-      '${manifestFile.path}.$requestedHash.bak',
+      _isarFileBackupPath(
+        filePath: manifestFile.path,
+        coreSchemaCount: requestedSchemasInfo.coreSchemaNames.length,
+        incomingSchemaCount: requestedIncomingSchemas.length,
+        schemaHash: requestedHash,
+      ),
     );
 
     try {
@@ -2013,7 +2056,15 @@ class UnknownEntityStateMigrationResult {
   });
 }
 
-// Typed schema info returned by `calculateSchemasInfo`.
+enum SchemaStatus {
+  noInfo,
+  missingHasBackup,
+  missingHasNoBackup,
+  addIncoming,
+  noChanges,
+}
+
+/// Typed schema info returned by `calculateSchemasInfo`.
 class SchemasInfo {
   const SchemasInfo({
     required this.schemaNames,

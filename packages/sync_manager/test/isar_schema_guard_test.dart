@@ -31,6 +31,16 @@ void main() {
     return crc32.convert(input.codeUnits).toString();
   }
 
+  String dbBackupPathFor(List<CollectionSchema> incomingSchemas) {
+    final info = calculateInfo(incomingSchemas);
+    return '${dbPath()}.${info.coreSchemaNamesLength}_${incomingSchemas.length}_${info.schemaNamesCrc32}.bak';
+  }
+
+  String manifestBackupPathFor(List<CollectionSchema> incomingSchemas) {
+    final info = calculateInfo(incomingSchemas);
+    return '${schemaPath()}.${info.coreSchemaNamesLength}_${incomingSchemas.length}_${info.schemaNamesCrc32}.bak';
+  }
+
   Future<void> initializeWith(
     List<CollectionSchema> providedSchemas, {
     bool? backupAndSwitchOnMissingSchemas,
@@ -117,19 +127,27 @@ void main() {
         IsarTaskStateSchema,
         IsarProjectStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
-      final oldInfo = calculateInfo([
+      calculateInfo([
         IsarTaskStateSchema,
         IsarProjectStateSchema,
       ], withFileInfo: true);
-      final oldNames = oldInfo.fileInfoSchemaNames;
-      final oldHash = schemaHash(oldNames);
 
       await initializeWith([
         IsarTaskStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
 
-      expect(await File('${dbPath()}.$oldHash.bak').exists(), isTrue);
-      expect(await File('${schemaPath()}.$oldHash.bak').exists(), isTrue);
+      expect(
+        await File(
+          dbBackupPathFor([IsarTaskStateSchema, IsarProjectStateSchema]),
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await File(
+          manifestBackupPathFor([IsarTaskStateSchema, IsarProjectStateSchema]),
+        ).exists(),
+        isTrue,
+      );
     });
 
     test('restores requested-schema backup when available', () async {
@@ -142,8 +160,10 @@ void main() {
       final taskOnlyNames = taskOnlyInfo.fileInfoSchemaNames;
       final taskOnlyHash = schemaHash(taskOnlyNames);
 
-      await File(dbPath()).copy('${dbPath()}.$taskOnlyHash.bak');
-      await File(schemaPath()).copy('${schemaPath()}.$taskOnlyHash.bak');
+      await File(dbPath()).copy(dbBackupPathFor([IsarTaskStateSchema]));
+      await File(
+        schemaPath(),
+      ).copy(manifestBackupPathFor([IsarTaskStateSchema]));
 
       await initializeWith([
         IsarTaskStateSchema,
@@ -170,8 +190,18 @@ void main() {
       ], withFileInfo: true);
       final restoredNames = restoredInfo.fileInfoSchemaNames;
       expect(restoredNames, equals(taskOnlyNames));
-      expect(await File('${dbPath()}.$expandedHash.bak').exists(), isTrue);
-      expect(await File('${schemaPath()}.$expandedHash.bak').exists(), isTrue);
+      expect(
+        await File(
+          dbBackupPathFor([IsarTaskStateSchema, IsarProjectStateSchema]),
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await File(
+          manifestBackupPathFor([IsarTaskStateSchema, IsarProjectStateSchema]),
+        ).exists(),
+        isTrue,
+      );
     });
 
     test('throws in strict mode when requested schemas are reduced', () async {
@@ -184,7 +214,6 @@ void main() {
         IsarProjectStateSchema,
       ], withFileInfo: true);
       final oldNames = oldInfo.fileInfoSchemaNames;
-      final oldHash = schemaHash(oldNames);
 
       await expectLater(
         () => initializeWith([
@@ -193,8 +222,18 @@ void main() {
         throwsA(isA<StateError>()),
       );
 
-      expect(await File('${dbPath()}.$oldHash.bak').exists(), isFalse);
-      expect(await File('${schemaPath()}.$oldHash.bak').exists(), isFalse);
+      expect(
+        await File(
+          dbBackupPathFor([IsarTaskStateSchema, IsarProjectStateSchema]),
+        ).exists(),
+        isFalse,
+      );
+      expect(
+        await File(
+          manifestBackupPathFor([IsarTaskStateSchema, IsarProjectStateSchema]),
+        ).exists(),
+        isFalse,
+      );
       final strictInfo = calculateInfo([
         IsarTaskStateSchema,
       ], withFileInfo: true);
@@ -269,13 +308,11 @@ void main() {
         await initializeWith([
           IsarTaskStateSchema,
         ], backupAndSwitchOnMissingSchemas: true);
-        final taskOnlyInfo = calculateInfo([
-          IsarTaskStateSchema,
-        ], withFileInfo: true);
-        final taskOnlyHash = schemaHash(taskOnlyInfo.fileInfoSchemaNames);
 
-        await File(dbPath()).copy('${dbPath()}.$taskOnlyHash.bak');
-        await File(schemaPath()).copy('${schemaPath()}.$taskOnlyHash.bak');
+        await File(dbPath()).copy(dbBackupPathFor([IsarTaskStateSchema]));
+        await File(
+          schemaPath(),
+        ).copy(manifestBackupPathFor([IsarTaskStateSchema]));
 
         await initializeWith([
           IsarTaskStateSchema,
