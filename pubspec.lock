@@ -281,6 +281,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.2"
+  hashlib:
+    dependency: transitive
+    description:
+      name: hashlib
+      sha256: b12381c77d926cc1a55a6c1dbf6fbbc5c97c05b670e89f6ce3bc59fc673f9dd2
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.0"
+  hashlib_codecs:
+    dependency: transitive
+    description:
+      name: hashlib_codecs
+      sha256: "0e1a17c47792fd131a9bf49b811c394b22516287746ee14cd0b0c22a34136699"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.1"
   http:
     dependency: "direct dev"
     description:

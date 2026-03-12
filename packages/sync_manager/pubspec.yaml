@@ -18,6 +18,7 @@ dependencies:
   http: ^1.1.0
   dio: ^5.0.0
   json_annotation: ^4.9.0
+  hashlib: ^2.3.0
 
 dev_dependencies:
   build_runner: ^2.4.9

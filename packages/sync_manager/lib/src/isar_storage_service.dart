@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:hashlib/hashlib.dart';
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/isar_entity_type_sync_state.dart';
@@ -29,6 +30,31 @@ class IsarStorageService extends BaseStorageService {
   IsarEntityStateStorageRegistry get entityStateRegistry =>
       _entityStateRegistry;
 
+  static const coreSchemas = [
+    IsarStorageStateSchema,
+    IsarEntityTypeSyncStateSchema,
+    CursorSyncStateSchema,
+    client.IsarChangeLogEntrySchema,
+    IsarUnknownEntityStateSchema,
+  ];
+
+  static Map<String, dynamic> calculateSchemasInfo({
+    required List<CollectionSchema> incomingSchemas,
+  }) {
+    final coreSchemaNames = _sortedDistinctSchemaNames(coreSchemas);
+    final schemaNames = _sortedDistinctSchemaNames([
+      ...coreSchemas,
+      ...incomingSchemas,
+    ]);
+    return {
+      'schemaNames': schemaNames,
+      'coreSchemaNames': coreSchemaNames,
+      'coreSchemaNamesLength': coreSchemaNames.length,
+      'schemaNamesLength': schemaNames.length,
+      'schemaNamesCrc32': _schemaNamesCrc32(schemaNames),
+    };
+  }
+
   IsarStorageService(
     this._databaseName,
     this._logPrefix, {
@@ -55,6 +81,7 @@ class IsarStorageService extends BaseStorageService {
     List<CollectionSchema>? providedEntityStateSchemas,
     void Function(IsarEntityStateStorageRegistry, Isar)? registerStorageGroups,
     bool inspector = false,
+    bool backupAndSwitchOnMissingSchemas = false,
   }) async {
     if (_initialized) return;
 
@@ -65,22 +92,21 @@ class IsarStorageService extends BaseStorageService {
     }
 
     // Use provided schemas or fall back to default registered schemas
-    final schemasToUse = providedEntityStateSchemas ?? entityStateSchemas;
+    final incomingSchemas = providedEntityStateSchemas ?? entityStateSchemas;
 
     // Initialize Isar with change log + sync state + entity schemas
-    final schemas = <CollectionSchema>[
-      IsarStorageStateSchema,
-      IsarEntityTypeSyncStateSchema,
-      CursorSyncStateSchema,
-      client.IsarChangeLogEntrySchema,
-      IsarUnknownEntityStateSchema,
-      ...schemasToUse,
-    ];
+    final schemas = <CollectionSchema>[...coreSchemas, ...incomingSchemas];
 
-    final requestedSchemaNames = _sortedSchemaNames(schemas);
+    final requestedSchemasInfo = IsarStorageService.calculateSchemasInfo(
+      incomingSchemas: incomingSchemas,
+    );
+    final requestedSchemaNames = (requestedSchemasInfo['schemaNames'] as List)
+        .cast<String>();
     await _protectDatabaseAgainstSchemaRegression(
       directoryPath: dir.path,
+      requestedIncomingSchemas: incomingSchemas,
       requestedSchemaNames: requestedSchemaNames,
+      strict: !backupAndSwitchOnMissingSchemas,
     );
 
     // Initialize Isar with all schemas
@@ -93,7 +119,7 @@ class IsarStorageService extends BaseStorageService {
     _dbPath = '${dir.path}/$_databaseName.isar';
     await _writeSchemaManifest(
       File(_schemaManifestPath(dir.path)),
-      requestedSchemaNames,
+      incomingSchemas: incomingSchemas,
     );
 
     // Register storage groups with the initialized Isar instance. Always
@@ -128,7 +154,9 @@ class IsarStorageService extends BaseStorageService {
     await migrateUnknownEntityStates();
   }
 
-  List<String> _sortedSchemaNames(List<CollectionSchema> schemas) {
+  static List<String> _sortedDistinctSchemaNames(
+    List<CollectionSchema> schemas,
+  ) {
     final schemaNames = schemas.map((s) => s.name).toSet().toList()..sort();
     return schemaNames;
   }
@@ -138,13 +166,12 @@ class IsarStorageService extends BaseStorageService {
   }
 
   String _schemaHash(List<String> schemaNames) {
+    return _schemaNamesCrc32(schemaNames);
+  }
+
+  static String _schemaNamesCrc32(List<String> schemaNames) {
     final input = schemaNames.join('|');
-    var hash = 0x811c9dc5;
-    for (final codeUnit in input.codeUnits) {
-      hash ^= codeUnit;
-      hash = (hash * 0x01000193) & 0xffffffff;
-    }
-    return hash.toRadixString(16).padLeft(8, '0');
+    return crc32.convert(utf8.encode(input)).toString();
   }
 
   bool _isSameSchemaNames(List<String> a, List<String> b) {
@@ -192,10 +219,12 @@ class IsarStorageService extends BaseStorageService {
   }
 
   Future<void> _writeSchemaManifest(
-    File manifestFile,
-    List<String> schemaNames,
-  ) async {
-    final payload = jsonEncode({'schemaNames': schemaNames});
+    File manifestFile, {
+    required List<CollectionSchema> incomingSchemas,
+  }) async {
+    final payload = jsonEncode(
+      IsarStorageService.calculateSchemasInfo(incomingSchemas: incomingSchemas),
+    );
     await manifestFile.writeAsString('$payload\n', flush: true);
   }
 
@@ -214,13 +243,18 @@ class IsarStorageService extends BaseStorageService {
 
   Future<void> _protectDatabaseAgainstSchemaRegression({
     required String directoryPath,
+    required List<CollectionSchema> requestedIncomingSchemas,
     required List<String> requestedSchemaNames,
+    bool strict = false,
   }) async {
     final manifestFile = File(_schemaManifestPath(directoryPath));
     final currentSchemaNames = await _readSchemaManifest(manifestFile);
 
     if (currentSchemaNames == null) {
-      await _writeSchemaManifest(manifestFile, requestedSchemaNames);
+      await _writeSchemaManifest(
+        manifestFile,
+        incomingSchemas: requestedIncomingSchemas,
+      );
       return;
     }
 
@@ -229,8 +263,19 @@ class IsarStorageService extends BaseStorageService {
     }
 
     if (_isSupersetSchemaNames(requestedSchemaNames, currentSchemaNames)) {
-      await _writeSchemaManifest(manifestFile, requestedSchemaNames);
+      await _writeSchemaManifest(
+        manifestFile,
+        incomingSchemas: requestedIncomingSchemas,
+      );
       return;
+    }
+
+    if (strict) {
+      throw StateError(
+        'IsarStorageService: Schema mismatch detected. Existing: '
+        '$currentSchemaNames, Requested: $requestedSchemaNames. '
+        'Set backupAndSwitchOnMissingSchemas=true to allow backup/restore.',
+      );
     }
 
     final dbFile = File('$directoryPath/$_databaseName.isar');
