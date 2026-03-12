@@ -16,11 +16,11 @@ import 'register_entity_states.dart';
 
 // ignore: constant_identifier_names
 enum SchemaStatus {
-  NoInfo,
-  MissingHasBackup,
-  MissingHasNoBackup,
-  Add,
-  NoChange,
+  noInfo,
+  missingHasBackup,
+  missingHasNoBackup,
+  addIncoming,
+  noChanges,
 }
 
 class IsarStorageService extends BaseStorageService {
@@ -63,7 +63,7 @@ class IsarStorageService extends BaseStorageService {
     var fileInfoBackupPath = '';
     var fileInfoSchemaNames = <String>[];
     var fileInfoCoreSchemaNames = <String>[];
-    var schemaStatus = SchemaStatus.NoInfo;
+    var schemaStatus = SchemaStatus.noInfo;
 
     if (calculateFileInfoSchemaStatus) {
       if (fileInfoDirectoryPath == null || fileInfoDatabaseName == null) {
@@ -116,7 +116,7 @@ class IsarStorageService extends BaseStorageService {
       final incomingMissingComparedWithFile = fileSet.difference(incomingSet);
 
       if (fileInfoSchemaNames.isEmpty) {
-        schemaStatus = SchemaStatus.Add;
+        schemaStatus = SchemaStatus.addIncoming;
       } else if (incomingMissingComparedWithFile.isNotEmpty) {
         final requestedHash = _schemaNamesCrc32(schemaNames);
         final requestedDbBackup = File(
@@ -130,15 +130,15 @@ class IsarStorageService extends BaseStorageService {
             requestedManifestBackup.existsSync();
         if (hasRequestedBackups) {
           fileInfoBackupPath = requestedManifestBackup.path;
-          schemaStatus = SchemaStatus.MissingHasBackup;
+          schemaStatus = SchemaStatus.missingHasBackup;
         } else {
-          schemaStatus = SchemaStatus.MissingHasNoBackup;
+          schemaStatus = SchemaStatus.missingHasNoBackup;
         }
       } else if (incomingSet.length == fileSet.length &&
           incomingSet.containsAll(fileSet)) {
-        schemaStatus = SchemaStatus.NoChange;
+        schemaStatus = SchemaStatus.noChanges;
       } else {
-        schemaStatus = SchemaStatus.Add;
+        schemaStatus = SchemaStatus.addIncoming;
       }
     }
 
@@ -309,12 +309,12 @@ class IsarStorageService extends BaseStorageService {
     final manifestFile = File(_schemaManifestPath(directoryPath));
     final requestedSchemaNames = requestedSchemasInfo.schemaNames;
 
-    if (requestedSchemasInfo.schemaStatus == SchemaStatus.NoChange) {
+    if (requestedSchemasInfo.schemaStatus == SchemaStatus.noChanges) {
       return;
     }
 
-    if (requestedSchemasInfo.schemaStatus == SchemaStatus.Add ||
-        requestedSchemasInfo.schemaStatus == SchemaStatus.NoInfo) {
+    if (requestedSchemasInfo.schemaStatus == SchemaStatus.addIncoming ||
+        requestedSchemasInfo.schemaStatus == SchemaStatus.noInfo) {
       await _writeSchemaManifest(
         manifestFile,
         incomingSchemas: requestedIncomingSchemas,
@@ -350,7 +350,7 @@ class IsarStorageService extends BaseStorageService {
         overwrite: true,
       );
 
-      if (requestedSchemasInfo.schemaStatus == SchemaStatus.MissingHasBackup) {
+      if (requestedSchemasInfo.schemaStatus == SchemaStatus.missingHasBackup) {
         await requestedDbBackup.copy(dbFile.path);
         await requestedManifestBackup.copy(manifestFile.path);
         SlttLogger.logger.warning(

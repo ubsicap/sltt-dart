@@ -215,9 +215,9 @@ void main() {
       expect(names, contains(IsarTaskStateSchema.name));
     });
 
-    test('schema status is NoInfo when file status is not requested', () async {
+    test('schema status is noInfo when file status is not requested', () async {
       final info = calculateInfo([IsarTaskStateSchema]);
-      expect(info.schemaStatus, SchemaStatus.NoInfo);
+      expect(info.schemaStatus, SchemaStatus.noInfo);
       expect(info.fileInfoSchemasPath, isEmpty);
       expect(info.fileInfoBackupPath, isEmpty);
       expect(info.fileInfoSchemaNames, isEmpty);
@@ -225,10 +225,10 @@ void main() {
     });
 
     test(
-      'schema status is Add for first initialize with no schema file',
+      'schema status is addIncoming for first initialize with no schema file',
       () async {
         final info = calculateInfo([IsarTaskStateSchema], withFileInfo: true);
-        expect(info.schemaStatus, SchemaStatus.Add);
+        expect(info.schemaStatus, SchemaStatus.addIncoming);
         expect(info.fileInfoSchemasPath, isEmpty);
         expect(info.fileInfoSchemaNames, isEmpty);
         expect(info.fileInfoCoreSchemaNames, isEmpty);
@@ -236,21 +236,21 @@ void main() {
     );
 
     test(
-      'schema status is NoChange when incoming matches file schema names',
+      'schema status is noChanges when incoming matches file schema names',
       () async {
         await initializeWith([
           IsarTaskStateSchema,
         ], backupAndSwitchOnMissingSchemas: true);
 
         final info = calculateInfo([IsarTaskStateSchema], withFileInfo: true);
-        expect(info.schemaStatus, SchemaStatus.NoChange);
+        expect(info.schemaStatus, SchemaStatus.noChanges);
         expect(info.fileInfoSchemasPath, isNotEmpty);
         expect(info.fileInfoSchemaNames, equals(info.schemaNames));
       },
     );
 
     test(
-      'schema status is MissingHasNoBackup when incoming misses schemas and no backup exists',
+      'schema status is missingHasNoBackup when incoming misses schemas and no backup exists',
       () async {
         await initializeWith([
           IsarTaskStateSchema,
@@ -258,13 +258,13 @@ void main() {
         ], backupAndSwitchOnMissingSchemas: true);
 
         final info = calculateInfo([IsarTaskStateSchema], withFileInfo: true);
-        expect(info.schemaStatus, SchemaStatus.MissingHasNoBackup);
+        expect(info.schemaStatus, SchemaStatus.missingHasNoBackup);
         expect(info.fileInfoBackupPath, isEmpty);
       },
     );
 
     test(
-      'schema status is MissingHasBackup when incoming misses schemas and backup exists',
+      'schema status is missingHasBackup when incoming misses schemas and backup exists',
       () async {
         await initializeWith([
           IsarTaskStateSchema,
@@ -283,7 +283,7 @@ void main() {
         ], backupAndSwitchOnMissingSchemas: true);
 
         final info = calculateInfo([IsarTaskStateSchema], withFileInfo: true);
-        expect(info.schemaStatus, SchemaStatus.MissingHasBackup);
+        expect(info.schemaStatus, SchemaStatus.missingHasBackup);
         expect(info.fileInfoBackupPath, isNotEmpty);
         expect(await File(info.fileInfoBackupPath).exists(), isTrue);
       },
