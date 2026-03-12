@@ -38,7 +38,7 @@ class IsarStorageService extends BaseStorageService {
     IsarUnknownEntityStateSchema,
   ];
 
-  static Map<String, dynamic> calculateSchemasInfo({
+  static SchemasInfo calculateSchemasInfo({
     required List<CollectionSchema> incomingSchemas,
   }) {
     final coreSchemaNames = _sortedDistinctSchemaNames(coreSchemas);
@@ -46,13 +46,11 @@ class IsarStorageService extends BaseStorageService {
       ...coreSchemas,
       ...incomingSchemas,
     ]);
-    return {
-      'schemaNames': schemaNames,
-      'coreSchemaNames': coreSchemaNames,
-      'coreSchemaNamesLength': coreSchemaNames.length,
-      'schemaNamesLength': schemaNames.length,
-      'schemaNamesCrc32': _schemaNamesCrc32(schemaNames),
-    };
+    return SchemasInfo(
+      schemaNames: schemaNames,
+      coreSchemaNames: coreSchemaNames,
+      schemaNamesCrc32: _schemaNamesCrc32(schemaNames),
+    );
   }
 
   IsarStorageService(
@@ -100,8 +98,7 @@ class IsarStorageService extends BaseStorageService {
     final requestedSchemasInfo = IsarStorageService.calculateSchemasInfo(
       incomingSchemas: incomingSchemas,
     );
-    final requestedSchemaNames = (requestedSchemasInfo['schemaNames'] as List)
-        .cast<String>();
+    final requestedSchemaNames = requestedSchemasInfo.schemaNames;
     await _protectDatabaseAgainstSchemaRegression(
       directoryPath: dir.path,
       requestedIncomingSchemas: incomingSchemas,
@@ -223,7 +220,9 @@ class IsarStorageService extends BaseStorageService {
     required List<CollectionSchema> incomingSchemas,
   }) async {
     final payload = jsonEncode(
-      IsarStorageService.calculateSchemasInfo(incomingSchemas: incomingSchemas),
+      IsarStorageService.calculateSchemasInfo(
+        incomingSchemas: incomingSchemas,
+      ).toJson(),
     );
     await manifestFile.writeAsString('$payload\n', flush: true);
   }
@@ -1961,4 +1960,28 @@ class UnknownEntityStateMigrationResult {
     required this.migratedEntityTypes,
     required this.skippedEntityTypes,
   });
+}
+
+// Typed schema info returned by `calculateSchemasInfo`.
+class SchemasInfo {
+  const SchemasInfo({
+    required this.schemaNames,
+    required this.coreSchemaNames,
+    required this.schemaNamesCrc32,
+  }) : coreSchemaNamesLength = coreSchemaNames.length,
+       schemaNamesLength = schemaNames.length;
+
+  final List<String> schemaNames;
+  final List<String> coreSchemaNames;
+  final int coreSchemaNamesLength;
+  final int schemaNamesLength;
+  final String schemaNamesCrc32;
+
+  Map<String, dynamic> toJson() => {
+    'schemaNames': schemaNames,
+    'coreSchemaNames': coreSchemaNames,
+    'coreSchemaNamesLength': coreSchemaNamesLength,
+    'schemaNamesLength': schemaNamesLength,
+    'schemaNamesCrc32': schemaNamesCrc32,
+  };
 }

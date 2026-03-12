@@ -68,44 +68,50 @@ void main() {
 
   group('Isar schema guard', () {
     test('creates sorted schema manifest on initialize', () async {
+      final expectedIncomingSchemas = [IsarTaskStateSchema];
+
       await initializeWith([
         IsarTaskStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
 
-      final info = await readSchemaInfo();
-      final names = await readSchemaNames();
-      final expectedInfo = IsarStorageService.calculateSchemasInfo(
-        incomingSchemas: [IsarTaskStateSchema],
+      final actualInfo = IsarStorageService.calculateSchemasInfo(
+        incomingSchemas: expectedIncomingSchemas,
       );
+      final schemaNames = actualInfo.schemaNames;
 
-      expect(names, equals([...names]..sort()));
-      expect(names, contains(IsarTaskStateSchema.name));
-      expect(info['coreSchemaNames'], equals(expectedInfo['coreSchemaNames']));
-      expect(
-        info['coreSchemaNamesLength'],
-        equals(expectedInfo['coreSchemaNamesLength']),
-      );
-      expect(
-        info['schemaNamesLength'],
-        equals(expectedInfo['schemaNamesLength']),
-      );
-      expect(
-        info['schemaNamesCrc32'],
-        equals(expectedInfo['schemaNamesCrc32']),
-      );
+      expect(schemaNames, equals([...schemaNames]..sort()));
+      expect(schemaNames, contains(IsarTaskStateSchema.name));
+      final expectedCoreSchemaNames =
+          IsarStorageService.coreSchemas.map((s) => s.name).toList()..sort();
+      final expectedSchemaNames = [
+        ...expectedCoreSchemaNames,
+        ...expectedIncomingSchemas.map((s) => s.name),
+      ]..sort();
+      expect(actualInfo.coreSchemaNames, equals(expectedCoreSchemaNames));
+      expect(actualInfo.coreSchemaNamesLength, expectedCoreSchemaNames.length);
+      expect(schemaNames, equals(expectedSchemaNames));
+      expect(actualInfo.schemaNamesLength, expectedSchemaNames.length);
+      expect(actualInfo.schemaNamesCrc32, schemaHash(expectedSchemaNames));
     });
 
     test('updates manifest when requested schemas are a superset', () async {
       await initializeWith([
         IsarTaskStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
-      final initialNames = await readSchemaNames();
+      final initialInfo = IsarStorageService.calculateSchemasInfo(
+        incomingSchemas: [IsarTaskStateSchema],
+      );
 
       await initializeWith([
         IsarTaskStateSchema,
         IsarProjectStateSchema,
       ], backupAndSwitchOnMissingSchemas: true);
-      final expandedNames = await readSchemaNames();
+      final expandedInfo = IsarStorageService.calculateSchemasInfo(
+        incomingSchemas: [IsarTaskStateSchema, IsarProjectStateSchema],
+      );
+
+      final initialNames = initialInfo.schemaNames;
+      final expandedNames = expandedInfo.schemaNames;
 
       expect(expandedNames.length, greaterThan(initialNames.length));
       expect(expandedNames.toSet().containsAll(initialNames), isTrue);
