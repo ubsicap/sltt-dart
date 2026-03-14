@@ -981,7 +981,34 @@ abstract class BaseRestApiServer {
                 'properties': {
                   'entityTypes': {
                     'type': 'object',
-                    'description': 'Map of entity type -> per-type statistics',
+                    'description':
+                        'Map of {entityType} -> per-type crud statistics.',
+                    'example': {
+                      'passage': {
+                        'creates': 3,
+                        'updates': 0,
+                        'deletes': 0,
+                        'total': 3,
+                        'latestChangeAt': '2026-02-02T18:16:40.097905Z',
+                        'latestSeq': 9,
+                      },
+                      'portion': {
+                        'creates': 3,
+                        'updates': 1,
+                        'deletes': 1,
+                        'total': 5,
+                        'latestChangeAt': '2026-02-03T13:48:51.553037Z',
+                        'latestSeq': 18,
+                      },
+                      'video': {
+                        'creates': 11,
+                        'updates': 0,
+                        'deletes': 4,
+                        'total': 15,
+                        'latestChangeAt': '2026-02-03T13:54:43.728061Z',
+                        'latestSeq': 23,
+                      },
+                    },
                     'additionalProperties': {
                       'type': 'object',
                       'properties': {
@@ -994,14 +1021,6 @@ abstract class BaseRestApiServer {
                           'format': 'ISO8601',
                         },
                         'latestSeq': {'type': 'integer'},
-                      },
-                      'example': {
-                        'creates': 3,
-                        'updates': 1,
-                        'deletes': 0,
-                        'total': 4,
-                        'latestChangeAt': '2026-02-02T18:16:40.097905Z',
-                        'latestSeq': 9,
                       },
                     },
                   },
