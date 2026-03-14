@@ -982,6 +982,28 @@ abstract class BaseRestApiServer {
                   'entityTypes': {
                     'type': 'object',
                     'description': 'Map of entity type -> per-type statistics',
+                    'additionalProperties': {
+                      'type': 'object',
+                      'properties': {
+                        'creates': {'type': 'integer'},
+                        'updates': {'type': 'integer'},
+                        'deletes': {'type': 'integer'},
+                        'total': {'type': 'integer'},
+                        'latestChangeAt': {
+                          'type': 'string',
+                          'format': 'ISO8601',
+                        },
+                        'latestSeq': {'type': 'integer'},
+                      },
+                      'example': {
+                        'creates': 3,
+                        'updates': 1,
+                        'deletes': 0,
+                        'total': 4,
+                        'latestChangeAt': '2026-02-02T18:16:40.097905Z',
+                        'latestSeq': 9,
+                      },
+                    },
                   },
                   'totals': {
                     'type': 'object',
