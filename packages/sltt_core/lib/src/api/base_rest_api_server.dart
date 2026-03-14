@@ -819,25 +819,6 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/stats/{domainCollection}/{domainId}/',
-          'description':
-              'Get statistics about changes and entity types for a domain',
-          'parameters': [
-            {'name': 'domainCollection', 'type': 'string', 'required': true},
-            {'name': 'domainId', 'type': 'string', 'required': true},
-          ],
-          'response': {
-            'type': 'object',
-            'properties': {
-              'changeStats': {'type': 'object'},
-              'entityTypeStats': {'type': 'object'},
-              'timestamp': {'type': 'string', 'format': 'ISO8601'},
-              'storageType': {'type': 'string'},
-            },
-          },
-        },
-        {
-          'method': 'GET',
           'path': '/api/ids/projects',
           'description': 'Get list of all projects that have changes',
           'response': {
