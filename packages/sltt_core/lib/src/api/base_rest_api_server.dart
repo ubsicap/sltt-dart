@@ -982,9 +982,10 @@ abstract class BaseRestApiServer {
                   'entityTypes': {
                     'type': 'object',
                     'description':
-                        'Map of {entityType} -> per-type crud statistics.',
+                        'Map of {entityType} -> per-type crud statistics. Each stats object also includes a "collection" property with the canonical collection name for that entityType (or "unknown" if not yet defined)',
                     'example': {
                       'passage': {
+                        'collection': 'passages',
                         'creates': 3,
                         'updates': 0,
                         'deletes': 0,
@@ -993,6 +994,7 @@ abstract class BaseRestApiServer {
                         'latestSeq': 9,
                       },
                       'portion': {
+                        'collection': 'portions',
                         'creates': 3,
                         'updates': 1,
                         'deletes': 1,
@@ -1001,6 +1003,7 @@ abstract class BaseRestApiServer {
                         'latestSeq': 18,
                       },
                       'video': {
+                        'collection': 'videos',
                         'creates': 11,
                         'updates': 0,
                         'deletes': 4,
@@ -1012,6 +1015,11 @@ abstract class BaseRestApiServer {
                     'additionalProperties': {
                       'type': 'object',
                       'properties': {
+                        'collection': {
+                          'type': 'string',
+                          'description':
+                              'Canonical collection name for this entityType (or "unknown" if not yet defined)',
+                        },
                         'creates': {'type': 'integer'},
                         'updates': {'type': 'integer'},
                         'deletes': {'type': 'integer'},
@@ -1665,6 +1673,18 @@ abstract class BaseRestApiServer {
       // Typed results: use the EntityTypeStats API and serialize to JSON
       final changeStatsJson = changeStats.totals.toJson();
       final entityTypeStatsJson = entityTypeStats.toJson();
+
+      // Inject 'collection' property for each entityType
+      final entityTypes =
+          entityTypeStatsJson['entityTypes'] as Map<String, dynamic>?;
+      if (entityTypes != null) {
+        entityTypes.forEach((entityType, stats) {
+          if (stats is Map<String, dynamic>) {
+            final collection = getCollectionByEntity(entityType);
+            stats['collection'] = collection ?? kEntityTypeUnknown;
+          }
+        });
+      }
 
       return Response.ok(
         jsonEncode({

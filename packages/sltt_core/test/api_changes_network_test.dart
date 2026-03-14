@@ -240,6 +240,29 @@ void main() {
       });
     });
 
+    group('GET /api/stats/{domainCollection}/{domainId}', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> statsTests;
+
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        statsTests =
+            testGroups['GET /api/stats/{domainCollection}/{domainId}']!;
+      });
+
+      test('entityTypeStats includes collection for known entityType', () async {
+        await statsTests['entityTypeStats includes collection for known entityType']!();
+      });
+
+      test(
+        'entityTypeStats includes unknown collection for unknown entityType',
+        () async {
+          await statsTests['entityTypeStats includes unknown collection for unknown entityType']!();
+        },
+      );
+    });
+
     test('verifies all suite tests are being run', () async {
       final suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
       final allSuiteTests = suite.getTestGroups();
@@ -252,8 +275,9 @@ void main() {
         }
       }
 
-      // List of all test names that this file actually runs
-      // This should match the suiteTestNames set
+      /// List of all test names that this file actually runs
+      /// This should match the suiteTestNames set
+      /// AGENT: don't add tests here until you've added their test group and test case in the suite
       final actuallyRunTestNames = {
         'with includeChangeUpdates/includeStateUpdates returns summaries',
         'domain-isolated entity ids: same entityId in different domainIds stays create',
@@ -277,6 +301,8 @@ void main() {
         'storedAfter + pagination returns correct filtered page',
         'storedAfter with old timestamp returns all items',
         'storedAfter with future timestamp returns empty',
+        'entityTypeStats includes collection for known entityType',
+        'entityTypeStats includes unknown collection for unknown entityType',
       };
 
       // Check that we have the same number of tests

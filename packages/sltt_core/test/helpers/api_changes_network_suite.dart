@@ -238,7 +238,97 @@ class ApiChangesNetworkTestSuite {
   /// per-test setup/tearDown hooks. Legacy no-arg test implementations
   /// are wrapped automatically so existing test bodies continue to work.
   Map<String, Map<String, TestFn>> getTestGroups() {
+    // --- New test group for /api/stats/{domainCollection}/{domainId} ---
+    final statsTests = <String, TestFn>{
+      'entityTypeStats includes collection for known entityType':
+          ({setup, tearDown}) async {
+            final domainId = '__test_stats_known_entityType';
+            await _runTestWithLifecycle(
+              domainId,
+              ({required domainId}) async {
+                // Seed a known entityType (task)
+                await seedChange(
+                  changePayload(
+                    domainId: domainId,
+                    entityType: 'task',
+                    entityId: 'task-1',
+                    changeAt: baseTime,
+                    data: {'nameLocal': 'Task 1'},
+                    operation: 'create',
+                  ),
+                );
+                final baseUrl = await resolveBaseUrl();
+                final uri = baseUrl.replace(
+                  path: '${baseUrl.path}/api/stats/$domainCollection/$domainId',
+                );
+                final req = await HttpClient().getUrl(uri);
+                final res = await req.close();
+                final body = await res.transform(utf8.decoder).join();
+                expect(res.statusCode, 200, reason: body);
+                final json = jsonDecode(body) as Map<String, dynamic>;
+                final entityTypes =
+                    json['entityTypeStats']['entityTypes']
+                        as Map<String, dynamic>?;
+                expect(entityTypes, isNotNull, reason: body);
+                expect(entityTypes!.containsKey('task'), isTrue, reason: body);
+                final taskStats = entityTypes['task'] as Map<String, dynamic>;
+                expect(taskStats['collection'], 'tasks', reason: body);
+              },
+              setup: setup,
+              tearDown: tearDown,
+            );
+          },
+      'entityTypeStats includes unknown collection for unknown entityType':
+          ({setup, tearDown}) async {
+            final domainId = '__test_stats_unknown_entityType';
+            await _runTestWithLifecycle(
+              domainId,
+              ({required domainId}) async {
+                // Seed an unknown entityType
+                await seedChange(
+                  changePayload(
+                    domainId: domainId,
+                    entityType: 'madeup_type',
+                    entityId: 'foo-1',
+                    changeAt: baseTime,
+                    data: {'nameLocal': 'Foo 1'},
+                    operation: 'create',
+                  ),
+                );
+                final baseUrl = await resolveBaseUrl();
+                final uri = baseUrl.replace(
+                  path: '${baseUrl.path}/api/stats/$domainCollection/$domainId',
+                );
+                final req = await HttpClient().getUrl(uri);
+                final res = await req.close();
+                final body = await res.transform(utf8.decoder).join();
+                expect(res.statusCode, 200, reason: body);
+                final json = jsonDecode(body) as Map<String, dynamic>;
+                final entityTypes =
+                    json['entityTypeStats']['entityTypes']
+                        as Map<String, dynamic>?;
+                expect(entityTypes, isNotNull, reason: body);
+                expect(
+                  entityTypes!.containsKey('madeup_type'),
+                  isTrue,
+                  reason: body,
+                );
+                final madeupStats =
+                    entityTypes['madeup_type'] as Map<String, dynamic>;
+                expect(
+                  madeupStats.containsKey('collection'),
+                  isTrue,
+                  reason: body,
+                );
+                expect(madeupStats['collection'], 'unknown', reason: body);
+              },
+              setup: setup,
+              tearDown: tearDown,
+            );
+          },
+    };
     return {
+      'GET /api/stats/{domainCollection}/{domainId}': statsTests,
       'POST /api/changes': {
         'with includeChangeUpdates/includeStateUpdates returns summaries':
             ({setup, tearDown}) async {
