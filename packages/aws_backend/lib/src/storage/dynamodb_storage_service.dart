@@ -10,6 +10,104 @@ import '../models/dynamo_change_log_entry.dart';
 import '../models/dynamo_entity_state_serialization_registry.dart';
 import '../models/dynamo_entity_type_sync_state.dart';
 
+/// Storage key access map (ElectroDB-compatible literal key shapes).
+///
+/// sample_values:
+///   domainType: project
+///   domainId: abc123
+///   entityType: portion
+///   entityId: entity1
+///   cid: 1234567890
+///   seq: 42
+///   parentId: parent1
+///   parentProp: tasks
+///   rank: 001
+///
+/// change_log:
+///   write:
+///     operation: Put change item in updateChangeLogAndStates
+///     key_fields: [pk, sk, gsi1pk, gsi1sk]
+///     keys:
+///       pk: $sltt#change#domainType_project#domainId_abc123#entityType_portion#entityId_entity1
+///       sk: $changes#change#cid_1234567890
+///       gsi1pk: $sltt#change#domainType_project#domainId_abc123
+///       gsi1sk: seq_0000000000000000042
+///   read_cursor:
+///     operation: Query GSI1 in getChangesWithCursor
+///     key_fields: [gsi1pk, gsi1sk]
+///     keys:
+///       gsi1pk: $sltt#change#domainType_project#domainId_abc123
+///       gsi1sk_condition: '> seq_0000000000000000042'
+///   read_single_cid:
+///     operation: Query base table in getChange
+///     key_fields: [pk_prefix, sk]
+///     keys:
+///       pk_prefix: $sltt#change#domainType_project#domainId_abc123
+///       sk: $changes#change#cid_1234567890
+///   reset_reads:
+///     operation: Query GSI1 plus fallback scan in testResetDomainStorage
+///     key_fields: [gsi1pk, pk_prefix]
+///     keys:
+///       gsi1pk: $sltt#change#domainType_project#domainId_abc123
+///       pk_prefix: $sltt#change#domainType_project#domainId_abc123
+///
+/// entity_state:
+///   write:
+///     operation: Put state item in updateChangeLogAndStates and testStoreState
+///     key_fields: [pk, sk, gsi2pk, gsi2sk]
+///     keys:
+///       pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion
+///       sk: $states#state#entityId_entity1
+///       gsi2pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion#parentId_parent1
+///       gsi2sk: parentProp_tasks#rank_001
+///   read_single:
+///     operation: GetItem in getEntityState
+///     key_fields: [pk, sk]
+///     keys:
+///       pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion
+///       sk: $states#state#entityId_entity1
+///   read_batch:
+///     operation: BatchGetItem in batchGetEntityState
+///     key_fields: [pk, sk]
+///     keys:
+///       pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion
+///       sk: $states#state#entityId_entity1
+///   read_list:
+///     operation: Query in getEntityStates (base table or GSI2)
+///     key_fields: [pk_and_sk_cursor, gsi2pk_and_gsi2sk_prefix]
+///     keys:
+///       base_pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion
+///       base_sk_cursor: $states#state#entityId_entity1
+///       gsi2pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion#parentId_parent1
+///       gsi2sk_prefix: parentProp_tasks
+///   reset_reads:
+///     operation: Scan in testResetDomainStorage
+///     key_fields: [pk_prefix]
+///     keys:
+///       pk_prefix: $sltt#state#domainType_project#domainId_abc123
+///
+/// entity_type_sync_state:
+///   etsc_write_read:
+///     operation: Upsert and stats/reset reads for change-log counters
+///     key_fields: [pk, sk]
+///     keys:
+///       pk: $sltt#etsc#domainType_project#domainId_abc123
+///       sk: $etsc#etsc#entityType_portion
+///   etss_write_read:
+///     operation: Upsert and stats/reset reads for entity-state counters
+///     key_fields: [pk, sk]
+///     keys:
+///       pk: $sltt#etss#domainType_project#domainId_abc123
+///       sk: $etss#etss#entityType_portion
+///
+/// sequence_counter:
+///   write_read:
+///     operation: _bumpSeq, _getLatestSeq, and reset delete key
+///     key_fields: [pk, sk]
+///     keys:
+///       pk: $sltt#seq#domainType_project#domainId_abc123
+///       sk: $seq#counter
+
 /// DynamoDB implementation of [BaseStorageService].
 ///
 /// All merge/conflict logic is delegated to [ChangeProcessingService]. This
