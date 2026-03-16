@@ -1,4 +1,7 @@
+
 **Agent Instruction:**
+
+- Any change to `packages/aws_backend/lib/src/storage/dynamodb_storage_service.dart` **must** update the key access map comment at the top of that file to reflect the current key patterns and usage. This ensures the documentation stays in sync with the implementation.
 
 - prefer running commands with cmd.exe instead of powershell pwsh.
 - Whenever pwsh is used, don't use '&&' since that is not a valid statement separator

@@ -9,6 +9,7 @@ import 'package:sltt_core/sltt_core.dart';
 import '../models/dynamo_change_log_entry.dart';
 import '../models/dynamo_entity_state_serialization_registry.dart';
 import '../models/dynamo_entity_type_sync_state.dart';
+import '../models/dynamo_storage_state.dart';
 
 /// Storage key access map (ElectroDB-compatible literal key shapes).
 ///
@@ -107,6 +108,15 @@ import '../models/dynamo_entity_type_sync_state.dart';
 ///     keys:
 ///       pk: $sltt#seq#domainType_project#domainId_abc123
 ///       sk: $seq#counter
+
+/// storage_state:
+///   write_read:
+///     operation: Ensure a singleton persisted storage state (ensureStorageId)
+///     key_fields: [pk, sk]
+///     notes: Singleton record used to persist the canonical storageId and metadata for this storage instance. Used by `ensureStorageId()` to provide a stable storage id across invocations.
+///     keys:
+///       pk: $sltt#storage#singleton
+///       sk: $storage#state
 
 /// DynamoDB implementation of [BaseStorageService].
 ///
@@ -221,8 +231,66 @@ class DynamoDBStorageService extends BaseStorageService {
   @override
   Future<String> ensureStorageId() async {
     if (_storageId != null) return _storageId!;
-    _storageId = BaseStorageService.generateShortStorageId();
-    return _storageId!;
+
+    try {
+      // 1) Try to read canonical storage state from DynamoDB.
+      final getResponse = await _dynamoRequest('GetItem', {
+        'TableName': tableName,
+        'Key': {
+          'pk': {'S': _storageStatePrimaryKey()},
+          'sk': {'S': _storageStateSortKey()},
+        },
+      });
+
+      if (getResponse.statusCode != 200) {
+        throw Exception('Failed to read storage state: ${getResponse.body}');
+      }
+
+      final getBody =
+          jsonDecode(utf8.decode(getResponse.bodyBytes))
+              as Map<String, dynamic>;
+      final item = getBody['Item'] as Map<String, dynamic>?;
+
+      if (item != null) {
+        final existing = DynamoStorageState.fromJson(_decodeItem(item));
+        if (existing.storageId.isNotEmpty) {
+          _storageId = existing.storageId;
+          return _storageId!;
+        }
+      }
+
+      // 2) Not found: create and persist a canonical storage state item.
+      final now = DateTime.now().toUtc();
+      final newState = DynamoStorageState(
+        storageId: BaseStorageService.generateShortStorageId(),
+        storageType: getStorageType(),
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final putResponse = await _dynamoRequest('PutItem', {
+        'TableName': tableName,
+        'Item': {
+          'pk': {'S': _storageStatePrimaryKey()},
+          'sk': {'S': _storageStateSortKey()},
+          ..._encodeJson(newState.toJson()),
+        },
+      });
+
+      if (putResponse.statusCode != 200) {
+        throw Exception('Failed to persist storage state: ${putResponse.body}');
+      }
+
+      _storageId = newState.storageId;
+      return _storageId!;
+    } catch (e) {
+      // Fallback for degraded environments; cache for warm invocation reuse.
+      SlttLogger.logger.warning(
+        '[DynamoDB] Failed to ensure persisted storage state, falling back to in-memory id: $e',
+      );
+      _storageId = BaseStorageService.generateShortStorageId();
+      return _storageId!;
+    }
   }
 
   @override
@@ -2175,6 +2243,16 @@ class DynamoDBStorageService extends BaseStorageService {
   ///
   /// Format: `$seq#counter`
   String _sequenceCounterSortKey() => '\$seq#counter';
+
+  /// Generates singleton primary key for storage state.
+  ///
+  /// Format: `$sltt#storage#singleton`
+  String _storageStatePrimaryKey() => '\$$_servicePrefix#storage#singleton';
+
+  /// Generates singleton sort key for storage state.
+  ///
+  /// Format: `$storage#state`
+  String _storageStateSortKey() => '\$storage#state';
 
   Map<String, dynamic> _encodeJson(Map<String, dynamic> json) {
     final result = <String, dynamic>{};

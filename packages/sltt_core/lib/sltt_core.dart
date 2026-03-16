@@ -6,6 +6,7 @@ export 'src/logging.dart';
 export 'src/models/base_change_log_entry.dart';
 export 'src/models/base_data_fields.dart';
 export 'src/models/base_entity_state.dart';
+export 'src/models/base_storage_state.dart';
 export 'src/models/change_processing_summary.dart';
 export 'src/models/constants/change_operations.dart';
 export 'src/models/entity_type.dart';
