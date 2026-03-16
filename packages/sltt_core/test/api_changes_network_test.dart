@@ -251,14 +251,14 @@ void main() {
             testGroups['GET /api/stats/{domainCollection}/{domainId}']!;
       });
 
-      test('entityTypeStats includes collection for known entityType', () async {
-        await statsTests['entityTypeStats includes collection for known entityType']!();
+      test('includes entityTypeCollections for known entityType', () async {
+        await statsTests['includes entityTypeCollections for known entityType']!();
       });
 
       test(
-        'entityTypeStats includes unknown collection for unknown entityType',
+        'includes entityTypeCollections unknown for unknown entityType',
         () async {
-          await statsTests['entityTypeStats includes unknown collection for unknown entityType']!();
+          await statsTests['includes entityTypeCollections unknown for unknown entityType']!();
         },
       );
     });
@@ -301,8 +301,8 @@ void main() {
         'storedAfter + pagination returns correct filtered page',
         'storedAfter with old timestamp returns all items',
         'storedAfter with future timestamp returns empty',
-        'entityTypeStats includes collection for known entityType',
-        'entityTypeStats includes unknown collection for unknown entityType',
+        'includes entityTypeCollections for known entityType',
+        'includes entityTypeCollections unknown for unknown entityType',
       };
 
       // Check that we have the same number of tests

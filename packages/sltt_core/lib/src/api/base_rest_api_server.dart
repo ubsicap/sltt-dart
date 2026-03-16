@@ -982,10 +982,9 @@ abstract class BaseRestApiServer {
                   'entityTypes': {
                     'type': 'object',
                     'description':
-                        'Map of {entityType} -> per-type crud statistics. Each stats object also includes a "collection" property with the canonical collection name for that entityType (or "unknown" if not yet defined)',
+                        'Map of {entityType} -> per-type numeric crud statistics (creates/updates/deletes/total/latestChangeAt/latestSeq).',
                     'example': {
                       'passage': {
-                        'collection': 'passages',
                         'creates': 3,
                         'updates': 0,
                         'deletes': 0,
@@ -994,7 +993,6 @@ abstract class BaseRestApiServer {
                         'latestSeq': 9,
                       },
                       'portion': {
-                        'collection': 'portions',
                         'creates': 3,
                         'updates': 1,
                         'deletes': 1,
@@ -1003,7 +1001,6 @@ abstract class BaseRestApiServer {
                         'latestSeq': 18,
                       },
                       'video': {
-                        'collection': 'videos',
                         'creates': 11,
                         'updates': 0,
                         'deletes': 4,
@@ -1015,11 +1012,6 @@ abstract class BaseRestApiServer {
                     'additionalProperties': {
                       'type': 'object',
                       'properties': {
-                        'collection': {
-                          'type': 'string',
-                          'description':
-                              'Canonical collection name for this entityType (or "unknown" if not yet defined)',
-                        },
                         'creates': {'type': 'integer'},
                         'updates': {'type': 'integer'},
                         'deletes': {'type': 'integer'},
@@ -1046,6 +1038,17 @@ abstract class BaseRestApiServer {
                 },
                 'description':
                     'Per-entity-type and aggregated totals for this project',
+              },
+              'entityTypeCollections': {
+                'type': 'object',
+                'description':
+                    'Top-level map of entityType -> canonical collection name for quick lookup (also provided per-entity in entityTypeStats.entityTypes)',
+                'example': {
+                  'portion': 'portions',
+                  'passage': 'passages',
+                  'video': 'videos',
+                },
+                'additionalProperties': {'type': 'string'},
               },
               'timestamp': {
                 'type': 'string',
@@ -1677,12 +1680,16 @@ abstract class BaseRestApiServer {
       // Inject 'collection' property for each entityType
       final entityTypes =
           entityTypeStatsJson['entityTypes'] as Map<String, dynamic>?;
+      // Build a top-level mapping of entityType -> collection for tests
+      final Map<String, String> entityTypeCollections = {};
       if (entityTypes != null) {
         entityTypes.forEach((entityType, stats) {
-          if (stats is Map<String, dynamic>) {
-            final collection = getCollectionByEntity(entityType);
-            stats['collection'] = collection ?? kEntityTypeUnknown;
-          }
+          final collection =
+              getCollectionByEntity(entityType) ?? kEntityTypeUnknown;
+          // Do NOT inject per-entity 'collection' into entityTypeStats.entityTypes
+          // to keep the stats payload focused on numeric totals. Provide the
+          // canonical collection mapping at the top-level instead.
+          entityTypeCollections[entityType] = collection;
         });
       }
 
@@ -1692,6 +1699,8 @@ abstract class BaseRestApiServer {
           '${domainType}Id': domainId,
           'changeStats': changeStatsJson,
           'entityTypeStats': entityTypeStatsJson,
+          // Provide a convenience top-level mapping of entityType -> collection
+          'entityTypeCollections': entityTypeCollections,
           'timestamp': DateTime.now().toUtc().toIso8601String(),
           'storageType': storageTypeDescription,
         }),

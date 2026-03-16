@@ -240,7 +240,7 @@ class ApiChangesNetworkTestSuite {
   Map<String, Map<String, TestFn>> getTestGroups() {
     // --- New test group for /api/stats/{domainCollection}/{domainId} ---
     final statsTests = <String, TestFn>{
-      'entityTypeStats includes collection for known entityType':
+      'includes entityTypeCollections for known entityType':
           ({setup, tearDown}) async {
             final domainId = '__test_stats_known_entityType';
             await _runTestWithLifecycle(
@@ -266,19 +266,21 @@ class ApiChangesNetworkTestSuite {
                 final body = await res.transform(utf8.decoder).join();
                 expect(res.statusCode, 200, reason: body);
                 final json = jsonDecode(body) as Map<String, dynamic>;
-                final entityTypes =
-                    json['entityTypeStats']['entityTypes']
-                        as Map<String, dynamic>?;
-                expect(entityTypes, isNotNull, reason: body);
-                expect(entityTypes!.containsKey('task'), isTrue, reason: body);
-                final taskStats = entityTypes['task'] as Map<String, dynamic>;
-                expect(taskStats['collection'], 'tasks', reason: body);
+                final entityTypeCollections =
+                    json['entityTypeCollections'] as Map<String, dynamic>?;
+                expect(entityTypeCollections, isNotNull, reason: body);
+                expect(
+                  entityTypeCollections!.containsKey('task'),
+                  isTrue,
+                  reason: body,
+                );
+                expect(entityTypeCollections['task'], 'tasks', reason: body);
               },
               setup: setup,
               tearDown: tearDown,
             );
           },
-      'entityTypeStats includes unknown collection for unknown entityType':
+      'includes entityTypeCollections unknown for unknown entityType':
           ({setup, tearDown}) async {
             final domainId = '__test_stats_unknown_entityType';
             await _runTestWithLifecycle(
@@ -304,23 +306,19 @@ class ApiChangesNetworkTestSuite {
                 final body = await res.transform(utf8.decoder).join();
                 expect(res.statusCode, 200, reason: body);
                 final json = jsonDecode(body) as Map<String, dynamic>;
-                final entityTypes =
-                    json['entityTypeStats']['entityTypes']
-                        as Map<String, dynamic>?;
-                expect(entityTypes, isNotNull, reason: body);
+                final entityTypeCollections =
+                    json['entityTypeCollections'] as Map<String, dynamic>?;
+                expect(entityTypeCollections, isNotNull, reason: body);
                 expect(
-                  entityTypes!.containsKey('madeup_type'),
+                  entityTypeCollections!.containsKey('madeup_type'),
                   isTrue,
                   reason: body,
                 );
-                final madeupStats =
-                    entityTypes['madeup_type'] as Map<String, dynamic>;
                 expect(
-                  madeupStats.containsKey('collection'),
-                  isTrue,
+                  entityTypeCollections['madeup_type'],
+                  kEntityTypeUnknown,
                   reason: body,
                 );
-                expect(madeupStats['collection'], 'unknown', reason: body);
               },
               setup: setup,
               tearDown: tearDown,

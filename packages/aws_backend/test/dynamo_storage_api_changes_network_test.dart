@@ -313,16 +313,16 @@ void main() {
             testGroups['GET /api/stats/{domainCollection}/{domainId}']!;
       });
 
-      test('entityTypeStats includes collection for known entityType', () async {
-        await statsTests['entityTypeStats includes collection for known entityType']!(
+      test('includes entityTypeCollections for known entityType', () async {
+        await statsTests['includes entityTypeCollections for known entityType']!(
           setup: resetDomain,
         );
       });
 
       test(
-        'entityTypeStats includes unknown collection for unknown entityType',
+        'includes entityTypeCollections unknown for unknown entityType',
         () async {
-          await statsTests['entityTypeStats includes unknown collection for unknown entityType']!(
+          await statsTests['includes entityTypeCollections unknown for unknown entityType']!(
             setup: resetDomain,
           );
         },
@@ -361,8 +361,8 @@ void main() {
           'srcStorageType: local, srcStorageId: matches server storage id',
           'srcStorageType: local, srcStorageId: different from server',
           'srcStorageType: cloud, srcStorageId: cloud',
-          'entityTypeStats includes collection for known entityType',
-          'entityTypeStats includes unknown collection for unknown entityType',
+          'includes entityTypeCollections for known entityType',
+          'includes entityTypeCollections unknown for unknown entityType',
         };
 
         final sortedSuiteTests = suiteTestNames.toList()..sort();
