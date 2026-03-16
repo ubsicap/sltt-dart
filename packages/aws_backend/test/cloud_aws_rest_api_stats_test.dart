@@ -59,6 +59,7 @@ void main() {
                   'latestSeq': -1,
                 },
               },
+              'entityTypeCollections': {},
               'timestamp': isA<String>(),
               'storageType': 'AWS DynamoDB',
             }),
