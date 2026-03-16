@@ -11,6 +11,11 @@ import '../models/dynamo_entity_state_serialization_registry.dart';
 import '../models/dynamo_entity_type_sync_state.dart';
 import '../models/dynamo_storage_state.dart';
 
+/// Cached storageId at module (isolate) level so it survives across Lambda warm
+/// invocations, regardless of whether a new [DynamoDBStorageService] instance
+/// is constructed per request.
+String? _cachedStorageId;
+
 /// Storage key access map (ElectroDB-compatible literal key shapes).
 ///
 /// sample_values:
@@ -168,8 +173,6 @@ class DynamoDBStorageService extends BaseStorageService {
   late String _endpoint;
   late Map<String, String> _baseHeaders;
 
-  String? _storageId;
-
   /// Maximum number of change log entries that can be processed in a single batch. Leave room for state updates in the same batch (max 25 items total).
   @override
   int get batchPutChangesLimit => 12;
@@ -196,13 +199,22 @@ class DynamoDBStorageService extends BaseStorageService {
       };
     }
 
-    if (useLocalDynamoDB) {
-      await createTableIfNotExists();
-    }
-
-    await ensureStorageId();
-
+    // Mark initialized BEFORE the DynamoDB calls below so that
+    // _dynamoRequest()'s re-entrancy guard (`if (!_initialized) await initialize()`)
+    // doesn't trigger infinite recursion when ensureStorageId() calls _dynamoRequest().
     _initialized = true;
+
+    try {
+      if (useLocalDynamoDB) {
+        await createTableIfNotExists();
+      }
+
+      await ensureStorageId();
+    } catch (e) {
+      // Roll back so a subsequent call can retry initialization.
+      _initialized = false;
+      rethrow;
+    }
   }
 
   @override
@@ -224,13 +236,13 @@ class DynamoDBStorageService extends BaseStorageService {
 
   @override
   Future<String> getStorageId() async {
-    if (_storageId != null) return _storageId!;
+    if (_cachedStorageId != null) return _cachedStorageId!;
     return ensureStorageId();
   }
 
   @override
   Future<String> ensureStorageId() async {
-    if (_storageId != null) return _storageId!;
+    if (_cachedStorageId != null) return _cachedStorageId!;
 
     try {
       // 1) Try to read canonical storage state from DynamoDB.
@@ -254,8 +266,8 @@ class DynamoDBStorageService extends BaseStorageService {
       if (item != null) {
         final existing = DynamoStorageState.fromJson(_decodeItem(item));
         if (existing.storageId.isNotEmpty) {
-          _storageId = existing.storageId;
-          return _storageId!;
+          _cachedStorageId = existing.storageId;
+          return _cachedStorageId!;
         }
       }
 
@@ -281,15 +293,15 @@ class DynamoDBStorageService extends BaseStorageService {
         throw Exception('Failed to persist storage state: ${putResponse.body}');
       }
 
-      _storageId = newState.storageId;
-      return _storageId!;
+      _cachedStorageId = newState.storageId;
+      return _cachedStorageId!;
     } catch (e) {
       // Fallback for degraded environments; cache for warm invocation reuse.
       SlttLogger.logger.warning(
         '[DynamoDB] Failed to ensure persisted storage state, falling back to in-memory id: $e',
       );
-      _storageId = BaseStorageService.generateShortStorageId();
-      return _storageId!;
+      _cachedStorageId = BaseStorageService.generateShortStorageId();
+      return _cachedStorageId!;
     }
   }
 
