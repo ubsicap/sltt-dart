@@ -1528,14 +1528,37 @@ class ApiChangesNetworkTestSuite {
       );
     }
 
-    // Wait to ensure timestamp separation
-    await Future.delayed(const Duration(seconds: 1));
+    // Derive cutoff from server-side storedAt values to avoid clock skew.
+    final firstBatchUri = baseUrl.replace(
+      path:
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+    );
+    final firstBatchReq = await HttpClient().getUrl(firstBatchUri);
+    final firstBatchRes = await firstBatchReq.close();
+    final firstBatchBody = await firstBatchRes.transform(utf8.decoder).join();
+    expect(firstBatchRes.statusCode, 200, reason: firstBatchBody);
+    final firstBatchJson = jsonDecode(firstBatchBody) as Map<String, dynamic>;
+    final firstBatchItems = firstBatchJson['items'] as List;
+    expect(firstBatchItems.length, equals(3));
 
-    // Record timestamp between batches
-    final betweenBatches = DateTime.now().toUtc();
+    DateTime parseStoredAt(Map<String, dynamic> item) {
+      final raw =
+          (item['change_storedAt'] ?? item['storedAt'] ?? item['cloudAt'])
+              as String?;
+      expect(
+        raw,
+        isNotNull,
+        reason: 'State item missing storedAt field: $item',
+      );
+      return DateTime.parse(raw!).toUtc();
+    }
 
-    // Wait again to ensure separation
-    await Future.delayed(const Duration(seconds: 1));
+    final firstBatchStoredAts =
+        firstBatchItems
+            .map((item) => parseStoredAt(item as Map<String, dynamic>))
+            .toList()
+          ..sort();
+    final betweenBatches = firstBatchStoredAts.last;
 
     // Create second batch of 3 tasks
     for (int i = 4; i <= 6; i++) {
@@ -1584,7 +1607,8 @@ class ApiChangesNetworkTestSuite {
     expect(
       filteredItems.length,
       equals(3),
-      reason: 'Should only return tasks stored after the cutoff timestamp',
+      reason:
+          'Should only return tasks stored after the cutoff timestamp: $betweenBatches, item storedAts: ${filteredItems.map((i) => (i as Map<String, dynamic>)['change_storedAt']).join(', ')}',
     );
 
     // Verify the returned items are from the second batch. Entity IDs are
@@ -1633,14 +1657,37 @@ class ApiChangesNetworkTestSuite {
       );
     }
 
-    // Wait to ensure timestamp separation
-    await Future.delayed(const Duration(seconds: 1));
+    // Derive cutoff from server-side storedAt values to avoid clock skew.
+    final firstBatchUri = baseUrl.replace(
+      path:
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+    );
+    final firstBatchReq = await HttpClient().getUrl(firstBatchUri);
+    final firstBatchRes = await firstBatchReq.close();
+    final firstBatchBody = await firstBatchRes.transform(utf8.decoder).join();
+    expect(firstBatchRes.statusCode, 200, reason: firstBatchBody);
+    final firstBatchJson = jsonDecode(firstBatchBody) as Map<String, dynamic>;
+    final firstBatchItems = firstBatchJson['items'] as List;
+    expect(firstBatchItems.length, equals(3));
 
-    // Record timestamp between batches
-    final betweenBatches = DateTime.now().toUtc();
+    DateTime parseStoredAt(Map<String, dynamic> item) {
+      final raw =
+          (item['change_storedAt'] ?? item['storedAt'] ?? item['cloudAt'])
+              as String?;
+      expect(
+        raw,
+        isNotNull,
+        reason: 'State item missing storedAt field: $item',
+      );
+      return DateTime.parse(raw!).toUtc();
+    }
 
-    // Wait again to ensure separation
-    await Future.delayed(const Duration(seconds: 1));
+    final firstBatchStoredAts =
+        firstBatchItems
+            .map((item) => parseStoredAt(item as Map<String, dynamic>))
+            .toList()
+          ..sort();
+    final betweenBatches = firstBatchStoredAts.last;
 
     // Create second batch of 3 tasks
     for (int i = 4; i <= 6; i++) {
@@ -1703,10 +1750,6 @@ class ApiChangesNetworkTestSuite {
         )
         .then((req) => req.close());
 
-    final beforeCreation = DateTime.now().toUtc().subtract(
-      const Duration(days: 1),
-    );
-
     // Create 3 tasks
     for (int i = 1; i <= 3; i++) {
       await seedChange(
@@ -1719,6 +1762,38 @@ class ApiChangesNetworkTestSuite {
         ),
       );
     }
+
+    // Derive an old timestamp relative to server-stored values.
+    final allStatesUri = baseUrl.replace(
+      path:
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
+    );
+    final allStatesReq = await HttpClient().getUrl(allStatesUri);
+    final allStatesRes = await allStatesReq.close();
+    final allStatesBody = await allStatesRes.transform(utf8.decoder).join();
+    expect(allStatesRes.statusCode, 200, reason: allStatesBody);
+    final allStatesJson = jsonDecode(allStatesBody) as Map<String, dynamic>;
+    final allStatesItems = allStatesJson['items'] as List;
+    expect(allStatesItems.length, equals(3));
+
+    DateTime parseStoredAt(Map<String, dynamic> item) {
+      final raw =
+          (item['change_storedAt'] ?? item['storedAt'] ?? item['cloudAt'])
+              as String?;
+      expect(
+        raw,
+        isNotNull,
+        reason: 'State item missing storedAt field: $item',
+      );
+      return DateTime.parse(raw!).toUtc();
+    }
+
+    final storedAts =
+        allStatesItems
+            .map((item) => parseStoredAt(item as Map<String, dynamic>))
+            .toList()
+          ..sort();
+    final beforeCreation = storedAts.first.subtract(const Duration(days: 1));
 
     // Test: Filter with old timestamp (should return all items)
     final oldFilterUri = baseUrl.replace(
@@ -1768,10 +1843,39 @@ class ApiChangesNetworkTestSuite {
       );
     }
 
-    // Test: Filter with future timestamp (should return no items)
-    final futureTimestamp = DateTime.now().toUtc().add(
-      const Duration(seconds: 10),
+    // Derive a future timestamp relative to server-stored values.
+    final allStatesUri = baseUrl.replace(
+      path:
+          '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',
     );
+    final allStatesReq = await HttpClient().getUrl(allStatesUri);
+    final allStatesRes = await allStatesReq.close();
+    final allStatesBody = await allStatesRes.transform(utf8.decoder).join();
+    expect(allStatesRes.statusCode, 200, reason: allStatesBody);
+    final allStatesJson = jsonDecode(allStatesBody) as Map<String, dynamic>;
+    final allStatesItems = allStatesJson['items'] as List;
+    expect(allStatesItems.length, equals(3));
+
+    DateTime parseStoredAt(Map<String, dynamic> item) {
+      final raw =
+          (item['change_storedAt'] ?? item['storedAt'] ?? item['cloudAt'])
+              as String?;
+      expect(
+        raw,
+        isNotNull,
+        reason: 'State item missing storedAt field: $item',
+      );
+      return DateTime.parse(raw!).toUtc();
+    }
+
+    final storedAts =
+        allStatesItems
+            .map((item) => parseStoredAt(item as Map<String, dynamic>))
+            .toList()
+          ..sort();
+
+    // Test: Filter with future timestamp (should return no items)
+    final futureTimestamp = storedAts.last.add(const Duration(seconds: 10));
     final futureFilterUri = baseUrl.replace(
       path:
           '${baseUrl.path}/api/state/$domainCollection/${Uri.encodeComponent(domainId)}/tasks',

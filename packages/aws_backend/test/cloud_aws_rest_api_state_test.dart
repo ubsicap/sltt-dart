@@ -383,9 +383,6 @@ void main() {
         final projectId = '__test_state_stored_after__';
         await resetTestDomainData(baseUrl, projectId);
 
-        // Record initial timestamp
-        final beforeFirstBatch = DateTime.now().toUtc();
-
         // Create first batch of 3 portions
         for (int i = 1; i <= 3; i++) {
           final portionData = PortionTranslationData(
@@ -410,14 +407,31 @@ void main() {
           );
         }
 
-        // Wait to ensure timestamp separation (longer delay for reliability)
-        await Future.delayed(const Duration(seconds: 1));
-
-        // Record timestamp between batches
-        final betweenBatches = DateTime.now().toUtc();
-
-        // Wait again to ensure separation
-        await Future.delayed(const Duration(seconds: 1));
+        // Use server-side storedAt values as the cutoff baseline to avoid
+        // client/server clock skew in cloud integration tests.
+        final firstBatchResp = await http.get(
+          Uri.parse('$baseUrl/api/state/projects/$projectId/portions'),
+          headers: {'Accept': 'application/json'},
+        );
+        expect(firstBatchResp.statusCode, equals(200));
+        final firstBatchBody =
+            jsonDecode(firstBatchResp.body) as Map<String, dynamic>;
+        final firstBatchItems = firstBatchBody['items'] as List;
+        expect(
+          firstBatchItems.length,
+          equals(3),
+          reason: 'First batch should have exactly 3 portions',
+        );
+        final firstBatchStoredAt =
+            firstBatchItems
+                .map(
+                  (item) => DateTime.parse(
+                    (item as Map<String, dynamic>)['change_storedAt'] as String,
+                  ),
+                )
+                .toList()
+              ..sort();
+        final betweenBatches = firstBatchStoredAt.last.toUtc();
 
         // Create second batch of 3 portions
         for (int i = 4; i <= 6; i++) {
@@ -491,7 +505,7 @@ void main() {
           itemsAfterCutoff,
           equals(3),
           reason:
-              'Should have exactly 3 items stored after the cutoff (data verification)',
+              'Should have exactly 3 items stored after the cutoff (data verification): betweenBatches: ${betweenBatches.toIso8601String()}, item storedAts: ${filteredItems.map((i) => (i as Map<String, dynamic>)['change_storedAt']).join(', ')}',
         );
 
         // Should only return the second batch (portions 4-6) when FilterExpression works
@@ -499,7 +513,7 @@ void main() {
           filteredItems.length,
           equals(3),
           reason:
-              'Should only return portions stored after the cutoff timestamp',
+              'Should only return portions stored after the cutoff timestamp: $storedAfterParam, betweenBatches: ${betweenBatches.toIso8601String()}, item storedAts: ${filteredItems.map((i) => (i as Map<String, dynamic>)['change_storedAt']).join(', ')}',
         );
 
         // Verify the returned items are from the second batch
@@ -515,7 +529,7 @@ void main() {
         expect(returnedEntityIds.contains('portion_3'), isFalse);
 
         // Test 3: Verify storedAfter works with a very old timestamp (should return all)
-        final veryOldTimestamp = beforeFirstBatch.subtract(
+        final veryOldTimestamp = betweenBatches.subtract(
           const Duration(days: 1),
         );
         final veryOldParam = Uri.encodeComponent(
@@ -539,7 +553,16 @@ void main() {
         );
 
         // Test 4: Verify storedAfter works with a very recent timestamp (should return none or very few)
-        final futureTimestamp = DateTime.now().toUtc().add(
+        final allStoredAt =
+            allItems
+                .map(
+                  (item) => DateTime.parse(
+                    (item as Map<String, dynamic>)['change_storedAt'] as String,
+                  ),
+                )
+                .toList()
+              ..sort();
+        final futureTimestamp = allStoredAt.last.toUtc().add(
           const Duration(seconds: 10),
         );
         final futureParam = Uri.encodeComponent(
