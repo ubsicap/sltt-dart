@@ -340,13 +340,26 @@ class ApiChangesNetworkTestSuite {
             },
         'domain-isolated entity ids: same entityId in different domainIds stays create':
             ({setup, tearDown}) async {
-              final domainId = '__test_multi_domainIds_1';
-              await _runTestWithLifecycle(
-                domainId,
-                _testPostChangesDomainIsolationWithSharedEntityId,
-                setup: setup,
-                tearDown: tearDown,
-              );
+              final domainId1 = '__test_multi_domainIds_1';
+              final domainId2 = '__test_multi_domainIds_2';
+
+              // This test writes to two different domains. Ensure lifecycle
+              // hooks are applied to both so runners can reset/cleanup both.
+              if (setup != null) {
+                await setup(domainId1);
+                await setup(domainId2);
+              }
+              try {
+                await _testPostChangesDomainIsolationWithSharedEntityId(
+                  domainId: domainId1,
+                  otherDomainId: domainId2,
+                );
+              } finally {
+                if (tearDown != null) {
+                  await tearDown(domainId1);
+                  await tearDown(domainId2);
+                }
+              }
             },
         'save mode: returns error when summary has errors (returnErrorIfInResultsSummary=true)':
             ({setup, tearDown}) async {
@@ -717,9 +730,10 @@ class ApiChangesNetworkTestSuite {
 
   Future<void> _testPostChangesDomainIsolationWithSharedEntityId({
     required String domainId,
+    required String otherDomainId,
   }) async {
-    final domainId1 = '__test_multi_domainIds_1';
-    final domainId2 = '__test_multi_domainIds_2';
+    final domainId1 = domainId;
+    final domainId2 = otherDomainId;
     const sharedEntityId = '__test_multi_domainIds_eid_seed_1';
     final t1 = DateTime.now().toUtc();
     final t2 = t1.add(const Duration(seconds: 1));
