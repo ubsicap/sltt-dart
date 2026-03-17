@@ -56,12 +56,12 @@ void main() {
 
           // Debug: Print stateUpdates to understand what fields are being generated
           SlttLogger.logger.info(
-            'DEBUG: stateUpdates keys: ${updates['stateUpdates'].keys.toList()..sort()}',
+            'DEBUG: stateUpdates keys: ${updates.stateUpdates.keys.toList()..sort()}',
           );
 
           // Step 2: Deserialize stateUpdates back to DynamoPortionDataEntityState
           final testEntityState = DynamoPortionDataEntityState.fromJson(
-            updates['stateUpdates'],
+            updates.stateUpdates,
           );
 
           // Step 2 verification: Check if there are unknown fields
@@ -90,7 +90,7 @@ void main() {
           // Step 3 verification: The serialized version should contain the same fields and values
           // as the original stateUpdates (excluding dynamic timestamps that we handle separately)
           final originalStateUpdates = Map<String, dynamic>.from(
-            updates['stateUpdates'],
+            updates.stateUpdates,
           );
 
           // remove unknownJson for comparison
@@ -151,7 +151,7 @@ void main() {
           // for any null values in jsonWithNullValues,
           // make sure there are no corresponding data values in stateUpdates for those keys
           jsonWithNullValues.forEach((key, value) {
-            updates['stateUpdates'].forEach((stateKey, stateValue) {
+            updates.stateUpdates.forEach((stateKey, stateValue) {
               if (key == stateKey ||
                   !key.endsWith('_') &&
                       stateKey.endsWith('_') &&
@@ -168,7 +168,7 @@ void main() {
 
           // compare with null values from stateUpdates
           final stateUpdatesWithNullValues = <String, dynamic>{
-            ...updates['stateUpdates'],
+            ...updates.stateUpdates,
           }..removeWhere((key, value) => value != null);
           expect(
             jsonWithNullValues.keys.toList()..sort(),

@@ -138,19 +138,13 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     cs: cs,
   );
 
-  final changeDataUpdates = {
-    ...(updates['changeDataUpdates'] as Map<String, dynamic>?) ??
-        <String, dynamic>{},
-  };
-  final stateUpdates = {
-    ...(updates['stateUpdates'] as Map<String, dynamic>?) ??
-        <String, dynamic>{},
-  };
+  final changeDataUpdates = {...updates.changeDataUpdates};
+  final stateUpdates = {...updates.stateUpdates};
 
   // remove any null (field-detection) fields from stateUpdates
   stateUpdates.removeWhere((key, value) => value == null);
-  final outdatedBys = (updates['outdatedBys'] as List<String>? ?? <String>[]);
-  final operation = (updates['operation'] as String? ?? '');
+  final outdatedBys = (updates.outdatedBys);
+  final operation = (updates.operation);
   final stateChanged = stateUpdates.isNotEmpty;
   Map<String, dynamic> additionalWarnings = getAdditionalWarnings(
     operation: operation,
@@ -161,8 +155,8 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   );
 
   // Read cloudAt/storedAt values computed by getDataAndStateUpdatesOrOutdatedBys
-  final String? cloudAt = updates['cloudAt'] as String?;
-  final String storedAt = updates['storedAt'] as String;
+  final String? cloudAt = updates.cloudAt;
+  final String storedAt = updates.storedAt;
 
   // Build the full set of change-log entry updates callers can apply
   // Decide whether to preserve incoming change data in the change-log entry.
@@ -470,7 +464,7 @@ DateTime _toDateTime(dynamic v, DateTime defaultValue) {
 
 /// fieldUpdatesOrOutdatedBys(changeLogEntry: ChangeLogEntry, entityState: BaseEntityState, fieldChanges):
 /// returns { fieldUpdates: Map<String, dynamic>, outdatedBys: List<String> }
-Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys({
+GetDataAndStateUpdatesOrOutdatedBysResult getDataAndStateUpdatesOrOutdatedBys({
   required BaseChangeLogEntry changeLogEntry,
   BaseEntityState? entityState,
   required Map<String, dynamic> fieldChanges,
@@ -663,16 +657,55 @@ Map<String, dynamic> getDataAndStateUpdatesOrOutdatedBys({
     noOpFields: noOpFields,
     outdatedBys: outdatedBys,
   );
+  return GetDataAndStateUpdatesOrOutdatedBysResult(
+    cloudAt: computedCloudAt,
+    storedAt: computedStoredAt,
+    stateUpdates: stateUpdates,
+    changeDataUpdates: fieldUpdates,
+    outdatedBys: outdatedBys,
+    operation: operation,
+  );
+}
 
-  return {
-    // expose the computed values to callers
-    'cloudAt': computedCloudAt,
-    'storedAt': computedStoredAt,
-    'stateUpdates': stateUpdates,
-    'changeDataUpdates': fieldUpdates,
-    'outdatedBys': outdatedBys,
-    'operation': operation,
-  };
+/// Typed result for `getDataAndStateUpdatesOrOutdatedBys` so callers have
+/// well-defined top-level fields instead of a loose `Map`.
+class GetDataAndStateUpdatesOrOutdatedBysResult {
+  final String? cloudAt;
+  final String storedAt;
+  final Map<String, dynamic> stateUpdates;
+  final Map<String, dynamic> changeDataUpdates;
+  final List<String> outdatedBys;
+  final String operation;
+
+  GetDataAndStateUpdatesOrOutdatedBysResult({
+    required this.cloudAt,
+    required this.storedAt,
+    required this.stateUpdates,
+    required this.changeDataUpdates,
+    required this.outdatedBys,
+    required this.operation,
+  });
+
+  /// Backwards-compatible map-style accessor used by existing callers that
+  /// expect a Map returned from the older implementation.
+  dynamic operator [](String key) {
+    switch (key) {
+      case 'cloudAt':
+        return cloudAt;
+      case 'storedAt':
+        return storedAt;
+      case 'stateUpdates':
+        return stateUpdates;
+      case 'changeDataUpdates':
+        return changeDataUpdates;
+      case 'outdatedBys':
+        return outdatedBys;
+      case 'operation':
+        return operation;
+      default:
+        return null;
+    }
+  }
 }
 
 /// Helper class to hold computed cloudAt and storedAt values. Using a single

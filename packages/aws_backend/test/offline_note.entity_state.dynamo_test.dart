@@ -60,11 +60,11 @@ void main() {
           );
 
           SlttLogger.logger.info(
-            'DEBUG: stateUpdates keys: ${updates['stateUpdates'].keys.toList()..sort()}',
+            'DEBUG: stateUpdates keys: ${updates.stateUpdates.keys.toList()..sort()}',
           );
 
           final testEntityState = DynamoNoteDataEntityState.fromJson(
-            updates['stateUpdates'],
+            updates.stateUpdates,
           );
 
           if (testEntityState.unknownJson != '{}') {
@@ -89,7 +89,7 @@ void main() {
           final serializedJson = testEntityState.toJson();
 
           final originalStateUpdates = Map<String, dynamic>.from(
-            updates['stateUpdates'],
+            updates.stateUpdates,
           );
 
           serializedJson.remove('unknownJson');
@@ -163,7 +163,7 @@ void main() {
             ..removeWhere((key, value) => value != null);
 
           jsonWithNullValues.forEach((key, value) {
-            updates['stateUpdates'].forEach((stateKey, stateValue) {
+            updates.stateUpdates.forEach((stateKey, stateValue) {
               if (key == stateKey ||
                   (!key.endsWith('_') &&
                       stateKey.endsWith('_') &&
@@ -179,7 +179,7 @@ void main() {
           });
 
           final stateUpdatesWithNullValues = <String, dynamic>{
-            ...updates['stateUpdates'],
+            ...updates.stateUpdates,
           }..removeWhere((key, value) => value != null);
           expect(
             jsonWithNullValues.keys.toList()..sort(),

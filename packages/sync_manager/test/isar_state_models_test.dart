@@ -265,13 +265,11 @@ void main() {
 
         // Debug: Print stateUpdates to understand what fields are being generated
         SlttLogger.logger.info(
-          'DEBUG: stateUpdates keys: ${updates['stateUpdates'].keys.toList()..sort()}',
+          'DEBUG: stateUpdates keys: ${updates.stateUpdates.keys.toList()..sort()}',
         );
 
         // Step 2: Deserialize stateUpdates back to IsarProjectState
-        final testEntityState = IsarProjectState.fromJson(
-          updates['stateUpdates'],
-        );
+        final testEntityState = IsarProjectState.fromJson(updates.stateUpdates);
 
         // Step 2 verification: Check if there are unknown fields
         if (testEntityState.unknownJson != '{}') {
@@ -299,7 +297,7 @@ void main() {
         // Step 3 verification: The serialized version should contain the same fields and values
         // as the original stateUpdates (excluding dynamic timestamps that we handle separately)
         final originalStateUpdates = Map<String, dynamic>.from(
-          updates['stateUpdates'],
+          updates.stateUpdates,
         );
 
         // remove unknownJson for comparison
@@ -348,7 +346,7 @@ void main() {
           ..removeWhere((key, value) => value != null);
         // compare with null values from stateUpdates
         final stateUpdatesWithNullValues = <String, dynamic>{
-          ...updates['stateUpdates'],
+          ...updates.stateUpdates,
         }..removeWhere((key, value) => value != null);
         expect(
           jsonWithNullValues.keys.toList()..sort(),

@@ -56,7 +56,7 @@ void main() {
         );
 
         final testEntityState = DynamoMarkerDataEntityState.fromJson(
-          updates['stateUpdates'],
+          updates.stateUpdates,
         );
 
         // Ensure unknownJson is empty

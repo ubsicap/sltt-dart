@@ -51,7 +51,7 @@ void main() {
         );
 
         final testEntityState = DynamoMarkerDataEntityState.fromJson(
-          updates['stateUpdates'],
+          updates.stateUpdates,
         );
 
         if (testEntityState.unknownJson != '{}') {
@@ -62,7 +62,7 @@ void main() {
 
         final serializedJson = testEntityState.toJson();
         final originalStateUpdates = Map<String, dynamic>.from(
-          updates['stateUpdates'],
+          updates.stateUpdates,
         );
 
         serializedJson.remove('unknownJson');
