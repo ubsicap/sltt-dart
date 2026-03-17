@@ -78,6 +78,8 @@ void main() {
     'data_parentProp_cid_',
     'data_parentProp_changeBy_',
     'data_parentProp_cloudAt_',
+    'stateDataHash',
+    'stateDataHash_orig_',
   };
 
   /// Helper to verify all DateTime fields are UTC
@@ -336,6 +338,9 @@ void main() {
         ),
         data_parentProp_changeBy_: 'test-user-6',
         data_parentProp_cloudAt_: localDataParentPropCloudAt,
+        // Provide non-null stateDataHash fields for coverage expectations
+        stateDataHash: 'test-hash',
+        stateDataHash_orig_: 'test-hash-orig',
       );
 
       // Test that instance DateTime fields are UTC
