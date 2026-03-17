@@ -25,6 +25,12 @@ abstract class BaseEntityState
   String unknownJson;
   @override
   final int? schemaVersion;
+
+  @override
+  final String? stateDataHash;
+  @override
+  final String? stateDataHash_orig_;
+
   final String change_domainId;
   @override
   final String change_domainId_orig_;
@@ -101,6 +107,8 @@ abstract class BaseEntityState
     required this.entityType,
     required this.domainType,
     this.schemaVersion,
+    this.stateDataHash,
+    this.stateDataHash_orig_,
     required String unknownJson,
     required DateTime change_storedAt,
     required DateTime change_storedAt_orig_,
@@ -248,6 +256,9 @@ mixin CoreEntityMetaData {
   DateTime get change_storedAt;
   int? get schemaVersion;
   String? get unknownJson;
+
+  /// base64(md5(stringified(stableSorted(not-null-data_*: value))))
+  String? get stateDataHash;
 }
 
 mixin CoreEntityStateDataFields {
@@ -301,4 +312,5 @@ mixin CoreChangeLogEntryOriginalFields {
   // NOT needed: DateTime? get change_cloudAt_orig_;
   String get change_changeBy_orig_;
   // NOT needed: int? get change_dataSchemaRev_orig_;
+  String? get stateDataHash_orig_;
 }
