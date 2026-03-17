@@ -49,6 +49,7 @@ class DynamoChangeLogEntry extends BaseChangeLogEntry {
     required super.changeAt,
     required super.entityId,
     required super.dataJson,
+    super.stateDataHash,
     super.operationInfoJson,
     super.dataSchemaRev,
     super.cloudAt,

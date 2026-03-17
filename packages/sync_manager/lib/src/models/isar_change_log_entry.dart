@@ -56,6 +56,7 @@ class IsarChangeLogEntry extends BaseChangeLogEntry {
     required super.entityId,
     required super.dataJson,
     super.cloudAt,
+    super.stateDataHash,
     super.storedAt,
     required super.changeBy,
     required super.storageId,

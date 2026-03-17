@@ -93,6 +93,8 @@ class DynamoNoteDataEntityState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     required super.unknownJson,
+    super.stateDataHash,
+    super.stateDataHash_orig_,
     required this.data_title,
     this.data_title_dataSchemaRev_,
     required DateTime data_title_changeAt_,

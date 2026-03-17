@@ -157,6 +157,25 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   // Read cloudAt/storedAt values computed by getDataAndStateUpdatesOrOutdatedBys
   final String? cloudAt = updates.cloudAt;
   final String storedAt = updates.storedAt;
+  // Compute stateDataHash according to rules:
+  // - if entityState == null: compute from stateUpdates and set stateDataHash_orig_
+  // - if entityState != null and no stateUpdates: reuse entityState.stateDataHash
+  // - otherwise: compute hash from merged data_ fields (entityState + stateUpdates)
+  late final String stateDataHash;
+  if (entityState == null) {
+    stateDataHash = computeStateDataHash(stateUpdates);
+    stateUpdates['stateDataHash_orig_'] = stateDataHash;
+  } else {
+    if (stateUpdates.isEmpty && entityState.stateDataHash != null) {
+      stateDataHash = entityState.stateDataHash!;
+    } else {
+      final merged = <String, dynamic>{
+        ...entityState.toJson(),
+        ...stateUpdates,
+      };
+      stateDataHash = computeStateDataHash(merged);
+    }
+  }
 
   // Build the full set of change-log entry updates callers can apply
   // Decide whether to preserve incoming change data in the change-log entry.
@@ -183,6 +202,12 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     changeLogEntryUpdates['dataJson'] = changeLogEntry.dataJson;
   } else {
     changeLogEntryUpdates['dataJson'] = jsonEncode(changeDataUpdates);
+  }
+
+  // Propagate stateDataHash into change updates and state updates when present
+  changeLogEntryUpdates['stateDataHash'] = stateDataHash;
+  if (stateUpdates.isNotEmpty) {
+    stateUpdates['stateDataHash'] = stateDataHash;
   }
 
   return GetUpdateResults(
@@ -676,6 +701,7 @@ class GetDataAndStateUpdatesOrOutdatedBysResult {
   final Map<String, dynamic> changeDataUpdates;
   final List<String> outdatedBys;
   final String operation;
+  final String? stateDataHash;
 
   GetDataAndStateUpdatesOrOutdatedBysResult({
     required this.cloudAt,
@@ -684,6 +710,7 @@ class GetDataAndStateUpdatesOrOutdatedBysResult {
     required this.changeDataUpdates,
     required this.outdatedBys,
     required this.operation,
+    this.stateDataHash,
   });
 
   /// Backwards-compatible map-style accessor used by existing callers that
@@ -702,6 +729,8 @@ class GetDataAndStateUpdatesOrOutdatedBysResult {
         return outdatedBys;
       case 'operation':
         return operation;
+      case 'stateDataHash':
+        return stateDataHash;
       default:
         return null;
     }

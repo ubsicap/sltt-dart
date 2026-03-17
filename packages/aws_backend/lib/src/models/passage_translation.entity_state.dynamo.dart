@@ -86,6 +86,8 @@ class DynamoPassageDataEntityState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     required super.unknownJson,
+    super.stateDataHash,
+    super.stateDataHash_orig_,
     required this.data_name,
     this.data_name_dataSchemaRev_,
     required DateTime data_name_changeAt_,

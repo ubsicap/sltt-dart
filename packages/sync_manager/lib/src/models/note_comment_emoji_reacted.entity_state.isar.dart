@@ -72,6 +72,8 @@ class IsarNoteCommentEmojiReactedDataEntityState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     required super.unknownJson,
+    super.stateDataHash,
+    super.stateDataHash_orig_,
     required this.data_emoji,
     this.data_emoji_dataSchemaRev_,
     required DateTime data_emoji_changeAt_,

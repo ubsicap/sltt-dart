@@ -695,6 +695,8 @@ void main() {
           updates.stateUpdates,
           'change_storedAt',
         );
+        final stateDataHash = updates.changeUpdates['stateDataHash'] as String;
+        expect(stateDataHash, isNotEmpty);
 
         // Entity state should update via stateUpdates
         expect(
@@ -710,6 +712,7 @@ void main() {
             'data_rank_changeAt_': newerTime.toIso8601String(),
             'data_rank_cid_': 'cid2',
             'data_rank_changeBy_': 'user2',
+            'stateDataHash': stateDataHash,
           }),
         );
         // Latest metadata should be updated since change is newer
@@ -735,6 +738,7 @@ void main() {
             'dataJson': jsonEncode({'rank': '2'}),
             'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
             'storedAt': storedAtVal1,
+            'stateDataHash': stateDataHash,
           }),
         );
       });
@@ -772,6 +776,8 @@ void main() {
           updates.changeUpdates,
           'storedAt',
         );
+        final stateDataHash2 = updates.changeUpdates['stateDataHash'] as String;
+        expect(stateDataHash2, isNotEmpty);
         expect(
           updates.changeUpdates,
           equals({
@@ -784,6 +790,7 @@ void main() {
             'cloudAt': changeLogEntry.cloudAt!.toUtc().toIso8601String(),
             'dataJson': jsonEncode({'rank': entityState.data_rank}),
             'storedAt': storedAtVal2,
+            'stateDataHash': stateDataHash2,
           }),
         );
       });
@@ -827,6 +834,9 @@ void main() {
             updates.changeUpdates,
             'storedAt',
           );
+          final stateDataHash3 =
+              updates.changeUpdates['stateDataHash'] as String;
+          expect(stateDataHash3, isNotEmpty);
           expect(
             updates.changeUpdates,
             equals({
@@ -843,6 +853,7 @@ void main() {
               }),
               'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
               'storedAt': storedAtVal3,
+              'stateDataHash': stateDataHash3,
             }),
           );
 
@@ -865,6 +876,7 @@ void main() {
               'data_nameLocal_cid_': 'cid6',
               'data_parentId_changeBy_': 'user2',
               'data_nameLocal_changeBy_': 'user2',
+              'stateDataHash': stateDataHash3,
             }),
           );
         },
@@ -957,6 +969,9 @@ void main() {
             updates.changeUpdates,
             'storedAt',
           );
+          final stateDataHash4 =
+              updates.changeUpdates['stateDataHash'] as String;
+          expect(stateDataHash4, isNotEmpty);
           expect(
             updates.changeUpdates,
             equals({
@@ -970,6 +985,7 @@ void main() {
               'cloudAt': null,
               'dataJson': jsonEncode({'parentId': 'parent2'}),
               'storedAt': storedAtVal4,
+              'stateDataHash': stateDataHash4,
             }),
           );
         },
@@ -1012,6 +1028,8 @@ void main() {
           updates.changeUpdates,
           'storedAt',
         );
+        final stateDataHash5 = updates.changeUpdates['stateDataHash'] as String;
+        expect(stateDataHash5, isNotEmpty);
         expect(
           updates.changeUpdates,
           equals({
@@ -1025,6 +1043,7 @@ void main() {
             'dataJson': jsonEncode({}),
             'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
             'storedAt': storedAtVal5,
+            'stateDataHash': stateDataHash5,
           }),
         );
       });
@@ -1064,6 +1083,8 @@ void main() {
           updates.changeUpdates,
           'storedAt',
         );
+        final stateDataHash6 = updates.changeUpdates['stateDataHash'] as String;
+        expect(stateDataHash6, isNotEmpty);
         expect(
           updates.changeUpdates,
           equals({
@@ -1081,6 +1102,7 @@ void main() {
               'parentProp': 'pList',
             }),
             'storedAt': storedAtVal6,
+            'stateDataHash': stateDataHash6,
           }),
         );
         // stateUpdates should initialize entity fields appropriately
@@ -1136,6 +1158,8 @@ void main() {
             'data_parentProp_changeAt_': '2023-01-01T00:01:00.000Z',
             'data_parentProp_cid_': 'cid3',
             'data_parentProp_changeBy_': 'user1',
+            'stateDataHash': stateDataHash6,
+            'stateDataHash_orig_': stateDataHash6,
           }),
         );
       });
@@ -1181,6 +1205,8 @@ void main() {
           updates.changeUpdates,
           'storedAt',
         );
+        final stateDataHash7 = updates.changeUpdates['stateDataHash'] as String;
+        expect(stateDataHash7, isNotEmpty);
         expect(
           updates.changeUpdates,
           equals({
@@ -1198,6 +1224,7 @@ void main() {
             }),
             'cloudAt': null,
             'storedAt': storedAtVal7,
+            'stateDataHash': stateDataHash7,
           }),
         );
       });
@@ -1237,6 +1264,8 @@ void main() {
           updates.changeUpdates,
           'storedAt',
         );
+        final stateDataHash8 = updates.changeUpdates['stateDataHash'] as String;
+        expect(stateDataHash8, isNotEmpty);
         expect(
           updates.changeUpdates,
           equals({
@@ -1250,6 +1279,7 @@ void main() {
             'dataJson': jsonEncode({'deleted': true}),
             'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
             'storedAt': storedAtVal8,
+            'stateDataHash': stateDataHash8,
           }),
         );
       });
@@ -1380,6 +1410,9 @@ void main() {
             updates.changeUpdates,
             'storedAt',
           );
+          final stateDataHash12 =
+              updates.changeUpdates['stateDataHash'] as String;
+          expect(stateDataHash12, isNotEmpty);
           expect(
             updates.changeUpdates,
             equals({
@@ -1393,6 +1426,7 @@ void main() {
               'dataJson': jsonEncode({'rank': '2'}),
               'storedAt': storedAtVal12,
               'cloudAt': null,
+              'stateDataHash': stateDataHash12,
             }),
           );
           expect(
@@ -1411,6 +1445,7 @@ void main() {
               'data_rank_changeAt_': '2023-01-01T00:05:00.000Z',
               'data_rank_cid_': 'new-cid',
               'data_rank_changeBy_': 'user2',
+              'stateDataHash': stateDataHash12,
             }),
           );
         },
@@ -1514,6 +1549,9 @@ void main() {
             updates.changeUpdates,
             'storedAt',
           );
+          final stateDataHash13 =
+              updates.changeUpdates['stateDataHash'] as String;
+          expect(stateDataHash13, isNotEmpty);
           expect(
             updates.changeUpdates,
             equals({
@@ -1527,6 +1565,7 @@ void main() {
               'dataJson': jsonEncode({}),
               'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
               'storedAt': storedAtVal13,
+              'stateDataHash': stateDataHash13,
             }),
           );
           expect(updates.stateUpdates, equals({}));
@@ -1620,6 +1659,9 @@ void main() {
             updates.changeUpdates,
             'storedAt',
           );
+          final stateDataHash14 =
+              updates.changeUpdates['stateDataHash'] as String;
+          expect(stateDataHash14, isNotEmpty);
           expect(
             updates.changeUpdates,
             equals({
@@ -1633,6 +1675,7 @@ void main() {
               'dataJson': jsonEncode({'rank': '2'}),
               'cloudAt': changeLogEntry.cloudAt?.toUtc().toIso8601String(),
               'storedAt': storedAtVal14,
+              'stateDataHash': stateDataHash14,
             }),
           );
           // Latest metadata should NOT be updated to reflect this change
@@ -1651,6 +1694,7 @@ void main() {
               'data_rank_changeAt_': newerFieldTime.toIso8601String(),
               'data_rank_cid_': 'mid-cid',
               'data_rank_changeBy_': 'user2',
+              'stateDataHash': stateDataHash14,
             }),
           );
         },
@@ -1906,7 +1950,12 @@ void main() {
 
           // now see if TestEntityState has any additional (optional) fields
           final jsonWithNullValues = testEntityState.toJsonBase()
-            ..removeWhere((key, value) => value != null);
+            ..removeWhere((key, value) => value != null)
+            // stateDataHash and stateDataHash_orig_ are added by the outer
+            // getUpdatesForChangeLogEntryAndEntityState wrapper, not by this
+            // function, so exclude them from field-drift detection here.
+            ..remove('stateDataHash')
+            ..remove('stateDataHash_orig_');
           // compare with null values from stateUpdates
           final stateUpdatesWithNullValues = <String, dynamic>{
             ...updates.stateUpdates,

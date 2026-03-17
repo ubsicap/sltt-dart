@@ -64,6 +64,8 @@ class DynamoMarkerDataEntityState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     required super.unknownJson,
+    super.stateDataHash,
+    super.stateDataHash_orig_,
     required this.data_colorValue,
     this.data_colorValue_dataSchemaRev_,
     required DateTime data_colorValue_changeAt_,
@@ -108,10 +110,10 @@ class DynamoMarkerDataEntityState extends BaseEntityState {
        data_colorValue_cloudAt_ = data_colorValue_cloudAt_?.toUtc(),
        data_shape_changeAt_ = data_shape_changeAt_.toUtc(),
        data_shape_cloudAt_ = data_shape_cloudAt_?.toUtc(),
-      data_description_changeAt_ = data_description_changeAt_.toUtc(),
-      data_description_cloudAt_ = data_description_cloudAt_?.toUtc(),
-      data_replacementId_changeAt_ = data_replacementId_changeAt_?.toUtc(),
-      data_replacementId_cloudAt_ = data_replacementId_cloudAt_?.toUtc();
+       data_description_changeAt_ = data_description_changeAt_.toUtc(),
+       data_description_cloudAt_ = data_description_cloudAt_?.toUtc(),
+       data_replacementId_changeAt_ = data_replacementId_changeAt_?.toUtc(),
+       data_replacementId_cloudAt_ = data_replacementId_cloudAt_?.toUtc();
 
   static DynamoMarkerDataEntityState fromJsonBase(Map<String, dynamic> json) =>
       _$DynamoMarkerDataEntityStateFromJson(json);
