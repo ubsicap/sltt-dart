@@ -29,6 +29,7 @@ TestChangeLogEntry _$TestChangeLogEntryFromJson(
       (v) => v as String? ?? '{}',
     ),
     stateChanged: $checkedConvert('stateChanged', (v) => v as bool),
+    stateDataHash: $checkedConvert('stateDataHash', (v) => v as String?),
     unknownJson: $checkedConvert('unknownJson', (v) => v as String? ?? '{}'),
     dataSchemaRev: $checkedConvert(
       'dataSchemaRev',
@@ -56,6 +57,7 @@ Map<String, dynamic> _$TestChangeLogEntryToJson(TestChangeLogEntry instance) =>
       'operation': instance.operation,
       'operationInfoJson': instance.operationInfoJson,
       'stateChanged': instance.stateChanged,
+      'stateDataHash': instance.stateDataHash,
       'changeAt': instance.changeAt.toIso8601String(),
       'entityId': instance.entityId,
       'dataJson': instance.dataJson,
@@ -81,6 +83,11 @@ TestEntityState _$TestEntityStateFromJson(Map<String, dynamic> json) =>
           (v) => (v as num?)?.toInt(),
         ),
         unknownJson: $checkedConvert('unknownJson', (v) => v as String),
+        stateDataHash: $checkedConvert('stateDataHash', (v) => v as String?),
+        stateDataHash_orig_: $checkedConvert(
+          'stateDataHash_orig_',
+          (v) => v as String?,
+        ),
         change_domainId: $checkedConvert('change_domainId', (v) => v as String),
         change_domainId_orig_: $checkedConvert(
           'change_domainId_orig_',
@@ -256,6 +263,8 @@ Map<String, dynamic> _$TestEntityStateToJson(
   'domainType': instance.domainType,
   'unknownJson': instance.unknownJson,
   'schemaVersion': instance.schemaVersion,
+  'stateDataHash': instance.stateDataHash,
+  'stateDataHash_orig_': instance.stateDataHash_orig_,
   'change_domainId': instance.change_domainId,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
