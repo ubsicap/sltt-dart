@@ -38,6 +38,9 @@ abstract class BaseChangeLogEntry
   final bool stateChanged;
 
   @override
+  String? stateDataHash;
+
+  @override
   final DateTime changeAt;
 
   @override
@@ -116,6 +119,7 @@ abstract class BaseChangeLogEntry
     required this.entityType,
     required this.operation,
     required this.stateChanged,
+    this.stateDataHash,
     required DateTime changeAt,
     required this.entityId,
     required this.dataJson,
@@ -152,6 +156,7 @@ mixin StorageResponsibilities {
   String get operation;
   String get operationInfoJson;
   bool get stateChanged;
+  String? get stateDataHash;
 
   /// we always expect this to eventually be set in getUpdatesForChangeLogEntryAndEntityState
   DateTime? get storedAt;
