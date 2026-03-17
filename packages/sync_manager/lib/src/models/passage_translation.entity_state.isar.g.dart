@@ -428,8 +428,18 @@ const IsarPassageDataEntityStateSchema = CollectionSchema(
       name: r'schemaVersion',
       type: IsarType.long,
     ),
-    r'unknownJson': PropertySchema(
+    r'stateDataHash': PropertySchema(
       id: 82,
+      name: r'stateDataHash',
+      type: IsarType.string,
+    ),
+    r'stateDataHash_orig_': PropertySchema(
+      id: 83,
+      name: r'stateDataHash_orig_',
+      type: IsarType.string,
+    ),
+    r'unknownJson': PropertySchema(
+      id: 84,
       name: r'unknownJson',
       type: IsarType.string,
     ),
@@ -599,6 +609,18 @@ int _isarPassageDataEntityStateEstimateSize(
   bytesCount += 3 + object.domainType.length * 3;
   bytesCount += 3 + object.entityId.length * 3;
   bytesCount += 3 + object.entityType.length * 3;
+  {
+    final value = object.stateDataHash;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.stateDataHash_orig_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.unknownJson.length * 3;
   return bytesCount;
 }
@@ -691,7 +713,9 @@ void _isarPassageDataEntityStateSerialize(
   writer.writeString(offsets[79], object.entityId);
   writer.writeString(offsets[80], object.entityType);
   writer.writeLong(offsets[81], object.schemaVersion);
-  writer.writeString(offsets[82], object.unknownJson);
+  writer.writeString(offsets[82], object.stateDataHash);
+  writer.writeString(offsets[83], object.stateDataHash_orig_);
+  writer.writeString(offsets[84], object.unknownJson);
 }
 
 IsarPassageDataEntityState _isarPassageDataEntityStateDeserialize(
@@ -784,7 +808,9 @@ IsarPassageDataEntityState _isarPassageDataEntityStateDeserialize(
     entityType: reader.readStringOrNull(offsets[80]) ?? kEntityTypePassage,
     id: id,
     schemaVersion: reader.readLongOrNull(offsets[81]),
-    unknownJson: reader.readString(offsets[82]),
+    stateDataHash: reader.readStringOrNull(offsets[82]),
+    stateDataHash_orig_: reader.readStringOrNull(offsets[83]),
+    unknownJson: reader.readString(offsets[84]),
   );
   return object;
 }
@@ -961,6 +987,10 @@ P _isarPassageDataEntityStateDeserializeProp<P>(
     case 81:
       return (reader.readLongOrNull(offset)) as P;
     case 82:
+      return (reader.readStringOrNull(offset)) as P;
+    case 83:
+      return (reader.readStringOrNull(offset)) as P;
+    case 84:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -13396,6 +13426,423 @@ extension IsarPassageDataEntityStateQueryFilter
     IsarPassageDataEntityState,
     QAfterFilterCondition
   >
+  stateDataHashIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'stateDataHash'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'stateDataHash'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'stateDataHash',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'stateDataHash',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'stateDataHash', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'stateDataHash', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'stateDataHash_orig_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'stateDataHash_orig_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_EqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'stateDataHash_orig_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_StartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'stateDataHash_orig_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'stateDataHash_orig_', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'stateDataHash_orig_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterFilterCondition
+  >
   unknownJsonEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -15345,6 +15792,50 @@ extension IsarPassageDataEntityStateQuerySortBy
     IsarPassageDataEntityState,
     QAfterSortBy
   >
+  sortByStateDataHash() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterSortBy
+  >
+  sortByStateDataHashDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterSortBy
+  >
+  sortByStateDataHash_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterSortBy
+  >
+  sortByStateDataHash_orig_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterSortBy
+  >
   sortByUnknownJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.asc);
@@ -17141,6 +17632,50 @@ extension IsarPassageDataEntityStateQuerySortThenBy
     IsarPassageDataEntityState,
     QAfterSortBy
   >
+  thenByStateDataHash() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterSortBy
+  >
+  thenByStateDataHashDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterSortBy
+  >
+  thenByStateDataHash_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterSortBy
+  >
+  thenByStateDataHash_orig_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QAfterSortBy
+  >
   thenByUnknownJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.asc);
@@ -18163,6 +18698,34 @@ extension IsarPassageDataEntityStateQueryWhereDistinct
     IsarPassageDataEntityState,
     QDistinct
   >
+  distinctByStateDataHash({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'stateDataHash',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QDistinct
+  >
+  distinctByStateDataHash_orig_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'stateDataHash_orig_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarPassageDataEntityState,
+    IsarPassageDataEntityState,
+    QDistinct
+  >
   distinctByUnknownJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'unknownJson', caseSensitive: caseSensitive);
@@ -18757,6 +19320,20 @@ extension IsarPassageDataEntityStateQueryProperty
     });
   }
 
+  QueryBuilder<IsarPassageDataEntityState, String?, QQueryOperations>
+  stateDataHashProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'stateDataHash');
+    });
+  }
+
+  QueryBuilder<IsarPassageDataEntityState, String?, QQueryOperations>
+  stateDataHash_orig_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'stateDataHash_orig_');
+    });
+  }
+
   QueryBuilder<IsarPassageDataEntityState, String, QQueryOperations>
   unknownJsonProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -18850,6 +19427,11 @@ IsarPassageDataEntityState _$IsarPassageDataEntityStateFromJson(
       (v) => v as String,
     ),
     unknownJson: $checkedConvert('unknownJson', (v) => v as String),
+    stateDataHash: $checkedConvert('stateDataHash', (v) => v as String?),
+    stateDataHash_orig_: $checkedConvert(
+      'stateDataHash_orig_',
+      (v) => v as String?,
+    ),
     data_name: $checkedConvert('data_name', (v) => v as String),
     data_name_dataSchemaRev_: $checkedConvert(
       'data_name_dataSchemaRev_',
@@ -19066,6 +19648,8 @@ Map<String, dynamic> _$IsarPassageDataEntityStateToJson(
   'domainType': instance.domainType,
   'unknownJson': instance.unknownJson,
   'schemaVersion': instance.schemaVersion,
+  'stateDataHash': instance.stateDataHash,
+  'stateDataHash_orig_': instance.stateDataHash_orig_,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
   'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),

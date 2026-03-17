@@ -41,6 +41,8 @@ class IsarProjectState extends BaseEntityState {
     required super.unknownJson,
     required super.change_storedAt,
     required super.change_storedAt_orig_,
+    super.stateDataHash,
+    super.stateDataHash_orig_,
     this.data_nameLocal,
     this.data_nameLocal_dataSchemaRev_,
     DateTime? data_nameLocal_changeAt_,

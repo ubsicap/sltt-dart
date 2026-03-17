@@ -92,6 +92,8 @@ void main() {
     'data_parentProp_cid_',
     'data_parentProp_changeBy_',
     'data_parentProp_cloudAt_',
+    'stateDataHash',
+    'stateDataHash_orig_',
   };
 
   /// Helper to verify all DateTime fields are UTC
@@ -246,6 +248,8 @@ void main() {
         change_changeAt_orig_: localChangeAt,
         change_storedAt: localStoredAt,
         change_storedAt_orig_: localStoredAt,
+        stateDataHash: 'test-hash',
+        stateDataHash_orig_: 'test-hash-orig',
         change_cid: generateCid(
           entityType: EntityType.task,
           userId: 'test-user-5',

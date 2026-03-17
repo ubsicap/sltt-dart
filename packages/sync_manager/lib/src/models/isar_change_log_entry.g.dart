@@ -84,18 +84,23 @@ const IsarChangeLogEntrySchema = CollectionSchema(
       name: r'stateChanged',
       type: IsarType.bool,
     ),
-    r'storageId': PropertySchema(
+    r'stateDataHash': PropertySchema(
       id: 14,
+      name: r'stateDataHash',
+      type: IsarType.string,
+    ),
+    r'storageId': PropertySchema(
+      id: 15,
       name: r'storageId',
       type: IsarType.string,
     ),
     r'storedAt': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'storedAt',
       type: IsarType.dateTime,
     ),
     r'unknownJson': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'unknownJson',
       type: IsarType.string,
     ),
@@ -145,6 +150,12 @@ int _isarChangeLogEntryEstimateSize(
   bytesCount += 3 + object.entityType.length * 3;
   bytesCount += 3 + object.operation.length * 3;
   bytesCount += 3 + object.operationInfoJson.length * 3;
+  {
+    final value = object.stateDataHash;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.storageId.length * 3;
   bytesCount += 3 + object.unknownJson.length * 3;
   return bytesCount;
@@ -170,9 +181,10 @@ void _isarChangeLogEntrySerialize(
   writer.writeString(offsets[11], object.operationInfoJson);
   writer.writeLong(offsets[12], object.schemaVersion);
   writer.writeBool(offsets[13], object.stateChanged);
-  writer.writeString(offsets[14], object.storageId);
-  writer.writeDateTime(offsets[15], object.storedAt);
-  writer.writeString(offsets[16], object.unknownJson);
+  writer.writeString(offsets[14], object.stateDataHash);
+  writer.writeString(offsets[15], object.storageId);
+  writer.writeDateTime(offsets[16], object.storedAt);
+  writer.writeString(offsets[17], object.unknownJson);
 }
 
 IsarChangeLogEntry _isarChangeLogEntryDeserialize(
@@ -197,9 +209,10 @@ IsarChangeLogEntry _isarChangeLogEntryDeserialize(
     schemaVersion: reader.readLongOrNull(offsets[12]),
     seq: id,
     stateChanged: reader.readBool(offsets[13]),
-    storageId: reader.readString(offsets[14]),
-    storedAt: reader.readDateTimeOrNull(offsets[15]),
-    unknownJson: reader.readStringOrNull(offsets[16]) ?? '{}',
+    stateDataHash: reader.readStringOrNull(offsets[14]),
+    storageId: reader.readString(offsets[15]),
+    storedAt: reader.readDateTimeOrNull(offsets[16]),
+    unknownJson: reader.readStringOrNull(offsets[17]) ?? '{}',
   );
   return object;
 }
@@ -240,10 +253,12 @@ P _isarChangeLogEntryDeserializeProp<P>(
     case 13:
       return (reader.readBool(offset)) as P;
     case 14:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 15:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 16:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 17:
       return (reader.readStringOrNull(offset) ?? '{}') as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2064,6 +2079,165 @@ extension IsarChangeLogEntryQueryFilter
   }
 
   QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'stateDataHash'),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'stateDataHash'),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'stateDataHash',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'stateDataHash',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'stateDataHash', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
+  stateDataHashIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'stateDataHash', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterFilterCondition>
   storageIdEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -2624,6 +2798,20 @@ extension IsarChangeLogEntryQuerySortBy
   }
 
   QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
+  sortByStateDataHash() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
+  sortByStateDataHashDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
   sortByStorageId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageId', Sort.asc);
@@ -2879,6 +3067,20 @@ extension IsarChangeLogEntryQuerySortThenBy
   }
 
   QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
+  thenByStateDataHash() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
+  thenByStateDataHashDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QAfterSortBy>
   thenByStorageId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'storageId', Sort.asc);
@@ -3025,6 +3227,16 @@ extension IsarChangeLogEntryQueryWhereDistinct
   }
 
   QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
+  distinctByStateDataHash({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'stateDataHash',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarChangeLogEntry, IsarChangeLogEntry, QDistinct>
   distinctByStorageId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'storageId', caseSensitive: caseSensitive);
@@ -3151,6 +3363,13 @@ extension IsarChangeLogEntryQueryProperty
     });
   }
 
+  QueryBuilder<IsarChangeLogEntry, String?, QQueryOperations>
+  stateDataHashProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'stateDataHash');
+    });
+  }
+
   QueryBuilder<IsarChangeLogEntry, String, QQueryOperations>
   storageIdProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -3196,6 +3415,7 @@ IsarChangeLogEntry _$IsarChangeLogEntryFromJson(
       'cloudAt',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
+    stateDataHash: $checkedConvert('stateDataHash', (v) => v as String?),
     storedAt: $checkedConvert(
       'storedAt',
       (v) => v == null ? null : DateTime.parse(v as String),
@@ -3230,6 +3450,7 @@ Map<String, dynamic> _$IsarChangeLogEntryToJson(IsarChangeLogEntry instance) =>
       'operation': instance.operation,
       'operationInfoJson': instance.operationInfoJson,
       'stateChanged': instance.stateChanged,
+      'stateDataHash': instance.stateDataHash,
       'changeAt': instance.changeAt.toIso8601String(),
       'entityId': instance.entityId,
       'dataJson': instance.dataJson,

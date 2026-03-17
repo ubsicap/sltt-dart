@@ -19,6 +19,8 @@ abstract class BaseIsarEntityState extends BaseEntityState {
     required super.domainType,
     required super.entityType,
     super.schemaVersion,
+    super.stateDataHash,
+    super.stateDataHash_orig_,
     required super.unknownJson,
     required super.change_storedAt,
     required super.change_storedAt_orig_,

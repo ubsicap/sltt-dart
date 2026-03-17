@@ -242,8 +242,18 @@ const IsarDocumentStateSchema = CollectionSchema(
       name: r'schemaVersion',
       type: IsarType.long,
     ),
-    r'unknownJson': PropertySchema(
+    r'stateDataHash': PropertySchema(
       id: 45,
+      name: r'stateDataHash',
+      type: IsarType.string,
+    ),
+    r'stateDataHash_orig_': PropertySchema(
+      id: 46,
+      name: r'stateDataHash_orig_',
+      type: IsarType.string,
+    ),
+    r'unknownJson': PropertySchema(
+      id: 47,
       name: r'unknownJson',
       type: IsarType.string,
     ),
@@ -388,6 +398,18 @@ int _isarDocumentStateEstimateSize(
   bytesCount += 3 + object.domainType.length * 3;
   bytesCount += 3 + object.entityId.length * 3;
   bytesCount += 3 + object.entityType.length * 3;
+  {
+    final value = object.stateDataHash;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.stateDataHash_orig_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.unknownJson.length * 3;
   return bytesCount;
 }
@@ -443,7 +465,9 @@ void _isarDocumentStateSerialize(
   writer.writeString(offsets[42], object.entityId);
   writer.writeString(offsets[43], object.entityType);
   writer.writeLong(offsets[44], object.schemaVersion);
-  writer.writeString(offsets[45], object.unknownJson);
+  writer.writeString(offsets[45], object.stateDataHash);
+  writer.writeString(offsets[46], object.stateDataHash_orig_);
+  writer.writeString(offsets[47], object.unknownJson);
 }
 
 IsarDocumentState _isarDocumentStateDeserialize(
@@ -499,7 +523,9 @@ IsarDocumentState _isarDocumentStateDeserialize(
     entityType: reader.readStringOrNull(offsets[43]) ?? 'document',
     id: id,
     schemaVersion: reader.readLongOrNull(offsets[44]),
-    unknownJson: reader.readString(offsets[45]),
+    stateDataHash: reader.readStringOrNull(offsets[45]),
+    stateDataHash_orig_: reader.readStringOrNull(offsets[46]),
+    unknownJson: reader.readString(offsets[47]),
   );
   return object;
 }
@@ -602,6 +628,10 @@ P _isarDocumentStateDeserializeProp<P>(
     case 44:
       return (reader.readLongOrNull(offset)) as P;
     case 45:
+      return (reader.readStringOrNull(offset)) as P;
+    case 46:
+      return (reader.readStringOrNull(offset)) as P;
+    case 47:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -6347,6 +6377,327 @@ extension IsarDocumentStateQueryFilter
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'stateDataHash'),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'stateDataHash'),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'stateDataHash',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'stateDataHash',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'stateDataHash', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHashIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'stateDataHash', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'stateDataHash_orig_'),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'stateDataHash_orig_'),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_EqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'stateDataHash_orig_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_StartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'stateDataHash_orig_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'stateDataHash_orig_', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
+  stateDataHash_orig_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'stateDataHash_orig_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterFilterCondition>
   unknownJsonEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -7127,6 +7478,34 @@ extension IsarDocumentStateQuerySortBy
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  sortByStateDataHash() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  sortByStateDataHashDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  sortByStateDataHash_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  sortByStateDataHash_orig_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
   sortByUnknownJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.asc);
@@ -7787,6 +8166,34 @@ extension IsarDocumentStateQuerySortThenBy
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  thenByStateDataHash() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  thenByStateDataHashDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  thenByStateDataHash_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
+  thenByStateDataHash_orig_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QAfterSortBy>
   thenByUnknownJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.asc);
@@ -8170,6 +8577,26 @@ extension IsarDocumentStateQueryWhereDistinct
   }
 
   QueryBuilder<IsarDocumentState, IsarDocumentState, QDistinct>
+  distinctByStateDataHash({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'stateDataHash',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QDistinct>
+  distinctByStateDataHash_orig_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'stateDataHash_orig_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, IsarDocumentState, QDistinct>
   distinctByUnknownJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'unknownJson', caseSensitive: caseSensitive);
@@ -8499,6 +8926,20 @@ extension IsarDocumentStateQueryProperty
     });
   }
 
+  QueryBuilder<IsarDocumentState, String?, QQueryOperations>
+  stateDataHashProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'stateDataHash');
+    });
+  }
+
+  QueryBuilder<IsarDocumentState, String?, QQueryOperations>
+  stateDataHash_orig_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'stateDataHash_orig_');
+    });
+  }
+
   QueryBuilder<IsarDocumentState, String, QQueryOperations>
   unknownJsonProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -8537,6 +8978,11 @@ IsarDocumentState _$IsarDocumentStateFromJson(
     change_storedAt_orig_: $checkedConvert(
       'change_storedAt_orig_',
       (v) => DateTime.parse(v as String),
+    ),
+    stateDataHash: $checkedConvert('stateDataHash', (v) => v as String?),
+    stateDataHash_orig_: $checkedConvert(
+      'stateDataHash_orig_',
+      (v) => v as String?,
     ),
     change_domainId: $checkedConvert('change_domainId', (v) => v as String),
     change_domainId_orig_: $checkedConvert(
@@ -8672,6 +9118,8 @@ Map<String, dynamic> _$IsarDocumentStateToJson(
   'domainType': instance.domainType,
   'unknownJson': instance.unknownJson,
   'schemaVersion': instance.schemaVersion,
+  'stateDataHash': instance.stateDataHash,
+  'stateDataHash_orig_': instance.stateDataHash_orig_,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
   'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),

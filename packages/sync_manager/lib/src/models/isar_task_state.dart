@@ -36,6 +36,8 @@ class IsarTaskState extends BaseIsarEntityState {
     required super.unknownJson,
     required super.change_storedAt,
     required super.change_storedAt_orig_,
+    super.stateDataHash,
+    super.stateDataHash_orig_,
     required this.data_nameLocal,
     required DateTime data_nameLocal_changeAt_,
     required this.data_nameLocal_cid_,

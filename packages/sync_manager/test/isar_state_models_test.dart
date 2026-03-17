@@ -189,6 +189,8 @@ void main() {
         'change_cid_orig_': 'cid-original',
         'change_changeBy_orig_': 'creator',
         'surprise': 'updated_entity',
+        'stateDataHash': 'test-hash',
+        'stateDataHash_orig_': 'test-hash-orig',
       };
 
       final p = IsarProjectState.fromJson(rawJson);
@@ -348,6 +350,11 @@ void main() {
         final stateUpdatesWithNullValues = <String, dynamic>{
           ...updates.stateUpdates,
         }..removeWhere((key, value) => value != null);
+        stateUpdatesWithNullValues.putIfAbsent('stateDataHash', () => null);
+        stateUpdatesWithNullValues.putIfAbsent(
+          'stateDataHash_orig_',
+          () => null,
+        );
         expect(
           jsonWithNullValues.keys.toList()..sort(),
           equals(stateUpdatesWithNullValues.keys.toList()..sort()),

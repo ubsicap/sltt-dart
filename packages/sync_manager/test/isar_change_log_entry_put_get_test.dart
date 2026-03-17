@@ -30,6 +30,7 @@ void main() {
     'changeAt',
     'storedAt',
     'cloudAt',
+    'stateDataHash',
     'changeBy',
     'cid',
     'dataJson',
@@ -119,6 +120,7 @@ void main() {
         unknownJson: '{}',
         dataSchemaRev: 1,
         schemaVersion: 2,
+        stateDataHash: 'test-hash',
       );
 
       // Test that instance DateTime fields are UTC before storing

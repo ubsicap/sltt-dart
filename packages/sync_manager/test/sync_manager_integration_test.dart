@@ -369,6 +369,7 @@ Future<void> testOutsyncCreate({
         'cloudAt': null,
         'storedAt': isA<String>(),
         'dataJson': change.dataJson,
+        'stateDataHash': isA<String>(),
       },
     },
   ];
@@ -401,6 +402,7 @@ Future<void> testOutsyncCreate({
         'cloudAt': null,
         'storedAt': isA<String>(),
         'dataJson': changeOtherDomainId.dataJson,
+        'stateDataHash': isA<String>(),
       },
     },
   ];
@@ -926,6 +928,7 @@ Future<void> testFullSyncUpdate({
           'cloudAt': null,
           'storedAt': isA<String>(),
           'dataJson': '{"nameLocal":"$expectedNameLocalUpdate"}',
+          'stateDataHash': isA<String>(),
         },
       },
     ],
@@ -940,6 +943,7 @@ Future<void> testFullSyncUpdate({
       'data_nameLocal_changeAt_': localChange.changeAt.toIso8601String(),
       'data_nameLocal_cid_': localChange.cid,
       'data_nameLocal_changeBy_': 'local-full',
+      'stateDataHash': isA<String>(),
     },
   );
   final fullSyncResult = await syncManager.performFullSync(
@@ -1132,6 +1136,7 @@ Future<void> testFullSyncOutdated({
           'cloudAt': null,
           'storedAt': isA<String>(),
           'dataJson': '{"nameLocal":"$expectedOutdatedNameLocalUpdate"}',
+          'stateDataHash': isA<String>(),
         },
       },
     ],
@@ -1146,6 +1151,7 @@ Future<void> testFullSyncOutdated({
       'data_nameLocal_changeAt_': localChange.changeAt.toIso8601String(),
       'data_nameLocal_cid_': localChange.cid,
       'data_nameLocal_changeBy_': localChange.changeBy,
+      'stateDataHash': isA<String>(),
     },
   );
 
@@ -1424,6 +1430,7 @@ Future<void> testFullSyncPartialUpdate({
           'storedAt': isA<String>(),
           'dataJson':
               '{"nameLocal":"$localChangeNameLocal","rank":"$localChangeRank"}',
+          'stateDataHash': isA<String>(),
         },
       },
     ],
@@ -1442,6 +1449,7 @@ Future<void> testFullSyncPartialUpdate({
       'data_rank_changeAt_': localChange.changeAt.toIso8601String(),
       'data_rank_cid_': localChange.cid,
       'data_rank_changeBy_': localChange.changeBy,
+      'stateDataHash': isA<String>(),
     },
   );
 
@@ -1719,6 +1727,8 @@ Map<String, dynamic> expectedStateFromChange(
     'change_changeBy': ch.changeBy,
     if (isCloudStorage) 'change_cloudAt': isA<String>(),
     'change_storedAt': isA<String>(),
+    'stateDataHash_orig_': isA<String>(),
+    'stateDataHash': isA<String>(),
   };
 
   // For each data field include the flattened variants observed in the

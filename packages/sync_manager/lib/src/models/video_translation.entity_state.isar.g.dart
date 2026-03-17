@@ -338,8 +338,18 @@ const IsarVideoDataEntityStateSchema = CollectionSchema(
       name: r'schemaVersion',
       type: IsarType.long,
     ),
-    r'unknownJson': PropertySchema(
+    r'stateDataHash': PropertySchema(
       id: 64,
+      name: r'stateDataHash',
+      type: IsarType.string,
+    ),
+    r'stateDataHash_orig_': PropertySchema(
+      id: 65,
+      name: r'stateDataHash_orig_',
+      type: IsarType.string,
+    ),
+    r'unknownJson': PropertySchema(
+      id: 66,
       name: r'unknownJson',
       type: IsarType.string,
     ),
@@ -498,6 +508,18 @@ int _isarVideoDataEntityStateEstimateSize(
   bytesCount += 3 + object.domainType.length * 3;
   bytesCount += 3 + object.entityId.length * 3;
   bytesCount += 3 + object.entityType.length * 3;
+  {
+    final value = object.stateDataHash;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.stateDataHash_orig_;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.unknownJson.length * 3;
   return bytesCount;
 }
@@ -572,7 +594,9 @@ void _isarVideoDataEntityStateSerialize(
   writer.writeString(offsets[61], object.entityId);
   writer.writeString(offsets[62], object.entityType);
   writer.writeLong(offsets[63], object.schemaVersion);
-  writer.writeString(offsets[64], object.unknownJson);
+  writer.writeString(offsets[64], object.stateDataHash);
+  writer.writeString(offsets[65], object.stateDataHash_orig_);
+  writer.writeString(offsets[66], object.unknownJson);
 }
 
 IsarVideoDataEntityState _isarVideoDataEntityStateDeserialize(
@@ -647,7 +671,9 @@ IsarVideoDataEntityState _isarVideoDataEntityStateDeserialize(
     entityType: reader.readStringOrNull(offsets[62]) ?? kEntityTypeVideo,
     id: id,
     schemaVersion: reader.readLongOrNull(offsets[63]),
-    unknownJson: reader.readString(offsets[64]),
+    stateDataHash: reader.readStringOrNull(offsets[64]),
+    stateDataHash_orig_: reader.readStringOrNull(offsets[65]),
+    unknownJson: reader.readString(offsets[66]),
   );
   return object;
 }
@@ -788,6 +814,10 @@ P _isarVideoDataEntityStateDeserializeProp<P>(
     case 63:
       return (reader.readLongOrNull(offset)) as P;
     case 64:
+      return (reader.readStringOrNull(offset)) as P;
+    case 65:
+      return (reader.readStringOrNull(offset)) as P;
+    case 66:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -10688,6 +10718,423 @@ extension IsarVideoDataEntityStateQueryFilter
     IsarVideoDataEntityState,
     QAfterFilterCondition
   >
+  stateDataHashIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'stateDataHash'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'stateDataHash'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'stateDataHash',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'stateDataHash',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'stateDataHash',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'stateDataHash', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHashIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'stateDataHash', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_IsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'stateDataHash_orig_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_IsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'stateDataHash_orig_'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_EqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_GreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_LessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_Between(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'stateDataHash_orig_',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_StartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_EndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_Contains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'stateDataHash_orig_',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_Matches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'stateDataHash_orig_',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_IsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'stateDataHash_orig_', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
+  stateDataHash_orig_IsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          property: r'stateDataHash_orig_',
+          value: '',
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    IsarVideoDataEntityState,
+    IsarVideoDataEntityState,
+    QAfterFilterCondition
+  >
   unknownJsonEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -11771,6 +12218,34 @@ extension IsarVideoDataEntityStateQuerySortBy
   }
 
   QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByStateDataHash() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByStateDataHashDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByStateDataHash_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  sortByStateDataHash_orig_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
   sortByUnknownJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.asc);
@@ -12689,6 +13164,34 @@ extension IsarVideoDataEntityStateQuerySortThenBy
   }
 
   QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByStateDataHash() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByStateDataHashDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByStateDataHash_orig_() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
+  thenByStateDataHash_orig_Desc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'stateDataHash_orig_', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QAfterSortBy>
   thenByUnknownJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'unknownJson', Sort.asc);
@@ -13231,6 +13734,26 @@ extension IsarVideoDataEntityStateQueryWhereDistinct
   }
 
   QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QDistinct>
+  distinctByStateDataHash({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'stateDataHash',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QDistinct>
+  distinctByStateDataHash_orig_({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(
+        r'stateDataHash_orig_',
+        caseSensitive: caseSensitive,
+      );
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, IsarVideoDataEntityState, QDistinct>
   distinctByUnknownJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'unknownJson', caseSensitive: caseSensitive);
@@ -13699,6 +14222,20 @@ extension IsarVideoDataEntityStateQueryProperty
     });
   }
 
+  QueryBuilder<IsarVideoDataEntityState, String?, QQueryOperations>
+  stateDataHashProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'stateDataHash');
+    });
+  }
+
+  QueryBuilder<IsarVideoDataEntityState, String?, QQueryOperations>
+  stateDataHash_orig_Property() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'stateDataHash_orig_');
+    });
+  }
+
   QueryBuilder<IsarVideoDataEntityState, String, QQueryOperations>
   unknownJsonProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -13792,6 +14329,11 @@ IsarVideoDataEntityState _$IsarVideoDataEntityStateFromJson(
       (v) => v as String,
     ),
     unknownJson: $checkedConvert('unknownJson', (v) => v as String),
+    stateDataHash: $checkedConvert('stateDataHash', (v) => v as String?),
+    stateDataHash_orig_: $checkedConvert(
+      'stateDataHash_orig_',
+      (v) => v as String?,
+    ),
     data_name: $checkedConvert('data_name', (v) => v as String),
     data_name_dataSchemaRev_: $checkedConvert(
       'data_name_dataSchemaRev_',
@@ -13948,6 +14490,8 @@ Map<String, dynamic> _$IsarVideoDataEntityStateToJson(
   'domainType': instance.domainType,
   'unknownJson': instance.unknownJson,
   'schemaVersion': instance.schemaVersion,
+  'stateDataHash': instance.stateDataHash,
+  'stateDataHash_orig_': instance.stateDataHash_orig_,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
   'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),

@@ -701,7 +701,6 @@ class GetDataAndStateUpdatesOrOutdatedBysResult {
   final Map<String, dynamic> changeDataUpdates;
   final List<String> outdatedBys;
   final String operation;
-  final String? stateDataHash;
 
   GetDataAndStateUpdatesOrOutdatedBysResult({
     required this.cloudAt,
@@ -710,7 +709,6 @@ class GetDataAndStateUpdatesOrOutdatedBysResult {
     required this.changeDataUpdates,
     required this.outdatedBys,
     required this.operation,
-    this.stateDataHash,
   });
 
   /// Backwards-compatible map-style accessor used by existing callers that
@@ -729,8 +727,6 @@ class GetDataAndStateUpdatesOrOutdatedBysResult {
         return outdatedBys;
       case 'operation':
         return operation;
-      case 'stateDataHash':
-        return stateDataHash;
       default:
         return null;
     }
