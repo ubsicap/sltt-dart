@@ -44,5 +44,5 @@ String computeStateDataHash(Map<String, dynamic> stateMap) {
   final stable = stableStringify(filtered);
   final bytes = utf8.encode(stable);
   final digest = md5.convert(bytes);
-  return base64.encode(digest.bytes);
+  return base64Url.encode(digest.bytes);
 }

@@ -8,7 +8,7 @@ import 'package:test/test.dart';
 String _expectedHash(Map<String, dynamic> fields) {
   final stable = stableStringify(fields);
   final digest = md5.convert(utf8.encode(stable));
-  return base64.encode(digest.bytes);
+  return base64Url.encode(digest.bytes);
 }
 
 void main() {
