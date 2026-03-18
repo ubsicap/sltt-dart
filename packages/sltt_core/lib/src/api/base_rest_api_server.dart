@@ -28,6 +28,66 @@ abstract class BaseRestApiServer {
   /// Storage type description for API documentation
   String get storageTypeDescription;
 
+  /// Environment map used for health metadata resolution.
+  ///
+  /// Defaults to process environment, but subclasses may override for tests
+  /// or local debug scenarios where metadata is computed at runtime.
+  @protected
+  Map<String, String> get healthEnvironment => Platform.environment;
+
+  /// Optional server-specific fields to include in `/health` responses.
+  ///
+  /// By default this includes git deploy metadata when present in environment
+  /// variables:
+  /// - `GIT_SHORT_CHANGESET`
+  /// - `GIT_DIRTY_FLAG` (`1`/`true` => `true`, `0`/`false` => `false`)
+  ///
+  /// Subclasses can override this to add or replace fields.
+  Map<String, dynamic> get additionalHealthResponseFields {
+    final shortChangeset = healthEnvironment['GIT_SHORT_CHANGESET'];
+    final dirtyRaw = healthEnvironment['GIT_DIRTY_FLAG'];
+
+    final fields = <String, dynamic>{};
+    if (shortChangeset != null && shortChangeset.isNotEmpty) {
+      fields['gitShortChangeset'] = shortChangeset;
+    }
+    if (dirtyRaw != null && dirtyRaw.isNotEmpty) {
+      final dirty = dirtyRaw.toLowerCase();
+      if (dirty == '1' || dirty == 'true') {
+        fields['gitDirty'] = true;
+      } else if (dirty == '0' || dirty == 'false') {
+        fields['gitDirty'] = false;
+      }
+    }
+    return fields;
+  }
+
+  /// Optional schema properties for server-specific `/health` fields.
+  ///
+  /// Keys must match [additionalHealthResponseFields] to keep `/api/help`
+  /// aligned with the runtime response payload.
+  Map<String, dynamic> get additionalHealthResponseSchemaProperties {
+    final schema = <String, dynamic>{};
+    final fields = additionalHealthResponseFields;
+
+    if (fields.containsKey('gitShortChangeset')) {
+      schema['gitShortChangeset'] = {
+        'type': 'string',
+        'description':
+            'Short git changeset identifier injected via GIT_SHORT_CHANGESET',
+      };
+    }
+    if (fields.containsKey('gitDirty')) {
+      schema['gitDirty'] = {
+        'type': 'boolean',
+        'description':
+            'Whether the source tree had uncommitted changes (from GIT_DIRTY_FLAG)',
+      };
+    }
+
+    return schema;
+  }
+
   /// Extract and URL decode `domainId` from request parameters.
   ///
   /// For backwards compatibility this will also accept the legacy
@@ -196,13 +256,16 @@ abstract class BaseRestApiServer {
 
   /// Health check endpoint
   Future<Response> _handleHealth(Request request) async {
+    final healthPayload = <String, dynamic>{
+      'status': 'healthy',
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
+      'server': serverName,
+      'storageType': storageTypeDescription,
+      ...additionalHealthResponseFields,
+    };
+
     return Response.ok(
-      jsonEncode({
-        'status': 'healthy',
-        'timestamp': DateTime.now().toUtc().toIso8601String(),
-        'server': serverName,
-        'storageType': storageTypeDescription,
-      }),
+      jsonEncode(healthPayload),
       headers: {'Content-Type': 'application/json'},
     );
   }
@@ -307,6 +370,7 @@ abstract class BaseRestApiServer {
                 'type': 'string',
                 'description': 'Type of storage backend',
               },
+              ...additionalHealthResponseSchemaProperties,
             },
           },
         },

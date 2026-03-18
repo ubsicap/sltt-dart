@@ -36,6 +36,8 @@ provider:
   # Environment variables
   environment:
     STAGE: ${self:provider.stage}
+    GIT_SHORT_CHANGESET: ${env:GIT_SHORT_CHANGESET, ''}
+    GIT_DIRTY_FLAG: ${env:GIT_DIRTY_FLAG, ''}
     DYNAMODB_TABLE: ${self:custom.dynamoDbTable}
     DYNAMODB_REGION: ${self:custom.sharedInfraRegion}
     SHARED_INFRA_ASSUME_ROLE_ARN: ${ssm:${self:custom.sharedInfraArnPath}/cross-account-role-arn}

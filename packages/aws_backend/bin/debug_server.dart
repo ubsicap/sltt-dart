@@ -70,6 +70,8 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
   print('   Stage: $stage');
   print('   Port: $port');
 
+  final gitHealthEnvironment = await _resolveGitHealthEnvironment();
+
   // Get configuration from environment variables (set by run_debug_server.sh)
   final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] ?? 'true';
   final useLocalDynamoDB = useCloudStorage != 'true';
@@ -117,6 +119,14 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('   MEDIA_BUCKET: $mediaBucket');
     print('   CLOUDFRONT_DOMAIN: $cloudFrontDomain');
     print('   CLOUDFRONT_KEY_PAIR_ID: $cloudFrontKeyPairId');
+    if (gitHealthEnvironment.containsKey('GIT_SHORT_CHANGESET')) {
+      print(
+        '   GIT_SHORT_CHANGESET: ${gitHealthEnvironment['GIT_SHORT_CHANGESET']}',
+      );
+    }
+    if (gitHealthEnvironment.containsKey('GIT_DIRTY_FLAG')) {
+      print('   GIT_DIRTY_FLAG: ${gitHealthEnvironment['GIT_DIRTY_FLAG']}');
+    }
 
     print('🗄️  Connecting to DynamoDB...');
 
@@ -130,6 +140,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
       serverName: 'Debug AWS Backend',
       storage: storage,
       mediaStorage: mediaStorage,
+      healthEnvironmentOverrides: gitHealthEnvironment,
     );
 
     print('🚀 Starting debug server...');
@@ -175,4 +186,32 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     await storage?.close();
     exit(1);
   }
+}
+
+Future<Map<String, String>> _resolveGitHealthEnvironment() async {
+  final gitEnvironment = <String, String>{};
+
+  try {
+    final shortShaResult = await Process.run('git', [
+      'rev-parse',
+      '--short',
+      'HEAD',
+    ]);
+    if (shortShaResult.exitCode == 0) {
+      final shortSha = (shortShaResult.stdout as String).trim();
+      if (shortSha.isNotEmpty) {
+        gitEnvironment['GIT_SHORT_CHANGESET'] = shortSha;
+      }
+    }
+
+    final statusResult = await Process.run('git', ['status', '--porcelain']);
+    if (statusResult.exitCode == 0) {
+      final isDirty = (statusResult.stdout as String).trim().isNotEmpty;
+      gitEnvironment['GIT_DIRTY_FLAG'] = isDirty ? 'true' : 'false';
+    }
+  } catch (_) {
+    // Keep debug startup resilient when git is unavailable.
+  }
+
+  return gitEnvironment;
 }

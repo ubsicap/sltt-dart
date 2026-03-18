@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
@@ -11,17 +12,24 @@ import '../storage/dynamodb_storage_service.dart';
 /// This server extends the base functionality with DynamoDB storage
 /// and provides the same API endpoints as local servers.
 class AwsRestApiServer extends BaseRestApiServer {
+  final Map<String, String> _healthEnvironment;
+
   AwsRestApiServer({
     required super.serverName,
-    required DynamoDBStorageService storage,
+    required DynamoDBStorageService super.storage,
     BaseMediaStorage? mediaStorage,
-  }) : super(
-         storage: storage,
-         mediaStorage: mediaStorage ?? NullMediaStorage(),
-       );
+    Map<String, String>? healthEnvironmentOverrides,
+  }) : _healthEnvironment = {
+         ...Platform.environment,
+         ...?healthEnvironmentOverrides,
+       },
+       super(mediaStorage: mediaStorage ?? NullMediaStorage());
 
   @override
   String get storageTypeDescription => 'AWS DynamoDB';
+
+  @override
+  Map<String, String> get healthEnvironment => _healthEnvironment;
 
   /// Get the router for use in debugging or custom server setups
   Router getRouter() => buildRouter();
