@@ -21,6 +21,7 @@ DynamoChangeLogEntry _$DynamoChangeLogEntryFromJson(
     changeAt: $checkedConvert('changeAt', (v) => DateTime.parse(v as String)),
     entityId: $checkedConvert('entityId', (v) => v as String),
     dataJson: $checkedConvert('dataJson', (v) => v as String),
+    stateDataHash: $checkedConvert('stateDataHash', (v) => v as String?),
     operationInfoJson: $checkedConvert(
       'operationInfoJson',
       (v) => v as String? ?? '{}',
@@ -57,6 +58,7 @@ Map<String, dynamic> _$DynamoChangeLogEntryToJson(
   'operation': instance.operation,
   'operationInfoJson': instance.operationInfoJson,
   'stateChanged': instance.stateChanged,
+  'stateDataHash': instance.stateDataHash,
   'changeAt': instance.changeAt.toIso8601String(),
   'entityId': instance.entityId,
   'dataJson': instance.dataJson,

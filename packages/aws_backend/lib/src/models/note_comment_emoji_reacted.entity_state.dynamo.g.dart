@@ -86,6 +86,11 @@ _$DynamoNoteCommentEmojiReactedDataEntityStateFromJson(
       (v) => v as String,
     ),
     unknownJson: $checkedConvert('unknownJson', (v) => v as String),
+    stateDataHash: $checkedConvert('stateDataHash', (v) => v as String?),
+    stateDataHash_orig_: $checkedConvert(
+      'stateDataHash_orig_',
+      (v) => v as String?,
+    ),
     data_emoji: $checkedConvert('data_emoji', (v) => v as String),
     data_emoji_dataSchemaRev_: $checkedConvert(
       'data_emoji_dataSchemaRev_',
@@ -209,6 +214,8 @@ Map<String, dynamic> _$DynamoNoteCommentEmojiReactedDataEntityStateToJson(
   'domainType': instance.domainType,
   'unknownJson': instance.unknownJson,
   'schemaVersion': instance.schemaVersion,
+  'stateDataHash': instance.stateDataHash,
+  'stateDataHash_orig_': instance.stateDataHash_orig_,
   'change_domainId': instance.change_domainId,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
