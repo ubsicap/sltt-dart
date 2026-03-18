@@ -17,6 +17,11 @@ DynamoEntityState _$DynamoEntityStateFromJson(Map<String, dynamic> json) =>
           (v) => (v as num?)?.toInt(),
         ),
         unknownJson: $checkedConvert('unknownJson', (v) => v as String),
+        stateDataHash: $checkedConvert('stateDataHash', (v) => v as String?),
+        stateDataHash_orig_: $checkedConvert(
+          'stateDataHash_orig_',
+          (v) => v as String?,
+        ),
         change_domainId: $checkedConvert('change_domainId', (v) => v as String),
         change_domainId_orig_: $checkedConvert(
           'change_domainId_orig_',
@@ -148,6 +153,8 @@ Map<String, dynamic> _$DynamoEntityStateToJson(
   'domainType': instance.domainType,
   'unknownJson': instance.unknownJson,
   'schemaVersion': instance.schemaVersion,
+  'stateDataHash': instance.stateDataHash,
+  'stateDataHash_orig_': instance.stateDataHash_orig_,
   'change_domainId': instance.change_domainId,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),

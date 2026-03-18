@@ -170,6 +170,12 @@ void main() {
           final stateUpdatesWithNullValues = <String, dynamic>{
             ...updates.stateUpdates,
           }..removeWhere((key, value) => value != null);
+          stateUpdatesWithNullValues.putIfAbsent('stateDataHash', () => null);
+          stateUpdatesWithNullValues.putIfAbsent(
+            'stateDataHash_orig_',
+            () => null,
+          );
+
           expect(
             jsonWithNullValues.keys.toList()..sort(),
             equals(stateUpdatesWithNullValues.keys.toList()..sort()),

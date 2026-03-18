@@ -33,6 +33,8 @@ void main() {
     'domainType',
     'unknownJson',
     'schemaVersion',
+    'stateDataHash',
+    'stateDataHash_orig_',
     'change_domainId',
     'change_domainId_orig_',
     'change_changeAt',
@@ -380,6 +382,8 @@ void main() {
         ),
         data_parentProp_changeBy_: 'test-user-1',
         data_parentProp_cloudAt_: localDataParentPropCloudAt,
+        stateDataHash: 'something',
+        stateDataHash_orig_: 'something',
       );
 
       expectAllDateTimeFieldsUtc(

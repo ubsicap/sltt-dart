@@ -1932,6 +1932,9 @@ class DynamoDBStorageService extends BaseStorageService {
 
     // Extract rank from data_rank if present
     final rank = stateJson['data_rank']?.toString();
+    // computeDataHash
+    final stateDataHash = computeStateDataHash(stateJson);
+    final stateDataHash_orig_ = stateDataHash;
 
     final item = <String, dynamic>{
       'pk': {
@@ -1951,7 +1954,11 @@ class DynamoDBStorageService extends BaseStorageService {
         ),
       },
       'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, rank: rank)},
-      ..._encodeJson(stateJson),
+      ..._encodeJson({
+        ...stateJson,
+        'stateDataHash': stateDataHash,
+        'stateDataHash_orig_': stateDataHash_orig_,
+      }),
     };
 
     final response = await _dynamoRequest('PutItem', {

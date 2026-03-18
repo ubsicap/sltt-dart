@@ -3,11 +3,7 @@ import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  const knownDateTimeFields = {
-    'changeAt',
-    'cloudAt',
-    'storedAt',
-  };
+  const knownDateTimeFields = {'changeAt', 'cloudAt', 'storedAt'};
 
   const knownDynamoChangeLogEntryFields = {
     'cid',
@@ -19,6 +15,7 @@ void main() {
     'operation',
     'operationInfoJson',
     'stateChanged',
+    'stateDataHash',
     'changeAt',
     'entityId',
     'dataJson',
@@ -114,6 +111,7 @@ void main() {
         changeBy: 'test-user-1',
         schemaVersion: 1,
         unknownJson: '{}',
+        stateDataHash: null,
       );
 
       // Test that instance DateTime fields are UTC
@@ -169,8 +167,7 @@ void main() {
       expect(
         processedAllFields,
         equals(knownDynamoChangeLogEntryFields),
-        reason:
-            'Not all known DynamoChangeLogEntry fields were processed.',
+        reason: 'Not all known DynamoChangeLogEntry fields were processed.',
       );
     });
 

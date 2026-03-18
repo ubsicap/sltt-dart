@@ -21,6 +21,8 @@ class DynamoEntityState extends BaseEntityState {
     required super.domainType,
     super.schemaVersion,
     required super.unknownJson,
+    super.stateDataHash,
+    super.stateDataHash_orig_,
     required super.change_domainId,
     required super.change_domainId_orig_,
     required super.change_changeAt,

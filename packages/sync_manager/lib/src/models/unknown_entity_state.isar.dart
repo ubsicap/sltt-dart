@@ -64,6 +64,8 @@ class IsarUnknownEntityState extends BaseEntityState {
     required super.data_parentProp_cid_,
     required super.data_parentProp_changeBy_,
     required super.unknownJson,
+    super.stateDataHash,
+    super.stateDataHash_orig_,
     this.data_name,
     this.data_name_dataSchemaRev_,
     DateTime? data_name_changeAt_,

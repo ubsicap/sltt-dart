@@ -45,6 +45,8 @@ class TaskDataEntityState extends BaseEntityState {
     required super.data_parentProp_changeBy_,
     super.data_parentProp_cloudAt_,
     required super.unknownJson,
+    super.stateDataHash,
+    super.stateDataHash_orig_,
     super.change_dataSchemaRev,
     super.change_cloudAt,
     super.data_rank,

@@ -26,6 +26,8 @@ void main() {
         data_parentProp_cid_: 'cid',
         data_parentProp_changeBy_: 'user',
         unknownJson: '{}',
+        stateDataHash: 'something',
+        stateDataHash_orig_: 'something',
         data_colorValue: 0,
         data_colorValue_changeAt_: DateTime.now().toUtc(),
         data_colorValue_changeBy_: 'user',
