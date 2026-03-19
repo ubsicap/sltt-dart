@@ -349,6 +349,8 @@ Future<Map<String, dynamic>> _processDomain({
           'stateDataHash': item['stateDataHash']?.toString() ?? '',
           // preserve source/original values for migration diagnostics
           'sourceStateDataHash': item['stateDataHash']?.toString() ?? '',
+          'sourceStateDataHash_orig_':
+              item['stateDataHash_orig_']?.toString() ?? '',
           'stateDataHash_orig_': item['stateDataHash_orig_']?.toString() ?? '',
         };
       }
@@ -397,12 +399,15 @@ Future<Map<String, dynamic>> _processDomain({
               'entityType': entityState.entityType,
               'entityId': entityState.entityId,
               'sourceStateDataHash': '',
+              'sourceStateDataHash_orig_': '',
               'stateDataHash_orig_': '',
             };
 
         // Only overwrite the computed/final hash from replay.
-        // Keep source/original fields captured from Dynamo source state pages.
+        // Keep source fields captured from Dynamo source state pages.
         existing['stateDataHash'] = entityState.stateDataHash ?? '';
+        // Track the replay-computed _orig_ separately from source _orig_.
+        existing['stateDataHash_orig_'] = entityState.stateDataHash_orig_ ?? '';
         migrationStates[key] = existing;
       }
 
@@ -442,18 +447,20 @@ Future<Map<String, dynamic>> _processDomain({
     final state = migrationStates[stateKey]!;
     final sourceStateDataHash = state['sourceStateDataHash']?.toString() ?? '';
     final sourceStateDataHashOrig =
-        state['stateDataHash_orig_']?.toString() ?? '';
+        state['sourceStateDataHash_orig_']?.toString() ?? '';
     final finalStateDataHash = state['stateDataHash']?.toString() ?? '';
+    final finalStateDataHashOrig =
+        state['stateDataHash_orig_']?.toString() ?? '';
 
     // Consider an entity already migrated only when source already had a hash
-    // and that source hash matches the replay-computed final hash.
+    // and source hash fields match replay-computed final hash fields.
     final sourceHasHash =
         sourceStateDataHash.isNotEmpty || sourceStateDataHashOrig.isNotEmpty;
     final matchesFinal =
-        (sourceStateDataHash.isNotEmpty &&
-            sourceStateDataHash == finalStateDataHash) ||
-        (sourceStateDataHashOrig.isNotEmpty &&
-            sourceStateDataHashOrig == finalStateDataHash);
+        (sourceStateDataHash.isEmpty ||
+            sourceStateDataHash == finalStateDataHash) &&
+        (sourceStateDataHashOrig.isEmpty ||
+            sourceStateDataHashOrig == finalStateDataHashOrig);
 
     if (!sourceHasHash || !matchesFinal) {
       continue;
@@ -557,22 +564,48 @@ Future<Map<String, dynamic>> _processDomain({
     }
   }
 
-  // Warnings: detect cases where a source/original hash differs from the
-  // final computed value. Include both remaining states and already-migrated
-  // states in this check (they may have an original stored value).
+  // Warnings: compare source vs final per field.
+  // We treat stateDataHash and stateDataHash_orig_ as separate fields.
+  // Use raw string comparison so padding-only differences (e.g. trailing '=' )
+  // are reported explicitly as warnings.
   final warnings = <Map<String, dynamic>>[];
   void checkStateForWarning(Map<String, dynamic> state, String source) {
+    final entityType = state['entityType']?.toString() ?? '';
     final entityId = state['entityId']?.toString() ?? '';
     if (entityId.isEmpty) return;
-    final orig = state['stateDataHash_orig_']?.toString() ?? '';
-    final finalHash = state['stateDataHash']?.toString() ?? '';
-    if (orig.isNotEmpty && orig != finalHash) {
+
+    final sourceStateDataHash = state['sourceStateDataHash']?.toString() ?? '';
+    final finalStateDataHash = state['stateDataHash']?.toString() ?? '';
+    final sourceStateDataHashOrig =
+        state['sourceStateDataHash_orig_']?.toString() ?? '';
+    final finalStateDataHashOrig =
+        state['stateDataHash_orig_']?.toString() ?? '';
+
+    if (sourceStateDataHash.isNotEmpty &&
+        sourceStateDataHash != finalStateDataHash) {
       warnings.add({
-        'message': 'original stateDataHash differs from computed final value',
+        'message': 'stateDataHash differs from sourceStateDataHash',
+        'entityType': entityType,
         'entityId': entityId,
         'source': source,
-        'orig': orig,
-        'final': finalHash,
+        'field': 'stateDataHash',
+        'sourceField': 'sourceStateDataHash',
+        'sourceValue': sourceStateDataHash,
+        'finalValue': finalStateDataHash,
+      });
+    }
+
+    if (sourceStateDataHashOrig.isNotEmpty &&
+        sourceStateDataHashOrig != finalStateDataHashOrig) {
+      warnings.add({
+        'message': 'stateDataHash_orig_ differs from sourceStateDataHash_orig_',
+        'entityType': entityType,
+        'entityId': entityId,
+        'source': source,
+        'field': 'stateDataHash_orig_',
+        'sourceField': 'sourceStateDataHash_orig_',
+        'sourceValue': sourceStateDataHashOrig,
+        'finalValue': finalStateDataHashOrig,
       });
     }
   }
@@ -690,6 +723,9 @@ Future<void> _appendDomainSummary({
           '    sourceStateDataHash: ${_yamlQuote(state['sourceStateDataHash']?.toString() ?? '')}',
         )
         ..writeln(
+          '    sourceStateDataHash_orig_: ${_yamlQuote(state['sourceStateDataHash_orig_']?.toString() ?? '')}',
+        )
+        ..writeln(
           '    stateDataHash_orig_: ${_yamlQuote(state['stateDataHash_orig_']?.toString() ?? '')}',
         );
     }
@@ -725,14 +761,24 @@ Future<void> _appendDomainSummary({
   if (warnings.isNotEmpty) {
     out.writeln('warnings:');
     for (final w in warnings) {
-      out
-        ..writeln('  - message: ${_yamlQuote(w['message']?.toString() ?? '')}')
-        ..writeln(
-          '    entityId: ${_yamlQuote(w['entityId']?.toString() ?? '')}',
-        )
-        ..writeln('    source: ${_yamlQuote(w['source']?.toString() ?? '')}')
-        ..writeln('    orig: ${_yamlQuote(w['orig']?.toString() ?? '')}')
-        ..writeln('    final: ${_yamlQuote(w['final']?.toString() ?? '')}');
+      out.writeln('  - message: ${_yamlQuote(w['message']?.toString() ?? '')}');
+
+      const preferredOrder = <String>[
+        'entityType',
+        'entityId',
+        'source',
+        'field',
+        'sourceField',
+        'sourceValue',
+        'finalValue',
+      ];
+
+      for (final key in preferredOrder) {
+        if (!w.containsKey(key)) {
+          continue;
+        }
+        out.writeln('    $key: ${_yamlQuote(w[key]?.toString() ?? '')}');
+      }
     }
   }
 
@@ -770,6 +816,9 @@ Future<void> _appendDomainSummary({
           '    sourceStateDataHash: ${_yamlQuote(s['sourceStateDataHash']?.toString() ?? '')}',
         )
         ..writeln(
+          '    sourceStateDataHash_orig_: ${_yamlQuote(s['sourceStateDataHash_orig_']?.toString() ?? '')}',
+        )
+        ..writeln(
           '    stateDataHash_orig_: ${_yamlQuote(s['stateDataHash_orig_']?.toString() ?? '')}',
         );
     }
@@ -780,6 +829,8 @@ Future<void> _appendDomainSummary({
 }
 
 String _yamlQuote(String value) => "'${value.replaceAll("'", "''")}'";
+
+// Normalization removed: comparisons are padding-sensitive now.
 
 void _printUsage() {
   print('''
