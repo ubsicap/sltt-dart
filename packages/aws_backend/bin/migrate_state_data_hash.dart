@@ -6,13 +6,16 @@ import 'package:aws_backend/src/models/dynamo_entity_state.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 Future<void> main(List<String> args) async {
-  SlttLogger.init(level: SlttLogLevel.fine);
+  SlttLogger.init(level: SlttLogLevel.warning);
 
   String? awsProfile;
   String stage = 'dev';
   String domainType = 'project';
   int pageSize = 100;
+  String summaryFile = 'migration_state_data_hash_summary.yaml';
+  bool includeTestDomainIds = false;
   bool writeChanges = false;
+  bool exitOnError = false;
 
   for (int index = 0; index < args.length; index++) {
     switch (args[index]) {
@@ -43,6 +46,18 @@ Future<void> main(List<String> args) async {
       case '--write-changes':
         writeChanges = true;
         break;
+      case '--exit-on-error':
+        exitOnError = true;
+        break;
+      case '--summary-file':
+        if (index + 1 < args.length) {
+          summaryFile = args[index + 1];
+          index++;
+        }
+        break;
+      case '--include-test-domainIds':
+        includeTestDomainIds = true;
+        break;
       case '--help':
         _printUsage();
         return;
@@ -71,6 +86,8 @@ Future<void> main(List<String> args) async {
   print('   Stage: $stage');
   print('   Domain Type: $domainType');
   print('   Page Size: $pageSize');
+  print('   Summary File: $summaryFile');
+  print('   Include Test Domains: $includeTestDomainIds');
   print('   Dry Run: true');
 
   final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] ?? 'true';
@@ -95,17 +112,63 @@ Future<void> main(List<String> args) async {
           ..sort();
     print('📚 Found ${domainIds.length} $domainType domain(s)');
 
+    await _appendSummaryHeader(
+      summaryFilePath: summaryFile,
+      awsProfile: awsProfile,
+      stage: stage,
+      domainType: domainType,
+      pageSize: pageSize,
+      includeTestDomainIds: includeTestDomainIds,
+    );
+
     for (final domainId in domainIds) {
-      await _processDomain(
-        sourceStorage: sourceStorage,
-        domainType: domainType,
-        domainId: domainId,
-        pageSize: pageSize,
-        srcStorageId: srcStorageId,
-      );
+      if (!includeTestDomainIds && domainId.startsWith('__test')) {
+        // Skip test domains unless explicitly requested
+        continue;
+      }
+      print('▶ Processing domain: $domainId');
+      try {
+        final summary = await _processDomain(
+          sourceStorage: sourceStorage,
+          domainType: domainType,
+          domainId: domainId,
+          pageSize: pageSize,
+          srcStorageId: srcStorageId,
+        );
+        await _appendDomainSummary(
+          summaryFilePath: summaryFile,
+          summary: summary,
+        );
+        print('  ✓ Appended summary for domain: $domainId');
+        final errors =
+            (summary['errors'] as List<dynamic>? ?? const <dynamic>[]);
+        if (exitOnError && errors.isNotEmpty) {
+          stderr.writeln(
+            'Exiting on first error encountered in domain: $domainId',
+          );
+          exitCode = 1;
+          return;
+        }
+      } catch (error, stackTrace) {
+        final errorSummary = <String, dynamic>{
+          'domainId': domainId,
+          'status': 'error',
+          'changes': <Map<String, dynamic>>[],
+          'states': <Map<String, dynamic>>[],
+          'errors': <Map<String, dynamic>>[
+            {'message': error.toString(), 'stackTrace': stackTrace.toString()},
+          ],
+        };
+        await _appendDomainSummary(
+          summaryFilePath: summaryFile,
+          summary: errorSummary,
+        );
+        stderr.writeln('❌ Domain failed: $domainId -> $error');
+        exitCode = 1;
+      }
     }
 
-    print('✅ Dry-run migration completed');
+    print('✅ Dry-run migration completed. Summary written to: $summaryFile');
   } on AwsCredentialsException catch (error, stackTrace) {
     stderr.writeln('❌ Credentials error: $error');
     stderr.writeln(stackTrace);
@@ -119,16 +182,13 @@ Future<void> main(List<String> args) async {
   }
 }
 
-Future<void> _processDomain({
+Future<Map<String, dynamic>> _processDomain({
   required DynamoDBStorageService sourceStorage,
   required String domainType,
   required String domainId,
   required int pageSize,
   required String srcStorageId,
 }) async {
-  print('');
-  print('=== Domain $domainId ===');
-
   final replayStorage = InMemoryStorage(
     storageType: 'cloud',
     storageId: 'migration-replay-$domainId',
@@ -137,11 +197,23 @@ Future<void> _processDomain({
   );
   await replayStorage.initialize();
 
+  // Step 1: accumulate all source changes (keyed by seq) as we page through them.
+  // Step 4 later fills in computed stateDataHash values.
+  final migrationChanges = <int, Map<String, dynamic>>{};
+
+  // Final state view per entityType/entityId, merged from source states then
+  // overwritten with replayed values from in-memory storage.
+  final migrationStates = <String, Map<String, dynamic>>{};
+
+  // Step 2: seqs whose stateChanged=false are queued here (FIFO); they are
+  // skipped from storeChanges and assigned a borrowed hash in step 4.
+  final skippedChangeSeqs = <int>[];
+
   int? sourceCursor;
   int? replayCursor;
-  var pageNumber = 0;
 
   while (true) {
+    // Step 1: fetch next page from the source (DynamoDB).
     final sourceChanges = await sourceStorage.getChangesWithCursor(
       domainType: domainType,
       domainId: domainId,
@@ -153,42 +225,125 @@ Future<void> _processDomain({
       break;
     }
 
-    pageNumber++;
-    print('--- Page $pageNumber (${sourceChanges.length} change(s)) ---');
-
-    final result = await ChangeProcessingService.storeChanges(
-      storageMode: 'sync',
-      changes: sourceChanges.map((change) => change.toJson()).toList(),
-      srcStorageType: sourceStorage.getStorageType(),
-      srcStorageId: srcStorageId,
-      storage: replayStorage,
-      includeChangeUpdates: false,
-      includeStateUpdates: false,
-    );
-
-    if (result.isError) {
-      throw StateError(result.errorMessage ?? 'Unknown migration replay error');
+    // Step 1+2: record every change in migrationChanges; split into
+    // stateChanged=true (to replay) vs stateChanged=false (to skip).
+    final stateChangedBatch = <BaseChangeLogEntry>[];
+    for (final change in sourceChanges) {
+      final json = change.toJson();
+      json['stateDataHash_orig_'] = change.stateDataHash?.toString() ?? '';
+      migrationChanges[change.seq] = json;
+      if (change.stateChanged) {
+        stateChangedBatch.add(change);
+      } else {
+        skippedChangeSeqs.add(change.seq);
+      }
     }
 
-    final replayedChanges = await replayStorage.getChangesWithCursor(
-      domainType: domainType,
-      domainId: domainId,
-      cursor: replayCursor,
-      limit: pageSize == -1 ? null : pageSize,
-    );
-
-    for (final change in replayedChanges) {
-      print(
-        'change stateDataHash: cid=${change.cid} entityType=${change.entityType} entityId=${change.entityId} value=${change.stateDataHash}',
+    // Step 2+3: only send stateChanged=true changes to storeChanges.
+    if (stateChangedBatch.isNotEmpty) {
+      final result = await ChangeProcessingService.storeChanges(
+        storageMode: 'sync',
+        changes: stateChangedBatch.map((change) => change.toJson()).toList(),
+        srcStorageType: sourceStorage.getStorageType(),
+        srcStorageId: srcStorageId,
+        storage: replayStorage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
       );
+
+      if (result.isError) {
+        throw StateError(
+          result.errorMessage ?? 'Unknown migration replay error',
+        );
+      }
+
+      // Step 3: cherry-pick computed stateDataHash values from replayStorage
+      // using the same cursor window as the source page.
+      final replayedChanges = await replayStorage.getChangesWithCursor(
+        domainType: domainType,
+        domainId: domainId,
+        cursor: replayCursor,
+        limit: pageSize == -1 ? null : pageSize,
+      );
+
+      for (final replayed in replayedChanges) {
+        final entry = migrationChanges[replayed.seq];
+        if (entry != null) {
+          entry['stateDataHash'] = replayed.stateDataHash;
+        }
+      }
+
+      if (replayedChanges.isNotEmpty) {
+        replayCursor = replayedChanges.last.seq;
+      }
     }
 
-    if (replayedChanges.isNotEmpty) {
-      replayCursor = replayedChanges.last.seq;
-    }
     sourceCursor = sourceChanges.last.seq;
   }
 
+  // Step 4: process skippedChangeSeqs as a FIFO queue.
+  // Each skipped change borrows stateDataHash from the entry immediately
+  // before it (by seq order).  If there is no preceding entry, use ''.
+  final allSeqs = migrationChanges.keys.toList()..sort();
+  for (final skippedSeq in skippedChangeSeqs) {
+    final idx = allSeqs.indexOf(skippedSeq);
+    String prevHash = '';
+    if (idx > 0) {
+      final prevSeq = allSeqs[idx - 1];
+      prevHash = (migrationChanges[prevSeq]?['stateDataHash'] as String?) ?? '';
+    }
+    migrationChanges[skippedSeq]!['stateDataHash'] = prevHash;
+  }
+
+  // Seed migrationStates with source storage states first.
+  final sourceStateStats = await sourceStorage.getStateStats(
+    domainType: domainType,
+    domainId: domainId,
+  );
+  final sourceEntityTypes = sourceStateStats.entityTypes.keys.toList()..sort();
+  for (final entityType in sourceEntityTypes) {
+    String? sourceStateCursor;
+    while (true) {
+      final page = await sourceStorage.getEntityStates(
+        domainType: domainType,
+        domainId: domainId,
+        entityType: entityType,
+        cursor: sourceStateCursor,
+        limit: pageSize == -1 ? null : pageSize,
+      );
+
+      final items = (page['items'] as List<dynamic>? ?? const <dynamic>[])
+          .cast<Map<String, dynamic>>();
+      if (items.isEmpty) {
+        break;
+      }
+
+      for (final item in items) {
+        final entityId = item['entityId']?.toString();
+        if (entityId == null || entityId.isEmpty) {
+          continue;
+        }
+        final key = '$entityType|$entityId';
+        migrationStates[key] = {
+          'entityType': entityType,
+          'entityId': entityId,
+          'stateDataHash': item['stateDataHash']?.toString() ?? '',
+          'stateDataHash_orig_': item['stateDataHash_orig_']?.toString() ?? '',
+        };
+      }
+
+      final hasMore = page['hasMore'] as bool? ?? false;
+      if (!hasMore) {
+        break;
+      }
+      sourceStateCursor = page['nextCursor'] as String?;
+      if (sourceStateCursor == null || sourceStateCursor.isEmpty) {
+        break;
+      }
+    }
+  }
+
+  // Merge replay storage state hashes into migrationStates.
   final stateStats = await replayStorage.getStateStats(
     domainType: domainType,
     domainId: domainId,
@@ -214,9 +369,13 @@ Future<void> _processDomain({
 
       for (final item in items) {
         final entityState = DynamoEntityState.fromJson(item);
-        print(
-          'entityState stateDataHash: entityType=${entityState.entityType} entityId=${entityState.entityId} value=${entityState.stateDataHash}',
-        );
+        final key = '${entityState.entityType}|${entityState.entityId}';
+        migrationStates[key] = {
+          'entityType': entityState.entityType,
+          'entityId': entityState.entityId,
+          'stateDataHash': entityState.stateDataHash ?? '',
+          'stateDataHash_orig_': entityState.stateDataHash_orig_ ?? '',
+        };
       }
 
       final hasMore = page['hasMore'] as bool? ?? false;
@@ -231,7 +390,326 @@ Future<void> _processDomain({
   }
 
   await replayStorage.close();
+
+  // Group changes by entityId and detect entities whose stateDataHash never
+  // changes across their change seqs (already migrated). We'll remove those
+  // changes/states from the main lists and surface them separately.
+  final entityToSeqs = <String, List<int>>{};
+  final entityHashSets = <String, Set<String>>{};
+  for (final seq in allSeqs) {
+    final entry = migrationChanges[seq]!;
+    final eid = entry['entityId']?.toString() ?? '';
+    if (eid.isEmpty) continue;
+    entityToSeqs.putIfAbsent(eid, () => <int>[]).add(seq);
+    final hash = entry['stateDataHash']?.toString() ?? '';
+    entityHashSets.putIfAbsent(eid, () => <String>{}).add(hash);
+  }
+
+  final changesAlreadyMigrated = <Map<String, dynamic>>[];
+  final statesAlreadyMigrated = <Map<String, dynamic>>[];
+  final alreadyMigratedEntities = <String>{};
+
+  for (final eid in entityToSeqs.keys) {
+    final hashes = entityHashSets[eid] ?? <String>{};
+    if (hashes.length <= 1) {
+      // No hash changes across seqs -> consider already migrated.
+      alreadyMigratedEntities.add(eid);
+      for (final seq in entityToSeqs[eid]!) {
+        final c = migrationChanges[seq]!;
+        changesAlreadyMigrated.add({
+          'seq': seq,
+          'entityId': eid,
+          'stateDataHash': c['stateDataHash']?.toString() ?? '',
+          'stateDataHash_orig_': c['stateDataHash_orig_']?.toString() ?? '',
+        });
+        migrationChanges.remove(seq);
+      }
+      // Remove matching migrationState, if present, and record it.
+      final stateKey = migrationStates.keys.firstWhere(
+        (k) => k.endsWith('|$eid'),
+        orElse: () => '',
+      );
+      if (stateKey.isNotEmpty) {
+        statesAlreadyMigrated.add(migrationStates[stateKey]!);
+        migrationStates.remove(stateKey);
+      }
+    }
+  }
+
+  // Recompute seq list after removals.
+  final remainingSeqs = migrationChanges.keys.toList()..sort();
+
+  // Build last-seen change per entityId for remaining changes.
+  final lastSeenByEntity = <String, Map<String, dynamic>>{};
+  for (final seq in remainingSeqs) {
+    final entry = migrationChanges[seq]!;
+    final eid = entry['entityId']?.toString() ?? '';
+    if (eid.isEmpty) continue;
+    lastSeenByEntity[eid] = {
+      'seq': seq,
+      'stateDataHash': entry['stateDataHash']?.toString() ?? '',
+    };
+  }
+
+  final changesSummary = <Map<String, dynamic>>[];
+  for (final seq in remainingSeqs) {
+    final change = migrationChanges[seq]!;
+    final entityId = change['entityId']?.toString() ?? '';
+    final skipped = skippedChangeSeqs.contains(seq);
+    final isFinal =
+        entityId.isNotEmpty && (lastSeenByEntity[entityId]?['seq'] == seq);
+    changesSummary.add({
+      'seq': seq,
+      'skipped': skipped,
+      'entityId': entityId,
+      'finalState': isFinal,
+      'stateDataHash': change['stateDataHash']?.toString() ?? '',
+    });
+  }
+
+  final statesSummary = migrationStates.values.toList()
+    ..sort((a, b) {
+      final ta = a['entityType']?.toString() ?? '';
+      final tb = b['entityType']?.toString() ?? '';
+      final typeCmp = ta.compareTo(tb);
+      if (typeCmp != 0) {
+        return typeCmp;
+      }
+      final ia = a['entityId']?.toString() ?? '';
+      final ib = b['entityId']?.toString() ?? '';
+      return ia.compareTo(ib);
+    });
+
+  // Validate: for each final entity state, ensure the last change for that
+  // entity has the same stateDataHash. If not, record an error.
+  final errors = <Map<String, dynamic>>[];
+  for (final state in statesSummary) {
+    final entityId = state['entityId']?.toString() ?? '';
+    if (entityId.isEmpty) continue;
+    final expected = state['stateDataHash']?.toString() ?? '';
+    final last = lastSeenByEntity[entityId];
+    if (last == null) {
+      errors.add({
+        'message': 'No change found for final entity state',
+        'entityId': entityId,
+      });
+      continue;
+    }
+    final lastHash = (last['stateDataHash'] as String?) ?? '';
+    if (lastHash != expected) {
+      errors.add({
+        'message': 'stateDataHash mismatch for entity',
+        'entityId': entityId,
+        'expected': expected,
+        'lastChangeSeq': last['seq'],
+        'lastChangeHash': lastHash,
+      });
+    }
+  }
+
+  // Warnings: detect cases where a source/original hash differs from the
+  // final computed value. Include both remaining states and already-migrated
+  // states in this check (they may have an original stored value).
+  final warnings = <Map<String, dynamic>>[];
+  void checkStateForWarning(Map<String, dynamic> state, String source) {
+    final entityId = state['entityId']?.toString() ?? '';
+    if (entityId.isEmpty) return;
+    final orig = state['stateDataHash_orig_']?.toString() ?? '';
+    final finalHash = state['stateDataHash']?.toString() ?? '';
+    if (orig.isNotEmpty && orig != finalHash) {
+      warnings.add({
+        'message': 'original stateDataHash differs from computed final value',
+        'entityId': entityId,
+        'source': source,
+        'orig': orig,
+        'final': finalHash,
+      });
+    }
+  }
+
+  for (final s in statesSummary) {
+    checkStateForWarning(s, 'state');
+  }
+  for (final s in statesAlreadyMigrated) {
+    checkStateForWarning(s, 'already_migrated_state');
+  }
+
+  return {
+    'domainId': domainId,
+    'status': 'success',
+    'changes': changesSummary,
+    'states': statesSummary,
+    'errors': errors,
+    'warnings': warnings,
+    'changesAlreadyMigrated': changesAlreadyMigrated,
+    'statesAlreadyMigrated': statesAlreadyMigrated,
+  };
 }
+
+Future<void> _appendSummaryHeader({
+  required String summaryFilePath,
+  required String awsProfile,
+  required String stage,
+  required String domainType,
+  required int pageSize,
+  required bool includeTestDomainIds,
+}) async {
+  final file = File(summaryFilePath);
+  await file.parent.create(recursive: true);
+
+  final header = StringBuffer()
+    ..writeln('# migration_state_data_hash summary')
+    ..writeln('# runStartedAt: ${DateTime.now().toUtc().toIso8601String()}')
+    ..writeln('# awsProfile: ${_yamlQuote(awsProfile)}')
+    ..writeln('# stage: ${_yamlQuote(stage)}')
+    ..writeln('# domainType: ${_yamlQuote(domainType)}')
+    ..writeln('# pageSize: $pageSize')
+    ..writeln('# includeTestDomainIds: $includeTestDomainIds')
+    ..writeln();
+
+  await file.writeAsString(header.toString(), mode: FileMode.append);
+}
+
+Future<void> _appendDomainSummary({
+  required String summaryFilePath,
+  required Map<String, dynamic> summary,
+}) async {
+  final file = File(summaryFilePath);
+  await file.parent.create(recursive: true);
+
+  final changes = (summary['changes'] as List<dynamic>? ?? const <dynamic>[])
+      .cast<Map<String, dynamic>>();
+  final states = (summary['states'] as List<dynamic>? ?? const <dynamic>[])
+      .cast<Map<String, dynamic>>();
+  final errors = (summary['errors'] as List<dynamic>? ?? const <dynamic>[])
+      .cast<Map<String, dynamic>>();
+  final warnings = (summary['warnings'] as List<dynamic>? ?? const <dynamic>[])
+      .cast<Map<String, dynamic>>();
+  final changesAlreadyMigrated =
+      (summary['changesAlreadyMigrated'] as List<dynamic>? ?? const <dynamic>[])
+          .cast<Map<String, dynamic>>();
+  final statesAlreadyMigrated =
+      (summary['statesAlreadyMigrated'] as List<dynamic>? ?? const <dynamic>[])
+          .cast<Map<String, dynamic>>();
+
+  final out = StringBuffer()
+    ..writeln('---')
+    ..writeln('domainId: ${_yamlQuote(summary['domainId']?.toString() ?? '')}')
+    ..writeln(
+      'status: ${_yamlQuote(summary['status']?.toString() ?? 'unknown')}',
+    )
+    ..writeln('changes:');
+
+  if (changes.isEmpty) {
+    out.writeln('  []');
+  } else {
+    for (final change in changes) {
+      final skipped = (change['skipped'] as bool?) ?? false;
+      final mark = skipped ? '*' : '';
+      out
+        ..writeln('  - seq: ${change['seq']}')
+        ..writeln('    skipped: $skipped')
+        ..writeln(
+          '    entityId: ${_yamlQuote(change['entityId']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    finalState: ${change['finalState'] == true ? 'true' : 'false'}',
+        )
+        ..writeln(
+          '    stateDataHash: ${_yamlQuote((change['stateDataHash']?.toString() ?? '') + mark)}',
+        );
+    }
+  }
+
+  out.writeln('states:');
+  if (states.isEmpty) {
+    out.writeln('  []');
+  } else {
+    for (final state in states) {
+      out
+        ..writeln(
+          '  - entityType: ${_yamlQuote(state['entityType']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    entityId: ${_yamlQuote(state['entityId']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    stateDataHash: ${_yamlQuote(state['stateDataHash']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    stateDataHash_orig_: ${_yamlQuote(state['stateDataHash_orig_']?.toString() ?? '')}',
+        );
+    }
+  }
+
+  if (errors.isNotEmpty) {
+    out.writeln('errors:');
+    for (final error in errors) {
+      out
+        ..writeln(
+          '  - message: ${_yamlQuote(error['message']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    stackTrace: ${_yamlQuote(error['stackTrace']?.toString() ?? '')}',
+        );
+    }
+  }
+
+  if (warnings.isNotEmpty) {
+    out.writeln('warnings:');
+    for (final w in warnings) {
+      out
+        ..writeln('  - message: ${_yamlQuote(w['message']?.toString() ?? '')}')
+        ..writeln(
+          '    entityId: ${_yamlQuote(w['entityId']?.toString() ?? '')}',
+        )
+        ..writeln('    source: ${_yamlQuote(w['source']?.toString() ?? '')}')
+        ..writeln('    orig: ${_yamlQuote(w['orig']?.toString() ?? '')}')
+        ..writeln('    final: ${_yamlQuote(w['final']?.toString() ?? '')}');
+    }
+  }
+
+  if (changesAlreadyMigrated.isNotEmpty) {
+    out.writeln('changesAlreadyMigrated:');
+    for (final c in changesAlreadyMigrated) {
+      out
+        ..writeln('  - seq: ${c['seq']}')
+        ..writeln(
+          '    entityId: ${_yamlQuote(c['entityId']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    stateDataHash: ${_yamlQuote(c['stateDataHash']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    stateDataHash_orig_: ${_yamlQuote(c['stateDataHash_orig_']?.toString() ?? '')}',
+        );
+    }
+  }
+
+  if (statesAlreadyMigrated.isNotEmpty) {
+    out.writeln('statesAlreadyMigrated:');
+    for (final s in statesAlreadyMigrated) {
+      out
+        ..writeln(
+          '  - entityType: ${_yamlQuote(s['entityType']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    entityId: ${_yamlQuote(s['entityId']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    stateDataHash: ${_yamlQuote(s['stateDataHash']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    stateDataHash_orig_: ${_yamlQuote(s['stateDataHash_orig_']?.toString() ?? '')}',
+        );
+    }
+  }
+
+  out.writeln();
+  await file.writeAsString(out.toString(), mode: FileMode.append);
+}
+
+String _yamlQuote(String value) => "'${value.replaceAll("'", "''")}'";
 
 void _printUsage() {
   print('''
@@ -244,7 +722,10 @@ Options:
   --stage <stage>           Deployment stage label for logging (default: dev)
   --domain-type <type>      Domain type to scan (default: project)
   --page-size <count>       Number of source changes per page (default: 100). Use -1 to let the storage/backend decide (no limit).
+  --summary-file <path>     Append per-domain YAML summaries to this file (default: migration_state_data_hash_summary.yaml)
   --write-changes           Reserved for future write mode; currently unsupported
+  --exit-on-error           Exit immediately when a domain validation error is detected
+  --include-test-domainIds  Include domainIds that start with __test (default: false)
   --help                    Show this help message
 ''');
 }
