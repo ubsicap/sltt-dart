@@ -200,6 +200,9 @@ Future<Map<String, dynamic>> _processDomain({
   // Step 1: accumulate all source changes (keyed by seq) as we page through them.
   // Step 4 later fills in computed stateDataHash values.
   final migrationChanges = <int, Map<String, dynamic>>{};
+  // Preserve original change JSONs separately so we can compare before/after
+  // without accidentally mutating the original objects stored here.
+  final migrationOriginalChanges = <int, Map<String, dynamic>>{};
 
   // Final state view per entityType/entityId, merged from source states then
   // overwritten with replayed values from in-memory storage.
@@ -230,8 +233,10 @@ Future<Map<String, dynamic>> _processDomain({
     final stateChangedBatch = <BaseChangeLogEntry>[];
     for (final change in sourceChanges) {
       final json = change.toJson();
-      json['stateDataHash_orig_'] = change.stateDataHash?.toString() ?? '';
-      migrationChanges[change.seq] = json;
+      // keep an immutable-ish copy of the original source JSON
+      migrationOriginalChanges[change.seq] = Map<String, dynamic>.from(json);
+      // work on a separate copy for migrationResults so we can add computed fields
+      migrationChanges[change.seq] = Map<String, dynamic>.from(json);
       if (change.stateChanged) {
         stateChangedBatch.add(change);
       } else {
@@ -281,18 +286,31 @@ Future<Map<String, dynamic>> _processDomain({
     sourceCursor = sourceChanges.last.seq;
   }
 
-  // Step 4: process skippedChangeSeqs as a FIFO queue.
-  // Each skipped change borrows stateDataHash from the entry immediately
-  // before it (by seq order).  If there is no preceding entry, use ''.
+  // Step 4: assign hashes for skipped (stateChanged=false) changes.
+  // A skipped change should carry forward the last known hash for its own
+  // entityId, not the immediately previous global seq.
   final allSeqs = migrationChanges.keys.toList()..sort();
-  for (final skippedSeq in skippedChangeSeqs) {
-    final idx = allSeqs.indexOf(skippedSeq);
-    String prevHash = '';
-    if (idx > 0) {
-      final prevSeq = allSeqs[idx - 1];
-      prevHash = (migrationChanges[prevSeq]?['stateDataHash'] as String?) ?? '';
+  final latestHashByEntity = <String, String>{};
+  for (final seq in allSeqs) {
+    final change = migrationChanges[seq]!;
+    final entityId = change['entityId']?.toString() ?? '';
+    if (entityId.isEmpty) {
+      continue;
     }
-    migrationChanges[skippedSeq]!['stateDataHash'] = prevHash;
+
+    final existingHash = change['stateDataHash']?.toString() ?? '';
+    if (existingHash.isNotEmpty) {
+      latestHashByEntity[entityId] = existingHash;
+      continue;
+    }
+
+    if (change['stateChanged'] == false) {
+      final carriedHash = latestHashByEntity[entityId] ?? '';
+      change['stateDataHash'] = carriedHash;
+      if (carriedHash.isNotEmpty) {
+        latestHashByEntity[entityId] = carriedHash;
+      }
+    }
   }
 
   // Seed migrationStates with source storage states first.
@@ -327,7 +345,10 @@ Future<Map<String, dynamic>> _processDomain({
         migrationStates[key] = {
           'entityType': entityType,
           'entityId': entityId,
+          // computed field starts as source value and may be overwritten by replay
           'stateDataHash': item['stateDataHash']?.toString() ?? '',
+          // preserve source/original values for migration diagnostics
+          'sourceStateDataHash': item['stateDataHash']?.toString() ?? '',
           'stateDataHash_orig_': item['stateDataHash_orig_']?.toString() ?? '',
         };
       }
@@ -370,12 +391,19 @@ Future<Map<String, dynamic>> _processDomain({
       for (final item in items) {
         final entityState = DynamoEntityState.fromJson(item);
         final key = '${entityState.entityType}|${entityState.entityId}';
-        migrationStates[key] = {
-          'entityType': entityState.entityType,
-          'entityId': entityState.entityId,
-          'stateDataHash': entityState.stateDataHash ?? '',
-          'stateDataHash_orig_': entityState.stateDataHash_orig_ ?? '',
-        };
+        final existing =
+            migrationStates[key] ??
+            <String, dynamic>{
+              'entityType': entityState.entityType,
+              'entityId': entityState.entityId,
+              'sourceStateDataHash': '',
+              'stateDataHash_orig_': '',
+            };
+
+        // Only overwrite the computed/final hash from replay.
+        // Keep source/original fields captured from Dynamo source state pages.
+        existing['stateDataHash'] = entityState.stateDataHash ?? '';
+        migrationStates[key] = existing;
       }
 
       final hasMore = page['hasMore'] as bool? ?? false;
@@ -391,49 +419,61 @@ Future<Map<String, dynamic>> _processDomain({
 
   await replayStorage.close();
 
-  // Group changes by entityId and detect entities whose stateDataHash never
-  // changes across their change seqs (already migrated). We'll remove those
-  // changes/states from the main lists and surface them separately.
+  // Group changes by entityId.
   final entityToSeqs = <String, List<int>>{};
-  final entityHashSets = <String, Set<String>>{};
   for (final seq in allSeqs) {
     final entry = migrationChanges[seq]!;
     final eid = entry['entityId']?.toString() ?? '';
     if (eid.isEmpty) continue;
     entityToSeqs.putIfAbsent(eid, () => <int>[]).add(seq);
-    final hash = entry['stateDataHash']?.toString() ?? '';
-    entityHashSets.putIfAbsent(eid, () => <String>{}).add(hash);
   }
 
   final changesAlreadyMigrated = <Map<String, dynamic>>[];
   final statesAlreadyMigrated = <Map<String, dynamic>>[];
-  final alreadyMigratedEntities = <String>{};
-
   for (final eid in entityToSeqs.keys) {
-    final hashes = entityHashSets[eid] ?? <String>{};
-    if (hashes.length <= 1) {
-      // No hash changes across seqs -> consider already migrated.
-      alreadyMigratedEntities.add(eid);
-      for (final seq in entityToSeqs[eid]!) {
-        final c = migrationChanges[seq]!;
-        changesAlreadyMigrated.add({
-          'seq': seq,
-          'entityId': eid,
-          'stateDataHash': c['stateDataHash']?.toString() ?? '',
-          'stateDataHash_orig_': c['stateDataHash_orig_']?.toString() ?? '',
-        });
-        migrationChanges.remove(seq);
-      }
-      // Remove matching migrationState, if present, and record it.
-      final stateKey = migrationStates.keys.firstWhere(
-        (k) => k.endsWith('|$eid'),
-        orElse: () => '',
-      );
-      if (stateKey.isNotEmpty) {
-        statesAlreadyMigrated.add(migrationStates[stateKey]!);
-        migrationStates.remove(stateKey);
-      }
+    final stateKey = migrationStates.keys.firstWhere(
+      (k) => k.endsWith('|$eid'),
+      orElse: () => '',
+    );
+    if (stateKey.isEmpty) {
+      continue;
     }
+
+    final state = migrationStates[stateKey]!;
+    final sourceStateDataHash = state['sourceStateDataHash']?.toString() ?? '';
+    final sourceStateDataHashOrig =
+        state['stateDataHash_orig_']?.toString() ?? '';
+    final finalStateDataHash = state['stateDataHash']?.toString() ?? '';
+
+    // Consider an entity already migrated only when source already had a hash
+    // and that source hash matches the replay-computed final hash.
+    final sourceHasHash =
+        sourceStateDataHash.isNotEmpty || sourceStateDataHashOrig.isNotEmpty;
+    final matchesFinal =
+        (sourceStateDataHash.isNotEmpty &&
+            sourceStateDataHash == finalStateDataHash) ||
+        (sourceStateDataHashOrig.isNotEmpty &&
+            sourceStateDataHashOrig == finalStateDataHash);
+
+    if (!sourceHasHash || !matchesFinal) {
+      continue;
+    }
+
+    for (final seq in entityToSeqs[eid]!) {
+      final c = migrationChanges[seq]!;
+      changesAlreadyMigrated.add({
+        'seq': seq,
+        'entityId': eid,
+        'stateDataHash': c['stateDataHash']?.toString() ?? '',
+        // record the original source change value for later inspection
+        'origStateDataHash':
+            migrationOriginalChanges[seq]?['stateDataHash']?.toString() ?? '',
+      });
+      migrationChanges.remove(seq);
+    }
+
+    statesAlreadyMigrated.add(state);
+    migrationStates.remove(stateKey);
   }
 
   // Recompute seq list after removals.
@@ -455,12 +495,12 @@ Future<Map<String, dynamic>> _processDomain({
   for (final seq in remainingSeqs) {
     final change = migrationChanges[seq]!;
     final entityId = change['entityId']?.toString() ?? '';
-    final skipped = skippedChangeSeqs.contains(seq);
+    final stateChanged = change['stateChanged'] == true;
     final isFinal =
         entityId.isNotEmpty && (lastSeenByEntity[entityId]?['seq'] == seq);
     changesSummary.add({
       'seq': seq,
-      'skipped': skipped,
+      'stateChanged': stateChanged,
       'entityId': entityId,
       'finalState': isFinal,
       'stateDataHash': change['stateDataHash']?.toString() ?? '',
@@ -486,12 +526,19 @@ Future<Map<String, dynamic>> _processDomain({
   for (final state in statesSummary) {
     final entityId = state['entityId']?.toString() ?? '';
     if (entityId.isEmpty) continue;
+    final entityType = state['entityType']?.toString() ?? '';
     final expected = state['stateDataHash']?.toString() ?? '';
+    final sourceStateDataHash = state['sourceStateDataHash']?.toString() ?? '';
+    final stateDataHashOrig = state['stateDataHash_orig_']?.toString() ?? '';
     final last = lastSeenByEntity[entityId];
     if (last == null) {
       errors.add({
         'message': 'No change found for final entity state',
+        'entityType': entityType,
         'entityId': entityId,
+        'expectedFinalStateHash': expected,
+        'sourceStateDataHash': sourceStateDataHash,
+        'stateDataHash_orig_': stateDataHashOrig,
       });
       continue;
     }
@@ -499,10 +546,13 @@ Future<Map<String, dynamic>> _processDomain({
     if (lastHash != expected) {
       errors.add({
         'message': 'stateDataHash mismatch for entity',
+        'entityType': entityType,
         'entityId': entityId,
-        'expected': expected,
+        'expectedFinalStateHash': expected,
         'lastChangeSeq': last['seq'],
         'lastChangeHash': lastHash,
+        'sourceStateDataHash': sourceStateDataHash,
+        'stateDataHash_orig_': stateDataHashOrig,
       });
     }
   }
@@ -604,11 +654,11 @@ Future<void> _appendDomainSummary({
     out.writeln('  []');
   } else {
     for (final change in changes) {
-      final skipped = (change['skipped'] as bool?) ?? false;
-      final mark = skipped ? '*' : '';
+      final stateChanged = (change['stateChanged'] as bool?) ?? true;
+      final mark = stateChanged ? '' : '*';
       out
         ..writeln('  - seq: ${change['seq']}')
-        ..writeln('    skipped: $skipped')
+        ..writeln('    stateChanged: $stateChanged')
         ..writeln(
           '    entityId: ${_yamlQuote(change['entityId']?.toString() ?? '')}',
         )
@@ -637,6 +687,9 @@ Future<void> _appendDomainSummary({
           '    stateDataHash: ${_yamlQuote(state['stateDataHash']?.toString() ?? '')}',
         )
         ..writeln(
+          '    sourceStateDataHash: ${_yamlQuote(state['sourceStateDataHash']?.toString() ?? '')}',
+        )
+        ..writeln(
           '    stateDataHash_orig_: ${_yamlQuote(state['stateDataHash_orig_']?.toString() ?? '')}',
         );
     }
@@ -645,13 +698,27 @@ Future<void> _appendDomainSummary({
   if (errors.isNotEmpty) {
     out.writeln('errors:');
     for (final error in errors) {
-      out
-        ..writeln(
-          '  - message: ${_yamlQuote(error['message']?.toString() ?? '')}',
-        )
-        ..writeln(
-          '    stackTrace: ${_yamlQuote(error['stackTrace']?.toString() ?? '')}',
-        );
+      out.writeln(
+        '  - message: ${_yamlQuote(error['message']?.toString() ?? '')}',
+      );
+
+      const preferredOrder = <String>[
+        'entityType',
+        'entityId',
+        'expectedFinalStateHash',
+        'lastChangeSeq',
+        'lastChangeHash',
+        'sourceStateDataHash',
+        'stateDataHash_orig_',
+        'stackTrace',
+      ];
+
+      for (final key in preferredOrder) {
+        if (!error.containsKey(key)) {
+          continue;
+        }
+        out.writeln('    $key: ${_yamlQuote(error[key]?.toString() ?? '')}');
+      }
     }
   }
 
@@ -681,7 +748,7 @@ Future<void> _appendDomainSummary({
           '    stateDataHash: ${_yamlQuote(c['stateDataHash']?.toString() ?? '')}',
         )
         ..writeln(
-          '    stateDataHash_orig_: ${_yamlQuote(c['stateDataHash_orig_']?.toString() ?? '')}',
+          '    origStateDataHash: ${_yamlQuote(c['origStateDataHash']?.toString() ?? '')}',
         );
     }
   }
@@ -698,6 +765,9 @@ Future<void> _appendDomainSummary({
         )
         ..writeln(
           '    stateDataHash: ${_yamlQuote(s['stateDataHash']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    sourceStateDataHash: ${_yamlQuote(s['sourceStateDataHash']?.toString() ?? '')}',
         )
         ..writeln(
           '    stateDataHash_orig_: ${_yamlQuote(s['stateDataHash_orig_']?.toString() ?? '')}',
