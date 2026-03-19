@@ -8,7 +8,7 @@ import 'package:test/test.dart';
 String _expectedHash(Map<String, dynamic> fields) {
   final stable = stableStringify(fields);
   final digest = md5.convert(utf8.encode(stable));
-  return base64Url.encode(digest.bytes);
+  return base64Url.encode(digest.bytes).replaceAll(RegExp(r'=+$'), '');
 }
 
 void main() {
@@ -105,10 +105,10 @@ void main() {
       'produces a base64-encoded MD5 string (22 chars, no padding issues)',
       () {
         final hash = computeStateDataHash({'data_rank': '1'});
-        // MD5 is 16 bytes → base64 is ceil(16*4/3) = 24 chars (with padding)
-        expect(hash.length, equals(24));
+        // MD5 is 16 bytes → base64 is ceil(16*4/3) = 24 chars - 2 chars (without `==` padding)
+        expect(hash.length, equals(22));
         // Must be valid base64
-        expect(() => base64.decode(hash), returnsNormally);
+        expect(() => base64.decode('$hash=='), returnsNormally);
       },
     );
 
