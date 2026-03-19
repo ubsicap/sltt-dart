@@ -70,6 +70,36 @@
             "console": "terminal"
         },
         {
+            "name": "Migrate changeDataHash (Dev, dry-run)",
+            "type": "dart",
+            "request": "launch",
+            "program": "packages/aws_backend/bin/migrate_state_data_hash.dart",
+            "args": [
+                "--aws-profile", "sltt-dart-dev",
+                "--stage", "dev",
+                "--domain-type", "project",
+                "--page-size", "-1"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "AWS_PROFILE": "sltt-dart-dev",
+                "AWS_ACCESS_KEY_ID":  "${input:awsAccessKeyId}",
+                "AWS_SECRET_ACCESS_KEY": "${input:awsSecretAccessKey}",
+                "AWS_REGION": "us-east-1",
+                "DYNAMODB_REGION": "us-east-1",
+                "DYNAMODB_TABLE": "sltt-shared-infra-changes-states",
+                "MEDIA_BUCKET": "sltt-shared-infra-media-worm-379334555674",
+                "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
+                "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",
+                "MEDIA_CLOUDFRONT_PRIVATE_KEY": "${input:mediaCloudFrontPrivateKey}",
+                "SHARED_INFRA_ASSUME_ROLE_ARN": "arn:aws:iam::379334555674:role/sltt-shared-infra-cross-account-access",
+                "STAGE": "dev",
+                "USE_CLOUD_STORAGE": "true",
+                "LOCAL_DEBUGGER": "true"
+            },
+            "console": "terminal"
+        },
+        {
             "name": "Debug AWS Backend (tst)",
             "type": "dart",
             "request": "launch",
