@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
@@ -36,7 +36,7 @@ void main() {
       return baseUrl!;
     }
     // Fallback: start in-memory server for this test file
-    final storage = InMemoryStorage(storageType: 'local');
+    final storage = testInMemoryStorage(storageType: 'local');
     final app = TestServer(
       serverName: 'core-it',
       storage: storage,

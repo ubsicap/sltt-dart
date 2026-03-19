@@ -28,6 +28,7 @@ export 'src/services/json_serialization_service.dart';
 export 'src/services/safe_json_service.dart';
 export 'src/services/uid_service.dart';
 export 'src/storage/base_storage_service.dart';
+export 'src/storage/in_memory_storage.dart';
 export 'src/storage/media/base_media_storage.dart';
 export 'src/storage/media/file_media_storage.dart';
 export 'src/storage/media/null_media_storage.dart';

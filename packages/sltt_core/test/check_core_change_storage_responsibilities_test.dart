@@ -1,4 +1,4 @@
-import 'package:sltt_core/sltt_core.dart';
+﻿import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 import './helpers/in_memory_storage.dart';
@@ -47,8 +47,8 @@ TestEntityState _mkEntityStateForChange(
 void main() {
   group('checkCoreChangeStorageResponsibilities', () {
     test('rejects empty storageId for both local and cloud storage', () {
-      final localStorage = InMemoryStorage(storageType: 'local');
-      final cloudStorage = InMemoryStorage(storageType: 'cloud');
+      final localStorage = testInMemoryStorage(storageType: 'local');
+      final cloudStorage = testInMemoryStorage(storageType: 'cloud');
 
       final changeWithEmptyStorageId = TestChangeLogEntry(
         cid: 'c1',
@@ -90,8 +90,8 @@ void main() {
     });
 
     test('requires storedAt for both local and cloud storage', () {
-      final localStorage = InMemoryStorage(storageType: 'local');
-      final cloudStorage = InMemoryStorage(storageType: 'cloud');
+      final localStorage = testInMemoryStorage(storageType: 'local');
+      final cloudStorage = testInMemoryStorage(storageType: 'cloud');
 
       final changeWithoutStoredAt = TestChangeLogEntry(
         cid: 'c2',
@@ -133,7 +133,7 @@ void main() {
     });
 
     test('cloud storage additionally requires cloudAt', () {
-      final cloudStorage = InMemoryStorage(storageType: 'cloud');
+      final cloudStorage = testInMemoryStorage(storageType: 'cloud');
 
       final changeWithoutCloudAt = TestChangeLogEntry(
         cid: 'c3',
@@ -164,7 +164,7 @@ void main() {
     });
 
     test('requires entityState when writing state', () {
-      final localStorage = InMemoryStorage(storageType: 'local');
+      final localStorage = testInMemoryStorage(storageType: 'local');
 
       final fixedStoredAt = DateTime.parse('2025-10-04T22:10:00.000Z');
 
@@ -201,7 +201,7 @@ void main() {
     });
 
     test('validates entityState change_storedAt matches change.storedAt', () {
-      final localStorage = InMemoryStorage(storageType: 'local');
+      final localStorage = testInMemoryStorage(storageType: 'local');
       final now = DateTime.now().toUtc();
       final differentTime = now.add(const Duration(minutes: 1));
 
@@ -260,7 +260,7 @@ void main() {
     });
 
     test('validates cloud storage has matching cloudAt in entityState', () {
-      final cloudStorage = InMemoryStorage(storageType: 'cloud');
+      final cloudStorage = testInMemoryStorage(storageType: 'cloud');
       final now = DateTime.now().toUtc();
 
       final change = TestChangeLogEntry(
@@ -320,7 +320,7 @@ void main() {
     });
 
     test('passes validation with correct local storage setup', () {
-      final localStorage = InMemoryStorage(storageType: 'local');
+      final localStorage = testInMemoryStorage(storageType: 'local');
       final now = DateTime.now().toUtc();
 
       final change = TestChangeLogEntry(
@@ -378,7 +378,7 @@ void main() {
     });
 
     test('passes validation with correct cloud storage setup', () {
-      final cloudStorage = InMemoryStorage(storageType: 'cloud');
+      final cloudStorage = testInMemoryStorage(storageType: 'cloud');
       final now = DateTime.now().toUtc();
 
       final change = TestChangeLogEntry(
@@ -440,7 +440,7 @@ void main() {
     });
 
     test('skips validation when both writes are skipped', () {
-      final cloudStorage = InMemoryStorage(storageType: 'cloud');
+      final cloudStorage = testInMemoryStorage(storageType: 'cloud');
 
       // Even with invalid data, should not throw when both writes are skipped
       final invalidChange = TestChangeLogEntry(

@@ -1,4 +1,4 @@
-import 'package:sltt_core/sltt_core.dart';
+﻿import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 import '../test_models.dart';
@@ -9,7 +9,7 @@ void main() {
 
   group('InMemoryStorage key composition', () {
     test('write then read returns persisted state', () async {
-      final storage = InMemoryStorage(
+      final storage = testInMemoryStorage(
         storageType: 'local',
         storageId: 'test-store',
       );

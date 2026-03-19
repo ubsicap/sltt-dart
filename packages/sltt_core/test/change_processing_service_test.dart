@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
@@ -35,7 +35,7 @@ void main() {
 
     group('- basic tests', () {
       setUp(() {
-        storage = InMemoryStorage(storageType: 'local');
+        storage = testInMemoryStorage(storageType: 'local');
       });
 
       test(
@@ -462,7 +462,7 @@ void main() {
 
     group('- returnErrorIfInResultsSummary tests', () {
       setUp(() {
-        storage = InMemoryStorage(storageType: 'local');
+        storage = testInMemoryStorage(storageType: 'local');
       });
 
       tearDown(() async {
@@ -599,7 +599,7 @@ void main() {
       late InMemoryStorage svcStorage;
 
       setUp(() {
-        svcStorage = InMemoryStorage(storageType: 'local');
+        svcStorage = testInMemoryStorage(storageType: 'local');
       });
 
       tearDown(() async {
@@ -873,8 +873,8 @@ void main() {
       late InMemoryStorage localStorage;
 
       setUp(() async {
-        cloudStorage = InMemoryStorage(storageType: 'cloud');
-        localStorage = InMemoryStorage(storageType: 'local');
+        cloudStorage = testInMemoryStorage(storageType: 'cloud');
+        localStorage = testInMemoryStorage(storageType: 'local');
         await cloudStorage.initialize();
         await localStorage.initialize();
       });
