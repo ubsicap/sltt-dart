@@ -513,6 +513,24 @@ class DynamoDBStorageService extends BaseStorageService {
     }
   }
 
+  /// Batch puts formatted change log entries to DynamoDB (max 25 per request).
+  /// Accessible public method for batch writing changes.
+  Future<void> batchPutChangeLogEntries(
+    List<DynamoChangeLogEntry> entries,
+  ) async {
+    if (entries.isEmpty) return;
+    final items = entries.map(_buildChangeLogItem).toList();
+    await _batchPutItems(items);
+  }
+
+  /// Batch puts formatted entity states to DynamoDB (max 25 per request).
+  /// Accessible public method for batch writing states.
+  Future<void> batchPutEntityStates(List<BaseEntityState> states) async {
+    if (states.isEmpty) return;
+    final items = states.map((state) => _buildEntityStateItem(state)).toList();
+    await _batchPutItems(items);
+  }
+
   /// Batch upserts entity type sync states.
   ///
   /// Note: DynamoDB doesn't support batch conditional updates, so we still need

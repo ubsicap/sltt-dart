@@ -16,6 +16,8 @@ Future<void> main(List<String> args) async {
   bool includeTestDomainIds = false;
   bool writeChanges = false;
   bool exitOnError = false;
+  String? specificDomainType;
+  String? specificDomainId;
 
   for (int index = 0; index < args.length; index++) {
     switch (args[index]) {
@@ -82,6 +84,27 @@ Future<void> main(List<String> args) async {
         }
         includeTestDomainIds = true;
         break;
+      case '--domain-type-id':
+        if (index + 1 < args.length) {
+          final val = args[index + 1];
+          index++;
+          final parts = val.split(':');
+          if (parts.length == 2) {
+            specificDomainType = parts[0];
+            specificDomainId = parts[1];
+          } else {
+            stderr.writeln(
+              '--domain-type-id must be of the form {domainType}:{domainId}',
+            );
+            exitCode = 64;
+            return;
+          }
+        } else {
+          stderr.writeln('--domain-type-id requires a value');
+          exitCode = 64;
+          return;
+        }
+        break;
       case '--help':
         _printUsage();
         return;
@@ -131,10 +154,17 @@ Future<void> main(List<String> args) async {
     print('   Source Storage ID: $srcStorageId');
     print('   Region: ${sourceStorage.region}');
 
-    final domainIds =
-        await sourceStorage.getAllDomainIds(domainType: domainType)
-          ..sort();
-    print('📚 Found ${domainIds.length} $domainType domain(s)');
+    List<String> domainIds;
+    if (specificDomainId != null && specificDomainType != null) {
+      // process a single domain specified by --domain-type-id
+      domainType = specificDomainType;
+      domainIds = [specificDomainId];
+      print('📚 Processing single domain: $domainType:$specificDomainId');
+    } else {
+      domainIds = await sourceStorage.getAllDomainIds(domainType: domainType)
+        ..sort();
+      print('📚 Found ${domainIds.length} $domainType domain(s)');
+    }
 
     await _appendSummaryHeader(
       summaryFilePath: summaryFile,
@@ -159,6 +189,7 @@ Future<void> main(List<String> args) async {
           domainId: domainId,
           pageSize: pageSize,
           srcStorageId: srcStorageId,
+          writeChanges: writeChanges,
         );
         await _appendDomainSummary(
           summaryFilePath: summaryFile,
@@ -196,6 +227,9 @@ Future<void> main(List<String> args) async {
     }
 
     print('✅ Dry-run migration completed. Summary written to: $summaryFile');
+    if (writeChanges) {
+      print('   ⚠️  Writes were enabled - check summary for any errors.');
+    }
   } on AwsCredentialsException catch (error, stackTrace) {
     stderr.writeln('❌ Credentials error: $error');
     stderr.writeln(stackTrace);
@@ -215,6 +249,7 @@ Future<Map<String, dynamic>> _processDomain({
   required String domainId,
   required int pageSize,
   required String srcStorageId,
+  required bool writeChanges,
 }) async {
   final replayStorage = InMemoryStorage(
     storageType: 'cloud',
@@ -660,6 +695,50 @@ Future<Map<String, dynamic>> _processDomain({
     checkStateForWarning(s, 'already_migrated_state');
   }
 
+  // If writeChanges is enabled, batch write the remaining/updated changes and states.
+  if (writeChanges && (changesSummary.isNotEmpty || statesSummary.isNotEmpty)) {
+    try {
+      // Batch write changes (max 25 per request)
+      if (changesSummary.isNotEmpty) {
+        final changesToWrite = <DynamoChangeLogEntry>[];
+        for (final seq in remainingSeqs) {
+          final changeJson = migrationChanges[seq];
+          if (changeJson != null) {
+            changesToWrite.add(DynamoChangeLogEntry.fromJson(changeJson));
+          }
+        }
+        for (var i = 0; i < changesToWrite.length; i += 25) {
+          final batch = changesToWrite.skip(i).take(25).toList();
+          await sourceStorage.batchPutChangeLogEntries(batch);
+        }
+      }
+
+      // Batch write states (max 25 per request)
+      if (statesSummary.isNotEmpty) {
+        final statesToWrite = <DynamoEntityState>[];
+        for (final state in statesSummary) {
+          final entityStateJson =
+              state['entityState_migration'] ??
+              state['entityState_source'] ??
+              state;
+          if (entityStateJson is Map<String, dynamic>) {
+            statesToWrite.add(DynamoEntityState.fromJson(entityStateJson));
+          }
+        }
+        for (var i = 0; i < statesToWrite.length; i += 25) {
+          final batch = statesToWrite.skip(i).take(25).toList();
+          await sourceStorage.batchPutEntityStates(batch);
+        }
+      }
+    } catch (writeError) {
+      stderr.writeln('⚠️  Write error for domain $domainId: $writeError');
+      errors.add({
+        'message': 'Failed to write migrated changes/states',
+        'error': writeError.toString(),
+      });
+    }
+  }
+
   return {
     'domainId': domainId,
     'status': 'success',
@@ -892,14 +971,19 @@ Dry-run migration for printing replayed stateDataHash values.
 Usage: dart run bin/migrate_state_data_hash.dart [options]
 
 Options:
-  --aws-profile <profile>   AWS profile to use (default: sltt-dart-dev)
-  --stage <stage>           Deployment stage label for logging (default: dev)
-  --domain-type <type>      Domain type to scan (default: project)
-  --page-size <count>       Number of source changes per page (default: 100). Use -1 to let the storage/backend decide (no limit).
-  --summary-file <path>     Append per-domain YAML summaries to this file (default: migration_state_data_hash_summary.yaml)
-  --write-changes <true|false>           Reserved for future write mode; currently unsupported
-  --exit-on-error <true|false>           Exit immediately when a domain validation error is detected
-  --include-test-domainIds <true|false>  Include domainIds that start with __test
+  --aws-profile <profile>
+                            AWS profile to use. Default: sltt-dart-dev
+  --stage <stage>           Deployment stage label for logging. Default: dev
+  --domain-type <type>      Domain type to scan. Default: project
+  --domain-type-id <type:id>  Process a single domain identified by '{domainType}:{domainId}'. When provided, this overrides --domain-type and processes only that one domain.
+  --page-size <count>       Number of source changes per page. Default: 100. Use -1 to let the storage/backend decide (no limit).
+  --summary-file <path>     File to append per-domain YAML summaries to. Default: migration_state_data_hash_summary.yaml
+  --write-changes <true|false>
+                            When true, perform writes to the source storage for migrated changes/states. Default: false (dry-run). If specified without a value, defaults to true.
+  --exit-on-error <true|false>
+                            When true, exit immediately when a domain validation error is detected. Default: false. If specified without a value, defaults to true.
+  --include-test-domainIds <true|false>
+                            Include domainIds that start with __test. Default: false. If specified without a value, defaults to true.
   --help                    Show this help message
 ''');
 }
