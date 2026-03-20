@@ -78,7 +78,7 @@
                 "--aws-profile", "sltt-dart-dev",
                 "--stage", "dev",
                 "--domain-type", "project",
-                "--include-test-domainIds", "true",
+                "--include-test-domainIds", "false",
                 "--page-size", "-1"
             ],
             "cwd": "${workspaceFolder}",

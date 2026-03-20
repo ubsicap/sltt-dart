@@ -44,9 +44,25 @@ Future<void> main(List<String> args) async {
         }
         break;
       case '--write-changes':
+        if (index + 1 < args.length) {
+          final val = args[index + 1].toLowerCase();
+          if (val == 'true' || val == 'false') {
+            writeChanges = val == 'true';
+            index++;
+            break;
+          }
+        }
         writeChanges = true;
         break;
       case '--exit-on-error':
+        if (index + 1 < args.length) {
+          final val = args[index + 1].toLowerCase();
+          if (val == 'true' || val == 'false') {
+            exitOnError = val == 'true';
+            index++;
+            break;
+          }
+        }
         exitOnError = true;
         break;
       case '--summary-file':
@@ -56,6 +72,14 @@ Future<void> main(List<String> args) async {
         }
         break;
       case '--include-test-domainIds':
+        if (index + 1 < args.length) {
+          final val = args[index + 1].toLowerCase();
+          if (val == 'true' || val == 'false') {
+            includeTestDomainIds = val == 'true';
+            index++;
+            break;
+          }
+        }
         includeTestDomainIds = true;
         break;
       case '--help':
@@ -670,7 +694,9 @@ Future<void> _appendSummaryHeader({
     ..writeln('# domainType: ${_yamlQuote(domainType)}')
     ..writeln('# pageSize: $pageSize')
     ..writeln('# includeTestDomainIds: $includeTestDomainIds')
-    ..writeln('# writeChanges: ${_yamlQuote(writeChanges.toString())} (dry-run)')
+    ..writeln(
+      '# writeChanges: ${_yamlQuote(writeChanges.toString())} (dry-run)',
+    )
     ..writeln();
 
   await file.writeAsString(header.toString(), mode: FileMode.append);
@@ -871,9 +897,9 @@ Options:
   --domain-type <type>      Domain type to scan (default: project)
   --page-size <count>       Number of source changes per page (default: 100). Use -1 to let the storage/backend decide (no limit).
   --summary-file <path>     Append per-domain YAML summaries to this file (default: migration_state_data_hash_summary.yaml)
-  --write-changes           Reserved for future write mode; currently unsupported
-  --exit-on-error           Exit immediately when a domain validation error is detected
-  --include-test-domainIds  Include domainIds that start with __test (default: false)
+  --write-changes <true|false>           Reserved for future write mode; currently unsupported
+  --exit-on-error <true|false>           Exit immediately when a domain validation error is detected
+  --include-test-domainIds <true|false>  Include domainIds that start with __test
   --help                    Show this help message
 ''');
 }
