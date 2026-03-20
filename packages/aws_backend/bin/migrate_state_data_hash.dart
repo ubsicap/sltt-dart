@@ -153,6 +153,8 @@ Future<void> main(List<String> args) async {
         final errorSummary = <String, dynamic>{
           'domainId': domainId,
           'status': 'error',
+          'updates': 0,
+          'anyUpdates': false,
           'changes': <Map<String, dynamic>>[],
           'states': <Map<String, dynamic>>[],
           'errors': <Map<String, dynamic>>[
@@ -636,6 +638,8 @@ Future<Map<String, dynamic>> _processDomain({
   return {
     'domainId': domainId,
     'status': 'success',
+    'updates': (changesSummary.length + statesSummary.length),
+    'anyUpdates': (changesSummary.isNotEmpty || statesSummary.isNotEmpty),
     'changes': changesSummary,
     'states': statesSummary,
     'errors': errors,
@@ -697,6 +701,8 @@ Future<void> _appendDomainSummary({
     ..writeln(
       'status: ${_yamlQuote(summary['status']?.toString() ?? 'unknown')}',
     )
+    ..writeln('updates: ${summary['updates'] ?? 0}')
+    ..writeln('anyUpdates: ${summary['anyUpdates'] ?? false}')
     ..writeln('changes:');
 
   if (changes.isEmpty) {
