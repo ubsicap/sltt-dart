@@ -119,6 +119,7 @@ Future<void> main(List<String> args) async {
       domainType: domainType,
       pageSize: pageSize,
       includeTestDomainIds: includeTestDomainIds,
+      writeChanges: writeChanges,
     );
 
     for (final domainId in domainIds) {
@@ -656,6 +657,7 @@ Future<void> _appendSummaryHeader({
   required String domainType,
   required int pageSize,
   required bool includeTestDomainIds,
+  required bool writeChanges,
 }) async {
   final file = File(summaryFilePath);
   await file.parent.create(recursive: true);
@@ -668,6 +670,7 @@ Future<void> _appendSummaryHeader({
     ..writeln('# domainType: ${_yamlQuote(domainType)}')
     ..writeln('# pageSize: $pageSize')
     ..writeln('# includeTestDomainIds: $includeTestDomainIds')
+    ..writeln('# writeChanges: ${_yamlQuote(writeChanges.toString())} (dry-run)')
     ..writeln();
 
   await file.writeAsString(header.toString(), mode: FileMode.append);
