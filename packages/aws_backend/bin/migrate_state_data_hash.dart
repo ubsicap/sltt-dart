@@ -927,10 +927,12 @@ Future<void> _appendDomainSummary({
   if (changesAlreadyMigrated.isNotEmpty) {
     out.writeln('changesAlreadyMigrated:');
     for (final c in changesAlreadyMigrated) {
+      final migratedStateChanged = c['stateChanged'] == true;
+      final mark = migratedStateChanged ? '' : '*';
       out
         ..writeln('  - seq: ${c['seq']}')
         ..writeln(
-          '    stateChanged: ${c['stateChanged'] == true ? 'true' : 'false'}',
+          '    stateChanged: ${migratedStateChanged ? 'true' : 'false'}',
         )
         ..writeln(
           '    finalState: ${c['finalState'] == true ? 'true' : 'false'}',
@@ -939,7 +941,7 @@ Future<void> _appendDomainSummary({
           '    entityId: ${_yamlQuote(c['entityId']?.toString() ?? '')}',
         )
         ..writeln(
-          '    stateDataHash: ${_yamlQuote(c['stateDataHash']?.toString() ?? '')}',
+          '    stateDataHash: ${_yamlQuote((c['stateDataHash']?.toString() ?? '') + mark)}',
         )
         ..writeln(
           '    stateDataHash_orig_: ${_yamlQuote(c['stateDataHash_orig_']?.toString() ?? '')}',
