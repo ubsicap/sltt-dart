@@ -18,6 +18,8 @@ Future<void> main(List<String> args) async {
   bool exitOnError = false;
   String? specificDomainType;
   String? specificDomainId;
+  String? debugDomainId;
+  final debugSeqs = <int>[];
 
   for (int index = 0; index < args.length; index++) {
     switch (args[index]) {
@@ -105,6 +107,37 @@ Future<void> main(List<String> args) async {
           return;
         }
         break;
+      case '--debug-domain-id':
+        if (index + 1 < args.length) {
+          debugDomainId = args[index + 1];
+          index++;
+        } else {
+          stderr.writeln('--debug-domain-id requires a value');
+          exitCode = 64;
+          return;
+        }
+        break;
+      case '--debug-seqs':
+        if (index + 1 < args.length) {
+          final raw = args[index + 1];
+          index++;
+          for (final part in raw.split(',')) {
+            final seq = int.tryParse(part.trim());
+            if (seq == null) {
+              stderr.writeln(
+                '--debug-seqs must be a comma-separated list of integers',
+              );
+              exitCode = 64;
+              return;
+            }
+            debugSeqs.add(seq);
+          }
+        } else {
+          stderr.writeln('--debug-seqs requires a value');
+          exitCode = 64;
+          return;
+        }
+        break;
       case '--help':
         _printUsage();
         return;
@@ -120,6 +153,12 @@ Future<void> main(List<String> args) async {
 
   awsProfile ??= 'sltt-dart-dev';
 
+  if (debugDomainId == null &&
+      specificDomainId != null &&
+      debugSeqs.isNotEmpty) {
+    debugDomainId = specificDomainId;
+  }
+
   print(
     '🔧 Starting changeDataHash migration${writeChanges ? '' : ' (dry-run)'}',
   );
@@ -130,6 +169,10 @@ Future<void> main(List<String> args) async {
   print('   Summary File: $summaryFile');
   print('   Include Test Domains: $includeTestDomainIds');
   print('   Write Changes: $writeChanges');
+  if (debugDomainId != null && debugSeqs.isNotEmpty) {
+    print('   Debug Domain: $debugDomainId');
+    print('   Debug Seqs: ${debugSeqs.join(', ')}');
+  }
 
   final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] ?? 'true';
   final useLocalDynamoDB = useCloudStorage != 'true';
@@ -187,6 +230,8 @@ Future<void> main(List<String> args) async {
           pageSize: pageSize,
           srcStorageId: srcStorageId,
           writeChanges: writeChanges,
+          debugDomainId: debugDomainId,
+          debugSeqs: debugSeqs,
         );
         await _appendDomainSummary(
           summaryFilePath: summaryFile,
@@ -247,6 +292,8 @@ Future<Map<String, dynamic>> _processDomain({
   required int pageSize,
   required String srcStorageId,
   required bool writeChanges,
+  required String? debugDomainId,
+  required List<int> debugSeqs,
 }) async {
   final replayStorage = InMemoryStorage(
     storageType: 'cloud',
@@ -262,6 +309,8 @@ Future<Map<String, dynamic>> _processDomain({
   // Preserve original change JSONs separately so we can compare before/after
   // without accidentally mutating the original objects stored here.
   final migrationOriginalChanges = <int, Map<String, dynamic>>{};
+  // Debug messages to include in summary (stable-stringified JSONs)
+  final debugMessages = <String>[];
 
   // Final state view per entityType/entityId, merged from source states then
   // overwritten with replayed values from in-memory storage.
@@ -368,6 +417,32 @@ Future<Map<String, dynamic>> _processDomain({
       change['stateDataHash'] = carriedHash;
       if (carriedHash.isNotEmpty) {
         latestHashByEntity[entityId] = carriedHash;
+      }
+    }
+  }
+
+  final shouldEmitDebugForDomain =
+      debugSeqs.isNotEmpty &&
+      (debugDomainId == null || domainId == debugDomainId);
+
+  // Record targeted debug entries in the summary, even when a seq is missing.
+  if (shouldEmitDebugForDomain) {
+    for (final debugSeq in debugSeqs) {
+      final orig = migrationOriginalChanges[debugSeq];
+      if (orig != null) {
+        debugMessages.add(
+          'DEBUG_SOURCE_SEQ_$debugSeq: ${stableStringify(orig)}',
+        );
+      } else {
+        debugMessages.add('DEBUG_SOURCE_SEQ_$debugSeq: <missing>');
+      }
+      final migrated = migrationChanges[debugSeq];
+      if (migrated != null) {
+        debugMessages.add(
+          'DEBUG_MIG_SEQ_$debugSeq: ${stableStringify(migrated)}',
+        );
+      } else {
+        debugMessages.add('DEBUG_MIG_SEQ_$debugSeq: <removed or missing>');
       }
     }
   }
@@ -544,6 +619,8 @@ Future<Map<String, dynamic>> _processDomain({
         'stateChanged': c['stateChanged'] == true,
         'finalState': seq == lastSeq,
         'stateDataHash': c['stateDataHash']?.toString() ?? '',
+        'storageId':
+            migrationOriginalChanges[seq]?['storageId']?.toString() ?? '',
         // record the original source change value for later inspection
         'stateDataHash_orig_':
             migrationOriginalChanges[seq]?['stateDataHash']?.toString() ?? '',
@@ -556,6 +633,12 @@ Future<Map<String, dynamic>> _processDomain({
     statesAlreadyMigrated.add(state);
     migrationStates.remove(stateKey);
   }
+
+  changesAlreadyMigrated.sort((a, b) {
+    final seqA = a['seq'] as int? ?? 0;
+    final seqB = b['seq'] as int? ?? 0;
+    return seqA.compareTo(seqB);
+  });
 
   // Recompute seq list after removals.
   final remainingSeqs = migrationChanges.keys.toList()..sort();
@@ -585,6 +668,7 @@ Future<Map<String, dynamic>> _processDomain({
       'entityId': entityId,
       'finalState': isFinal,
       'stateDataHash': change['stateDataHash']?.toString() ?? '',
+      'storageId': change['storageId']?.toString() ?? '',
     });
   }
 
@@ -758,6 +842,7 @@ Future<Map<String, dynamic>> _processDomain({
     'warnings': warnings,
     'changesAlreadyMigrated': changesAlreadyMigrated,
     'statesAlreadyMigrated': statesAlreadyMigrated,
+    'debug': debugMessages,
   };
 }
 
@@ -837,10 +922,13 @@ Future<void> _appendDomainSummary({
         )
         ..writeln(
           '    finalState: ${change['finalState'] == true ? 'true' : 'false'}',
-        )
-        ..writeln(
-          '    stateDataHash: ${_yamlQuote((change['stateDataHash']?.toString() ?? '') + mark)}',
         );
+      out.writeln(
+        '    storageId: ${_yamlQuote(change['storageId']?.toString() ?? '')}',
+      );
+      out.writeln(
+        '    stateDataHash: ${_yamlQuote((change['stateDataHash']?.toString() ?? '') + mark)}',
+      );
     }
   }
 
@@ -924,6 +1012,17 @@ Future<void> _appendDomainSummary({
     }
   }
 
+  // Write debug messages (if any)
+  final debug = (summary['debug'] as List<dynamic>? ?? const <dynamic>[])
+      .cast<String>();
+
+  if (debug.isNotEmpty) {
+    out.writeln('debug:');
+    for (final d in debug) {
+      out.writeln('  - ${_yamlQuote(d)}');
+    }
+  }
+
   if (changesAlreadyMigrated.isNotEmpty) {
     out.writeln('changesAlreadyMigrated:');
     for (final c in changesAlreadyMigrated) {
@@ -939,7 +1038,11 @@ Future<void> _appendDomainSummary({
         )
         ..writeln(
           '    entityId: ${_yamlQuote(c['entityId']?.toString() ?? '')}',
-        )
+        );
+      out.writeln(
+        '    storageId: ${_yamlQuote(c['storageId']?.toString() ?? '')}',
+      );
+      out
         ..writeln(
           '    stateDataHash: ${_yamlQuote((c['stateDataHash']?.toString() ?? '') + mark)}',
         )
@@ -997,6 +1100,9 @@ Options:
   --stage <stage>           Deployment stage label for logging. Default: dev
   --domain-type <type>      Domain type to scan. Default: project
   --domain-type-id <type:id>  Process a single domain identified by '{domainType}:{domainId}'. When provided, this overrides --domain-type and processes only that one domain.
+  --debug-domain-id <domainId>
+                            Emit targeted debug entries for a single domain into the YAML summary.
+  --debug-seqs <a,b,c>       Comma-separated seq values to include in the debug section for --debug-domain-id.
   --page-size <count>       Number of source changes per page. Default: 100. Use -1 to let the storage/backend decide (no limit).
   --summary-file <path>     File to append per-domain YAML summaries to. Default: migration_state_data_hash_summary.yaml
   --write-changes <true|false>
