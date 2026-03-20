@@ -143,17 +143,9 @@ T deserializeChangeLogEntrySafely<T extends HasUnknownField>({
 }) {
   late final Map<String, dynamic> json2;
   final parsed = _parseEntityType(json['entityType']);
-  if (parsed.entityType == null && parsed.raw != null) {
-    // Preserve the original unknown entityType string so downstream
-    // processors can handle forward-compatible types (e.g., via an
-    // `EntityType.unknown` handler). Do not convert to operation='hold'.
-    final safeJson = toSafeJson(json);
-    // Keep the raw entityType string provided by the caller so storage
-    // implementations and entity-state factories can route appropriately.
-    safeJson['entityType'] = parsed.raw;
-    // Preserve any existing operationInfoJson as provided by toSafeJson.
-    // Do not annotate with 'hold' metadata; callers should not rely on
-    // injected hold markers.
+  if (parsed.entityType == null &&
+      (parsed.raw == null || parsed.raw!.isEmpty)) {
+    final safeJson = {...json, 'entityType': kEntityTypeMissing};
     json2 = safeJson;
   } else {
     json2 = json;
