@@ -352,6 +352,8 @@ Future<Map<String, dynamic>> _processDomain({
           'sourceStateDataHash_orig_':
               item['stateDataHash_orig_']?.toString() ?? '',
           'stateDataHash_orig_': item['stateDataHash_orig_']?.toString() ?? '',
+          // keep the full source entityState JSON for debugging
+          'entityState_source': Map<String, dynamic>.from(item),
         };
       }
 
@@ -408,6 +410,8 @@ Future<Map<String, dynamic>> _processDomain({
         existing['stateDataHash'] = entityState.stateDataHash ?? '';
         // Track the replay-computed _orig_ separately from source _orig_.
         existing['stateDataHash_orig_'] = entityState.stateDataHash_orig_ ?? '';
+        // keep the full migration/replay entityState JSON for debugging
+        existing['entityState_migration'] = Map<String, dynamic>.from(item);
         migrationStates[key] = existing;
       }
 
@@ -592,6 +596,12 @@ Future<Map<String, dynamic>> _processDomain({
         'sourceField': 'sourceStateDataHash',
         'sourceValue': sourceStateDataHash,
         'finalValue': finalStateDataHash,
+        'sourceJson': stableStringify(
+          state['entityState_source'] ?? <String, dynamic>{},
+        ),
+        'finalJson': stableStringify(
+          state['entityState_migration'] ?? <String, dynamic>{},
+        ),
       });
     }
 
@@ -606,6 +616,12 @@ Future<Map<String, dynamic>> _processDomain({
         'sourceField': 'sourceStateDataHash_orig_',
         'sourceValue': sourceStateDataHashOrig,
         'finalValue': finalStateDataHashOrig,
+        'sourceJson': stableStringify(
+          state['entityState_source'] ?? <String, dynamic>{},
+        ),
+        'finalJson': stableStringify(
+          state['entityState_migration'] ?? <String, dynamic>{},
+        ),
       });
     }
   }
@@ -771,6 +787,8 @@ Future<void> _appendDomainSummary({
         'sourceField',
         'sourceValue',
         'finalValue',
+        'sourceJson',
+        'finalJson',
       ];
 
       for (final key in preferredOrder) {
