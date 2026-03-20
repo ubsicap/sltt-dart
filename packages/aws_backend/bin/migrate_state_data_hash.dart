@@ -529,19 +529,30 @@ Future<Map<String, dynamic>> _processDomain({
       continue;
     }
 
-    for (final seq in entityToSeqs[eid]!) {
+    // Determine whether the final change for this entity had stateChanged=true
+    final seqsForEntity = entityToSeqs[eid]!;
+    final lastSeq = seqsForEntity.isNotEmpty ? seqsForEntity.last : null;
+    final finalStateChanged = lastSeq != null
+        ? (migrationChanges[lastSeq]?['stateChanged'] == true)
+        : false;
+
+    for (final seq in seqsForEntity) {
       final c = migrationChanges[seq]!;
       changesAlreadyMigrated.add({
         'seq': seq,
         'entityId': eid,
+        'stateChanged': c['stateChanged'] == true,
+        'finalState': seq == lastSeq,
         'stateDataHash': c['stateDataHash']?.toString() ?? '',
         // record the original source change value for later inspection
-        'origStateDataHash':
+        'stateDataHash_orig_':
             migrationOriginalChanges[seq]?['stateDataHash']?.toString() ?? '',
       });
       migrationChanges.remove(seq);
     }
 
+    // Include the final change's stateChanged flag on the migrated state entry
+    state['stateChanged'] = finalStateChanged;
     statesAlreadyMigrated.add(state);
     migrationStates.remove(stateKey);
   }
@@ -919,13 +930,19 @@ Future<void> _appendDomainSummary({
       out
         ..writeln('  - seq: ${c['seq']}')
         ..writeln(
+          '    stateChanged: ${c['stateChanged'] == true ? 'true' : 'false'}',
+        )
+        ..writeln(
+          '    finalState: ${c['finalState'] == true ? 'true' : 'false'}',
+        )
+        ..writeln(
           '    entityId: ${_yamlQuote(c['entityId']?.toString() ?? '')}',
         )
         ..writeln(
           '    stateDataHash: ${_yamlQuote(c['stateDataHash']?.toString() ?? '')}',
         )
         ..writeln(
-          '    origStateDataHash: ${_yamlQuote(c['origStateDataHash']?.toString() ?? '')}',
+          '    stateDataHash_orig_: ${_yamlQuote(c['stateDataHash_orig_']?.toString() ?? '')}',
         );
     }
   }
@@ -939,6 +956,9 @@ Future<void> _appendDomainSummary({
         )
         ..writeln(
           '    entityId: ${_yamlQuote(s['entityId']?.toString() ?? '')}',
+        )
+        ..writeln(
+          '    stateChanged: ${s['stateChanged'] == true ? 'true' : 'false'}',
         )
         ..writeln(
           '    stateDataHash: ${_yamlQuote(s['stateDataHash']?.toString() ?? '')}',
