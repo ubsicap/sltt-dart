@@ -118,24 +118,18 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  if (writeChanges) {
-    stderr.writeln(
-      '--write-changes is not implemented yet. This script currently supports dry-run output only.',
-    );
-    exitCode = 2;
-    return;
-  }
-
   awsProfile ??= 'sltt-dart-dev';
 
-  print('🔧 Starting changeDataHash dry-run migration');
+  print(
+    '🔧 Starting changeDataHash migration${writeChanges ? '' : ' (dry-run)'}',
+  );
   print('   AWS Profile: $awsProfile');
   print('   Stage: $stage');
   print('   Domain Type: $domainType');
   print('   Page Size: $pageSize');
   print('   Summary File: $summaryFile');
   print('   Include Test Domains: $includeTestDomainIds');
-  print('   Dry Run: true');
+  print('   Write Changes: $writeChanges');
 
   final useCloudStorage = Platform.environment['USE_CLOUD_STORAGE'] ?? 'true';
   final useLocalDynamoDB = useCloudStorage != 'true';
@@ -174,6 +168,9 @@ Future<void> main(List<String> args) async {
       pageSize: pageSize,
       includeTestDomainIds: includeTestDomainIds,
       writeChanges: writeChanges,
+      domainTypeId: (specificDomainType != null && specificDomainId != null)
+          ? '$specificDomainType:$specificDomainId'
+          : null,
     );
 
     for (final domainId in domainIds) {
@@ -761,6 +758,7 @@ Future<void> _appendSummaryHeader({
   required int pageSize,
   required bool includeTestDomainIds,
   required bool writeChanges,
+  String? domainTypeId,
 }) async {
   final file = File(summaryFilePath);
   await file.parent.create(recursive: true);
@@ -771,10 +769,11 @@ Future<void> _appendSummaryHeader({
     ..writeln('# awsProfile: ${_yamlQuote(awsProfile)}')
     ..writeln('# stage: ${_yamlQuote(stage)}')
     ..writeln('# domainType: ${_yamlQuote(domainType)}')
+    ..writeln('# domainTypeId: ${_yamlQuote(domainTypeId ?? '')}')
     ..writeln('# pageSize: $pageSize')
     ..writeln('# includeTestDomainIds: $includeTestDomainIds')
     ..writeln(
-      '# writeChanges: ${_yamlQuote(writeChanges.toString())} (dry-run)',
+      '# writeChanges: $writeChanges${writeChanges ? '' : ' (dry-run)'}',
     )
     ..writeln();
 

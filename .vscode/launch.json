@@ -80,7 +80,7 @@
                 "--domain-type", "project",
                 "--include-test-domainIds", "false",
                 "--page-size", "-1",
-                "--domain-type-id", "project:TEST_EPYLE",
+                "--write-changes", "false",
             ],
             "cwd": "${workspaceFolder}",
             "env": {
