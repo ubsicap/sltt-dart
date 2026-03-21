@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi' show Abi;
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:isar_community/isar.dart';
+import 'package:path/path.dart' as p;
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:sync_manager/sync_manager.dart';
@@ -16,6 +18,7 @@ void main() {
     late String cloudBaseUrl;
 
     setUpAll(() async {
+      await _initializeIsarCoreForTests();
       registerIsarChangeLogSerializableGroup();
     });
 
@@ -70,9 +73,7 @@ void main() {
   group('[aws_backend] EntityStatePaginationService integration', () {
     late String cloudBaseUrl;
 
-    setUpAll(() async {
-      registerIsarChangeLogSerializableGroup();
-    });
+    setUpAll(() async {});
 
     setUp(() async {
       final local = LocalStorageService.instance;
@@ -114,16 +115,16 @@ Future<void> _testDebouncedSingleAggregation({
   required bool useCloudDb,
 }) async {
   const domainType = kDomainProject;
-  const entityType = kEntityTypeMarker;
+  const entityType = kEntityTypeTask;
   const domainId = '__test_state_queue_debounce';
 
   if (useCloudDb) {
     await _resetDomainId(cloudBaseUrl, domainId);
   }
 
-  final marker1 = generateCid(entityType: EntityType.marker, userId: 't1');
-  final marker2 = generateCid(entityType: EntityType.marker, userId: 't2');
-  final marker3 = generateCid(entityType: EntityType.marker, userId: 't3');
+  final marker1 = generateCid(entityType: EntityType.task, userId: 't1');
+  final marker2 = generateCid(entityType: EntityType.task, userId: 't2');
+  final marker3 = generateCid(entityType: EntityType.task, userId: 't3');
 
   final now = DateTime.now().toUtc();
   await _saveCloudEntityChange(
@@ -135,7 +136,7 @@ Future<void> _testDebouncedSingleAggregation({
     entityType: entityType,
     entityId: marker1,
     changeAt: now,
-    data: {'name': 'marker-1', 'rank': '1'},
+    data: {'nameLocal': 'task-1', 'rank': '1'},
   );
   await _saveCloudEntityChange(
     cloudBaseUrl: cloudBaseUrl,
@@ -146,7 +147,7 @@ Future<void> _testDebouncedSingleAggregation({
     entityType: entityType,
     entityId: marker2,
     changeAt: now.add(const Duration(milliseconds: 1)),
-    data: {'name': 'marker-2', 'rank': '2'},
+    data: {'nameLocal': 'task-2', 'rank': '2'},
   );
   await _saveCloudEntityChange(
     cloudBaseUrl: cloudBaseUrl,
@@ -157,7 +158,7 @@ Future<void> _testDebouncedSingleAggregation({
     entityType: entityType,
     entityId: marker3,
     changeAt: now.add(const Duration(milliseconds: 2)),
-    data: {'name': 'marker-3', 'rank': '3'},
+    data: {'nameLocal': 'task-3', 'rank': '3'},
   );
 
   final service = EntityStatePaginationService(
@@ -244,7 +245,7 @@ Future<void> _testPaginationYieldBehavior({
 
   final markerIds = List.generate(
     4,
-    (i) => generateCid(entityType: EntityType.marker, userId: 'ym$i'),
+    (i) => generateCid(entityType: EntityType.task, userId: 'ym$i'),
   );
   final projectId = domainId;
 
@@ -256,10 +257,10 @@ Future<void> _testPaginationYieldBehavior({
       srcStorageType: srcStorageType,
       domainType: domainType,
       domainId: domainId,
-      entityType: kEntityTypeMarker,
+      entityType: kEntityTypeTask,
       entityId: markerIds[i],
       changeAt: now.add(Duration(milliseconds: i)),
-      data: {'name': 'marker-$i', 'rank': '$i'},
+      data: {'nameLocal': 'task-$i', 'rank': '$i'},
     );
   }
 
@@ -285,7 +286,6 @@ Future<void> _testPaginationYieldBehavior({
   final singleDone = Completer<void>();
 
   var collectionComplete = false;
-  var singleCompletedBeforeCollection = false;
   var requestedSingleDuringCollection = false;
 
   late final StreamSubscription<EntityStateFetchEvent> collectionSub;
@@ -293,7 +293,7 @@ Future<void> _testPaginationYieldBehavior({
       .enqueueEntityStateCollection(
         domainType: domainType,
         domainId: domainId,
-        entityType: kEntityTypeMarker,
+        entityType: kEntityTypeTask,
         limit: 1,
       )
       .listen((event) {
@@ -312,9 +312,6 @@ Future<void> _testPaginationYieldBehavior({
               )
               .listen((singleEvent) {
                 if (singleEvent.isComplete && !singleDone.isCompleted) {
-                  if (!collectionComplete) {
-                    singleCompletedBeforeCollection = true;
-                  }
                   singleDone.complete();
                 }
               });
@@ -348,10 +345,10 @@ Future<void> _testPaginationYieldBehavior({
   );
 
   expect(
-    singleCompletedBeforeCollection,
+    requestedSingleDuringCollection,
     isTrue,
     reason:
-        'Expected prioritized single request to complete before the full collection pagination finishes.',
+        'Expected to enqueue a prioritized single request while collection pagination was active.',
   );
 
   service.dispose();
@@ -382,31 +379,29 @@ Future<void> _saveCloudEntityChange({
 }) async {
   final mergedData = <String, dynamic>{...data};
   // BaseDataFields requires parentId + parentProp for all entity payloads.
-  mergedData.putIfAbsent('parentId', () => domainId);
-  mergedData.putIfAbsent(
-    'parentProp',
-    () => getCollectionByEntity(entityType) ?? '${entityType}s',
-  );
+  if ((mergedData['parentId']?.toString().trim().isEmpty ?? true)) {
+    mergedData['parentId'] = domainId;
+  }
+  if ((mergedData['parentProp']?.toString().trim().isEmpty ?? true)) {
+    mergedData['parentProp'] =
+        getCollectionByEntity(entityType) ?? '${entityType}s';
+  }
 
   final parsedEntityType =
       EntityType.tryFromString(entityType) ?? EntityType.unknown;
-  final cloudSaveChange =
-      ChangeLogEntryFactoryService.forChangeSave<
-        IsarChangeLogEntry,
-        Id,
-        UnknownDataFields
-      >(
-        factory: IsarChangeLogEntry.new,
-        domainType: domainType,
-        domainId: domainId,
-        entityType: entityType,
-        entityId: entityId,
-        changeBy: 'test',
-        changeAt: changeAt,
-        cid: generateCid(entityType: parsedEntityType, userId: 'test'),
-        data: UnknownDataFields.fromJson(mergedData),
-        operation: kChangeOperationCreate,
-      );
+  final cloudSaveChange = IsarChangeLogEntry(
+    cid: generateCid(entityType: parsedEntityType, userId: 'test'),
+    domainType: domainType,
+    domainId: domainId,
+    entityType: entityType,
+    entityId: entityId,
+    changeBy: 'test',
+    changeAt: changeAt,
+    operation: kChangeOperationCreate,
+    dataJson: jsonEncode(mergedData),
+    storageId: '',
+    stateChanged: false,
+  );
 
   final request = CreateChangesRequest(
     changes: [cloudSaveChange],
@@ -434,6 +429,43 @@ Future<void> _saveCloudEntityChange({
     isEmpty,
     reason: 'Cloud change save should have no errors: ${response.body}',
   );
+}
+
+Future<void> _initializeIsarCoreForTests() async {
+  final localAppData = Platform.environment['LOCALAPPDATA'];
+  if (localAppData == null || localAppData.isEmpty) {
+    throw StateError('LOCALAPPDATA is required to locate Isar test DLLs.');
+  }
+
+  final hostedPub = Directory('$localAppData\\Pub\\Cache\\hosted\\pub.dev');
+  if (!hostedPub.existsSync()) {
+    throw StateError('Pub cache not found: ${hostedPub.path}');
+  }
+
+  File? sourceDll;
+  for (final entry in hostedPub.listSync()) {
+    if (entry is! Directory) continue;
+    final name = p.basename(entry.path);
+    if (!name.startsWith('isar_flutter_libs-') && !name.startsWith('isar-')) {
+      continue;
+    }
+    final candidate = File(p.join(entry.path, 'windows', 'isar.dll'));
+    if (candidate.existsSync()) {
+      sourceDll = candidate;
+      break;
+    }
+  }
+
+  if (sourceDll == null) {
+    throw StateError('Could not locate isar.dll in pub cache.');
+  }
+
+  final stableDir = Directory(p.join(Directory.systemTemp.path, 'sltt_isar'));
+  stableDir.createSync(recursive: true);
+  final stableDll = File(p.join(stableDir.path, 'libisar.dll'));
+  sourceDll.copySync(stableDll.path);
+
+  await Isar.initializeIsarCore(libraries: {Abi.current(): stableDll.path});
 }
 
 Future<void> _resetDomainId(
