@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ffi' show Abi;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
-import 'package:isar_community/isar.dart';
-import 'package:path/path.dart' as p;
+import 'package:isar_community/isar.dart' show Isar;
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:sync_manager/sync_manager.dart';
@@ -310,7 +308,6 @@ Future<void> _testPaginationYieldBehavior({
   final collectionDone = Completer<void>();
   final singleDone = Completer<void>();
 
-  var collectionComplete = false;
   var requestedSingleDuringCollection = false;
 
   late final StreamSubscription<EntityStateFetchEvent> collectionSub;
@@ -343,7 +340,6 @@ Future<void> _testPaginationYieldBehavior({
         }
 
         if (event.isComplete && !collectionDone.isCompleted) {
-          collectionComplete = true;
           collectionDone.complete();
         }
       });
@@ -453,7 +449,7 @@ Future<void> _testDuplicateSingleEnqueueBehavior({
     entityId: domainIdB,
   );
   await Future<void>.delayed(const Duration(milliseconds: 20));
-  final streamA2 = service.enqueueEntityState(
+  service.enqueueEntityState(
     domainType: domainType,
     domainId: domainIdA,
     entityType: entityType,
@@ -602,7 +598,7 @@ Future<void> _testDuplicateCollectionEnqueueBehavior({
     limit: 1,
   );
   await Future<void>.delayed(const Duration(milliseconds: 20));
-  final streamA2 = service.enqueueEntityStateCollection(
+  service.enqueueEntityStateCollection(
     domainType: domainType,
     domainId: domainIdA,
     entityType: entityType,
@@ -754,40 +750,41 @@ Future<void> _saveCloudEntityChange({
 }
 
 Future<void> _initializeIsarCoreForTests() async {
-  final localAppData = Platform.environment['LOCALAPPDATA'];
-  if (localAppData == null || localAppData.isEmpty) {
-    throw StateError('LOCALAPPDATA is required to locate Isar test DLLs.');
-  }
+  await Isar.initializeIsarCore(download: true);
+  // final localAppData = Platform.environment['LOCALAPPDATA'];
+  // if (localAppData == null || localAppData.isEmpty) {
+  //   throw StateError('LOCALAPPDATA is required to locate Isar test DLLs.');
+  // }
 
-  final hostedPub = Directory('$localAppData\\Pub\\Cache\\hosted\\pub.dev');
-  if (!hostedPub.existsSync()) {
-    throw StateError('Pub cache not found: ${hostedPub.path}');
-  }
+  // final hostedPub = Directory('$localAppData\\Pub\\Cache\\hosted\\pub.dev');
+  // if (!hostedPub.existsSync()) {
+  //   throw StateError('Pub cache not found: ${hostedPub.path}');
+  // }
 
-  File? sourceDll;
-  for (final entry in hostedPub.listSync()) {
-    if (entry is! Directory) continue;
-    final name = p.basename(entry.path);
-    if (!name.startsWith('isar_flutter_libs-') && !name.startsWith('isar-')) {
-      continue;
-    }
-    final candidate = File(p.join(entry.path, 'windows', 'isar.dll'));
-    if (candidate.existsSync()) {
-      sourceDll = candidate;
-      break;
-    }
-  }
+  // File? sourceDll;
+  // for (final entry in hostedPub.listSync()) {
+  //   if (entry is! Directory) continue;
+  //   final name = p.basename(entry.path);
+  //   if (!name.startsWith('isar_flutter_libs-') && !name.startsWith('isar-')) {
+  //     continue;
+  //   }
+  //   final candidate = File(p.join(entry.path, 'windows', 'isar.dll'));
+  //   if (candidate.existsSync()) {
+  //     sourceDll = candidate;
+  //     break;
+  //   }
+  // }
 
-  if (sourceDll == null) {
-    throw StateError('Could not locate isar.dll in pub cache.');
-  }
+  // if (sourceDll == null) {
+  //   throw StateError('Could not locate isar.dll in pub cache.');
+  // }
 
-  final stableDir = Directory(p.join(Directory.systemTemp.path, 'sltt_isar'));
-  stableDir.createSync(recursive: true);
-  final stableDll = File(p.join(stableDir.path, 'libisar.dll'));
-  sourceDll.copySync(stableDll.path);
+  // final stableDir = Directory(p.join(Directory.systemTemp.path, 'sltt_isar'));
+  // stableDir.createSync(recursive: true);
+  // final stableDll = File(p.join(stableDir.path, 'libisar.dll'));
+  // sourceDll.copySync(stableDll.path);
 
-  await Isar.initializeIsarCore(libraries: {Abi.current(): stableDll.path});
+  // await Isar.initializeIsarCore(libraries: {Abi.current(): stableDll.path});
 }
 
 Future<void> _resetDomainId(
