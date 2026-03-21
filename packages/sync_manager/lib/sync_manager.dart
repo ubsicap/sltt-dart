@@ -3,6 +3,7 @@
 
 library sync_manager;
 
+export 'src/entity_state_pagination_service.dart';
 export 'src/isar_entity_state_storage_group.dart';
 // Export services
 export 'src/isar_storage_service.dart';

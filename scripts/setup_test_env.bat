@@ -56,7 +56,13 @@ if errorlevel 1 (
 	exit /b 3
 )
 
-echo Copied isar.dll to "%TARGET_ISAR_DIR%"
+copy /Y "%ISAR_DLL%" "%TARGET_ISAR_DIR%\libisar.dll" 1>nul
+if errorlevel 1 (
+	echo ERROR: Failed to copy libisar.dll to "%TARGET_ISAR_DIR%".
+	exit /b 3
+)
+
+echo Copied isar.dll and libisar.dll to "%TARGET_ISAR_DIR%"
 
 REM Prepend the isar.dll directory to PATH for this session only
 for %%F in ("%ISAR_DLL%") do set "ISAR_DIR=%%~dpF"
@@ -70,12 +76,15 @@ if not exist "%TEMP_DIR%" (
 )
 if exist "%TEMP_DIR%" (
   copy /Y "%ISAR_DLL%" "%TEMP_DIR%\isar.dll" 1>nul 2>nul
-  echo Copied isar.dll to "%TEMP_DIR%" for test kernel access
+	copy /Y "%ISAR_DLL%" "%TEMP_DIR%\libisar.dll" 1>nul 2>nul
+	echo Copied isar.dll and libisar.dll to "%TEMP_DIR%" for test kernel access
 )
 
 REM Hint Isar where to find the DLL explicitly
 set "ISAR_DLL_PATH=%ISAR_DIR%"
 echo Setting ISAR_DLL_PATH to "%ISAR_DIR%"
+set "ISAR_LIBRARY_PATH=%TARGET_ISAR_DIR%\libisar.dll"
+echo Setting ISAR_LIBRARY_PATH to "%ISAR_LIBRARY_PATH%"
 
 if /I "%FIRST_ARG%"=="--setup-only" (
 	echo Setup complete; not running tests (use without --setup-only to run tests).

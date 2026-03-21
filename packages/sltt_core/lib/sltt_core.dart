@@ -34,4 +34,5 @@ export 'src/storage/media/file_media_storage.dart';
 export 'src/storage/media/null_media_storage.dart';
 export 'src/storage/stats/entity_type_stats.dart';
 export 'src/storage/stats/entity_type_summary.dart';
+export 'src/utils/concurrency_utils.dart';
 export 'src/utils/json_utils.dart';

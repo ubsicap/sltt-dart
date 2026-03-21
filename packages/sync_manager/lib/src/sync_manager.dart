@@ -7,6 +7,7 @@ import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 
+import 'entity_state_pagination_service.dart';
 import 'isar_storage_service.dart';
 
 class SyncManager {
@@ -33,12 +34,51 @@ class SyncManager {
   // Public getters for testing
   bool get autoOutsyncEnabled => _autoOutsyncEnabled;
   StreamSubscription<void>? get changeLogSubscription => _changeLogSubscription;
+  EntityStatePaginationService? _entityStatePaginationService;
+
+  EntityStatePaginationService get entityStatePaginationService {
+    _entityStatePaginationService ??= EntityStatePaginationService(
+      baseUrl: _cloudStorageUrl,
+    )..startProcessing();
+    return _entityStatePaginationService!;
+  }
 
   /// Configure the cloud storage URL (useful for testing with localhost)
   void configureCloudUrl(String cloudUrl) {
     _cloudStorageUrl = cloudUrl;
+    _entityStatePaginationService?.updateBaseUrl(cloudUrl);
     SlttLogger.logger.info(
       '[SyncManager] Cloud URL configured to: $_cloudStorageUrl',
+    );
+  }
+
+  Stream<EntityStateFetchEvent> enqueueEntityState({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+  }) {
+    return entityStatePaginationService.enqueueEntityState(
+      domainType: domainType,
+      domainId: domainId,
+      entityType: entityType,
+      entityId: entityId,
+    );
+  }
+
+  Stream<EntityStateFetchEvent> enqueueEntityStatesCollection({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    int limit = 100,
+    String? cursor,
+  }) {
+    return entityStatePaginationService.enqueueEntityStateCollection(
+      domainType: domainType,
+      domainId: domainId,
+      entityType: entityType,
+      limit: limit,
+      cursor: cursor,
     );
   }
 
@@ -612,6 +652,8 @@ class SyncManager {
     if (_initialized) {
       // Clean up auto-sync resources
       disableAutoOutsync();
+      _entityStatePaginationService?.dispose();
+      _entityStatePaginationService = null;
 
       if (_ownsLocalStorage) {
         await _localStorage.close();
