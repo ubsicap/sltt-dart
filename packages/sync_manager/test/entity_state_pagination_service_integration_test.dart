@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ffi' show Abi;
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
 import 'package:isar_community/isar.dart';
 import 'package:path/path.dart' as p;
@@ -61,6 +62,30 @@ void main() {
       '[isar] cursor pagination yields to incoming single requests',
       () async {
         await _testPaginationYieldBehavior(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: 'isar-cloud-storage',
+          srcStorageType: 'cloud',
+          useCloudDb: false,
+        );
+      },
+    );
+
+    test(
+      '[isar] duplicate single enqueue: discard active, bump queued priority',
+      () async {
+        await _testDuplicateSingleEnqueueBehavior(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: 'isar-cloud-storage',
+          srcStorageType: 'cloud',
+          useCloudDb: false,
+        );
+      },
+    );
+
+    test(
+      '[isar] duplicate collection enqueue: discard active, bump queued priority',
+      () async {
+        await _testDuplicateCollectionEnqueueBehavior(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: 'isar-cloud-storage',
           srcStorageType: 'cloud',
@@ -351,6 +376,303 @@ Future<void> _testPaginationYieldBehavior({
         'Expected to enqueue a prioritized single request while collection pagination was active.',
   );
 
+  service.dispose();
+}
+
+Future<void> _testDuplicateSingleEnqueueBehavior({
+  required String cloudBaseUrl,
+  required String srcStorageId,
+  required String srcStorageType,
+  required bool useCloudDb,
+}) async {
+  const domainType = kDomainProject;
+  const entityType = kEntityTypeProject;
+  const domainIdA = '__test_state_dup_single_A';
+  const domainIdB = '__test_state_dup_single_B';
+
+  if (useCloudDb) {
+    await _resetDomainId(cloudBaseUrl, domainIdA);
+    await _resetDomainId(cloudBaseUrl, domainIdB);
+  }
+
+  final now = DateTime.now().toUtc();
+  await _saveCloudEntityChange(
+    cloudBaseUrl: cloudBaseUrl,
+    srcStorageId: srcStorageId,
+    srcStorageType: srcStorageType,
+    domainType: domainType,
+    domainId: domainIdA,
+    entityType: entityType,
+    entityId: domainIdA,
+    changeAt: now,
+    data: {'nameLocal': 'A', 'rank': '1'},
+  );
+  await _saveCloudEntityChange(
+    cloudBaseUrl: cloudBaseUrl,
+    srcStorageId: srcStorageId,
+    srcStorageType: srcStorageType,
+    domainType: domainType,
+    domainId: domainIdB,
+    entityType: entityType,
+    entityId: domainIdB,
+    changeAt: now.add(const Duration(milliseconds: 1)),
+    data: {'nameLocal': 'B', 'rank': '2'},
+  );
+
+  final delayedDio = Dio()
+    ..interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+          handler.next(options);
+        },
+      ),
+    );
+
+  final service = EntityStatePaginationService(
+    baseUrl: cloudBaseUrl,
+    maxConcurrentRequests: 1,
+    singleRequestDebounce: const Duration(milliseconds: 1),
+    dio: delayedDio,
+  );
+
+  final completionOrder = <String>[];
+  final doneA = Completer<void>();
+  final doneB = Completer<void>();
+
+  final streamA1 = service.enqueueEntityState(
+    domainType: domainType,
+    domainId: domainIdA,
+    entityType: entityType,
+    entityId: domainIdA,
+  );
+  final streamB = service.enqueueEntityState(
+    domainType: domainType,
+    domainId: domainIdB,
+    entityType: entityType,
+    entityId: domainIdB,
+  );
+  await Future<void>.delayed(const Duration(milliseconds: 20));
+  final streamA2 = service.enqueueEntityState(
+    domainType: domainType,
+    domainId: domainIdA,
+    entityType: entityType,
+    entityId: domainIdA,
+  );
+
+  final subA = streamA1.listen((event) {
+    if (event.isComplete && !doneA.isCompleted) {
+      completionOrder.add(domainIdA);
+      doneA.complete();
+    }
+  });
+  final subB = streamB.listen((event) {
+    if (event.isComplete && !doneB.isCompleted) {
+      completionOrder.add(domainIdB);
+      doneB.complete();
+    }
+  });
+
+  service.startProcessing();
+
+  await Future.wait([
+    doneA.future.timeout(const Duration(seconds: 30)),
+    doneB.future.timeout(const Duration(seconds: 30)),
+  ]);
+
+  expect(
+    completionOrder.first,
+    equals(domainIdA),
+    reason: 'Re-enqueued older single job should be bumped to top of LIFO.',
+  );
+  expect(
+    service.requeuedQueuedDuplicateSingleCount,
+    greaterThanOrEqualTo(1),
+    reason:
+        'Queued duplicate single should be re-enqueued instead of duplicated.',
+  );
+
+  const domainIdC = '__test_state_dup_single_C';
+  await _saveCloudEntityChange(
+    cloudBaseUrl: cloudBaseUrl,
+    srcStorageId: srcStorageId,
+    srcStorageType: srcStorageType,
+    domainType: domainType,
+    domainId: domainIdC,
+    entityType: entityType,
+    entityId: domainIdC,
+    changeAt: now.add(const Duration(seconds: 1)),
+    data: {'nameLocal': 'C', 'rank': '3'},
+  );
+
+  final activeSingleDone = Completer<void>();
+  final activeSingleStream = service.enqueueEntityState(
+    domainType: domainType,
+    domainId: domainIdC,
+    entityType: entityType,
+    entityId: domainIdC,
+  );
+  final activeSub = activeSingleStream.listen((event) {
+    if (event.isComplete && !activeSingleDone.isCompleted) {
+      activeSingleDone.complete();
+    }
+  });
+
+  await Future<void>.delayed(const Duration(milliseconds: 20));
+  service.enqueueEntityState(
+    domainType: domainType,
+    domainId: domainIdC,
+    entityType: entityType,
+    entityId: domainIdC,
+  );
+  await activeSingleDone.future.timeout(const Duration(seconds: 30));
+  expect(
+    service.discardedActiveDuplicateSingleCount,
+    greaterThanOrEqualTo(1),
+    reason: 'Active duplicate single should be discarded.',
+  );
+
+  await activeSub.cancel();
+  await subA.cancel();
+  await subB.cancel();
+  service.dispose();
+}
+
+Future<void> _testDuplicateCollectionEnqueueBehavior({
+  required String cloudBaseUrl,
+  required String srcStorageId,
+  required String srcStorageType,
+  required bool useCloudDb,
+}) async {
+  const domainType = kDomainProject;
+  const entityType = kEntityTypeTask;
+  const domainIdA = '__test_state_dup_collection_A';
+  const domainIdB = '__test_state_dup_collection_B';
+
+  if (useCloudDb) {
+    await _resetDomainId(cloudBaseUrl, domainIdA);
+    await _resetDomainId(cloudBaseUrl, domainIdB);
+  }
+
+  final now = DateTime.now().toUtc();
+  for (var i = 0; i < 3; i++) {
+    await _saveCloudEntityChange(
+      cloudBaseUrl: cloudBaseUrl,
+      srcStorageId: srcStorageId,
+      srcStorageType: srcStorageType,
+      domainType: domainType,
+      domainId: domainIdA,
+      entityType: entityType,
+      entityId: 'A_task_$i',
+      changeAt: now.add(Duration(milliseconds: i)),
+      data: {'nameLocal': 'A-$i', 'rank': '$i'},
+    );
+    await _saveCloudEntityChange(
+      cloudBaseUrl: cloudBaseUrl,
+      srcStorageId: srcStorageId,
+      srcStorageType: srcStorageType,
+      domainType: domainType,
+      domainId: domainIdB,
+      entityType: entityType,
+      entityId: 'B_task_$i',
+      changeAt: now.add(Duration(milliseconds: 10 + i)),
+      data: {'nameLocal': 'B-$i', 'rank': '$i'},
+    );
+  }
+
+  final service = EntityStatePaginationService(
+    baseUrl: cloudBaseUrl,
+    maxConcurrentRequests: 1,
+  );
+
+  final firstPageDomains = <String>[];
+  final doneA = Completer<void>();
+  final doneB = Completer<void>();
+
+  final streamA1 = service.enqueueEntityStateCollection(
+    domainType: domainType,
+    domainId: domainIdA,
+    entityType: entityType,
+    limit: 1,
+  );
+  final streamB = service.enqueueEntityStateCollection(
+    domainType: domainType,
+    domainId: domainIdB,
+    entityType: entityType,
+    limit: 1,
+  );
+  await Future<void>.delayed(const Duration(milliseconds: 20));
+  final streamA2 = service.enqueueEntityStateCollection(
+    domainType: domainType,
+    domainId: domainIdA,
+    entityType: entityType,
+    limit: 1,
+  );
+
+  expect(
+    service.requeuedQueuedDuplicateCollectionCount,
+    greaterThanOrEqualTo(1),
+    reason:
+        'Queued duplicate collection should be re-enqueued and preserve pagination state.',
+  );
+
+  var activeDuplicateCollectionTriggered = false;
+
+  final subA = streamA1.listen((event) {
+    if (!event.isComplete &&
+        event.items.isNotEmpty &&
+        !firstPageDomains.contains(domainIdA)) {
+      firstPageDomains.add(domainIdA);
+    }
+    if (!event.isComplete &&
+        event.hasMore &&
+        !activeDuplicateCollectionTriggered) {
+      activeDuplicateCollectionTriggered = true;
+      service.enqueueEntityStateCollection(
+        domainType: domainType,
+        domainId: domainIdA,
+        entityType: entityType,
+        limit: 1,
+      );
+    }
+    if (event.isComplete && !doneA.isCompleted) {
+      doneA.complete();
+    }
+  });
+
+  final subB = streamB.listen((event) {
+    if (!event.isComplete &&
+        event.items.isNotEmpty &&
+        !firstPageDomains.contains(domainIdB)) {
+      firstPageDomains.add(domainIdB);
+    }
+    if (event.isComplete && !doneB.isCompleted) {
+      doneB.complete();
+    }
+  });
+
+  service.startProcessing();
+
+  await Future.wait([
+    doneA.future.timeout(const Duration(seconds: 30)),
+    doneB.future.timeout(const Duration(seconds: 30)),
+  ]);
+
+  expect(
+    firstPageDomains.first,
+    equals(domainIdA),
+    reason:
+        'Re-enqueued older collection job should be bumped to top of LIFO before other queued collections.',
+  );
+  expect(
+    service.discardedActiveDuplicateCollectionCount,
+    greaterThanOrEqualTo(1),
+    reason:
+        'Active duplicate collection should be discarded instead of creating a second in-flight job.',
+  );
+
+  await subA.cancel();
+  await subB.cancel();
   service.dispose();
 }
 

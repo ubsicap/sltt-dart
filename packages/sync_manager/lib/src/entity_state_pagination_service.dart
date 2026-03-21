@@ -109,9 +109,21 @@ class EntityStatePaginationService {
 
   int _mergedSingleBatchCount = 0;
   int _yieldedActiveJobCount = 0;
+  int _discardedActiveDuplicateSingleCount = 0;
+  int _discardedActiveDuplicateCollectionCount = 0;
+  int _requeuedQueuedDuplicateSingleCount = 0;
+  int _requeuedQueuedDuplicateCollectionCount = 0;
 
   int get mergedSingleBatchCount => _mergedSingleBatchCount;
   int get yieldedActiveJobCount => _yieldedActiveJobCount;
+  int get discardedActiveDuplicateSingleCount =>
+      _discardedActiveDuplicateSingleCount;
+  int get discardedActiveDuplicateCollectionCount =>
+      _discardedActiveDuplicateCollectionCount;
+  int get requeuedQueuedDuplicateSingleCount =>
+      _requeuedQueuedDuplicateSingleCount;
+  int get requeuedQueuedDuplicateCollectionCount =>
+      _requeuedQueuedDuplicateCollectionCount;
 
   void updateBaseUrl(String baseUrl) {
     _baseUrl = baseUrl;
@@ -194,6 +206,7 @@ class EntityStatePaginationService {
           entityId: entityId,
         )];
     if (existingSingleActive != null) {
+      _discardedActiveDuplicateSingleCount++;
       return existingSingleActive.progressStream;
     }
 
@@ -207,6 +220,7 @@ class EntityStatePaginationService {
     if (existingSingleInQueueIndex != -1) {
       final queued = _queueLifo.removeAt(existingSingleInQueueIndex);
       _queueLifo.add(queued);
+      _requeuedQueuedDuplicateSingleCount++;
       _processQueue();
       return queued.progressStream;
     }
@@ -253,6 +267,7 @@ class EntityStatePaginationService {
     if (existingIndex != -1) {
       final queued = _queueLifo.removeAt(existingIndex);
       _queueLifo.add(queued);
+      _requeuedQueuedDuplicateCollectionCount++;
       _processQueue();
       return queued.progressStream;
     }
@@ -264,6 +279,7 @@ class EntityStatePaginationService {
     );
     final active = _activeJobs[key];
     if (active != null) {
+      _discardedActiveDuplicateCollectionCount++;
       return active.progressStream;
     }
 
