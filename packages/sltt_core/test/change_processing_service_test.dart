@@ -1352,6 +1352,228 @@ void main() {
           },
         );
 
+        test(
+          'sync mode duplicate remote cid recomputes stateDataHash from merged state updates and existing state',
+          () async {
+            final duplicateCid = generateCid(entityType: EntityType.task);
+            final initialChangeAt = DateTime.now().toUtc();
+            final initial = {
+              'domainId': 'test-project',
+              'domainType': 'project',
+              'entityType': 'task',
+              'entityId': 'test-project-entity-dup-hash',
+              'changeBy': 'user1',
+              'changeAt': initialChangeAt.toIso8601String(),
+              'cid': duplicateCid,
+              'storageId': '',
+              'operation': 'create',
+              'operationInfoJson': '{}',
+              'stateChanged': true,
+              'unknownJson': '{}',
+              'dataJson':
+                  '{"nameLocal": "Before Duplicate", "parentId": "root", "parentProp": "pList"}',
+            };
+
+            final seedResult = await ChangeProcessingService.storeChanges(
+              changes: [initial],
+              storage: localStorage,
+              storageMode: 'save',
+              srcStorageType: 'local',
+              srcStorageId: 'test-src-local',
+              includeChangeUpdates: false,
+              includeStateUpdates: false,
+            );
+            expect(
+              seedResult.isSuccess,
+              isTrue,
+              reason: seedResult.errorMessage,
+            );
+
+            final before = await localStorage.getEntityState(
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'task',
+              entityId: 'test-project-entity-dup-hash',
+            );
+            expect(before, isNotNull);
+
+            final seededChange = await localStorage.getChange(
+              domainType: 'project',
+              domainId: 'test-project',
+              cid: duplicateCid,
+            );
+            expect(seededChange, isNotNull);
+
+            await localStorage.updateChangeLogAndStates(
+              domainType: 'project',
+              requests: [
+                ChangeLogAndStateRequest(
+                  changeLogEntry: seededChange!,
+                  changeUpdates: const {},
+                  entityState: before,
+                  stateUpdates: const {'stateDataHash': 'staleStateDataHash'},
+                  operationCounts: OperationCounts(),
+                  skipChangeLogWrite: true,
+                  skipStateWrite: false,
+                ),
+              ],
+            );
+
+            final staleBeforeDuplicate = await localStorage.getEntityState(
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'task',
+              entityId: 'test-project-entity-dup-hash',
+            );
+            expect(staleBeforeDuplicate, isNotNull);
+            expect(
+              staleBeforeDuplicate!.stateDataHash,
+              equals('staleStateDataHash'),
+            );
+
+            const remoteStateDataHash = 'remoteStateDataHash';
+            final remoteCloudAt = DateTime.now()
+                .toUtc()
+                .add(const Duration(minutes: 2))
+                .toIso8601String();
+            final duplicateRemoteChange = {
+              'domainId': 'test-project',
+              'domainType': 'project',
+              'entityType': 'task',
+              'entityId': 'test-project-entity-dup-hash',
+              'changeBy': 'cloud-user',
+              'changeAt': DateTime.now()
+                  .toUtc()
+                  .add(const Duration(minutes: 2))
+                  .toIso8601String(),
+              'cloudAt': remoteCloudAt,
+              'cid': duplicateCid,
+              'storageId': 'remote-cloud-storage',
+              'seq': 77,
+              'operation': 'update',
+              'operationInfoJson': '{}',
+              'stateChanged': true,
+              'stateDataHash': remoteStateDataHash,
+              'unknownJson': '{}',
+              'dataJson':
+                  '{"nameLocal": "Remote Should Not Win", "parentId": "root", "parentProp": "pList"}',
+            };
+
+            final duplicateResult = await ChangeProcessingService.storeChanges(
+              changes: [duplicateRemoteChange],
+              storage: localStorage,
+              storageMode: 'sync',
+              srcStorageType: 'cloud',
+              srcStorageId: 'remote-cloud-storage',
+              includeChangeUpdates: false,
+              includeStateUpdates: false,
+            );
+
+            expect(
+              duplicateResult.isSuccess,
+              isTrue,
+              reason: duplicateResult.errorMessage,
+            );
+
+            final after = await localStorage.getEntityState(
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'task',
+              entityId: 'test-project-entity-dup-hash',
+            );
+            expect(after, isNotNull);
+
+            final mergedForHash = <String, dynamic>{
+              ...before!.toJson(),
+              'change_cloudAt': remoteCloudAt,
+              'change_storedAt': after!.change_storedAt.toIso8601String(),
+            };
+            final expectedStateDataHash = computeStateDataHash(mergedForHash);
+
+            expect(
+              after.stateDataHash,
+              equals(expectedStateDataHash),
+              reason:
+                  'Final stateDataHash should be computed from merged state updates over existing state',
+            );
+            expect(
+              after.stateDataHash,
+              isNot(equals(remoteStateDataHash)),
+              reason:
+                  'Storage should be authoritative and not trust incoming remote stateDataHash',
+            );
+            expect(
+              after.stateDataHash,
+              isNot(equals('staleStateDataHash')),
+              reason:
+                  'Storage should not keep stale local stateDataHash after duplicate sync updates',
+            );
+          },
+        );
+
+        test(
+          'sync mode remote stateDataHash is recomputed when no existing state',
+          () async {
+            const remoteStateDataHash = 'remoteStateDataHash';
+            final incoming = {
+              'domainId': 'test-project',
+              'domainType': 'project',
+              'entityType': 'task',
+              'entityId': 'test-project-entity-no-existing-hash',
+              'changeBy': 'cloud-user',
+              'changeAt': DateTime.now().toUtc().toIso8601String(),
+              'cloudAt': DateTime.now()
+                  .toUtc()
+                  .add(const Duration(minutes: 1))
+                  .toIso8601String(),
+              'cid': generateCid(entityType: EntityType.task),
+              'storageId': 'remote-cloud-storage',
+              'seq': 88,
+              'operation': 'create',
+              'operationInfoJson': '{}',
+              'stateChanged': true,
+              'stateDataHash': remoteStateDataHash,
+              'unknownJson': '{}',
+              'dataJson':
+                  '{"nameLocal": "Remote Fresh", "parentId": "root", "parentProp": "pList"}',
+            };
+
+            final result = await ChangeProcessingService.storeChanges(
+              changes: [incoming],
+              storage: localStorage,
+              storageMode: 'sync',
+              srcStorageType: 'cloud',
+              srcStorageId: 'remote-cloud-storage',
+              includeChangeUpdates: false,
+              includeStateUpdates: false,
+            );
+
+            expect(result.isSuccess, isTrue, reason: result.errorMessage);
+
+            final state = await localStorage.getEntityState(
+              domainType: 'project',
+              domainId: 'test-project',
+              entityType: 'task',
+              entityId: 'test-project-entity-no-existing-hash',
+            );
+            expect(state, isNotNull);
+
+            final expectedStateDataHash = computeStateDataHash(state!.toJson());
+            expect(
+              state.stateDataHash,
+              equals(expectedStateDataHash),
+              reason:
+                  'Final stateDataHash should be computed from state updates when state does not exist',
+            );
+            expect(
+              state.stateDataHash,
+              isNot(equals(remoteStateDataHash)),
+              reason:
+                  'Storage should compute stateDataHash instead of trusting remote input',
+            );
+          },
+        );
+
         Future<Object?> runOutdatedScenario({
           required String projectId,
           required String entityId,

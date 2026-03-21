@@ -89,14 +89,27 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   );
 
   if (duplicateCheck.isDuplicate) {
-    // For duplicates, do not emit change data; only apply minimal state updates
+    // For duplicates, do not emit change data; only apply minimal state updates.
+    // When duplicate handling produces state updates, storage remains the
+    // authority for stateDataHash and must recompute it from merged state.
+    var duplicateStateUpdates = <String, dynamic>{
+      ...duplicateCheck.stateUpdates,
+    };
+    if (duplicateStateUpdates.isNotEmpty && entityState != null) {
+      final merged = <String, dynamic>{
+        ...entityState.toJson(),
+        ...duplicateStateUpdates,
+      };
+      duplicateStateUpdates['stateDataHash'] = computeStateDataHash(merged);
+    }
+
     return GetUpdateResults(
       isDuplicate: true,
-      stateUpdates: duplicateCheck.stateUpdates,
+      stateUpdates: duplicateStateUpdates,
       changeUpdates: const <String, dynamic>{},
       operationCounts: OperationCounts(
-        duplicate: duplicateCheck.stateUpdates.isEmpty ? 1 : 0,
-        clouded: duplicateCheck.stateUpdates.isNotEmpty ? 1 : 0,
+        duplicate: duplicateStateUpdates.isEmpty ? 1 : 0,
+        clouded: duplicateStateUpdates.isNotEmpty ? 1 : 0,
       ),
     );
   }
