@@ -12,6 +12,7 @@ class EntityStateFetchEvent {
     required this.domainId,
     required this.entityType,
     this.entityId,
+    this.parentId,
     this.items = const [],
     this.cursor,
     this.hasMore = false,
@@ -24,6 +25,7 @@ class EntityStateFetchEvent {
   final String domainId;
   final String entityType;
   final String? entityId;
+  final String? parentId;
   final List<Map<String, dynamic>> items;
   final String? cursor;
   final bool hasMore;
@@ -48,6 +50,7 @@ class _EntityStateJob {
     required this.enqueuedAt,
     required this.priority,
     this.entityId,
+    this.parentId,
     this.limit = 100,
     this.cursor,
     this.fanOutControllers = const {},
@@ -60,6 +63,7 @@ class _EntityStateJob {
   final String entityType;
   final bool isCollection;
   final String? entityId;
+  final String? parentId;
   final int limit;
   String? cursor;
   bool hasMore = false;
@@ -73,9 +77,10 @@ class _EntityStateJob {
 }
 
 class _SingleEntityDebounceBucket {
-  _SingleEntityDebounceBucket({required this.scopeKey});
+  _SingleEntityDebounceBucket({required this.scopeKey, required this.parentId});
 
   final String scopeKey;
+  final String? parentId;
   Timer? timer;
   final Map<String, StreamController<EntityStateFetchEvent>> controllersById =
       {};
@@ -184,11 +189,13 @@ class EntityStatePaginationService {
     required String domainId,
     required String entityType,
     required String entityId,
+    String? parentId,
   }) {
     final scopeKey = _scopeKey(
       domainType: domainType,
       domainId: domainId,
       entityType: entityType,
+      parentId: parentId,
     );
 
     final activeCollectionForScope = _activeJobs.values.any(
@@ -204,6 +211,7 @@ class EntityStatePaginationService {
           domainId: domainId,
           entityType: entityType,
           entityId: entityId,
+          parentId: parentId,
         )];
     if (existingSingleActive != null) {
       _discardedActiveDuplicateSingleCount++;
@@ -215,6 +223,7 @@ class EntityStatePaginationService {
           job.domainType == domainType &&
           job.domainId == domainId &&
           job.entityType == entityType &&
+          job.parentId == parentId &&
           job.entityId == entityId;
     });
     if (existingSingleInQueueIndex != -1) {
@@ -227,7 +236,7 @@ class EntityStatePaginationService {
 
     final bucket = _singleDebounceBuckets.putIfAbsent(
       scopeKey,
-      () => _SingleEntityDebounceBucket(scopeKey: scopeKey),
+      () => _SingleEntityDebounceBucket(scopeKey: scopeKey, parentId: parentId),
     );
 
     final existingController = bucket.controllersById[entityId];
@@ -244,6 +253,7 @@ class EntityStatePaginationService {
         domainType: domainType,
         domainId: domainId,
         entityType: entityType,
+        parentId: parentId,
       );
     });
 
@@ -255,6 +265,7 @@ class EntityStatePaginationService {
     required String domainType,
     required String domainId,
     required String entityType,
+    String? parentId,
     int limit = 100,
     String? cursor,
   }) {
@@ -262,7 +273,8 @@ class EntityStatePaginationService {
       return job.isCollection &&
           job.domainType == domainType &&
           job.domainId == domainId &&
-          job.entityType == entityType;
+          job.entityType == entityType &&
+          job.parentId == parentId;
     });
     if (existingIndex != -1) {
       final queued = _queueLifo.removeAt(existingIndex);
@@ -276,6 +288,7 @@ class EntityStatePaginationService {
       domainType: domainType,
       domainId: domainId,
       entityType: entityType,
+      parentId: parentId,
     );
     final active = _activeJobs[key];
     if (active != null) {
@@ -290,11 +303,13 @@ class EntityStatePaginationService {
         domainType: domainType,
         domainId: domainId,
         entityType: entityType,
+        parentId: parentId,
       ),
       domainType: domainType,
       domainId: domainId,
       entityType: entityType,
       isCollection: true,
+      parentId: parentId,
       progressController: controller,
       enqueuedAt: DateTime.now().toUtc(),
       priority: _EntityStateJobPriority.normal,
@@ -311,11 +326,13 @@ class EntityStatePaginationService {
     required String domainType,
     required String domainId,
     required String entityType,
+    String? parentId,
   }) {
     final scopeKey = _scopeKey(
       domainType: domainType,
       domainId: domainId,
       entityType: entityType,
+      parentId: parentId,
     );
     final bucket = _singleDebounceBuckets.remove(scopeKey);
     if (bucket == null || bucket.controllersById.isEmpty) return;
@@ -331,6 +348,7 @@ class EntityStatePaginationService {
           domainId: domainId,
           entityType: entityType,
           entityId: entityId,
+          parentId: parentId,
         ),
         scopeKey: scopeKey,
         domainType: domainType,
@@ -338,6 +356,7 @@ class EntityStatePaginationService {
         entityType: entityType,
         isCollection: false,
         entityId: entityId,
+        parentId: parentId,
         progressController: controller,
         enqueuedAt: DateTime.now().toUtc(),
         priority: _EntityStateJobPriority.normal,
@@ -352,12 +371,14 @@ class EntityStatePaginationService {
           domainType: domainType,
           domainId: domainId,
           entityType: entityType,
+          parentId: parentId,
         ),
         scopeKey: scopeKey,
         domainType: domainType,
         domainId: domainId,
         entityType: entityType,
         isCollection: true,
+        parentId: parentId,
         progressController: batchController,
         enqueuedAt: DateTime.now().toUtc(),
         priority: _EntityStateJobPriority.normal,
@@ -449,6 +470,7 @@ class EntityStatePaginationService {
         domainId: job.domainId,
         entityType: job.entityType,
         entityId: job.entityId,
+        parentId: job.parentId,
         items: items,
         hasMore: false,
         isCollectionRequest: false,
@@ -475,6 +497,7 @@ class EntityStatePaginationService {
           domainType: job.domainType,
           domainId: job.domainId,
           entityType: job.entityType,
+          parentId: job.parentId,
           items: items,
           cursor: nextCursor,
           hasMore: hasMore,
@@ -494,6 +517,7 @@ class EntityStatePaginationService {
               domainId: job.domainId,
               entityType: job.entityType,
               entityId: id,
+              parentId: job.parentId,
               items: [item],
               cursor: nextCursor,
               hasMore: hasMore,
@@ -523,6 +547,7 @@ class EntityStatePaginationService {
           domainId: job.domainId,
           entityType: job.entityType,
           isCollection: true,
+          parentId: job.parentId,
           progressController: job.progressController,
           enqueuedAt: job.enqueuedAt,
           priority: _EntityStateJobPriority.low,
@@ -545,6 +570,7 @@ class EntityStatePaginationService {
         domainId: job.domainId,
         entityType: job.entityType,
         isCollection: true,
+        parentId: job.parentId,
         progressController: job.progressController,
         enqueuedAt: job.enqueuedAt,
         priority: _EntityStateJobPriority.low,
@@ -570,6 +596,9 @@ class EntityStatePaginationService {
     final query = <String, dynamic>{'limit': job.limit};
     if (cursor != null && cursor.isNotEmpty) {
       query['cursor'] = cursor;
+    }
+    if (job.parentId != null && job.parentId!.isNotEmpty) {
+      query['parentId'] = job.parentId;
     }
 
     final response = await _dio.get(url, queryParameters: query);
@@ -614,6 +643,7 @@ class EntityStatePaginationService {
           domainId: job.domainId,
           entityType: job.entityType,
           entityId: job.entityId,
+          parentId: job.parentId,
           isCollectionRequest: job.isCollection,
           isComplete: true,
         ),
@@ -630,6 +660,7 @@ class EntityStatePaginationService {
           domainId: job.domainId,
           entityType: job.entityType,
           entityId: entry.key,
+          parentId: job.parentId,
           isCollectionRequest: true,
           isComplete: true,
         ),
@@ -646,6 +677,7 @@ class EntityStatePaginationService {
           domainId: job.domainId,
           entityType: job.entityType,
           entityId: job.entityId,
+          parentId: job.parentId,
           isCollectionRequest: job.isCollection,
           errorMessage: errorMessage,
         ),
@@ -662,6 +694,7 @@ class EntityStatePaginationService {
           domainId: job.domainId,
           entityType: job.entityType,
           entityId: entry.key,
+          parentId: job.parentId,
           isCollectionRequest: true,
           errorMessage: errorMessage,
         ),
@@ -690,16 +723,18 @@ class EntityStatePaginationService {
     required String domainType,
     required String domainId,
     required String entityType,
+    String? parentId,
   }) {
-    return '$domainType|$domainId|$entityType';
+    return '$domainType|$domainId|$entityType|parent:${parentId ?? ''}';
   }
 
   String _collectionJobKey({
     required String domainType,
     required String domainId,
     required String entityType,
+    String? parentId,
   }) {
-    return '${_scopeKey(domainType: domainType, domainId: domainId, entityType: entityType)}|collection';
+    return '${_scopeKey(domainType: domainType, domainId: domainId, entityType: entityType, parentId: parentId)}|collection';
   }
 
   String _singleJobKey({
@@ -707,8 +742,9 @@ class EntityStatePaginationService {
     required String domainId,
     required String entityType,
     required String entityId,
+    String? parentId,
   }) {
-    return '${_scopeKey(domainType: domainType, domainId: domainId, entityType: entityType)}|single|$entityId';
+    return '${_scopeKey(domainType: domainType, domainId: domainId, entityType: entityType, parentId: parentId)}|single|$entityId';
   }
 
   String? _extractEntityId(Map<String, dynamic> item) {

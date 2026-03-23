@@ -57,6 +57,27 @@ void main() {
     );
 
     test(
+      '[isar] debounced single requests with different parentId do not merge',
+      () async {
+        await _testDebouncedSingleAggregationByParentId(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: 'isar-cloud-storage',
+          srcStorageType: 'cloud',
+          useCloudDb: false,
+        );
+      },
+    );
+
+    test('[isar] collection requests include parentId filter', () async {
+      await _testCollectionParentIdFilter(
+        cloudBaseUrl: cloudBaseUrl,
+        srcStorageId: 'isar-cloud-storage',
+        srcStorageType: 'cloud',
+        useCloudDb: false,
+      );
+    });
+
+    test(
       '[isar] cursor pagination yields to incoming single requests',
       () async {
         await _testPaginationYieldBehavior(
@@ -148,6 +169,7 @@ Future<void> _testDebouncedSingleAggregation({
   final marker1 = generateCid(entityType: EntityType.task, userId: 't1');
   final marker2 = generateCid(entityType: EntityType.task, userId: 't2');
   final marker3 = generateCid(entityType: EntityType.task, userId: 't3');
+  const parentId = 'parent-merge';
 
   final now = DateTime.now().toUtc();
   await _saveCloudEntityChange(
@@ -159,7 +181,7 @@ Future<void> _testDebouncedSingleAggregation({
     entityType: entityType,
     entityId: marker1,
     changeAt: now,
-    data: {'nameLocal': 'task-1', 'rank': '1'},
+    data: {'nameLocal': 'task-1', 'rank': '1', 'parentId': parentId},
   );
   await _saveCloudEntityChange(
     cloudBaseUrl: cloudBaseUrl,
@@ -170,7 +192,7 @@ Future<void> _testDebouncedSingleAggregation({
     entityType: entityType,
     entityId: marker2,
     changeAt: now.add(const Duration(milliseconds: 1)),
-    data: {'nameLocal': 'task-2', 'rank': '2'},
+    data: {'nameLocal': 'task-2', 'rank': '2', 'parentId': parentId},
   );
   await _saveCloudEntityChange(
     cloudBaseUrl: cloudBaseUrl,
@@ -181,7 +203,7 @@ Future<void> _testDebouncedSingleAggregation({
     entityType: entityType,
     entityId: marker3,
     changeAt: now.add(const Duration(milliseconds: 2)),
-    data: {'nameLocal': 'task-3', 'rank': '3'},
+    data: {'nameLocal': 'task-3', 'rank': '3', 'parentId': parentId},
   );
 
   final service = EntityStatePaginationService(
@@ -202,6 +224,7 @@ Future<void> _testDebouncedSingleAggregation({
         domainId: domainId,
         entityType: entityType,
         entityId: marker1,
+        parentId: parentId,
       )
       .listen((event) {
         eventsForFirst.add(event);
@@ -216,6 +239,7 @@ Future<void> _testDebouncedSingleAggregation({
         domainId: domainId,
         entityType: entityType,
         entityId: marker2,
+        parentId: parentId,
       )
       .listen((event) {
         eventsForSecond.add(event);
@@ -248,6 +272,199 @@ Future<void> _testDebouncedSingleAggregation({
     _containsEntity(eventsForSecond, marker2),
     isTrue,
     reason: 'Expected second single stream to receive its requested entity.',
+  );
+
+  service.dispose();
+}
+
+Future<void> _testDebouncedSingleAggregationByParentId({
+  required String cloudBaseUrl,
+  required String srcStorageId,
+  required String srcStorageType,
+  required bool useCloudDb,
+}) async {
+  const domainType = kDomainProject;
+  const entityType = kEntityTypeTask;
+  const domainId = '__test_state_queue_debounce_parent';
+  const parentIdA = 'parent-A';
+  const parentIdB = 'parent-B';
+
+  if (useCloudDb) {
+    await _resetDomainId(cloudBaseUrl, domainId);
+  }
+
+  final markerA = generateCid(entityType: EntityType.task, userId: 'pa');
+  final markerB = generateCid(entityType: EntityType.task, userId: 'pb');
+  final now = DateTime.now().toUtc();
+
+  await _saveCloudEntityChange(
+    cloudBaseUrl: cloudBaseUrl,
+    srcStorageId: srcStorageId,
+    srcStorageType: srcStorageType,
+    domainType: domainType,
+    domainId: domainId,
+    entityType: entityType,
+    entityId: markerA,
+    changeAt: now,
+    data: {'nameLocal': 'task-parent-A', 'rank': '1', 'parentId': parentIdA},
+  );
+  await _saveCloudEntityChange(
+    cloudBaseUrl: cloudBaseUrl,
+    srcStorageId: srcStorageId,
+    srcStorageType: srcStorageType,
+    domainType: domainType,
+    domainId: domainId,
+    entityType: entityType,
+    entityId: markerB,
+    changeAt: now.add(const Duration(milliseconds: 1)),
+    data: {'nameLocal': 'task-parent-B', 'rank': '2', 'parentId': parentIdB},
+  );
+
+  final service = EntityStatePaginationService(
+    baseUrl: cloudBaseUrl,
+    singleRequestDebounce: const Duration(milliseconds: 300),
+    maxConcurrentRequests: 4,
+  )..startProcessing();
+
+  final firstDone = Completer<void>();
+  final secondDone = Completer<void>();
+
+  final sub1 = service
+      .enqueueEntityState(
+        domainType: domainType,
+        domainId: domainId,
+        entityType: entityType,
+        entityId: markerA,
+        parentId: parentIdA,
+      )
+      .listen((event) {
+        if (event.isComplete && !firstDone.isCompleted) {
+          firstDone.complete();
+        }
+      });
+
+  final sub2 = service
+      .enqueueEntityState(
+        domainType: domainType,
+        domainId: domainId,
+        entityType: entityType,
+        entityId: markerB,
+        parentId: parentIdB,
+      )
+      .listen((event) {
+        if (event.isComplete && !secondDone.isCompleted) {
+          secondDone.complete();
+        }
+      });
+
+  await Future.wait([
+    firstDone.future.timeout(const Duration(seconds: 30)),
+    secondDone.future.timeout(const Duration(seconds: 30)),
+  ]);
+
+  await sub1.cancel();
+  await sub2.cancel();
+
+  expect(
+    service.mergedSingleBatchCount,
+    equals(0),
+    reason:
+        'Single requests with different parentId should not be merged into a collection request.',
+  );
+
+  service.dispose();
+}
+
+Future<void> _testCollectionParentIdFilter({
+  required String cloudBaseUrl,
+  required String srcStorageId,
+  required String srcStorageType,
+  required bool useCloudDb,
+}) async {
+  const domainType = kDomainProject;
+  const entityType = kEntityTypeTask;
+  const domainId = '__test_state_collection_parent_filter';
+  const targetParentId = 'parent-filter-target';
+  const otherParentId = 'parent-filter-other';
+
+  if (useCloudDb) {
+    await _resetDomainId(cloudBaseUrl, domainId);
+  }
+
+  final now = DateTime.now().toUtc();
+  final targetEntityIds = <String>[];
+  for (var i = 0; i < 3; i++) {
+    final id = generateCid(entityType: EntityType.task, userId: 'pt$i');
+    targetEntityIds.add(id);
+    await _saveCloudEntityChange(
+      cloudBaseUrl: cloudBaseUrl,
+      srcStorageId: srcStorageId,
+      srcStorageType: srcStorageType,
+      domainType: domainType,
+      domainId: domainId,
+      entityType: entityType,
+      entityId: id,
+      changeAt: now.add(Duration(milliseconds: i)),
+      data: {
+        'nameLocal': 'target-$i',
+        'rank': '$i',
+        'parentId': targetParentId,
+      },
+    );
+  }
+
+  for (var i = 0; i < 2; i++) {
+    final id = generateCid(entityType: EntityType.task, userId: 'po$i');
+    await _saveCloudEntityChange(
+      cloudBaseUrl: cloudBaseUrl,
+      srcStorageId: srcStorageId,
+      srcStorageType: srcStorageType,
+      domainType: domainType,
+      domainId: domainId,
+      entityType: entityType,
+      entityId: id,
+      changeAt: now.add(Duration(milliseconds: 10 + i)),
+      data: {'nameLocal': 'other-$i', 'rank': '$i', 'parentId': otherParentId},
+    );
+  }
+
+  final service = EntityStatePaginationService(
+    baseUrl: cloudBaseUrl,
+    maxConcurrentRequests: 4,
+  )..startProcessing();
+
+  final done = Completer<void>();
+  final receivedIds = <String>{};
+
+  final sub = service
+      .enqueueEntityStateCollection(
+        domainType: domainType,
+        domainId: domainId,
+        entityType: entityType,
+        parentId: targetParentId,
+        limit: 2,
+      )
+      .listen((event) {
+        for (final item in event.items) {
+          final id = item['entityId']?.toString() ?? item['id']?.toString();
+          if (id != null && id.isNotEmpty) {
+            receivedIds.add(id);
+          }
+        }
+
+        if (event.isComplete && !done.isCompleted) {
+          done.complete();
+        }
+      });
+
+  await done.future.timeout(const Duration(seconds: 30));
+  await sub.cancel();
+
+  expect(
+    receivedIds,
+    equals(targetEntityIds.toSet()),
+    reason:
+        'Collection request with parentId should return all entities for that parentId.',
   );
 
   service.dispose();

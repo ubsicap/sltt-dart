@@ -57,12 +57,14 @@ class SyncManager {
     required String domainId,
     required String entityType,
     required String entityId,
+    String? parentId,
   }) {
     return entityStatePaginationService.enqueueEntityState(
       domainType: domainType,
       domainId: domainId,
       entityType: entityType,
       entityId: entityId,
+      parentId: parentId,
     );
   }
 
@@ -70,6 +72,7 @@ class SyncManager {
     required String domainType,
     required String domainId,
     required String entityType,
+    String? parentId,
     int limit = 100,
     String? cursor,
   }) {
@@ -77,6 +80,7 @@ class SyncManager {
       domainType: domainType,
       domainId: domainId,
       entityType: entityType,
+      parentId: parentId,
       limit: limit,
       cursor: cursor,
     );
@@ -507,6 +511,7 @@ class SyncManager {
                 domainId: updateDomainId,
                 entityType: updateEntityType,
                 entityId: updateEntityId,
+                parentId: stateUpdate['parentId']?.toString(),
                 stateDataHash: stateUpdate['stateDataHash']?.toString(),
               );
             }
@@ -573,6 +578,7 @@ class SyncManager {
             domainId: snapshot.domainId,
             entityType: snapshot.entityType,
             entityId: snapshot.entityId,
+            parentId: snapshot.parentId,
           );
         }
       }
@@ -737,6 +743,7 @@ class _StateHashSnapshot {
   final String domainId;
   final String entityType;
   final String entityId;
+  final String? parentId;
   final String? stateDataHash;
 
   const _StateHashSnapshot({
@@ -744,6 +751,7 @@ class _StateHashSnapshot {
     required this.domainId,
     required this.entityType,
     required this.entityId,
+    required this.parentId,
     required this.stateDataHash,
   });
 }
