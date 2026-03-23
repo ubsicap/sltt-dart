@@ -708,7 +708,7 @@ class ChangeProcessingService {
         'entityType': changeLogEntry.entityType,
         'entityId': changeLogEntry.entityId,
         'parentId': updateResults.newEntityState?.data_parentId,
-        'stateUpdates': result.stateUpdates,
+        'updates': result.stateUpdates,
         'stateDataHash':
             updateResults.newEntityState?.stateDataHash ??
             result.stateUpdates['stateDataHash'],
