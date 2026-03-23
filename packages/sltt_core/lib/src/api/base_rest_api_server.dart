@@ -846,7 +846,13 @@ abstract class BaseRestApiServer {
             {'name': 'domainId', 'type': 'string', 'required': true},
             {'name': 'entityType', 'type': 'string', 'required': true},
             {'name': 'cursor', 'type': 'string', 'required': false},
-            {'name': 'limit', 'type': 'integer', 'required': false},
+            {
+              'name': 'limit',
+              'type': 'integer',
+              'required': false,
+              'description':
+                  'Optional maximum number of results to return. If omitted, storage/backend defaults apply.',
+            },
             {
               'name': 'parentId',
               'type': 'string',
@@ -1909,13 +1915,13 @@ abstract class BaseRestApiServer {
         }
       }
 
-      // Parse limit parameter
-      int limit = 100; // Default limit
+      // Parse limit parameter (optional; backend can enforce defaults/max)
+      int? limit;
       if (limitStr != null && limitStr.isNotEmpty) {
         try {
           limit = int.parse(limitStr);
-          if (limit <= 0 || limit > 1000) {
-            return _errorResponse('Limit must be between 1 and 1000', 400);
+          if (limit <= 0) {
+            return _errorResponse('Limit must be a positive integer', 400);
           }
         } catch (e) {
           return _errorResponse(
