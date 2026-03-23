@@ -707,8 +707,11 @@ class ChangeProcessingService {
         'domainId': changeLogEntry.domainId,
         'entityType': changeLogEntry.entityType,
         'entityId': changeLogEntry.entityId,
-        'state': result.stateUpdates,
-        'stateDataHash': result.stateUpdates['stateDataHash'],
+        'parentId': updateResults.newEntityState?.data_parentId,
+        'stateUpdates': result.stateUpdates,
+        'stateDataHash':
+            updateResults.newEntityState?.stateDataHash ??
+            result.stateUpdates['stateDataHash'],
       });
     }
 
