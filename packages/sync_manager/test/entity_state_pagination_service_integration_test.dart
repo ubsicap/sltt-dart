@@ -219,7 +219,7 @@ Future<void> _testDebouncedSingleAggregation({
   final secondDone = Completer<void>();
 
   final sub1 = service
-      .enqueueEntityState(
+      .enqueueJobFetchEntityState(
         domainType: domainType,
         domainId: domainId,
         entityType: entityType,
@@ -234,7 +234,7 @@ Future<void> _testDebouncedSingleAggregation({
       });
 
   final sub2 = service
-      .enqueueEntityState(
+      .enqueueJobFetchEntityState(
         domainType: domainType,
         domainId: domainId,
         entityType: entityType,
@@ -330,7 +330,7 @@ Future<void> _testDebouncedSingleAggregationByParentId({
   final secondDone = Completer<void>();
 
   final sub1 = service
-      .enqueueEntityState(
+      .enqueueJobFetchEntityState(
         domainType: domainType,
         domainId: domainId,
         entityType: entityType,
@@ -344,7 +344,7 @@ Future<void> _testDebouncedSingleAggregationByParentId({
       });
 
   final sub2 = service
-      .enqueueEntityState(
+      .enqueueJobFetchEntityState(
         domainType: domainType,
         domainId: domainId,
         entityType: entityType,
@@ -437,7 +437,7 @@ Future<void> _testCollectionParentIdFilter({
   final receivedIds = <String>{};
 
   final sub = service
-      .enqueueEntityStateCollection(
+      .enqueueJobFetchEntityStateCollection(
         domainType: domainType,
         domainId: domainId,
         entityType: entityType,
@@ -529,7 +529,7 @@ Future<void> _testPaginationYieldBehavior({
 
   late final StreamSubscription<EntityStateFetchEvent> collectionSub;
   collectionSub = service
-      .enqueueEntityStateCollection(
+      .enqueueJobFetchEntityStateCollection(
         domainType: domainType,
         domainId: domainId,
         entityType: kEntityTypeTask,
@@ -543,7 +543,7 @@ Future<void> _testPaginationYieldBehavior({
             event.items.isNotEmpty) {
           requestedSingleDuringCollection = true;
           service
-              .enqueueEntityState(
+              .enqueueJobFetchEntityState(
                 domainType: domainType,
                 domainId: domainId,
                 entityType: kEntityTypeProject,
@@ -653,20 +653,20 @@ Future<void> _testDuplicateSingleEnqueueBehavior({
   final doneA = Completer<void>();
   final doneB = Completer<void>();
 
-  final streamA1 = service.enqueueEntityState(
+  final streamA1 = service.enqueueJobFetchEntityState(
     domainType: domainType,
     domainId: domainIdA,
     entityType: entityType,
     entityId: domainIdA,
   );
-  final streamB = service.enqueueEntityState(
+  final streamB = service.enqueueJobFetchEntityState(
     domainType: domainType,
     domainId: domainIdB,
     entityType: entityType,
     entityId: domainIdB,
   );
   await Future<void>.delayed(const Duration(milliseconds: 20));
-  service.enqueueEntityState(
+  service.enqueueJobFetchEntityState(
     domainType: domainType,
     domainId: domainIdA,
     entityType: entityType,
@@ -719,7 +719,7 @@ Future<void> _testDuplicateSingleEnqueueBehavior({
   );
 
   final activeSingleDone = Completer<void>();
-  final activeSingleStream = service.enqueueEntityState(
+  final activeSingleStream = service.enqueueJobFetchEntityState(
     domainType: domainType,
     domainId: domainIdC,
     entityType: entityType,
@@ -732,7 +732,7 @@ Future<void> _testDuplicateSingleEnqueueBehavior({
   });
 
   await Future<void>.delayed(const Duration(milliseconds: 20));
-  service.enqueueEntityState(
+  service.enqueueJobFetchEntityState(
     domainType: domainType,
     domainId: domainIdC,
     entityType: entityType,
@@ -802,20 +802,20 @@ Future<void> _testDuplicateCollectionEnqueueBehavior({
   final doneA = Completer<void>();
   final doneB = Completer<void>();
 
-  final streamA1 = service.enqueueEntityStateCollection(
+  final streamA1 = service.enqueueJobFetchEntityStateCollection(
     domainType: domainType,
     domainId: domainIdA,
     entityType: entityType,
     limit: 1,
   );
-  final streamB = service.enqueueEntityStateCollection(
+  final streamB = service.enqueueJobFetchEntityStateCollection(
     domainType: domainType,
     domainId: domainIdB,
     entityType: entityType,
     limit: 1,
   );
   await Future<void>.delayed(const Duration(milliseconds: 20));
-  service.enqueueEntityStateCollection(
+  service.enqueueJobFetchEntityStateCollection(
     domainType: domainType,
     domainId: domainIdA,
     entityType: entityType,
@@ -841,7 +841,7 @@ Future<void> _testDuplicateCollectionEnqueueBehavior({
         event.hasMore &&
         !activeDuplicateCollectionTriggered) {
       activeDuplicateCollectionTriggered = true;
-      service.enqueueEntityStateCollection(
+      service.enqueueJobFetchEntityStateCollection(
         domainType: domainType,
         domainId: domainIdA,
         entityType: entityType,

@@ -184,7 +184,7 @@ class EntityStatePaginationService {
     _queueLifo.clear();
   }
 
-  Stream<EntityStateFetchEvent> enqueueEntityState({
+  Stream<EntityStateFetchEvent> enqueueJobFetchEntityState({
     required String domainType,
     required String domainId,
     required String entityType,
@@ -261,7 +261,7 @@ class EntityStatePaginationService {
     return controller.stream;
   }
 
-  Stream<EntityStateFetchEvent> enqueueEntityStateCollection({
+  Stream<EntityStateFetchEvent> enqueueJobFetchEntityStateCollection({
     required String domainType,
     required String domainId,
     required String entityType,

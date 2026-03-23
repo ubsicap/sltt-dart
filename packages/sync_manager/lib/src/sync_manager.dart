@@ -52,14 +52,14 @@ class SyncManager {
     );
   }
 
-  Stream<EntityStateFetchEvent> enqueueEntityState({
+  Stream<EntityStateFetchEvent> enqueueJobFetchEntityState({
     required String domainType,
     required String domainId,
     required String entityType,
     required String entityId,
     String? parentId,
   }) {
-    return entityStatePaginationService.enqueueEntityState(
+    return entityStatePaginationService.enqueueJobFetchEntityState(
       domainType: domainType,
       domainId: domainId,
       entityType: entityType,
@@ -68,7 +68,7 @@ class SyncManager {
     );
   }
 
-  Stream<EntityStateFetchEvent> enqueueEntityStatesCollection({
+  Stream<EntityStateFetchEvent> enqueueJobFetchEntityStateCollection({
     required String domainType,
     required String domainId,
     required String entityType,
@@ -76,7 +76,7 @@ class SyncManager {
     int limit = 100,
     String? cursor,
   }) {
-    return entityStatePaginationService.enqueueEntityStateCollection(
+    return entityStatePaginationService.enqueueJobFetchEntityStateCollection(
       domainType: domainType,
       domainId: domainId,
       entityType: entityType,
@@ -573,7 +573,7 @@ class SyncManager {
         final localStateDataHash = localState?.stateDataHash;
         if (localStateDataHash != snapshot.stateDataHash) {
           mismatchCount++;
-          enqueueEntityState(
+          enqueueJobFetchEntityState(
             domainType: snapshot.domainType,
             domainId: snapshot.domainId,
             entityType: snapshot.entityType,
