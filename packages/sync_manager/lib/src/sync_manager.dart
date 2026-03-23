@@ -190,6 +190,15 @@ class SyncManager {
     };
   }
 
+  String _entityStateKey({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+  }) {
+    return '$domainType/$domainId/$entityType/$entityId';
+  }
+
   // Get all projects that have changes to sync
 
   // Outsync changes from outsyncs to cloud storage
@@ -310,6 +319,7 @@ class SyncManager {
   }) async {
     ProjectCursorChanges projectCursorChanges = {};
     StorageSummaries storageSummaries = {};
+    final finalCloudStateHashByKey = <String, _StateHashSnapshot>{};
     try {
       SlttLogger.logger.info('[SyncManager] Starting downsync from cloud...');
 
@@ -469,6 +479,37 @@ class SyncManager {
             }
 
             storageSummaries['$domainId/$cursor'] = results.resultsSummary;
+            for (final stateUpdate
+                in results.resultsSummary?.stateUpdates ?? const []) {
+              final updateDomainType = stateUpdate['domainType']?.toString();
+              final updateDomainId = stateUpdate['domainId']?.toString();
+              final updateEntityType = stateUpdate['entityType']?.toString();
+              final updateEntityId = stateUpdate['entityId']?.toString();
+
+              if (updateDomainType == null ||
+                  updateDomainId == null ||
+                  updateEntityType == null ||
+                  updateEntityId == null) {
+                SlttLogger.logger.warning(
+                  '[SyncManager] Skipping malformed state update during downsync for $domainType $domainId: $stateUpdate',
+                );
+                continue;
+              }
+
+              final key = _entityStateKey(
+                domainType: updateDomainType,
+                domainId: updateDomainId,
+                entityType: updateEntityType,
+                entityId: updateEntityId,
+              );
+              finalCloudStateHashByKey[key] = _StateHashSnapshot(
+                domainType: updateDomainType,
+                domainId: updateDomainId,
+                entityType: updateEntityType,
+                entityId: updateEntityId,
+                stateDataHash: stateUpdate['stateDataHash']?.toString(),
+              );
+            }
             totalChangesForProject += incomingChanges.length;
 
             SlttLogger.logger.info(
@@ -515,6 +556,32 @@ class SyncManager {
       SlttLogger.logger.info(
         '[SyncManager] Downsync completed. Total changes: $totalDownloadedCount',
       );
+
+      var mismatchCount = 0;
+      for (final snapshot in finalCloudStateHashByKey.values) {
+        final localState = await _localStorage.getEntityState(
+          domainType: snapshot.domainType,
+          domainId: snapshot.domainId,
+          entityType: snapshot.entityType,
+          entityId: snapshot.entityId,
+        );
+        final localStateDataHash = localState?.stateDataHash;
+        if (localStateDataHash != snapshot.stateDataHash) {
+          mismatchCount++;
+          enqueueEntityState(
+            domainType: snapshot.domainType,
+            domainId: snapshot.domainId,
+            entityType: snapshot.entityType,
+            entityId: snapshot.entityId,
+          );
+        }
+      }
+
+      if (mismatchCount > 0) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Downsync hash reconciliation found $mismatchCount mismatched entity state hash(es); queued targeted state refetch.',
+        );
+      }
 
       return DownsyncResult(
         success: true,
@@ -663,6 +730,22 @@ class SyncManager {
       SlttLogger.logger.info('[SyncManager] Closed');
     }
   }
+}
+
+class _StateHashSnapshot {
+  final String domainType;
+  final String domainId;
+  final String entityType;
+  final String entityId;
+  final String? stateDataHash;
+
+  const _StateHashSnapshot({
+    required this.domainType,
+    required this.domainId,
+    required this.entityType,
+    required this.entityId,
+    required this.stateDataHash,
+  });
 }
 
 // Result classes

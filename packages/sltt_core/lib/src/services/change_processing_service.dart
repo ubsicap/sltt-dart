@@ -703,7 +703,12 @@ class ChangeProcessingService {
     if (includeStateUpdates) {
       resultsSummary.stateUpdates.add({
         'cid': updateResults.newChangeLogEntry.cid,
+        'domainType': changeLogEntry.domainType,
+        'domainId': changeLogEntry.domainId,
+        'entityType': changeLogEntry.entityType,
+        'entityId': changeLogEntry.entityId,
         'state': result.stateUpdates,
+        'stateDataHash': result.stateUpdates['stateDataHash'],
       });
     }
 
