@@ -699,6 +699,7 @@ class ChangeProcessingService {
       resultsSummary.changeUpdates.add({
         'cid': updateResults.newChangeLogEntry.cid,
         'updates': result.changeUpdates,
+        'stateChanged': updateResults.newChangeLogEntry.stateChanged,
       });
     }
 
