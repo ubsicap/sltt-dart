@@ -500,6 +500,7 @@ class ChangeProcessingService {
             updateResults: updateResults,
             result: metadata.result,
             changeLogEntry: metadata.changeLogEntry,
+            storageMode: storageMode,
             includeChangeUpdates: includeChangeUpdates,
             includeStateUpdates: includeStateUpdates,
           );
@@ -642,6 +643,7 @@ class ChangeProcessingService {
     required UpdateChangeLogAndStateResult updateResults,
     required GetUpdateResults result,
     required BaseChangeLogEntry changeLogEntry,
+    required String storageMode,
     required bool includeChangeUpdates,
     required bool includeStateUpdates,
   }) {
@@ -708,7 +710,8 @@ class ChangeProcessingService {
         'entityType': changeLogEntry.entityType,
         'entityId': changeLogEntry.entityId,
         'parentId': updateResults.newEntityState?.data_parentId,
-        'updates': result.stateUpdates,
+        // Keep `state` for backward compatibility with existing API/tests.
+        'state': result.stateUpdates,
         'stateDataHash':
             updateResults.newEntityState?.stateDataHash ??
             result.stateUpdates['stateDataHash'],

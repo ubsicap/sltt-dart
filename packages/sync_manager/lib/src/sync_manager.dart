@@ -323,7 +323,7 @@ class SyncManager {
   }) async {
     ProjectCursorChanges projectCursorChanges = {};
     StorageSummaries storageSummaries = {};
-    final finalCloudStateHashByKey = <String, _StateHashSnapshot>{};
+    final finalStateHashesByKey = <String, _StateHashSnapshot>{};
     try {
       SlttLogger.logger.info('[SyncManager] Starting downsync from cloud...');
 
@@ -454,6 +454,46 @@ class SyncManager {
                 .toList();
             projectCursorChanges['$domainId/$cursor'] = incomingChanges;
 
+            for (final incomingChange in incomingChanges) {
+              final updateDomainType = incomingChange['domainType']?.toString();
+              final updateDomainId = incomingChange['domainId']?.toString();
+              final updateEntityType = incomingChange['entityType']?.toString();
+              final updateEntityId = incomingChange['entityId']?.toString();
+              final cloudStateDataHash = incomingChange['stateDataHash']
+                  ?.toString();
+
+              if (updateDomainType == null ||
+                  updateDomainId == null ||
+                  updateEntityType == null ||
+                  updateEntityId == null) {
+                SlttLogger.logger.warning(
+                  '[SyncManager] Skipping malformed incoming change during downsync hash reconciliation for $domainType $domainId: $incomingChange',
+                );
+                continue;
+              }
+
+              final key = _entityStateKey(
+                domainType: updateDomainType,
+                domainId: updateDomainId,
+                entityType: updateEntityType,
+                entityId: updateEntityId,
+              );
+
+              final previous = finalStateHashesByKey[key];
+              finalStateHashesByKey[key] = _StateHashSnapshot(
+                domainType: updateDomainType,
+                domainId: updateDomainId,
+                entityType: updateEntityType,
+                entityId: updateEntityId,
+                parentId:
+                    incomingChange['parentId']?.toString() ??
+                    previous?.parentId,
+                cloudStateDataHash:
+                    cloudStateDataHash ?? previous?.cloudStateDataHash,
+                localStateDataHash: previous?.localStateDataHash,
+              );
+            }
+
             // Apply changes directly to state storage
             final results = await ChangeProcessingService.storeChanges(
               storageMode: 'sync',
@@ -506,13 +546,16 @@ class SyncManager {
                 entityType: updateEntityType,
                 entityId: updateEntityId,
               );
-              finalCloudStateHashByKey[key] = _StateHashSnapshot(
+              final previous = finalStateHashesByKey[key];
+              finalStateHashesByKey[key] = _StateHashSnapshot(
                 domainType: updateDomainType,
                 domainId: updateDomainId,
                 entityType: updateEntityType,
                 entityId: updateEntityId,
-                parentId: stateUpdate['parentId']?.toString(),
-                stateDataHash: stateUpdate['stateDataHash']?.toString(),
+                parentId:
+                    stateUpdate['parentId']?.toString() ?? previous?.parentId,
+                cloudStateDataHash: previous?.cloudStateDataHash,
+                localStateDataHash: stateUpdate['stateDataHash']?.toString(),
               );
             }
             totalChangesForProject += incomingChanges.length;
@@ -563,15 +606,12 @@ class SyncManager {
       );
 
       var mismatchCount = 0;
-      for (final snapshot in finalCloudStateHashByKey.values) {
-        final localState = await _localStorage.getEntityState(
-          domainType: snapshot.domainType,
-          domainId: snapshot.domainId,
-          entityType: snapshot.entityType,
-          entityId: snapshot.entityId,
-        );
-        final localStateDataHash = localState?.stateDataHash;
-        if (localStateDataHash != snapshot.stateDataHash) {
+      for (final snapshot in finalStateHashesByKey.values) {
+        final cloudStateDataHash = snapshot.cloudStateDataHash;
+        final localStateDataHash = snapshot.localStateDataHash;
+        if (cloudStateDataHash != null &&
+            localStateDataHash != null &&
+            localStateDataHash != cloudStateDataHash) {
           mismatchCount++;
           enqueueJobFetchEntityState(
             domainType: snapshot.domainType,
@@ -744,7 +784,8 @@ class _StateHashSnapshot {
   final String entityType;
   final String entityId;
   final String? parentId;
-  final String? stateDataHash;
+  final String? cloudStateDataHash;
+  final String? localStateDataHash;
 
   const _StateHashSnapshot({
     required this.domainType,
@@ -752,7 +793,8 @@ class _StateHashSnapshot {
     required this.entityType,
     required this.entityId,
     required this.parentId,
-    required this.stateDataHash,
+    required this.cloudStateDataHash,
+    required this.localStateDataHash,
   });
 }
 
