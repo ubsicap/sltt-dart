@@ -1952,6 +1952,7 @@ class DynamoDBStorageService extends BaseStorageService {
     final rank = stateJson['data_rank']?.toString();
     // computeDataHash
     final stateDataHash = computeStateDataHash(stateJson);
+    // ignore: non_constant_identifier_names
     final stateDataHash_orig_ = stateDataHash;
 
     final item = <String, dynamic>{
