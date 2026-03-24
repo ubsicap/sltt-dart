@@ -2434,6 +2434,7 @@ void main() {
             updateResults: updateResults,
             result: result,
             changeLogEntry: entry,
+            storageMode: 'save',
             includeChangeUpdates: false,
             includeStateUpdates: false,
           );
@@ -2470,6 +2471,7 @@ void main() {
           updateResults: updateResults,
           result: result,
           changeLogEntry: entry,
+          storageMode: 'save',
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -2495,6 +2497,7 @@ void main() {
             operationCounts: OperationCounts(),
           ),
           changeLogEntry: entry1,
+          storageMode: 'save',
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -2512,6 +2515,7 @@ void main() {
             operationCounts: OperationCounts(),
           ),
           changeLogEntry: entry2,
+          storageMode: 'save',
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -2536,6 +2540,7 @@ void main() {
             operationCounts: OperationCounts(),
           ),
           changeLogEntry: entry,
+          storageMode: 'save',
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -2561,6 +2566,7 @@ void main() {
             operationCounts: OperationCounts(),
           ),
           changeLogEntry: entry,
+          storageMode: 'save',
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -2584,6 +2590,7 @@ void main() {
             operationCounts: OperationCounts(),
           ),
           changeLogEntry: entry,
+          storageMode: 'save',
           includeChangeUpdates: true,
           includeStateUpdates: true,
         );
