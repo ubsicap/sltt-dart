@@ -76,7 +76,14 @@ void main() {
       cloudBaseUrl = cloudAddress!;
     });
 
+    tearDown(() async {
+      // Ensure background queue jobs are disposed between tests so they do not
+      // continue hitting a torn-down local cloud server.
+      await SyncManager.instance.close();
+    });
+
     tearDownAll(() async {
+      await SyncManager.instance.close();
       await MultiServerLauncher.instance.stopServer(StorageType.cloud);
     });
 
@@ -213,6 +220,12 @@ void main() {
       srcStorageType = 'cloud';
     });
 
+    tearDown(() async {
+      // Dispose queue/retries after each aws integration test to keep logs and
+      // teardown behavior deterministic.
+      await SyncManager.instance.close();
+    });
+
     test(
       '[aws_backend] outsync [create]: save local changes > outsync to cloud',
       () async {
@@ -260,8 +273,6 @@ void main() {
         );
       },
       timeout: Timeout.none,
-      skip:
-          'Expected to fail until aws_backend backend is redeployed to return the new warning shape',
     );
 
     test(
@@ -1392,10 +1403,30 @@ Future<void> testFullSyncOutdated({
     contains(localChange.cid),
     reason: 'Full sync should remove outsynced local change from storage',
   );
+  final fullSyncDownsyncedChanges = fullSyncResult
+      .downsyncResult
+      .projectCursorChanges
+      .values
+      .expand((changes) => changes)
+      .toList();
   expect(
-    fullSyncResult.downsyncResult.projectCursorChanges.values,
-    isEmpty,
-    reason: 'Downsync should be empty (already downsynced)',
+    fullSyncDownsyncedChanges,
+    isNotEmpty,
+    reason:
+        'Downsync should include the local outdated change as a synced cursor update',
+  );
+  final outdatedDownsyncedChange = fullSyncDownsyncedChanges.firstWhere(
+    (change) =>
+        change['cid'] == localChange.cid &&
+        change['operation'] == 'outdated' &&
+        change['stateChanged'] == false,
+    orElse: () => <String, dynamic>{},
+  );
+  expect(
+    outdatedDownsyncedChange,
+    isNotEmpty,
+    reason:
+        'Downsync should include an outdated/stateChanged=false cursor change for local cid ${localChange.cid}',
   );
 
   // Verify outsynced project has no pending local-origin changes
