@@ -90,7 +90,7 @@ void main() {
     );
 
     test(
-      '[isar] duplicate single enqueue: discard active, bump queued priority',
+      '[isar] duplicate single enqueue: reuse active stream, bump queued priority',
       () async {
         await _testDuplicateSingleEnqueueBehavior(
           cloudBaseUrl: cloudBaseUrl,
@@ -102,7 +102,7 @@ void main() {
     );
 
     test(
-      '[isar] duplicate collection enqueue: discard active, bump queued priority',
+      '[isar] duplicate collection enqueue: reuse active stream, bump queued priority',
       () async {
         await _testDuplicateCollectionEnqueueBehavior(
           cloudBaseUrl: cloudBaseUrl,
@@ -740,9 +740,10 @@ Future<void> _testDuplicateSingleEnqueueBehavior({
   );
   await activeSingleDone.future.timeout(const Duration(seconds: 30));
   expect(
-    service.discardedActiveDuplicateSingleCount,
+    service.ignoredDuplicateSingleRequestDuringActiveCount,
     greaterThanOrEqualTo(1),
-    reason: 'Active duplicate single should be discarded.',
+    reason:
+        'Duplicate single request during active should be ignored, reusing the active stream.',
   );
 
   await activeSub.cancel();
@@ -878,10 +879,10 @@ Future<void> _testDuplicateCollectionEnqueueBehavior({
         'Re-enqueued older collection job should be bumped to top of LIFO before other queued collections.',
   );
   expect(
-    service.discardedActiveDuplicateCollectionCount,
+    service.ignoredDuplicateCollectionRequestDuringActiveCount,
     greaterThanOrEqualTo(1),
     reason:
-        'Active duplicate collection should be discarded instead of creating a second in-flight job.',
+        'Duplicate collection request during active should be ignored instead of creating a second in-flight job.',
   );
 
   await subA.cancel();

@@ -114,17 +114,17 @@ class EntityStatePaginationService {
 
   int _mergedSingleBatchCount = 0;
   int _yieldedActiveJobCount = 0;
-  int _discardedActiveDuplicateSingleCount = 0;
-  int _discardedActiveDuplicateCollectionCount = 0;
+  int _ignoredDuplicateSingleRequestDuringActiveCount = 0;
+  int _ignoredDuplicateCollectionRequestDuringActiveCount = 0;
   int _requeuedQueuedDuplicateSingleCount = 0;
   int _requeuedQueuedDuplicateCollectionCount = 0;
 
   int get mergedSingleBatchCount => _mergedSingleBatchCount;
   int get yieldedActiveJobCount => _yieldedActiveJobCount;
-  int get discardedActiveDuplicateSingleCount =>
-      _discardedActiveDuplicateSingleCount;
-  int get discardedActiveDuplicateCollectionCount =>
-      _discardedActiveDuplicateCollectionCount;
+  int get ignoredDuplicateSingleRequestDuringActiveCount =>
+      _ignoredDuplicateSingleRequestDuringActiveCount;
+  int get ignoredDuplicateCollectionRequestDuringActiveCount =>
+      _ignoredDuplicateCollectionRequestDuringActiveCount;
   int get requeuedQueuedDuplicateSingleCount =>
       _requeuedQueuedDuplicateSingleCount;
   int get requeuedQueuedDuplicateCollectionCount =>
@@ -214,7 +214,7 @@ class EntityStatePaginationService {
           parentId: parentId,
         )];
     if (existingSingleActive != null) {
-      _discardedActiveDuplicateSingleCount++;
+      _ignoredDuplicateSingleRequestDuringActiveCount++;
       return existingSingleActive.progressStream;
     }
 
@@ -292,7 +292,7 @@ class EntityStatePaginationService {
     );
     final active = _activeJobs[key];
     if (active != null) {
-      _discardedActiveDuplicateCollectionCount++;
+      _ignoredDuplicateCollectionRequestDuringActiveCount++;
       return active.progressStream;
     }
 
