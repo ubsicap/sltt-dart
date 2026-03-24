@@ -11,33 +11,6 @@ import 'entity_state_pagination_service.dart';
 import 'isar_storage_service.dart';
 
 class SyncManager {
-  Map<String, String>? _extractUpdateKeysFromChange(
-    Map<String, dynamic> change, {
-    required String domainTypeContext,
-    required String domainIdContext,
-    required String reason,
-  }) {
-    final updateDomainType = change['domainType']?.toString();
-    final updateDomainId = change['domainId']?.toString();
-    final updateEntityType = change['entityType']?.toString();
-    final updateEntityId = change['entityId']?.toString();
-    if (updateDomainType == null ||
-        updateDomainId == null ||
-        updateEntityType == null ||
-        updateEntityId == null) {
-      SlttLogger.logger.warning(
-        '[SyncManager] Skipping $reason for $domainTypeContext $domainIdContext: $change',
-      );
-      return null;
-    }
-    return {
-      'domainType': updateDomainType,
-      'domainId': updateDomainId,
-      'entityType': updateEntityType,
-      'entityId': updateEntityId,
-    };
-  }
-
   static SyncManager? _instance;
   static SyncManager get instance => _instance ??= SyncManager._();
 
@@ -891,6 +864,33 @@ class SyncManager {
       _instance = null;
       SlttLogger.logger.info('[SyncManager] Closed');
     }
+  }
+
+  Map<String, String>? _extractUpdateKeysFromChange(
+    Map<String, dynamic> change, {
+    required String domainTypeContext,
+    required String domainIdContext,
+    required String reason,
+  }) {
+    final updateDomainType = change['domainType']?.toString();
+    final updateDomainId = change['domainId']?.toString();
+    final updateEntityType = change['entityType']?.toString();
+    final updateEntityId = change['entityId']?.toString();
+    if (updateDomainType == null ||
+        updateDomainId == null ||
+        updateEntityType == null ||
+        updateEntityId == null) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Skipping $reason for $domainTypeContext $domainIdContext: $change',
+      );
+      return null;
+    }
+    return {
+      'domainType': updateDomainType,
+      'domainId': updateDomainId,
+      'entityType': updateEntityType,
+      'entityId': updateEntityId,
+    };
   }
 }
 
