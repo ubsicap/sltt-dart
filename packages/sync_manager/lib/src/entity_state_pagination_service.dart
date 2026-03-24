@@ -51,7 +51,7 @@ class _EntityStateJob {
     required this.priority,
     this.entityId,
     this.parentId,
-    this.limit = 100,
+    this.limit,
     this.cursor,
     this.fanOutControllers = const {},
   });
@@ -64,7 +64,7 @@ class _EntityStateJob {
   final bool isCollection;
   final String? entityId;
   final String? parentId;
-  final int limit;
+  final int? limit;
   String? cursor;
   bool hasMore = false;
   bool yieldRequested = false;
@@ -266,7 +266,7 @@ class EntityStatePaginationService {
     required String domainId,
     required String entityType,
     String? parentId,
-    int limit = 100,
+    int? limit,
     String? cursor,
   }) {
     final existingIndex = _queueLifo.indexWhere((job) {
