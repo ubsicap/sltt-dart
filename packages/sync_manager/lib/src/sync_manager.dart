@@ -11,6 +11,33 @@ import 'entity_state_pagination_service.dart';
 import 'isar_storage_service.dart';
 
 class SyncManager {
+  Map<String, String>? _extractUpdateKeysFromChange(
+    Map<String, dynamic> change, {
+    required String domainTypeContext,
+    required String domainIdContext,
+    required String reason,
+  }) {
+    final updateDomainType = change['domainType']?.toString();
+    final updateDomainId = change['domainId']?.toString();
+    final updateEntityType = change['entityType']?.toString();
+    final updateEntityId = change['entityId']?.toString();
+    if (updateDomainType == null ||
+        updateDomainId == null ||
+        updateEntityType == null ||
+        updateEntityId == null) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Skipping $reason for $domainTypeContext $domainIdContext: $change',
+      );
+      return null;
+    }
+    return {
+      'domainType': updateDomainType,
+      'domainId': updateDomainId,
+      'entityType': updateEntityType,
+      'entityId': updateEntityId,
+    };
+  }
+
   static SyncManager? _instance;
   static SyncManager get instance => _instance ??= SyncManager._();
 
@@ -492,22 +519,21 @@ class SyncManager {
             projectCursorChanges['$domainId/$cursor'] = incomingChanges;
 
             for (final incomingChange in incomingChanges) {
-              final updateDomainType = incomingChange['domainType']?.toString();
-              final updateDomainId = incomingChange['domainId']?.toString();
-              final updateEntityType = incomingChange['entityType']?.toString();
-              final updateEntityId = incomingChange['entityId']?.toString();
               final cloudStateDataHash = incomingChange['stateDataHash']
                   ?.toString();
+              final updateKeys = _extractUpdateKeysFromChange(
+                incomingChange,
+                domainTypeContext: domainType,
+                domainIdContext: domainId,
+                reason:
+                    'malformed incoming change during downsync hash reconciliation',
+              );
+              if (updateKeys == null) continue;
 
-              if (updateDomainType == null ||
-                  updateDomainId == null ||
-                  updateEntityType == null ||
-                  updateEntityId == null) {
-                SlttLogger.logger.warning(
-                  '[SyncManager] Skipping malformed incoming change during downsync hash reconciliation for $domainType $domainId: $incomingChange',
-                );
-                continue;
-              }
+              final updateDomainType = updateKeys['domainType']!;
+              final updateDomainId = updateKeys['domainId']!;
+              final updateEntityType = updateKeys['entityType']!;
+              final updateEntityId = updateKeys['entityId']!;
 
               final key = _entityStateKey(
                 domainType: updateDomainType,
@@ -565,20 +591,18 @@ class SyncManager {
             storageSummaries['$domainId/$cursor'] = results.resultsSummary;
             for (final stateUpdate
                 in results.resultsSummary?.stateUpdates ?? const []) {
-              final updateDomainType = stateUpdate['domainType']?.toString();
-              final updateDomainId = stateUpdate['domainId']?.toString();
-              final updateEntityType = stateUpdate['entityType']?.toString();
-              final updateEntityId = stateUpdate['entityId']?.toString();
+              final updateKeys = _extractUpdateKeysFromChange(
+                stateUpdate,
+                domainTypeContext: domainType,
+                domainIdContext: domainId,
+                reason: 'malformed state update during downsync',
+              );
+              if (updateKeys == null) continue;
 
-              if (updateDomainType == null ||
-                  updateDomainId == null ||
-                  updateEntityType == null ||
-                  updateEntityId == null) {
-                SlttLogger.logger.warning(
-                  '[SyncManager] Skipping malformed state update during downsync for $domainType $domainId: $stateUpdate',
-                );
-                continue;
-              }
+              final updateDomainType = updateKeys['domainType']!;
+              final updateDomainId = updateKeys['domainId']!;
+              final updateEntityType = updateKeys['entityType']!;
+              final updateEntityId = updateKeys['entityId']!;
 
               final key = _entityStateKey(
                 domainType: updateDomainType,
@@ -612,19 +636,19 @@ class SyncManager {
               // changes before/after outsync, revisit this by looking up
               // sender stateDataHash by CID instead of relying only on warning
               // metadata from downsynced change entries.
-              final updateDomainType = incomingChange['domainType']?.toString();
-              final updateDomainId = incomingChange['domainId']?.toString();
-              final updateEntityType = incomingChange['entityType']?.toString();
-              final updateEntityId = incomingChange['entityId']?.toString();
-              if (updateDomainType == null ||
-                  updateDomainId == null ||
-                  updateEntityType == null ||
-                  updateEntityId == null) {
-                SlttLogger.logger.warning(
-                  '[SyncManager] Skipping malformed stateChanged=false change during warning-based reconciliation for $domainType $domainId: $incomingChange',
-                );
-                continue;
-              }
+              final updateKeys = _extractUpdateKeysFromChange(
+                incomingChange,
+                domainTypeContext: domainType,
+                domainIdContext: domainId,
+                reason:
+                    'malformed stateChanged=false change during warning-based reconciliation',
+              );
+              if (updateKeys == null) continue;
+
+              final updateDomainType = updateKeys['domainType']!;
+              final updateDomainId = updateKeys['domainId']!;
+              final updateEntityType = updateKeys['entityType']!;
+              final updateEntityId = updateKeys['entityId']!;
 
               final key = _entityStateKey(
                 domainType: updateDomainType,
