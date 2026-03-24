@@ -203,6 +203,36 @@ class SyncManager {
     return '$domainType/$domainId/$entityType/$entityId';
   }
 
+  String? _extractIncomingStateDataHashWarning(
+    Map<String, dynamic> incomingChange,
+  ) {
+    final operationInfoRaw = incomingChange['operationInfoJson'];
+    if (operationInfoRaw == null) {
+      return null;
+    }
+
+    try {
+      dynamic operationInfo;
+      if (operationInfoRaw is String && operationInfoRaw.isNotEmpty) {
+        operationInfo = jsonDecode(operationInfoRaw);
+      } else if (operationInfoRaw is Map) {
+        operationInfo = operationInfoRaw;
+      }
+      if (operationInfo is! Map) {
+        return null;
+      }
+
+      final warnings = operationInfo['warnings'];
+      if (warnings is! Map) {
+        return null;
+      }
+
+      return warnings['stateDataHash']?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Get all projects that have changes to sync
 
   // Outsync changes from outsyncs to cloud storage
@@ -324,6 +354,7 @@ class SyncManager {
     ProjectCursorChanges projectCursorChanges = {};
     StorageSummaries storageSummaries = {};
     final finalStateHashesByKey = <String, _StateHashSnapshot>{};
+    final queuedEntityStateFetchKeys = <String>{};
     try {
       SlttLogger.logger.info('[SyncManager] Starting downsync from cloud...');
 
@@ -402,7 +433,7 @@ class SyncManager {
           final encodedDomainId = Uri.encodeComponent(domainId);
           // router.get('/api/changes/<domainCollection>/<domainId>', _handleGetChanges);
           final url =
-              '$_cloudStorageUrl/api/changes/$collection/$encodedDomainId?stateChanged=true&cursor=$cursor';
+              '$_cloudStorageUrl/api/changes/$collection/$encodedDomainId?cursor=$cursor';
 
           final response = await _dio.get(url);
           final changesResponseData = response.data as Map<String, dynamic>;
@@ -452,6 +483,12 @@ class SyncManager {
             final incomingChanges = changesBatch
                 .cast<Map<String, dynamic>>()
                 .toList();
+            final changesToApply = incomingChanges
+                .where((change) => change['stateChanged'] == true)
+                .toList();
+            final changesStateFalse = incomingChanges
+                .where((change) => change['stateChanged'] != true)
+                .toList();
             projectCursorChanges['$domainId/$cursor'] = incomingChanges;
 
             for (final incomingChange in incomingChanges) {
@@ -494,16 +531,19 @@ class SyncManager {
               );
             }
 
-            // Apply changes directly to state storage
-            final results = await ChangeProcessingService.storeChanges(
-              storageMode: 'sync',
-              changes: incomingChanges,
-              srcStorageType: srcStorageType,
-              srcStorageId: srcStorageId,
-              storage: _localStorage,
-              includeChangeUpdates: true,
-              includeStateUpdates: true,
-            );
+            // Apply only stateChanged=true changes to avoid sync pre-validation
+            // rejection for stateChanged=false entries.
+            final results = changesToApply.isEmpty
+                ? const ChangeProcessingResult(resultsSummary: null)
+                : await ChangeProcessingService.storeChanges(
+                    storageMode: 'sync',
+                    changes: changesToApply,
+                    srcStorageType: srcStorageType,
+                    srcStorageId: srcStorageId,
+                    storage: _localStorage,
+                    includeChangeUpdates: true,
+                    includeStateUpdates: true,
+                  );
 
             // TODO: how to handle more gracefully so we don't get stuck?
             if (results.isError) {
@@ -558,10 +598,54 @@ class SyncManager {
                 localStateDataHash: stateUpdate['stateDataHash']?.toString(),
               );
             }
+
+            for (final incomingChange in changesStateFalse) {
+              final warningStateDataHash = _extractIncomingStateDataHashWarning(
+                incomingChange,
+              );
+              if (warningStateDataHash == null ||
+                  warningStateDataHash.isEmpty) {
+                continue;
+              }
+
+              // TODO(lan-local-team-storage): if/when each client preserves
+              // changes before/after outsync, revisit this by looking up
+              // sender stateDataHash by CID instead of relying only on warning
+              // metadata from downsynced change entries.
+              final updateDomainType = incomingChange['domainType']?.toString();
+              final updateDomainId = incomingChange['domainId']?.toString();
+              final updateEntityType = incomingChange['entityType']?.toString();
+              final updateEntityId = incomingChange['entityId']?.toString();
+              if (updateDomainType == null ||
+                  updateDomainId == null ||
+                  updateEntityType == null ||
+                  updateEntityId == null) {
+                SlttLogger.logger.warning(
+                  '[SyncManager] Skipping malformed stateChanged=false change during warning-based reconciliation for $domainType $domainId: $incomingChange',
+                );
+                continue;
+              }
+
+              final key = _entityStateKey(
+                domainType: updateDomainType,
+                domainId: updateDomainId,
+                entityType: updateEntityType,
+                entityId: updateEntityId,
+              );
+              if (queuedEntityStateFetchKeys.add(key)) {
+                enqueueJobFetchEntityState(
+                  domainType: updateDomainType,
+                  domainId: updateDomainId,
+                  entityType: updateEntityType,
+                  entityId: updateEntityId,
+                  parentId: incomingChange['parentId']?.toString(),
+                );
+              }
+            }
             totalChangesForProject += incomingChanges.length;
 
             SlttLogger.logger.info(
-              '[SyncManager] Applied ${incomingChanges.length} changes for $domainType $domainId (batch)',
+              '[SyncManager] Downloaded ${incomingChanges.length} changes for $domainType $domainId (batch); applied ${changesToApply.length}',
             );
 
             // Update sync state for this project if we processed any changes
@@ -613,13 +697,21 @@ class SyncManager {
             localStateDataHash != null &&
             localStateDataHash != cloudStateDataHash) {
           mismatchCount++;
-          enqueueJobFetchEntityState(
+          final key = _entityStateKey(
             domainType: snapshot.domainType,
             domainId: snapshot.domainId,
             entityType: snapshot.entityType,
             entityId: snapshot.entityId,
-            parentId: snapshot.parentId,
           );
+          if (queuedEntityStateFetchKeys.add(key)) {
+            enqueueJobFetchEntityState(
+              domainType: snapshot.domainType,
+              domainId: snapshot.domainId,
+              entityType: snapshot.entityType,
+              entityId: snapshot.entityId,
+              parentId: snapshot.parentId,
+            );
+          }
         }
       }
 

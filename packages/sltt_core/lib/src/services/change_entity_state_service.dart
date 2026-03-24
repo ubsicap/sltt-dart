@@ -190,6 +190,14 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     }
   }
 
+  if (changeLogEntry.stateDataHash != null &&
+      changeLogEntry.stateDataHash != stateDataHash) {
+    // TODO(lan-local-team-storage): this currently keeps only the latest
+    // sender-reported hash mismatch and assumes warnings originated from
+    // changeLogEntry.storageId. Revisit warning provenance for multi-hop sync.
+    additionalWarnings['stateDataHash'] = changeLogEntry.stateDataHash;
+  }
+
   // Build the full set of change-log entry updates callers can apply
   // Decide whether to preserve incoming change data in the change-log entry.
   // In "sync" mode we generally preserve the incoming data when it originated
@@ -258,6 +266,8 @@ Map<String, dynamic> getAdditionalWarnings({
   if (['create', 'update', 'delete'].contains(operation) &&
       (storageMode != 'save' || changeLogEntry.operation.isNotEmpty) &&
       changeLogEntry.operation != operation) {
+    // TODO(lan-local-team-storage): assumes warning values came from
+    // changeLogEntry.storageId and does not preserve warning history.
     additionalWarnings['operation'] = changeLogEntry.operation;
   }
   if (entityState == null) {

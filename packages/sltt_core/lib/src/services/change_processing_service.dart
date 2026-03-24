@@ -696,27 +696,41 @@ class ChangeProcessingService {
 
     // Add detailed updates if requested
     if (includeChangeUpdates) {
-      resultsSummary.changeUpdates.add({
-        'cid': updateResults.newChangeLogEntry.cid,
-        'updates': result.changeUpdates,
-        'stateChanged': updateResults.newChangeLogEntry.stateChanged,
-      });
+      if (storageMode == 'sync') {
+        resultsSummary.changeUpdates.add({
+          'cid': updateResults.newChangeLogEntry.cid,
+          'updates': result.changeUpdates,
+          'stateChanged': updateResults.newChangeLogEntry.stateChanged,
+        });
+      } else {
+        resultsSummary.changeUpdates.add({
+          'cid': updateResults.newChangeLogEntry.cid,
+          'updates': result.changeUpdates,
+        });
+      }
     }
 
     if (includeStateUpdates) {
-      resultsSummary.stateUpdates.add({
-        'cid': updateResults.newChangeLogEntry.cid,
-        'domainType': changeLogEntry.domainType,
-        'domainId': changeLogEntry.domainId,
-        'entityType': changeLogEntry.entityType,
-        'entityId': changeLogEntry.entityId,
-        'parentId': updateResults.newEntityState?.data_parentId,
-        // Keep `state` for backward compatibility with existing API/tests.
-        'state': result.stateUpdates,
-        'stateDataHash':
-            updateResults.newEntityState?.stateDataHash ??
-            result.stateUpdates['stateDataHash'],
-      });
+      if (storageMode == 'sync') {
+        resultsSummary.stateUpdates.add({
+          'cid': updateResults.newChangeLogEntry.cid,
+          'domainType': changeLogEntry.domainType,
+          'domainId': changeLogEntry.domainId,
+          'entityType': changeLogEntry.entityType,
+          'entityId': changeLogEntry.entityId,
+          'parentId': updateResults.newEntityState?.data_parentId,
+          // Keep `state` for backward compatibility with existing API/tests. TODO: rename to `stateUpdates`
+          'state': result.stateUpdates,
+          'stateDataHash':
+              updateResults.newEntityState?.stateDataHash ??
+              result.stateUpdates['stateDataHash'],
+        });
+      } else {
+        resultsSummary.stateUpdates.add({
+          'cid': updateResults.newChangeLogEntry.cid,
+          'state': result.stateUpdates,
+        });
+      }
     }
 
     // Debugging aid: log when tests produce unexpected empty updates

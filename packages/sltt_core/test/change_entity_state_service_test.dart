@@ -659,6 +659,48 @@ void main() {
         return val;
       }
 
+      test(
+        'adds stateDataHash warning on mismatch without warning history storage map',
+        () {
+          final incomingChange = TestChangeLogEntry(
+            entityId: 'entity1',
+            entityType: 'task',
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: baseTime.add(const Duration(minutes: 5)),
+            cid: 'cid-warning-hash-1',
+            storageId: 'sender-storage',
+            changeBy: 'user2',
+            dataJson: jsonEncode({'rank': '2'}),
+            operation: 'update',
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            stateDataHash: 'incoming-hash-from-sender',
+            unknownJson: jsonEncode({}),
+          );
+
+          final updates = getUpdatesForChangeLogEntryAndEntityState(
+            incomingChange,
+            entityState,
+            storageMode: 'sync',
+            storageType: 'local',
+            targetStorageId: 'localId',
+          );
+
+          final operationInfo =
+              jsonDecode(updates.changeUpdates['operationInfoJson'] as String)
+                  as Map<String, dynamic>;
+          final warnings =
+              operationInfo['warnings'] as Map<String, dynamic>? ??
+              <String, dynamic>{};
+
+          expect(
+            warnings['stateDataHash'],
+            equals('incoming-hash-from-sender'),
+          );
+        },
+      );
+
       test('should handle field-level conflict resolution', () {
         // Create a change log entry with newer field changes
         final newerTime = baseTime.add(const Duration(minutes: 5));
