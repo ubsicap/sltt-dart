@@ -591,31 +591,10 @@ class SyncManager {
         '[SyncManager] Downsync completed. Total changes: $totalDownloadedCount',
       );
 
-      var mismatchCount = 0;
-      for (final snapshot in finalStateHashesByKey.values) {
-        final cloudStateDataHash = snapshot.cloudStateDataHash;
-        final localStateDataHash = snapshot.localStateDataHash;
-        if (cloudStateDataHash != null &&
-            localStateDataHash != null &&
-            localStateDataHash != cloudStateDataHash) {
-          mismatchCount++;
-          final key = _entityStateKey(
-            domainType: snapshot.domainType,
-            domainId: snapshot.domainId,
-            entityType: snapshot.entityType,
-            entityId: snapshot.entityId,
-          );
-          if (queuedEntityStateFetchKeys.add(key)) {
-            enqueueJobFetchEntityState(
-              domainType: snapshot.domainType,
-              domainId: snapshot.domainId,
-              entityType: snapshot.entityType,
-              entityId: snapshot.entityId,
-              parentId: snapshot.parentId,
-            );
-          }
-        }
-      }
+      final mismatchCount = _queueMismatchedEntityStateRefetches(
+        finalStateHashesByKey: finalStateHashesByKey,
+        queuedEntityStateFetchKeys: queuedEntityStateFetchKeys,
+      );
 
       if (mismatchCount > 0) {
         SlttLogger.logger.warning(
@@ -908,6 +887,39 @@ class SyncManager {
         localStateDataHash: trustedLocalStateDataHash,
       );
     }
+  }
+
+  int _queueMismatchedEntityStateRefetches({
+    required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required Set<String> queuedEntityStateFetchKeys,
+  }) {
+    var mismatchCount = 0;
+    for (final snapshot in finalStateHashesByKey.values) {
+      final cloudStateDataHash = snapshot.cloudStateDataHash;
+      final localStateDataHash = snapshot.localStateDataHash;
+      if (cloudStateDataHash != null &&
+          localStateDataHash != null &&
+          localStateDataHash != cloudStateDataHash) {
+        mismatchCount++;
+        final key = _entityStateKey(
+          domainType: snapshot.domainType,
+          domainId: snapshot.domainId,
+          entityType: snapshot.entityType,
+          entityId: snapshot.entityId,
+        );
+        if (queuedEntityStateFetchKeys.add(key)) {
+          enqueueJobFetchEntityState(
+            domainType: snapshot.domainType,
+            domainId: snapshot.domainId,
+            entityType: snapshot.entityType,
+            entityId: snapshot.entityId,
+            parentId: snapshot.parentId,
+          );
+        }
+      }
+    }
+
+    return mismatchCount;
   }
 
   Map<String, String>? _extractUpdateKeysFromChange(
