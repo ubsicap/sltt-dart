@@ -162,6 +162,22 @@ class EntityStatePaginationService {
       _requeuedQueuedDuplicateSingleCount;
   int get requeuedQueuedDuplicateCollectionCount =>
       _requeuedQueuedDuplicateCollectionCount;
+  int get pendingSingleDebounceCount => _singleDebounceBuckets.values.fold(
+    0,
+    (count, bucket) => count + bucket.requestsByEntityId.length,
+  );
+  int get queuedSingleJobCount =>
+      _queueLifo.where((job) => !job.isCollection).length +
+      pendingSingleDebounceCount;
+  int get queuedCollectionJobCount =>
+      _queueLifo.where((job) => job.isCollection).length;
+  int get activeSingleJobCount =>
+      _activeJobs.values.where((job) => !job.isCollection).length;
+  int get activeCollectionJobCount =>
+      _activeJobs.values.where((job) => job.isCollection).length;
+  int get totalQueuedJobCount =>
+      queuedSingleJobCount + queuedCollectionJobCount;
+  bool get isProcessingEnabled => _enabled;
   Stream<EntityStateFetchEvent> get singleEntityEvents =>
       _singleEntityEventsController.stream;
   Stream<EntityStateFetchEvent> get collectionEntityEvents =>

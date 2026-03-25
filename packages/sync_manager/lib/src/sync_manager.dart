@@ -90,6 +90,44 @@ class SyncManager {
     );
   }
 
+  void startEntityStatePaginationService() {
+    entityStatePaginationService.startProcessing();
+  }
+
+  void stopEntityStatePaginationService() {
+    _entityStatePaginationService?.stopProcessing();
+  }
+
+  Map<String, dynamic> getEntityStatePaginationJobQueueCounts() {
+    final service = _entityStatePaginationService;
+    if (service == null) {
+      return {
+        'queuedSingle': 0,
+        'queuedCollection': 0,
+        'queuedTotal': 0,
+        'activeSingle': 0,
+        'activeCollection': 0,
+        'activeTotal': 0,
+        'enabled': false,
+      };
+    }
+
+    final queuedSingle = service.queuedSingleJobCount;
+    final queuedCollection = service.queuedCollectionJobCount;
+    final activeSingle = service.activeSingleJobCount;
+    final activeCollection = service.activeCollectionJobCount;
+
+    return {
+      'queuedSingle': queuedSingle,
+      'queuedCollection': queuedCollection,
+      'queuedTotal': queuedSingle + queuedCollection,
+      'activeSingle': activeSingle,
+      'activeCollection': activeCollection,
+      'activeTotal': activeSingle + activeCollection,
+      'enabled': service.isProcessingEnabled,
+    };
+  }
+
   Future<void> initialize({
     IsarStorageService? localStorage,
     bool closeStorageOnDispose = true,
