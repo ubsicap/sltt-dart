@@ -490,45 +490,12 @@ class SyncManager {
                 .where((change) => change['stateChanged'] != true)
                 .toList();
             projectCursorChanges['$domainId/$cursor'] = incomingChanges;
-
-            for (final incomingChange in incomingChanges) {
-              final cloudStateDataHash = incomingChange['stateDataHash']
-                  ?.toString();
-              final updateKeys = _extractUpdateKeysFromChange(
-                incomingChange,
-                domainTypeContext: domainType,
-                domainIdContext: domainId,
-                reason:
-                    'malformed incoming change during downsync hash reconciliation',
-              );
-              if (updateKeys == null) continue;
-
-              final updateDomainType = updateKeys['domainType']!;
-              final updateDomainId = updateKeys['domainId']!;
-              final updateEntityType = updateKeys['entityType']!;
-              final updateEntityId = updateKeys['entityId']!;
-
-              final key = _entityStateKey(
-                domainType: updateDomainType,
-                domainId: updateDomainId,
-                entityType: updateEntityType,
-                entityId: updateEntityId,
-              );
-
-              final previous = finalStateHashesByKey[key];
-              finalStateHashesByKey[key] = _StateHashSnapshot(
-                domainType: updateDomainType,
-                domainId: updateDomainId,
-                entityType: updateEntityType,
-                entityId: updateEntityId,
-                parentId:
-                    incomingChange['parentId']?.toString() ??
-                    previous?.parentId,
-                cloudStateDataHash:
-                    cloudStateDataHash ?? previous?.cloudStateDataHash,
-                localStateDataHash: previous?.localStateDataHash,
-              );
-            }
+            _updateCloudStateDataHashes(
+              incomingChanges: incomingChanges,
+              finalStateHashesByKey: finalStateHashesByKey,
+              domainTypeContext: domainType,
+              domainIdContext: domainId,
+            );
 
             // Apply only stateChanged=true changes to avoid sync pre-validation
             // rejection for stateChanged=false entries.
@@ -562,39 +529,12 @@ class SyncManager {
             }
 
             storageSummaries['$domainId/$cursor'] = results.resultsSummary;
-            for (final stateUpdate
-                in results.resultsSummary?.stateUpdates ?? const []) {
-              final updateKeys = _extractUpdateKeysFromChange(
-                stateUpdate,
-                domainTypeContext: domainType,
-                domainIdContext: domainId,
-                reason: 'malformed state update during downsync',
-              );
-              if (updateKeys == null) continue;
-
-              final updateDomainType = updateKeys['domainType']!;
-              final updateDomainId = updateKeys['domainId']!;
-              final updateEntityType = updateKeys['entityType']!;
-              final updateEntityId = updateKeys['entityId']!;
-
-              final key = _entityStateKey(
-                domainType: updateDomainType,
-                domainId: updateDomainId,
-                entityType: updateEntityType,
-                entityId: updateEntityId,
-              );
-              final previous = finalStateHashesByKey[key];
-              finalStateHashesByKey[key] = _StateHashSnapshot(
-                domainType: updateDomainType,
-                domainId: updateDomainId,
-                entityType: updateEntityType,
-                entityId: updateEntityId,
-                parentId:
-                    stateUpdate['parentId']?.toString() ?? previous?.parentId,
-                cloudStateDataHash: previous?.cloudStateDataHash,
-                localStateDataHash: stateUpdate['stateDataHash']?.toString(),
-              );
-            }
+            _updateLocalStateDataHashes(
+              stateUpdates: results.resultsSummary?.stateUpdates ?? const [],
+              finalStateHashesByKey: finalStateHashesByKey,
+              domainTypeContext: domainType,
+              domainIdContext: domainId,
+            );
 
             for (final incomingChange in changesStateFalse) {
               final warningStateDataHash = _extractIncomingStateDataHashWarning(
@@ -863,6 +803,86 @@ class SyncManager {
       _initialized = false;
       _instance = null;
       SlttLogger.logger.info('[SyncManager] Closed');
+    }
+  }
+
+  void _updateCloudStateDataHashes({
+    required List<Map<String, dynamic>> incomingChanges,
+    required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required String domainTypeContext,
+    required String domainIdContext,
+  }) {
+    for (final incomingChange in incomingChanges) {
+      final cloudStateDataHash = incomingChange['stateDataHash']?.toString();
+      final updateKeys = _extractUpdateKeysFromChange(
+        incomingChange,
+        domainTypeContext: domainTypeContext,
+        domainIdContext: domainIdContext,
+        reason: 'malformed incoming change during downsync hash reconciliation',
+      );
+      if (updateKeys == null) continue;
+
+      final updateDomainType = updateKeys['domainType']!;
+      final updateDomainId = updateKeys['domainId']!;
+      final updateEntityType = updateKeys['entityType']!;
+      final updateEntityId = updateKeys['entityId']!;
+
+      final key = _entityStateKey(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+      );
+
+      final previous = finalStateHashesByKey[key];
+      finalStateHashesByKey[key] = _StateHashSnapshot(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+        parentId: incomingChange['parentId']?.toString() ?? previous?.parentId,
+        cloudStateDataHash: cloudStateDataHash ?? previous?.cloudStateDataHash,
+        localStateDataHash: previous?.localStateDataHash,
+      );
+    }
+  }
+
+  void _updateLocalStateDataHashes({
+    required List<Map<String, dynamic>> stateUpdates,
+    required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required String domainTypeContext,
+    required String domainIdContext,
+  }) {
+    for (final stateUpdate in stateUpdates) {
+      final updateKeys = _extractUpdateKeysFromChange(
+        stateUpdate,
+        domainTypeContext: domainTypeContext,
+        domainIdContext: domainIdContext,
+        reason: 'malformed state update during downsync',
+      );
+      if (updateKeys == null) continue;
+
+      final updateDomainType = updateKeys['domainType']!;
+      final updateDomainId = updateKeys['domainId']!;
+      final updateEntityType = updateKeys['entityType']!;
+      final updateEntityId = updateKeys['entityId']!;
+
+      final key = _entityStateKey(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+      );
+      final previous = finalStateHashesByKey[key];
+      finalStateHashesByKey[key] = _StateHashSnapshot(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+        parentId: stateUpdate['parentId']?.toString() ?? previous?.parentId,
+        cloudStateDataHash: previous?.cloudStateDataHash,
+        localStateDataHash: stateUpdate['stateDataHash']?.toString(),
+      );
     }
   }
 
