@@ -124,9 +124,22 @@ void main() {
     );
 
     test(
-      '[isar] downsync [stateChanged=false warning]: sync no-op change is downloaded with warning and queues targeted refetch job',
+      '[isar] downsync [stateChanged=false warning]: sync no-op change warning updates reconciliation hashes without immediate refetch enqueue for different storage id',
       () async {
         await testDownsyncStateChangedFalseWarningQueuesRefetch(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useCloudDb: false,
+        );
+      },
+      timeout: Timeout.none,
+    );
+
+    test(
+      '[isar] downsync [stateChanged=false warning same-storage]: sync no-op warning trusts local hash when storage ids match and avoids refetch enqueue',
+      () async {
+        await testDownsyncStateChangedFalseWarningSameStorageIdAvoidsRefetch(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
@@ -263,9 +276,22 @@ void main() {
     );
 
     test(
-      '[aws_backend] downsync [stateChanged=false warning]: sync no-op change is downloaded with warning and queues targeted refetch job',
+      '[aws_backend] downsync [stateChanged=false warning]: sync no-op change warning updates reconciliation hashes without immediate refetch enqueue for different storage id',
       () async {
         await testDownsyncStateChangedFalseWarningQueuesRefetch(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useCloudDb: true,
+        );
+      },
+      timeout: Timeout.none,
+    );
+
+    test(
+      '[aws_backend] downsync [stateChanged=false warning same-storage]: sync no-op warning trusts local hash when storage ids match and avoids refetch enqueue',
+      () async {
+        await testDownsyncStateChangedFalseWarningSameStorageIdAvoidsRefetch(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
@@ -865,9 +891,154 @@ Future<void> testDownsyncStateChangedFalseWarningQueuesRefetch({
 
   expect(
     queue.requeuedQueuedDuplicateSingleCount,
-    greaterThan(beforeRequeueCount),
+    equals(beforeRequeueCount),
     reason:
-        'warning-based stateChanged=false reconciliation should enqueue a single-entity fetch job',
+        'warning-based stateChanged=false reconciliation should not pre-enqueue when sender storageId differs from current storageId',
+  );
+
+  queue.resumeProcessing();
+}
+
+Future<void> testDownsyncStateChangedFalseWarningSameStorageIdAvoidsRefetch({
+  required String cloudBaseUrl,
+  required String srcStorageId,
+  required String srcStorageType,
+  bool useCloudDb = false,
+}) async {
+  final projectId = '__test_downsync_statechanged_false_warning_same_storage';
+
+  if (useCloudDb) {
+    await resetDomainId(cloudBaseUrl, projectId);
+  }
+
+  await saveCloudChangeViaHttp(
+    cloudBaseUrl: cloudBaseUrl,
+    srcStorageType: srcStorageType,
+    srcStorageId: srcStorageId,
+    domainId: projectId,
+    entityId: projectId,
+    changeAt: DateTime.now().toUtc().subtract(const Duration(minutes: 2)),
+    dataJson: stableStringify(
+      BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
+    ),
+    userId: 'test-seed',
+    operation: 'create',
+    fromJson: ProjectDataFields.fromJson,
+  );
+
+  final localStorageId = await LocalStorageService.instance.getStorageId();
+
+  final syncNoOpChange = IsarChangeLogEntry(
+    seq: 2,
+    cid: generateCid(
+      entityType: EntityType.project,
+      userId: 'sync-noop-same-storage',
+    ),
+    storageId: localStorageId,
+    domainType: 'project',
+    domainId: projectId,
+    entityType: 'project',
+    entityId: projectId,
+    operation: 'update',
+    operationInfoJson: jsonEncode({}),
+    stateChanged: true,
+    stateDataHash: 'incoming-mismatched-state-data-hash',
+    changeAt: DateTime.now().toUtc().subtract(const Duration(minutes: 1)),
+    dataJson: stableStringify(
+      BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
+    ),
+    changeBy: 'sync-noop-same-storage',
+    unknownJson: jsonEncode({}),
+  );
+
+  final syncReq = CreateChangesRequest(
+    changes: [syncNoOpChange],
+    srcStorageType: 'local',
+    srcStorageId: localStorageId,
+    storageMode: 'sync',
+    includeChangeUpdates: true,
+    includeStateUpdates: true,
+  );
+
+  final syncResp = await http.post(
+    Uri.parse('$cloudBaseUrl/api/changes'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode(syncReq.toJson()),
+  );
+  expect(
+    syncResp.statusCode,
+    anyOf([200, 201]),
+    reason:
+        'sync-mode cloud save should succeed, got ${syncResp.statusCode}: ${syncResp.body}',
+  );
+
+  final syncRespJson = jsonDecode(syncResp.body) as Map<String, dynamic>;
+  expect(
+    syncRespJson['errors'],
+    isEmpty,
+    reason: 'sync-mode cloud save should have no errors: ${syncResp.body}',
+  );
+
+  final syncManager = SyncManager.instance;
+  await syncManager.initialize();
+  syncManager.configureCloudUrl(cloudBaseUrl);
+
+  final queue = syncManager.entityStatePaginationService;
+  queue.stopProcessing();
+  final beforeRequeueCount = queue.requeuedQueuedDuplicateSingleCount;
+
+  final downsyncResult = await syncManager.downsyncFromCloud(
+    domainIds: [projectId],
+  );
+
+  expect(
+    downsyncResult.success,
+    isTrue,
+    reason:
+        'stateChanged=false warning downsync should succeed: ${downsyncResult.error}',
+  );
+
+  final downloadedChanges = downsyncResult.projectCursorChanges.values
+      .expand((changes) => changes)
+      .toList();
+  final downloadedSyncNoOp = downloadedChanges.firstWhere(
+    (c) => c['cid'] == syncNoOpChange.cid,
+    orElse: () => <String, dynamic>{},
+  );
+
+  expect(
+    downloadedSyncNoOp,
+    isNotEmpty,
+    reason:
+        'expected to download sync no-op change ${syncNoOpChange.cid}, got: $downloadedChanges',
+  );
+  expect(downloadedSyncNoOp['stateChanged'], isFalse);
+
+  final operationInfo =
+      jsonDecode(downloadedSyncNoOp['operationInfoJson'] as String)
+          as Map<String, dynamic>;
+  final warnings =
+      operationInfo['warnings'] as Map<String, dynamic>? ?? <String, dynamic>{};
+  expect(
+    warnings['stateDataHash'],
+    equals('incoming-mismatched-state-data-hash'),
+  );
+
+  await Future<void>.delayed(const Duration(milliseconds: 450));
+
+  syncManager.enqueueJobFetchEntityState(
+    domainType: 'project',
+    domainId: projectId,
+    entityType: 'project',
+    entityId: projectId,
+    parentId: downloadedSyncNoOp['parentId']?.toString(),
+  );
+
+  expect(
+    queue.requeuedQueuedDuplicateSingleCount,
+    equals(beforeRequeueCount),
+    reason:
+        'same-storage warning reconciliation should trust warning hash and avoid pre-enqueueing refetch',
   );
 
   queue.resumeProcessing();

@@ -356,6 +356,7 @@ class SyncManager {
     final finalStateHashesByKey = <String, _StateHashSnapshot>{};
     final queuedEntityStateFetchKeys = <String>{};
     try {
+      final currentStorageId = await _localStorage.getStorageId();
       SlttLogger.logger.info('[SyncManager] Starting downsync from cloud...');
 
       if (domainIds != null && domainIds.isNotEmpty) {
@@ -496,6 +497,13 @@ class SyncManager {
               domainTypeContext: domainType,
               domainIdContext: domainId,
             );
+            _updateStateChangedFalseStateDataHashes(
+              changesStateFalse: changesStateFalse,
+              finalStateHashesByKey: finalStateHashesByKey,
+              domainTypeContext: domainType,
+              domainIdContext: domainId,
+              currentStorageId: currentStorageId,
+            );
 
             // Apply only stateChanged=true changes to avoid sync pre-validation
             // rejection for stateChanged=false entries.
@@ -536,49 +544,6 @@ class SyncManager {
               domainIdContext: domainId,
             );
 
-            for (final incomingChange in changesStateFalse) {
-              final warningStateDataHash = _extractIncomingStateDataHashWarning(
-                incomingChange,
-              );
-              if (warningStateDataHash == null ||
-                  warningStateDataHash.isEmpty) {
-                continue;
-              }
-
-              // TODO(lan-local-team-storage): if/when each client preserves
-              // changes before/after outsync, revisit this by looking up
-              // sender stateDataHash by CID instead of relying only on warning
-              // metadata from downsynced change entries.
-              final updateKeys = _extractUpdateKeysFromChange(
-                incomingChange,
-                domainTypeContext: domainType,
-                domainIdContext: domainId,
-                reason:
-                    'malformed stateChanged=false change during warning-based reconciliation',
-              );
-              if (updateKeys == null) continue;
-
-              final updateDomainType = updateKeys['domainType']!;
-              final updateDomainId = updateKeys['domainId']!;
-              final updateEntityType = updateKeys['entityType']!;
-              final updateEntityId = updateKeys['entityId']!;
-
-              final key = _entityStateKey(
-                domainType: updateDomainType,
-                domainId: updateDomainId,
-                entityType: updateEntityType,
-                entityId: updateEntityId,
-              );
-              if (queuedEntityStateFetchKeys.add(key)) {
-                enqueueJobFetchEntityState(
-                  domainType: updateDomainType,
-                  domainId: updateDomainId,
-                  entityType: updateEntityType,
-                  entityId: updateEntityId,
-                  parentId: incomingChange['parentId']?.toString(),
-                );
-              }
-            }
             totalChangesForProject += incomingChanges.length;
 
             SlttLogger.logger.info(
@@ -882,6 +847,65 @@ class SyncManager {
         parentId: stateUpdate['parentId']?.toString() ?? previous?.parentId,
         cloudStateDataHash: previous?.cloudStateDataHash,
         localStateDataHash: stateUpdate['stateDataHash']?.toString(),
+      );
+    }
+  }
+
+  void _updateStateChangedFalseStateDataHashes({
+    required List<Map<String, dynamic>> changesStateFalse,
+    required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required String domainTypeContext,
+    required String domainIdContext,
+    required String currentStorageId,
+  }) {
+    for (final incomingChange in changesStateFalse) {
+      final warningStateDataHash = _extractIncomingStateDataHashWarning(
+        incomingChange,
+      );
+      if (warningStateDataHash == null || warningStateDataHash.isEmpty) {
+        continue;
+      }
+
+      final updateKeys = _extractUpdateKeysFromChange(
+        incomingChange,
+        domainTypeContext: domainTypeContext,
+        domainIdContext: domainIdContext,
+        reason:
+            'malformed stateChanged=false change during warning-based reconciliation',
+      );
+      if (updateKeys == null) continue;
+
+      final updateDomainType = updateKeys['domainType']!;
+      final updateDomainId = updateKeys['domainId']!;
+      final updateEntityType = updateKeys['entityType']!;
+      final updateEntityId = updateKeys['entityId']!;
+
+      final key = _entityStateKey(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+      );
+      final previous = finalStateHashesByKey[key];
+      final incomingStorageId = incomingChange['storageId']?.toString();
+
+      // TODO(lan-local-team-storage): revisit this when clients can share
+      // changes across storage ids. At that point, prefer sender stateDataHash
+      // lookup by CID rather than requiring storageId match.
+      final trustedLocalStateDataHash = incomingStorageId == currentStorageId
+          ? warningStateDataHash
+          : previous?.localStateDataHash;
+
+      finalStateHashesByKey[key] = _StateHashSnapshot(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+        parentId: incomingChange['parentId']?.toString() ?? previous?.parentId,
+        cloudStateDataHash:
+            previous?.cloudStateDataHash ??
+            incomingChange['stateDataHash']?.toString(),
+        localStateDataHash: trustedLocalStateDataHash,
       );
     }
   }
