@@ -11,6 +11,8 @@ const _defaultSingleRequestDebounceMs = 300;
 
 class EntityStateFetchEvent {
   EntityStateFetchEvent({
+    required this.requestKey,
+    required this.jobKey,
     required this.domainType,
     required this.domainId,
     required this.entityType,
@@ -24,6 +26,8 @@ class EntityStateFetchEvent {
     this.errorMessage = '',
   });
 
+  final String requestKey;
+  final String jobKey;
   final String domainType;
   final String domainId;
   final String entityType;
@@ -44,22 +48,23 @@ enum _EntityStateJobPriority { low, normal }
 class _EntityStateJob {
   _EntityStateJob({
     required this.jobKey,
+    required this.requestKey,
     required this.scopeKey,
     required this.domainType,
     required this.domainId,
     required this.entityType,
     required this.isCollection,
-    required this.progressController,
     required this.enqueuedAt,
     required this.priority,
     this.entityId,
     this.parentId,
     this.limit,
     this.cursor,
-    this.fanOutControllers = const {},
+    this.singleRequestKeysByEntityId = const {},
   });
 
   final String jobKey;
+  final String requestKey;
   final String scopeKey;
   final String domainType;
   final String domainId;
@@ -71,12 +76,16 @@ class _EntityStateJob {
   String? cursor;
   bool hasMore = false;
   bool yieldRequested = false;
-  final StreamController<EntityStateFetchEvent> progressController;
-  final Map<String, StreamController<EntityStateFetchEvent>> fanOutControllers;
+  final Map<String, String> singleRequestKeysByEntityId;
   final DateTime enqueuedAt;
   final _EntityStateJobPriority priority;
+}
 
-  Stream<EntityStateFetchEvent> get progressStream => progressController.stream;
+class _PendingSingleRequest {
+  _PendingSingleRequest({required this.requestKey, required this.entityId});
+
+  final String requestKey;
+  final String entityId;
 }
 
 class _SingleEntityDebounceBucket {
@@ -85,8 +94,7 @@ class _SingleEntityDebounceBucket {
   final String scopeKey;
   final String? parentId;
   Timer? timer;
-  final Map<String, StreamController<EntityStateFetchEvent>> controllersById =
-      {};
+  final Map<String, _PendingSingleRequest> requestsByEntityId = {};
 }
 
 class EntityStatePaginationService {
@@ -122,6 +130,11 @@ class EntityStatePaginationService {
   final Dio _dio;
   late final RequestLimiter _requestLimiter;
   EntityStatePaginationJobPersistenceStore? _jobStore;
+  final StreamController<EntityStateFetchEvent> _singleEntityEventsController =
+      StreamController<EntityStateFetchEvent>.broadcast();
+  final StreamController<EntityStateFetchEvent>
+  _collectionEntityEventsController =
+      StreamController<EntityStateFetchEvent>.broadcast();
   String _baseUrl;
 
   bool _processingQueue = false;
@@ -149,6 +162,10 @@ class EntityStatePaginationService {
       _requeuedQueuedDuplicateSingleCount;
   int get requeuedQueuedDuplicateCollectionCount =>
       _requeuedQueuedDuplicateCollectionCount;
+  Stream<EntityStateFetchEvent> get singleEntityEvents =>
+      _singleEntityEventsController.stream;
+  Stream<EntityStateFetchEvent> get collectionEntityEvents =>
+      _collectionEntityEventsController.stream;
 
   void updateBaseUrl(String baseUrl) {
     _baseUrl = baseUrl;
@@ -173,39 +190,23 @@ class EntityStatePaginationService {
     _enabled = false;
     for (final bucket in _singleDebounceBuckets.values) {
       bucket.timer?.cancel();
-      for (final controller in bucket.controllersById.values) {
-        if (!controller.isClosed) {
-          controller.addError(StateError('Entity state queue disposed'));
-          unawaited(controller.close());
-        }
-      }
     }
     _singleDebounceBuckets.clear();
-
-    final seen = <StreamController<EntityStateFetchEvent>>{};
-    void closeController(StreamController<EntityStateFetchEvent> controller) {
-      if (seen.contains(controller)) return;
-      seen.add(controller);
-      if (!controller.isClosed) {
-        controller.addError(StateError('Entity state queue disposed'));
-        unawaited(controller.close());
-      }
-    }
-
-    for (final active in _activeJobs.values) {
-      closeController(active.progressController);
-      for (final c in active.fanOutControllers.values) {
-        closeController(c);
-      }
-    }
-    for (final queued in _queueLifo) {
-      closeController(queued.progressController);
-      for (final c in queued.fanOutControllers.values) {
-        closeController(c);
-      }
-    }
     _activeJobs.clear();
     _queueLifo.clear();
+
+    if (!_singleEntityEventsController.isClosed) {
+      _singleEntityEventsController.addError(
+        StateError('Entity state queue disposed'),
+      );
+      unawaited(_singleEntityEventsController.close());
+    }
+    if (!_collectionEntityEventsController.isClosed) {
+      _collectionEntityEventsController.addError(
+        StateError('Entity state queue disposed'),
+      );
+      unawaited(_collectionEntityEventsController.close());
+    }
 
     final store = _jobStore;
     _jobStore = null;
@@ -287,7 +288,7 @@ class EntityStatePaginationService {
     );
   }
 
-  Stream<EntityStateFetchEvent> enqueueJobFetchEntityState({
+  String enqueueJobFetchEntityState({
     required String domainType,
     required String domainId,
     required String entityType,
@@ -318,7 +319,7 @@ class EntityStatePaginationService {
         )];
     if (existingSingleActive != null) {
       _ignoredDuplicateSingleRequestDuringActiveCount++;
-      return existingSingleActive.progressStream;
+      return existingSingleActive.requestKey;
     }
 
     final existingSingleInQueueIndex = _queueLifo.indexWhere((job) {
@@ -335,7 +336,7 @@ class EntityStatePaginationService {
       _requeuedQueuedDuplicateSingleCount++;
       _persistQueuedJob(queued);
       _processQueue();
-      return queued.progressStream;
+      return queued.requestKey;
     }
 
     final bucket = _singleDebounceBuckets.putIfAbsent(
@@ -343,13 +344,22 @@ class EntityStatePaginationService {
       () => _SingleEntityDebounceBucket(scopeKey: scopeKey, parentId: parentId),
     );
 
-    final existingController = bucket.controllersById[entityId];
-    if (existingController != null && !existingController.isClosed) {
-      return existingController.stream;
+    final existingRequest = bucket.requestsByEntityId[entityId];
+    if (existingRequest != null) {
+      return existingRequest.requestKey;
     }
 
-    final controller = StreamController<EntityStateFetchEvent>.broadcast();
-    bucket.controllersById[entityId] = controller;
+    final requestKey = _singleJobKey(
+      domainType: domainType,
+      domainId: domainId,
+      entityType: entityType,
+      entityId: entityId,
+      parentId: parentId,
+    );
+    bucket.requestsByEntityId[entityId] = _PendingSingleRequest(
+      requestKey: requestKey,
+      entityId: entityId,
+    );
 
     bucket.timer?.cancel();
     bucket.timer = Timer(singleRequestDebounce, () {
@@ -362,10 +372,10 @@ class EntityStatePaginationService {
     });
 
     _processQueue();
-    return controller.stream;
+    return requestKey;
   }
 
-  Stream<EntityStateFetchEvent> enqueueJobFetchEntityStateCollection({
+  String enqueueJobFetchEntityStateCollection({
     required String domainType,
     required String domainId,
     required String entityType,
@@ -386,7 +396,7 @@ class EntityStatePaginationService {
       _requeuedQueuedDuplicateCollectionCount++;
       _persistQueuedJob(queued);
       _processQueue();
-      return queued.progressStream;
+      return queued.requestKey;
     }
 
     final key = _collectionJobKey(
@@ -398,12 +408,12 @@ class EntityStatePaginationService {
     final active = _activeJobs[key];
     if (active != null) {
       _ignoredDuplicateCollectionRequestDuringActiveCount++;
-      return active.progressStream;
+      return active.requestKey;
     }
 
-    final controller = StreamController<EntityStateFetchEvent>.broadcast();
     final job = _EntityStateJob(
       jobKey: key,
+      requestKey: key,
       scopeKey: _scopeKey(
         domainType: domainType,
         domainId: domainId,
@@ -415,7 +425,6 @@ class EntityStatePaginationService {
       entityType: entityType,
       isCollection: true,
       parentId: parentId,
-      progressController: controller,
       enqueuedAt: DateTime.now().toUtc(),
       priority: _EntityStateJobPriority.normal,
       limit: limit,
@@ -425,7 +434,7 @@ class EntityStatePaginationService {
     _queueLifo.add(job);
     _persistQueuedJob(job);
     _processQueue();
-    return controller.stream;
+    return job.requestKey;
   }
 
   void _flushSingleEntityBucket({
@@ -441,21 +450,16 @@ class EntityStatePaginationService {
       parentId: parentId,
     );
     final bucket = _singleDebounceBuckets.remove(scopeKey);
-    if (bucket == null || bucket.controllersById.isEmpty) return;
+    if (bucket == null || bucket.requestsByEntityId.isEmpty) return;
     bucket.timer?.cancel();
 
-    final ids = bucket.controllersById.keys.toList();
+    final ids = bucket.requestsByEntityId.keys.toList();
     if (ids.length == 1) {
       final entityId = ids.first;
-      final controller = bucket.controllersById[entityId]!;
+      final pendingRequest = bucket.requestsByEntityId[entityId]!;
       final job = _EntityStateJob(
-        jobKey: _singleJobKey(
-          domainType: domainType,
-          domainId: domainId,
-          entityType: entityType,
-          entityId: entityId,
-          parentId: parentId,
-        ),
+        jobKey: pendingRequest.requestKey,
+        requestKey: pendingRequest.requestKey,
         scopeKey: scopeKey,
         domainType: domainType,
         domainId: domainId,
@@ -463,7 +467,6 @@ class EntityStatePaginationService {
         isCollection: false,
         entityId: entityId,
         parentId: parentId,
-        progressController: controller,
         enqueuedAt: DateTime.now().toUtc(),
         priority: _EntityStateJobPriority.normal,
       );
@@ -471,10 +474,14 @@ class EntityStatePaginationService {
       _persistQueuedJob(job);
     } else {
       _mergedSingleBatchCount++;
-      final batchController =
-          StreamController<EntityStateFetchEvent>.broadcast();
       final job = _EntityStateJob(
         jobKey: _collectionJobKey(
+          domainType: domainType,
+          domainId: domainId,
+          entityType: entityType,
+          parentId: parentId,
+        ),
+        requestKey: _collectionJobKey(
           domainType: domainType,
           domainId: domainId,
           entityType: entityType,
@@ -486,13 +493,12 @@ class EntityStatePaginationService {
         entityType: entityType,
         isCollection: true,
         parentId: parentId,
-        progressController: batchController,
         enqueuedAt: DateTime.now().toUtc(),
         priority: _EntityStateJobPriority.normal,
-        fanOutControllers:
-            Map<String, StreamController<EntityStateFetchEvent>>.from(
-              bucket.controllersById,
-            ),
+        singleRequestKeysByEntityId: {
+          for (final entry in bucket.requestsByEntityId.entries)
+            entry.key: entry.value.requestKey,
+        },
       );
       _queueLifo.add(job);
       _persistQueuedJob(job);
@@ -572,25 +578,13 @@ class EntityStatePaginationService {
       items.add(state.cast<String, dynamic>());
     }
 
-    _emitProgress(
-      job,
-      EntityStateFetchEvent(
-        domainType: job.domainType,
-        domainId: job.domainId,
-        entityType: job.entityType,
-        entityId: job.entityId,
-        parentId: job.parentId,
-        items: items,
-        hasMore: false,
-        isCollectionRequest: false,
-      ),
-    );
+    _emitSingleEvent(job, items: items, hasMore: false);
     _complete(job);
   }
 
   Future<void> _runCollectionJob(_EntityStateJob job) async {
     var cursor = job.cursor;
-    final pendingIds = job.fanOutControllers.keys.toSet();
+    final pendingIds = job.singleRequestKeysByEntityId.keys.toSet();
 
     while (_enabled) {
       final response = await _fetchCollectionPage(job, cursor: cursor);
@@ -602,38 +596,26 @@ class EntityStatePaginationService {
       job.cursor = nextCursor;
       _persistJobCursor(job);
 
-      _emitProgress(
+      _emitCollectionEvent(
         job,
-        EntityStateFetchEvent(
-          domainType: job.domainType,
-          domainId: job.domainId,
-          entityType: job.entityType,
-          parentId: job.parentId,
-          items: items,
-          cursor: nextCursor,
-          hasMore: hasMore,
-          isCollectionRequest: true,
-        ),
+        items: items,
+        cursor: nextCursor,
+        hasMore: hasMore,
       );
 
-      if (job.fanOutControllers.isNotEmpty) {
+      if (job.singleRequestKeysByEntityId.isNotEmpty) {
         for (final item in items) {
           final id = _extractEntityId(item);
           if (id == null) continue;
-          final controller = job.fanOutControllers[id];
-          if (controller == null || controller.isClosed) continue;
-          controller.add(
-            EntityStateFetchEvent(
-              domainType: job.domainType,
-              domainId: job.domainId,
-              entityType: job.entityType,
-              entityId: id,
-              parentId: job.parentId,
-              items: [item],
-              cursor: nextCursor,
-              hasMore: hasMore,
-              isCollectionRequest: true,
-            ),
+          final requestKey = job.singleRequestKeysByEntityId[id];
+          if (requestKey == null) continue;
+          _emitSingleEvent(
+            job,
+            requestKey: requestKey,
+            entityId: id,
+            items: [item],
+            cursor: nextCursor,
+            hasMore: hasMore,
           );
           pendingIds.remove(id);
         }
@@ -653,18 +635,18 @@ class EntityStatePaginationService {
         _yieldedActiveJobCount++;
         final continuation = _EntityStateJob(
           jobKey: job.jobKey,
+          requestKey: job.requestKey,
           scopeKey: job.scopeKey,
           domainType: job.domainType,
           domainId: job.domainId,
           entityType: job.entityType,
           isCollection: true,
           parentId: job.parentId,
-          progressController: job.progressController,
           enqueuedAt: job.enqueuedAt,
           priority: _EntityStateJobPriority.low,
           limit: job.limit,
           cursor: nextCursor,
-          fanOutControllers: job.fanOutControllers,
+          singleRequestKeysByEntityId: job.singleRequestKeysByEntityId,
         );
         _enqueueLowPriority(continuation);
         return;
@@ -676,18 +658,18 @@ class EntityStatePaginationService {
     if (cursor != null && cursor.isNotEmpty) {
       final continuation = _EntityStateJob(
         jobKey: job.jobKey,
+        requestKey: job.requestKey,
         scopeKey: job.scopeKey,
         domainType: job.domainType,
         domainId: job.domainId,
         entityType: job.entityType,
         isCollection: true,
         parentId: job.parentId,
-        progressController: job.progressController,
         enqueuedAt: job.enqueuedAt,
         priority: _EntityStateJobPriority.low,
         limit: job.limit,
         cursor: cursor,
-        fanOutControllers: job.fanOutControllers,
+        singleRequestKeysByEntityId: job.singleRequestKeysByEntityId,
       );
       _enqueueLowPriority(continuation);
     }
@@ -745,81 +727,41 @@ class EntityStatePaginationService {
     _queueLifo.add(job);
   }
 
-  void _emitProgress(_EntityStateJob job, EntityStateFetchEvent event) {
-    if (!job.progressController.isClosed) {
-      job.progressController.add(event);
-    }
-  }
-
   void _complete(_EntityStateJob job) {
     _persistJobCompleted(job.jobKey);
 
-    if (!job.progressController.isClosed) {
-      job.progressController.add(
-        EntityStateFetchEvent(
-          domainType: job.domainType,
-          domainId: job.domainId,
-          entityType: job.entityType,
-          entityId: job.entityId,
-          parentId: job.parentId,
-          isCollectionRequest: job.isCollection,
-          isComplete: true,
-        ),
-      );
-      unawaited(job.progressController.close());
+    if (job.isCollection) {
+      _emitCollectionEvent(job, isComplete: true);
+    } else {
+      _emitSingleEvent(job, isComplete: true);
     }
 
-    for (final entry in job.fanOutControllers.entries) {
-      final controller = entry.value;
-      if (controller.isClosed) continue;
-      controller.add(
-        EntityStateFetchEvent(
-          domainType: job.domainType,
-          domainId: job.domainId,
-          entityType: job.entityType,
-          entityId: entry.key,
-          parentId: job.parentId,
-          isCollectionRequest: true,
-          isComplete: true,
-        ),
+    for (final entry in job.singleRequestKeysByEntityId.entries) {
+      _emitSingleEvent(
+        job,
+        requestKey: entry.value,
+        entityId: entry.key,
+        isComplete: true,
       );
-      unawaited(controller.close());
     }
   }
 
   void _emitError(_EntityStateJob job, String errorMessage) {
     _persistJobFailed(job.jobKey, errorMessage);
 
-    if (!job.progressController.isClosed) {
-      job.progressController.add(
-        EntityStateFetchEvent(
-          domainType: job.domainType,
-          domainId: job.domainId,
-          entityType: job.entityType,
-          entityId: job.entityId,
-          parentId: job.parentId,
-          isCollectionRequest: job.isCollection,
-          errorMessage: errorMessage,
-        ),
-      );
-      unawaited(job.progressController.close());
+    if (job.isCollection) {
+      _emitCollectionEvent(job, errorMessage: errorMessage);
+    } else {
+      _emitSingleEvent(job, errorMessage: errorMessage);
     }
 
-    for (final entry in job.fanOutControllers.entries) {
-      final controller = entry.value;
-      if (controller.isClosed) continue;
-      controller.add(
-        EntityStateFetchEvent(
-          domainType: job.domainType,
-          domainId: job.domainId,
-          entityType: job.entityType,
-          entityId: entry.key,
-          parentId: job.parentId,
-          isCollectionRequest: true,
-          errorMessage: errorMessage,
-        ),
+    for (final entry in job.singleRequestKeysByEntityId.entries) {
+      _emitSingleEvent(
+        job,
+        requestKey: entry.value,
+        entityId: entry.key,
+        errorMessage: errorMessage,
       );
-      unawaited(controller.close());
     }
   }
 
@@ -875,9 +817,9 @@ class EntityStatePaginationService {
   }
 
   _EntityStateJob _jobFromRecord(EntityStatePaginationJobRecord record) {
-    final controller = StreamController<EntityStateFetchEvent>.broadcast();
     return _EntityStateJob(
       jobKey: record.jobKey,
+      requestKey: record.jobKey,
       scopeKey: record.scopeKey,
       domainType: record.domainType,
       domainId: record.domainId,
@@ -887,10 +829,67 @@ class EntityStatePaginationService {
       parentId: record.parentId,
       limit: record.limit,
       cursor: record.cursor,
-      progressController: controller,
       enqueuedAt: record.enqueuedAt,
       priority: _priorityFromStored(record.priority),
     )..hasMore = record.hasMore ?? false;
+  }
+
+  void _emitSingleEvent(
+    _EntityStateJob job, {
+    String? requestKey,
+    String? entityId,
+    List<Map<String, dynamic>> items = const [],
+    String? cursor,
+    bool hasMore = false,
+    bool isComplete = false,
+    String errorMessage = '',
+  }) {
+    if (_singleEntityEventsController.isClosed) return;
+    _singleEntityEventsController.add(
+      EntityStateFetchEvent(
+        requestKey: requestKey ?? job.requestKey,
+        jobKey: job.jobKey,
+        domainType: job.domainType,
+        domainId: job.domainId,
+        entityType: job.entityType,
+        entityId: entityId ?? job.entityId,
+        parentId: job.parentId,
+        items: items,
+        cursor: cursor,
+        hasMore: hasMore,
+        isCollectionRequest: false,
+        isComplete: isComplete,
+        errorMessage: errorMessage,
+      ),
+    );
+  }
+
+  void _emitCollectionEvent(
+    _EntityStateJob job, {
+    List<Map<String, dynamic>> items = const [],
+    String? cursor,
+    bool hasMore = false,
+    bool isComplete = false,
+    String errorMessage = '',
+  }) {
+    if (_collectionEntityEventsController.isClosed) return;
+    _collectionEntityEventsController.add(
+      EntityStateFetchEvent(
+        requestKey: job.requestKey,
+        jobKey: job.jobKey,
+        domainType: job.domainType,
+        domainId: job.domainId,
+        entityType: job.entityType,
+        entityId: job.entityId,
+        parentId: job.parentId,
+        items: items,
+        cursor: cursor,
+        hasMore: hasMore,
+        isCollectionRequest: true,
+        isComplete: isComplete,
+        errorMessage: errorMessage,
+      ),
+    );
   }
 
   _EntityStateJobPriority _priorityFromStored(String value) {

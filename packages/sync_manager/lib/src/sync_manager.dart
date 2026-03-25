@@ -35,6 +35,10 @@ class SyncManager {
   bool get autoOutsyncEnabled => _autoOutsyncEnabled;
   StreamSubscription<void>? get changeLogSubscription => _changeLogSubscription;
   EntityStatePaginationService? _entityStatePaginationService;
+  Stream<EntityStateFetchEvent> get singleEntityStateEvents =>
+      entityStatePaginationService.singleEntityEvents;
+  Stream<EntityStateFetchEvent> get collectionEntityStateEvents =>
+      entityStatePaginationService.collectionEntityEvents;
 
   EntityStatePaginationService get entityStatePaginationService {
     _entityStatePaginationService ??= EntityStatePaginationService(
@@ -52,7 +56,7 @@ class SyncManager {
     );
   }
 
-  Stream<EntityStateFetchEvent> enqueueJobFetchEntityState({
+  String enqueueJobFetchEntityState({
     required String domainType,
     required String domainId,
     required String entityType,
@@ -68,7 +72,7 @@ class SyncManager {
     );
   }
 
-  Stream<EntityStateFetchEvent> enqueueJobFetchEntityStateCollection({
+  String enqueueJobFetchEntityStateCollection({
     required String domainType,
     required String domainId,
     required String entityType,

@@ -222,7 +222,7 @@ Future<void> _testDebouncedSingleAggregation({
     singleRequestDebounce: const Duration(milliseconds: 300),
     maxConcurrentRequests: 4,
     workspacePrefix: _testSpecificPersistencePrefix,
-  )..startProcessing();
+  );
 
   final eventsForFirst = <EntityStateFetchEvent>[];
   final eventsForSecond = <EntityStateFetchEvent>[];
@@ -230,35 +230,36 @@ Future<void> _testDebouncedSingleAggregation({
   final firstDone = Completer<void>();
   final secondDone = Completer<void>();
 
-  final sub1 = service
-      .enqueueJobFetchEntityState(
-        domainType: domainType,
-        domainId: domainId,
-        entityType: entityType,
-        entityId: marker1,
-        parentId: parentId,
-      )
-      .listen((event) {
-        eventsForFirst.add(event);
-        if (event.isComplete && !firstDone.isCompleted) {
-          firstDone.complete();
-        }
-      });
+  final requestKey1 = service.enqueueJobFetchEntityState(
+    domainType: domainType,
+    domainId: domainId,
+    entityType: entityType,
+    entityId: marker1,
+    parentId: parentId,
+  );
+  final requestKey2 = service.enqueueJobFetchEntityState(
+    domainType: domainType,
+    domainId: domainId,
+    entityType: entityType,
+    entityId: marker2,
+    parentId: parentId,
+  );
 
-  final sub2 = service
-      .enqueueJobFetchEntityState(
-        domainType: domainType,
-        domainId: domainId,
-        entityType: entityType,
-        entityId: marker2,
-        parentId: parentId,
-      )
-      .listen((event) {
-        eventsForSecond.add(event);
-        if (event.isComplete && !secondDone.isCompleted) {
-          secondDone.complete();
-        }
-      });
+  final sub1 = _listenForSingleRequest(service, requestKey1, (event) {
+    eventsForFirst.add(event);
+    if (event.isComplete && !firstDone.isCompleted) {
+      firstDone.complete();
+    }
+  });
+
+  final sub2 = _listenForSingleRequest(service, requestKey2, (event) {
+    eventsForSecond.add(event);
+    if (event.isComplete && !secondDone.isCompleted) {
+      secondDone.complete();
+    }
+  });
+
+  service.startProcessing();
 
   await Future.wait([
     firstDone.future.timeout(const Duration(seconds: 30)),
@@ -337,38 +338,39 @@ Future<void> _testDebouncedSingleAggregationByParentId({
     singleRequestDebounce: const Duration(milliseconds: 300),
     maxConcurrentRequests: 4,
     workspacePrefix: _testSpecificPersistencePrefix,
-  )..startProcessing();
+  );
 
   final firstDone = Completer<void>();
   final secondDone = Completer<void>();
 
-  final sub1 = service
-      .enqueueJobFetchEntityState(
-        domainType: domainType,
-        domainId: domainId,
-        entityType: entityType,
-        entityId: markerA,
-        parentId: parentIdA,
-      )
-      .listen((event) {
-        if (event.isComplete && !firstDone.isCompleted) {
-          firstDone.complete();
-        }
-      });
+  final requestKeyA = service.enqueueJobFetchEntityState(
+    domainType: domainType,
+    domainId: domainId,
+    entityType: entityType,
+    entityId: markerA,
+    parentId: parentIdA,
+  );
+  final requestKeyB = service.enqueueJobFetchEntityState(
+    domainType: domainType,
+    domainId: domainId,
+    entityType: entityType,
+    entityId: markerB,
+    parentId: parentIdB,
+  );
 
-  final sub2 = service
-      .enqueueJobFetchEntityState(
-        domainType: domainType,
-        domainId: domainId,
-        entityType: entityType,
-        entityId: markerB,
-        parentId: parentIdB,
-      )
-      .listen((event) {
-        if (event.isComplete && !secondDone.isCompleted) {
-          secondDone.complete();
-        }
-      });
+  final sub1 = _listenForSingleRequest(service, requestKeyA, (event) {
+    if (event.isComplete && !firstDone.isCompleted) {
+      firstDone.complete();
+    }
+  });
+
+  final sub2 = _listenForSingleRequest(service, requestKeyB, (event) {
+    if (event.isComplete && !secondDone.isCompleted) {
+      secondDone.complete();
+    }
+  });
+
+  service.startProcessing();
 
   await Future.wait([
     firstDone.future.timeout(const Duration(seconds: 30)),
@@ -445,31 +447,33 @@ Future<void> _testCollectionParentIdFilter({
     baseUrl: cloudBaseUrl,
     maxConcurrentRequests: 4,
     workspacePrefix: _testSpecificPersistencePrefix,
-  )..startProcessing();
+  );
 
   final done = Completer<void>();
   final receivedIds = <String>{};
 
-  final sub = service
-      .enqueueJobFetchEntityStateCollection(
-        domainType: domainType,
-        domainId: domainId,
-        entityType: entityType,
-        parentId: targetParentId,
-        limit: 2,
-      )
-      .listen((event) {
-        for (final item in event.items) {
-          final id = item['entityId']?.toString() ?? item['id']?.toString();
-          if (id != null && id.isNotEmpty) {
-            receivedIds.add(id);
-          }
-        }
+  final requestKey = service.enqueueJobFetchEntityStateCollection(
+    domainType: domainType,
+    domainId: domainId,
+    entityType: entityType,
+    parentId: targetParentId,
+    limit: 2,
+  );
 
-        if (event.isComplete && !done.isCompleted) {
-          done.complete();
-        }
-      });
+  final sub = _listenForCollectionRequest(service, requestKey, (event) {
+    for (final item in event.items) {
+      final id = item['entityId']?.toString() ?? item['id']?.toString();
+      if (id != null && id.isNotEmpty) {
+        receivedIds.add(id);
+      }
+    }
+
+    if (event.isComplete && !done.isCompleted) {
+      done.complete();
+    }
+  });
+
+  service.startProcessing();
 
   await done.future.timeout(const Duration(seconds: 30));
   await sub.cancel();
@@ -534,7 +538,7 @@ Future<void> _testPaginationYieldBehavior({
     baseUrl: cloudBaseUrl,
     maxConcurrentRequests: 4,
     workspacePrefix: _testSpecificPersistencePrefix,
-  )..startProcessing();
+  );
 
   final collectionEvents = <EntityStateFetchEvent>[];
   final collectionDone = Completer<void>();
@@ -542,39 +546,48 @@ Future<void> _testPaginationYieldBehavior({
 
   var requestedSingleDuringCollection = false;
 
+  final collectionRequestKey = service.enqueueJobFetchEntityStateCollection(
+    domainType: domainType,
+    domainId: domainId,
+    entityType: kEntityTypeTask,
+    limit: 1,
+  );
+
+  StreamSubscription<EntityStateFetchEvent>? prioritizedSingleSub;
+
   late final StreamSubscription<EntityStateFetchEvent> collectionSub;
-  collectionSub = service
-      .enqueueJobFetchEntityStateCollection(
+  collectionSub = _listenForCollectionRequest(service, collectionRequestKey, (
+    event,
+  ) {
+    collectionEvents.add(event);
+
+    if (!requestedSingleDuringCollection &&
+        !event.isComplete &&
+        event.items.isNotEmpty) {
+      requestedSingleDuringCollection = true;
+      final singleRequestKey = service.enqueueJobFetchEntityState(
         domainType: domainType,
         domainId: domainId,
-        entityType: kEntityTypeTask,
-        limit: 1,
-      )
-      .listen((event) {
-        collectionEvents.add(event);
+        entityType: kEntityTypeProject,
+        entityId: projectId,
+      );
+      prioritizedSingleSub = _listenForSingleRequest(
+        service,
+        singleRequestKey,
+        (singleEvent) {
+          if (singleEvent.isComplete && !singleDone.isCompleted) {
+            singleDone.complete();
+          }
+        },
+      );
+    }
 
-        if (!requestedSingleDuringCollection &&
-            !event.isComplete &&
-            event.items.isNotEmpty) {
-          requestedSingleDuringCollection = true;
-          service
-              .enqueueJobFetchEntityState(
-                domainType: domainType,
-                domainId: domainId,
-                entityType: kEntityTypeProject,
-                entityId: projectId,
-              )
-              .listen((singleEvent) {
-                if (singleEvent.isComplete && !singleDone.isCompleted) {
-                  singleDone.complete();
-                }
-              });
-        }
+    if (event.isComplete && !collectionDone.isCompleted) {
+      collectionDone.complete();
+    }
+  });
 
-        if (event.isComplete && !collectionDone.isCompleted) {
-          collectionDone.complete();
-        }
-      });
+  service.startProcessing();
 
   await Future.wait([
     collectionDone.future.timeout(const Duration(seconds: 30)),
@@ -582,6 +595,7 @@ Future<void> _testPaginationYieldBehavior({
   ]);
 
   await collectionSub.cancel();
+  await prioritizedSingleSub?.cancel();
 
   final pageEvents = collectionEvents.where((e) => !e.isComplete).toList();
   expect(
@@ -669,13 +683,13 @@ Future<void> _testDuplicateSingleEnqueueBehavior({
   final doneA = Completer<void>();
   final doneB = Completer<void>();
 
-  final streamA1 = service.enqueueJobFetchEntityState(
+  final requestKeyA = service.enqueueJobFetchEntityState(
     domainType: domainType,
     domainId: domainIdA,
     entityType: entityType,
     entityId: domainIdA,
   );
-  final streamB = service.enqueueJobFetchEntityState(
+  final requestKeyB = service.enqueueJobFetchEntityState(
     domainType: domainType,
     domainId: domainIdB,
     entityType: entityType,
@@ -689,13 +703,13 @@ Future<void> _testDuplicateSingleEnqueueBehavior({
     entityId: domainIdA,
   );
 
-  final subA = streamA1.listen((event) {
+  final subA = _listenForSingleRequest(service, requestKeyA, (event) {
     if (event.isComplete && !doneA.isCompleted) {
       completionOrder.add(domainIdA);
       doneA.complete();
     }
   });
-  final subB = streamB.listen((event) {
+  final subB = _listenForSingleRequest(service, requestKeyB, (event) {
     if (event.isComplete && !doneB.isCompleted) {
       completionOrder.add(domainIdB);
       doneB.complete();
@@ -735,13 +749,15 @@ Future<void> _testDuplicateSingleEnqueueBehavior({
   );
 
   final activeSingleDone = Completer<void>();
-  final activeSingleStream = service.enqueueJobFetchEntityState(
+  final activeSingleRequestKey = service.enqueueJobFetchEntityState(
     domainType: domainType,
     domainId: domainIdC,
     entityType: entityType,
     entityId: domainIdC,
   );
-  final activeSub = activeSingleStream.listen((event) {
+  final activeSub = _listenForSingleRequest(service, activeSingleRequestKey, (
+    event,
+  ) {
     if (event.isComplete && !activeSingleDone.isCompleted) {
       activeSingleDone.complete();
     }
@@ -820,13 +836,13 @@ Future<void> _testDuplicateCollectionEnqueueBehavior({
   final doneA = Completer<void>();
   final doneB = Completer<void>();
 
-  final streamA1 = service.enqueueJobFetchEntityStateCollection(
+  final requestKeyA = service.enqueueJobFetchEntityStateCollection(
     domainType: domainType,
     domainId: domainIdA,
     entityType: entityType,
     limit: 1,
   );
-  final streamB = service.enqueueJobFetchEntityStateCollection(
+  final requestKeyB = service.enqueueJobFetchEntityStateCollection(
     domainType: domainType,
     domainId: domainIdB,
     entityType: entityType,
@@ -849,7 +865,7 @@ Future<void> _testDuplicateCollectionEnqueueBehavior({
 
   var activeDuplicateCollectionTriggered = false;
 
-  final subA = streamA1.listen((event) {
+  final subA = _listenForCollectionRequest(service, requestKeyA, (event) {
     if (!event.isComplete &&
         event.items.isNotEmpty &&
         !firstPageDomains.contains(domainIdA)) {
@@ -871,7 +887,7 @@ Future<void> _testDuplicateCollectionEnqueueBehavior({
     }
   });
 
-  final subB = streamB.listen((event) {
+  final subB = _listenForCollectionRequest(service, requestKeyB, (event) {
     if (!event.isComplete &&
         event.items.isNotEmpty &&
         !firstPageDomains.contains(domainIdB)) {
@@ -917,6 +933,26 @@ bool _containsEntity(List<EntityStateFetchEvent> events, String entityId) {
     }
   }
   return false;
+}
+
+StreamSubscription<EntityStateFetchEvent> _listenForSingleRequest(
+  EntityStatePaginationService service,
+  String requestKey,
+  void Function(EntityStateFetchEvent event) onData,
+) {
+  return service.singleEntityEvents
+      .where((event) => event.requestKey == requestKey)
+      .listen(onData);
+}
+
+StreamSubscription<EntityStateFetchEvent> _listenForCollectionRequest(
+  EntityStatePaginationService service,
+  String requestKey,
+  void Function(EntityStateFetchEvent event) onData,
+) {
+  return service.collectionEntityEvents
+      .where((event) => event.requestKey == requestKey)
+      .listen(onData);
 }
 
 Future<void> _saveCloudEntityChange({
