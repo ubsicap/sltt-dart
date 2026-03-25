@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
 
+import 'entity_state_pagination_job_persistence_store.dart';
+import 'models/entity_state_pagination_job.isar.dart';
+
 const _defaultEntityStateRequestsConcurrency = 4;
 const _defaultSingleRequestDebounceMs = 300;
 
@@ -93,20 +96,37 @@ class EntityStatePaginationService {
     this.singleRequestDebounce = const Duration(
       milliseconds: _defaultSingleRequestDebounceMs,
     ),
+    this.workspacePrefix = '',
+    this.persistJobs = true,
+    this.persistenceDbDirectory = './isar_db',
+    this.persistenceDbNamePrefix = 'entity_state_pagination_jobs',
     Dio? dio,
   }) : _baseUrl = baseUrl,
        _dio = dio ?? Dio() {
     _requestLimiter = RequestLimiter(maxConcurrentRequests);
+    if (persistJobs) {
+      _jobStore = EntityStatePaginationJobPersistenceStore(
+        workspacePrefix: workspacePrefix,
+        databaseDirectory: persistenceDbDirectory,
+        databaseNamePrefix: persistenceDbNamePrefix,
+      );
+    }
   }
 
   final int maxConcurrentRequests;
   final Duration singleRequestDebounce;
+  final String workspacePrefix;
+  final bool persistJobs;
+  final String persistenceDbDirectory;
+  final String persistenceDbNamePrefix;
   final Dio _dio;
   late final RequestLimiter _requestLimiter;
+  EntityStatePaginationJobPersistenceStore? _jobStore;
   String _baseUrl;
 
   bool _processingQueue = false;
   bool _enabled = false;
+  bool _resumeRequested = false;
 
   final List<_EntityStateJob> _queueLifo = [];
   final Map<String, _EntityStateJob> _activeJobs = {};
@@ -136,6 +156,10 @@ class EntityStatePaginationService {
 
   void startProcessing() {
     _enabled = true;
+    if (!_resumeRequested) {
+      _resumeRequested = true;
+      unawaited(resumePersistedJobs());
+    }
     _processQueue();
   }
 
@@ -182,6 +206,85 @@ class EntityStatePaginationService {
     }
     _activeJobs.clear();
     _queueLifo.clear();
+
+    final store = _jobStore;
+    _jobStore = null;
+    if (store != null) {
+      unawaited(store.close());
+    }
+  }
+
+  Future<int> resumePersistedJobs() async {
+    final store = _jobStore;
+    if (store == null) return 0;
+
+    final records = await store.loadResumableJobs();
+    var resumedCount = 0;
+
+    for (final record in records) {
+      final alreadyActive = _activeJobs.containsKey(record.jobKey);
+      final alreadyQueued = _queueLifo.any(
+        (job) => job.jobKey == record.jobKey,
+      );
+      if (alreadyActive || alreadyQueued) {
+        continue;
+      }
+
+      final job = _jobFromRecord(record);
+      _enqueueByPriority(job);
+      resumedCount++;
+    }
+
+    if (resumedCount > 0) {
+      SlttLogger.logger.info(
+        '[EntityStateQueue] Resumed $resumedCount persisted job(s) for workspace prefix: $workspacePrefix',
+      );
+      _processQueue();
+    }
+
+    return resumedCount;
+  }
+
+  Future<List<Map<String, dynamic>>> debugListPersistedJobs() async {
+    final store = _jobStore;
+    if (store == null) return const [];
+    final records = await store.listAll();
+    records.sort((a, b) => a.enqueuedAt.compareTo(b.enqueuedAt));
+    return records
+        .map(
+          (record) => {
+            'jobKey': record.jobKey,
+            'scopeKey': record.scopeKey,
+            'domainType': record.domainType,
+            'domainId': record.domainId,
+            'entityType': record.entityType,
+            'isCollection': record.isCollection,
+            'entityId': record.entityId,
+            'parentId': record.parentId,
+            'limit': record.limit,
+            'cursor': record.cursor,
+            'hasMore': record.hasMore,
+            'status': record.status,
+            'priority': record.priority,
+            'enqueuedAt': record.enqueuedAt.toIso8601String(),
+            'startedAt': record.startedAt?.toIso8601String(),
+            'completedAt': record.completedAt?.toIso8601String(),
+            'lastError': record.lastError,
+          },
+        )
+        .toList();
+  }
+
+  static Future<void> deletePersistedJobsForWorkspacePrefix({
+    required String workspacePrefix,
+    String databaseDirectory = './isar_db',
+    String databaseNamePrefix = 'entity_state_pagination_jobs',
+  }) {
+    return EntityStatePaginationJobPersistenceStore.deleteDatabaseFilesForWorkspacePrefix(
+      workspacePrefix: workspacePrefix,
+      databaseDirectory: databaseDirectory,
+      databaseNamePrefix: databaseNamePrefix,
+    );
   }
 
   Stream<EntityStateFetchEvent> enqueueJobFetchEntityState({
@@ -230,6 +333,7 @@ class EntityStatePaginationService {
       final queued = _queueLifo.removeAt(existingSingleInQueueIndex);
       _queueLifo.add(queued);
       _requeuedQueuedDuplicateSingleCount++;
+      _persistQueuedJob(queued);
       _processQueue();
       return queued.progressStream;
     }
@@ -280,6 +384,7 @@ class EntityStatePaginationService {
       final queued = _queueLifo.removeAt(existingIndex);
       _queueLifo.add(queued);
       _requeuedQueuedDuplicateCollectionCount++;
+      _persistQueuedJob(queued);
       _processQueue();
       return queued.progressStream;
     }
@@ -318,6 +423,7 @@ class EntityStatePaginationService {
     );
 
     _queueLifo.add(job);
+    _persistQueuedJob(job);
     _processQueue();
     return controller.stream;
   }
@@ -362,6 +468,7 @@ class EntityStatePaginationService {
         priority: _EntityStateJobPriority.normal,
       );
       _queueLifo.add(job);
+      _persistQueuedJob(job);
     } else {
       _mergedSingleBatchCount++;
       final batchController =
@@ -388,6 +495,7 @@ class EntityStatePaginationService {
             ),
       );
       _queueLifo.add(job);
+      _persistQueuedJob(job);
     }
 
     _processQueue();
@@ -417,6 +525,7 @@ class EntityStatePaginationService {
 
           final nextJob = _queueLifo.removeLast();
           _activeJobs[nextJob.jobKey] = nextJob;
+          _persistJobActive(nextJob.jobKey);
 
           unawaited(
             _runJob(nextJob).whenComplete(() {
@@ -490,6 +599,8 @@ class EntityStatePaginationService {
       final hasMore = response.hasMore;
 
       job.hasMore = hasMore;
+      job.cursor = nextCursor;
+      _persistJobCursor(job);
 
       _emitProgress(
         job,
@@ -621,12 +732,17 @@ class EntityStatePaginationService {
   }
 
   void _enqueueLowPriority(_EntityStateJob job) {
+    _enqueueByPriority(job);
+    _persistQueuedJob(job);
+    _processQueue();
+  }
+
+  void _enqueueByPriority(_EntityStateJob job) {
     if (job.priority == _EntityStateJobPriority.low) {
       _queueLifo.insert(0, job);
-    } else {
-      _queueLifo.add(job);
+      return;
     }
-    _processQueue();
+    _queueLifo.add(job);
   }
 
   void _emitProgress(_EntityStateJob job, EntityStateFetchEvent event) {
@@ -636,6 +752,8 @@ class EntityStatePaginationService {
   }
 
   void _complete(_EntityStateJob job) {
+    _persistJobCompleted(job.jobKey);
+
     if (!job.progressController.isClosed) {
       job.progressController.add(
         EntityStateFetchEvent(
@@ -670,6 +788,8 @@ class EntityStatePaginationService {
   }
 
   void _emitError(_EntityStateJob job, String errorMessage) {
+    _persistJobFailed(job.jobKey, errorMessage);
+
     if (!job.progressController.isClosed) {
       job.progressController.add(
         EntityStateFetchEvent(
@@ -752,6 +872,83 @@ class EntityStatePaginationService {
     if (raw == null) return null;
     final str = raw.toString().trim();
     return str.isEmpty ? null : str;
+  }
+
+  _EntityStateJob _jobFromRecord(EntityStatePaginationJobRecord record) {
+    final controller = StreamController<EntityStateFetchEvent>.broadcast();
+    return _EntityStateJob(
+      jobKey: record.jobKey,
+      scopeKey: record.scopeKey,
+      domainType: record.domainType,
+      domainId: record.domainId,
+      entityType: record.entityType,
+      isCollection: record.isCollection,
+      entityId: record.entityId,
+      parentId: record.parentId,
+      limit: record.limit,
+      cursor: record.cursor,
+      progressController: controller,
+      enqueuedAt: record.enqueuedAt,
+      priority: _priorityFromStored(record.priority),
+    )..hasMore = record.hasMore ?? false;
+  }
+
+  _EntityStateJobPriority _priorityFromStored(String value) {
+    return value == _EntityStateJobPriority.low.name
+        ? _EntityStateJobPriority.low
+        : _EntityStateJobPriority.normal;
+  }
+
+  void _persistQueuedJob(_EntityStateJob job) {
+    final store = _jobStore;
+    if (store == null) return;
+    unawaited(
+      store.upsertQueuedJob(
+        jobKey: job.jobKey,
+        scopeKey: job.scopeKey,
+        domainType: job.domainType,
+        domainId: job.domainId,
+        entityType: job.entityType,
+        isCollection: job.isCollection,
+        priority: job.priority.name,
+        enqueuedAt: job.enqueuedAt,
+        entityId: job.entityId,
+        parentId: job.parentId,
+        limit: job.limit,
+        cursor: job.cursor,
+        hasMore: job.hasMore,
+      ),
+    );
+  }
+
+  void _persistJobActive(String jobKey) {
+    final store = _jobStore;
+    if (store == null) return;
+    unawaited(store.markActive(jobKey));
+  }
+
+  void _persistJobCursor(_EntityStateJob job) {
+    final store = _jobStore;
+    if (store == null) return;
+    unawaited(
+      store.updateCursor(
+        jobKey: job.jobKey,
+        cursor: job.cursor,
+        hasMore: job.hasMore,
+      ),
+    );
+  }
+
+  void _persistJobCompleted(String jobKey) {
+    final store = _jobStore;
+    if (store == null) return;
+    unawaited(store.markCompleted(jobKey));
+  }
+
+  void _persistJobFailed(String jobKey, String errorMessage) {
+    final store = _jobStore;
+    if (store == null) return;
+    unawaited(store.markFailed(jobKey, errorMessage));
   }
 }
 

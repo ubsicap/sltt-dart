@@ -10,6 +10,9 @@ import 'package:sync_manager/src/test_helpers/isar_change_log_serializer.dart';
 import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
+const _testSpecificPersistencePrefix =
+    '__test_specific_prefix_entity_state_pagination_integration';
+
 void main() {
   SlttLogger.init();
 
@@ -22,6 +25,10 @@ void main() {
     });
 
     setUp(() async {
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: _testSpecificPersistencePrefix,
+      );
+
       final local = LocalStorageService.instance;
       await local.deleteDatabase();
       await local.initialize();
@@ -120,6 +127,10 @@ void main() {
     setUpAll(() async {});
 
     setUp(() async {
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: _testSpecificPersistencePrefix,
+      );
+
       final local = LocalStorageService.instance;
       await local.deleteDatabase();
       await local.initialize();
@@ -210,6 +221,7 @@ Future<void> _testDebouncedSingleAggregation({
     baseUrl: cloudBaseUrl,
     singleRequestDebounce: const Duration(milliseconds: 300),
     maxConcurrentRequests: 4,
+    workspacePrefix: _testSpecificPersistencePrefix,
   )..startProcessing();
 
   final eventsForFirst = <EntityStateFetchEvent>[];
@@ -324,6 +336,7 @@ Future<void> _testDebouncedSingleAggregationByParentId({
     baseUrl: cloudBaseUrl,
     singleRequestDebounce: const Duration(milliseconds: 300),
     maxConcurrentRequests: 4,
+    workspacePrefix: _testSpecificPersistencePrefix,
   )..startProcessing();
 
   final firstDone = Completer<void>();
@@ -431,6 +444,7 @@ Future<void> _testCollectionParentIdFilter({
   final service = EntityStatePaginationService(
     baseUrl: cloudBaseUrl,
     maxConcurrentRequests: 4,
+    workspacePrefix: _testSpecificPersistencePrefix,
   )..startProcessing();
 
   final done = Completer<void>();
@@ -519,6 +533,7 @@ Future<void> _testPaginationYieldBehavior({
   final service = EntityStatePaginationService(
     baseUrl: cloudBaseUrl,
     maxConcurrentRequests: 4,
+    workspacePrefix: _testSpecificPersistencePrefix,
   )..startProcessing();
 
   final collectionEvents = <EntityStateFetchEvent>[];
@@ -647,6 +662,7 @@ Future<void> _testDuplicateSingleEnqueueBehavior({
     maxConcurrentRequests: 1,
     singleRequestDebounce: const Duration(milliseconds: 1),
     dio: delayedDio,
+    workspacePrefix: _testSpecificPersistencePrefix,
   );
 
   final completionOrder = <String>[];
@@ -797,6 +813,7 @@ Future<void> _testDuplicateCollectionEnqueueBehavior({
   final service = EntityStatePaginationService(
     baseUrl: cloudBaseUrl,
     maxConcurrentRequests: 1,
+    workspacePrefix: _testSpecificPersistencePrefix,
   );
 
   final firstPageDomains = <String>[];
