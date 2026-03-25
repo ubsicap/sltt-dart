@@ -1696,6 +1696,91 @@ class IsarStorageService extends BaseStorageService {
     return await storageGroup.findByDomainAndEntity(_isar, domainId, entityId);
   }
 
+  BaseEntityState _copyEntityStateWithStoredAt({
+    required BaseEntityState state,
+    required DateTime storedAt,
+  }) {
+    final entityTypeEnum = EntityType.values.firstWhere(
+      (e) => e.value == state.entityType,
+      orElse: () => EntityType.unknown,
+    );
+
+    final normalizedStoredAt = storedAt.toUtc();
+    final updatedJson = {
+      ...state.toJson(),
+      'change_storedAt': normalizedStoredAt.toIso8601String(),
+    };
+
+    return _createEntityStateFromJson(
+      entityTypeEnum,
+      updatedJson,
+      state.entityType,
+    );
+  }
+
+  Future<void> putEntityState({
+    required BaseEntityState state,
+    required DateTime storedAt,
+  }) async {
+    final entityTypeEnum = EntityType.values.firstWhere(
+      (e) => e.value == state.entityType,
+      orElse: () => EntityType.unknown,
+    );
+    final group = _entityStateRegistry.get(entityTypeEnum);
+    if (group == null) {
+      throw StateError(
+        'No storage group registered for entity type: ${state.entityType}',
+      );
+    }
+
+    final stateWithStoredAt = _copyEntityStateWithStoredAt(
+      state: state,
+      storedAt: storedAt,
+    );
+
+    await _isar.writeTxn(() async {
+      await group.put(stateWithStoredAt);
+    });
+  }
+
+  Future<void> batchPutEntityStates({
+    required List<BaseEntityState> states,
+    required DateTime storedAt,
+  }) async {
+    if (states.isEmpty) return;
+
+    final normalizedByEntityType = <EntityType, List<BaseEntityState>>{};
+    for (final state in states) {
+      final entityTypeEnum = EntityType.values.firstWhere(
+        (e) => e.value == state.entityType,
+        orElse: () => EntityType.unknown,
+      );
+      if (entityTypeEnum == EntityType.unknown) {
+        throw ArgumentError('Unsupported entity type: ${state.entityType}');
+      }
+
+      final normalizedState = _copyEntityStateWithStoredAt(
+        state: state,
+        storedAt: storedAt,
+      );
+      normalizedByEntityType
+          .putIfAbsent(entityTypeEnum, () => <BaseEntityState>[])
+          .add(normalizedState);
+    }
+
+    await _isar.writeTxn(() async {
+      for (final entry in normalizedByEntityType.entries) {
+        final group = _entityStateRegistry.get(entry.key);
+        if (group == null) {
+          throw StateError(
+            'No storage group registered for entity type: ${entry.key.value}',
+          );
+        }
+        await group.putAll(entry.value);
+      }
+    });
+  }
+
   /// Delete all changes - useful for testing cleanup
   Future<int> deleteAllChanges() async {
     final allChanges = await _isar.isarChangeLogEntrys.where().findAll();
