@@ -1861,6 +1861,7 @@ class IsarStorageService extends BaseStorageService {
     if (states.isEmpty) return;
 
     final normalizedByEntityType = <EntityType, List<BaseEntityState>>{};
+    final normalizedStates = <BaseEntityState>[];
     final isNewByIdentity = <String, bool>{};
 
     String stateIdentity(BaseEntityState state) =>
@@ -1879,18 +1880,41 @@ class IsarStorageService extends BaseStorageService {
         state: state,
         storedAt: storedAt,
       );
-
-      final existing = await getEntityState(
-        domainType: normalizedState.domainType,
-        domainId: normalizedState.change_domainId,
-        entityType: normalizedState.entityType,
-        entityId: normalizedState.entityId,
-      );
-      isNewByIdentity[stateIdentity(normalizedState)] = existing == null;
+      normalizedStates.add(normalizedState);
 
       normalizedByEntityType
           .putIfAbsent(entityTypeEnum, () => <BaseEntityState>[])
           .add(normalizedState);
+    }
+
+    final lookupGroups =
+        <
+          (String domainType, String domainId, String entityType),
+          List<BaseEntityState>
+        >{};
+    for (final state in normalizedStates) {
+      final key = (state.domainType, state.change_domainId, state.entityType);
+      lookupGroups.putIfAbsent(key, () => <BaseEntityState>[]).add(state);
+    }
+
+    for (final entry in lookupGroups.entries) {
+      final groupStates = entry.value;
+      final keys = groupStates
+          .map(
+            (state) => (
+              domainType: state.domainType,
+              domainId: state.change_domainId,
+              entityType: state.entityType,
+              entityId: state.entityId,
+            ),
+          )
+          .toList();
+
+      final existingByEntityId = await batchGetEntityState(keys: keys);
+      for (final state in groupStates) {
+        isNewByIdentity[stateIdentity(state)] =
+            existingByEntityId[state.entityId] == null;
+      }
     }
 
     await _isar.writeTxn(() async {
