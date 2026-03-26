@@ -333,9 +333,14 @@ class InMemoryStorage implements BaseStorageService {
     required String domainType,
     required String domainId,
   }) async {
+    final changeStats = await getChangeStats(
+      domainType: domainType,
+      domainId: domainId,
+    );
     final states = _statesByDomainType[domainType] ?? {};
 
     final Map<String, int> counts = {};
+    final Map<String, DateTime> mostRecentChangeAtByType = {};
     DateTime? mostRecentChangeAt;
 
     for (final entry in states.entries) {
@@ -343,12 +348,17 @@ class InMemoryStorage implements BaseStorageService {
       if (!key.startsWith('$domainId|')) continue;
       final parts = key.split('|');
       if (parts.length != 3) continue;
+
       final entityType = parts[1];
       counts[entityType] = (counts[entityType] ?? 0) + 1;
 
       final state = entry.value;
       try {
         final ca = state.change_changeAt.toUtc();
+        final existingByType = mostRecentChangeAtByType[entityType];
+        if (existingByType == null || ca.isAfter(existingByType)) {
+          mostRecentChangeAtByType[entityType] = ca;
+        }
         if (mostRecentChangeAt == null || ca.isAfter(mostRecentChangeAt)) {
           mostRecentChangeAt = ca;
         }
@@ -356,26 +366,28 @@ class InMemoryStorage implements BaseStorageService {
     }
 
     final Map<String, EntityTypeSummary> typedPerType = {};
-    counts.forEach((k, v) {
-      typedPerType[k] = EntityTypeSummary(
-        creates: 0,
-        updates: 0,
-        deletes: 0,
-        total: v,
+    counts.forEach((entityType, totalStates) {
+      final changeSummary = changeStats.entityTypes[entityType];
+      typedPerType[entityType] = EntityTypeSummary(
+        creates: changeSummary?.creates ?? 0,
+        updates: changeSummary?.updates ?? 0,
+        deletes: changeSummary?.deletes ?? 0,
+        total: totalStates,
         latestChangeAt:
-            mostRecentChangeAt?.toIso8601String() ?? '1970-01-01T00:00:00Z',
-        latestSeq: -1,
+            mostRecentChangeAtByType[entityType]?.toIso8601String() ??
+            '1970-01-01T00:00:00Z',
+        latestSeq: changeSummary?.latestSeq ?? -1,
       );
     });
 
     final totals = EntityTypeSummary(
-      creates: 0,
-      updates: 0,
-      deletes: 0,
+      creates: changeStats.totals.creates,
+      updates: changeStats.totals.updates,
+      deletes: changeStats.totals.deletes,
       total: counts.values.fold(0, (a, b) => a + b),
       latestChangeAt:
           mostRecentChangeAt?.toIso8601String() ?? '1970-01-01T00:00:00Z',
-      latestSeq: -1,
+      latestSeq: changeStats.totals.latestSeq,
     );
 
     return EntityTypeStats(entityTypes: typedPerType, totals: totals);

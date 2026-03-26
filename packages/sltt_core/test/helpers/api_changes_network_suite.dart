@@ -324,6 +324,109 @@ class ApiChangesNetworkTestSuite {
               tearDown: tearDown,
             );
           },
+      'entityTypeStats latestSeq is independent from latestChangeAt':
+          ({setup, tearDown}) async {
+            final domainId = '__test_stats_latest_seq_independent';
+            await _runTestWithLifecycle(
+              domainId,
+              ({required domainId}) async {
+                final laterChangeAt = baseTime.add(const Duration(minutes: 10));
+                final olderChangeAt = baseTime.add(const Duration(minutes: 5));
+
+                final first = await postSingleChange(
+                  changePayload(
+                    domainId: domainId,
+                    entityType: 'task',
+                    entityId: 'task-later-time',
+                    changeAt: laterChangeAt,
+                    operation: 'create',
+                    stateChanged: false,
+                    data: {'nameLocal': 'later-time'},
+                  ),
+                );
+                final firstErrors = first['errors'] as List<dynamic>?;
+                expect(
+                  firstErrors == null || firstErrors.isEmpty,
+                  isTrue,
+                  reason: '$first',
+                );
+
+                final second = await postSingleChange(
+                  changePayload(
+                    domainId: domainId,
+                    entityType: 'task',
+                    entityId: 'task-older-time',
+                    changeAt: olderChangeAt,
+                    operation: 'create',
+                    stateChanged: false,
+                    data: {'nameLocal': 'older-time'},
+                  ),
+                );
+                final secondErrors = second['errors'] as List<dynamic>?;
+                expect(
+                  secondErrors == null || secondErrors.isEmpty,
+                  isTrue,
+                  reason: '$second',
+                );
+
+                final allChanges = await getProjectChanges(domainId);
+                final changes = allChanges['changes'] as List<dynamic>?;
+                expect(changes, isNotNull, reason: '$allChanges');
+
+                final laterEntityId = '$domainId-task-later-time';
+                final olderEntityId = '$domainId-task-older-time';
+                Map<String, dynamic>? laterChange;
+                Map<String, dynamic>? olderChange;
+                for (final raw in changes!) {
+                  if (raw is! Map<String, dynamic>) continue;
+                  if (raw['entityId'] == laterEntityId) {
+                    laterChange = raw;
+                  } else if (raw['entityId'] == olderEntityId) {
+                    olderChange = raw;
+                  }
+                }
+                expect(laterChange, isNotNull, reason: '$allChanges');
+                expect(olderChange, isNotNull, reason: '$allChanges');
+
+                final firstSeq = laterChange!['seq'] as int;
+                final secondSeq = olderChange!['seq'] as int;
+                expect(secondSeq, greaterThan(firstSeq));
+
+                final baseUrl = await resolveBaseUrl();
+                final uri = baseUrl.replace(
+                  path: '${baseUrl.path}/api/stats/$domainCollection/$domainId',
+                );
+                final req = await HttpClient().getUrl(uri);
+                final res = await req.close();
+                final body = await res.transform(utf8.decoder).join();
+                expect(res.statusCode, 200, reason: body);
+
+                final json = jsonDecode(body) as Map<String, dynamic>;
+                final entityTypeStats =
+                    json['entityTypeStats'] as Map<String, dynamic>?;
+                expect(entityTypeStats, isNotNull, reason: body);
+                final entityTypes =
+                    entityTypeStats!['entityTypes'] as Map<String, dynamic>?;
+                expect(entityTypes, isNotNull, reason: body);
+                final taskStats = entityTypes!['task'] as Map<String, dynamic>?;
+                expect(taskStats, isNotNull, reason: body);
+
+                expect(
+                  taskStats!['latestChangeAt'],
+                  laterChangeAt.toUtc().toIso8601String(),
+                  reason: body,
+                );
+                expect(taskStats['latestSeq'], secondSeq, reason: body);
+
+                final changeStats =
+                    json['changeStats'] as Map<String, dynamic>?;
+                expect(changeStats, isNotNull, reason: body);
+                expect(changeStats!['latestSeq'], secondSeq, reason: body);
+              },
+              setup: setup,
+              tearDown: tearDown,
+            );
+          },
     };
     return {
       'GET /api/stats/{domainCollection}/{domainId}': statsTests,

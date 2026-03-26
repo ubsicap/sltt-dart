@@ -805,7 +805,8 @@ class IsarStorageService extends BaseStorageService {
           String,
           ({
             String entityType,
-            client.IsarChangeLogEntry latestChange,
+            client.IsarChangeLogEntry latestChangeAtChange,
+            client.IsarChangeLogEntry latestSeqChange,
             int creates,
             int updates,
             int deletes,
@@ -819,21 +820,29 @@ class IsarStorageService extends BaseStorageService {
       if (existing == null) {
         grouped[key] = (
           entityType: syncState.entityType,
-          latestChange: syncState.change,
+          latestChangeAtChange: syncState.change,
+          latestSeqChange: syncState.change,
           creates: syncState.operationCounts.create,
           updates: syncState.operationCounts.update,
           deletes: syncState.operationCounts.delete,
         );
       } else {
-        // Keep the latest change
-        final latestChange =
-            syncState.change.changeAt.isAfter(existing.latestChange.changeAt)
+        // Track latest-by-time and latest-by-seq independently.
+        final latestChangeAtChange =
+            syncState.change.changeAt.isAfter(
+              existing.latestChangeAtChange.changeAt,
+            )
             ? syncState.change
-            : existing.latestChange;
+            : existing.latestChangeAtChange;
+        final latestSeqChange =
+            syncState.change.seq >= existing.latestSeqChange.seq
+            ? syncState.change
+            : existing.latestSeqChange;
 
         grouped[key] = (
           entityType: existing.entityType,
-          latestChange: latestChange,
+          latestChangeAtChange: latestChangeAtChange,
+          latestSeqChange: latestSeqChange,
           creates: existing.creates + syncState.operationCounts.create,
           updates: existing.updates + syncState.operationCounts.update,
           deletes: existing.deletes + syncState.operationCounts.delete,
@@ -850,7 +859,7 @@ class IsarStorageService extends BaseStorageService {
           .where()
           .entityTypeDomainIdEqualTo(
             entityType,
-            grouped[entityType]!.latestChange.domainId,
+            grouped[entityType]!.latestChangeAtChange.domainId,
           )
           .findFirst();
       if (existing != null) {
@@ -877,35 +886,39 @@ class IsarStorageService extends BaseStorageService {
 
       if (existing != null) {
         // Determine latest change metadata
-        if (data.latestChange.changeAt.isAfter(existing.changeAt) ||
-            data.latestChange.changeAt.isAtSameMomentAs(existing.changeAt)) {
-          latestChangeAt = data.latestChange.changeAt;
-          latestCid = data.latestChange.cid;
-          latestSeq = data.latestChange.seq;
+        if (data.latestChangeAtChange.changeAt.isAfter(existing.changeAt) ||
+            data.latestChangeAtChange.changeAt.isAtSameMomentAs(
+              existing.changeAt,
+            )) {
+          latestChangeAt = data.latestChangeAtChange.changeAt;
+          latestCid = data.latestChangeAtChange.cid;
         } else {
           latestChangeAt = existing.changeAt;
           latestCid = existing.cid;
-          latestSeq = existing.seq;
         }
+        latestSeq = data.latestSeqChange.seq > existing.seq
+            ? data.latestSeqChange.seq
+            : existing.seq;
 
         created = existing.created + data.creates;
         updated = existing.updated + data.updates;
         deleted = existing.deleted + data.deletes;
         storedAt_orig_ = existing.storedAt_orig_!;
       } else {
-        latestChangeAt = data.latestChange.changeAt;
-        latestCid = data.latestChange.cid;
-        latestSeq = data.latestChange.seq;
+        latestChangeAt = data.latestChangeAtChange.changeAt;
+        latestCid = data.latestChangeAtChange.cid;
+        latestSeq = data.latestSeqChange.seq;
         created = data.creates;
         updated = data.updates;
         deleted = data.deletes;
-        storedAt_orig_ = data.latestChange.storedAt ?? DateTime.now().toUtc();
+        storedAt_orig_ =
+            data.latestChangeAtChange.storedAt ?? DateTime.now().toUtc();
       }
 
       final newState = IsarEntityTypeSyncState(
         id: existing?.id ?? Isar.autoIncrement,
         entityType: data.entityType,
-        domainId: data.latestChange.domainId,
+        domainId: data.latestChangeAtChange.domainId,
         domainType: domainType,
         storageId: _storageId,
         storageType: getStorageType(),
@@ -915,7 +928,7 @@ class IsarStorageService extends BaseStorageService {
         created: created,
         updated: updated,
         deleted: deleted,
-        storedAt: data.latestChange.storedAt ?? DateTime.now().toUtc(),
+        storedAt: data.latestChangeAtChange.storedAt ?? DateTime.now().toUtc(),
         storedAt_orig_: storedAt_orig_,
       );
 

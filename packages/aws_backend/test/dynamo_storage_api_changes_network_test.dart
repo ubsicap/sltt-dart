@@ -327,6 +327,15 @@ void main() {
           );
         },
       );
+
+      test(
+        'entityTypeStats latestSeq is independent from latestChangeAt',
+        () async {
+          await statsTests['entityTypeStats latestSeq is independent from latestChangeAt']!(
+            setup: resetDomain,
+          );
+        },
+      );
     });
 
     // Verification test to ensure all non-state suite tests are being run.
@@ -363,6 +372,7 @@ void main() {
           'srcStorageType: cloud, srcStorageId: cloud',
           'includes entityTypeCollections for known entityType',
           'includes entityTypeCollections unknown for unknown entityType',
+          'entityTypeStats latestSeq is independent from latestChangeAt',
         };
 
         final sortedSuiteTests = suiteTestNames.toList()..sort();

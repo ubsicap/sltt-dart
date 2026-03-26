@@ -257,6 +257,13 @@ void main() {
           await statsTests['includes entityTypeCollections unknown for unknown entityType']!();
         },
       );
+
+      test(
+        'entityTypeStats latestSeq is independent from latestChangeAt',
+        () async {
+          await statsTests['entityTypeStats latestSeq is independent from latestChangeAt']!();
+        },
+      );
     });
 
     // GET /api/state tests are exercised in the dedicated
@@ -303,6 +310,7 @@ void main() {
         'srcStorageType: cloud, srcStorageId: cloud',
         'includes entityTypeCollections for known entityType',
         'includes entityTypeCollections unknown for unknown entityType',
+        'entityTypeStats latestSeq is independent from latestChangeAt',
         // State-specific tests are exercised in
         // `isar_storage_api_state_network_test.dart` to avoid duplication.
       };
