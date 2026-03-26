@@ -6,6 +6,7 @@ import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
+import 'package:sync_manager/src/models/isar_entity_type_sync_state.dart';
 import 'package:sync_manager/src/models/isar_storage_state.dart';
 import 'package:sync_manager/src/models/isar_task_state.dart';
 import 'package:sync_manager/src/models/unknown_entity_state.isar.dart';
@@ -561,6 +562,151 @@ void main() {
         expect(updated2, isNotNull);
         expect(updated1!.change_storedAt, equals(updatedStoredAt.toUtc()));
         expect(updated2!.change_storedAt, equals(updatedStoredAt.toUtc()));
+      },
+    );
+
+    test(
+      'putEntityState increments entity type sync-state updated count',
+      () async {
+        const projectId = 'proj-put-entity-state-sync-state';
+        const entityId = 'task-put-sync-1';
+        final initialChangeAt = DateTime.parse('2023-01-01T04:00:00Z');
+        final updatedStoredAt = DateTime.parse('2023-01-01T04:05:00Z');
+
+        final seedResult = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [
+            changePayload(
+              projectId: projectId,
+              entityType: 'task',
+              entityId: entityId,
+              changeAt: initialChangeAt,
+              operation: 'create',
+              data: {
+                'nameLocal': 'Task sync-state put',
+                'parentId': 'root',
+                'parentProp': 'tList',
+              },
+            ),
+          ],
+          srcStorageType: 'local',
+          srcStorageId: 'local-client',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(seedResult.isSuccess, isTrue, reason: seedResult.errorMessage);
+
+        final beforeSyncState = await storage.isar.isarEntityTypeSyncStates
+            .where()
+            .entityTypeDomainIdEqualTo('task', projectId)
+            .findFirst();
+        expect(beforeSyncState, isNotNull);
+
+        final seeded = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId,
+        );
+        expect(seeded, isNotNull);
+
+        await storage.putEntityState(state: seeded!, storedAt: updatedStoredAt);
+
+        final afterSyncState = await storage.isar.isarEntityTypeSyncStates
+            .where()
+            .entityTypeDomainIdEqualTo('task', projectId)
+            .findFirst();
+        expect(afterSyncState, isNotNull);
+        expect(afterSyncState!.created, equals(beforeSyncState!.created));
+        expect(afterSyncState.updated, equals(beforeSyncState.updated + 1));
+      },
+    );
+
+    test(
+      'batchPutEntityStates increments entity type sync-state create/update counts',
+      () async {
+        const projectId = 'proj-batch-put-sync-state';
+        const existingEntityId = 'task-batch-sync-existing';
+        const newEntityId = 'task-batch-sync-new';
+        final initialChangeAt = DateTime.parse('2023-01-01T05:00:00Z');
+        final updatedStoredAt = DateTime.parse('2023-01-01T05:05:00Z');
+
+        final seedResult = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [
+            changePayload(
+              projectId: projectId,
+              entityType: 'task',
+              entityId: existingEntityId,
+              changeAt: initialChangeAt,
+              operation: 'create',
+              data: {
+                'nameLocal': 'Task existing for batch sync-state',
+                'parentId': 'root',
+                'parentProp': 'tList',
+              },
+            ),
+          ],
+          srcStorageType: 'local',
+          srcStorageId: 'local-client',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(seedResult.isSuccess, isTrue, reason: seedResult.errorMessage);
+
+        final beforeSyncState = await storage.isar.isarEntityTypeSyncStates
+            .where()
+            .entityTypeDomainIdEqualTo('task', projectId)
+            .findFirst();
+        expect(beforeSyncState, isNotNull);
+
+        final existingState = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: existingEntityId,
+        );
+        expect(existingState, isNotNull);
+
+        final newStateJson = {
+          ...existingState!.toJson(),
+          'entityId': newEntityId,
+          'change_cid': generateCid(entityType: EntityType.task),
+          'change_changeAt': initialChangeAt
+              .add(const Duration(minutes: 1))
+              .toIso8601String(),
+          'change_storedAt': initialChangeAt
+              .add(const Duration(minutes: 1))
+              .toIso8601String(),
+          'data_nameLocal': 'Task new for batch sync-state',
+        };
+        final newState = storage.createEntityStateFromJson(
+          entityType: 'task',
+          json: newStateJson,
+        );
+
+        final preNewEntity = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: newEntityId,
+        );
+        expect(preNewEntity, isNull);
+
+        await storage.batchPutEntityStates(
+          states: [existingState, newState],
+          storedAt: updatedStoredAt,
+        );
+
+        final afterSyncState = await storage.isar.isarEntityTypeSyncStates
+            .where()
+            .entityTypeDomainIdEqualTo('task', projectId)
+            .findFirst();
+        expect(afterSyncState, isNotNull);
+        expect(afterSyncState!.created, equals(beforeSyncState!.created + 1));
+        expect(afterSyncState.updated, equals(beforeSyncState.updated + 1));
       },
     );
   });
