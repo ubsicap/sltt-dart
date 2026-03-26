@@ -124,7 +124,7 @@ void main() {
     );
 
     test(
-      '[isar] downsync [stateChanged=false warning]: sync no-op change warning updates reconciliation hashes without immediate refetch enqueue for different storage id',
+      '[isar] downsync [stateChanged=false warning]: sync no-op change warning pre-enqueues refetch regardless of storage id',
       () async {
         await testDownsyncStateChangedFalseWarningQueuesRefetch(
           cloudBaseUrl: cloudBaseUrl,
@@ -137,9 +137,9 @@ void main() {
     );
 
     test(
-      '[isar] downsync [stateChanged=false warning same-storage]: sync no-op warning trusts local hash when storage ids match and avoids refetch enqueue',
+      '[isar] downsync [stateChanged=false warning same-storage]: sync no-op warning pre-enqueues refetch for same storage id',
       () async {
-        await testDownsyncStateChangedFalseWarningSameStorageIdAvoidsRefetch(
+        await testDownsyncStateChangedFalseWarningSameStorageIdPreEnqueuesRefetch(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
@@ -276,7 +276,7 @@ void main() {
     );
 
     test(
-      '[aws_backend] downsync [stateChanged=false warning]: sync no-op change warning updates reconciliation hashes without immediate refetch enqueue for different storage id',
+      '[aws_backend] downsync [stateChanged=false warning]: sync no-op change warning pre-enqueues refetch regardless of storage id',
       () async {
         await testDownsyncStateChangedFalseWarningQueuesRefetch(
           cloudBaseUrl: cloudBaseUrl,
@@ -289,9 +289,9 @@ void main() {
     );
 
     test(
-      '[aws_backend] downsync [stateChanged=false warning same-storage]: sync no-op warning trusts local hash when storage ids match and avoids refetch enqueue',
+      '[aws_backend] downsync [stateChanged=false warning same-storage]: sync no-op warning pre-enqueues refetch for same storage id',
       () async {
-        await testDownsyncStateChangedFalseWarningSameStorageIdAvoidsRefetch(
+        await testDownsyncStateChangedFalseWarningSameStorageIdPreEnqueuesRefetch(
           cloudBaseUrl: cloudBaseUrl,
           srcStorageId: srcStorageId,
           srcStorageType: srcStorageType,
@@ -840,7 +840,7 @@ Future<void> testDownsyncStateChangedFalseWarningQueuesRefetch({
 
   final queue = syncManager.entityStatePaginationService;
   queue.stopProcessing();
-  final beforeRequeueCount = queue.requeuedQueuedDuplicateSingleCount;
+  final beforeQueuedSingleCount = queue.queuedSingleJobCount;
 
   final downsyncResult = await syncManager.downsyncFromCloud(
     domainIds: [projectId],
@@ -881,25 +881,18 @@ Future<void> testDownsyncStateChangedFalseWarningQueuesRefetch({
 
   await Future<void>.delayed(const Duration(milliseconds: 450));
 
-  syncManager.enqueueJobFetchEntityState(
-    domainType: 'project',
-    domainId: projectId,
-    entityType: 'project',
-    entityId: projectId,
-    parentId: downloadedSyncNoOp['parentId']?.toString(),
-  );
-
   expect(
-    queue.requeuedQueuedDuplicateSingleCount,
-    equals(beforeRequeueCount),
+    queue.queuedSingleJobCount,
+    greaterThan(beforeQueuedSingleCount),
     reason:
-        'warning-based stateChanged=false reconciliation should not pre-enqueue when sender storageId differs from current storageId',
+        'warning-based stateChanged=false reconciliation should pre-enqueue refetch even when sender storageId differs from current storageId',
   );
 
   queue.resumeProcessing();
 }
 
-Future<void> testDownsyncStateChangedFalseWarningSameStorageIdAvoidsRefetch({
+Future<void>
+testDownsyncStateChangedFalseWarningSameStorageIdPreEnqueuesRefetch({
   required String cloudBaseUrl,
   required String srcStorageId,
   required String srcStorageType,
@@ -985,7 +978,7 @@ Future<void> testDownsyncStateChangedFalseWarningSameStorageIdAvoidsRefetch({
 
   final queue = syncManager.entityStatePaginationService;
   queue.stopProcessing();
-  final beforeRequeueCount = queue.requeuedQueuedDuplicateSingleCount;
+  final beforeQueuedSingleCount = queue.queuedSingleJobCount;
 
   final downsyncResult = await syncManager.downsyncFromCloud(
     domainIds: [projectId],
@@ -1026,19 +1019,10 @@ Future<void> testDownsyncStateChangedFalseWarningSameStorageIdAvoidsRefetch({
 
   await Future<void>.delayed(const Duration(milliseconds: 450));
 
-  syncManager.enqueueJobFetchEntityState(
-    domainType: 'project',
-    domainId: projectId,
-    entityType: 'project',
-    entityId: projectId,
-    parentId: downloadedSyncNoOp['parentId']?.toString(),
-  );
-
   expect(
-    queue.requeuedQueuedDuplicateSingleCount,
-    equals(beforeRequeueCount),
-    reason:
-        'same-storage warning reconciliation should trust warning hash and avoid pre-enqueueing refetch',
+    queue.queuedSingleJobCount,
+    greaterThan(beforeQueuedSingleCount),
+    reason: 'same-storage warning reconciliation should pre-enqueue refetch',
   );
 
   queue.resumeProcessing();

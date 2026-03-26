@@ -397,8 +397,8 @@ class SyncManager {
     StorageSummaries storageSummaries = {};
     final finalStateHashesByKey = <String, _StateHashSnapshot>{};
     final queuedEntityStateFetchKeys = <String>{};
+    final warningBasedRefetchKeys = <String>{};
     try {
-      final currentStorageId = await _localStorage.getStorageId();
       SlttLogger.logger.info('[SyncManager] Starting downsync from cloud...');
 
       if (domainIds != null && domainIds.isNotEmpty) {
@@ -542,9 +542,9 @@ class SyncManager {
             _updateStateChangedFalseStateDataHashes(
               changesStateFalse: changesStateFalse,
               finalStateHashesByKey: finalStateHashesByKey,
+              warningBasedRefetchKeys: warningBasedRefetchKeys,
               domainTypeContext: domainType,
               domainIdContext: domainId,
-              currentStorageId: currentStorageId,
             );
 
             // Apply only stateChanged=true changes to avoid sync pre-validation
@@ -637,10 +637,20 @@ class SyncManager {
         finalStateHashesByKey: finalStateHashesByKey,
         queuedEntityStateFetchKeys: queuedEntityStateFetchKeys,
       );
+      final warningRefetchCount = _queueWarningBasedEntityStateRefetches(
+        warningBasedRefetchKeys: warningBasedRefetchKeys,
+        finalStateHashesByKey: finalStateHashesByKey,
+        queuedEntityStateFetchKeys: queuedEntityStateFetchKeys,
+      );
 
       if (mismatchCount > 0) {
         SlttLogger.logger.warning(
           '[SyncManager] Downsync hash reconciliation found $mismatchCount mismatched entity state hash(es); queued targeted state refetch.',
+        );
+      }
+      if (warningRefetchCount > 0) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Downsync warning-based reconciliation queued $warningRefetchCount targeted state refetch(es).',
         );
       }
 
@@ -962,9 +972,9 @@ class SyncManager {
   void _updateStateChangedFalseStateDataHashes({
     required List<Map<String, dynamic>> changesStateFalse,
     required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required Set<String> warningBasedRefetchKeys,
     required String domainTypeContext,
     required String domainIdContext,
-    required String currentStorageId,
   }) {
     for (final incomingChange in changesStateFalse) {
       final warningStateDataHash = _extractIncomingStateDataHashWarning(
@@ -994,15 +1004,8 @@ class SyncManager {
         entityType: updateEntityType,
         entityId: updateEntityId,
       );
+      warningBasedRefetchKeys.add(key);
       final previous = finalStateHashesByKey[key];
-      final incomingStorageId = incomingChange['storageId']?.toString();
-
-      // TODO(lan-local-team-storage): revisit this when clients can share
-      // changes across storage ids. At that point, prefer sender stateDataHash
-      // lookup by CID rather than requiring storageId match.
-      final trustedLocalStateDataHash = incomingStorageId == currentStorageId
-          ? warningStateDataHash
-          : previous?.localStateDataHash;
 
       finalStateHashesByKey[key] = _StateHashSnapshot(
         domainType: updateDomainType,
@@ -1013,7 +1016,9 @@ class SyncManager {
         cloudStateDataHash:
             previous?.cloudStateDataHash ??
             incomingChange['stateDataHash']?.toString(),
-        localStateDataHash: trustedLocalStateDataHash,
+        // For warning-based stateChanged=false changes, always carry forward
+        // the warning hash so mismatch detection can enqueue a refetch.
+        localStateDataHash: warningStateDataHash,
       );
     }
   }
@@ -1049,6 +1054,28 @@ class SyncManager {
     }
 
     return mismatchCount;
+  }
+
+  int _queueWarningBasedEntityStateRefetches({
+    required Set<String> warningBasedRefetchKeys,
+    required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required Set<String> queuedEntityStateFetchKeys,
+  }) {
+    var warningRefetchCount = 0;
+    for (final key in warningBasedRefetchKeys) {
+      final snapshot = finalStateHashesByKey[key];
+      if (snapshot == null) continue;
+      if (!queuedEntityStateFetchKeys.add(key)) continue;
+      warningRefetchCount++;
+      enqueueJobFetchEntityState(
+        domainType: snapshot.domainType,
+        domainId: snapshot.domainId,
+        entityType: snapshot.entityType,
+        entityId: snapshot.entityId,
+        parentId: snapshot.parentId,
+      );
+    }
+    return warningRefetchCount;
   }
 
   Map<String, String>? _extractUpdateKeysFromChange(
