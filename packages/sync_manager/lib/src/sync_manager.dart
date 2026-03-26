@@ -776,6 +776,93 @@ class SyncManager {
     await _localStorage.clearAllCursorSyncStates();
   }
 
+  Future<Map<String, int>?> _fetchLatestSeqByEntityTypeFromCloudStats({
+    required String domainType,
+    required String domainId,
+  }) async {
+    try {
+      final collection = getCollectionByDomain(domainType);
+      if (collection == null || collection.isEmpty) {
+        return null;
+      }
+
+      final response = await _dio.get(
+        '$_cloudStorageUrl/api/stats/$collection/$domainId',
+      );
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final stats = response.data as Map<String, dynamic>;
+      final parsed = DomainStatsResponse.fromJson(stats);
+      final out = <String, int>{};
+      final entityTypeStats = parsed.entityTypeStats;
+      if (entityTypeStats == null) {
+        return out;
+      }
+
+      entityTypeStats.entityTypes.forEach((entityType, summary) {
+        if (summary.latestSeq >= 0) {
+          out[entityType] = summary.latestSeq;
+        }
+      });
+
+      return out;
+    } catch (e) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Failed to fetch latest seq via /api/stats for $domainType $domainId: $e',
+      );
+      return null;
+    }
+  }
+
+  Future<void> storeFetchedEntityState({
+    required BaseEntityState state,
+    required DateTime storedAt,
+  }) async {
+    final latestSeqByEntityType =
+        await _fetchLatestSeqByEntityTypeFromCloudStats(
+          domainType: state.domainType,
+          domainId: state.change_domainId,
+        );
+
+    await _localStorage.putEntityState(
+      state: state,
+      storedAt: storedAt,
+      latestSeqForEntityType: latestSeqByEntityType?[state.entityType],
+    );
+  }
+
+  Future<void> storeFetchedEntityStates({
+    required List<BaseEntityState> states,
+    required DateTime storedAt,
+  }) async {
+    if (states.isEmpty) return;
+
+    final grouped =
+        <(String domainType, String domainId), List<BaseEntityState>>{};
+    for (final state in states) {
+      final key = (state.domainType, state.change_domainId);
+      grouped.putIfAbsent(key, () => <BaseEntityState>[]).add(state);
+    }
+
+    for (final entry in grouped.entries) {
+      final domainType = entry.key.$1;
+      final domainId = entry.key.$2;
+      final latestSeqByEntityType =
+          await _fetchLatestSeqByEntityTypeFromCloudStats(
+            domainType: domainType,
+            domainId: domainId,
+          );
+
+      await _localStorage.batchPutEntityStates(
+        states: entry.value,
+        storedAt: storedAt,
+        latestSeqByEntityType: latestSeqByEntityType,
+      );
+    }
+  }
+
   Future<void> close() async {
     if (_initialized) {
       // Clean up auto-sync resources

@@ -1734,6 +1734,7 @@ class IsarStorageService extends BaseStorageService {
   Future<void> _upsertEntityTypeSyncStatesForStateWrites({
     required List<({BaseEntityState state, bool isNew})> items,
     required DateTime storedAt,
+    Map<String, int>? latestSeqByEntityType,
   }) async {
     if (items.isEmpty) return;
 
@@ -1778,6 +1779,7 @@ class IsarStorageService extends BaseStorageService {
         final domainId = entry.key.$2;
         final data = entry.value;
         final latestState = data.latestState;
+        final providedLatestSeq = latestSeqByEntityType?[entityType];
 
         final existing = await _isar.isarEntityTypeSyncStates
             .where()
@@ -1792,12 +1794,14 @@ class IsarStorageService extends BaseStorageService {
             latestState.change_changeAt.isAtSameMomentAs(existing.changeAt)) {
           latestChangeAt = latestState.change_changeAt;
           latestCid = latestState.change_cid;
-          latestSeq = existing?.seq ?? 0;
         } else {
           latestChangeAt = existing.changeAt;
           latestCid = existing.cid;
-          latestSeq = existing.seq;
         }
+
+        final existingSeq = existing?.seq ?? 0;
+        final providedSeq = providedLatestSeq ?? -1;
+        latestSeq = providedSeq > existingSeq ? providedSeq : existingSeq;
 
         final nextState = IsarEntityTypeSyncState(
           id: existing?.id ?? Isar.autoIncrement,
@@ -1832,6 +1836,7 @@ class IsarStorageService extends BaseStorageService {
   Future<void> putEntityState({
     required BaseEntityState state,
     required DateTime storedAt,
+    int? latestSeqForEntityType,
   }) async {
     final entityTypeEnum = EntityType.values.firstWhere(
       (e) => e.value == state.entityType,
@@ -1864,12 +1869,16 @@ class IsarStorageService extends BaseStorageService {
     await _upsertEntityTypeSyncStatesForStateWrites(
       items: [(state: stateWithStoredAt, isNew: isNew)],
       storedAt: storedAt,
+      latestSeqByEntityType: latestSeqForEntityType == null
+          ? null
+          : {state.entityType: latestSeqForEntityType},
     );
   }
 
   Future<void> batchPutEntityStates({
     required List<BaseEntityState> states,
     required DateTime storedAt,
+    Map<String, int>? latestSeqByEntityType,
   }) async {
     if (states.isEmpty) return;
 
@@ -1956,6 +1965,7 @@ class IsarStorageService extends BaseStorageService {
     await _upsertEntityTypeSyncStatesForStateWrites(
       items: syncItems,
       storedAt: storedAt,
+      latestSeqByEntityType: latestSeqByEntityType,
     );
   }
 

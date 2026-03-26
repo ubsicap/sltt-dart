@@ -624,6 +624,61 @@ void main() {
     );
 
     test(
+      'putEntityState applies provided latestSeqForEntityType when higher',
+      () async {
+        const projectId = 'proj-put-entity-state-latest-seq';
+        const entityId = 'task-put-seq-1';
+        final initialChangeAt = DateTime.parse('2023-01-01T04:30:00Z');
+        final updatedStoredAt = DateTime.parse('2023-01-01T04:35:00Z');
+
+        final seedResult = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [
+            changePayload(
+              projectId: projectId,
+              entityType: 'task',
+              entityId: entityId,
+              changeAt: initialChangeAt,
+              operation: 'create',
+              data: {
+                'nameLocal': 'Task put latest seq',
+                'parentId': 'root',
+                'parentProp': 'tList',
+              },
+            ),
+          ],
+          srcStorageType: 'local',
+          srcStorageId: 'local-client',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(seedResult.isSuccess, isTrue, reason: seedResult.errorMessage);
+
+        final seeded = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId,
+        );
+        expect(seeded, isNotNull);
+
+        await storage.putEntityState(
+          state: seeded!,
+          storedAt: updatedStoredAt,
+          latestSeqForEntityType: 777,
+        );
+
+        final syncState = await storage.isar.isarEntityTypeSyncStates
+            .where()
+            .entityTypeDomainIdEqualTo('task', projectId)
+            .findFirst();
+        expect(syncState, isNotNull);
+        expect(syncState!.seq, equals(777));
+      },
+    );
+
+    test(
       'batchPutEntityStates increments entity type sync-state create/update counts',
       () async {
         const projectId = 'proj-batch-put-sync-state';
@@ -707,6 +762,74 @@ void main() {
         expect(afterSyncState, isNotNull);
         expect(afterSyncState!.created, equals(beforeSyncState!.created + 1));
         expect(afterSyncState.updated, equals(beforeSyncState.updated + 1));
+      },
+    );
+
+    test(
+      'batchPutEntityStates applies provided latestSeqByEntityType map',
+      () async {
+        const projectId = 'proj-batch-put-latest-seq';
+        const entityId1 = 'task-batch-seq-1';
+        const entityId2 = 'task-batch-seq-2';
+        final initialChangeAt = DateTime.parse('2023-01-01T05:30:00Z');
+        final updatedStoredAt = DateTime.parse('2023-01-01T05:35:00Z');
+
+        Future<void> seedTask(String entityId, int minutesOffset) async {
+          final seedResult = await ChangeProcessingService.storeChanges(
+            storageMode: 'save',
+            changes: [
+              changePayload(
+                projectId: projectId,
+                entityType: 'task',
+                entityId: entityId,
+                changeAt: initialChangeAt.add(Duration(minutes: minutesOffset)),
+                operation: 'create',
+                data: {
+                  'nameLocal': 'Task batch latest seq $entityId',
+                  'parentId': 'root',
+                  'parentProp': 'tList',
+                },
+              ),
+            ],
+            srcStorageType: 'local',
+            srcStorageId: 'local-client',
+            storage: storage,
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+          expect(seedResult.isSuccess, isTrue, reason: seedResult.errorMessage);
+        }
+
+        await seedTask(entityId1, 0);
+        await seedTask(entityId2, 1);
+
+        final state1 = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId1,
+        );
+        final state2 = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId2,
+        );
+        expect(state1, isNotNull);
+        expect(state2, isNotNull);
+
+        await storage.batchPutEntityStates(
+          states: [state1!, state2!],
+          storedAt: updatedStoredAt,
+          latestSeqByEntityType: {'task': 888},
+        );
+
+        final syncState = await storage.isar.isarEntityTypeSyncStates
+            .where()
+            .entityTypeDomainIdEqualTo('task', projectId)
+            .findFirst();
+        expect(syncState, isNotNull);
+        expect(syncState!.seq, equals(888));
       },
     );
   });
