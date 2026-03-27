@@ -29,6 +29,8 @@ class SyncManager {
   // Debounced sync state
   Timer? _syncDebounceTimer;
   StreamSubscription<void>? _changeLogSubscription;
+  StreamSubscription<EntityStateFetchEvent>? _singleEntityStateSubscription;
+  StreamSubscription<EntityStateFetchEvent>? _collectionEntityStateSubscription;
   bool _autoOutsyncEnabled = false;
 
   // Public getters for testing
@@ -44,6 +46,9 @@ class SyncManager {
     _entityStatePaginationService ??= EntityStatePaginationService(
       baseUrl: _cloudStorageUrl,
     )..startProcessing();
+    if (_initialized) {
+      _ensureEntityStateEventSubscriptions();
+    }
     return _entityStatePaginationService!;
   }
 
@@ -144,6 +149,8 @@ class SyncManager {
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 300);
     _dio.options.sendTimeout = const Duration(seconds: 300);
+
+    _ensureEntityStateEventSubscriptions();
 
     _initialized = true;
     SlttLogger.logger.info(
@@ -826,23 +833,6 @@ class SyncManager {
     }
   }
 
-  Future<void> storeFetchedEntityState({
-    required BaseEntityState state,
-    required DateTime storedAt,
-  }) async {
-    final latestSeqByEntityType =
-        await _fetchLatestSeqByEntityTypeFromCloudStats(
-          domainType: state.domainType,
-          domainId: state.change_domainId,
-        );
-
-    await _localStorage.putEntityState(
-      state: state,
-      storedAt: storedAt,
-      latestSeqForEntityType: latestSeqByEntityType?[state.entityType],
-    );
-  }
-
   Future<void> storeFetchedEntityStates({
     required List<BaseEntityState> states,
     required DateTime storedAt,
@@ -877,6 +867,10 @@ class SyncManager {
     if (_initialized) {
       // Clean up auto-sync resources
       disableAutoOutsync();
+      await _singleEntityStateSubscription?.cancel();
+      _singleEntityStateSubscription = null;
+      await _collectionEntityStateSubscription?.cancel();
+      _collectionEntityStateSubscription = null;
       _entityStatePaginationService?.dispose();
       _entityStatePaginationService = null;
 
@@ -886,6 +880,69 @@ class SyncManager {
       _initialized = false;
       _instance = null;
       SlttLogger.logger.info('[SyncManager] Closed');
+    }
+  }
+
+  void _ensureEntityStateEventSubscriptions() {
+    final service = _entityStatePaginationService;
+    if (service == null) {
+      return;
+    }
+
+    _singleEntityStateSubscription ??= service.singleEntityEvents.listen(
+      (event) => unawaited(_handleFetchedEntityStateEvent(event)),
+      onError: (error, stackTrace) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Error from single entity-state stream: $error',
+        );
+      },
+    );
+
+    _collectionEntityStateSubscription ??= service.collectionEntityEvents
+        .listen(
+          (event) => unawaited(_handleFetchedEntityStateEvent(event)),
+          onError: (error, stackTrace) {
+            SlttLogger.logger.warning(
+              '[SyncManager] Error from collection entity-state stream: $error',
+            );
+          },
+        );
+  }
+
+  Future<void> _handleFetchedEntityStateEvent(
+    EntityStateFetchEvent event,
+  ) async {
+    if (event.hasError || event.items.isEmpty) {
+      return;
+    }
+
+    try {
+      final states = <BaseEntityState>[];
+      for (final item in event.items) {
+        final state = _localStorage.createEntityStateFromJson(
+          entityType: event.entityType,
+          json: item,
+        );
+        states.add(state);
+      }
+
+      if (states.isEmpty) {
+        return;
+      }
+
+      await storeFetchedEntityStates(
+        states: states,
+        storedAt: DateTime.now().toUtc(),
+      );
+    } catch (e, stackTrace) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Failed to persist fetched entity-state event '
+        '(${event.entityType}/${event.domainType}/${event.domainId}): $e',
+      );
+      SlttLogger.logger.fine(
+        '[SyncManager] Entity-state event persistence stack trace: '
+        '$stackTrace',
+      );
     }
   }
 

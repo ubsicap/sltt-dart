@@ -1833,48 +1833,6 @@ class IsarStorageService extends BaseStorageService {
     });
   }
 
-  Future<void> putEntityState({
-    required BaseEntityState state,
-    required DateTime storedAt,
-    int? latestSeqForEntityType,
-  }) async {
-    final entityTypeEnum = EntityType.values.firstWhere(
-      (e) => e.value == state.entityType,
-      orElse: () => EntityType.unknown,
-    );
-    final group = _entityStateRegistry.get(entityTypeEnum);
-    if (group == null) {
-      throw StateError(
-        'No storage group registered for entity type: ${state.entityType}',
-      );
-    }
-
-    final existing = await getEntityState(
-      domainType: state.domainType,
-      domainId: state.change_domainId,
-      entityType: state.entityType,
-      entityId: state.entityId,
-    );
-    final isNew = existing == null;
-
-    final stateWithStoredAt = _copyEntityStateWithStoredAt(
-      state: state,
-      storedAt: storedAt,
-    );
-
-    await _isar.writeTxn(() async {
-      await group.put(stateWithStoredAt);
-    });
-
-    await _upsertEntityTypeSyncStatesForStateWrites(
-      items: [(state: stateWithStoredAt, isNew: isNew)],
-      storedAt: storedAt,
-      latestSeqByEntityType: latestSeqForEntityType == null
-          ? null
-          : {state.entityType: latestSeqForEntityType},
-    );
-  }
-
   Future<void> batchPutEntityStates({
     required List<BaseEntityState> states,
     required DateTime storedAt,

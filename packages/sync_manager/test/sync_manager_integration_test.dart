@@ -124,6 +124,19 @@ void main() {
     );
 
     test(
+      '[isar] entity state queue [single fetch]: fetched state is persisted via stream subscription',
+      () async {
+        await testEntityStateQueueSingleFetchPersistsState(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useCloudDb: false,
+        );
+      },
+      timeout: Timeout.none,
+    );
+
+    test(
       '[isar] downsync [stateChanged=false warning]: sync no-op change warning pre-enqueues refetch regardless of storage id',
       () async {
         await testDownsyncStateChangedFalseWarningQueuesRefetch(
@@ -273,6 +286,19 @@ void main() {
           useCloudDb: true,
         );
       },
+    );
+
+    test(
+      '[aws_backend] entity state queue [single fetch]: fetched state is persisted via stream subscription',
+      () async {
+        await testEntityStateQueueSingleFetchPersistsState(
+          cloudBaseUrl: cloudBaseUrl,
+          srcStorageId: srcStorageId,
+          srcStorageType: srcStorageType,
+          useCloudDb: true,
+        );
+      },
+      timeout: Timeout.none,
     );
 
     test(
@@ -756,6 +782,75 @@ Future<void> testUserDomainDownsync({
     }),
     reason:
         'After user domain downsync, user $userId should have 1 total cloud change',
+  );
+}
+
+Future<void> testEntityStateQueueSingleFetchPersistsState({
+  required String cloudBaseUrl,
+  required String srcStorageId,
+  required String srcStorageType,
+  bool useCloudDb = false,
+}) async {
+  const projectId = '__test_entity_state_queue_single_fetch_persists_state';
+
+  if (useCloudDb) {
+    await resetDomainId(cloudBaseUrl, projectId);
+  }
+
+  await saveCloudChangeViaHttp(
+    cloudBaseUrl: cloudBaseUrl,
+    srcStorageType: srcStorageType,
+    srcStorageId: srcStorageId,
+    domainId: projectId,
+    entityId: projectId,
+    changeAt: DateTime.now().toUtc().subtract(const Duration(minutes: 1)),
+    dataJson: stableStringify(
+      BaseDataFields(parentId: 'root', parentProp: 'projects').toJson(),
+    ),
+    userId: 'test-queue-single-fetch',
+    operation: 'create',
+    fromJson: ProjectDataFields.fromJson,
+  );
+
+  final syncManager = SyncManager.instance;
+  final local = LocalStorageService.instance;
+  await syncManager.initialize();
+  syncManager.configureCloudUrl(cloudBaseUrl);
+
+  final requestKey = syncManager.enqueueJobFetchEntityState(
+    domainType: DomainType.project.value,
+    domainId: projectId,
+    entityType: EntityType.project.value,
+    entityId: projectId,
+  );
+
+  BaseEntityState? fetched;
+  final deadline = DateTime.now().toUtc().add(const Duration(seconds: 8));
+  while (DateTime.now().toUtc().isBefore(deadline)) {
+    fetched = await local.getEntityState(
+      domainType: DomainType.project.value,
+      domainId: projectId,
+      entityType: EntityType.project.value,
+      entityId: projectId,
+    );
+
+    if (fetched != null) {
+      break;
+    }
+
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  }
+
+  expect(
+    fetched,
+    isNotNull,
+    reason:
+        'Entity-state queue single fetch should persist local state for requestKey=$requestKey',
+  );
+  expect(
+    fetched!.change_storedAt,
+    isNotNull,
+    reason: 'Fetched state should be stored via batchPutEntityStates',
   );
 }
 
