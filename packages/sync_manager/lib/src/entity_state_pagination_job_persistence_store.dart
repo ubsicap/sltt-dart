@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:isar_community/isar.dart';
+import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 import 'models/entity_state_pagination_job.isar.dart';
 
@@ -10,11 +11,13 @@ class EntityStatePaginationJobPersistenceStore {
     required this.workspacePrefix,
     this.databaseDirectory = './isar_db',
     this.databaseNamePrefix = 'entity_state_pagination_jobs',
+    this.inspector = true,
   });
 
   final String workspacePrefix;
   final String databaseDirectory;
   final String databaseNamePrefix;
+  final bool inspector;
 
   Isar? _isar;
   Future<Isar>? _opening;
@@ -66,10 +69,18 @@ class EntityStatePaginationJobPersistenceStore {
     }
   }
 
+  Future<void> ensureOpen() async {
+    await _open();
+  }
+
   Future<Isar> _openInternal() async {
     final existing = Isar.getInstance(databaseName);
     if (existing != null) {
       _ownsIsarInstance = false;
+      SlttLogger.logger.info(
+        '[EntityStatePaginationJobStore] Attached existing Isar instance '
+        'name=$databaseName dir=$databaseDirectory inspector=$inspector',
+      );
       return existing;
     }
 
@@ -82,8 +93,13 @@ class EntityStatePaginationJobPersistenceStore {
       [EntityStatePaginationJobRecordSchema],
       directory: dir.path,
       name: databaseName,
+      inspector: inspector,
     );
     _ownsIsarInstance = true;
+    SlttLogger.logger.info(
+      '[EntityStatePaginationJobStore] Opened Isar db '
+      'path=${dir.path}/$databaseName.isar inspector=$inspector',
+    );
     return opened;
   }
 
@@ -94,6 +110,10 @@ class EntityStatePaginationJobPersistenceStore {
     _ownsIsarInstance = false;
     if (isar != null && isar.isOpen && shouldClose) {
       await isar.close();
+      SlttLogger.logger.info(
+        '[EntityStatePaginationJobStore] Closed Isar db '
+        'path=$databaseDirectory/$databaseName.isar',
+      );
     }
   }
 

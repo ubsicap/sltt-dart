@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'entity_state_pagination_job_persistence_store.dart';
@@ -108,6 +109,7 @@ class EntityStatePaginationService {
     this.persistJobs = true,
     this.persistenceDbDirectory = './isar_db',
     this.persistenceDbNamePrefix = 'entity_state_pagination_jobs',
+    this.persistenceInspector = true,
     Dio? dio,
   }) : _baseUrl = baseUrl,
        _dio = dio ?? Dio() {
@@ -117,6 +119,7 @@ class EntityStatePaginationService {
         workspacePrefix: workspacePrefix,
         databaseDirectory: persistenceDbDirectory,
         databaseNamePrefix: persistenceDbNamePrefix,
+        inspector: persistenceInspector,
       );
     }
   }
@@ -127,6 +130,7 @@ class EntityStatePaginationService {
   final bool persistJobs;
   final String persistenceDbDirectory;
   final String persistenceDbNamePrefix;
+  final bool persistenceInspector;
   final Dio _dio;
   late final RequestLimiter _requestLimiter;
   EntityStatePaginationJobPersistenceStore? _jobStore;
@@ -189,6 +193,19 @@ class EntityStatePaginationService {
 
   void startProcessing() {
     _enabled = true;
+    final store = _jobStore;
+    if (store != null) {
+      unawaited(
+        store.ensureOpen().catchError((Object error, StackTrace stackTrace) {
+          SlttLogger.logger.warning(
+            '[EntityStateQueue] Failed to open persistence store: $error',
+          );
+          SlttLogger.logger.fine(
+            '[EntityStateQueue] Persistence open stack trace: $stackTrace',
+          );
+        }),
+      );
+    }
     if (!_resumeRequested) {
       _resumeRequested = true;
       unawaited(resumePersistedJobs());
@@ -290,6 +307,35 @@ class EntityStatePaginationService {
           },
         )
         .toList();
+  }
+
+  Map<String, dynamic> debugPersistenceInfo() {
+    final store = _jobStore;
+    if (store == null) {
+      return {
+        'persistJobs': false,
+        'workspacePrefix': workspacePrefix,
+        'databaseDirectory': persistenceDbDirectory,
+        'databaseNamePrefix': persistenceDbNamePrefix,
+        'databaseName': null,
+        'databasePath': null,
+        'inspector': persistenceInspector,
+        'openInCurrentIsolate': false,
+      };
+    }
+
+    final dbName = store.databaseName;
+    final openInCurrentIsolate = Isar.getInstance(dbName) != null;
+    return {
+      'persistJobs': true,
+      'workspacePrefix': workspacePrefix,
+      'databaseDirectory': store.databaseDirectory,
+      'databaseNamePrefix': store.databaseNamePrefix,
+      'databaseName': dbName,
+      'databasePath': '${store.databaseDirectory}/$dbName.isar',
+      'inspector': store.inspector,
+      'openInCurrentIsolate': openInCurrentIsolate,
+    };
   }
 
   static Future<void> deletePersistedJobsForWorkspacePrefix({

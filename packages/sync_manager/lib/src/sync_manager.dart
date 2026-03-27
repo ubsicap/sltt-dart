@@ -41,11 +41,26 @@ class SyncManager {
       entityStatePaginationService.singleEntityEvents;
   Stream<EntityStateFetchEvent> get collectionEntityStateEvents =>
       entityStatePaginationService.collectionEntityEvents;
+  EntityStatePaginationServiceConfig _entityStatePaginationServiceConfig =
+      const EntityStatePaginationServiceConfig();
+
+  EntityStatePaginationService _createEntityStatePaginationService() {
+    final config = _entityStatePaginationServiceConfig;
+    return EntityStatePaginationService(
+      baseUrl: _cloudStorageUrl,
+      maxConcurrentRequests: config.maxConcurrentRequests,
+      singleRequestDebounce: config.singleRequestDebounce,
+      workspacePrefix: config.workspacePrefix,
+      persistJobs: config.persistJobs,
+      persistenceDbDirectory: config.persistenceDbDirectory,
+      persistenceDbNamePrefix: config.persistenceDbNamePrefix,
+      persistenceInspector: config.persistenceInspector,
+    );
+  }
 
   EntityStatePaginationService get entityStatePaginationService {
-    _entityStatePaginationService ??= EntityStatePaginationService(
-      baseUrl: _cloudStorageUrl,
-    )..startProcessing();
+    _entityStatePaginationService ??= _createEntityStatePaginationService()
+      ..startProcessing();
     if (_initialized) {
       _ensureEntityStateEventSubscriptions();
     }
@@ -133,11 +148,36 @@ class SyncManager {
     };
   }
 
+  Map<String, dynamic> getEntityStatePaginationDebugInfo() {
+    final service = _entityStatePaginationService;
+    return {
+      'cloudUrl': _cloudStorageUrl,
+      'serviceInitialized': service != null,
+      'queueCounts': getEntityStatePaginationJobQueueCounts(),
+      'persistence':
+          service?.debugPersistenceInfo() ??
+          {'persistJobs': false, 'openInCurrentIsolate': false},
+    };
+  }
+
   Future<void> initialize({
     IsarStorageService? localStorage,
     bool closeStorageOnDispose = true,
+    EntityStatePaginationService? entityStatePaginationService,
+    EntityStatePaginationServiceConfig entityStatePaginationServiceConfig =
+        const EntityStatePaginationServiceConfig(),
   }) async {
     if (_initialized) return;
+
+    _entityStatePaginationServiceConfig = entityStatePaginationServiceConfig;
+    _entityStatePaginationService = entityStatePaginationService;
+    if (_entityStatePaginationService != null) {
+      _entityStatePaginationService!.updateBaseUrl(_cloudStorageUrl);
+      if (entityStatePaginationServiceConfig.startProcessingOnInitialize &&
+          !_entityStatePaginationService!.isProcessingEnabled) {
+        _entityStatePaginationService!.startProcessing();
+      }
+    }
 
     _localStorage = localStorage ?? LocalStorageService.instance;
     _ownsLocalStorage = closeStorageOnDispose || localStorage == null;
@@ -1304,4 +1344,26 @@ class SyncStatus {
     'cloudChangeStats': cloudChangeStats?.toJson(),
     'cloudStateStats': cloudStateStats?.toJson(),
   };
+}
+
+class EntityStatePaginationServiceConfig {
+  const EntityStatePaginationServiceConfig({
+    this.maxConcurrentRequests = 4,
+    this.singleRequestDebounce = const Duration(milliseconds: 300),
+    this.workspacePrefix = '',
+    this.persistJobs = true,
+    this.persistenceDbDirectory = './isar_db',
+    this.persistenceDbNamePrefix = 'entity_state_pagination_jobs',
+    this.persistenceInspector = true,
+    this.startProcessingOnInitialize = false,
+  });
+
+  final int maxConcurrentRequests;
+  final Duration singleRequestDebounce;
+  final String workspacePrefix;
+  final bool persistJobs;
+  final String persistenceDbDirectory;
+  final String persistenceDbNamePrefix;
+  final bool persistenceInspector;
+  final bool startProcessingOnInitialize;
 }
