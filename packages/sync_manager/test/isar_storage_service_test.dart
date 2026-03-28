@@ -512,6 +512,72 @@ void main() {
     );
 
     test(
+      'batchPutEntityStates upserts fetched state without preserving local isar id',
+      () async {
+        const projectId = 'proj-batch-put-upsert-by-identity';
+        const entityId = 'task-batch-upsert';
+        final initialChangeAt = DateTime.parse('2023-01-01T04:00:00Z');
+        final updatedStoredAt = DateTime.parse('2023-01-01T04:05:00Z');
+
+        final seedResult = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [
+            changePayload(
+              projectId: projectId,
+              entityType: 'task',
+              entityId: entityId,
+              changeAt: initialChangeAt,
+              operation: 'create',
+              data: {
+                'nameLocal': 'Task fetched upsert',
+                'parentId': 'root',
+                'parentProp': 'tList',
+              },
+            ),
+          ],
+          srcStorageType: 'local',
+          srcStorageId: 'local-client',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(seedResult.isSuccess, isTrue, reason: seedResult.errorMessage);
+
+        final existingState = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId,
+        );
+        expect(existingState, isNotNull);
+
+        final fetchedJson = Map<String, dynamic>.from(existingState!.toJson())
+          ..remove('id');
+        final fetchedState = storage.createEntityStateFromJson(
+          entityType: 'task',
+          json: fetchedJson,
+        );
+
+        await storage.batchPutEntityStates(
+          states: [fetchedState],
+          storedAt: updatedStoredAt,
+        );
+
+        final storedState = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId,
+        );
+        final allStates = await storage.isar.isarTaskStates.where().findAll();
+
+        expect(storedState, isNotNull);
+        expect(storedState!.change_storedAt, equals(updatedStoredAt.toUtc()));
+        expect(allStates, hasLength(1));
+      },
+    );
+
+    test(
       'batchPutEntityStates increments entity type sync-state create/update counts',
       () async {
         const projectId = 'proj-batch-put-sync-state';

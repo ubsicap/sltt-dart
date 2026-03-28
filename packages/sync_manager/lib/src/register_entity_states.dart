@@ -34,9 +34,17 @@ void registerAllIsarEntityStateStorageGroups(
       entityType: EntityType.project,
       fromJson: IsarProjectState.fromJson,
       put: (state) async =>
-          await isar.isarProjectStates.put(state as IsarProjectState),
+          // ignore: experimental_member_use
+          await isar.isarProjectStates.putByIndex(
+            r'change_domainId_entityId',
+            state as IsarProjectState,
+          ),
       putAll: (states) async =>
-          await isar.isarProjectStates.putAll(states.cast<IsarProjectState>()),
+          // ignore: experimental_member_use
+          await isar.isarProjectStates.putAllByIndex(
+            r'change_domainId_entityId',
+            states.cast<IsarProjectState>(),
+          ),
       collection: (Isar db) => db.isarProjectStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarProjectStates
@@ -89,10 +97,17 @@ void registerAllIsarEntityStateStorageGroups(
       entityType: EntityType.document,
       fromJson: IsarDocumentState.fromJson,
       put: (state) async =>
-          await isar.isarDocumentStates.put(state as IsarDocumentState),
-      putAll: (states) async => await isar.isarDocumentStates.putAll(
-        states.cast<IsarDocumentState>(),
-      ),
+          // ignore: experimental_member_use
+          await isar.isarDocumentStates.putByIndex(
+            r'change_domainId_entityId',
+            state as IsarDocumentState,
+          ),
+      putAll: (states) async =>
+          // ignore: experimental_member_use
+          await isar.isarDocumentStates.putAllByIndex(
+            r'change_domainId_entityId',
+            states.cast<IsarDocumentState>(),
+          ),
       collection: (Isar db) => db.isarDocumentStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarDocumentStates
@@ -145,9 +160,17 @@ void registerAllIsarEntityStateStorageGroups(
       entityType: EntityType.task,
       fromJson: IsarTaskState.fromJson,
       put: (state) async =>
-          await isar.isarTaskStates.put(state as IsarTaskState),
+          // ignore: experimental_member_use
+          await isar.isarTaskStates.putByIndex(
+            r'change_domainId_entityId',
+            state as IsarTaskState,
+          ),
       putAll: (states) async =>
-          await isar.isarTaskStates.putAll(states.cast<IsarTaskState>()),
+          // ignore: experimental_member_use
+          await isar.isarTaskStates.putAllByIndex(
+            r'change_domainId_entityId',
+            states.cast<IsarTaskState>(),
+          ),
       collection: (Isar db) => db.isarTaskStates,
       findByDomainAndEntity: (Isar db, String projectId, String entityId) => db
           .isarTaskStates

@@ -116,11 +116,18 @@ void registerIsarUserPreferencesDataEntityStateStorageGroup(
     IsarEntityStateStorageGroup<IsarUserPreferencesDataEntityState>(
           entityType: EntityType.userPreferences,
           fromJson: IsarUserPreferencesDataEntityState.fromJson,
-          put: (state) async => await isar.isarUserPreferencesDataEntityStates
-              .put(state as IsarUserPreferencesDataEntityState),
-          putAll: (states) async => await isar
-              .isarUserPreferencesDataEntityStates
-              .putAll(states.cast<IsarUserPreferencesDataEntityState>()),
+          put: (state) async =>
+              // ignore: experimental_member_use
+              await isar.isarUserPreferencesDataEntityStates.putByIndex(
+                r'change_domainId_entityId',
+                state as IsarUserPreferencesDataEntityState,
+              ),
+          putAll: (states) async =>
+              // ignore: experimental_member_use
+              await isar.isarUserPreferencesDataEntityStates.putAllByIndex(
+                r'change_domainId_entityId',
+                states.cast<IsarUserPreferencesDataEntityState>(),
+              ),
           collection: (isar) => isar.isarUserPreferencesDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarUserPreferencesDataEntityStates

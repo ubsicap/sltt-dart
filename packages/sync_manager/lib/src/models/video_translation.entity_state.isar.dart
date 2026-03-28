@@ -165,12 +165,18 @@ void registerIsarVideoDataEntityStateStorageGroup(
     IsarEntityStateStorageGroup<IsarVideoDataEntityState>(
           entityType: EntityType.video,
           fromJson: IsarVideoDataEntityState.fromJson,
-          put: (state) async => await isar.isarVideoDataEntityStates.put(
-            state as IsarVideoDataEntityState,
-          ),
-          putAll: (states) async => await isar.isarVideoDataEntityStates.putAll(
-            states.cast<IsarVideoDataEntityState>(),
-          ),
+          put: (state) async =>
+              // ignore: experimental_member_use
+              await isar.isarVideoDataEntityStates.putByIndex(
+                r'change_domainId_entityId',
+                state as IsarVideoDataEntityState,
+              ),
+          putAll: (states) async =>
+              // ignore: experimental_member_use
+              await isar.isarVideoDataEntityStates.putAllByIndex(
+                r'change_domainId_entityId',
+                states.cast<IsarVideoDataEntityState>(),
+              ),
           collection: (isar) => isar.isarVideoDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarVideoDataEntityStates

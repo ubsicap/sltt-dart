@@ -231,12 +231,18 @@ void registerIsarNoteDataEntityStateStorageGroup(
     IsarEntityStateStorageGroup<IsarNoteDataEntityState>(
           entityType: EntityType.note,
           fromJson: IsarNoteDataEntityState.fromJson,
-          put: (state) async => await isar.isarNoteDataEntityStates.put(
-            state as IsarNoteDataEntityState,
-          ),
-          putAll: (states) async => await isar.isarNoteDataEntityStates.putAll(
-            states.cast<IsarNoteDataEntityState>(),
-          ),
+          put: (state) async =>
+              // ignore: experimental_member_use
+              await isar.isarNoteDataEntityStates.putByIndex(
+                r'change_domainId_entityId',
+                state as IsarNoteDataEntityState,
+              ),
+          putAll: (states) async =>
+              // ignore: experimental_member_use
+              await isar.isarNoteDataEntityStates.putAllByIndex(
+                r'change_domainId_entityId',
+                states.cast<IsarNoteDataEntityState>(),
+              ),
           collection: (isar) => isar.isarNoteDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarNoteDataEntityStates
