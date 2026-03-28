@@ -4,8 +4,10 @@ part 'entity_state_pagination_job.isar.g.dart';
 
 const entityStatePaginationJobStatusQueued = 'queued';
 const entityStatePaginationJobStatusActive = 'active';
+const entityStatePaginationJobStatusFetched = 'fetched';
 const entityStatePaginationJobStatusCompleted = 'completed';
 const entityStatePaginationJobStatusFailed = 'failed';
+const entityStatePaginationJobStatusStorageFailed = 'storage_failed';
 
 @collection
 class EntityStatePaginationJobRecord {
@@ -25,8 +27,11 @@ class EntityStatePaginationJobRecord {
     this.limit,
     this.cursor,
     this.startedAt,
+    this.fetchedAt,
+    this.storedAt,
     this.completedAt,
     this.lastError,
+    this.storageError,
     this.hasMore,
   });
 
@@ -58,6 +63,9 @@ class EntityStatePaginationJobRecord {
   DateTime enqueuedAt;
 
   DateTime? startedAt;
+  DateTime? fetchedAt;
+  DateTime? storedAt;
   DateTime? completedAt;
   String? lastError;
+  String? storageError;
 }

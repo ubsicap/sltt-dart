@@ -133,6 +133,79 @@ class EntityStatePaginationJobPersistenceStore {
     bool? hasMore,
   }) async {
     final isar = await _open();
+    final nextEnqueuedAt = enqueuedAt.toUtc();
+    await isar.writeTxn(() async {
+      final existing = await isar.entityStatePaginationJobRecords
+          .where()
+          .jobKeyEqualTo(jobKey)
+          .findFirst();
+      final isStaleQueuedWrite =
+          existing != null &&
+          existing.startedAt != null &&
+          !nextEnqueuedAt.isAfter(existing.enqueuedAt);
+      if (isStaleQueuedWrite) {
+        return;
+      }
+
+      final next =
+          existing ??
+          EntityStatePaginationJobRecord(
+            jobKey: jobKey,
+            scopeKey: scopeKey,
+            domainType: domainType,
+            domainId: domainId,
+            entityType: entityType,
+            isCollection: isCollection,
+            status: entityStatePaginationJobStatusQueued,
+            priority: priority,
+            enqueuedAt: nextEnqueuedAt,
+            entityId: entityId,
+            parentId: parentId,
+            limit: limit,
+            cursor: cursor,
+            hasMore: hasMore,
+          );
+
+      next.scopeKey = scopeKey;
+      next.domainType = domainType;
+      next.domainId = domainId;
+      next.entityType = entityType;
+      next.isCollection = isCollection;
+      next.entityId = entityId;
+      next.parentId = parentId;
+      next.limit = limit;
+      next.cursor = cursor;
+      next.hasMore = hasMore;
+      next.priority = priority;
+      next.enqueuedAt = nextEnqueuedAt;
+      next.status = entityStatePaginationJobStatusQueued;
+      next.startedAt = null;
+      next.fetchedAt = null;
+      next.storedAt = null;
+      next.completedAt = null;
+      next.lastError = null;
+      next.storageError = null;
+
+      await isar.entityStatePaginationJobRecords.put(next);
+    });
+  }
+
+  Future<void> upsertActiveJob({
+    required String jobKey,
+    required String scopeKey,
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required bool isCollection,
+    required String priority,
+    required DateTime enqueuedAt,
+    String? entityId,
+    String? parentId,
+    int? limit,
+    String? cursor,
+    bool? hasMore,
+  }) async {
+    final isar = await _open();
     await isar.writeTxn(() async {
       final existing = await isar.entityStatePaginationJobRecords
           .where()
@@ -147,7 +220,7 @@ class EntityStatePaginationJobPersistenceStore {
             domainId: domainId,
             entityType: entityType,
             isCollection: isCollection,
-            status: entityStatePaginationJobStatusQueued,
+            status: entityStatePaginationJobStatusActive,
             priority: priority,
             enqueuedAt: enqueuedAt.toUtc(),
             entityId: entityId,
@@ -169,16 +242,34 @@ class EntityStatePaginationJobPersistenceStore {
       next.hasMore = hasMore;
       next.priority = priority;
       next.enqueuedAt = enqueuedAt.toUtc();
-      next.status = entityStatePaginationJobStatusQueued;
-      next.startedAt = null;
+      next.status = entityStatePaginationJobStatusActive;
+      next.startedAt = DateTime.now().toUtc();
+      next.fetchedAt = null;
+      next.storedAt = null;
       next.completedAt = null;
       next.lastError = null;
-
+      next.storageError = null;
       await isar.entityStatePaginationJobRecords.put(next);
     });
   }
 
-  Future<void> markActive(String jobKey) async {
+  Future<void> markFetched(String jobKey) async {
+    final isar = await _open();
+    await isar.writeTxn(() async {
+      final existing = await isar.entityStatePaginationJobRecords
+          .where()
+          .jobKeyEqualTo(jobKey)
+          .findFirst();
+      if (existing == null) return;
+      existing.status = entityStatePaginationJobStatusFetched;
+      existing.fetchedAt = DateTime.now().toUtc();
+      existing.lastError = null;
+      existing.storageError = null;
+      await isar.entityStatePaginationJobRecords.put(existing);
+    });
+  }
+
+  Future<void> markStored(String jobKey) async {
     final isar = await _open();
     await isar.writeTxn(() async {
       final existing = await isar.entityStatePaginationJobRecords
@@ -187,9 +278,10 @@ class EntityStatePaginationJobPersistenceStore {
           .findFirst();
       if (existing == null) return;
       existing.status = entityStatePaginationJobStatusActive;
-      existing.startedAt = DateTime.now().toUtc();
+      existing.storedAt = DateTime.now().toUtc();
       existing.completedAt = null;
       existing.lastError = null;
+      existing.storageError = null;
       await isar.entityStatePaginationJobRecords.put(existing);
     });
   }
@@ -223,6 +315,7 @@ class EntityStatePaginationJobPersistenceStore {
       existing.status = entityStatePaginationJobStatusCompleted;
       existing.completedAt = DateTime.now().toUtc();
       existing.lastError = null;
+      existing.storageError = null;
       await isar.entityStatePaginationJobRecords.put(existing);
     });
   }
@@ -238,6 +331,23 @@ class EntityStatePaginationJobPersistenceStore {
       existing.status = entityStatePaginationJobStatusFailed;
       existing.completedAt = DateTime.now().toUtc();
       existing.lastError = errorMessage;
+      existing.storageError = null;
+      await isar.entityStatePaginationJobRecords.put(existing);
+    });
+  }
+
+  Future<void> markStorageFailed(String jobKey, String errorMessage) async {
+    final isar = await _open();
+    await isar.writeTxn(() async {
+      final existing = await isar.entityStatePaginationJobRecords
+          .where()
+          .jobKeyEqualTo(jobKey)
+          .findFirst();
+      if (existing == null) return;
+      existing.status = entityStatePaginationJobStatusStorageFailed;
+      existing.completedAt = DateTime.now().toUtc();
+      existing.lastError = errorMessage;
+      existing.storageError = errorMessage;
       await isar.entityStatePaginationJobRecords.put(existing);
     });
   }
@@ -254,8 +364,23 @@ class EntityStatePaginationJobPersistenceStore {
         .statusEqualTo(entityStatePaginationJobStatusActive)
         .sortByEnqueuedAt()
         .findAll();
+    final fetched = await isar.entityStatePaginationJobRecords
+        .filter()
+        .statusEqualTo(entityStatePaginationJobStatusFetched)
+        .sortByEnqueuedAt()
+        .findAll();
+    final storageFailed = await isar.entityStatePaginationJobRecords
+        .filter()
+        .statusEqualTo(entityStatePaginationJobStatusStorageFailed)
+        .sortByEnqueuedAt()
+        .findAll();
 
-    final merged = <EntityStatePaginationJobRecord>[...queued, ...active];
+    final merged = <EntityStatePaginationJobRecord>[
+      ...queued,
+      ...active,
+      ...fetched,
+      ...storageFailed,
+    ];
     merged.sort((a, b) => a.enqueuedAt.compareTo(b.enqueuedAt));
     return merged;
   }

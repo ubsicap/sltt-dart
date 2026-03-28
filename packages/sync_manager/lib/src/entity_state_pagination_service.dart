@@ -10,6 +10,15 @@ import 'models/entity_state_pagination_job.isar.dart';
 const _defaultEntityStateRequestsConcurrency = 4;
 const _defaultSingleRequestDebounceMs = 300;
 
+typedef StoreFetchedEntityStatesCallback =
+    Future<void> Function({
+      required String domainType,
+      required String domainId,
+      required String entityType,
+      required List<Map<String, dynamic>> items,
+      required DateTime storedAt,
+    });
+
 class EntityStateFetchEvent {
   EntityStateFetchEvent({
     required this.requestKey,
@@ -42,6 +51,50 @@ class EntityStateFetchEvent {
   final String errorMessage;
 
   bool get hasError => errorMessage.isNotEmpty;
+}
+
+class EntityStateJobQueueCounts {
+  const EntityStateJobQueueCounts({
+    required this.queuedSingle,
+    required this.queuedCollection,
+    required this.queuedTotal,
+    required this.activeSingle,
+    required this.activeCollection,
+    required this.activeTotal,
+    required this.enabled,
+  });
+
+  final int queuedSingle;
+  final int queuedCollection;
+  final int queuedTotal;
+  final int activeSingle;
+  final int activeCollection;
+  final int activeTotal;
+  final bool enabled;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'queuedSingle': queuedSingle,
+      'queuedCollection': queuedCollection,
+      'queuedTotal': queuedTotal,
+      'activeSingle': activeSingle,
+      'activeCollection': activeCollection,
+      'activeTotal': activeTotal,
+      'enabled': enabled,
+    };
+  }
+
+  factory EntityStateJobQueueCounts.fromJson(Map<String, dynamic> json) {
+    return EntityStateJobQueueCounts(
+      queuedSingle: json['queuedSingle'] as int? ?? 0,
+      queuedCollection: json['queuedCollection'] as int? ?? 0,
+      queuedTotal: json['queuedTotal'] as int? ?? 0,
+      activeSingle: json['activeSingle'] as int? ?? 0,
+      activeCollection: json['activeCollection'] as int? ?? 0,
+      activeTotal: json['activeTotal'] as int? ?? 0,
+      enabled: json['enabled'] as bool? ?? false,
+    );
+  }
 }
 
 enum _EntityStateJobPriority { low, normal }
@@ -110,9 +163,11 @@ class EntityStatePaginationService {
     this.persistenceDbDirectory = './isar_db',
     this.persistenceDbNamePrefix = 'entity_state_pagination_jobs',
     this.persistenceInspector = true,
+    StoreFetchedEntityStatesCallback? onStoreFetchedItems,
     Dio? dio,
   }) : _baseUrl = baseUrl,
-       _dio = dio ?? Dio() {
+       _dio = dio ?? Dio(),
+       _onStoreFetchedItems = onStoreFetchedItems {
     _requestLimiter = RequestLimiter(maxConcurrentRequests);
     if (persistJobs) {
       _jobStore = EntityStatePaginationJobPersistenceStore(
@@ -132,6 +187,7 @@ class EntityStatePaginationService {
   final String persistenceDbNamePrefix;
   final bool persistenceInspector;
   final Dio _dio;
+  StoreFetchedEntityStatesCallback? _onStoreFetchedItems;
   late final RequestLimiter _requestLimiter;
   EntityStatePaginationJobPersistenceStore? _jobStore;
   final StreamController<EntityStateFetchEvent> _singleEntityEventsController =
@@ -139,6 +195,9 @@ class EntityStatePaginationService {
   final StreamController<EntityStateFetchEvent>
   _collectionEntityEventsController =
       StreamController<EntityStateFetchEvent>.broadcast();
+  final StreamController<EntityStateJobQueueCounts>
+  _queueCountsEventsController =
+      StreamController<EntityStateJobQueueCounts>.broadcast();
   String _baseUrl;
 
   bool _processingQueue = false;
@@ -186,6 +245,36 @@ class EntityStatePaginationService {
       _singleEntityEventsController.stream;
   Stream<EntityStateFetchEvent> get collectionEntityEvents =>
       _collectionEntityEventsController.stream;
+  Stream<EntityStateJobQueueCounts> get queueCountEvents =>
+      _queueCountsEventsController.stream;
+
+  void setStoreFetchedItemsCallback(StoreFetchedEntityStatesCallback? cb) {
+    _onStoreFetchedItems = cb;
+  }
+
+  EntityStateJobQueueCounts get currentQueueCounts =>
+      _currentQueueCountsSnapshot();
+
+  EntityStateJobQueueCounts _currentQueueCountsSnapshot() {
+    final queuedSingle = queuedSingleJobCount;
+    final queuedCollection = queuedCollectionJobCount;
+    final activeSingle = activeSingleJobCount;
+    final activeCollection = activeCollectionJobCount;
+    return EntityStateJobQueueCounts(
+      queuedSingle: queuedSingle,
+      queuedCollection: queuedCollection,
+      queuedTotal: queuedSingle + queuedCollection,
+      activeSingle: activeSingle,
+      activeCollection: activeCollection,
+      activeTotal: activeSingle + activeCollection,
+      enabled: isProcessingEnabled,
+    );
+  }
+
+  void _notifyQueueCountsChanged() {
+    if (_queueCountsEventsController.isClosed) return;
+    _queueCountsEventsController.add(_currentQueueCountsSnapshot());
+  }
 
   void updateBaseUrl(String baseUrl) {
     _baseUrl = baseUrl;
@@ -210,16 +299,18 @@ class EntityStatePaginationService {
       _resumeRequested = true;
       unawaited(resumePersistedJobs());
     }
+    _notifyQueueCountsChanged();
     _processQueue();
   }
 
   void stopProcessing() {
     _enabled = false;
+    _notifyQueueCountsChanged();
   }
 
   void resumeProcessing() => startProcessing();
 
-  void dispose() {
+  Future<void> dispose() async {
     _enabled = false;
     for (final bucket in _singleDebounceBuckets.values) {
       bucket.timer?.cancel();
@@ -232,19 +323,22 @@ class EntityStatePaginationService {
       _singleEntityEventsController.addError(
         StateError('Entity state queue disposed'),
       );
-      unawaited(_singleEntityEventsController.close());
+      await _singleEntityEventsController.close();
     }
     if (!_collectionEntityEventsController.isClosed) {
       _collectionEntityEventsController.addError(
         StateError('Entity state queue disposed'),
       );
-      unawaited(_collectionEntityEventsController.close());
+      await _collectionEntityEventsController.close();
+    }
+    if (!_queueCountsEventsController.isClosed) {
+      await _queueCountsEventsController.close();
     }
 
     final store = _jobStore;
     _jobStore = null;
     if (store != null) {
-      unawaited(store.close());
+      await store.close();
     }
   }
 
@@ -267,6 +361,10 @@ class EntityStatePaginationService {
       final job = _jobFromRecord(record);
       _enqueueByPriority(job);
       resumedCount++;
+    }
+
+    if (resumedCount > 0) {
+      _notifyQueueCountsChanged();
     }
 
     if (resumedCount > 0) {
@@ -302,8 +400,11 @@ class EntityStatePaginationService {
             'priority': record.priority,
             'enqueuedAt': record.enqueuedAt.toIso8601String(),
             'startedAt': record.startedAt?.toIso8601String(),
+            'fetchedAt': record.fetchedAt?.toIso8601String(),
+            'storedAt': record.storedAt?.toIso8601String(),
             'completedAt': record.completedAt?.toIso8601String(),
             'lastError': record.lastError,
+            'storageError': record.storageError,
           },
         )
         .toList();
@@ -434,6 +535,7 @@ class EntityStatePaginationService {
     });
 
     _processQueue();
+    _notifyQueueCountsChanged();
     return requestKey;
   }
 
@@ -496,6 +598,7 @@ class EntityStatePaginationService {
     _queueLifo.add(job);
     _persistQueuedJob(job);
     _processQueue();
+    _notifyQueueCountsChanged();
     return job.requestKey;
   }
 
@@ -566,6 +669,7 @@ class EntityStatePaginationService {
       _persistQueuedJob(job);
     }
 
+    _notifyQueueCountsChanged();
     _processQueue();
   }
 
@@ -593,11 +697,13 @@ class EntityStatePaginationService {
 
           final nextJob = _queueLifo.removeLast();
           _activeJobs[nextJob.jobKey] = nextJob;
-          _persistJobActive(nextJob.jobKey);
+          await _persistJobActive(nextJob);
+          _notifyQueueCountsChanged();
 
           unawaited(
             _runJob(nextJob).whenComplete(() {
               _activeJobs.remove(nextJob.jobKey);
+              _notifyQueueCountsChanged();
               _requestLimiter.release();
               _processQueue();
             }),
@@ -618,7 +724,7 @@ class EntityStatePaginationService {
       }
     } catch (e, st) {
       SlttLogger.logger.severe('[EntityStateQueue] Job failed: $e', e, st);
-      _emitError(job, e.toString());
+      await _emitError(job, e.toString());
     }
   }
 
@@ -640,8 +746,27 @@ class EntityStatePaginationService {
       items.add(state.cast<String, dynamic>());
     }
 
+    final storeFetchedItems = _onStoreFetchedItems;
+    if (storeFetchedItems != null && items.isNotEmpty) {
+      try {
+        await _persistJobFetched(job.jobKey);
+        await storeFetchedItems(
+          domainType: job.domainType,
+          domainId: job.domainId,
+          entityType: job.entityType,
+          items: items,
+          storedAt: DateTime.now().toUtc(),
+        );
+        await _persistJobStored(job.jobKey);
+      } catch (e) {
+        _emitSingleEvent(job, items: items, hasMore: false);
+        await _emitStorageError(job, 'Storage failed for ${job.jobKey}: $e');
+        return;
+      }
+    }
+
     _emitSingleEvent(job, items: items, hasMore: false);
-    _complete(job);
+    await _complete(job);
   }
 
   Future<void> _runCollectionJob(_EntityStateJob job) async {
@@ -657,6 +782,46 @@ class EntityStatePaginationService {
       job.hasMore = hasMore;
       job.cursor = nextCursor;
       _persistJobCursor(job);
+
+      final storeFetchedItems = _onStoreFetchedItems;
+      if (storeFetchedItems != null && items.isNotEmpty) {
+        try {
+          await _persistJobFetched(job.jobKey);
+          await storeFetchedItems(
+            domainType: job.domainType,
+            domainId: job.domainId,
+            entityType: job.entityType,
+            items: items,
+            storedAt: DateTime.now().toUtc(),
+          );
+          await _persistJobStored(job.jobKey);
+        } catch (e) {
+          _emitCollectionEvent(
+            job,
+            items: items,
+            cursor: nextCursor,
+            hasMore: hasMore,
+          );
+          if (job.singleRequestKeysByEntityId.isNotEmpty) {
+            for (final item in items) {
+              final id = _extractEntityId(item);
+              if (id == null) continue;
+              final requestKey = job.singleRequestKeysByEntityId[id];
+              if (requestKey == null) continue;
+              _emitSingleEvent(
+                job,
+                requestKey: requestKey,
+                entityId: id,
+                items: [item],
+                cursor: nextCursor,
+                hasMore: hasMore,
+              );
+            }
+          }
+          await _emitStorageError(job, 'Storage failed for ${job.jobKey}: $e');
+          return;
+        }
+      }
 
       _emitCollectionEvent(
         job,
@@ -683,13 +848,13 @@ class EntityStatePaginationService {
         }
 
         if (pendingIds.isEmpty) {
-          _complete(job);
+          await _complete(job);
           return;
         }
       }
 
       if (!hasMore || nextCursor == null || nextCursor.isEmpty) {
-        _complete(job);
+        await _complete(job);
         return;
       }
 
@@ -704,7 +869,7 @@ class EntityStatePaginationService {
           entityType: job.entityType,
           isCollection: true,
           parentId: job.parentId,
-          enqueuedAt: job.enqueuedAt,
+          enqueuedAt: DateTime.now().toUtc(),
           priority: _EntityStateJobPriority.low,
           limit: job.limit,
           cursor: nextCursor,
@@ -727,7 +892,7 @@ class EntityStatePaginationService {
         entityType: job.entityType,
         isCollection: true,
         parentId: job.parentId,
-        enqueuedAt: job.enqueuedAt,
+        enqueuedAt: DateTime.now().toUtc(),
         priority: _EntityStateJobPriority.low,
         limit: job.limit,
         cursor: cursor,
@@ -789,8 +954,8 @@ class EntityStatePaginationService {
     _queueLifo.add(job);
   }
 
-  void _complete(_EntityStateJob job) {
-    _persistJobCompleted(job.jobKey);
+  Future<void> _complete(_EntityStateJob job) async {
+    await _persistJobCompleted(job.jobKey);
 
     if (job.isCollection) {
       _emitCollectionEvent(job, isComplete: true);
@@ -808,8 +973,30 @@ class EntityStatePaginationService {
     }
   }
 
-  void _emitError(_EntityStateJob job, String errorMessage) {
-    _persistJobFailed(job.jobKey, errorMessage);
+  Future<void> _emitError(_EntityStateJob job, String errorMessage) async {
+    await _persistJobFailed(job.jobKey, errorMessage);
+
+    if (job.isCollection) {
+      _emitCollectionEvent(job, errorMessage: errorMessage);
+    } else {
+      _emitSingleEvent(job, errorMessage: errorMessage);
+    }
+
+    for (final entry in job.singleRequestKeysByEntityId.entries) {
+      _emitSingleEvent(
+        job,
+        requestKey: entry.value,
+        entityId: entry.key,
+        errorMessage: errorMessage,
+      );
+    }
+  }
+
+  Future<void> _emitStorageError(
+    _EntityStateJob job,
+    String errorMessage,
+  ) async {
+    await _persistJobStorageFailed(job.jobKey, errorMessage);
 
     if (job.isCollection) {
       _emitCollectionEvent(job, errorMessage: errorMessage);
@@ -982,10 +1169,24 @@ class EntityStatePaginationService {
     );
   }
 
-  void _persistJobActive(String jobKey) {
+  Future<void> _persistJobActive(_EntityStateJob job) async {
     final store = _jobStore;
     if (store == null) return;
-    unawaited(store.markActive(jobKey));
+    await store.upsertActiveJob(
+      jobKey: job.jobKey,
+      scopeKey: job.scopeKey,
+      domainType: job.domainType,
+      domainId: job.domainId,
+      entityType: job.entityType,
+      isCollection: job.isCollection,
+      priority: job.priority.name,
+      enqueuedAt: job.enqueuedAt,
+      entityId: job.entityId,
+      parentId: job.parentId,
+      limit: job.limit,
+      cursor: job.cursor,
+      hasMore: job.hasMore,
+    );
   }
 
   void _persistJobCursor(_EntityStateJob job) {
@@ -1000,16 +1201,58 @@ class EntityStatePaginationService {
     );
   }
 
-  void _persistJobCompleted(String jobKey) {
+  Future<void> _persistJobFetched(String jobKey) async {
     final store = _jobStore;
     if (store == null) return;
-    unawaited(store.markCompleted(jobKey));
+    await store.markFetched(jobKey);
   }
 
-  void _persistJobFailed(String jobKey, String errorMessage) {
+  Future<void> _persistJobStored(String jobKey) async {
     final store = _jobStore;
     if (store == null) return;
-    unawaited(store.markFailed(jobKey, errorMessage));
+    await store.markStored(jobKey);
+    SlttLogger.logger.info(
+      '[EntityStateQueue] Stored fetched entity-state page for job=$jobKey',
+    );
+  }
+
+  Future<void> _persistJobCompleted(String jobKey) async {
+    final store = _jobStore;
+    if (store == null) {
+      _notifyQueueCountsChanged();
+      return;
+    }
+    await store.markCompleted(jobKey);
+    SlttLogger.logger.info(
+      '[EntityStateQueue] Completed entity-state job=$jobKey',
+    );
+    _notifyQueueCountsChanged();
+  }
+
+  Future<void> _persistJobFailed(String jobKey, String errorMessage) async {
+    final store = _jobStore;
+    if (store == null) {
+      _notifyQueueCountsChanged();
+      return;
+    }
+    await store.markFailed(jobKey, errorMessage);
+    _notifyQueueCountsChanged();
+  }
+
+  Future<void> _persistJobStorageFailed(
+    String jobKey,
+    String errorMessage,
+  ) async {
+    final store = _jobStore;
+    if (store == null) {
+      _notifyQueueCountsChanged();
+      return;
+    }
+    await store.markStorageFailed(jobKey, errorMessage);
+    SlttLogger.logger.warning(
+      '[EntityStateQueue] Storage failed for job=$jobKey: $errorMessage',
+    );
+    _notifyQueueCountsChanged();
   }
 }
 

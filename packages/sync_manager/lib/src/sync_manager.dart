@@ -55,6 +55,7 @@ class SyncManager {
       persistenceDbDirectory: config.persistenceDbDirectory,
       persistenceDbNamePrefix: config.persistenceDbNamePrefix,
       persistenceInspector: config.persistenceInspector,
+      onStoreFetchedItems: storeFetchedEntityStates,
     );
   }
 
@@ -66,6 +67,10 @@ class SyncManager {
     }
     return _entityStatePaginationService!;
   }
+
+  Stream<EntityStateJobQueueCounts>
+  get entityStatePaginationJobQueueCountEvents =>
+      entityStatePaginationService.queueCountEvents;
 
   /// Configure the cloud storage URL (useful for testing with localhost)
   void configureCloudUrl(String cloudUrl) {
@@ -118,34 +123,21 @@ class SyncManager {
     _entityStatePaginationService?.stopProcessing();
   }
 
-  Map<String, dynamic> getEntityStatePaginationJobQueueCounts() {
+  EntityStateJobQueueCounts getEntityStatePaginationJobQueueCounts() {
     final service = _entityStatePaginationService;
     if (service == null) {
-      return {
-        'queuedSingle': 0,
-        'queuedCollection': 0,
-        'queuedTotal': 0,
-        'activeSingle': 0,
-        'activeCollection': 0,
-        'activeTotal': 0,
-        'enabled': false,
-      };
+      return const EntityStateJobQueueCounts(
+        queuedSingle: 0,
+        queuedCollection: 0,
+        queuedTotal: 0,
+        activeSingle: 0,
+        activeCollection: 0,
+        activeTotal: 0,
+        enabled: false,
+      );
     }
 
-    final queuedSingle = service.queuedSingleJobCount;
-    final queuedCollection = service.queuedCollectionJobCount;
-    final activeSingle = service.activeSingleJobCount;
-    final activeCollection = service.activeCollectionJobCount;
-
-    return {
-      'queuedSingle': queuedSingle,
-      'queuedCollection': queuedCollection,
-      'queuedTotal': queuedSingle + queuedCollection,
-      'activeSingle': activeSingle,
-      'activeCollection': activeCollection,
-      'activeTotal': activeSingle + activeCollection,
-      'enabled': service.isProcessingEnabled,
-    };
+    return service.currentQueueCounts;
   }
 
   Map<String, dynamic> getEntityStatePaginationDebugInfo() {
@@ -153,7 +145,7 @@ class SyncManager {
     return {
       'cloudUrl': _cloudStorageUrl,
       'serviceInitialized': service != null,
-      'queueCounts': getEntityStatePaginationJobQueueCounts(),
+      'queueCounts': getEntityStatePaginationJobQueueCounts().toJson(),
       'persistence':
           service?.debugPersistenceInfo() ??
           {'persistJobs': false, 'openInCurrentIsolate': false},
@@ -173,6 +165,9 @@ class SyncManager {
     _entityStatePaginationService = entityStatePaginationService;
     if (_entityStatePaginationService != null) {
       _entityStatePaginationService!.updateBaseUrl(_cloudStorageUrl);
+      _entityStatePaginationService!.setStoreFetchedItemsCallback(
+        storeFetchedEntityStates,
+      );
       if (entityStatePaginationServiceConfig.startProcessingOnInitialize &&
           !_entityStatePaginationService!.isProcessingEnabled) {
         _entityStatePaginationService!.startProcessing();
@@ -874,10 +869,39 @@ class SyncManager {
   }
 
   Future<void> storeFetchedEntityStates({
-    required List<BaseEntityState> states,
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required List<Map<String, dynamic>> items,
     required DateTime storedAt,
   }) async {
+    if (items.isEmpty) return;
+
+    final states = <BaseEntityState>[];
+    for (final item in items) {
+      final state = _localStorage.createEntityStateFromJson(
+        entityType: entityType,
+        json: item,
+      );
+      states.add(state);
+    }
+
     if (states.isEmpty) return;
+
+    final mismatchedContextCount = states
+        .where(
+          (state) =>
+              state.domainType != domainType ||
+              state.change_domainId != domainId,
+        )
+        .length;
+    if (mismatchedContextCount > 0) {
+      SlttLogger.logger.warning(
+        '[SyncManager] storeFetchedEntityStates received '
+        '$mismatchedContextCount state(s) outside callback context '
+        '($entityType/$domainType/$domainId).',
+      );
+    }
 
     final grouped =
         <(String domainType, String domainId), List<BaseEntityState>>{};
@@ -911,7 +935,7 @@ class SyncManager {
       _singleEntityStateSubscription = null;
       await _collectionEntityStateSubscription?.cancel();
       _collectionEntityStateSubscription = null;
-      _entityStatePaginationService?.dispose();
+      await _entityStatePaginationService?.dispose();
       _entityStatePaginationService = null;
 
       if (_ownsLocalStorage) {
@@ -952,38 +976,17 @@ class SyncManager {
   Future<void> _handleFetchedEntityStateEvent(
     EntityStateFetchEvent event,
   ) async {
-    if (event.hasError || event.items.isEmpty) {
+    if (event.hasError) {
       return;
     }
 
-    try {
-      final states = <BaseEntityState>[];
-      for (final item in event.items) {
-        final state = _localStorage.createEntityStateFromJson(
-          entityType: event.entityType,
-          json: item,
-        );
-        states.add(state);
-      }
-
-      if (states.isEmpty) {
-        return;
-      }
-
-      await storeFetchedEntityStates(
-        states: states,
-        storedAt: DateTime.now().toUtc(),
-      );
-    } catch (e, stackTrace) {
-      SlttLogger.logger.warning(
-        '[SyncManager] Failed to persist fetched entity-state event '
-        '(${event.entityType}/${event.domainType}/${event.domainId}): $e',
-      );
-      SlttLogger.logger.fine(
-        '[SyncManager] Entity-state event persistence stack trace: '
-        '$stackTrace',
-      );
-    }
+    // Progress-only hook: storage is handled directly by
+    // EntityStatePaginationService via onStoreFetchedItems callback.
+    SlttLogger.logger.fine(
+      '[SyncManager] Entity-state progress event '
+      '(${event.entityType}/${event.domainType}/${event.domainId}) '
+      'items=${event.items.length} hasMore=${event.hasMore} complete=${event.isComplete}',
+    );
   }
 
   void _updateCloudStateDataHashes({

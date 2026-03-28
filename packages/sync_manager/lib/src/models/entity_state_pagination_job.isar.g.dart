@@ -49,40 +49,55 @@ const EntityStatePaginationJobRecordSchema = CollectionSchema(
       name: r'entityType',
       type: IsarType.string,
     ),
-    r'hasMore': PropertySchema(id: 7, name: r'hasMore', type: IsarType.bool),
+    r'fetchedAt': PropertySchema(
+      id: 7,
+      name: r'fetchedAt',
+      type: IsarType.dateTime,
+    ),
+    r'hasMore': PropertySchema(id: 8, name: r'hasMore', type: IsarType.bool),
     r'isCollection': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'isCollection',
       type: IsarType.bool,
     ),
-    r'jobKey': PropertySchema(id: 9, name: r'jobKey', type: IsarType.string),
+    r'jobKey': PropertySchema(id: 10, name: r'jobKey', type: IsarType.string),
     r'lastError': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'lastError',
       type: IsarType.string,
     ),
-    r'limit': PropertySchema(id: 11, name: r'limit', type: IsarType.long),
+    r'limit': PropertySchema(id: 12, name: r'limit', type: IsarType.long),
     r'parentId': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'parentId',
       type: IsarType.string,
     ),
     r'priority': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'priority',
       type: IsarType.string,
     ),
     r'scopeKey': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'scopeKey',
       type: IsarType.string,
     ),
     r'startedAt': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'startedAt',
       type: IsarType.dateTime,
     ),
-    r'status': PropertySchema(id: 16, name: r'status', type: IsarType.string),
+    r'status': PropertySchema(id: 17, name: r'status', type: IsarType.string),
+    r'storageError': PropertySchema(
+      id: 18,
+      name: r'storageError',
+      type: IsarType.string,
+    ),
+    r'storedAt': PropertySchema(
+      id: 19,
+      name: r'storedAt',
+      type: IsarType.dateTime,
+    ),
   },
 
   estimateSize: _entityStatePaginationJobRecordEstimateSize,
@@ -190,6 +205,12 @@ int _entityStatePaginationJobRecordEstimateSize(
   bytesCount += 3 + object.priority.length * 3;
   bytesCount += 3 + object.scopeKey.length * 3;
   bytesCount += 3 + object.status.length * 3;
+  {
+    final value = object.storageError;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -206,16 +227,19 @@ void _entityStatePaginationJobRecordSerialize(
   writer.writeDateTime(offsets[4], object.enqueuedAt);
   writer.writeString(offsets[5], object.entityId);
   writer.writeString(offsets[6], object.entityType);
-  writer.writeBool(offsets[7], object.hasMore);
-  writer.writeBool(offsets[8], object.isCollection);
-  writer.writeString(offsets[9], object.jobKey);
-  writer.writeString(offsets[10], object.lastError);
-  writer.writeLong(offsets[11], object.limit);
-  writer.writeString(offsets[12], object.parentId);
-  writer.writeString(offsets[13], object.priority);
-  writer.writeString(offsets[14], object.scopeKey);
-  writer.writeDateTime(offsets[15], object.startedAt);
-  writer.writeString(offsets[16], object.status);
+  writer.writeDateTime(offsets[7], object.fetchedAt);
+  writer.writeBool(offsets[8], object.hasMore);
+  writer.writeBool(offsets[9], object.isCollection);
+  writer.writeString(offsets[10], object.jobKey);
+  writer.writeString(offsets[11], object.lastError);
+  writer.writeLong(offsets[12], object.limit);
+  writer.writeString(offsets[13], object.parentId);
+  writer.writeString(offsets[14], object.priority);
+  writer.writeString(offsets[15], object.scopeKey);
+  writer.writeDateTime(offsets[16], object.startedAt);
+  writer.writeString(offsets[17], object.status);
+  writer.writeString(offsets[18], object.storageError);
+  writer.writeDateTime(offsets[19], object.storedAt);
 }
 
 EntityStatePaginationJobRecord _entityStatePaginationJobRecordDeserialize(
@@ -232,17 +256,20 @@ EntityStatePaginationJobRecord _entityStatePaginationJobRecordDeserialize(
     enqueuedAt: reader.readDateTime(offsets[4]),
     entityId: reader.readStringOrNull(offsets[5]),
     entityType: reader.readString(offsets[6]),
-    hasMore: reader.readBoolOrNull(offsets[7]),
+    fetchedAt: reader.readDateTimeOrNull(offsets[7]),
+    hasMore: reader.readBoolOrNull(offsets[8]),
     id: id,
-    isCollection: reader.readBool(offsets[8]),
-    jobKey: reader.readString(offsets[9]),
-    lastError: reader.readStringOrNull(offsets[10]),
-    limit: reader.readLongOrNull(offsets[11]),
-    parentId: reader.readStringOrNull(offsets[12]),
-    priority: reader.readString(offsets[13]),
-    scopeKey: reader.readString(offsets[14]),
-    startedAt: reader.readDateTimeOrNull(offsets[15]),
-    status: reader.readString(offsets[16]),
+    isCollection: reader.readBool(offsets[9]),
+    jobKey: reader.readString(offsets[10]),
+    lastError: reader.readStringOrNull(offsets[11]),
+    limit: reader.readLongOrNull(offsets[12]),
+    parentId: reader.readStringOrNull(offsets[13]),
+    priority: reader.readString(offsets[14]),
+    scopeKey: reader.readString(offsets[15]),
+    startedAt: reader.readDateTimeOrNull(offsets[16]),
+    status: reader.readString(offsets[17]),
+    storageError: reader.readStringOrNull(offsets[18]),
+    storedAt: reader.readDateTimeOrNull(offsets[19]),
   );
   return object;
 }
@@ -269,25 +296,31 @@ P _entityStatePaginationJobRecordDeserializeProp<P>(
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readBoolOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 8:
-      return (reader.readBool(offset)) as P;
+      return (reader.readBoolOrNull(offset)) as P;
     case 9:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 10:
-      return (reader.readStringOrNull(offset)) as P;
-    case 11:
-      return (reader.readLongOrNull(offset)) as P;
-    case 12:
-      return (reader.readStringOrNull(offset)) as P;
-    case 13:
       return (reader.readString(offset)) as P;
+    case 11:
+      return (reader.readStringOrNull(offset)) as P;
+    case 12:
+      return (reader.readLongOrNull(offset)) as P;
+    case 13:
+      return (reader.readStringOrNull(offset)) as P;
     case 14:
       return (reader.readString(offset)) as P;
     case 15:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 16:
       return (reader.readString(offset)) as P;
+    case 16:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 17:
+      return (reader.readString(offset)) as P;
+    case 18:
+      return (reader.readStringOrNull(offset)) as P;
+    case 19:
+      return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -1942,6 +1975,103 @@ extension EntityStatePaginationJobRecordQueryFilter
     EntityStatePaginationJobRecord,
     QAfterFilterCondition
   >
+  fetchedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'fetchedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  fetchedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'fetchedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  fetchedAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'fetchedAt', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  fetchedAtGreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'fetchedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  fetchedAtLessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'fetchedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  fetchedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'fetchedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
   hasMoreIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -3391,6 +3521,310 @@ extension EntityStatePaginationJobRecordQueryFilter
       );
     });
   }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'storageError'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'storageError'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'storageError',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'storageError',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'storageError',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'storageError',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'storageError',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'storageError',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'storageError',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'storageError',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'storageError', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storageErrorIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'storageError', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'storedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'storedAt'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storedAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'storedAt', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storedAtGreaterThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'storedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storedAtLessThan(DateTime? value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'storedAt',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterFilterCondition
+  >
+  storedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'storedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
 }
 
 extension EntityStatePaginationJobRecordQueryObject
@@ -3567,6 +4001,28 @@ extension EntityStatePaginationJobRecordQuerySortBy
   sortByEntityTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityType', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  sortByFetchedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fetchedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  sortByFetchedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fetchedAt', Sort.desc);
     });
   }
 
@@ -3789,6 +4245,50 @@ extension EntityStatePaginationJobRecordQuerySortBy
       return query.addSortBy(r'status', Sort.desc);
     });
   }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  sortByStorageError() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storageError', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  sortByStorageErrorDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storageError', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  sortByStoredAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  sortByStoredAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.desc);
+    });
+  }
 }
 
 extension EntityStatePaginationJobRecordQuerySortThenBy
@@ -3949,6 +4449,28 @@ extension EntityStatePaginationJobRecordQuerySortThenBy
   thenByEntityTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'entityType', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  thenByFetchedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fetchedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  thenByFetchedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'fetchedAt', Sort.desc);
     });
   }
 
@@ -4193,6 +4715,50 @@ extension EntityStatePaginationJobRecordQuerySortThenBy
       return query.addSortBy(r'status', Sort.desc);
     });
   }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  thenByStorageError() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storageError', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  thenByStorageErrorDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storageError', Sort.desc);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  thenByStoredAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QAfterSortBy
+  >
+  thenByStoredAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'storedAt', Sort.desc);
+    });
+  }
 }
 
 extension EntityStatePaginationJobRecordQueryWhereDistinct
@@ -4276,6 +4842,17 @@ extension EntityStatePaginationJobRecordQueryWhereDistinct
   distinctByEntityType({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'entityType', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QDistinct
+  >
+  distinctByFetchedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'fetchedAt');
     });
   }
 
@@ -4388,6 +4965,28 @@ extension EntityStatePaginationJobRecordQueryWhereDistinct
       return query.addDistinctBy(r'status', caseSensitive: caseSensitive);
     });
   }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QDistinct
+  >
+  distinctByStorageError({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'storageError', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<
+    EntityStatePaginationJobRecord,
+    EntityStatePaginationJobRecord,
+    QDistinct
+  >
+  distinctByStoredAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'storedAt');
+    });
+  }
 }
 
 extension EntityStatePaginationJobRecordQueryProperty
@@ -4450,6 +5049,13 @@ extension EntityStatePaginationJobRecordQueryProperty
   entityTypeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'entityType');
+    });
+  }
+
+  QueryBuilder<EntityStatePaginationJobRecord, DateTime?, QQueryOperations>
+  fetchedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'fetchedAt');
     });
   }
 
@@ -4520,6 +5126,20 @@ extension EntityStatePaginationJobRecordQueryProperty
   statusProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'status');
+    });
+  }
+
+  QueryBuilder<EntityStatePaginationJobRecord, String?, QQueryOperations>
+  storageErrorProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'storageError');
+    });
+  }
+
+  QueryBuilder<EntityStatePaginationJobRecord, DateTime?, QQueryOperations>
+  storedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'storedAt');
     });
   }
 }

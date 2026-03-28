@@ -287,7 +287,7 @@ Future<void> _testDebouncedSingleAggregation({
     reason: 'Expected second single stream to receive its requested entity.',
   );
 
-  service.dispose();
+  await service.dispose();
 }
 
 Future<void> _testDebouncedSingleAggregationByParentId({
@@ -387,7 +387,7 @@ Future<void> _testDebouncedSingleAggregationByParentId({
         'Single requests with different parentId should not be merged into a collection request.',
   );
 
-  service.dispose();
+  await service.dispose();
 }
 
 Future<void> _testCollectionParentIdFilter({
@@ -485,7 +485,7 @@ Future<void> _testCollectionParentIdFilter({
         'Collection request with parentId should return all entities for that parentId.',
   );
 
-  service.dispose();
+  await service.dispose();
 }
 
 Future<void> _testPaginationYieldBehavior({
@@ -618,7 +618,7 @@ Future<void> _testPaginationYieldBehavior({
         'Expected to enqueue a prioritized single request while collection pagination was active.',
   );
 
-  service.dispose();
+  await service.dispose();
 }
 
 Future<void> _testDuplicateSingleEnqueueBehavior({
@@ -781,7 +781,7 @@ Future<void> _testDuplicateSingleEnqueueBehavior({
   await activeSub.cancel();
   await subA.cancel();
   await subB.cancel();
-  service.dispose();
+  await service.dispose();
 }
 
 Future<void> _testDuplicateCollectionEnqueueBehavior({
@@ -920,7 +920,7 @@ Future<void> _testDuplicateCollectionEnqueueBehavior({
 
   await subA.cancel();
   await subB.cancel();
-  service.dispose();
+  await service.dispose();
 }
 
 bool _containsEntity(List<EntityStateFetchEvent> events, String entityId) {

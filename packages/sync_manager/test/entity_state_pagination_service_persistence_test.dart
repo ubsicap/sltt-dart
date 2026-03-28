@@ -36,7 +36,7 @@ void main() {
       expect(beforeRestartJobs.length, 1);
       expect(beforeRestartJobs.first['status'], 'queued');
 
-      firstService.dispose();
+      await firstService.dispose();
       await Future<void>.delayed(const Duration(milliseconds: 120));
 
       final resumedService = EntityStatePaginationService(
@@ -49,7 +49,7 @@ void main() {
 
       await _waitForStatus(resumedService, expectedStatus: 'completed');
 
-      resumedService.dispose();
+      await resumedService.dispose();
       await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
         workspacePrefix: workspacePrefix,
       );
@@ -99,8 +99,8 @@ void main() {
       expect(jobsA.first['status'], 'queued');
       expect(jobsB.first['status'], 'queued');
 
-      serviceA.dispose();
-      serviceB.dispose();
+      await serviceA.dispose();
+      await serviceB.dispose();
 
       await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
         workspacePrefix: prefixA,
@@ -109,6 +109,108 @@ void main() {
         workspacePrefix: prefixB,
       );
     });
+
+    test('job stays fetched until storage completes', () async {
+      const workspacePrefix = '__test_specific_prefix_storage_pending';
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: workspacePrefix,
+      );
+
+      final storageCompleter = Completer<void>();
+      final service = EntityStatePaginationService(
+        baseUrl: 'https://example.invalid',
+        dio: _buildDeterministicDio(),
+        workspacePrefix: workspacePrefix,
+        onStoreFetchedItems:
+            ({
+              required String domainType,
+              required String domainId,
+              required String entityType,
+              required List<Map<String, dynamic>> items,
+              required DateTime storedAt,
+            }) async {
+              await storageCompleter.future;
+            },
+      );
+
+      service.startProcessing();
+      service.enqueueJobFetchEntityStateCollection(
+        domainType: 'project',
+        domainId: '__test_domain_storage_pending',
+        entityType: 'task',
+      );
+
+      await _waitForStatus(service, expectedStatus: 'fetched');
+      final fetchedJobs = await service.debugListPersistedJobs();
+      expect(fetchedJobs, hasLength(1));
+      expect(fetchedJobs.first['completedAt'], isNull);
+      expect(fetchedJobs.first['fetchedAt'], isNotNull);
+      expect(fetchedJobs.first['storedAt'], isNull);
+
+      storageCompleter.complete();
+
+      await _waitForStatus(service, expectedStatus: 'completed');
+      final completedJobs = await service.debugListPersistedJobs();
+      expect(completedJobs.first['storedAt'], isNotNull);
+      expect(completedJobs.first['completedAt'], isNotNull);
+
+      await service.dispose();
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: workspacePrefix,
+      );
+    });
+
+    test(
+      'storage failures are recorded separately from fetch failures',
+      () async {
+        const workspacePrefix = '__test_specific_prefix_storage_failed';
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+
+        final service = EntityStatePaginationService(
+          baseUrl: 'https://example.invalid',
+          dio: _buildDeterministicDio(),
+          workspacePrefix: workspacePrefix,
+          onStoreFetchedItems:
+              ({
+                required String domainType,
+                required String domainId,
+                required String entityType,
+                required List<Map<String, dynamic>> items,
+                required DateTime storedAt,
+              }) async {
+                throw StateError('intentional storage failure');
+              },
+        );
+
+        service.startProcessing();
+        service.enqueueJobFetchEntityStateCollection(
+          domainType: 'project',
+          domainId: '__test_domain_storage_failed',
+          entityType: 'task',
+        );
+
+        await _waitForStatus(service, expectedStatus: 'storage_failed');
+        final jobs = await service.debugListPersistedJobs();
+        expect(jobs, hasLength(1));
+        expect(jobs.first['fetchedAt'], isNotNull);
+        expect(jobs.first['storedAt'], isNull);
+        expect(
+          jobs.first['storageError'],
+          contains('intentional storage failure'),
+        );
+        expect(
+          jobs.first['lastError'],
+          contains('intentional storage failure'),
+        );
+
+        await service.dispose();
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+      },
+    );
   });
 }
 
@@ -117,8 +219,10 @@ Dio _buildDeterministicDio() {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
-        final path = options.path;
-        if (path.contains('/api/state/') && !path.endsWith('/task')) {
+        final segments = options.uri.pathSegments;
+        final isCollectionRequest =
+            segments.isNotEmpty && segments.last == 'tasks';
+        if (!isCollectionRequest) {
           handler.resolve(
             Response(
               requestOptions: options,
@@ -156,12 +260,17 @@ Future<void> _waitForStatus(
   Duration timeout = const Duration(seconds: 5),
 }) async {
   final deadline = DateTime.now().add(timeout);
+  List<Map<String, dynamic>> lastJobs = const [];
   while (DateTime.now().isBefore(deadline)) {
     final jobs = await service.debugListPersistedJobs();
-    if (jobs.isNotEmpty && jobs.first['status'] == expectedStatus) {
+    lastJobs = jobs;
+    if (jobs.any((job) => job['status'] == expectedStatus)) {
       return;
     }
     await Future<void>.delayed(const Duration(milliseconds: 50));
   }
-  fail('Timed out waiting for persisted job status: $expectedStatus');
+  fail(
+    'Timed out waiting for persisted job status: '
+    '$expectedStatus. Last jobs: $lastJobs',
+  );
 }
