@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/entity_state_job_queue_counts.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 

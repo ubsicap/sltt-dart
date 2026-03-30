@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
 
+import 'entity_state_job_queue_counts.dart';
 import 'entity_state_pagination_job_persistence_store.dart';
 import 'models/entity_state_pagination_job.isar.dart';
 
@@ -51,50 +52,6 @@ class EntityStateFetchEvent {
   final String errorMessage;
 
   bool get hasError => errorMessage.isNotEmpty;
-}
-
-class EntityStateJobQueueCounts {
-  const EntityStateJobQueueCounts({
-    required this.queuedSingle,
-    required this.queuedCollection,
-    required this.queuedTotal,
-    required this.activeSingle,
-    required this.activeCollection,
-    required this.activeTotal,
-    required this.enabled,
-  });
-
-  final int queuedSingle;
-  final int queuedCollection;
-  final int queuedTotal;
-  final int activeSingle;
-  final int activeCollection;
-  final int activeTotal;
-  final bool enabled;
-
-  Map<String, dynamic> toJson() {
-    return {
-      'queuedSingle': queuedSingle,
-      'queuedCollection': queuedCollection,
-      'queuedTotal': queuedTotal,
-      'activeSingle': activeSingle,
-      'activeCollection': activeCollection,
-      'activeTotal': activeTotal,
-      'enabled': enabled,
-    };
-  }
-
-  factory EntityStateJobQueueCounts.fromJson(Map<String, dynamic> json) {
-    return EntityStateJobQueueCounts(
-      queuedSingle: json['queuedSingle'] as int? ?? 0,
-      queuedCollection: json['queuedCollection'] as int? ?? 0,
-      queuedTotal: json['queuedTotal'] as int? ?? 0,
-      activeSingle: json['activeSingle'] as int? ?? 0,
-      activeCollection: json['activeCollection'] as int? ?? 0,
-      activeTotal: json['activeTotal'] as int? ?? 0,
-      enabled: json['enabled'] as bool? ?? false,
-    );
-  }
 }
 
 enum _EntityStateJobPriority { low, normal }

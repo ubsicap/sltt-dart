@@ -3,6 +3,7 @@
 
 library sync_manager;
 
+export 'src/entity_state_job_queue_counts.dart';
 export 'src/entity_state_pagination_job_persistence_store.dart';
 export 'src/entity_state_pagination_service.dart';
 export 'src/entity_state_pagination_service_config.dart';
