@@ -8,6 +8,7 @@ import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 
 import 'entity_state_pagination_service.dart';
+import 'entity_state_pagination_service_config.dart';
 import 'isar_storage_service.dart';
 
 class SyncManager {
@@ -1347,26 +1348,4 @@ class SyncStatus {
     'cloudChangeStats': cloudChangeStats?.toJson(),
     'cloudStateStats': cloudStateStats?.toJson(),
   };
-}
-
-class EntityStatePaginationServiceConfig {
-  const EntityStatePaginationServiceConfig({
-    this.maxConcurrentRequests = 4,
-    this.singleRequestDebounce = const Duration(milliseconds: 300),
-    this.workspacePrefix = '',
-    this.persistJobs = true,
-    this.persistenceDbDirectory = './isar_db',
-    this.persistenceDbNamePrefix = 'entity_state_pagination_jobs',
-    this.persistenceInspector = true,
-    this.startProcessingOnInitialize = false,
-  });
-
-  final int maxConcurrentRequests;
-  final Duration singleRequestDebounce;
-  final String workspacePrefix;
-  final bool persistJobs;
-  final String persistenceDbDirectory;
-  final String persistenceDbNamePrefix;
-  final bool persistenceInspector;
-  final bool startProcessingOnInitialize;
 }
