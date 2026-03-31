@@ -239,6 +239,9 @@ class EntityStatePaginationService {
 
   void startProcessing() {
     _enabled = true;
+    SlttLogger.logger.info(
+      '[EntityStateQueue] Processing started (workspacePrefix=$workspacePrefix)',
+    );
     final store = _jobStore;
     if (store != null) {
       unawaited(
@@ -262,6 +265,9 @@ class EntityStatePaginationService {
 
   void stopProcessing() {
     _enabled = false;
+    SlttLogger.logger.info(
+      '[EntityStateQueue] Processing stopped (workspacePrefix=$workspacePrefix)',
+    );
     _notifyQueueCountsChanged();
   }
 
