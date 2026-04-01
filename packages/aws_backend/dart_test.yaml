@@ -3,6 +3,9 @@
 
 # Define test tags used in the aws_backend package
 tags:
+  network:
+    description: "Tests that involve network communication, such as API calls to AWS services"
+
   # Integration tests that require external services
   integration:
     description: "Integration tests that communicate with real AWS services or external APIs"
