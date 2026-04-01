@@ -222,6 +222,87 @@ void main() {
           expect(result.noOpFields, contains('testField'));
         },
       );
+
+      test(
+        'duplicate mode marks cidStateFields as noOp only when data and metadata are unchanged',
+        () {
+          final existing = TestEntityState.fromJson({
+            ...entityState.toJson(),
+            'data_rank': '1',
+            'data_rank_changeAt_': baseTime.toIso8601String(),
+            'data_rank_cid_': 'cid1',
+            'data_rank_changeBy_': 'user1',
+            'data_rank_dataSchemaRev_': 1,
+            'data_rank_cloudAt_': null,
+          });
+
+          final entry = TestChangeLogEntry(
+            cid: 'cid1',
+            entityId: existing.entityId,
+            entityType: 'task',
+            domainId: existing.change_domainId,
+            domainType: 'project',
+            changeAt: baseTime,
+            dataSchemaRev: 1,
+            storageId: 'local',
+            changeBy: 'user1',
+            dataJson: jsonEncode({'rank': '1', 'nameLocal': 'changed-name'}),
+            operation: 'update',
+            stateChanged: true,
+          );
+
+          final result = getFieldChangesOrNoOps(
+            entry,
+            existing,
+            isDuplicate: true,
+            cidStateFields: const <String>['rank'],
+          );
+
+          expect(result.noOpFields, contains('rank'));
+          expect(result.fieldChanges.containsKey('rank'), isFalse);
+          expect(result.fieldChanges['nameLocal'], equals('changed-name'));
+        },
+      );
+
+      test(
+        'duplicate mode keeps cidStateField as change when metadata changed',
+        () {
+          final existing = TestEntityState.fromJson({
+            ...entityState.toJson(),
+            'data_rank': '1',
+            'data_rank_changeAt_': baseTime.toIso8601String(),
+            'data_rank_cid_': 'cid1',
+            'data_rank_changeBy_': 'user1',
+            'data_rank_dataSchemaRev_': 1,
+            'data_rank_cloudAt_': null,
+          });
+
+          final entry = TestChangeLogEntry(
+            cid: 'cid1',
+            entityId: existing.entityId,
+            entityType: 'task',
+            domainId: existing.change_domainId,
+            domainType: 'project',
+            changeAt: baseTime,
+            storageId: 'local',
+            changeBy: 'user1',
+            dataJson: jsonEncode({'rank': '1'}),
+            operation: 'update',
+            stateChanged: true,
+            cloudAt: baseTime.add(const Duration(minutes: 5)),
+          );
+
+          final result = getFieldChangesOrNoOps(
+            entry,
+            existing,
+            isDuplicate: true,
+            cidStateFields: const <String>['rank'],
+          );
+
+          expect(result.fieldChanges['rank'], equals('1'));
+          expect(result.noOpFields.contains('rank'), isFalse);
+        },
+      );
     });
 
     // ...existing code...
@@ -462,10 +543,12 @@ void main() {
         );
 
         expect(result.isDuplicate, isTrue);
+        expect(result.isClouded, isFalse);
+        expect(result.cidStateFields, contains('rank'));
       });
 
       test(
-        'should return duplicate with cloudAt stateUpdates for local storageType',
+        'should return duplicate with isClouded for local storageType when cloudAt drifts',
         () {
           final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity1',
@@ -491,24 +574,13 @@ void main() {
           );
 
           expect(result.isDuplicate, isTrue);
-          expect(result.stateUpdates, isNotNull);
-          // Expect cloudAt to match and storedAt to be present (parseable)
-          expect(
-            result.stateUpdates,
-            containsPair(
-              'change_cloudAt',
-              changeLogEntry.cloudAt!.toUtc().toIso8601String(),
-            ),
-          );
-          expect(result.stateUpdates.containsKey('change_storedAt'), isTrue);
-          final storedAtVal = result.stateUpdates['change_storedAt'];
-          expect(storedAtVal, isA<String>());
-          expect(DateTime.tryParse(storedAtVal), isNotNull);
+          expect(result.isClouded, isTrue);
+          expect(result.cidStateFields, contains('rank'));
         },
       );
 
       test(
-        'should not return cloudAt stateUpdates for duplicate with cloudAt for cloud storageType',
+        'should not report clouded for duplicate with cloudAt in cloud storageType',
         () {
           final changeLogEntry = TestChangeLogEntry(
             entityId: 'entity1',
@@ -534,7 +606,48 @@ void main() {
           );
 
           expect(result.isDuplicate, isTrue);
-          expect(result.stateUpdates, isEmpty);
+          expect(result.isClouded, isFalse);
+        },
+      );
+
+      test(
+        'should collect field-level cidStateFields when latest cid differs',
+        () {
+          final fieldDuplicateState = TestEntityState.fromJson({
+            ...entityState.toJson(),
+            'change_cid': 'latest-other-cid',
+            'data_rank_cid_': 'field-cid-1',
+            'data_nameLocal_cid_': 'field-cid-1',
+          });
+
+          final changeLogEntry = TestChangeLogEntry(
+            entityId: 'entity1',
+            entityType: 'task',
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: baseTime,
+            cid: 'field-cid-1',
+            storageId: 'localId',
+            changeBy: 'user1',
+            dataJson: jsonEncode({'rank': '1', 'nameLocal': 'Task 1'}),
+            operation: 'update',
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            unknownJson: jsonEncode({}),
+          );
+
+          final result = getMaybeIsDuplicateCidResult(
+            changeLogEntry: changeLogEntry,
+            entityState: fieldDuplicateState,
+            storageType: 'local',
+          );
+
+          expect(result.isDuplicate, isTrue);
+          expect(result.isClouded, isFalse);
+          expect(
+            result.cidStateFields,
+            containsAll(<String>['rank', 'nameLocal']),
+          );
         },
       );
 
@@ -562,6 +675,8 @@ void main() {
         );
 
         expect(result.isDuplicate, isFalse);
+        expect(result.isClouded, isFalse);
+        expect(result.cidStateFields, isEmpty);
       });
     });
 
@@ -700,6 +815,39 @@ void main() {
           );
         },
       );
+
+      test('cloud duplicate short-circuits with empty updates', () {
+        final duplicateChange = TestChangeLogEntry(
+          entityId: 'entity1',
+          entityType: 'task',
+          domainId: 'project1',
+          domainType: 'project',
+          changeAt: baseTime.add(const Duration(minutes: 5)),
+          cid: 'cid1',
+          storageId: 'remote-cloud',
+          changeBy: 'user2',
+          dataJson: jsonEncode({'rank': '9'}),
+          operation: 'update',
+          operationInfoJson: jsonEncode({}),
+          stateChanged: true,
+          unknownJson: jsonEncode({}),
+          cloudAt: baseTime.add(const Duration(minutes: 10)),
+        );
+
+        final updates = getUpdatesForChangeLogEntryAndEntityState(
+          duplicateChange,
+          entityState,
+          storageMode: 'sync',
+          storageType: 'cloud',
+          targetStorageId: 'cloud-1',
+        );
+
+        expect(updates.isDuplicate, isTrue);
+        expect(updates.changeUpdates, isEmpty);
+        expect(updates.stateUpdates, isEmpty);
+        expect(updates.operationCounts.duplicate, equals(1));
+        expect(updates.operationCounts.clouded, equals(0));
+      });
 
       test('should handle field-level conflict resolution', () {
         // Create a change log entry with newer field changes
@@ -2008,6 +2156,49 @@ void main() {
             reason:
                 'TestEntityState should include all optional fields with null values',
           );
+        },
+      );
+
+      test(
+        'duplicate mode strips data values only for cidStateFields and keeps non-cid field updates',
+        () {
+          final duplicateCloudAt = baseTime.add(const Duration(minutes: 8));
+          final changeLogEntry = TestChangeLogEntry(
+            entityId: 'entity1',
+            entityType: 'task',
+            domainId: 'project1',
+            domainType: 'project',
+            changeAt: baseTime.add(const Duration(minutes: 1)),
+            cid: 'cid1',
+            storageId: 'localId',
+            changeBy: 'user1',
+            dataJson: jsonEncode({'rank': '99', 'nameLocal': 'New Name'}),
+            operation: 'update',
+            operationInfoJson: jsonEncode({}),
+            stateChanged: true,
+            unknownJson: jsonEncode({}),
+            cloudAt: duplicateCloudAt,
+          );
+
+          final updates = getDataAndStateUpdatesOrOutdatedBys(
+            changeLogEntry: changeLogEntry,
+            entityState: entityState,
+            fieldChanges: const {'rank': '99', 'nameLocal': 'New Name'},
+            noOpFields: const <String>[],
+            storageMode: 'sync',
+            storageType: 'local',
+            isDuplicate: true,
+            isClouded: true,
+            cidStateFields: const <String>['rank'],
+          );
+
+          expect(updates.stateUpdates.containsKey('data_rank'), isFalse);
+          expect(
+            updates.stateUpdates['data_rank_cloudAt_'],
+            equals(duplicateCloudAt.toUtc().toIso8601String()),
+          );
+          expect(updates.changeDataUpdates.containsKey('rank'), isFalse);
+          expect(updates.changeDataUpdates['nameLocal'], equals('New Name'));
         },
       );
     });

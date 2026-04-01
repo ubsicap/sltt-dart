@@ -1482,28 +1482,39 @@ void main() {
               entityId: 'test-project-entity-dup-hash',
             );
             expect(after, isNotNull);
+            final afterState = after!;
+
+            final duplicateEntry = deserializeChangeLogEntryUsingRegistry(
+              duplicateRemoteChange,
+            );
+            final duplicateProbe = getUpdatesForChangeLogEntryAndEntityState(
+              duplicateEntry,
+              staleBeforeDuplicate,
+              storageMode: 'sync',
+              storageType: 'local',
+              targetStorageId: await localStorage.getStorageId(),
+            );
 
             final mergedForHash = <String, dynamic>{
-              ...before!.toJson(),
-              'change_cloudAt': remoteCloudAt,
-              'change_storedAt': after!.change_storedAt.toIso8601String(),
+              ...staleBeforeDuplicate.toJson(),
+              ...duplicateProbe.stateUpdates,
             };
             final expectedStateDataHash = computeStateDataHash(mergedForHash);
 
             expect(
-              after.stateDataHash,
+              afterState.stateDataHash,
               equals(expectedStateDataHash),
               reason:
                   'Final stateDataHash should be computed from merged state updates over existing state',
             );
             expect(
-              after.stateDataHash,
+              afterState.stateDataHash,
               isNot(equals(remoteStateDataHash)),
               reason:
                   'Storage should be authoritative and not trust incoming remote stateDataHash',
             );
             expect(
-              after.stateDataHash,
+              afterState.stateDataHash,
               isNot(equals('staleStateDataHash')),
               reason:
                   'Storage should not keep stale local stateDataHash after duplicate sync updates',
