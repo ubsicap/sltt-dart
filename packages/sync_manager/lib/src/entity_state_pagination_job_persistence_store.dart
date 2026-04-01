@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 import 'models/entity_state_pagination_job.isar.dart';
+import 'models/entity_state_pagination_job_transition_log.isar.dart';
 
 class EntityStatePaginationJobPersistenceStore {
   EntityStatePaginationJobPersistenceStore({
@@ -90,7 +92,10 @@ class EntityStatePaginationJobPersistenceStore {
     }
 
     final opened = await Isar.open(
-      [EntityStatePaginationJobRecordSchema],
+      [
+        EntityStatePaginationJobRecordSchema,
+        EntityStatePaginationJobTransitionLogRecordSchema,
+      ],
       directory: dir.path,
       name: databaseName,
       inspector: inspector,
@@ -187,6 +192,13 @@ class EntityStatePaginationJobPersistenceStore {
       next.storageError = null;
 
       await isar.entityStatePaginationJobRecords.put(next);
+      await _appendTransitionLog(
+        isar: isar,
+        jobRecord: next,
+        fromStatus: existing?.status ?? entityStatePaginationJobStatusQueued,
+        toStatus: entityStatePaginationJobStatusQueued,
+        transitionType: entityStatePaginationJobTransitionTypeStatus,
+      );
     });
   }
 
@@ -250,6 +262,13 @@ class EntityStatePaginationJobPersistenceStore {
       next.lastError = null;
       next.storageError = null;
       await isar.entityStatePaginationJobRecords.put(next);
+      await _appendTransitionLog(
+        isar: isar,
+        jobRecord: next,
+        fromStatus: existing?.status ?? entityStatePaginationJobStatusQueued,
+        toStatus: entityStatePaginationJobStatusActive,
+        transitionType: entityStatePaginationJobTransitionTypeStatus,
+      );
     });
   }
 
@@ -266,6 +285,13 @@ class EntityStatePaginationJobPersistenceStore {
       existing.lastError = null;
       existing.storageError = null;
       await isar.entityStatePaginationJobRecords.put(existing);
+      await _appendTransitionLog(
+        isar: isar,
+        jobRecord: existing,
+        fromStatus: entityStatePaginationJobStatusActive,
+        toStatus: entityStatePaginationJobStatusFetched,
+        transitionType: entityStatePaginationJobTransitionTypeStatus,
+      );
     });
   }
 
@@ -283,6 +309,13 @@ class EntityStatePaginationJobPersistenceStore {
       existing.lastError = null;
       existing.storageError = null;
       await isar.entityStatePaginationJobRecords.put(existing);
+      await _appendTransitionLog(
+        isar: isar,
+        jobRecord: existing,
+        fromStatus: entityStatePaginationJobStatusFetched,
+        toStatus: entityStatePaginationJobStatusActive,
+        transitionType: entityStatePaginationJobTransitionTypeStatus,
+      );
     });
   }
 
@@ -298,9 +331,24 @@ class EntityStatePaginationJobPersistenceStore {
           .jobKeyEqualTo(jobKey)
           .findFirst();
       if (existing == null) return;
+      final oldCursor = existing.cursor;
+      final oldHasMore = existing.hasMore;
       existing.cursor = cursor;
       existing.hasMore = hasMore;
       await isar.entityStatePaginationJobRecords.put(existing);
+      await _appendTransitionLog(
+        isar: isar,
+        jobRecord: existing,
+        fromStatus: existing.status,
+        toStatus: existing.status,
+        transitionType: entityStatePaginationJobTransitionTypeCursorUpdate,
+        detailsJson: jsonEncode({
+          'oldCursor': oldCursor,
+          'newCursor': cursor,
+          'oldHasMore': oldHasMore,
+          'newHasMore': hasMore,
+        }),
+      );
     });
   }
 
@@ -317,6 +365,13 @@ class EntityStatePaginationJobPersistenceStore {
       existing.lastError = null;
       existing.storageError = null;
       await isar.entityStatePaginationJobRecords.put(existing);
+      await _appendTransitionLog(
+        isar: isar,
+        jobRecord: existing,
+        fromStatus: entityStatePaginationJobStatusActive,
+        toStatus: entityStatePaginationJobStatusCompleted,
+        transitionType: entityStatePaginationJobTransitionTypeStatus,
+      );
     });
   }
 
@@ -333,6 +388,14 @@ class EntityStatePaginationJobPersistenceStore {
       existing.lastError = errorMessage;
       existing.storageError = null;
       await isar.entityStatePaginationJobRecords.put(existing);
+      await _appendTransitionLog(
+        isar: isar,
+        jobRecord: existing,
+        fromStatus: entityStatePaginationJobStatusActive,
+        toStatus: entityStatePaginationJobStatusFailed,
+        transitionType: entityStatePaginationJobTransitionTypeStatus,
+        message: errorMessage,
+      );
     });
   }
 
@@ -349,6 +412,14 @@ class EntityStatePaginationJobPersistenceStore {
       existing.lastError = errorMessage;
       existing.storageError = errorMessage;
       await isar.entityStatePaginationJobRecords.put(existing);
+      await _appendTransitionLog(
+        isar: isar,
+        jobRecord: existing,
+        fromStatus: entityStatePaginationJobStatusFetched,
+        toStatus: entityStatePaginationJobStatusStorageFailed,
+        transitionType: entityStatePaginationJobTransitionTypeStatus,
+        message: errorMessage,
+      );
     });
   }
 
@@ -390,11 +461,77 @@ class EntityStatePaginationJobPersistenceStore {
     return isar.entityStatePaginationJobRecords.where().findAll();
   }
 
+  Future<List<EntityStatePaginationJobTransitionLogRecord>> listTransitions({
+    String? jobKey,
+    int limit = 200,
+  }) async {
+    final isar = await _open();
+    if (jobKey == null || jobKey.isEmpty) {
+      return isar.entityStatePaginationJobTransitionLogRecords
+          .where()
+          .sortByTransitionAtDesc()
+          .limit(limit)
+          .findAll();
+    }
+    return isar.entityStatePaginationJobTransitionLogRecords
+        .filter()
+        .jobKeyEqualTo(jobKey)
+        .sortByTransitionAtDesc()
+        .limit(limit)
+        .findAll();
+  }
+
   Future<void> deleteAllJobs() async {
     final isar = await _open();
     await isar.writeTxn(() async {
       await isar.entityStatePaginationJobRecords.where().deleteAll();
+      await isar.entityStatePaginationJobTransitionLogRecords
+          .where()
+          .deleteAll();
     });
+  }
+
+  Future<void> _appendTransitionLog({
+    required Isar isar,
+    required EntityStatePaginationJobRecord jobRecord,
+    required String fromStatus,
+    required String toStatus,
+    required String transitionType,
+    String? message,
+    String? detailsJson,
+  }) async {
+    try {
+      await isar.entityStatePaginationJobTransitionLogRecords.put(
+        EntityStatePaginationJobTransitionLogRecord(
+          jobRecordId: jobRecord.id,
+          jobKey: jobRecord.jobKey,
+          scopeKey: jobRecord.scopeKey,
+          domainType: jobRecord.domainType,
+          domainId: jobRecord.domainId,
+          entityType: jobRecord.entityType,
+          isCollection: jobRecord.isCollection,
+          entityId: jobRecord.entityId,
+          parentId: jobRecord.parentId,
+          cursor: jobRecord.cursor,
+          hasMore: jobRecord.hasMore,
+          fromStatus: fromStatus,
+          toStatus: toStatus,
+          transitionType: transitionType,
+          transitionAt: DateTime.now().toUtc(),
+          message: message,
+          detailsJson: detailsJson,
+        ),
+      );
+    } catch (e, st) {
+      // Debug log writes must not block primary job persistence.
+      SlttLogger.logger.warning(
+        '[EntityStatePaginationJobStore] Failed to append transition log '
+        'for job ${jobRecord.jobKey}: $e',
+      );
+      SlttLogger.logger.fine(
+        '[EntityStatePaginationJobStore] Transition log stack trace: $st',
+      );
+    }
   }
 
   static Future<void> deleteDatabaseFilesForWorkspacePrefix({

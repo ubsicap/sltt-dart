@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:isar_community/isar.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/models/entity_state_pagination_job_transition_log.isar.dart'
+    show EntityStatePaginationJobTransitionLogRecord;
 
 import 'entity_state_job_queue_counts.dart';
 import 'entity_state_pagination_job_persistence_store.dart';
@@ -387,37 +389,20 @@ class EntityStatePaginationService {
     return resumedCount;
   }
 
-  Future<List<Map<String, dynamic>>> debugListPersistedJobs() async {
+  Future<List<EntityStatePaginationJobRecord>> debugListPersistedJobs() async {
     final store = _jobStore;
     if (store == null) return const [];
     final records = await store.listAll();
     records.sort((a, b) => a.enqueuedAt.compareTo(b.enqueuedAt));
-    return records
-        .map(
-          (record) => {
-            'jobKey': record.jobKey,
-            'scopeKey': record.scopeKey,
-            'domainType': record.domainType,
-            'domainId': record.domainId,
-            'entityType': record.entityType,
-            'isCollection': record.isCollection,
-            'entityId': record.entityId,
-            'parentId': record.parentId,
-            'limit': record.limit,
-            'cursor': record.cursor,
-            'hasMore': record.hasMore,
-            'status': record.status,
-            'priority': record.priority,
-            'enqueuedAt': record.enqueuedAt.toIso8601String(),
-            'startedAt': record.startedAt?.toIso8601String(),
-            'fetchedAt': record.fetchedAt?.toIso8601String(),
-            'storedAt': record.storedAt?.toIso8601String(),
-            'completedAt': record.completedAt?.toIso8601String(),
-            'lastError': record.lastError,
-            'storageError': record.storageError,
-          },
-        )
-        .toList();
+    return records;
+  }
+
+  Future<List<EntityStatePaginationJobTransitionLogRecord>>
+  debugListPersistedJobTransitions({String? jobKey, int limit = 200}) async {
+    final store = _jobStore;
+    if (store == null) return const [];
+    final records = await store.listTransitions(jobKey: jobKey, limit: limit);
+    return records;
   }
 
   Map<String, dynamic> debugPersistenceInfo() {
@@ -557,6 +542,18 @@ class EntityStatePaginationService {
     int? limit,
     String? cursor,
   }) {
+    // TODO(entity-state-queue): beyond debounce flush merging, handle queued
+    // single-job obsolescence for the same scope/parentId.
+    //
+    // Desired behavior:
+    // - Do NOT cancel active work that still has outstanding requests.
+    // - If a single fetch job is only queued (not active), and we enqueue
+    //   another job in the same scope/parentId (e.g. after debounce expiry),
+    //   or enqueue a collection fetch for that same scope/parentId, consider
+    //   the queued single obsolete and replaced by the collection fetch job.
+    //
+    // This should eventually be reflected in transition logs (e.g.
+    // obsoleted_by_collection) for debug tracing.
     final existingIndex = _queueLifo.indexWhere((job) {
       return job.isCollection &&
           job.domainType == domainType &&
