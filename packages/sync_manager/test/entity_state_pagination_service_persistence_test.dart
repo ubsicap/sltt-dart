@@ -11,6 +11,115 @@ void main() {
       await Isar.initializeIsarCore(download: true);
     });
 
+    test(
+      'initialize() pre-loads persisted jobs into queue without starting processing',
+      () async {
+        const workspacePrefix = '__test_specific_prefix_initialize_preload';
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+
+        final dio = _buildDeterministicDio();
+
+        // Seed a job via a first-run service.
+        final seedService = EntityStatePaginationService(
+          baseUrl: 'https://example.invalid',
+          dio: dio,
+          workspacePrefix: workspacePrefix,
+        );
+        seedService.enqueueJobFetchEntityStateCollection(
+          domainType: 'project',
+          domainId: '__test_domain_preload',
+          entityType: 'task',
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+        await seedService.dispose();
+
+        // Simulate app restart: create new service instance and call initialize().
+        final service = EntityStatePaginationService(
+          baseUrl: 'https://example.invalid',
+          dio: dio,
+          workspacePrefix: workspacePrefix,
+        );
+
+        // Before initialize(), counts should be zero.
+        expect(service.queuedCollectionJobCount, 0);
+
+        await service.initialize();
+
+        // After initialize(), the job is in the in-memory queue but processing
+        // has NOT started, so it should still be 'queued' in the DB.
+        expect(service.queuedCollectionJobCount, 1);
+        expect(service.isProcessingEnabled, isFalse);
+
+        // Give a moment to confirm processing does not run spontaneously.
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+        final jobs = await service.debugListPersistedJobs();
+        expect(jobs, hasLength(1));
+        expect(jobs.first['status'], 'queued');
+
+        await service.dispose();
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+      },
+    );
+
+    test(
+      'startProcessing() after initialize() does not double-load jobs from DB',
+      () async {
+        const workspacePrefix = '__test_specific_prefix_no_double_load';
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+
+        final dio = _buildDeterministicDio();
+
+        // Seed two jobs.
+        final seedService = EntityStatePaginationService(
+          baseUrl: 'https://example.invalid',
+          dio: dio,
+          workspacePrefix: workspacePrefix,
+        );
+        seedService.enqueueJobFetchEntityStateCollection(
+          domainType: 'project',
+          domainId: '__test_domain_double_load_A',
+          entityType: 'task',
+        );
+        seedService.enqueueJobFetchEntityStateCollection(
+          domainType: 'project',
+          domainId: '__test_domain_double_load_B',
+          entityType: 'task',
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+        await seedService.dispose();
+
+        final service = EntityStatePaginationService(
+          baseUrl: 'https://example.invalid',
+          dio: dio,
+          workspacePrefix: workspacePrefix,
+        );
+
+        await service.initialize();
+        expect(service.queuedCollectionJobCount, 2);
+
+        // startProcessing() must not add duplicate jobs.
+        service.startProcessing();
+        expect(service.queuedCollectionJobCount, 2);
+
+        await _waitForStatus(service, expectedStatus: 'completed');
+
+        final completedJobs = await service.debugListPersistedJobs();
+        // All completed — no duplicates that are still queued.
+        expect(completedJobs.where((j) => j['status'] == 'queued'), isEmpty);
+
+        await service.dispose();
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+      },
+    );
+
     test('startProcessing resumes persisted queued jobs', () async {
       const workspacePrefix = '__test_specific_prefix_resume_on_start';
       await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(

@@ -170,6 +170,10 @@ class SyncManager {
       _entityStatePaginationService!.setStoreFetchedItemsCallback(
         storeFetchedEntityStates,
       );
+      // Pre-load persisted jobs so queue counts are visible immediately, even
+      // before the user triggers processing. Must happen before startProcessing
+      // so the _resumeRequested guard prevents a redundant DB load.
+      await _entityStatePaginationService!.initialize();
       if (entityStatePaginationServiceConfig.startProcessingOnInitialize &&
           !_entityStatePaginationService!.isProcessingEnabled) {
         _entityStatePaginationService!.startProcessing();

@@ -273,6 +273,53 @@ class EntityStatePaginationService {
 
   void resumeProcessing() => startProcessing();
 
+  /// Pre-loads persisted jobs into the in-memory queue so that queue counts
+  /// are immediately visible to subscribers (e.g. the menu badge) even before
+  /// the user has clicked "Download states" to start processing.
+  ///
+  /// Does NOT enable processing — jobs sit in [_queueLifo] but are not
+  /// dispatched until [startProcessing] is called. Once this has run,
+  /// [startProcessing] will skip the redundant [resumePersistedJobs] call
+  /// via the [_resumeRequested] guard.
+  Future<void> initialize() async {
+    final store = _jobStore;
+    if (store == null) return;
+
+    try {
+      await store.ensureOpen();
+      final records = await store.loadResumableJobs();
+
+      for (final record in records) {
+        final alreadyActive = _activeJobs.containsKey(record.jobKey);
+        final alreadyQueued = _queueLifo.any(
+          (job) => job.jobKey == record.jobKey,
+        );
+        if (alreadyActive || alreadyQueued) continue;
+
+        _enqueueByPriority(_jobFromRecord(record));
+      }
+
+      if (records.isNotEmpty) {
+        SlttLogger.logger.info(
+          '[EntityStateQueue] Pre-loaded ${records.length} persisted job(s) '
+          'during initialization (workspacePrefix=$workspacePrefix)',
+        );
+        _notifyQueueCountsChanged();
+      }
+
+      // Mark as resumed so startProcessing() won't load from the DB a second time.
+      _resumeRequested = true;
+    } catch (e, st) {
+      SlttLogger.logger.warning(
+        '[EntityStateQueue] Failed to pre-load persisted jobs during '
+        'initialization: $e',
+      );
+      SlttLogger.logger.fine(
+        '[EntityStateQueue] Initialization stack trace: $st',
+      );
+    }
+  }
+
   Future<void> dispose() async {
     _enabled = false;
     for (final bucket in _singleDebounceBuckets.values) {
