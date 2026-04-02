@@ -31,6 +31,10 @@ A comprehensive mono-repo for offline-first sync systems including core librarie
 
 ## Development
 
+## Documentation
+
+- [docs/sltt3-architecture-rfc.md](docs/sltt3-architecture-rfc.md) - Draft platform architecture RFC for SLTT 3
+
 ### VS Code Setup
 - Open `sltt_dart.code-workspace` for multi-folder development
 - Use F5 to launch configurations for debugging
