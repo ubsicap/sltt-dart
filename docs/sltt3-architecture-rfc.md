@@ -8,9 +8,9 @@ Related milestone: 2026 Milestone 4 - Architecture Documentation
 
 ## 1. Summary
 
-SLTT 3 needs an architecture that supports offline-first collaboration, stable API contracts, and a clear path to future deployment shapes beyond the initial 2026 desktop-first product. This RFC recommends a platform architecture in which Flutter clients and future clients consume a shared REST API and synchronization model, while core server and merge logic remain portable enough to run in cloud and LAN-hosted environments.
+SLTT 3 needs an architecture that supports offline-first operation and networked collaboration, stable API contracts, and a clear path to future deployment shapes beyond the initial 2026 desktop-first product. This RFC recommends a platform architecture in which Flutter clients and future clients consume a shared REST API and synchronization model, while core server and merge logic remain portable enough to run in cloud and LAN-hosted environments.
 
-The recommendation is intentionally flexible at the API surface but opinionated about the primary synchronization path. SLTT 3 should support both change-based and state-based downsyncing. For Dart and Flutter clients, the normal operating mode should be sequential change-based downsync with local state materialization. Full entity-state retrieval should remain a supported fallback for repair, bootstrap, benchmarking, and interoperability.
+The recommendation is intentionally flexible at the API surface while still expressing a preferred synchronization path. SLTT 3 supports both change-based and state-based downsyncing. For Dart and Flutter clients, sequential change-based downsync with local state materialization may prove more performant and cost-effective, while also building confidence in future LAN-hosted operation. Full entity-state retrieval can then supplement this as a fallback for repair, initial loading, and interoperability with other clients and systems.
 
 This RFC is not intended to finalize every implementation detail. Its purpose is to align product and engineering around a recommended architecture, identify validation work that must happen in 2026, and preserve a credible path to future capabilities including LAN collaboration, mobile clients, reporting dashboards, and external reporting APIs.
 
@@ -18,14 +18,16 @@ This RFC is not intended to finalize every implementation detail. Its purpose is
 
 SLTT 2.0 delivered meaningful value for sign language translation teams, but the product accumulated technical and workflow pressure in several areas:
 
-- Browser and PWA constraints complicated installation, permissions, local storage, video processing, and offline reliability.
-- Too much product logic lived in clients rather than behind stable backend contracts.
+- Browser and PWA constraints complicated installation, permissions, disk space management, video processing, and offline reliability.
+- Lack of backend state persistence meant new clients had to sequentially download long change histories and forced the reporting backend to duplicate replay logic in order to process and serve state.
+- Lack of local state persistence meant clients had to replay long change histories on every load, leading to performance issues and, as projects grew, potential memory pressure.
+- Too much client-specific merging and state logic made portability challenging and led to duplicated logic across other clients and systems, rather than allowing state to be served through a stable API and changes to be processed with shared code.
 - The single-track timeline became overloaded with patches, comments, references, and other concerns that should evolve more independently.
 - Current and future clients need a clearer contract for sync, auth, state retrieval, and integrations.
 
 At the same time, SLTT 3 is expected to support a broader product surface than the initial 2026 roadmap alone. In addition to desktop-first delivery, the platform needs to leave room for:
 
-- full offline collaboration with local-team-storage or LAN-hosted servers,
+- full offline collaboration with LAN-hosted local team storage,
 - mobile clients optimized for phone and tablet workflows,
 - reporting dashboards for internal monitoring and planning,
 - external reporting APIs for partner access,
@@ -33,7 +35,7 @@ At the same time, SLTT 3 is expected to support a broader product surface than t
 
 ## 3. Problem Statement
 
-SLTT 3 needs an API-first, offline-first platform architecture that can:
+SLTT 3 needs an offline-first, API-based platform architecture that can:
 
 - support day-to-day client operation with predictable sync behavior,
 - provide a reliable fallback path when client and server state diverge,
@@ -41,7 +43,7 @@ SLTT 3 needs an API-first, offline-first platform architecture that can:
 - avoid coupling reporting and partner integrations to raw sync storage,
 - support future clients without forcing all business logic into each client implementation.
 
-An earlier requirements direction suggested a more state-pull-heavy API model in which clients would often retrieve the latest entity state, potentially with responses shaped by client-version behavior. This RFC recommends a different default: support both models, but treat change-based downsync as the primary operating mode for Dart and Flutter clients so the same merge and materialization logic is battle-tested in the clients that may later act as LAN hosts.
+While a more state-pull-heavy API model could temporarily reduce client complexity during downsync and help guarantee consistency, this RFC recommends a different default: support state-based pulling, but treat change-based downsync as the primary operating mode for Dart and Flutter clients so the same merge and materialization logic used in the backend is battle-tested in the clients that may later act as LAN hosts.
 
 ## 4. Goals
 
