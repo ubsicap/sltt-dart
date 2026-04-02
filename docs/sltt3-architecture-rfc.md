@@ -70,6 +70,7 @@ The current codebase already provides a strong starting point for the recommende
 - The backend already exposes a REST API and self-documented `/api/help` endpoint in [../packages/sltt_core/lib/src/api/base_rest_api_server.dart](../packages/sltt_core/lib/src/api/base_rest_api_server.dart).
 - The current AWS design already separates shared infrastructure from environment-specific API deployments in [../packages/aws_backend/serverless-shared-infra.yml](../packages/aws_backend/serverless-shared-infra.yml) and [../packages/aws_backend/serverless-secondary-infra.yml](../packages/aws_backend/serverless-secondary-infra.yml).
 - The current sync model already distinguishes change storage and entity state concerns.
+- In the current desktop implementation, persisted local entity state is stored in Isar. This reduces translation overhead between local and cloud-facing state models, supports reactive UI updates when persisted state changes, and helps keep client-side state materialization aligned with backend behavior.
 - The current implementation work on concurrent entity-state downloads demonstrates that state retrieval remains important, especially for recovery and performance testing.
 - The current direction toward persisted entity state also creates room for lazy loading and lower memory pressure, which should improve startup behavior for larger projects.
 
@@ -112,6 +113,8 @@ The preferred normal flow for Dart and Flutter clients is:
 5. Client compares local and remote `stateDataHash` values.
 6. If hashes match, the client continues normal operation.
 7. If hashes diverge, the client selectively requests full entity state for repair or re-baselining.
+
+In the current desktop implementation, persisted state changes can also be observed by the UI so that views remain reactive to updates produced by the sync manager in a separate isolate.
 
 ### 8.2 Why Prefer Change-Based Downsync
 
