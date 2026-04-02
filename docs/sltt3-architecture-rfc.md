@@ -39,6 +39,7 @@ SLTT 3 needs an offline-first, API-based platform architecture that can:
 
 - support day-to-day client operation with predictable sync behavior,
 - provide a reliable fallback path when client and server state diverge,
+- allow clients to persist state locally so they can lazy-load data, lower memory usage, and shorten startup time,
 - preserve the option for any suitable device to become a LAN host for a local team,
 - avoid coupling reporting and partner integrations to raw sync storage,
 - support future clients without forcing all business logic into each client implementation.
@@ -49,6 +50,7 @@ While a more state-pull-heavy API model could temporarily reduce client complexi
 
 - Define a recommended target architecture for SLTT 3 platform services and clients.
 - Clarify the preferred sync model and the role of full entity-state retrieval.
+- Clarify the role of persisted local state in startup performance, lazy loading, and memory usage.
 - Show how 2026 milestones fit into a coherent longer-term architecture.
 - Preserve architectural headroom for LAN collaboration, mobile clients, reporting, and partner APIs.
 - Separate current implemented facts from target architecture and validation work.
@@ -69,6 +71,7 @@ The current codebase already provides a strong starting point for the recommende
 - The current AWS design already separates shared infrastructure from environment-specific API deployments in [../packages/aws_backend/serverless-shared-infra.yml](../packages/aws_backend/serverless-shared-infra.yml) and [../packages/aws_backend/serverless-secondary-infra.yml](../packages/aws_backend/serverless-secondary-infra.yml).
 - The current sync model already distinguishes change storage and entity state concerns.
 - The current implementation work on concurrent entity-state downloads demonstrates that state retrieval remains important, especially for recovery and performance testing.
+- The current direction toward persisted entity state also creates room for lazy loading and lower memory pressure, which should improve startup behavior for larger projects.
 
 This RFC therefore builds on existing architecture rather than replacing it with a wholly new conceptual model.
 
@@ -91,6 +94,7 @@ The recommended target shape is:
 - Shared cloud infrastructure owns durable shared resources such as DynamoDB, S3, CloudFront, and cross-account configuration.
 - Environment-specific API deployments host the operational API surface.
 - Clients primarily downsync changes and materialize state locally.
+- Clients persist enough local state to support lazy loading, faster startup, and a lower memory profile.
 - Clients compare local and cloud `stateDataHash` values to detect divergence.
 - Clients selectively use full entity-state retrieval when change replay is not the best option.
 - Reporting and dashboard use cases are served by a reporting layer, not by direct client-side aggregation over operational sync data.
@@ -104,9 +108,10 @@ The preferred normal flow for Dart and Flutter clients is:
 1. Client submits changes to the server.
 2. Client downsyncs ordered changes from the server.
 3. Client applies those changes locally and materializes entity state.
-4. Client compares local and remote `stateDataHash` values.
-5. If hashes match, the client continues normal operation.
-6. If hashes diverge, the client selectively requests full entity state for repair or re-baselining.
+4. Client persists enough local state to support lazy loading and avoid replaying all history on every startup.
+5. Client compares local and remote `stateDataHash` values.
+6. If hashes match, the client continues normal operation.
+7. If hashes diverge, the client selectively requests full entity state for repair or re-baselining.
 
 ### 8.2 Why Prefer Change-Based Downsync
 
@@ -116,6 +121,8 @@ Change-based downsync is preferred because it:
 - keeps clients closer to being promotable into local hosts,
 - is expected to reduce read costs,
 - is expected to deliver more state updates per MB transferred,
+- allows clients to persist state and lazy-load data as needed instead of loading or replaying everything up front,
+- helps reduce memory pressure and shorten time to first useful interaction,
 - keeps operational sync behavior conceptually aligned across cloud and LAN deployment shapes.
 
 ### 8.3 Why Preserve State-Based Downsync
@@ -197,11 +204,11 @@ For that reason, this RFC recommends that reporting services and dashboards be b
 That means:
 
 - operational sync/state storage remains optimized for collaboration and correctness,
-- reporting data is derived into reporting-friendly summaries,
+- reporting data is derived into reporting-friendly summaries and server-side projections,
 - dashboards read curated reporting data,
 - external reporting APIs expose stable, partner-oriented reporting contracts rather than raw sync storage semantics.
 
-This separation reduces the risk that dashboard queries, partner reporting, or client-side aggregation will distort or overload operational collaboration systems.
+This separation reduces the risk that dashboard queries, partner reporting, or client-side aggregation will distort or overload operational collaboration systems. It also avoids forcing reporting systems to independently replay long operational change histories just to reconstruct the state they need to serve.
 
 ## 12. Requirements Mapping
 
@@ -213,6 +220,7 @@ The architecture should explicitly support the following requirement themes:
 | TRL workflow redesign | Move resource workflows behind dedicated backend contracts instead of embedding them in altered translation object flows. |
 | Multi-Bible support | Keep the client free to render multiple synchronized datasets while relying on stable backend/state contracts rather than client-specific business logic. |
 | REST API centralization | Put business logic behind stable API contracts shared across desktop, mobile, and future partner integrations. |
+| Persisted local state | Persist enough local state to support lazy loading, lower memory usage, shorter startup time, and reliable divergence detection through `stateDataHash`. |
 | Mobile product | Reuse auth, sync, and state contracts while allowing scoped feature sets and mobile-specific UX. |
 | Deep search | Treat search as a server-side capability or service tier that can evolve independently from client workflows. |
 | First-party auth | Centralize auth, token issuance, and permission enforcement in backend services rather than UI-specific flows. |
