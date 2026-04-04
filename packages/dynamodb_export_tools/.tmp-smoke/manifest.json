@@ -1,0 +1,11 @@
+{
+  "inputDirectory": "test",
+  "outputDirectory": ".tmp-smoke",
+  "exportId": null,
+  "generatedAt": "2026-04-04T23:14:54.343227Z",
+  "totalRowsSeen": 0,
+  "rawRowsWritten": 0,
+  "unsupportedRows": 0,
+  "tables": [],
+  "unsupportedSamples": []
+}
