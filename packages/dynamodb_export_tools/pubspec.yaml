@@ -1,0 +1,16 @@
+name: dynamodb_export_tools
+description: Pure Dart helpers for classifying DynamoDB export items into logical table families.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '^3.8.2'
+
+resolution: workspace
+
+dependencies:
+  meta: ^1.10.0
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^3.0.0
