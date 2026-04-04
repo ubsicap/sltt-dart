@@ -31,6 +31,12 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
   }
 
   final String _storageId = 'test-storage';
+  Map<String, dynamic> listExportsResponse = const {
+    'ExportSummaries': <Map<String, dynamic>>[],
+  };
+  final Map<String, Map<String, dynamic>> describeExportResponses = {};
+  final List<Map<String, dynamic>> listExportsRequests = [];
+  final List<Map<String, dynamic>> describeExportRequests = [];
 
   @override
   String getStorageType() => 'cloud';
@@ -133,6 +139,31 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
           result;
     }
     return results;
+  }
+
+  @override
+  Future<Map<String, dynamic>> listExports(
+    Map<String, dynamic> listRequest,
+  ) async {
+    listExportsRequests.add(Map<String, dynamic>.from(listRequest));
+    return Map<String, dynamic>.from(listExportsResponse);
+  }
+
+  @override
+  Future<Map<String, dynamic>> describeExport(
+    Map<String, dynamic> describeRequest,
+  ) async {
+    describeExportRequests.add(Map<String, dynamic>.from(describeRequest));
+    final exportArn = describeRequest['ExportArn'] as String?;
+    final response = exportArn == null
+        ? null
+        : describeExportResponses[exportArn];
+    if (response == null) {
+      throw StateError(
+        'No fake describeExport response configured for $exportArn',
+      );
+    }
+    return Map<String, dynamic>.from(response);
   }
 
   @override
@@ -273,4 +304,40 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     required String domainId,
     bool isAdminReset = false,
   }) async {}
+}
+
+class FakeAwsMediaStorage extends AwsMediaStorage {
+  FakeAwsMediaStorage()
+    : super(
+        bucketName: 'test-bucket',
+        region: 'us-east-1',
+        credentials: _testCredentials,
+      );
+
+  String? lastPrefix;
+  int? lastMaxKeys;
+  String? lastContinuationToken;
+  Map<String, dynamic> listResponse = const {
+    'items': <Map<String, dynamic>>[],
+    'isTruncated': false,
+    'nextContinuationToken': null,
+  };
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<void> close() async {}
+
+  @override
+  Future<Map<String, dynamic>> listObjectsWithPresignedUrls({
+    required String prefix,
+    int? maxKeys,
+    String? continuationToken,
+  }) async {
+    lastPrefix = prefix;
+    lastMaxKeys = maxKeys;
+    lastContinuationToken = continuationToken;
+    return Map<String, dynamic>.from(listResponse);
+  }
 }

@@ -10,9 +10,10 @@ void main() {
   group('offline - AwsRestApiServer additional unit routes', () {
     late AwsRestApiServer server;
     late Router router;
+    late FakeDynamoDBStorageService storage;
 
     setUp(() {
-      final storage = FakeDynamoDBStorageService();
+      storage = FakeDynamoDBStorageService();
       server = AwsRestApiServer(serverName: 'TestServer', storage: storage);
       router = server.getRouter();
     });
@@ -77,5 +78,97 @@ void main() {
           jsonDecode(response['body'] as String) as Map<String, dynamic>;
       expect(body['message'], contains('__test1'));
     });
+
+    test(
+      'GET /api/admin/storage/export/list includeDetails enriches summaries',
+      () async {
+        storage.listExportsResponse = {
+          'ExportSummaries': [
+            {
+              'ExportArn':
+                  'arn:aws:dynamodb:us-east-1:123456789012:table/test/export/exp-1',
+              'ExportStatus': 'COMPLETED',
+              'ExportType': 'FULL_EXPORT',
+            },
+          ],
+        };
+        storage
+            .describeExportResponses['arn:aws:dynamodb:us-east-1:123456789012:table/test/export/exp-1'] = {
+          'ExportDescription': {
+            'ExportArn':
+                'arn:aws:dynamodb:us-east-1:123456789012:table/test/export/exp-1',
+            'S3Bucket': 'bucket-a',
+            'S3Prefix': 'exports/diag',
+            'ExportTime': '2026-01-01T00:00:00Z',
+            'StartTime': '2026-01-01T00:01:00Z',
+            'EndTime': '2026-01-01T00:02:00Z',
+          },
+        };
+
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'GET',
+          'path': '/api/admin/storage/export/list',
+          'queryStringParameters': {'includeDetails': 'true'},
+          'headers': <String, String>{},
+        }, router);
+
+        expect(response['statusCode'], equals(200));
+        final body =
+            jsonDecode(response['body'] as String) as Map<String, dynamic>;
+        final summaries = body['ExportSummaries'] as List<dynamic>;
+        expect(summaries, hasLength(1));
+        expect(
+          (summaries.first as Map<String, dynamic>)['S3Bucket'],
+          equals('bucket-a'),
+        );
+        expect(storage.describeExportRequests, hasLength(1));
+      },
+    );
+
+    test(
+      'GET /api/admin/storage/export/list-files resolves exportArn to manifest prefix',
+      () async {
+        final media = FakeAwsMediaStorage()
+          ..listResponse = {
+            'items': [
+              {'key': 'exports/diag/AWSDynamoDB/exp-1/manifest-summary.json'},
+            ],
+            'isTruncated': false,
+            'nextContinuationToken': null,
+          };
+        storage
+            .describeExportResponses['arn:aws:dynamodb:us-east-1:123456789012:table/test/export/exp-1'] = {
+          'ExportDescription': {
+            'ExportArn':
+                'arn:aws:dynamodb:us-east-1:123456789012:table/test/export/exp-1',
+            'ExportManifest':
+                'exports/diag/AWSDynamoDB/exp-1/manifest-summary.json',
+            'S3Prefix': 'exports/diag',
+          },
+        };
+        server = AwsRestApiServer(
+          serverName: 'TestServer',
+          storage: storage,
+          mediaStorage: media,
+        );
+        router = server.getRouter();
+
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'GET',
+          'path': '/api/admin/storage/export/list-files',
+          'queryStringParameters': {
+            'exportArn':
+                'arn:aws:dynamodb:us-east-1:123456789012:table/test/export/exp-1',
+          },
+          'headers': <String, String>{},
+        }, router);
+
+        expect(response['statusCode'], equals(200));
+        expect(media.lastPrefix, equals('exports/diag/AWSDynamoDB/exp-1/'));
+        final body =
+            jsonDecode(response['body'] as String) as Map<String, dynamic>;
+        expect(body['items'], isA<List<dynamic>>());
+      },
+    );
   });
 }

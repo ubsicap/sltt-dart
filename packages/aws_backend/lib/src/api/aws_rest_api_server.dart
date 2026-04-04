@@ -73,24 +73,39 @@ class AwsRestApiServer extends BaseRestApiServer {
           'required': false,
           'description': 'AWS pagination token returned from a previous call.',
         },
+        {
+          'name': 'includeDetails',
+          'type': 'boolean',
+          'required': false,
+          'description':
+              'When true, hydrate each export summary with DescribeExport fields such as S3Bucket, S3Prefix, ExportTime, StartTime, EndTime, and ExportManifest.',
+        },
       ],
       'response': {
         'type': 'object',
         'description':
-            'Raw AWS ListExports response payload, including ExportSummaries and NextToken when present.',
+            'AWS ListExports response payload. When includeDetails=true, each entry in ExportSummaries is enriched with DescribeExport fields.',
       },
     },
     {
       'method': 'GET',
       'path': '/api/admin/storage/export/list-files',
       'description':
-          'List exported files under an S3 prefix and return presigned GET URLs for each object.',
+          'List exported files under an S3 prefix or by export ARN and return presigned GET URLs for each object.',
       'parameters': [
         {
           'name': 'prefix',
           'type': 'string',
-          'required': true,
-          'description': 'S3 prefix for a specific export output folder.',
+          'required': false,
+          'description':
+              'S3 prefix for a specific export output folder. Provide this or exportArn.',
+        },
+        {
+          'name': 'exportArn',
+          'type': 'string',
+          'required': false,
+          'description':
+              'DynamoDB export ARN to resolve into the export output folder automatically. Provide this or prefix.',
         },
         {
           'name': 'maxKeys',
@@ -162,15 +177,24 @@ class AwsRestApiServer extends BaseRestApiServer {
   Future<Response> _handleExportList(Request request) async {
     try {
       final params = <String, dynamic>{};
+      var includeDetails = false;
       // Use query parameters as-is for simplicity (convert common numeric values)
       request.url.queryParameters.forEach((k, v) {
+        if (k == 'includeDetails') {
+          includeDetails =
+              v.toLowerCase() == 'true' || v == '1' || v.toLowerCase() == 'yes';
+          return;
+        }
         final numVal = int.tryParse(v);
         params[k] = numVal ?? v;
       });
       final dynamo = storage as DynamoDBStorageService;
       final result = await dynamo.listExports(params);
+      final responseBody = includeDetails
+          ? await _enrichExportListResponse(dynamo, result)
+          : result;
       return Response.ok(
-        jsonEncode(result),
+        jsonEncode(responseBody),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e, st) {
@@ -184,17 +208,26 @@ class AwsRestApiServer extends BaseRestApiServer {
 
   Future<Response> _handleExportListFiles(Request request) async {
     try {
-      final prefix = request.url.queryParameters['prefix']?.trim() ?? '';
+      var prefix = request.url.queryParameters['prefix']?.trim() ?? '';
+      final exportArn = request.url.queryParameters['exportArn']?.trim() ?? '';
       final maxKeys = int.tryParse(
         request.url.queryParameters['maxKeys'] ?? '',
       );
       final continuationToken =
           request.url.queryParameters['continuationToken'];
 
+      if (_looksLikeExportArn(prefix) && exportArn.isEmpty) {
+        prefix = await _resolveExportPrefixFromArn(prefix);
+      } else if (prefix.isEmpty && exportArn.isNotEmpty) {
+        prefix = await _resolveExportPrefixFromArn(exportArn);
+      }
+
       if (prefix.isEmpty) {
         return Response(
           400,
-          body: jsonEncode({'error': 'Query parameter "prefix" is required'}),
+          body: jsonEncode({
+            'error': 'Query parameter "prefix" or "exportArn" is required',
+          }),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -227,6 +260,67 @@ class AwsRestApiServer extends BaseRestApiServer {
         headers: {'Content-Type': 'application/json'},
       );
     }
+  }
+
+  Future<Map<String, dynamic>> _enrichExportListResponse(
+    DynamoDBStorageService dynamo,
+    Map<String, dynamic> listResponse,
+  ) async {
+    final summaries = (listResponse['ExportSummaries'] as List?) ?? const [];
+    final enriched = <Map<String, dynamic>>[];
+
+    for (final summary in summaries) {
+      if (summary is! Map) continue;
+      final summaryMap = Map<String, dynamic>.from(summary);
+      final exportArn = summaryMap['ExportArn'] as String?;
+      if (exportArn == null || exportArn.isEmpty) {
+        enriched.add(summaryMap);
+        continue;
+      }
+
+      final detailResponse = await dynamo.describeExport({
+        'ExportArn': exportArn,
+      });
+      final detail = detailResponse['ExportDescription'];
+      if (detail is Map) {
+        enriched.add({...summaryMap, ...Map<String, dynamic>.from(detail)});
+      } else {
+        enriched.add(summaryMap);
+      }
+    }
+
+    return {...listResponse, 'ExportSummaries': enriched};
+  }
+
+  bool _looksLikeExportArn(String value) {
+    return value.startsWith('arn:aws:dynamodb:') && value.contains('/export/');
+  }
+
+  Future<String> _resolveExportPrefixFromArn(String exportArn) async {
+    final dynamo = storage as DynamoDBStorageService;
+    final detailResponse = await dynamo.describeExport({
+      'ExportArn': exportArn,
+    });
+    final detail = detailResponse['ExportDescription'];
+    if (detail is! Map) {
+      throw StateError('DescribeExport did not return ExportDescription');
+    }
+
+    final manifest = detail['ExportManifest'] as String?;
+    if (manifest != null && manifest.isNotEmpty) {
+      final slashIndex = manifest.lastIndexOf('/');
+      if (slashIndex > 0) {
+        return manifest.substring(0, slashIndex + 1);
+      }
+    }
+
+    final s3Prefix = (detail['S3Prefix'] as String?)?.trim() ?? '';
+    final exportId = exportArn.split('/').last.trim();
+    if (s3Prefix.isEmpty || exportId.isEmpty) {
+      throw StateError('Unable to resolve export files prefix from exportArn');
+    }
+
+    return '$s3Prefix/AWSDynamoDB/$exportId/';
   }
 
   /// Handle AWS API Gateway event (for Lambda deployment)
