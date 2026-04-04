@@ -6,6 +6,7 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import '../storage/dynamodb_storage_service.dart';
+import '../storage/media/aws_media_storage.dart';
 
 /// AWS DynamoDB-backed REST API server.
 ///
@@ -31,8 +32,202 @@ class AwsRestApiServer extends BaseRestApiServer {
   @override
   Map<String, String> get healthEnvironment => _healthEnvironment;
 
+  @override
+  List<Map<String, dynamic>> get customApiDocEndpoints => [
+    {
+      'method': 'POST',
+      'path': '/api/admin/storage/export/create',
+      'description':
+          'Start a DynamoDB ExportTableToPointInTime job using the supplied AWS export payload.',
+      'requestBody': {
+        'type': 'object',
+        'description':
+            'AWS ExportTableToPointInTime request payload. Typical fields include TableArn, S3Bucket, S3Prefix, ExportFormat, and ExportType.',
+      },
+      'response': {
+        'type': 'object',
+        'description':
+            'Raw AWS ExportTableToPointInTime response payload, including ExportDescription when successful.',
+      },
+    },
+    {
+      'method': 'GET',
+      'path': '/api/admin/storage/export/list',
+      'description': 'List DynamoDB export jobs via AWS ListExports.',
+      'parameters': [
+        {
+          'name': 'TableArn',
+          'type': 'string',
+          'required': false,
+          'description': 'Optional DynamoDB table ARN to filter exports.',
+        },
+        {
+          'name': 'MaxResults',
+          'type': 'integer',
+          'required': false,
+          'description': 'Optional maximum number of export records to return.',
+        },
+        {
+          'name': 'NextToken',
+          'type': 'string',
+          'required': false,
+          'description': 'AWS pagination token returned from a previous call.',
+        },
+      ],
+      'response': {
+        'type': 'object',
+        'description':
+            'Raw AWS ListExports response payload, including ExportSummaries and NextToken when present.',
+      },
+    },
+    {
+      'method': 'GET',
+      'path': '/api/admin/storage/export/list-files',
+      'description':
+          'List exported files under an S3 prefix and return presigned GET URLs for each object.',
+      'parameters': [
+        {
+          'name': 'prefix',
+          'type': 'string',
+          'required': true,
+          'description': 'S3 prefix for a specific export output folder.',
+        },
+        {
+          'name': 'maxKeys',
+          'type': 'integer',
+          'required': false,
+          'description': 'Optional maximum number of objects to return.',
+        },
+        {
+          'name': 'continuationToken',
+          'type': 'string',
+          'required': false,
+          'description': 'S3 continuation token for paginated listing.',
+        },
+      ],
+      'response': {
+        'type': 'object',
+        'properties': {
+          'items': {
+            'type': 'array',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'key': {'type': 'string'},
+                'size': {'type': 'integer'},
+                'lastModified': {'type': 'string', 'format': 'ISO8601'},
+                'getUrl': {'type': 'string'},
+              },
+            },
+          },
+          'isTruncated': {'type': 'boolean'},
+          'nextContinuationToken': {'type': 'string'},
+        },
+      },
+    },
+  ];
+
   /// Get the router for use in debugging or custom server setups
   Router getRouter() => buildRouter();
+
+  @override
+  void addCustomRoutes(Router router) {
+    // Admin export endpoints: start export, list exports, and list exported files
+    router.post('/api/admin/storage/export/create', _handleExportCreate);
+    router.get('/api/admin/storage/export/list', _handleExportList);
+    router.get('/api/admin/storage/export/list-files', _handleExportListFiles);
+  }
+
+  Future<Response> _handleExportCreate(Request request) async {
+    try {
+      final body = await request.readAsString();
+      final payload = body.isNotEmpty
+          ? jsonDecode(body) as Map<String, dynamic>
+          : <String, dynamic>{};
+      final dynamo = storage as DynamoDBStorageService;
+      final result = await dynamo.startExportToS3(payload);
+      return Response.ok(
+        jsonEncode(result),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, st) {
+      SlttLogger.logger.severe('Export create failed: $e\n$st');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  Future<Response> _handleExportList(Request request) async {
+    try {
+      final params = <String, dynamic>{};
+      // Use query parameters as-is for simplicity (convert common numeric values)
+      request.url.queryParameters.forEach((k, v) {
+        final numVal = int.tryParse(v);
+        params[k] = numVal ?? v;
+      });
+      final dynamo = storage as DynamoDBStorageService;
+      final result = await dynamo.listExports(params);
+      return Response.ok(
+        jsonEncode(result),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, st) {
+      SlttLogger.logger.severe('Export list failed: $e\n$st');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  Future<Response> _handleExportListFiles(Request request) async {
+    try {
+      final prefix = request.url.queryParameters['prefix']?.trim() ?? '';
+      final maxKeys = int.tryParse(
+        request.url.queryParameters['maxKeys'] ?? '',
+      );
+      final continuationToken =
+          request.url.queryParameters['continuationToken'];
+
+      if (prefix.isEmpty) {
+        return Response(
+          400,
+          body: jsonEncode({'error': 'Query parameter "prefix" is required'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      if (mediaStorage is! AwsMediaStorage) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Media storage does not support S3 listing',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final media = mediaStorage as AwsMediaStorage;
+      final result = await media.listObjectsWithPresignedUrls(
+        prefix: prefix,
+        maxKeys: maxKeys,
+        continuationToken: continuationToken,
+      );
+
+      return Response.ok(
+        jsonEncode(result),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, st) {
+      SlttLogger.logger.severe('Export list-files failed: $e\n$st');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
 
   /// Handle AWS API Gateway event (for Lambda deployment)
   Future<Map<String, dynamic>> handleApiGatewayEvent(

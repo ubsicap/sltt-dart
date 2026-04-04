@@ -2371,4 +2371,48 @@ class DynamoDBStorageService extends BaseStorageService {
     }
     return attr;
   }
+
+  // ----------------------------------------------------------------------
+  // DynamoDB Export Helpers
+  // ----------------------------------------------------------------------
+  /// Start an export job via DynamoDB ExportTableToPointInTime API.
+  ///
+  /// The [exportRequest] should match the AWS API payload (e.g. include
+  /// `TableArn`, `S3Bucket`, `S3Prefix`, `ExportFormat`, `RoleArn`, etc.).
+  /// Returns the decoded JSON response from AWS on success.
+  Future<Map<String, dynamic>> startExportToS3(
+    Map<String, dynamic> exportRequest,
+  ) async {
+    final response = await _dynamoRequest('ExportTableToPointInTime', exportRequest);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to start ExportTableToPointInTime: ${response.body}');
+    }
+    return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+  }
+
+  /// List export jobs via DynamoDB ListExports API.
+  ///
+  /// [listRequest] may include `TableArn`, `MaxResults`, `NextToken`, etc.
+  Future<Map<String, dynamic>> listExports(
+    Map<String, dynamic> listRequest,
+  ) async {
+    final response = await _dynamoRequest('ListExports', listRequest);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to list exports: ${response.body}');
+    }
+    return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+  }
+
+  /// Describe a specific export job via DynamoDB DescribeExport API.
+  ///
+  /// [describeRequest] should include `ExportArn`.
+  Future<Map<String, dynamic>> describeExport(
+    Map<String, dynamic> describeRequest,
+  ) async {
+    final response = await _dynamoRequest('DescribeExport', describeRequest);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to describe export: ${response.body}');
+    }
+    return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+  }
 }

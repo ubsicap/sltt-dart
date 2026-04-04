@@ -52,6 +52,20 @@ provider:
         - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}/index/*"
     - Effect: Allow
       Action:
+        - dynamodb:ExportTableToPointInTime
+      Resource:
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeExport
+      Resource:
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}/export/*"
+    - Effect: Allow
+      Action:
+        - dynamodb:ListExports
+      Resource: '*'
+    - Effect: Allow
+      Action:
         - s3:AbortMultipartUpload
         - s3:CreateMultipartUpload
         - s3:GetObject

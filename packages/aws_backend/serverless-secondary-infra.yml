@@ -65,6 +65,20 @@ provider:
         - ${self:custom.dynamoDbTableArn}/index/*
     - Effect: Allow
       Action:
+        - dynamodb:ExportTableToPointInTime
+      Resource:
+        - ${self:custom.dynamoDbTableArn}
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeExport
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:${self:custom.sharedInfraAccountId}:table/${self:custom.dynamoDbTable}/export/*
+    - Effect: Allow
+      Action:
+        - dynamodb:ListExports
+      Resource: '*'
+    - Effect: Allow
+      Action:
         - s3:AbortMultipartUpload
         - s3:CreateMultipartUpload
         - s3:GetObject

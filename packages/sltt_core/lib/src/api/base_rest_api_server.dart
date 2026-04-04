@@ -131,6 +131,13 @@ abstract class BaseRestApiServer {
     // Default: no custom routes
   }
 
+  /// Additional server-specific endpoint docs to include in `/api/help`.
+  ///
+  /// Subclasses that add routes via [addCustomRoutes] should also override
+  /// this getter so the documentation stays aligned with runtime behavior.
+  @protected
+  List<Map<String, dynamic>> get customApiDocEndpoints => const [];
+
   /// Validate `entityCollection` path parameter and map it to an entity type.
   ///
   /// Returns a map with keys `{ 'error': String? , 'entityType': String? }`.
@@ -763,6 +770,7 @@ abstract class BaseRestApiServer {
             },
           },
         },
+        ...customApiDocEndpoints,
         // Generalized domain-scoped endpoints
         {
           'method': 'GET',
