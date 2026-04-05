@@ -42,7 +42,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'POST',
       'path': '/api/admin/storage/export/create',
       'description':
-          'Start a DynamoDB ExportTableToPointInTime job using server-managed table and S3 destination defaults. The server always uses DYNAMODB_TABLE/DYNAMODB_TABLE_ARN for the table, MEDIA_BUCKET for the bucket, and dynamodb-exports/diag for the S3 prefix. Before creating a new export, the server checks recent exports and rejects a request when another export of the same type is already in progress.',
+          'Start a DynamoDB ExportTableToPointInTime job using server-managed table and S3 destination defaults. The server always uses DYNAMODB_TABLE/DYNAMODB_TABLE_ARN for the table, MEDIA_BUCKET for the bucket, dynamodb-exports/diag for the S3 prefix, and a generated ClientToken for idempotency. Before creating a new export, the server checks recent exports and rejects a request when another export of the same type is already in progress.',
       'requestBody': {
         'type': 'object',
         'required': ['ExportFormat'],
@@ -84,6 +84,7 @@ class AwsRestApiServer extends BaseRestApiServer {
           'table': 'DYNAMODB_TABLE / DYNAMODB_TABLE_ARN',
           'bucket': 'MEDIA_BUCKET',
           'prefix': _defaultExportS3Prefix,
+          'clientToken': 'server-generated',
         },
         'examples': [
           {'ExportFormat': 'DYNAMODB_JSON', 'ExportType': 'FULL_EXPORT'},
@@ -402,13 +403,27 @@ class AwsRestApiServer extends BaseRestApiServer {
 
     final tableArn = _resolveConfiguredExportTableArn();
     final bucket = _requireHealthEnvironmentValue('MEDIA_BUCKET');
+    final clientToken = _buildExportClientToken(clientPayload);
 
     return {
       ...clientPayload,
       'TableArn': tableArn,
       'S3Bucket': bucket,
       'S3Prefix': _defaultExportS3Prefix,
+      'ClientToken': clientToken,
     };
+  }
+
+  String _buildExportClientToken(Map<String, dynamic> clientPayload) {
+    final exportType = _normalizedExportType(
+      clientPayload['ExportType'] as String?,
+    ).toLowerCase();
+    final timestamp = DateTime.now()
+        .toUtc()
+        .microsecondsSinceEpoch
+        .toRadixString(36);
+    final typeHash = exportType.hashCode.abs().toRadixString(36);
+    return 'sltt$timestamp$typeHash';
   }
 
   Future<_ExportConflict?> _findInProgressExportConflict(

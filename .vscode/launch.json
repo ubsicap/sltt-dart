@@ -58,6 +58,7 @@
                 "AWS_REGION": "us-east-1",
                 "DYNAMODB_REGION": "us-east-1",
                 "DYNAMODB_TABLE": "sltt-shared-infra-changes-states",
+                "DYNAMODB_TABLE_ARN": "arn:aws:dynamodb:us-east-1:379334555674:table/sltt-shared-infra-changes-states",
                 "MEDIA_BUCKET": "sltt-shared-infra-media-worm-379334555674",
                 "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
                 "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",

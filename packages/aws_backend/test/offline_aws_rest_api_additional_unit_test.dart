@@ -121,6 +121,8 @@ void main() {
         );
         expect(request['S3Bucket'], equals('bucket-a'));
         expect(request['S3Prefix'], equals('dynamodb-exports/diag'));
+        expect(request['ClientToken'], isA<String>());
+        expect((request['ClientToken'] as String), isNotEmpty);
         expect(
           storage.listExportsRequests,
           equals([
