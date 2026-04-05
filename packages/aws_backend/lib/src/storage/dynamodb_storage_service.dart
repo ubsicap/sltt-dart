@@ -2383,9 +2383,14 @@ class DynamoDBStorageService extends BaseStorageService {
   Future<Map<String, dynamic>> startExportToS3(
     Map<String, dynamic> exportRequest,
   ) async {
-    final response = await _dynamoRequest('ExportTableToPointInTime', exportRequest);
+    final response = await _dynamoRequest(
+      'ExportTableToPointInTime',
+      exportRequest,
+    );
     if (response.statusCode != 200) {
-      throw Exception('Failed to start ExportTableToPointInTime: ${response.body}');
+      throw Exception(
+        'Failed to start ExportTableToPointInTime: ${response.body}',
+      );
     }
     return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
   }
