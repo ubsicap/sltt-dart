@@ -13,6 +13,8 @@ import '../storage/media/aws_media_storage.dart';
 /// This server extends the base functionality with DynamoDB storage
 /// and provides the same API endpoints as local servers.
 class AwsRestApiServer extends BaseRestApiServer {
+  static const String _defaultExportS3Prefix = 'dynamodb-exports/diag';
+
   final Map<String, String> _healthEnvironment;
 
   AwsRestApiServer({
@@ -38,11 +40,60 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'POST',
       'path': '/api/admin/storage/export/create',
       'description':
-          'Start a DynamoDB ExportTableToPointInTime job using the supplied AWS export payload.',
+          'Start a DynamoDB ExportTableToPointInTime job using server-managed table and S3 destination defaults. The server always uses DYNAMODB_TABLE/DYNAMODB_TABLE_ARN for the table, MEDIA_BUCKET for the bucket, and dynamodb-exports/diag for the S3 prefix.',
       'requestBody': {
         'type': 'object',
+        'required': ['ExportFormat'],
         'description':
-            'AWS ExportTableToPointInTime request payload. Typical fields include TableArn, S3Bucket, S3Prefix, ExportFormat, and ExportType.',
+            'Client-supplied export options. The client should provide only export format, whether the export is full or incremental, and optional export timestamps. TableArn, S3Bucket, and S3Prefix are supplied by the server.',
+        'properties': {
+          'ExportFormat': {
+            'type': 'string',
+            'description':
+                'Required export file format. Typical values are DYNAMODB_JSON or ION.',
+          },
+          'ExportType': {
+            'type': 'string',
+            'description':
+                'Optional export mode. Use FULL_EXPORT or INCREMENTAL_EXPORT. AWS defaults to FULL_EXPORT when omitted.',
+          },
+          'ExportTime': {
+            'type': 'string',
+            'format': 'ISO8601',
+            'description':
+                'Optional point-in-time timestamp for a full export.',
+          },
+          'IncrementalExportSpecification': {
+            'type': 'object',
+            'description':
+                'Required for incremental exports. Supply the incremental time window and optional view type.',
+            'properties': {
+              'ExportFromTime': {'type': 'string', 'format': 'ISO8601'},
+              'ExportToTime': {'type': 'string', 'format': 'ISO8601'},
+              'ExportViewType': {
+                'type': 'string',
+                'description':
+                    'Optional AWS incremental view type such as NEW_AND_OLD_IMAGES or NEW_IMAGES.',
+              },
+            },
+          },
+        },
+        'serverDefaults': {
+          'table': 'DYNAMODB_TABLE / DYNAMODB_TABLE_ARN',
+          'bucket': 'MEDIA_BUCKET',
+          'prefix': _defaultExportS3Prefix,
+        },
+        'examples': [
+          {'ExportFormat': 'DYNAMODB_JSON', 'ExportType': 'FULL_EXPORT'},
+          {
+            'ExportFormat': 'DYNAMODB_JSON',
+            'ExportType': 'INCREMENTAL_EXPORT',
+            'IncrementalExportSpecification': {
+              'ExportFromTime': '2026-04-04T00:00:00Z',
+              'ExportToTime': '2026-04-04T01:00:00Z',
+            },
+          },
+        ],
       },
       'response': {
         'type': 'object',
@@ -159,8 +210,9 @@ class AwsRestApiServer extends BaseRestApiServer {
       final payload = body.isNotEmpty
           ? jsonDecode(body) as Map<String, dynamic>
           : <String, dynamic>{};
+      final exportRequest = _buildExportCreatePayload(payload);
       final dynamo = storage as DynamoDBStorageService;
-      final result = await dynamo.startExportToS3(payload);
+      final result = await dynamo.startExportToS3(exportRequest);
       return Response.ok(
         jsonEncode(result),
         headers: {'Content-Type': 'application/json'},
@@ -321,6 +373,49 @@ class AwsRestApiServer extends BaseRestApiServer {
     }
 
     return '$s3Prefix/AWSDynamoDB/$exportId/';
+  }
+
+  Map<String, dynamic> _buildExportCreatePayload(
+    Map<String, dynamic> clientPayload,
+  ) {
+    final exportFormat = (clientPayload['ExportFormat'] as String?)?.trim();
+    if (exportFormat == null || exportFormat.isEmpty) {
+      throw StateError('ExportFormat is required');
+    }
+
+    final tableArn = _resolveConfiguredExportTableArn();
+    final bucket = _requireHealthEnvironmentValue('MEDIA_BUCKET');
+
+    return {
+      ...clientPayload,
+      'TableArn': tableArn,
+      'S3Bucket': bucket,
+      'S3Prefix': _defaultExportS3Prefix,
+    };
+  }
+
+  String _resolveConfiguredExportTableArn() {
+    final explicitArn = (healthEnvironment['DYNAMODB_TABLE_ARN'] ?? '').trim();
+    if (explicitArn.isNotEmpty) {
+      return explicitArn;
+    }
+
+    final configuredTable = _requireHealthEnvironmentValue('DYNAMODB_TABLE');
+    if (configuredTable.startsWith('arn:aws:dynamodb:')) {
+      return configuredTable;
+    }
+
+    throw StateError(
+      'DYNAMODB_TABLE_ARN environment variable is required when DYNAMODB_TABLE is not already a table ARN',
+    );
+  }
+
+  String _requireHealthEnvironmentValue(String key) {
+    final value = (healthEnvironment[key] ?? '').trim();
+    if (value.isEmpty) {
+      throw StateError('$key environment variable is required');
+    }
+    return value;
   }
 
   /// Handle AWS API Gateway event (for Lambda deployment)

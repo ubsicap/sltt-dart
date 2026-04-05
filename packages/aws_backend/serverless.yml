@@ -27,6 +27,7 @@ provider:
   environment:
     STAGE: ${self:provider.stage}
     DYNAMODB_TABLE: ${self:service}-changes-states-${self:provider.stage}
+    DYNAMODB_TABLE_ARN: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE}
     DYNAMODB_REGION: ${self:provider.region}
     MEDIA_BUCKET: ${self:custom.mediaBucket}
     MEDIA_CLOUDFRONT_DOMAIN: ${self:custom.mediaCloudFrontDomainByStage.${self:provider.stage}}

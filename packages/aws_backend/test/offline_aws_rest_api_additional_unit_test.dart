@@ -14,7 +14,16 @@ void main() {
 
     setUp(() {
       storage = FakeDynamoDBStorageService();
-      server = AwsRestApiServer(serverName: 'TestServer', storage: storage);
+      server = AwsRestApiServer(
+        serverName: 'TestServer',
+        storage: storage,
+        healthEnvironmentOverrides: {
+          'DYNAMODB_TABLE': 'sltt-shared-infra-changes-states',
+          'DYNAMODB_TABLE_ARN':
+              'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-shared-infra-changes-states',
+          'MEDIA_BUCKET': 'bucket-a',
+        },
+      );
       router = server.getRouter();
     });
 
@@ -78,6 +87,59 @@ void main() {
           jsonDecode(response['body'] as String) as Map<String, dynamic>;
       expect(body['message'], contains('__test1'));
     });
+
+    test(
+      'POST /api/admin/storage/export/create injects table and bucket defaults',
+      () async {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/admin/storage/export/create',
+          'headers': <String, String>{'Content-Type': 'application/json'},
+          'body': jsonEncode({
+            'ExportFormat': 'DYNAMODB_JSON',
+            'ExportType': 'INCREMENTAL_EXPORT',
+            'S3Bucket': 'client-bucket-should-be-ignored',
+            'S3Prefix': 'client-prefix-should-be-ignored',
+            'IncrementalExportSpecification': {
+              'ExportFromTime': '2026-04-04T00:00:00Z',
+              'ExportToTime': '2026-04-04T01:00:00Z',
+            },
+          }),
+        }, router);
+
+        expect(response['statusCode'], equals(200));
+        expect(storage.startExportRequests, hasLength(1));
+
+        final request = storage.startExportRequests.single;
+        expect(request['ExportFormat'], equals('DYNAMODB_JSON'));
+        expect(request['ExportType'], equals('INCREMENTAL_EXPORT'));
+        expect(
+          request['TableArn'],
+          equals(
+            'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-shared-infra-changes-states',
+          ),
+        );
+        expect(request['S3Bucket'], equals('bucket-a'));
+        expect(request['S3Prefix'], equals('dynamodb-exports/diag'));
+      },
+    );
+
+    test(
+      'POST /api/admin/storage/export/create returns 500 when ExportFormat is missing',
+      () async {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/admin/storage/export/create',
+          'headers': <String, String>{'Content-Type': 'application/json'},
+          'body': jsonEncode({'ExportType': 'FULL_EXPORT'}),
+        }, router);
+
+        expect(response['statusCode'], equals(500));
+        final body =
+            jsonDecode(response['body'] as String) as Map<String, dynamic>;
+        expect(body['error'], contains('ExportFormat is required'));
+      },
+    );
 
     test(
       'GET /api/admin/storage/export/list includeDetails enriches summaries',

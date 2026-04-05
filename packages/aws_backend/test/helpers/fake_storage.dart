@@ -31,6 +31,10 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
   }
 
   final String _storageId = 'test-storage';
+  Map<String, dynamic> startExportResponse = const {
+    'ExportDescription': <String, dynamic>{'ExportStatus': 'IN_PROGRESS'},
+  };
+  final List<Map<String, dynamic>> startExportRequests = [];
   Map<String, dynamic> listExportsResponse = const {
     'ExportSummaries': <Map<String, dynamic>>[],
   };
@@ -139,6 +143,14 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
           result;
     }
     return results;
+  }
+
+  @override
+  Future<Map<String, dynamic>> startExportToS3(
+    Map<String, dynamic> exportRequest,
+  ) async {
+    startExportRequests.add(Map<String, dynamic>.from(exportRequest));
+    return Map<String, dynamic>.from(startExportResponse);
   }
 
   @override
