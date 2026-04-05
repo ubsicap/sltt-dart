@@ -121,6 +121,115 @@ void main() {
         );
         expect(request['S3Bucket'], equals('bucket-a'));
         expect(request['S3Prefix'], equals('dynamodb-exports/diag'));
+        expect(
+          storage.listExportsRequests,
+          equals([
+            {
+              'TableArn':
+                  'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-shared-infra-changes-states',
+              'MaxResults': 20,
+            },
+          ]),
+        );
+      },
+    );
+
+    test(
+      'POST /api/admin/storage/export/create blocks second full export in progress',
+      () async {
+        storage.listExportsResponse = {
+          'ExportSummaries': [
+            {
+              'ExportArn':
+                  'arn:aws:dynamodb:us-east-1:123456789012:table/test/export/exp-full-1',
+              'ExportType': 'FULL_EXPORT',
+              'ExportStatus': 'IN_PROGRESS',
+            },
+          ],
+        };
+
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/admin/storage/export/create',
+          'headers': <String, String>{'Content-Type': 'application/json'},
+          'body': jsonEncode({'ExportFormat': 'DYNAMODB_JSON'}),
+        }, router);
+
+        expect(response['statusCode'], equals(409));
+        expect(storage.startExportRequests, isEmpty);
+        final body =
+            jsonDecode(response['body'] as String) as Map<String, dynamic>;
+        expect(body['error'], contains('FULL_EXPORT'));
+        expect(body['conflict'], isA<Map<String, dynamic>>());
+      },
+    );
+
+    test(
+      'POST /api/admin/storage/export/create blocks second incremental export in progress',
+      () async {
+        storage.listExportsResponse = {
+          'ExportSummaries': [
+            {
+              'ExportArn':
+                  'arn:aws:dynamodb:us-east-1:123456789012:table/test/export/exp-inc-1',
+              'ExportType': 'INCREMENTAL_EXPORT',
+              'ExportStatus': 'IN_PROGRESS',
+            },
+          ],
+        };
+
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/admin/storage/export/create',
+          'headers': <String, String>{'Content-Type': 'application/json'},
+          'body': jsonEncode({
+            'ExportFormat': 'DYNAMODB_JSON',
+            'ExportType': 'INCREMENTAL_EXPORT',
+            'IncrementalExportSpecification': {
+              'ExportFromTime': '2026-04-04T00:00:00Z',
+              'ExportToTime': '2026-04-04T01:00:00Z',
+            },
+          }),
+        }, router);
+
+        expect(response['statusCode'], equals(409));
+        expect(storage.startExportRequests, isEmpty);
+        final body =
+            jsonDecode(response['body'] as String) as Map<String, dynamic>;
+        expect(body['error'], contains('INCREMENTAL_EXPORT'));
+      },
+    );
+
+    test(
+      'POST /api/admin/storage/export/create allows incremental while full export is in progress',
+      () async {
+        storage.listExportsResponse = {
+          'ExportSummaries': [
+            {
+              'ExportArn':
+                  'arn:aws:dynamodb:us-east-1:123456789012:table/test/export/exp-full-1',
+              'ExportType': 'FULL_EXPORT',
+              'ExportStatus': 'IN_PROGRESS',
+            },
+          ],
+        };
+
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/admin/storage/export/create',
+          'headers': <String, String>{'Content-Type': 'application/json'},
+          'body': jsonEncode({
+            'ExportFormat': 'DYNAMODB_JSON',
+            'ExportType': 'INCREMENTAL_EXPORT',
+            'IncrementalExportSpecification': {
+              'ExportFromTime': '2026-04-04T00:00:00Z',
+              'ExportToTime': '2026-04-04T01:00:00Z',
+            },
+          }),
+        }, router);
+
+        expect(response['statusCode'], equals(200));
+        expect(storage.startExportRequests, hasLength(1));
       },
     );
 

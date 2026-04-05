@@ -14,6 +14,8 @@ import '../storage/media/aws_media_storage.dart';
 /// and provides the same API endpoints as local servers.
 class AwsRestApiServer extends BaseRestApiServer {
   static const String _defaultExportS3Prefix = 'dynamodb-exports/diag';
+  static const int _exportCreateConflictScanLimit = 20;
+  static const Set<String> _activeExportStatuses = {'IN_PROGRESS'};
 
   final Map<String, String> _healthEnvironment;
 
@@ -40,7 +42,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'POST',
       'path': '/api/admin/storage/export/create',
       'description':
-          'Start a DynamoDB ExportTableToPointInTime job using server-managed table and S3 destination defaults. The server always uses DYNAMODB_TABLE/DYNAMODB_TABLE_ARN for the table, MEDIA_BUCKET for the bucket, and dynamodb-exports/diag for the S3 prefix.',
+          'Start a DynamoDB ExportTableToPointInTime job using server-managed table and S3 destination defaults. The server always uses DYNAMODB_TABLE/DYNAMODB_TABLE_ARN for the table, MEDIA_BUCKET for the bucket, and dynamodb-exports/diag for the S3 prefix. Before creating a new export, the server checks recent exports and rejects a request when another export of the same type is already in progress.',
       'requestBody': {
         'type': 'object',
         'required': ['ExportFormat'],
@@ -98,7 +100,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'response': {
         'type': 'object',
         'description':
-            'Raw AWS ExportTableToPointInTime response payload, including ExportDescription when successful.',
+            'Raw AWS ExportTableToPointInTime response payload, including ExportDescription when successful. Returns HTTP 409 when a recent export of the same type is already in progress.',
       },
     },
     {
@@ -212,6 +214,21 @@ class AwsRestApiServer extends BaseRestApiServer {
           : <String, dynamic>{};
       final exportRequest = _buildExportCreatePayload(payload);
       final dynamo = storage as DynamoDBStorageService;
+      final conflict = await _findInProgressExportConflict(
+        dynamo,
+        exportRequest,
+      );
+      if (conflict != null) {
+        return Response(
+          409,
+          body: jsonEncode({
+            'error':
+                'An ${conflict.exportType} export is already in progress for this table.',
+            'conflict': conflict.toJson(),
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
       final result = await dynamo.startExportToS3(exportRequest);
       return Response.ok(
         jsonEncode(result),
@@ -394,6 +411,56 @@ class AwsRestApiServer extends BaseRestApiServer {
     };
   }
 
+  Future<_ExportConflict?> _findInProgressExportConflict(
+    DynamoDBStorageService dynamo,
+    Map<String, dynamic> exportRequest,
+  ) async {
+    final tableArn = exportRequest['TableArn'] as String;
+    final requestedType = _normalizedExportType(
+      exportRequest['ExportType'] as String?,
+    );
+    final listResponse = await dynamo.listExports({
+      'TableArn': tableArn,
+      'MaxResults': _exportCreateConflictScanLimit,
+    });
+    final summaries = listResponse['ExportSummaries'];
+    if (summaries is! List) {
+      return null;
+    }
+
+    for (final summary in summaries) {
+      if (summary is! Map) continue;
+      final summaryMap = Map<String, dynamic>.from(summary);
+      final exportType = _normalizedExportType(
+        summaryMap['ExportType'] as String?,
+      );
+      final exportStatus = (summaryMap['ExportStatus'] as String?)
+          ?.trim()
+          .toUpperCase();
+      if (exportType != requestedType ||
+          exportStatus == null ||
+          !_activeExportStatuses.contains(exportStatus)) {
+        continue;
+      }
+
+      return _ExportConflict(
+        exportArn: summaryMap['ExportArn'] as String?,
+        exportType: exportType,
+        exportStatus: exportStatus,
+      );
+    }
+
+    return null;
+  }
+
+  String _normalizedExportType(String? exportType) {
+    final normalized = exportType?.trim().toUpperCase();
+    if (normalized == null || normalized.isEmpty) {
+      return 'FULL_EXPORT';
+    }
+    return normalized;
+  }
+
   String _resolveConfiguredExportTableArn() {
     final explicitArn = (healthEnvironment['DYNAMODB_TABLE_ARN'] ?? '').trim();
     if (explicitArn.isNotEmpty) {
@@ -483,4 +550,22 @@ class AwsRestApiServer extends BaseRestApiServer {
       'body': body,
     };
   }
+}
+
+class _ExportConflict {
+  const _ExportConflict({
+    required this.exportArn,
+    required this.exportType,
+    required this.exportStatus,
+  });
+
+  final String? exportArn;
+  final String exportType;
+  final String exportStatus;
+
+  Map<String, dynamic> toJson() => {
+    'exportArn': exportArn,
+    'exportType': exportType,
+    'exportStatus': exportStatus,
+  };
 }
