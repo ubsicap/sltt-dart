@@ -54,6 +54,7 @@ provider:
     MEDIA_CLOUDFRONT_DOMAIN: ${self:custom.mediaCloudFrontDomain}
     MEDIA_CLOUDFRONT_KEY_PAIR_ID: ${self:custom.mediaCloudFrontKeyPairId}
     MEDIA_CLOUDFRONT_PRIVATE_KEY: ${self:custom.mediaCloudFrontPrivateKey}
+    SLTT_LOG_LEVEL: INFO
 
   # IAM permissions for shared DynamoDB + S3 resources
   iamRoleStatements:
