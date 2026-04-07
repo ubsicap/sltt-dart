@@ -27,7 +27,8 @@ class BackendAuthService {
        _passwordHashService = passwordHashService,
        _tokenService = tokenService,
        _emailSender = emailSender,
-       _verificationLifetime = verificationLifetime ?? const Duration(minutes: 10),
+       _verificationLifetime =
+           verificationLifetime ?? const Duration(minutes: 10),
        _refreshLifetime = refreshLifetime ?? const Duration(days: 30),
        _random = random ?? Random.secure(),
        _uuid = uuid ?? const Uuid();
@@ -63,8 +64,14 @@ class BackendAuthService {
     final email = request.email.trim();
     final password = request.password;
 
-    if (name.isEmpty || dateOfBirth.isEmpty || email.isEmpty || password.isEmpty) {
-      throw AuthException('Unable to complete this action', code: 'invalid_request');
+    if (name.isEmpty ||
+        dateOfBirth.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty) {
+      throw AuthException(
+        'Unable to complete this action',
+        code: 'invalid_request',
+      );
     }
     final normalizedEmail = _normalizeEmail(email);
     final existing = await _recordStore.getPrincipalByEmail(normalizedEmail);
@@ -74,41 +81,45 @@ class BackendAuthService {
 
     final passwordHash = await _passwordHashService.hashPassword(password);
     final now = DateTime.now().toUtc();
-    final principal = (existing ??
-            AuthPrincipal(
-              userId: _uuid.v4(),
-              identityKind: AuthIdentityKind.emailPassword,
+    final principal =
+        (existing ??
+                AuthPrincipal(
+                  userId: _uuid.v4(),
+                  identityKind: AuthIdentityKind.emailPassword,
+                  email: email,
+                  normalizedEmail: normalizedEmail,
+                  passwordHash: passwordHash.hash,
+                  passwordSalt: passwordHash.salt,
+                  passwordIterations: passwordHash.iterations,
+                  accountStatus: AuthAccountStatus.pendingVerification,
+                  emailVerified: false,
+                  isAdHoc: false,
+                  displayName: name,
+                  dateOfBirth: dateOfBirth,
+                  assignedProjectIds: const <String>[],
+                  verificationVersion: 0,
+                  createdAt: now,
+                  updatedAt: now,
+                ))
+            .copyWith(
               email: email,
               normalizedEmail: normalizedEmail,
+              displayName: name,
+              dateOfBirth: dateOfBirth,
               passwordHash: passwordHash.hash,
               passwordSalt: passwordHash.salt,
               passwordIterations: passwordHash.iterations,
               accountStatus: AuthAccountStatus.pendingVerification,
               emailVerified: false,
-              isAdHoc: false,
-              displayName: name,
-              dateOfBirth: dateOfBirth,
-              assignedProjectIds: const <String>[],
-              verificationVersion: 0,
-              createdAt: now,
               updatedAt: now,
-            ))
-        .copyWith(
-          email: email,
-          normalizedEmail: normalizedEmail,
-          displayName: name,
-          dateOfBirth: dateOfBirth,
-          passwordHash: passwordHash.hash,
-          passwordSalt: passwordHash.salt,
-          passwordIterations: passwordHash.iterations,
-          accountStatus: AuthAccountStatus.pendingVerification,
-          emailVerified: false,
-          updatedAt: now,
-        );
+            );
 
     await _recordStore.putPrincipal(principal);
     await _recordStore.putEmailLookup(normalizedEmail, principal.userId);
-    await _issueVerificationChallenge(principal, resendCount: existing == null ? 0 : 1);
+    await _issueVerificationChallenge(
+      principal,
+      resendCount: existing == null ? 0 : 1,
+    );
     return const AuthStatusResponse(status: 'pending_verification');
   }
 
@@ -124,7 +135,8 @@ class BackendAuthService {
     }
 
     final challenge = await _recordStore.getEmailChallenge(principal.userId);
-    if (challenge == null || challenge.expiresAt.isBefore(DateTime.now().toUtc())) {
+    if (challenge == null ||
+        challenge.expiresAt.isBefore(DateTime.now().toUtc())) {
       throw AuthException(
         'Invalid or expired code',
         statusCode: 400,
@@ -228,9 +240,13 @@ class BackendAuthService {
         code: 'invalid_credentials',
       );
     }
-    final tokenHash = _tokenService.hashRefreshToken(request.refreshToken.trim());
+    final tokenHash = _tokenService.hashRefreshToken(
+      request.refreshToken.trim(),
+    );
     final session = await _recordStore.getSessionByTokenHash(tokenHash);
-    if (session == null || session.isRevoked || session.expiresAt.isBefore(DateTime.now().toUtc())) {
+    if (session == null ||
+        session.isRevoked ||
+        session.expiresAt.isBefore(DateTime.now().toUtc())) {
       throw AuthException(
         'Invalid credentials',
         statusCode: 401,
@@ -245,11 +261,9 @@ class BackendAuthService {
         code: 'invalid_credentials',
       );
     }
-    final tokenPair = _tokenService.issueTokens(
-      principal: principal,
-      sessionId: session.sessionId,
-      now: DateTime.now().toUtc(),
-    );
+    final now = DateTime.now().toUtc();
+    await _recordStore.revokeSession(session.userId, session.sessionId, now);
+    final tokenPair = await _issueSessionTokens(principal, now: now);
     return AuthenticatedResponse(
       status: 'authenticated',
       userId: principal.userId,
@@ -266,8 +280,11 @@ class BackendAuthService {
       session.sessionId,
       DateTime.now().toUtc(),
     );
-    if (request?.refreshToken != null && request!.refreshToken!.trim().isNotEmpty) {
-      final tokenHash = _tokenService.hashRefreshToken(request.refreshToken!.trim());
+    if (request?.refreshToken != null &&
+        request!.refreshToken!.trim().isNotEmpty) {
+      final tokenHash = _tokenService.hashRefreshToken(
+        request.refreshToken!.trim(),
+      );
       final storedSession = await _recordStore.getSessionByTokenHash(tokenHash);
       if (storedSession != null) {
         await _recordStore.revokeSession(
@@ -290,10 +307,15 @@ class BackendAuthService {
     final name = request.name.trim();
     final password = request.password;
     if (username.isEmpty || name.isEmpty || password.isEmpty) {
-      throw AuthException('Unable to complete this action', code: 'invalid_request');
+      throw AuthException(
+        'Unable to complete this action',
+        code: 'invalid_request',
+      );
     }
     final normalizedUsername = _normalizeUsername(username);
-    final existing = await _recordStore.getPrincipalByUsername(normalizedUsername);
+    final existing = await _recordStore.getPrincipalByUsername(
+      normalizedUsername,
+    );
     if (existing != null && !existing.isDeleted) {
       throw AuthException(
         'Unable to complete this action',
@@ -334,15 +356,20 @@ class BackendAuthService {
     return _toAdHocSummary(principal);
   }
 
-  Future<AdHocUsersResponse> listAdHocUsers({required AuthenticatedSession session}) async {
-    final adminProjects = await _appStateStore.getAdminProjectIdsForUser(session.userId);
+  Future<AdHocUsersResponse> listAdHocUsers({
+    required AuthenticatedSession session,
+  }) async {
+    final adminProjects = await _appStateStore.getAdminProjectIdsForUser(
+      session.userId,
+    );
     if (adminProjects.isEmpty) {
       return const AdHocUsersResponse(items: <AdHocUserSummary>[]);
     }
     final items = await _recordStore.listAdHocPrincipals();
     final visible = items
         .where(
-          (principal) => principal.assignedProjectIds.any(adminProjects.contains),
+          (principal) =>
+              principal.assignedProjectIds.any(adminProjects.contains),
         )
         .map(_toAdHocSummary)
         .toList(growable: false);
@@ -380,7 +407,10 @@ class BackendAuthService {
   }) async {
     await _confirmAdminPassword(session.userId, request.adminPassword);
     final principal = await _requireAdHocPrincipal(userId);
-    await _requireAdminForProjects(session.userId, principal.assignedProjectIds);
+    await _requireAdminForProjects(
+      session.userId,
+      principal.assignedProjectIds,
+    );
     final hash = await _passwordHashService.hashPassword(request.newPassword);
     await _recordStore.putPrincipal(
       principal.copyWith(
@@ -401,7 +431,10 @@ class BackendAuthService {
   }) async {
     await _confirmAdminPassword(session.userId, request.adminPassword);
     final principal = await _requireAdHocPrincipal(userId);
-    await _requireAdminForProjects(session.userId, principal.assignedProjectIds);
+    await _requireAdminForProjects(
+      session.userId,
+      principal.assignedProjectIds,
+    );
     final deleted = principal.copyWith(
       accountStatus: AuthAccountStatus.deleted,
       deletedAt: DateTime.now().toUtc(),
@@ -467,7 +500,10 @@ class BackendAuthService {
     );
   }
 
-  Future<void> _confirmAdminPassword(String userId, String adminPassword) async {
+  Future<void> _confirmAdminPassword(
+    String userId,
+    String adminPassword,
+  ) async {
     final principal = await _recordStore.getPrincipalByUserId(userId);
     if (principal == null || principal.isDeleted) {
       throw AuthException(
@@ -491,12 +527,17 @@ class BackendAuthService {
     }
   }
 
-  Future<void> _requireAdminForProjects(String userId, List<String> projectIds) async {
+  Future<void> _requireAdminForProjects(
+    String userId,
+    List<String> projectIds,
+  ) async {
     final requested = projectIds.where((id) => id.trim().isNotEmpty).toSet();
     if (requested.isEmpty) {
       return;
     }
-    final adminProjects = await _appStateStore.getAdminProjectIdsForUser(userId);
+    final adminProjects = await _appStateStore.getAdminProjectIdsForUser(
+      userId,
+    );
     if (!requested.every(adminProjects.contains)) {
       throw AuthException(
         'Unable to complete this action',

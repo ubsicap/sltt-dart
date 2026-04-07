@@ -100,6 +100,68 @@ void main() {
       expect(profileState?.toJson()['email'], equals('jane@example.com'));
     });
 
+    test('refresh rotates refresh token and invalidates old token', () async {
+      final registerResponse = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/register',
+        'headers': <String, String>{},
+        'body': jsonEncode({
+          'name': 'Jane Doe',
+          'dateOfBirth': '1990-06-15',
+          'email': 'jane@example.com',
+          'password': 'secret123',
+        }),
+      }, router);
+
+      expect(registerResponse['statusCode'], equals(200));
+
+      final verifyResponse = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/verify-email',
+        'headers': <String, String>{},
+        'body': jsonEncode({
+          'email': 'jane@example.com',
+          'code': emailSender.codes['jane@example.com']!.single,
+        }),
+      }, router);
+
+      expect(verifyResponse['statusCode'], equals(200));
+      final verifyBody =
+          jsonDecode(verifyResponse['body'] as String) as Map<String, dynamic>;
+      final originalRefreshToken = verifyBody['refreshToken'] as String;
+
+      final refreshResponse = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/refresh',
+        'headers': <String, String>{},
+        'body': jsonEncode({'refreshToken': originalRefreshToken}),
+      }, router);
+
+      expect(refreshResponse['statusCode'], equals(200));
+      final refreshBody =
+          jsonDecode(refreshResponse['body'] as String) as Map<String, dynamic>;
+      final rotatedRefreshToken = refreshBody['refreshToken'] as String;
+      expect(rotatedRefreshToken, isNot(equals(originalRefreshToken)));
+
+      final oldRefreshRetry = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/refresh',
+        'headers': <String, String>{},
+        'body': jsonEncode({'refreshToken': originalRefreshToken}),
+      }, router);
+
+      expect(oldRefreshRetry['statusCode'], equals(401));
+
+      final newRefreshRetry = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/refresh',
+        'headers': <String, String>{},
+        'body': jsonEncode({'refreshToken': rotatedRefreshToken}),
+      }, router);
+
+      expect(newRefreshRetry['statusCode'], equals(200));
+    });
+
     test('resend invalidates previous code', () async {
       await authService.register(
         RegisterRequest(
