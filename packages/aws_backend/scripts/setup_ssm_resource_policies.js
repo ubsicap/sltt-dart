@@ -79,6 +79,8 @@ function main() {
   const parametersToGrant = [
     `${ssmPrefix}/dynamodb/table-name`,
     `${ssmPrefix}/dynamodb/table-arn`,
+    `${ssmPrefix}/auth/table-name`,
+    `${ssmPrefix}/auth/table-arn`,
     `${ssmPrefix}/s3/bucket-name`,
     `${ssmPrefix}/s3/bucket-arn`,
     `${ssmPrefix}/cloudfront/domain`,

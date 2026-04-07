@@ -72,6 +72,8 @@ function main() {
   const map = {
     DynamoDbTableName: `${ssmPrefix}/dynamodb/table-name`,
     DynamoDbTableArn: `${ssmPrefix}/dynamodb/table-arn`,
+    AuthTableName: `${ssmPrefix}/auth/table-name`,
+    AuthTableArn: `${ssmPrefix}/auth/table-arn`,
     MediaBucketName: `${ssmPrefix}/s3/bucket-name`,
     MediaBucketArn: `${ssmPrefix}/s3/bucket-arn`,
     MediaCloudFrontDomainName: `${ssmPrefix}/cloudfront/domain`,
