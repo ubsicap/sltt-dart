@@ -59,6 +59,11 @@
                 "DYNAMODB_REGION": "us-east-1",
                 "DYNAMODB_TABLE": "sltt-shared-infra-changes-states",
                 "DYNAMODB_TABLE_ARN": "arn:aws:dynamodb:us-east-1:379334555674:table/sltt-shared-infra-changes-states",
+                "AUTH_TABLE": "sltt-shared-infra-auth",
+                "AUTH_TABLE_ARN": "arn:aws:dynamodb:us-east-1:379334555674:table/sltt-shared-infra-auth",
+                "AUTH_JWT_SECRET": "${input:authJwtSecret}",
+                "AUTH_ACCESS_TOKEN_TTL_MINUTES": "60",
+                "AUTH_REFRESH_TOKEN_TTL_DAYS": "30",
                 "MEDIA_BUCKET": "sltt-shared-infra-media-worm-379334555674",
                 "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
                 "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",
@@ -120,6 +125,12 @@
                 "AWS_REGION": "us-east-1",
                 "DYNAMODB_REGION": "us-east-1",
                 "DYNAMODB_TABLE": "sltt-shared-infra-changes-states",
+                "DYNAMODB_TABLE_ARN": "arn:aws:dynamodb:us-east-1:379334555674:table/sltt-shared-infra-changes-states",
+                "AUTH_TABLE": "sltt-shared-infra-auth",
+                "AUTH_TABLE_ARN": "arn:aws:dynamodb:us-east-1:379334555674:table/sltt-shared-infra-auth",
+                "AUTH_JWT_SECRET": "${input:authJwtSecret}",
+                "AUTH_ACCESS_TOKEN_TTL_MINUTES": "60",
+                "AUTH_REFRESH_TOKEN_TTL_DAYS": "30",
                 "MEDIA_BUCKET": "sltt-shared-infra-media-worm-379334555674",
                 "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
                 "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",
@@ -244,6 +255,11 @@
         {
             "id": "mediaCloudFrontPrivateKey",
             "description": "MEDIA_CLOUDFRONT_PRIVATE_KEY (PEM; you can paste with literal \\n)",
+            "type": "promptString",
+        },
+        {
+            "id": "authJwtSecret",
+            "description": "AUTH_JWT_SECRET for local AWS backend debug sessions",
             "type": "promptString",
         }
     ]

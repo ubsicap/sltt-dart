@@ -16,6 +16,9 @@
 
 - When introducing a new Dynamo entity state model, register it in `packages/aws_backend/lib/src/models/dynamo_entity_state_serialization_registry.dart` so serialization/deserialization works across entity types.
 
+- When adding or changing AWS backend environment variables used by local debug runs, keep `packages/aws_backend/bin/debug_server.dart` and `.vscode/launch.json` in sync with the same variable names, defaults, and operator-facing hints.
+  - This applies especially to new auth settings alongside existing storage/media settings.
+
 - Do not automatically add code just so deserialization works; always confirm with the repository maintainer before adding such code.
    - such code may mask data that is required to be added upstream
    - as an example of what NOT to auto add:
