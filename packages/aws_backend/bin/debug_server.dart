@@ -136,11 +136,18 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('✅ DynamoDB connection established');
 
     // Create server instance
+    final authService = BackendAuthServiceFactory.createFromEnvironment(
+      credentials: credentials,
+      appStorage: storage,
+      environment: Platform.environment,
+    );
+    await authService?.initialize();
     final serverInstance = AwsRestApiServer(
       serverName: 'Debug AWS Backend',
       storage: storage,
       mediaStorage: mediaStorage,
       healthEnvironmentOverrides: gitHealthEnvironment,
+      authService: authService,
     );
 
     print('🚀 Starting debug server...');
@@ -165,6 +172,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     ProcessSignal.sigint.watch().listen((signal) async {
       print('\n🛑 Shutting down debug server...');
       await serverInstance.stop();
+      await authService?.close();
       print('✅ Debug server stopped');
       exit(0);
     });

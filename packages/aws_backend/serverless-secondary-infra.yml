@@ -16,6 +16,8 @@ custom:
   # Shared infrastructure values from SSM (can be cross-account via SSM resource policy)
   dynamoDbTable: ${ssm:${self:custom.sharedInfraArnPath}/dynamodb/table-name}
   dynamoDbTableArn: ${ssm:${self:custom.sharedInfraArnPath}/dynamodb/table-arn}
+  authTable: ${ssm:${self:custom.sharedInfraArnPath}/auth/table-name}
+  authTableArn: ${ssm:${self:custom.sharedInfraArnPath}/auth/table-arn}
   mediaBucket: ${ssm:${self:custom.sharedInfraArnPath}/s3/bucket-name}
   mediaBucketArn: ${ssm:${self:custom.sharedInfraArnPath}/s3/bucket-arn}
   mediaCloudFrontDomain: ${ssm:${self:custom.sharedInfraArnPath}/cloudfront/domain}
@@ -40,6 +42,11 @@ provider:
     GIT_DIRTY_FLAG: ${env:GIT_DIRTY_FLAG, ''}
     DYNAMODB_TABLE: ${self:custom.dynamoDbTable}
     DYNAMODB_TABLE_ARN: ${self:custom.dynamoDbTableArn}
+    AUTH_TABLE: ${self:custom.authTable}
+    AUTH_TABLE_ARN: ${self:custom.authTableArn}
+    AUTH_JWT_SECRET: ${ssm:/sltt/auth/${self:provider.stage}/jwt-secret, ''}
+    AUTH_ACCESS_TOKEN_TTL_MINUTES: ${ssm:/sltt/auth/${self:provider.stage}/access-token-ttl-minutes, '60'}
+    AUTH_REFRESH_TOKEN_TTL_DAYS: ${ssm:/sltt/auth/${self:provider.stage}/refresh-token-ttl-days, '30'}
     DYNAMODB_REGION: ${self:custom.sharedInfraRegion}
     SHARED_INFRA_ASSUME_ROLE_ARN: ${ssm:${self:custom.sharedInfraArnPath}/cross-account-role-arn}
     ASSUME_ROLE_SESSION_NAME: sltt-secondary-infra-${self:provider.stage}
@@ -64,6 +71,16 @@ provider:
       Resource:
         - ${self:custom.dynamoDbTableArn}
         - ${self:custom.dynamoDbTableArn}/index/*
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:Query
+        - dynamodb:Scan
+      Resource:
+        - ${self:custom.authTableArn}
     - Effect: Allow
       Action:
         - dynamodb:ExportTableToPointInTime
@@ -98,6 +115,7 @@ provider:
         - ssm:GetParameters
       Resource:
         - ${self:custom.sharedInfraArnPath}/*
+        - arn:aws:ssm:${self:provider.region}:*:parameter/sltt/auth/${self:provider.stage}/*
     - Effect: Allow
       Action:
         - sts:AssumeRole

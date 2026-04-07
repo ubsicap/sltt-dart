@@ -5,6 +5,8 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 
+import '../auth/auth_models.dart';
+import '../auth/auth_service.dart';
 import '../storage/dynamodb_storage_service.dart';
 import '../storage/media/aws_media_storage.dart';
 
@@ -18,12 +20,14 @@ class AwsRestApiServer extends BaseRestApiServer {
   static const Set<String> _activeExportStatuses = {'IN_PROGRESS'};
 
   final Map<String, String> _healthEnvironment;
+  final BackendAuthService? authService;
 
   AwsRestApiServer({
     required super.serverName,
     required DynamoDBStorageService super.storage,
     BaseMediaStorage? mediaStorage,
     Map<String, String>? healthEnvironmentOverrides,
+    this.authService,
   }) : _healthEnvironment = {
          ...Platform.environment,
          ...?healthEnvironmentOverrides,
@@ -38,6 +42,178 @@ class AwsRestApiServer extends BaseRestApiServer {
 
   @override
   List<Map<String, dynamic>> get customApiDocEndpoints => [
+    {
+      'method': 'POST',
+      'path': '/api/auth/register',
+      'description':
+          'Start self-registration for standard users and send a 6-digit verification code valid for 10 minutes. Response remains neutral when the email already exists.',
+      'requestBody': {
+        'type': 'object',
+        'required': ['name', 'dateOfBirth', 'email', 'password'],
+        'properties': {
+          'name': {'type': 'string'},
+          'dateOfBirth': {'type': 'string', 'format': 'yyyy-MM-dd'},
+          'email': {'type': 'string'},
+          'password': {'type': 'string'},
+        },
+      },
+      'response': {
+        'type': 'object',
+        'properties': {
+          'status': {'type': 'string', 'example': 'pending_verification'},
+        },
+      },
+    },
+    {
+      'method': 'POST',
+      'path': '/api/auth/verify-email',
+      'description':
+          'Verify the 6-digit email code and issue access and refresh tokens.',
+      'requestBody': {
+        'type': 'object',
+        'required': ['email', 'code'],
+        'properties': {
+          'email': {'type': 'string'},
+          'code': {'type': 'string'},
+        },
+      },
+      'response': {
+        'type': 'object',
+        'properties': {
+          'status': {'type': 'string', 'example': 'verified'},
+          'userId': {'type': 'string'},
+          'accessToken': {'type': 'string'},
+          'refreshToken': {'type': 'string'},
+          'expiresAt': {'type': 'string', 'format': 'ISO8601'},
+        },
+      },
+    },
+    {
+      'method': 'POST',
+      'path': '/api/auth/resend-verification-code',
+      'description':
+          'Resend the verification code for an unverified email registration. Response remains neutral.',
+      'requestBody': {
+        'type': 'object',
+        'required': ['email'],
+        'properties': {
+          'email': {'type': 'string'},
+        },
+      },
+      'response': {
+        'type': 'object',
+        'properties': {
+          'status': {'type': 'string', 'example': 'sent'},
+        },
+      },
+    },
+    {
+      'method': 'POST',
+      'path': '/api/auth/login',
+      'description':
+          'Authenticate with email or username plus password and issue access and refresh tokens.',
+      'requestBody': {
+        'type': 'object',
+        'required': ['identifier', 'password'],
+        'properties': {
+          'identifier': {'type': 'string'},
+          'password': {'type': 'string'},
+        },
+      },
+      'response': {
+        'type': 'object',
+        'properties': {
+          'status': {'type': 'string', 'example': 'authenticated'},
+          'userId': {'type': 'string'},
+          'accessToken': {'type': 'string'},
+          'refreshToken': {'type': 'string'},
+          'expiresAt': {'type': 'string', 'format': 'ISO8601'},
+        },
+      },
+    },
+    {
+      'method': 'POST',
+      'path': '/api/auth/refresh',
+      'description': 'Exchange a refresh token for a new access token.',
+      'requestBody': {
+        'type': 'object',
+        'required': ['refreshToken'],
+        'properties': {
+          'refreshToken': {'type': 'string'},
+        },
+      },
+      'response': {
+        'type': 'object',
+        'properties': {
+          'status': {'type': 'string', 'example': 'authenticated'},
+          'accessToken': {'type': 'string'},
+          'refreshToken': {'type': 'string'},
+          'expiresAt': {'type': 'string', 'format': 'ISO8601'},
+        },
+      },
+    },
+    {
+      'method': 'POST',
+      'path': '/api/auth/logout',
+      'description': 'Revoke the current authenticated session.',
+      'requestBody': {
+        'type': 'object',
+        'properties': {
+          'refreshToken': {'type': 'string'},
+        },
+      },
+      'response': {
+        'type': 'object',
+        'properties': {
+          'status': {'type': 'string', 'example': 'logged_out'},
+        },
+      },
+    },
+    {
+      'method': 'GET',
+      'path': '/api/admin/adhoc-users',
+      'description':
+          'List AdHoc users visible to the authenticated administrator across the projects they manage.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+    },
+    {
+      'method': 'POST',
+      'path': '/api/admin/adhoc-users',
+      'description':
+          'Create an AdHoc user with username/password credentials and assign managed projects.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+    },
+    {
+      'method': 'PUT',
+      'path': '/api/admin/adhoc-users/{userId}/projects',
+      'description':
+          'Replace the AdHoc user project assignments. Caller must be an admin of all affected projects.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+    },
+    {
+      'method': 'POST',
+      'path': '/api/admin/adhoc-users/{userId}/reset-password',
+      'description':
+          'Reset an AdHoc user password after administrator password confirmation.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+    },
+    {
+      'method': 'DELETE',
+      'path': '/api/admin/adhoc-users/{userId}',
+      'description':
+          'Delete an AdHoc user and revoke all project access after administrator password confirmation.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+    },
     {
       'method': 'POST',
       'path': '/api/admin/storage/export/create',
@@ -201,10 +377,156 @@ class AwsRestApiServer extends BaseRestApiServer {
 
   @override
   void addCustomRoutes(Router router) {
+    router.post('/api/auth/register', _handleAuthRegister);
+    router.post('/api/auth/verify-email', _handleAuthVerifyEmail);
+    router.post(
+      '/api/auth/resend-verification-code',
+      _handleAuthResendVerificationCode,
+    );
+    router.post('/api/auth/login', _handleAuthLogin);
+    router.post('/api/auth/refresh', _handleAuthRefresh);
+    router.post('/api/auth/logout', _handleAuthLogout);
+    router.get('/api/admin/adhoc-users', _handleAdminListAdHocUsers);
+    router.post('/api/admin/adhoc-users', _handleAdminCreateAdHocUser);
+    router.put(
+      '/api/admin/adhoc-users/<userId>/projects',
+      _handleAdminUpdateAdHocProjects,
+    );
+    router.post(
+      '/api/admin/adhoc-users/<userId>/reset-password',
+      _handleAdminResetAdHocPassword,
+    );
+    router.delete(
+      '/api/admin/adhoc-users/<userId>',
+      _handleAdminDeleteAdHocUser,
+    );
     // Admin export endpoints: start export, list exports, and list exported files
     router.post('/api/admin/storage/export/create', _handleExportCreate);
     router.get('/api/admin/storage/export/list', _handleExportList);
     router.get('/api/admin/storage/export/list-files', _handleExportListFiles);
+  }
+
+  Future<Response> _handleAuthRegister(Request request) async {
+    return _handleAuthRequest(() async {
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().register(
+        RegisterRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAuthVerifyEmail(Request request) async {
+    return _handleAuthRequest(() async {
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().verifyEmail(
+        VerifyEmailRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAuthResendVerificationCode(Request request) async {
+    return _handleAuthRequest(() async {
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().resendVerificationCode(
+        ResendVerificationCodeRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAuthLogin(Request request) async {
+    return _handleAuthRequest(() async {
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().login(
+        LoginRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAuthRefresh(Request request) async {
+    return _handleAuthRequest(() async {
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().refresh(
+        RefreshRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAuthLogout(Request request) async {
+    return _handleAuthRequest(() async {
+      final session = _requireAuthenticatedSession(request);
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().logout(
+        session: session,
+        request: LogoutRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAdminListAdHocUsers(Request request) async {
+    return _handleAuthRequest(() async {
+      final session = _requireAuthenticatedSession(request);
+      final result = await _requireAuthService().listAdHocUsers(
+        session: session,
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAdminCreateAdHocUser(Request request) async {
+    return _handleAuthRequest(() async {
+      final session = _requireAuthenticatedSession(request);
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().createAdHocUser(
+        session: session,
+        request: CreateAdHocUserRequest.fromJson(body),
+      );
+      return _jsonResponse(201, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAdminUpdateAdHocProjects(Request request) async {
+    return _handleAuthRequest(() async {
+      final session = _requireAuthenticatedSession(request);
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().updateAdHocProjects(
+        session: session,
+        userId: request.params['userId'] ?? '',
+        request: UpdateAdHocProjectsRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAdminResetAdHocPassword(Request request) async {
+    return _handleAuthRequest(() async {
+      final session = _requireAuthenticatedSession(request);
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().resetAdHocPassword(
+        session: session,
+        userId: request.params['userId'] ?? '',
+        request: ResetAdHocPasswordRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAdminDeleteAdHocUser(Request request) async {
+    return _handleAuthRequest(() async {
+      final session = _requireAuthenticatedSession(request);
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().deleteAdHocUser(
+        session: session,
+        userId: request.params['userId'] ?? '',
+        request: DeleteAdHocUserRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result.toJson());
+    });
   }
 
   Future<Response> _handleExportCreate(Request request) async {
@@ -498,6 +820,68 @@ class AwsRestApiServer extends BaseRestApiServer {
       throw StateError('$key environment variable is required');
     }
     return value;
+  }
+
+  BackendAuthService _requireAuthService() {
+    if (authService == null) {
+      throw AuthException(
+        'Authentication service is not configured',
+        statusCode: 503,
+        code: 'auth_unavailable',
+      );
+    }
+    return authService!;
+  }
+
+  AuthenticatedSession _requireAuthenticatedSession(Request request) {
+    final header = request.headers['authorization'];
+    if (header == null || header.trim().isEmpty) {
+      throw AuthException(
+        'Invalid credentials',
+        statusCode: 401,
+        code: 'invalid_credentials',
+      );
+    }
+    return _requireAuthService().authenticateBearerToken(header);
+  }
+
+  Future<Map<String, dynamic>> _readBodyMap(Request request) async {
+    final body = await request.readAsString();
+    if (body.trim().isEmpty) {
+      return <String, dynamic>{};
+    }
+    final decoded = jsonDecode(body);
+    if (decoded is! Map<String, dynamic>) {
+      throw AuthException(
+        'Unable to complete this action',
+        code: 'invalid_request',
+      );
+    }
+    return decoded;
+  }
+
+  Response _jsonResponse(int statusCode, Map<String, dynamic> payload) {
+    return Response(
+      statusCode,
+      body: jsonEncode(payload),
+      headers: {'Content-Type': 'application/json'},
+    );
+  }
+
+  Future<Response> _handleAuthRequest(
+    Future<Response> Function() action,
+  ) async {
+    try {
+      return await action();
+    } on AuthException catch (e) {
+      return _jsonResponse(e.statusCode, e.toJson());
+    } catch (e, st) {
+      SlttLogger.logger.severe('Auth request failed: $e\n$st');
+      return _jsonResponse(500, const {
+        'error': 'Unable to complete this action',
+        'code': 'internal_error',
+      });
+    }
   }
 
   /// Handle AWS API Gateway event (for Lambda deployment)

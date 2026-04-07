@@ -31,6 +31,8 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
   }
 
   final String _storageId = 'test-storage';
+  final Map<String, BaseEntityState> _entityStates = {};
+  final Map<String, BaseChangeLogEntry> _changes = {};
   Map<String, dynamic> startExportResponse = const {
     'ExportDescription': <String, dynamic>{'ExportStatus': 'IN_PROGRESS'},
   };
@@ -56,7 +58,13 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
 
   @override
   Future<List<String>> getAllDomainIds({required String domainType}) async {
-    return ['__test1', 'project1'];
+    final ids = <String>{'__test1', 'project1'};
+    for (final state in _entityStates.values) {
+      if (state.domainType == domainType) {
+        ids.add(state.change_domainId);
+      }
+    }
+    return ids.toList(growable: false);
   }
 
   @override
@@ -120,8 +128,7 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     required String entityType,
     required String entityId,
   }) async {
-    // For unit tests we simulate that no prior state exists by default.
-    return null;
+    return _entityStates['$domainType|$domainId|$entityType|$entityId'];
   }
 
   @override
@@ -235,6 +242,8 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
 
     // Construct a DynamoChangeLogEntry (uses registered serializers)
     final newChange = DynamoChangeLogEntry.fromJson(mergedChangeJson);
+    _changes['${newChange.domainType}|${newChange.domainId}|${newChange.cid}'] =
+        newChange;
 
     final now = DateTime.now().toUtc();
     // Build new entity state JSON by merging prior state (if any) with updates.
@@ -286,6 +295,8 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
         mergedState['data_parentProp_changeBy_'] ?? newChange.changeBy;
 
     final newState = DynamoEntityState.fromJson(mergedState);
+    _entityStates['$domainType|${newChange.domainId}|${newChange.entityType}|${newState.entityId}'] =
+        newState;
 
     // Validate core storage responsibilities (no mutation)
     ChangeProcessingService.checkCoreChangeStorageResponsibilities(
@@ -297,6 +308,24 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     );
 
     return (newChangeLogEntry: newChange, newEntityState: newState);
+  }
+
+  @override
+  Future<TEntityState> testStoreState<TEntityState extends BaseEntityState>({
+    required TEntityState entityState,
+  }) async {
+    _entityStates['${entityState.domainType}|${entityState.change_domainId}|${entityState.entityType}|${entityState.entityId}'] =
+        entityState;
+    return entityState;
+  }
+
+  @override
+  Future<BaseChangeLogEntry> testStoreChangeFromJson({
+    required Map<String, dynamic> changeJson,
+  }) async {
+    final change = DynamoChangeLogEntry.fromJson(changeJson);
+    _changes['${change.domainType}|${change.domainId}|${change.cid}'] = change;
+    return change;
   }
 
   @override

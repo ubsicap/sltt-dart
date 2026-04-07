@@ -13,21 +13,29 @@ import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
   DynamoDBStorageService? storage;
   AwsMediaStorage? mediaStorage;
+  BackendAuthService? authService;
 
   try {
     // Get credentials first - may throw AwsCredentialsException
     final credentials = await AwsCredentialsService().getOrCreateCredentials();
     storage = StorageFactory.createStorage(credentials: credentials);
     mediaStorage = _createMediaStorageFromEnv(credentials: credentials);
+    authService = BackendAuthServiceFactory.createFromEnvironment(
+      credentials: credentials,
+      appStorage: storage,
+      environment: Platform.environment,
+    );
 
     await storage.initialize();
     await mediaStorage.initialize();
+    await authService?.initialize();
 
     // Create AwsRestApiServer instance
     final server = AwsRestApiServer(
       serverName: 'AWS Lambda API',
       storage: storage,
       mediaStorage: mediaStorage,
+      authService: authService,
     );
 
     // Get router and process the API Gateway event
@@ -58,6 +66,7 @@ Future<Map<String, dynamic>> handler(Map<String, dynamic> event) async {
       }),
     };
   } finally {
+    await authService?.close();
     await mediaStorage?.close();
     await storage?.close();
   }
