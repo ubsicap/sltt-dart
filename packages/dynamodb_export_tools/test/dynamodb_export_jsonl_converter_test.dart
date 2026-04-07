@@ -88,7 +88,7 @@ void main() {
         isTrue,
       );
       expect(
-        File(p.join(outputDir.path, 'change_log.jsonl')).existsSync(),
+        File(p.join(outputDir.path, 'change_log_entries.jsonl')).existsSync(),
         isTrue,
       );
       expect(

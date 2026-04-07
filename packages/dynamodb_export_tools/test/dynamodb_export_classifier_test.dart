@@ -5,7 +5,7 @@ void main() {
   const classifier = DynamoExportClassifier();
 
   group('DynamoExportClassifier', () {
-    test('routes change log items to change_log table', () {
+    test('routes change log items to change_log_entries table', () {
       final result = classifier.classifyCompositeKeys(
         pk: r'$sltt#change#domainType_project#domainId_abc123#entityType_portion#entityId_entity1',
         sk: r'$changes#change#cid_1234567890',

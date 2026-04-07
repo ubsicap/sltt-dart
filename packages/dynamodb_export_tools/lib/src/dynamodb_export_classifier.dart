@@ -43,7 +43,7 @@ class DynamoExportItemClassification {
 
 class DynamoExportClassifier {
   static const String rawItemsTableName = 'raw_items';
-  static const String changeLogTableName = 'change_log';
+  static const String changeLogTableName = 'change_log_entries';
 
   const DynamoExportClassifier();
 
