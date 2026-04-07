@@ -59,121 +59,213 @@ class BackendAuthService {
   }
 
   Future<AuthStatusResponse> register(RegisterRequest request) async {
+    final total = _startTiming();
     final name = request.name.trim();
     final dateOfBirth = request.dateOfBirth.trim();
     final email = request.email.trim();
     final password = request.password;
 
-    if (name.isEmpty ||
-        dateOfBirth.isEmpty ||
-        email.isEmpty ||
-        password.isEmpty) {
-      throw AuthException(
-        'Unable to complete this action',
-        code: 'invalid_request',
+    try {
+      if (name.isEmpty ||
+          dateOfBirth.isEmpty ||
+          email.isEmpty ||
+          password.isEmpty) {
+        throw AuthException(
+          'Unable to complete this action',
+          code: 'invalid_request',
+        );
+      }
+      final normalizedEmail = _normalizeEmail(email);
+
+      var stage = _startTiming();
+      final existing = await _recordStore.getPrincipalByEmail(normalizedEmail);
+      _logTiming(
+        'register.lookupPrincipal',
+        stage,
+        extra: {'email': normalizedEmail, 'found': existing != null},
+      );
+
+      if (existing != null && existing.emailVerified) {
+        return const AuthStatusResponse(status: 'pending_verification');
+      }
+
+      stage = _startTiming();
+      final passwordHash = await _passwordHashService.hashPassword(password);
+      _logTiming(
+        'register.hashPassword',
+        stage,
+        extra: {'email': normalizedEmail},
+      );
+
+      final now = DateTime.now().toUtc();
+      final principal =
+          (existing ??
+                  AuthPrincipal(
+                    userId: _uuid.v4(),
+                    identityKind: AuthIdentityKind.emailPassword,
+                    email: email,
+                    normalizedEmail: normalizedEmail,
+                    passwordHash: passwordHash.hash,
+                    passwordSalt: passwordHash.salt,
+                    passwordIterations: passwordHash.iterations,
+                    accountStatus: AuthAccountStatus.pendingVerification,
+                    emailVerified: false,
+                    isAdHoc: false,
+                    displayName: name,
+                    dateOfBirth: dateOfBirth,
+                    assignedProjectIds: const <String>[],
+                    verificationVersion: 0,
+                    createdAt: now,
+                    updatedAt: now,
+                  ))
+              .copyWith(
+                email: email,
+                normalizedEmail: normalizedEmail,
+                displayName: name,
+                dateOfBirth: dateOfBirth,
+                passwordHash: passwordHash.hash,
+                passwordSalt: passwordHash.salt,
+                passwordIterations: passwordHash.iterations,
+                accountStatus: AuthAccountStatus.pendingVerification,
+                emailVerified: false,
+                updatedAt: now,
+              );
+
+      stage = _startTiming();
+      await _recordStore.putPrincipal(principal);
+      _logTiming(
+        'register.putPrincipal',
+        stage,
+        extra: {'userId': principal.userId},
+      );
+
+      stage = _startTiming();
+      await _recordStore.putEmailLookup(normalizedEmail, principal.userId);
+      _logTiming(
+        'register.putEmailLookup',
+        stage,
+        extra: {'email': normalizedEmail},
+      );
+
+      stage = _startTiming();
+      await _issueVerificationChallenge(
+        principal,
+        resendCount: existing == null ? 0 : 1,
+      );
+      _logTiming(
+        'register.issueVerificationChallenge',
+        stage,
+        extra: {'email': normalizedEmail},
+      );
+      return const AuthStatusResponse(status: 'pending_verification');
+    } finally {
+      _logTiming(
+        'register.total',
+        total,
+        extra: {'email': email.trim().toLowerCase()},
       );
     }
-    final normalizedEmail = _normalizeEmail(email);
-    final existing = await _recordStore.getPrincipalByEmail(normalizedEmail);
-    if (existing != null && existing.emailVerified) {
-      return const AuthStatusResponse(status: 'pending_verification');
-    }
-
-    final passwordHash = await _passwordHashService.hashPassword(password);
-    final now = DateTime.now().toUtc();
-    final principal =
-        (existing ??
-                AuthPrincipal(
-                  userId: _uuid.v4(),
-                  identityKind: AuthIdentityKind.emailPassword,
-                  email: email,
-                  normalizedEmail: normalizedEmail,
-                  passwordHash: passwordHash.hash,
-                  passwordSalt: passwordHash.salt,
-                  passwordIterations: passwordHash.iterations,
-                  accountStatus: AuthAccountStatus.pendingVerification,
-                  emailVerified: false,
-                  isAdHoc: false,
-                  displayName: name,
-                  dateOfBirth: dateOfBirth,
-                  assignedProjectIds: const <String>[],
-                  verificationVersion: 0,
-                  createdAt: now,
-                  updatedAt: now,
-                ))
-            .copyWith(
-              email: email,
-              normalizedEmail: normalizedEmail,
-              displayName: name,
-              dateOfBirth: dateOfBirth,
-              passwordHash: passwordHash.hash,
-              passwordSalt: passwordHash.salt,
-              passwordIterations: passwordHash.iterations,
-              accountStatus: AuthAccountStatus.pendingVerification,
-              emailVerified: false,
-              updatedAt: now,
-            );
-
-    await _recordStore.putPrincipal(principal);
-    await _recordStore.putEmailLookup(normalizedEmail, principal.userId);
-    await _issueVerificationChallenge(
-      principal,
-      resendCount: existing == null ? 0 : 1,
-    );
-    return const AuthStatusResponse(status: 'pending_verification');
   }
 
   Future<AuthenticatedResponse> verifyEmail(VerifyEmailRequest request) async {
+    final total = _startTiming();
     final normalizedEmail = _normalizeEmail(request.email);
-    final principal = await _recordStore.getPrincipalByEmail(normalizedEmail);
-    if (principal == null || principal.isDeleted) {
-      throw AuthException(
-        'Invalid or expired code',
-        statusCode: 400,
-        code: 'invalid_or_expired_code',
+    try {
+      var stage = _startTiming();
+      final principal = await _recordStore.getPrincipalByEmail(normalizedEmail);
+      _logTiming(
+        'verify.lookupPrincipal',
+        stage,
+        extra: {'email': normalizedEmail, 'found': principal != null},
       );
-    }
+      if (principal == null || principal.isDeleted) {
+        throw AuthException(
+          'Invalid or expired code',
+          statusCode: 400,
+          code: 'invalid_or_expired_code',
+        );
+      }
 
-    final challenge = await _recordStore.getEmailChallenge(principal.userId);
-    if (challenge == null ||
-        challenge.expiresAt.isBefore(DateTime.now().toUtc())) {
-      throw AuthException(
-        'Invalid or expired code',
-        statusCode: 400,
-        code: 'invalid_or_expired_code',
+      stage = _startTiming();
+      final challenge = await _recordStore.getEmailChallenge(principal.userId);
+      _logTiming(
+        'verify.getChallenge',
+        stage,
+        extra: {'userId': principal.userId},
       );
-    }
-    final isCodeValid = await _passwordHashService.verifyPassword(
-      password: request.code.trim(),
-      expectedHash: challenge.codeHash,
-      salt: challenge.codeSalt,
-      iterations: challenge.hashIterations,
-    );
-    if (!isCodeValid) {
-      throw AuthException(
-        'Invalid or expired code',
-        statusCode: 400,
-        code: 'invalid_or_expired_code',
-      );
-    }
+      if (challenge == null ||
+          challenge.expiresAt.isBefore(DateTime.now().toUtc())) {
+        throw AuthException(
+          'Invalid or expired code',
+          statusCode: 400,
+          code: 'invalid_or_expired_code',
+        );
+      }
 
-    final now = DateTime.now().toUtc();
-    final verifiedPrincipal = principal.copyWith(
-      accountStatus: AuthAccountStatus.active,
-      emailVerified: true,
-      verifiedAt: now,
-      updatedAt: now,
-      verificationVersion: challenge.challengeVersion,
-    );
-    await _recordStore.putPrincipal(verifiedPrincipal);
-    await _recordStore.deleteEmailChallenge(verifiedPrincipal.userId);
-    await _appStateStore.upsertVerifiedUser(verifiedPrincipal);
-    final tokens = await _issueSessionTokens(verifiedPrincipal, now: now);
-    return AuthenticatedResponse(
-      status: 'verified',
-      userId: verifiedPrincipal.userId,
-      tokens: tokens,
-    );
+      stage = _startTiming();
+      final isCodeValid = await _passwordHashService.verifyPassword(
+        password: request.code.trim(),
+        expectedHash: challenge.codeHash,
+        salt: challenge.codeSalt,
+        iterations: challenge.hashIterations,
+      );
+      _logTiming('verify.checkCode', stage, extra: {'email': normalizedEmail});
+      if (!isCodeValid) {
+        throw AuthException(
+          'Invalid or expired code',
+          statusCode: 400,
+          code: 'invalid_or_expired_code',
+        );
+      }
+
+      final now = DateTime.now().toUtc();
+      final verifiedPrincipal = principal.copyWith(
+        accountStatus: AuthAccountStatus.active,
+        emailVerified: true,
+        verifiedAt: now,
+        updatedAt: now,
+        verificationVersion: challenge.challengeVersion,
+      );
+
+      stage = _startTiming();
+      await _recordStore.putPrincipal(verifiedPrincipal);
+      _logTiming(
+        'verify.putPrincipal',
+        stage,
+        extra: {'userId': verifiedPrincipal.userId},
+      );
+
+      stage = _startTiming();
+      await _recordStore.deleteEmailChallenge(verifiedPrincipal.userId);
+      _logTiming(
+        'verify.deleteChallenge',
+        stage,
+        extra: {'userId': verifiedPrincipal.userId},
+      );
+
+      stage = _startTiming();
+      await _appStateStore.upsertVerifiedUser(verifiedPrincipal);
+      _logTiming(
+        'verify.upsertVerifiedUser',
+        stage,
+        extra: {'userId': verifiedPrincipal.userId},
+      );
+
+      stage = _startTiming();
+      final tokens = await _issueSessionTokens(verifiedPrincipal, now: now);
+      _logTiming(
+        'verify.issueSessionTokens',
+        stage,
+        extra: {'userId': verifiedPrincipal.userId},
+      );
+      return AuthenticatedResponse(
+        status: 'verified',
+        userId: verifiedPrincipal.userId,
+        tokens: tokens,
+      );
+    } finally {
+      _logTiming('verify.total', total, extra: {'email': normalizedEmail});
+    }
   }
 
   Future<AuthStatusResponse> resendVerificationCode(
@@ -194,45 +286,71 @@ class BackendAuthService {
   }
 
   Future<AuthenticatedResponse> login(LoginRequest request) async {
+    final total = _startTiming();
     final identifier = request.identifier.trim();
     final password = request.password;
-    if (identifier.isEmpty || password.isEmpty) {
-      throw AuthException(
-        'Invalid credentials',
-        statusCode: 401,
-        code: 'invalid_credentials',
+    try {
+      if (identifier.isEmpty || password.isEmpty) {
+        throw AuthException(
+          'Invalid credentials',
+          statusCode: 401,
+          code: 'invalid_credentials',
+        );
+      }
+      var stage = _startTiming();
+      final principal = await _findPrincipalByIdentifier(identifier);
+      _logTiming(
+        'login.lookupPrincipal',
+        stage,
+        extra: {'identifier': identifier, 'found': principal != null},
       );
-    }
-    final principal = await _findPrincipalByIdentifier(identifier);
-    if (principal == null || principal.isDeleted || !principal.isActive) {
-      throw AuthException(
-        'Invalid credentials',
-        statusCode: 401,
-        code: 'invalid_credentials',
+      if (principal == null || principal.isDeleted || !principal.isActive) {
+        throw AuthException(
+          'Invalid credentials',
+          statusCode: 401,
+          code: 'invalid_credentials',
+        );
+      }
+
+      stage = _startTiming();
+      final isPasswordValid = await _passwordHashService.verifyPassword(
+        password: password,
+        expectedHash: principal.passwordHash,
+        salt: principal.passwordSalt,
+        iterations: principal.passwordIterations,
       );
-    }
-    final isPasswordValid = await _passwordHashService.verifyPassword(
-      password: password,
-      expectedHash: principal.passwordHash,
-      salt: principal.passwordSalt,
-      iterations: principal.passwordIterations,
-    );
-    if (!isPasswordValid) {
-      throw AuthException(
-        'Invalid credentials',
-        statusCode: 401,
-        code: 'invalid_credentials',
+      _logTiming(
+        'login.checkPassword',
+        stage,
+        extra: {'userId': principal.userId},
       );
+      if (!isPasswordValid) {
+        throw AuthException(
+          'Invalid credentials',
+          statusCode: 401,
+          code: 'invalid_credentials',
+        );
+      }
+
+      stage = _startTiming();
+      final tokens = await _issueSessionTokens(principal);
+      _logTiming(
+        'login.issueSessionTokens',
+        stage,
+        extra: {'userId': principal.userId},
+      );
+      return AuthenticatedResponse(
+        status: 'authenticated',
+        userId: principal.userId,
+        tokens: tokens,
+      );
+    } finally {
+      _logTiming('login.total', total, extra: {'identifier': identifier});
     }
-    final tokens = await _issueSessionTokens(principal);
-    return AuthenticatedResponse(
-      status: 'authenticated',
-      userId: principal.userId,
-      tokens: tokens,
-    );
   }
 
   Future<AuthenticatedResponse> refresh(RefreshRequest request) async {
+    final total = _startTiming();
     if (request.refreshToken.trim().isEmpty) {
       throw AuthException(
         'Invalid credentials',
@@ -240,35 +358,66 @@ class BackendAuthService {
         code: 'invalid_credentials',
       );
     }
-    final tokenHash = _tokenService.hashRefreshToken(
-      request.refreshToken.trim(),
-    );
-    final session = await _recordStore.getSessionByTokenHash(tokenHash);
-    if (session == null ||
-        session.isRevoked ||
-        session.expiresAt.isBefore(DateTime.now().toUtc())) {
-      throw AuthException(
-        'Invalid credentials',
-        statusCode: 401,
-        code: 'invalid_credentials',
+    try {
+      final tokenHash = _tokenService.hashRefreshToken(
+        request.refreshToken.trim(),
       );
-    }
-    final principal = await _recordStore.getPrincipalByUserId(session.userId);
-    if (principal == null || principal.isDeleted || !principal.isActive) {
-      throw AuthException(
-        'Invalid credentials',
-        statusCode: 401,
-        code: 'invalid_credentials',
+      var stage = _startTiming();
+      final session = await _recordStore.getSessionByTokenHash(tokenHash);
+      _logTiming(
+        'refresh.getSessionByTokenHash',
+        stage,
+        extra: {'found': session != null},
       );
+      if (session == null ||
+          session.isRevoked ||
+          session.expiresAt.isBefore(DateTime.now().toUtc())) {
+        throw AuthException(
+          'Invalid credentials',
+          statusCode: 401,
+          code: 'invalid_credentials',
+        );
+      }
+
+      stage = _startTiming();
+      final principal = await _recordStore.getPrincipalByUserId(session.userId);
+      _logTiming(
+        'refresh.getPrincipal',
+        stage,
+        extra: {'userId': session.userId},
+      );
+      if (principal == null || principal.isDeleted || !principal.isActive) {
+        throw AuthException(
+          'Invalid credentials',
+          statusCode: 401,
+          code: 'invalid_credentials',
+        );
+      }
+      final now = DateTime.now().toUtc();
+
+      stage = _startTiming();
+      await _recordStore.revokeSession(session.userId, session.sessionId, now);
+      _logTiming(
+        'refresh.revokeSession',
+        stage,
+        extra: {'sessionId': session.sessionId},
+      );
+
+      stage = _startTiming();
+      final tokenPair = await _issueSessionTokens(principal, now: now);
+      _logTiming(
+        'refresh.issueSessionTokens',
+        stage,
+        extra: {'userId': principal.userId},
+      );
+      return AuthenticatedResponse(
+        status: 'authenticated',
+        userId: principal.userId,
+        tokens: tokenPair,
+      );
+    } finally {
+      _logTiming('refresh.total', total);
     }
-    final now = DateTime.now().toUtc();
-    await _recordStore.revokeSession(session.userId, session.sessionId, now);
-    final tokenPair = await _issueSessionTokens(principal, now: now);
-    return AuthenticatedResponse(
-      status: 'authenticated',
-      userId: principal.userId,
-      tokens: tokenPair,
-    );
   }
 
   Future<AuthStatusResponse> logout({
@@ -457,47 +606,90 @@ class BackendAuthService {
     AuthPrincipal principal, {
     DateTime? now,
   }) async {
+    final total = _startTiming();
     final issuedAt = (now ?? DateTime.now()).toUtc();
     final sessionId = _uuid.v4();
-    final tokenPair = _tokenService.issueTokens(
-      principal: principal,
-      sessionId: sessionId,
-      now: issuedAt,
-    );
-    final session = AuthSessionRecord(
-      userId: principal.userId,
-      sessionId: sessionId,
-      refreshTokenHash: _tokenService.hashRefreshToken(tokenPair.refreshToken),
-      createdAt: issuedAt,
-      expiresAt: issuedAt.add(_refreshLifetime),
-    );
-    await _recordStore.putSession(session);
-    return tokenPair;
+    try {
+      var stage = _startTiming();
+      final tokenPair = _tokenService.issueTokens(
+        principal: principal,
+        sessionId: sessionId,
+        now: issuedAt,
+      );
+      _logTiming(
+        'session.issueTokens',
+        stage,
+        extra: {'userId': principal.userId},
+      );
+
+      final session = AuthSessionRecord(
+        userId: principal.userId,
+        sessionId: sessionId,
+        refreshTokenHash: _tokenService.hashRefreshToken(
+          tokenPair.refreshToken,
+        ),
+        createdAt: issuedAt,
+        expiresAt: issuedAt.add(_refreshLifetime),
+      );
+
+      stage = _startTiming();
+      await _recordStore.putSession(session);
+      _logTiming('session.putSession', stage, extra: {'sessionId': sessionId});
+      return tokenPair;
+    } finally {
+      _logTiming('session.total', total, extra: {'userId': principal.userId});
+    }
   }
 
   Future<void> _issueVerificationChallenge(
     AuthPrincipal principal, {
     required int resendCount,
   }) async {
+    final total = _startTiming();
     final code = _generateCode();
     final now = DateTime.now().toUtc();
-    final codeHash = await _passwordHashService.hashPassword(code);
-    final challenge = AuthEmailChallenge(
-      userId: principal.userId,
-      codeHash: codeHash.hash,
-      codeSalt: codeHash.salt,
-      hashIterations: codeHash.iterations,
-      expiresAt: now.add(_verificationLifetime),
-      createdAt: now,
-      resendCount: resendCount,
-      challengeVersion: principal.verificationVersion + 1,
-    );
-    await _recordStore.putEmailChallenge(challenge);
-    await _emailSender.sendVerificationCode(
-      toEmail: principal.email ?? '',
-      code: code,
-      expiresAt: challenge.expiresAt,
-    );
+    try {
+      var stage = _startTiming();
+      final codeHash = await _passwordHashService.hashPassword(code);
+      _logTiming(
+        'challenge.hashCode',
+        stage,
+        extra: {'userId': principal.userId},
+      );
+
+      final challenge = AuthEmailChallenge(
+        userId: principal.userId,
+        codeHash: codeHash.hash,
+        codeSalt: codeHash.salt,
+        hashIterations: codeHash.iterations,
+        expiresAt: now.add(_verificationLifetime),
+        createdAt: now,
+        resendCount: resendCount,
+        challengeVersion: principal.verificationVersion + 1,
+      );
+
+      stage = _startTiming();
+      await _recordStore.putEmailChallenge(challenge);
+      _logTiming(
+        'challenge.putEmailChallenge',
+        stage,
+        extra: {'userId': principal.userId},
+      );
+
+      stage = _startTiming();
+      await _emailSender.sendVerificationCode(
+        toEmail: principal.email ?? '',
+        code: code,
+        expiresAt: challenge.expiresAt,
+      );
+      _logTiming(
+        'challenge.sendVerificationCode',
+        stage,
+        extra: {'email': principal.email ?? ''},
+      );
+    } finally {
+      _logTiming('challenge.total', total, extra: {'userId': principal.userId});
+    }
   }
 
   Future<void> _confirmAdminPassword(
@@ -566,6 +758,23 @@ class BackendAuthService {
 
   String _normalizeEmail(String email) => email.trim().toLowerCase();
   String _normalizeUsername(String username) => username.trim().toLowerCase();
+
+  Stopwatch _startTiming() => Stopwatch()..start();
+
+  void _logTiming(
+    String operation,
+    Stopwatch stopwatch, {
+    Map<String, Object?> extra = const {},
+  }) {
+    final context = extra.entries
+        .where((entry) => entry.value != null)
+        .map((entry) => '${entry.key}=${entry.value}')
+        .join(' ');
+    final suffix = context.isEmpty ? '' : ' $context';
+    SlttLogger.logger.info(
+      '[AuthTiming] operation=$operation elapsedMs=${stopwatch.elapsedMilliseconds}$suffix',
+    );
+  }
 
   AdHocUserSummary _toAdHocSummary(AuthPrincipal principal) {
     return AdHocUserSummary(
