@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:aws_common/aws_common.dart';
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:sltt_core/sltt_core.dart';
 import 'package:uuid/uuid.dart';
 
@@ -18,6 +20,7 @@ class BackendAuthService {
     required PasswordHashService passwordHashService,
     required TokenService tokenService,
     required AuthEmailSender emailSender,
+    required String verificationCodeSecret,
     Duration? verificationLifetime,
     Duration? refreshLifetime,
     Random? random,
@@ -27,6 +30,7 @@ class BackendAuthService {
        _passwordHashService = passwordHashService,
        _tokenService = tokenService,
        _emailSender = emailSender,
+       _verificationCodeSecret = verificationCodeSecret,
        _verificationLifetime =
            verificationLifetime ?? const Duration(minutes: 10),
        _refreshLifetime = refreshLifetime ?? const Duration(days: 30),
@@ -38,10 +42,13 @@ class BackendAuthService {
   final PasswordHashService _passwordHashService;
   final TokenService _tokenService;
   final AuthEmailSender _emailSender;
+  final String _verificationCodeSecret;
   final Duration _verificationLifetime;
   final Duration _refreshLifetime;
   final Random _random;
   final Uuid _uuid;
+
+  static const int _fastVerificationCodeMode = 0;
 
   Future<void> initialize() => _recordStore.initialize();
   Future<void> close() => _recordStore.close();
@@ -203,11 +210,9 @@ class BackendAuthService {
       }
 
       stage = _startTiming();
-      final isCodeValid = await _passwordHashService.verifyPassword(
-        password: request.code.trim(),
-        expectedHash: challenge.codeHash,
-        salt: challenge.codeSalt,
-        iterations: challenge.hashIterations,
+      final isCodeValid = await _verifyChallengeCode(
+        challenge: challenge,
+        code: request.code.trim(),
       );
       _logTiming('verify.checkCode', stage, extra: {'email': normalizedEmail});
       if (!isCodeValid) {
@@ -650,7 +655,16 @@ class BackendAuthService {
     final now = DateTime.now().toUtc();
     try {
       var stage = _startTiming();
-      final codeHash = await _passwordHashService.hashPassword(code);
+      final challengeVersion = principal.verificationVersion + 1;
+      final expiresAt = now.add(_verificationLifetime);
+      final codeNonce = _generateNonce();
+      final codeHash = _hashVerificationCode(
+        userId: principal.userId,
+        code: code,
+        nonce: codeNonce,
+        challengeVersion: challengeVersion,
+        expiresAt: expiresAt,
+      );
       _logTiming(
         'challenge.hashCode',
         stage,
@@ -659,13 +673,13 @@ class BackendAuthService {
 
       final challenge = AuthEmailChallenge(
         userId: principal.userId,
-        codeHash: codeHash.hash,
-        codeSalt: codeHash.salt,
-        hashIterations: codeHash.iterations,
-        expiresAt: now.add(_verificationLifetime),
+        codeHash: codeHash,
+        codeSalt: codeNonce,
+        hashIterations: _fastVerificationCodeMode,
+        expiresAt: expiresAt,
         createdAt: now,
         resendCount: resendCount,
-        challengeVersion: principal.verificationVersion + 1,
+        challengeVersion: challengeVersion,
       );
 
       stage = _startTiming();
@@ -756,6 +770,52 @@ class BackendAuthService {
     return value.toString().padLeft(6, '0');
   }
 
+  Future<bool> _verifyChallengeCode({
+    required AuthEmailChallenge challenge,
+    required String code,
+  }) async {
+    final expected = _hashVerificationCode(
+      userId: challenge.userId,
+      code: code,
+      nonce: challenge.codeSalt,
+      challengeVersion: challenge.challengeVersion,
+      expiresAt: challenge.expiresAt,
+    );
+    return _constantTimeEquals(expected, challenge.codeHash);
+  }
+
+  String _generateNonce() {
+    final nonceBytes = List<int>.generate(16, (_) => _random.nextInt(256));
+    return base64UrlEncode(nonceBytes);
+  }
+
+  String _hashVerificationCode({
+    required String userId,
+    required String code,
+    required String nonce,
+    required int challengeVersion,
+    required DateTime expiresAt,
+  }) {
+    final payload =
+        '$userId|$nonce|$challengeVersion|${expiresAt.toUtc().toIso8601String()}|$code';
+    final hmac = crypto.Hmac(
+      crypto.sha256,
+      utf8.encode(_verificationCodeSecret),
+    );
+    return base64UrlEncode(hmac.convert(utf8.encode(payload)).bytes);
+  }
+
+  bool _constantTimeEquals(String left, String right) {
+    if (left.length != right.length) {
+      return false;
+    }
+    var diff = 0;
+    for (var i = 0; i < left.length; i++) {
+      diff |= left.codeUnitAt(i) ^ right.codeUnitAt(i);
+    }
+    return diff == 0;
+  }
+
   String _normalizeEmail(String email) => email.trim().toLowerCase();
   String _normalizeUsername(String username) => username.trim().toLowerCase();
 
@@ -826,6 +886,7 @@ class BackendAuthServiceFactory {
         accessTokenLifetime: Duration(minutes: accessMinutes ?? 60),
       ),
       emailSender: LogAuthEmailSender(),
+      verificationCodeSecret: jwtSecret,
       refreshLifetime: Duration(days: refreshDays ?? 30),
     );
   }

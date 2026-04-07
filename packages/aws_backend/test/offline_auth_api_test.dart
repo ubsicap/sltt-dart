@@ -32,6 +32,7 @@ void main() {
         passwordHashService: PasswordHashService(iterations: 1000),
         tokenService: TokenService(jwtSecret: 'test-secret'),
         emailSender: emailSender,
+        verificationCodeSecret: 'test-secret',
       );
       await authService.initialize();
       server = AwsRestApiServer(
