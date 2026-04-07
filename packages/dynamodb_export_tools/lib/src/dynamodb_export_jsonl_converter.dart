@@ -36,6 +36,7 @@ class DynamoExportJsonlConverter {
     await outputDirectory.create(recursive: true);
 
     final writers = <String, IOSink>{};
+    final outputFiles = <String, File>{};
     final tableCounts = <String, int>{};
     final unsupportedSamples = <DynamoExportUnsupportedSample>[];
     var totalRowsSeen = 0;
@@ -46,6 +47,7 @@ class DynamoExportJsonlConverter {
       if (existing != null) return existing;
       final file = File(p.join(outputDirectory.path, '$tableName.jsonl'));
       final sink = file.openWrite(mode: FileMode.writeOnly);
+      outputFiles[tableName] = file;
       writers[tableName] = sink;
       return sink;
     }
@@ -87,6 +89,21 @@ class DynamoExportJsonlConverter {
         await sink.flush();
         await sink.close();
       }
+    }
+
+    for (final entry in outputFiles.entries) {
+      final rowCount = tableCounts[entry.key];
+      if (rowCount == null) {
+        continue;
+      }
+
+      final renamedFile = File(
+        p.join(outputDirectory.path, '${entry.key}-$rowCount.jsonl'),
+      );
+      if (await renamedFile.exists()) {
+        await renamedFile.delete();
+      }
+      await entry.value.rename(renamedFile.path);
     }
 
     final manifest = DynamoExportManifest(

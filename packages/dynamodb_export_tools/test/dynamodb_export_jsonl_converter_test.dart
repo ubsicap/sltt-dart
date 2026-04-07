@@ -80,19 +80,19 @@ void main() {
       expect(manifest.exportId, '01772818685648-730afa12');
 
       expect(
-        File(p.join(outputDir.path, 'raw_items.jsonl')).existsSync(),
+        File(p.join(outputDir.path, 'raw_items-3.jsonl')).existsSync(),
         isTrue,
       );
       expect(
-        File(p.join(outputDir.path, 'entity_state__note.jsonl')).existsSync(),
+        File(p.join(outputDir.path, 'entity_state__note-1.jsonl')).existsSync(),
         isTrue,
       );
       expect(
-        File(p.join(outputDir.path, 'change_log_entries.jsonl')).existsSync(),
+        File(p.join(outputDir.path, 'change_log_entries-1.jsonl')).existsSync(),
         isTrue,
       );
       expect(
-        File(p.join(outputDir.path, 'unsupported_items.jsonl')).existsSync(),
+        File(p.join(outputDir.path, 'unsupported_items-1.jsonl')).existsSync(),
         isTrue,
       );
       expect(
@@ -101,7 +101,7 @@ void main() {
       );
 
       final noteRows = await File(
-        p.join(outputDir.path, 'entity_state__note.jsonl'),
+        p.join(outputDir.path, 'entity_state__note-1.jsonl'),
       ).readAsLines();
       expect(noteRows, hasLength(1));
 
@@ -143,7 +143,9 @@ void main() {
 
         expect(manifest.totalRowsSeen, 1);
         expect(
-          File(p.join(outputDir.path, 'entity_state__note.jsonl')).existsSync(),
+          File(
+            p.join(outputDir.path, 'entity_state__note-1.jsonl'),
+          ).existsSync(),
           isTrue,
         );
       },
