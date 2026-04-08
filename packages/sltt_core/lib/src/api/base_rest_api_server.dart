@@ -2009,7 +2009,7 @@ abstract class BaseRestApiServer {
           '${domainType}Id': domainId,
           'entityType': entityType,
           'entityId': entityId,
-          'state': stateData?.toJson(),
+          'state': jsonDecode(stableStringify(stateData?.toJson())) ?? {},
           'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
@@ -2454,7 +2454,7 @@ abstract class BaseRestApiServer {
       return Response.ok(
         jsonEncode({
           'message': 'Change log entry stored successfully',
-          'change': storedChange.toJson(),
+          'change': jsonDecode(stableStringify(storedChange.toJson())) ?? {},
           'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
