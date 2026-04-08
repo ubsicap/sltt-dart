@@ -97,6 +97,8 @@ resources:
         TimeToLiveSpecification:
           AttributeName: ttlEpochSeconds
           Enabled: true
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
         Tags:
           - Key: Service
             Value: ${self:service}
