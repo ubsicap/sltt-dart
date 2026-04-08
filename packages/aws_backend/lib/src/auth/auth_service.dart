@@ -80,14 +80,20 @@ class BackendAuthService {
     final password = request.password;
 
     try {
-      if (userId.isEmpty ||
-          name.isEmpty ||
-          dateOfBirth.isEmpty ||
-          email.isEmpty ||
-          password.isEmpty) {
-        throw AuthException(
-          'Unable to complete this action',
-          code: 'invalid_request',
+      final validationDetails = _requiredFieldDetails({
+        'userId': userId,
+        'name': name,
+        'dateOfBirth': dateOfBirth,
+        'email': email,
+        'password': password,
+      });
+      if (validationDetails.isNotEmpty) {
+        _throwInvalidRequest(
+          event: 'register_invalid_request',
+          details: validationDetails,
+          email: email.isEmpty ? null : _normalizeEmail(email),
+          userId: userId.isEmpty ? null : userId,
+          sourceIp: sourceIp,
         );
       }
       final normalizedEmail = _normalizeEmail(email);
@@ -280,8 +286,22 @@ class BackendAuthService {
     String? sourceIp,
   }) async {
     final total = _startTiming();
-    final normalizedEmail = _normalizeEmail(request.email);
+    final email = request.email.trim();
+    final code = request.code.trim();
+    final normalizedEmail = email.isEmpty ? '' : _normalizeEmail(email);
     try {
+      final validationDetails = _requiredFieldDetails({
+        'email': email,
+        'code': code,
+      });
+      if (validationDetails.isNotEmpty) {
+        _throwInvalidRequest(
+          event: 'verify_invalid_request',
+          details: validationDetails,
+          email: normalizedEmail.isEmpty ? null : normalizedEmail,
+          sourceIp: sourceIp,
+        );
+      }
       var stage = _startTiming();
       final principal = await _recordStore.getPrincipalByEmail(normalizedEmail);
       _logTiming(
@@ -329,7 +349,7 @@ class BackendAuthService {
       stage = _startTiming();
       final isCodeValid = await _verifyChallengeCode(
         challenge: challenge,
-        code: request.code.trim(),
+        code: code,
       );
       _logTiming('verify.checkCode', stage, extra: {'email': normalizedEmail});
       if (!isCodeValid) {
@@ -410,7 +430,17 @@ class BackendAuthService {
     ResendVerificationCodeRequest request, {
     String? sourceIp,
   }) async {
-    final normalizedEmail = _normalizeEmail(request.email);
+    final email = request.email.trim();
+    final normalizedEmail = email.isEmpty ? '' : _normalizeEmail(email);
+    final validationDetails = _requiredFieldDetails({'email': email});
+    if (validationDetails.isNotEmpty) {
+      _throwInvalidRequest(
+        event: 'resend_invalid_request',
+        details: validationDetails,
+        email: normalizedEmail.isEmpty ? null : normalizedEmail,
+        sourceIp: sourceIp,
+      );
+    }
     final principal = await _recordStore.getPrincipalByEmail(normalizedEmail);
     if (principal == null || principal.emailVerified || principal.isDeleted) {
       _logAuthEvent(
@@ -448,17 +478,16 @@ class BackendAuthService {
     final identifier = request.identifier.trim();
     final password = request.password;
     try {
-      if (identifier.isEmpty || password.isEmpty) {
-        _logAuthEvent(
-          'login_invalid_credentials',
-          userId: null,
+      final validationDetails = _requiredFieldDetails({
+        'identifier': identifier,
+        'password': password,
+      });
+      if (validationDetails.isNotEmpty) {
+        _throwInvalidRequest(
+          event: 'login_invalid_request',
+          details: validationDetails,
+          identifier: identifier.isEmpty ? null : identifier,
           sourceIp: sourceIp,
-          detail: 'missing_identifier_or_password',
-        );
-        throw AuthException(
-          'Invalid credentials',
-          statusCode: 401,
-          code: 'invalid_credentials',
         );
       }
       var stage = _startTiming();
@@ -538,22 +567,16 @@ class BackendAuthService {
     String? sourceIp,
   }) async {
     final total = _startTiming();
-    if (request.refreshToken.trim().isEmpty) {
-      _logAuthEvent(
-        'refresh_invalid_credentials',
+    final refreshToken = request.refreshToken.trim();
+    if (refreshToken.isEmpty) {
+      _throwInvalidRequest(
+        event: 'refresh_invalid_request',
+        details: const {'refreshToken': 'required'},
         sourceIp: sourceIp,
-        detail: 'missing_refresh_token',
-      );
-      throw AuthException(
-        'Invalid credentials',
-        statusCode: 401,
-        code: 'invalid_credentials',
       );
     }
     try {
-      final tokenHash = _tokenService.hashRefreshToken(
-        request.refreshToken.trim(),
-      );
+      final tokenHash = _tokenService.hashRefreshToken(refreshToken);
       var stage = _startTiming();
       final session = await _recordStore.getSessionByTokenHash(tokenHash);
       _logTiming(
@@ -1095,6 +1118,40 @@ class BackendAuthService {
   String _normalizeEmail(String email) => email.trim().toLowerCase();
   String _normalizeUsername(String username) => username.trim().toLowerCase();
 
+  Map<String, String> _requiredFieldDetails(Map<String, String> fields) {
+    final details = <String, String>{};
+    fields.forEach((field, value) {
+      if (value.isEmpty) {
+        details[field] = 'required';
+      }
+    });
+    return details;
+  }
+
+  Never _throwInvalidRequest({
+    required String event,
+    required Map<String, String> details,
+    String? email,
+    String? identifier,
+    String? userId,
+    String? sourceIp,
+  }) {
+    _logAuthEvent(
+      event,
+      email: email,
+      identifier: identifier,
+      userId: userId,
+      sourceIp: sourceIp,
+      detail: 'missing_required_fields',
+      validationDetails: details,
+    );
+    throw AuthException(
+      'Unable to complete this action',
+      code: 'invalid_request',
+      details: details,
+    );
+  }
+
   AuthPrincipal _withRegistrationMetadata(
     AuthPrincipal principal, {
     required String outcome,
@@ -1123,6 +1180,7 @@ class BackendAuthService {
     String? sourceIp,
     int? resendCount,
     String? detail,
+    Map<String, String>? validationDetails,
   }) {
     final payload = <String, Object?>{
       'schema': _authEventSchema,
@@ -1138,6 +1196,7 @@ class BackendAuthService {
       'sourceIpMasked': sourceIp == null ? null : _maskIpForLog(sourceIp),
       'resendCount': resendCount,
       'detail': detail,
+      'validationDetails': validationDetails,
     }..removeWhere((key, value) => value == null);
     SlttLogger.logger.info('[AuthEvent] ${jsonEncode(payload)}');
   }

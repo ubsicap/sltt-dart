@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:aws_backend/aws_backend.dart';
@@ -7,6 +8,7 @@ import 'package:aws_backend/src/auth/auth_record_store.dart';
 import 'package:aws_backend/src/auth/password_hash_service.dart';
 import 'package:aws_backend/src/auth/token_service.dart';
 import 'package:aws_backend/src/models/dynamo_entity_state.dart';
+import 'package:logging/logging.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
@@ -21,8 +23,25 @@ void main() {
     late BackendAuthService authService;
     late AwsRestApiServer server;
     late Router router;
+    late List<LogRecord> logRecords;
+    late StreamSubscription<LogRecord> logSubscription;
+
+    Map<String, dynamic> responseBody(Map<String, dynamic> response) {
+      return jsonDecode(response['body'] as String) as Map<String, dynamic>;
+    }
+
+    Map<String, dynamic> authEventPayload(String event) {
+      final record = logRecords.lastWhere(
+        (record) => record.message.contains('"event":"$event"'),
+      );
+      return jsonDecode(record.message.substring(record.message.indexOf('{')))
+          as Map<String, dynamic>;
+    }
 
     setUp(() async {
+      SlttLogger.setLevel(SlttLogLevel.info);
+      logRecords = <LogRecord>[];
+      logSubscription = Logger.root.onRecord.listen(logRecords.add);
       storage = FakeDynamoDBStorageService();
       recordStore = InMemoryAuthRecordStore();
       emailSender = _CapturingEmailSender();
@@ -41,6 +60,11 @@ void main() {
         authService: authService,
       );
       router = server.getRouter();
+    });
+
+    tearDown(() async {
+      await logSubscription.cancel();
+      SlttLogger.setLevel(SlttLogLevel.warning);
     });
 
     test('register then verify then login', () async {
@@ -412,6 +436,141 @@ void main() {
       expect(resendBody['status'], equals('sent'));
       expect(emailSender.codes.containsKey('missing@example.com'), isFalse);
     });
+
+    test(
+      'register returns validation details and logs invalid request',
+      () async {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.70'},
+          'body': jsonEncode({
+            'name': 'Jane Doe',
+            'dateOfBirth': '1990-06-15',
+            'email': 'jane@example.com',
+            'password': 'secret123',
+          }),
+        }, router);
+
+        expect(response['statusCode'], equals(400));
+        expect(
+          responseBody(response),
+          equals({
+            'error': 'Unable to complete this action',
+            'code': 'invalid_request',
+            'details': {'userId': 'required'},
+          }),
+        );
+
+        final event = authEventPayload('register_invalid_request');
+        expect(event['detail'], equals('missing_required_fields'));
+        expect(event['validationDetails'], equals({'userId': 'required'}));
+      },
+    );
+
+    test(
+      'verify returns validation details and logs invalid request',
+      () async {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/verify-email',
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.71'},
+          'body': jsonEncode({'email': 'jane@example.com'}),
+        }, router);
+
+        expect(response['statusCode'], equals(400));
+        expect(
+          responseBody(response),
+          equals({
+            'error': 'Unable to complete this action',
+            'code': 'invalid_request',
+            'details': {'code': 'required'},
+          }),
+        );
+
+        final event = authEventPayload('verify_invalid_request');
+        expect(event['detail'], equals('missing_required_fields'));
+        expect(event['validationDetails'], equals({'code': 'required'}));
+      },
+    );
+
+    test(
+      'resend returns validation details and logs invalid request',
+      () async {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/resend-verification-code',
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.72'},
+          'body': jsonEncode({}),
+        }, router);
+
+        expect(response['statusCode'], equals(400));
+        expect(
+          responseBody(response),
+          equals({
+            'error': 'Unable to complete this action',
+            'code': 'invalid_request',
+            'details': {'email': 'required'},
+          }),
+        );
+
+        final event = authEventPayload('resend_invalid_request');
+        expect(event['detail'], equals('missing_required_fields'));
+        expect(event['validationDetails'], equals({'email': 'required'}));
+      },
+    );
+
+    test('login returns validation details and logs invalid request', () async {
+      final response = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/login',
+        'headers': <String, String>{'x-forwarded-for': '203.0.113.73'},
+        'body': jsonEncode({'identifier': 'jane@example.com'}),
+      }, router);
+
+      expect(response['statusCode'], equals(400));
+      expect(
+        responseBody(response),
+        equals({
+          'error': 'Unable to complete this action',
+          'code': 'invalid_request',
+          'details': {'password': 'required'},
+        }),
+      );
+
+      final event = authEventPayload('login_invalid_request');
+      expect(event['detail'], equals('missing_required_fields'));
+      expect(event['validationDetails'], equals({'password': 'required'}));
+    });
+
+    test(
+      'refresh returns validation details and logs invalid request',
+      () async {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/refresh',
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.74'},
+          'body': jsonEncode({}),
+        }, router);
+
+        expect(response['statusCode'], equals(400));
+        expect(
+          responseBody(response),
+          equals({
+            'error': 'Unable to complete this action',
+            'code': 'invalid_request',
+            'details': {'refreshToken': 'required'},
+          }),
+        );
+
+        final event = authEventPayload('refresh_invalid_request');
+        expect(event['detail'], equals('missing_required_fields'));
+        expect(
+          event['validationDetails'],
+          equals({'refreshToken': 'required'}),
+        );
+      },
+    );
 
     test('admin can create adhoc user', () async {
       final adminResponse = await authService.register(

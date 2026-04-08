@@ -64,6 +64,14 @@ class AwsRestApiServer extends BaseRestApiServer {
           'status': {'type': 'string', 'example': 'pending_verification'},
         },
       },
+      'errorResponses': [
+        {
+          'statusCode': 400,
+          'code': 'invalid_request',
+          'description':
+              'Missing required fields return safe field-level validation details such as {"details":{"userId":"required"}}.',
+        },
+      ],
     },
     {
       'method': 'POST',
@@ -88,6 +96,14 @@ class AwsRestApiServer extends BaseRestApiServer {
           'expiresAt': {'type': 'string', 'format': 'ISO8601'},
         },
       },
+      'errorResponses': [
+        {
+          'statusCode': 400,
+          'code': 'invalid_request',
+          'description':
+              'Missing required fields return safe field-level validation details.',
+        },
+      ],
     },
     {
       'method': 'POST',
@@ -107,6 +123,14 @@ class AwsRestApiServer extends BaseRestApiServer {
           'status': {'type': 'string', 'example': 'sent'},
         },
       },
+      'errorResponses': [
+        {
+          'statusCode': 400,
+          'code': 'invalid_request',
+          'description':
+              'Missing required fields return safe field-level validation details.',
+        },
+      ],
     },
     {
       'method': 'POST',
@@ -131,6 +155,14 @@ class AwsRestApiServer extends BaseRestApiServer {
           'expiresAt': {'type': 'string', 'format': 'ISO8601'},
         },
       },
+      'errorResponses': [
+        {
+          'statusCode': 400,
+          'code': 'invalid_request',
+          'description':
+              'Missing required fields return safe field-level validation details.',
+        },
+      ],
     },
     {
       'method': 'POST',
@@ -152,6 +184,14 @@ class AwsRestApiServer extends BaseRestApiServer {
           'expiresAt': {'type': 'string', 'format': 'ISO8601'},
         },
       },
+      'errorResponses': [
+        {
+          'statusCode': 400,
+          'code': 'invalid_request',
+          'description':
+              'Missing required fields return safe field-level validation details.',
+        },
+      ],
     },
     {
       'method': 'POST',

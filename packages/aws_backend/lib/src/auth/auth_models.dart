@@ -40,13 +40,19 @@ class AuthException implements Exception {
     this.message, {
     this.statusCode = 400,
     this.code = 'auth_error',
+    this.details,
   });
 
   final String message;
   final int statusCode;
   final String code;
+  final Map<String, String>? details;
 
-  Map<String, dynamic> toJson() => {'error': message, 'code': code};
+  Map<String, dynamic> toJson() => {
+    'error': message,
+    'code': code,
+    if (details != null && details!.isNotEmpty) 'details': details,
+  };
 
   @override
   String toString() => 'AuthException($statusCode, $code, $message)';
