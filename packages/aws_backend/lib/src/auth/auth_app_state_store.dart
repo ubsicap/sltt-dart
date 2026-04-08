@@ -1,4 +1,4 @@
-import 'package:aws_backend/src/models/dynamo_entity_state.dart';
+import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'auth_models.dart';
@@ -7,66 +7,40 @@ class AuthAppStateStore {
   AuthAppStateStore({required BaseStorageService storage}) : _storage = storage;
 
   final BaseStorageService _storage;
+  static const String _authSourceStorageId = 'auth-backend';
 
-  Future<void> upsertVerifiedUser(AuthPrincipal principal) async {
-    final now = DateTime.now().toUtc();
-    await _storage.testStoreState(
-      entityState: _buildState(
-        entityType: kEntityTypeUser,
-        domainType: 'user',
-        domainId: principal.userId,
-        entityId: principal.userId,
-        parentProp: kEntityTypeUserCollection,
-        changeBy: 'auth-system',
-        now: now,
-        customFields: {
-          'status': principal.accountStatus.value,
-          'isAdHoc': principal.isAdHoc,
-          'identityKind': principal.identityKind.value,
-          'username': principal.username,
-          'emailVerified': principal.emailVerified,
-        },
-      ),
-    );
-
-    await _storage.testStoreState(
-      entityState: _buildState(
-        entityType: kEntityTypeUserProfile,
-        domainType: 'user',
-        domainId: principal.userId,
-        entityId: 'default',
-        parentProp: kEntityTypeUserProfileCollection,
-        changeBy: 'auth-system',
-        now: now,
-        customFields: {
-          'name': principal.displayName,
-          'email': principal.email,
-          'username': principal.username,
-          'dateOfBirth': principal.dateOfBirth,
-          'isAdHoc': principal.isAdHoc,
-          'status': principal.accountStatus.value,
-        },
-      ),
+  Future<void> upsertVerifiedUserProfile({
+    required AuthPrincipal principal,
+    required String changeBy,
+  }) async {
+    await _storeProfileChange(
+      principal: principal,
+      changeBy: changeBy,
+      deleted: false,
     );
   }
 
-  Future<void> syncProjectAssignments({
+  Future<void> applyProjectAssignmentChanges({
     required AuthPrincipal principal,
-    required List<String> previousProjectIds,
+    required Iterable<String> projectIdsToAdd,
+    required Iterable<String> projectIdsToRemove,
+    required String changeBy,
   }) async {
-    final now = DateTime.now().toUtc();
-    final previous = previousProjectIds.toSet();
-    final current = principal.assignedProjectIds.toSet();
-    for (final projectId in current) {
-      await _storage.testStoreState(
-        entityState: _buildState(
-          entityType: kEntityTypeMember,
+    final addSet = _normalizeProjectIds(projectIdsToAdd);
+    final removeSet = _normalizeProjectIds(projectIdsToRemove)
+      ..removeAll(addSet);
+
+    final changes = <Map<String, dynamic>>[];
+    for (final projectId in addSet) {
+      changes.add(
+        _buildChangeJson(
           domainType: 'project',
           domainId: projectId,
+          entityType: kEntityTypeMember,
           entityId: principal.userId,
           parentProp: kEntityTypeMemberCollection,
-          changeBy: 'auth-system',
-          now: now,
+          changeBy: changeBy,
+          deleted: false,
           customFields: {
             'userId': principal.userId,
             'role': 'translator',
@@ -74,21 +48,20 @@ class AuthAppStateStore {
             'username': principal.username,
             'email': principal.email,
             'isAdHoc': principal.isAdHoc,
-            'status': principal.accountStatus.value,
+            'emailVerified': principal.emailVerified,
           },
         ),
       );
     }
-    for (final removedProjectId in previous.difference(current)) {
-      await _storage.testStoreState(
-        entityState: _buildState(
-          entityType: kEntityTypeMember,
+    for (final projectId in removeSet) {
+      changes.add(
+        _buildChangeJson(
           domainType: 'project',
-          domainId: removedProjectId,
+          domainId: projectId,
+          entityType: kEntityTypeMember,
           entityId: principal.userId,
           parentProp: kEntityTypeMemberCollection,
-          changeBy: 'auth-system',
-          now: now,
+          changeBy: changeBy,
           deleted: true,
           customFields: {
             'userId': principal.userId,
@@ -97,55 +70,29 @@ class AuthAppStateStore {
             'username': principal.username,
             'email': principal.email,
             'isAdHoc': principal.isAdHoc,
-            'status': 'deleted',
+            'emailVerified': principal.emailVerified,
           },
         ),
       );
     }
+
+    await _storeProjectMemberChanges(changes);
   }
 
-  Future<void> markUserDeleted(AuthPrincipal principal) async {
-    final now = DateTime.now().toUtc();
-    await _storage.testStoreState(
-      entityState: _buildState(
-        entityType: kEntityTypeUser,
-        domainType: 'user',
-        domainId: principal.userId,
-        entityId: principal.userId,
-        parentProp: kEntityTypeUserCollection,
-        changeBy: 'auth-system',
-        now: now,
-        deleted: true,
-        customFields: {
-          'status': 'deleted',
-          'isAdHoc': principal.isAdHoc,
-          'identityKind': principal.identityKind.value,
-        },
-      ),
+  Future<void> markUserDeleted({
+    required AuthPrincipal principal,
+    required String changeBy,
+  }) async {
+    await _storeProfileChange(
+      principal: principal,
+      changeBy: changeBy,
+      deleted: true,
     );
-    await _storage.testStoreState(
-      entityState: _buildState(
-        entityType: kEntityTypeUserProfile,
-        domainType: 'user',
-        domainId: principal.userId,
-        entityId: 'default',
-        parentProp: kEntityTypeUserProfileCollection,
-        changeBy: 'auth-system',
-        now: now,
-        deleted: true,
-        customFields: {
-          'name': principal.displayName,
-          'email': principal.email,
-          'username': principal.username,
-          'dateOfBirth': principal.dateOfBirth,
-          'status': 'deleted',
-          'isAdHoc': principal.isAdHoc,
-        },
-      ),
-    );
-    await syncProjectAssignments(
-      principal: principal.copyWith(assignedProjectIds: const <String>[]),
-      previousProjectIds: principal.assignedProjectIds,
+    await applyProjectAssignmentChanges(
+      principal: principal,
+      projectIdsToAdd: const <String>[],
+      projectIdsToRemove: principal.assignedProjectIds,
+      changeBy: changeBy,
     );
   }
 
@@ -163,54 +110,133 @@ class AuthAppStateStore {
         continue;
       }
       final json = state.toJson();
-      final role = (json['role'] as String? ?? '').trim().toLowerCase();
+      final role =
+          (json['role'] as String? ?? json['data_role'] as String? ?? '')
+              .trim()
+              .toLowerCase();
       final deleted = json['data_deleted'] as bool? ?? false;
-      if (!deleted && (role == 'admin' || role == 'superadmin' || role == 'super_admin')) {
+      if (!deleted &&
+          (role == 'admin' || role == 'superadmin' || role == 'super_admin')) {
         adminProjects.add(projectId);
       }
     }
     return adminProjects;
   }
 
-  DynamoEntityState _buildState({
-    required String entityType,
+  Future<void> _storeProfileChange({
+    required AuthPrincipal principal,
+    required String changeBy,
+    required bool deleted,
+  }) async {
+    final result = await ChangeProcessingService.storeChanges(
+      storageMode: 'save',
+      changes: <Map<String, dynamic>>[
+        _buildChangeJson(
+          domainType: 'user',
+          domainId: principal.userId,
+          entityType: kEntityTypeUserProfile,
+          entityId: 'default',
+          parentProp: kEntityTypeUserProfileCollection,
+          changeBy: changeBy,
+          deleted: deleted,
+          customFields: {
+            'name': principal.displayName,
+            'email': principal.email,
+            'username': principal.username,
+            'dateOfBirth': principal.dateOfBirth,
+            'isAdHoc': principal.isAdHoc,
+            'emailVerified': principal.emailVerified,
+            'identityKind': principal.identityKind.value,
+          },
+        ),
+      ],
+      srcStorageType: 'local',
+      srcStorageId: _authSourceStorageId,
+      storage: _storage,
+      includeChangeUpdates: false,
+      includeStateUpdates: false,
+    );
+    if (!result.isSuccess) {
+      throw StateError(result.errorMessage ?? 'Failed to store auth profile');
+    }
+  }
+
+  Future<void> _storeProjectMemberChanges(
+    List<Map<String, dynamic>> changes,
+  ) async {
+    if (changes.isEmpty) {
+      return;
+    }
+
+    final changesByDomainKey = <String, List<Map<String, dynamic>>>{};
+    for (final change in changes) {
+      final domainType = (change['domainType'] as String? ?? '').trim();
+      final domainId = (change['domainId'] as String? ?? '').trim();
+      final domainKey = '$domainType|$domainId';
+      changesByDomainKey.putIfAbsent(domainKey, () => <Map<String, dynamic>>[]);
+      changesByDomainKey[domainKey]!.add(change);
+    }
+
+    for (final domainChanges in changesByDomainKey.values) {
+      final result = await ChangeProcessingService.storeChanges(
+        storageMode: 'save',
+        changes: domainChanges,
+        srcStorageType: 'local',
+        srcStorageId: _authSourceStorageId,
+        storage: _storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+      if (!result.isSuccess) {
+        throw StateError(
+          result.errorMessage ?? 'Failed to store auth project membership',
+        );
+      }
+    }
+  }
+
+  Set<String> _normalizeProjectIds(Iterable<String> projectIds) {
+    return projectIds
+        .map((projectId) => projectId.trim())
+        .where((projectId) => projectId.isNotEmpty)
+        .toSet();
+  }
+
+  Map<String, dynamic> _buildChangeJson({
     required String domainType,
     required String domainId,
     required String entityId,
+    required String entityType,
     required String parentProp,
     required String changeBy,
-    required DateTime now,
     required Map<String, dynamic> customFields,
     bool deleted = false,
   }) {
-    return DynamoEntityState.fromJson({
-      'entityId': entityId,
-      'entityType': entityType,
-      'domainType': domainType,
-      'unknownJson': '{}',
-      'change_domainId': domainId,
-      'change_domainId_orig_': domainId,
-      'change_changeAt': now.toIso8601String(),
-      'change_changeAt_orig_': now.toIso8601String(),
-      'change_cid': 'auth-${now.microsecondsSinceEpoch}',
-      'change_cid_orig_': 'auth-${now.microsecondsSinceEpoch}',
-      'change_changeBy': changeBy,
-      'change_changeBy_orig_': changeBy,
-      'change_storedAt': now.toIso8601String(),
-      'change_storedAt_orig_': now.toIso8601String(),
-      'data_parentId': '',
-      'data_parentId_changeAt_': now.toIso8601String(),
-      'data_parentId_cid_': 'auth-${now.microsecondsSinceEpoch}',
-      'data_parentId_changeBy_': changeBy,
-      'data_parentProp': parentProp,
-      'data_parentProp_changeAt_': now.toIso8601String(),
-      'data_parentProp_cid_': 'auth-${now.microsecondsSinceEpoch}',
-      'data_parentProp_changeBy_': changeBy,
-      'data_deleted': deleted,
-      'data_deleted_changeAt_': now.toIso8601String(),
-      'data_deleted_cid_': 'auth-${now.microsecondsSinceEpoch}',
-      'data_deleted_changeBy_': changeBy,
+    final now = DateTime.now().toUtc();
+    final entity = EntityType.tryFromString(entityType) ?? EntityType.unknown;
+    final data = <String, dynamic>{
+      'parentId': '',
+      'parentProp': parentProp,
+      'deleted': deleted,
       ...customFields,
-    });
+    }..removeWhere((key, value) => value == null);
+
+    return DynamoChangeLogEntry(
+      cid: generateCid(entityType: entity, userId: changeBy),
+      storageId: '',
+      domainType: domainType,
+      domainId: domainId,
+      entityType: entityType,
+      operation: deleted
+          ? kChangeOperationDelete
+          : kChangeOperationNotYetDefined,
+      stateChanged: false,
+      changeAt: now,
+      entityId: entityId,
+      dataJson: stableStringify(data),
+      changeBy: changeBy,
+      unknownJson: '{}',
+      operationInfoJson: '{}',
+    ).toJson();
   }
 }

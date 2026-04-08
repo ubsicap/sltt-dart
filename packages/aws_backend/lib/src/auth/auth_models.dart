@@ -336,12 +336,14 @@ class AuthTokenPair {
 
 class RegisterRequest {
   RegisterRequest({
+    required this.userId,
     required this.name,
     required this.dateOfBirth,
     required this.email,
     required this.password,
   });
 
+  final String userId;
   final String name;
   final String dateOfBirth;
   final String email;
@@ -349,6 +351,7 @@ class RegisterRequest {
 
   factory RegisterRequest.fromJson(Map<String, dynamic> json) {
     return RegisterRequest(
+      userId: json['userId'] as String? ?? '',
       name: json['name'] as String? ?? '',
       dateOfBirth: json['dateOfBirth'] as String? ?? '',
       email: json['email'] as String? ?? '',
@@ -419,6 +422,7 @@ class LogoutRequest {
 
 class CreateAdHocUserRequest {
   CreateAdHocUserRequest({
+    required this.userId,
     required this.name,
     required this.username,
     required this.password,
@@ -427,6 +431,7 @@ class CreateAdHocUserRequest {
     required this.adminPassword,
   });
 
+  final String userId;
   final String name;
   final String username;
   final String password;
@@ -436,6 +441,7 @@ class CreateAdHocUserRequest {
 
   factory CreateAdHocUserRequest.fromJson(Map<String, dynamic> json) {
     return CreateAdHocUserRequest(
+      userId: json['userId'] as String? ?? '',
       name: json['name'] as String? ?? '',
       username: json['username'] as String? ?? '',
       password: json['password'] as String? ?? '',
@@ -450,18 +456,25 @@ class CreateAdHocUserRequest {
 
 class UpdateAdHocProjectsRequest {
   UpdateAdHocProjectsRequest({
-    required this.projectIds,
+    required this.addProjectIds,
+    required this.removeProjectIds,
     required this.adminPassword,
   });
 
-  final List<String> projectIds;
+  final List<String> addProjectIds;
+  final List<String> removeProjectIds;
   final String adminPassword;
 
   factory UpdateAdHocProjectsRequest.fromJson(Map<String, dynamic> json) {
     return UpdateAdHocProjectsRequest(
-      projectIds: (json['projectIds'] as List<dynamic>? ?? const <dynamic>[])
-          .whereType<String>()
-          .toList(growable: false),
+      addProjectIds:
+          (json['addProjectIds'] as List<dynamic>? ?? const <dynamic>[])
+              .whereType<String>()
+              .toList(growable: false),
+      removeProjectIds:
+          (json['removeProjectIds'] as List<dynamic>? ?? const <dynamic>[])
+              .whereType<String>()
+              .toList(growable: false),
       adminPassword: json['adminPassword'] as String? ?? '',
     );
   }

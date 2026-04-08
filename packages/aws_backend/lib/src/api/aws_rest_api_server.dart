@@ -49,8 +49,9 @@ class AwsRestApiServer extends BaseRestApiServer {
           'Start self-registration for standard users and send a 6-digit verification code valid for 10 minutes. Response remains neutral when the email already exists.',
       'requestBody': {
         'type': 'object',
-        'required': ['name', 'dateOfBirth', 'email', 'password'],
+        'required': ['userId', 'name', 'dateOfBirth', 'email', 'password'],
         'properties': {
+          'userId': {'type': 'string'},
           'name': {'type': 'string'},
           'dateOfBirth': {'type': 'string', 'format': 'yyyy-MM-dd'},
           'email': {'type': 'string'},
@@ -186,15 +187,53 @@ class AwsRestApiServer extends BaseRestApiServer {
       'security': [
         {'bearerAuth': []},
       ],
+      'requestBody': {
+        'type': 'object',
+        'required': [
+          'userId',
+          'name',
+          'username',
+          'password',
+          'projectIds',
+          'adminPassword',
+        ],
+        'properties': {
+          'userId': {'type': 'string'},
+          'name': {'type': 'string'},
+          'username': {'type': 'string'},
+          'password': {'type': 'string'},
+          'dateOfBirth': {'type': 'string', 'format': 'yyyy-MM-dd'},
+          'projectIds': {
+            'type': 'array',
+            'items': {'type': 'string'},
+          },
+          'adminPassword': {'type': 'string'},
+        },
+      },
     },
     {
       'method': 'PUT',
       'path': '/api/admin/adhoc-users/{userId}/projects',
       'description':
-          'Replace the AdHoc user project assignments. Caller must be an admin of all affected projects.',
+          'Apply explicit project assignment changes for an AdHoc user. Caller must be an admin of every project listed in addProjectIds or removeProjectIds.',
       'security': [
         {'bearerAuth': []},
       ],
+      'requestBody': {
+        'type': 'object',
+        'required': ['adminPassword'],
+        'properties': {
+          'addProjectIds': {
+            'type': 'array',
+            'items': {'type': 'string'},
+          },
+          'removeProjectIds': {
+            'type': 'array',
+            'items': {'type': 'string'},
+          },
+          'adminPassword': {'type': 'string'},
+        },
+      },
     },
     {
       'method': 'POST',

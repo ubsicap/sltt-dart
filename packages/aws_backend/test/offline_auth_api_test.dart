@@ -49,6 +49,7 @@ void main() {
         'path': '/api/auth/register',
         'headers': <String, String>{},
         'body': jsonEncode({
+          'userId': 'user-jane',
           'name': 'Jane Doe',
           'dateOfBirth': '1990-06-15',
           'email': 'jane@example.com',
@@ -97,8 +98,23 @@ void main() {
         entityType: kEntityTypeUserProfile,
         entityId: 'default',
       );
+      final userState = await storage.getEntityState(
+        domainType: 'user',
+        domainId: verifyBody['userId'] as String,
+        entityType: kEntityTypeUser,
+        entityId: verifyBody['userId'] as String,
+      );
       expect(profileState, isA<DynamoEntityState>());
-      expect(profileState?.toJson()['email'], equals('jane@example.com'));
+      expect(
+        profileState?.toJson()['email'] ?? profileState?.toJson()['data_email'],
+        equals('jane@example.com'),
+      );
+      expect(
+        profileState?.toJson()['emailVerified'] ??
+            profileState?.toJson()['data_emailVerified'],
+        isTrue,
+      );
+      expect(userState, isNull);
     });
 
     test('refresh rotates refresh token and invalidates old token', () async {
@@ -107,6 +123,7 @@ void main() {
         'path': '/api/auth/register',
         'headers': <String, String>{},
         'body': jsonEncode({
+          'userId': 'user-jane',
           'name': 'Jane Doe',
           'dateOfBirth': '1990-06-15',
           'email': 'jane@example.com',
@@ -166,6 +183,7 @@ void main() {
     test('resend invalidates previous code', () async {
       await authService.register(
         RegisterRequest(
+          userId: 'user-jane',
           name: 'Jane Doe',
           dateOfBirth: '1990-06-15',
           email: 'jane@example.com',
@@ -196,6 +214,7 @@ void main() {
     test('admin can create adhoc user', () async {
       final adminResponse = await authService.register(
         RegisterRequest(
+          userId: 'admin-user',
           name: 'Admin User',
           dateOfBirth: '1980-01-01',
           email: 'admin@example.com',
@@ -247,6 +266,7 @@ void main() {
           'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
         },
         'body': jsonEncode({
+          'userId': 'adhoc-local-user',
           'name': 'Local User',
           'username': 'local.user',
           'password': 'secret123',
@@ -272,6 +292,128 @@ void main() {
           jsonDecode(listResponse['body'] as String) as Map<String, dynamic>;
       expect((listBody['items'] as List<dynamic>).length, equals(1));
     });
+
+    test(
+      'project updates only remove explicitly requested memberships',
+      () async {
+        final adminResponse = await authService.register(
+          RegisterRequest(
+            userId: 'admin-user',
+            name: 'Admin User',
+            dateOfBirth: '1980-01-01',
+            email: 'admin@example.com',
+            password: 'admin-pass',
+          ),
+        );
+        expect(adminResponse.status, equals('pending_verification'));
+        final adminVerify = await authService.verifyEmail(
+          VerifyEmailRequest(
+            email: 'admin@example.com',
+            code: emailSender.codes['admin@example.com']!.last,
+          ),
+        );
+        final adminUserId = adminVerify.userId;
+
+        await storage.testStoreState(
+          entityState: DynamoEntityState.fromJson({
+            'entityId': adminUserId,
+            'entityType': kEntityTypeMember,
+            'domainType': 'project',
+            'unknownJson': '{}',
+            'change_domainId': 'project-1',
+            'change_domainId_orig_': 'project-1',
+            'change_changeAt': DateTime.now().toUtc().toIso8601String(),
+            'change_changeAt_orig_': DateTime.now().toUtc().toIso8601String(),
+            'change_cid': 'admin-member',
+            'change_cid_orig_': 'admin-member',
+            'change_changeBy': 'seed',
+            'change_changeBy_orig_': 'seed',
+            'change_storedAt': DateTime.now().toUtc().toIso8601String(),
+            'change_storedAt_orig_': DateTime.now().toUtc().toIso8601String(),
+            'data_parentId': '',
+            'data_parentId_changeAt_': DateTime.now().toUtc().toIso8601String(),
+            'data_parentId_cid_': 'admin-member',
+            'data_parentId_changeBy_': 'seed',
+            'data_parentProp': kEntityTypeMemberCollection,
+            'data_parentProp_changeAt_': DateTime.now()
+                .toUtc()
+                .toIso8601String(),
+            'data_parentProp_cid_': 'admin-member',
+            'data_parentProp_changeBy_': 'seed',
+            'role': 'admin',
+            'userId': adminUserId,
+          }),
+        );
+
+        final createResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/admin/adhoc-users',
+          'headers': <String, String>{
+            'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
+          },
+          'body': jsonEncode({
+            'userId': 'adhoc-local-user',
+            'name': 'Local User',
+            'username': 'local.user',
+            'password': 'secret123',
+            'projectIds': ['project-1'],
+            'adminPassword': 'admin-pass',
+          }),
+        }, router);
+        expect(createResponse['statusCode'], equals(201));
+
+        final storedPrincipal = await recordStore.getPrincipalByUserId(
+          'adhoc-local-user',
+        );
+        await recordStore.putPrincipal(
+          storedPrincipal!.copyWith(
+            assignedProjectIds: const <String>['project-1', 'project-2'],
+          ),
+        );
+        await AuthAppStateStore(storage: storage).applyProjectAssignmentChanges(
+          principal: storedPrincipal.copyWith(
+            assignedProjectIds: const <String>['project-1', 'project-2'],
+          ),
+          projectIdsToAdd: const <String>['project-2'],
+          projectIdsToRemove: const <String>[],
+          changeBy: adminUserId,
+        );
+
+        final updateResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'PUT',
+          'path': '/api/admin/adhoc-users/adhoc-local-user/projects',
+          'headers': <String, String>{
+            'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
+          },
+          'body': jsonEncode({
+            'removeProjectIds': ['project-1'],
+            'adminPassword': 'admin-pass',
+          }),
+        }, router);
+
+        expect(updateResponse['statusCode'], equals(200));
+        final updatedPrincipal = await recordStore.getPrincipalByUserId(
+          'adhoc-local-user',
+        );
+        expect(updatedPrincipal?.assignedProjectIds, equals(['project-2']));
+
+        final removedMembership = await storage.getEntityState(
+          domainType: 'project',
+          domainId: 'project-1',
+          entityType: kEntityTypeMember,
+          entityId: 'adhoc-local-user',
+        );
+        final retainedMembership = await storage.getEntityState(
+          domainType: 'project',
+          domainId: 'project-2',
+          entityType: kEntityTypeMember,
+          entityId: 'adhoc-local-user',
+        );
+
+        expect(removedMembership?.toJson()['data_deleted'], isTrue);
+        expect(retainedMembership?.toJson()['data_deleted'], isFalse);
+      },
+    );
   });
 }
 

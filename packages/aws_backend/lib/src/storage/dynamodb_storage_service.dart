@@ -61,6 +61,7 @@ String? _cachedStorageId;
 ///   write:
 ///     operation: Put state item in updateChangeLogAndStates and testStoreState
 ///     key_fields: [pk, sk, gsi2pk, gsi2sk]
+///     usage_notes: Within a single batch, the latest pending state write must be deduped by the full state key `(domainId, entityType, entityId)`, not by `entityId` alone, because the same entityId can appear in multiple domains.
 ///     keys:
 ///       pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion
 ///       sk: $states#state#entityId_entity1
@@ -318,8 +319,9 @@ class DynamoDBStorageService extends BaseStorageService {
     final outChanges = <BaseChangeLogEntry>[];
     final outStates = <BaseEntityState?>[];
     final changeItemsToPut = <Map<String, dynamic>>[];
-    // the states need to be unique, so only update the latest for each entityId
-    final stateItemsToPutByEntityId = <String, Map<String, dynamic>>{};
+    // the states need to be unique within a batch, keyed by the full state
+    // identity so the same entityId can be written in multiple domains.
+    final stateItemsToPutByKey = <String, Map<String, dynamic>>{};
     final syncStatesToUpsert =
         <
           ({
@@ -377,9 +379,8 @@ class DynamoDBStorageService extends BaseStorageService {
 
         if (!req.skipStateWrite) {
           // Prepare entity state item for batch put
-          stateItemsToPutByEntityId[newState.entityId] = _buildEntityStateItem(
-            newState,
-          );
+          stateItemsToPutByKey[_stateBatchKey(newState)] =
+              _buildEntityStateItem(newState);
 
           // Queue sync state update for entity state
           syncStatesToUpsert.add((
@@ -400,8 +401,8 @@ class DynamoDBStorageService extends BaseStorageService {
     }
 
     // Phase 3: Batch write entity states
-    if (stateItemsToPutByEntityId.isNotEmpty) {
-      await _batchPutItems(stateItemsToPutByEntityId.values.toList());
+    if (stateItemsToPutByKey.isNotEmpty) {
+      await _batchPutItems(stateItemsToPutByKey.values.toList());
     }
 
     // Phase 4: Batch upsert entity type sync states
@@ -468,6 +469,10 @@ class DynamoDBStorageService extends BaseStorageService {
       'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, rank: rank)},
       ..._encodeJson(stateJson),
     };
+  }
+
+  String _stateBatchKey(BaseEntityState state) {
+    return '${state.domainType}|${state.change_domainId}|${state.entityType}|${state.entityId}';
   }
 
   /// Batch puts items to DynamoDB (max 25 per request).

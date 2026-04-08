@@ -6,6 +6,76 @@ import 'package:http/http.dart' as http;
 
 import 'auth_models.dart';
 
+/// Auth table key access map.
+///
+/// There are currently no GSIs on this table. Every access pattern uses the
+/// base table `pk`/`sk`, and TTL cleanup relies on `ttlEpochSeconds` stored on
+/// challenge/session items.
+///
+/// sample_values:
+///   userId: user_123
+///   normalizedEmail: person@example.com
+///   normalizedUsername: local.user
+///   sessionId: sess_abc
+///   refreshTokenHash: sha256_refresh_token
+///
+/// principal:
+///   write_read:
+///     operation: PutItem/GetItem in putPrincipal and getPrincipalByUserId
+///     key_fields: [pk, sk]
+///     keys:
+///       pk: USER#user_123
+///       sk: PRINCIPAL
+///
+/// email_lookup:
+///   write_read:
+///     operation: PutItem/GetItem in putEmailLookup and getPrincipalByEmail
+///     key_fields: [pk, sk]
+///     keys:
+///       pk: IDENTIFIER#EMAIL#person@example.com
+///       sk: LOOKUP
+///
+/// username_lookup:
+///   write_read:
+///     operation: PutItem/GetItem in putUsernameLookup and getPrincipalByUsername
+///     key_fields: [pk, sk]
+///     keys:
+///       pk: IDENTIFIER#USERNAME#local.user
+///       sk: LOOKUP
+///
+/// email_challenge:
+///   write_read_delete:
+///     operation: PutItem/GetItem/DeleteItem in put/get/deleteEmailChallenge
+///     key_fields: [pk, sk]
+///     notes: TTL is driven by ttlEpochSeconds on the item payload.
+///     keys:
+///       pk: USER#user_123
+///       sk: CHALLENGE#EMAIL
+///
+/// session:
+///   write_read:
+///     operation: PutItem/GetItem/Query in putSession, getSessionById, revokeAllSessionsForUser
+///     key_fields: [pk, sk]
+///     notes: Query uses pk = USER#user_123 and begins_with(sk, SESSION#).
+///     keys:
+///       pk: USER#user_123
+///       sk: SESSION#sess_abc
+///
+/// session_token_lookup:
+///   write_read:
+///     operation: PutItem/GetItem in putSession and getSessionByTokenHash
+///     key_fields: [pk, sk]
+///     notes: TTL is mirrored from the backing session item.
+///     keys:
+///       pk: SESSIONTOKEN#sha256_refresh_token
+///       sk: LOOKUP
+///
+/// adhoc_listing:
+///   read_scan:
+///     operation: Scan in listAdHocPrincipals
+///     key_fields: [itemType filter]
+///     notes: No index yet; this scans for itemType = principal and filters in memory.
+
 abstract class AuthRecordStore {
   Future<void> initialize();
   Future<void> close();

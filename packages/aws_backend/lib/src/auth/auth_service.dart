@@ -67,13 +67,15 @@ class BackendAuthService {
 
   Future<AuthStatusResponse> register(RegisterRequest request) async {
     final total = _startTiming();
+    final userId = request.userId.trim();
     final name = request.name.trim();
     final dateOfBirth = request.dateOfBirth.trim();
     final email = request.email.trim();
     final password = request.password;
 
     try {
-      if (name.isEmpty ||
+      if (userId.isEmpty ||
+          name.isEmpty ||
           dateOfBirth.isEmpty ||
           email.isEmpty ||
           password.isEmpty) {
@@ -92,8 +94,32 @@ class BackendAuthService {
         extra: {'email': normalizedEmail, 'found': existing != null},
       );
 
+      if (existing != null && existing.userId != userId) {
+        throw AuthException(
+          'Unable to complete this action',
+          statusCode: 400,
+          code: 'unable_to_complete_action',
+        );
+      }
+
       if (existing != null && existing.emailVerified) {
         return const AuthStatusResponse(status: 'pending_verification');
+      }
+
+      stage = _startTiming();
+      final existingByUserId = await _recordStore.getPrincipalByUserId(userId);
+      _logTiming(
+        'register.lookupUserId',
+        stage,
+        extra: {'userId': userId, 'found': existingByUserId != null},
+      );
+      if (existingByUserId != null &&
+          existingByUserId.normalizedEmail != normalizedEmail) {
+        throw AuthException(
+          'Unable to complete this action',
+          statusCode: 400,
+          code: 'unable_to_complete_action',
+        );
       }
 
       stage = _startTiming();
@@ -108,7 +134,7 @@ class BackendAuthService {
       final principal =
           (existing ??
                   AuthPrincipal(
-                    userId: _uuid.v4(),
+                    userId: userId,
                     identityKind: AuthIdentityKind.emailPassword,
                     email: email,
                     normalizedEmail: normalizedEmail,
@@ -249,7 +275,10 @@ class BackendAuthService {
       );
 
       stage = _startTiming();
-      await _appStateStore.upsertVerifiedUser(verifiedPrincipal);
+      await _appStateStore.upsertVerifiedUserProfile(
+        principal: verifiedPrincipal,
+        changeBy: verifiedPrincipal.userId,
+      );
       _logTiming(
         'verify.upsertVerifiedUser',
         stage,
@@ -457,13 +486,25 @@ class BackendAuthService {
   }) async {
     await _confirmAdminPassword(session.userId, request.adminPassword);
     await _requireAdminForProjects(session.userId, request.projectIds);
+    final userId = request.userId.trim();
     final username = request.username.trim();
     final name = request.name.trim();
     final password = request.password;
-    if (username.isEmpty || name.isEmpty || password.isEmpty) {
+    if (userId.isEmpty ||
+        username.isEmpty ||
+        name.isEmpty ||
+        password.isEmpty) {
       throw AuthException(
         'Unable to complete this action',
         code: 'invalid_request',
+      );
+    }
+    final existingByUserId = await _recordStore.getPrincipalByUserId(userId);
+    if (existingByUserId != null) {
+      throw AuthException(
+        'Unable to complete this action',
+        statusCode: 400,
+        code: 'unable_to_complete_action',
       );
     }
     final normalizedUsername = _normalizeUsername(username);
@@ -480,7 +521,7 @@ class BackendAuthService {
     final hash = await _passwordHashService.hashPassword(password);
     final now = DateTime.now().toUtc();
     final principal = AuthPrincipal(
-      userId: _uuid.v4(),
+      userId: userId,
       identityKind: AuthIdentityKind.usernamePassword,
       username: username,
       normalizedUsername: normalizedUsername,
@@ -502,10 +543,15 @@ class BackendAuthService {
     );
     await _recordStore.putPrincipal(principal);
     await _recordStore.putUsernameLookup(normalizedUsername, principal.userId);
-    await _appStateStore.upsertVerifiedUser(principal);
-    await _appStateStore.syncProjectAssignments(
+    await _appStateStore.upsertVerifiedUserProfile(
       principal: principal,
-      previousProjectIds: const <String>[],
+      changeBy: session.userId,
+    );
+    await _appStateStore.applyProjectAssignmentChanges(
+      principal: principal,
+      projectIdsToAdd: request.projectIds,
+      projectIdsToRemove: const <String>[],
+      changeBy: session.userId,
     );
     return _toAdHocSummary(principal);
   }
@@ -537,19 +583,39 @@ class BackendAuthService {
   }) async {
     await _confirmAdminPassword(session.userId, request.adminPassword);
     final principal = await _requireAdHocPrincipal(userId);
-    final authorizationProjects = {
+    final addProjectIds = request.addProjectIds
+        .map((projectId) => projectId.trim())
+        .where((projectId) => projectId.isNotEmpty)
+        .toSet();
+    final removeProjectIds = request.removeProjectIds
+        .map((projectId) => projectId.trim())
+        .where((projectId) => projectId.isNotEmpty)
+        .toSet();
+    final overlap = addProjectIds.intersection(removeProjectIds);
+    if (overlap.isNotEmpty) {
+      throw AuthException(
+        'Unable to complete this action',
+        code: 'invalid_request',
+      );
+    }
+    await _requireAdminForProjects(
+      session.userId,
+      {...addProjectIds, ...removeProjectIds}.toList(growable: false),
+    );
+    final updatedProjectIds = {
       ...principal.assignedProjectIds,
-      ...request.projectIds,
-    }.toList(growable: false);
-    await _requireAdminForProjects(session.userId, authorizationProjects);
+      ...addProjectIds,
+    }..removeAll(removeProjectIds);
     final updated = principal.copyWith(
-      assignedProjectIds: request.projectIds,
+      assignedProjectIds: updatedProjectIds.toList(growable: false),
       updatedAt: DateTime.now().toUtc(),
     );
     await _recordStore.putPrincipal(updated);
-    await _appStateStore.syncProjectAssignments(
+    await _appStateStore.applyProjectAssignmentChanges(
       principal: updated,
-      previousProjectIds: principal.assignedProjectIds,
+      projectIdsToAdd: addProjectIds,
+      projectIdsToRemove: removeProjectIds,
+      changeBy: session.userId,
     );
     return _toAdHocSummary(updated);
   }
@@ -596,7 +662,10 @@ class BackendAuthService {
     );
     await _recordStore.putPrincipal(deleted);
     await _recordStore.revokeAllSessionsForUser(userId, DateTime.now().toUtc());
-    await _appStateStore.markUserDeleted(deleted);
+    await _appStateStore.markUserDeleted(
+      principal: deleted,
+      changeBy: session.userId,
+    );
     return const AuthStatusResponse(status: 'deleted');
   }
 
