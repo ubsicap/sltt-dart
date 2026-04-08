@@ -232,6 +232,72 @@ void main() {
       expect(oldVerifyResponse['statusCode'], equals(400));
     });
 
+    test('register clamps verification emails after three sends', () async {
+      for (var attempt = 0; attempt < 4; attempt++) {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{
+            'x-forwarded-for': '203.0.113.${50 + attempt}',
+          },
+          'body': jsonEncode({
+            'userId': 'user-jane',
+            'name': 'Jane Doe',
+            'dateOfBirth': '1990-06-15',
+            'email': 'jane@example.com',
+            'password': 'secret123',
+          }),
+        }, router);
+
+        expect(response['statusCode'], equals(200));
+      }
+
+      expect(emailSender.codes['jane@example.com'], hasLength(3));
+      final challenge = await recordStore.getEmailChallenge('user-jane');
+      expect(challenge?.resendCount, equals(2));
+
+      final principal = await recordStore.getPrincipalByUserId('user-jane');
+      expect(
+        principal?.registrationOutcome_last_,
+        equals('register_existing_pending_same_user'),
+      );
+      expect(principal?.registrationSourceIp_last_, equals('203.0.113.53'));
+    });
+
+    test('resend clamps verification emails after three sends', () async {
+      final registerResponse = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/register',
+        'headers': <String, String>{'x-forwarded-for': '203.0.113.60'},
+        'body': jsonEncode({
+          'userId': 'user-jane',
+          'name': 'Jane Doe',
+          'dateOfBirth': '1990-06-15',
+          'email': 'jane@example.com',
+          'password': 'secret123',
+        }),
+      }, router);
+
+      expect(registerResponse['statusCode'], equals(200));
+
+      for (var attempt = 0; attempt < 3; attempt++) {
+        final resendResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/resend-verification-code',
+          'headers': <String, String>{
+            'x-forwarded-for': '203.0.113.${61 + attempt}',
+          },
+          'body': jsonEncode({'email': 'jane@example.com'}),
+        }, router);
+
+        expect(resendResponse['statusCode'], equals(200));
+      }
+
+      expect(emailSender.codes['jane@example.com'], hasLength(3));
+      final challenge = await recordStore.getEmailChallenge('user-jane');
+      expect(challenge?.resendCount, equals(2));
+    });
+
     test(
       'register stays neutral when email belongs to another userId',
       () async {

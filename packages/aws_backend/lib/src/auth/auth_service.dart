@@ -15,6 +15,7 @@ import 'token_service.dart';
 
 class BackendAuthService {
   static const String _authEventSchema = 'auth_event_v1';
+  static const int _maxVerificationEmailsPerWindow = 3;
 
   BackendAuthService({
     required AuthRecordStore recordStore,
@@ -239,9 +240,13 @@ class BackendAuthService {
       );
 
       stage = _startTiming();
-      await _issueVerificationChallenge(
+      final challengeIssue = await _maybeIssueVerificationChallenge(
         principal,
-        resendCount: existing == null ? 0 : 1,
+        existingChallenge: existing == null
+            ? null
+            : await _recordStore.getEmailChallenge(principal.userId),
+        sourceIp: sourceIp,
+        clampEvent: 'register_email_clamped',
       );
       _logTiming(
         'register.issueVerificationChallenge',
@@ -255,6 +260,10 @@ class BackendAuthService {
         email: normalizedEmail,
         userId: principal.userId,
         sourceIp: sourceIp,
+        resendCount: challengeIssue.resendCount,
+        detail: challengeIssue.sent
+            ? 'verification_email_sent'
+            : 'verification_email_clamped',
       );
       return const AuthStatusResponse(status: 'pending_verification');
     } finally {
@@ -415,16 +424,18 @@ class BackendAuthService {
       return const AuthStatusResponse(status: 'sent');
     }
     final existing = await _recordStore.getEmailChallenge(principal.userId);
-    await _issueVerificationChallenge(
+    final challengeIssue = await _maybeIssueVerificationChallenge(
       principal,
-      resendCount: (existing?.resendCount ?? 0) + 1,
+      existingChallenge: existing,
+      sourceIp: sourceIp,
+      clampEvent: 'resend_email_clamped',
     );
     _logAuthEvent(
-      'resend_sent',
+      challengeIssue.sent ? 'resend_sent' : 'resend_clamped',
       email: normalizedEmail,
       userId: principal.userId,
       sourceIp: sourceIp,
-      resendCount: (existing?.resendCount ?? 0) + 1,
+      resendCount: challengeIssue.resendCount,
     );
     return const AuthStatusResponse(status: 'sent');
   }
@@ -936,6 +947,39 @@ class BackendAuthService {
     } finally {
       _logTiming('challenge.total', total, extra: {'userId': principal.userId});
     }
+  }
+
+  Future<({bool sent, int resendCount})> _maybeIssueVerificationChallenge(
+    AuthPrincipal principal, {
+    required AuthEmailChallenge? existingChallenge,
+    required String? sourceIp,
+    required String clampEvent,
+  }) async {
+    final now = DateTime.now().toUtc();
+    if (existingChallenge != null && existingChallenge.expiresAt.isAfter(now)) {
+      final emailsAlreadySent = existingChallenge.resendCount + 1;
+      if (emailsAlreadySent >= _maxVerificationEmailsPerWindow) {
+        _logAuthEvent(
+          clampEvent,
+          email: principal.normalizedEmail,
+          userId: principal.userId,
+          sourceIp: sourceIp,
+          resendCount: existingChallenge.resendCount,
+          detail: 'max_verification_emails_reached',
+        );
+        return (sent: false, resendCount: existingChallenge.resendCount);
+      }
+
+      final nextResendCount = existingChallenge.resendCount + 1;
+      await _issueVerificationChallenge(
+        principal,
+        resendCount: nextResendCount,
+      );
+      return (sent: true, resendCount: nextResendCount);
+    }
+
+    await _issueVerificationChallenge(principal, resendCount: 0);
+    return (sent: true, resendCount: 0);
   }
 
   Future<void> _confirmAdminPassword(
