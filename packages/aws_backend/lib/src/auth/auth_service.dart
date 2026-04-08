@@ -95,11 +95,7 @@ class BackendAuthService {
       );
 
       if (existing != null && existing.userId != userId) {
-        throw AuthException(
-          'Unable to complete this action',
-          statusCode: 400,
-          code: 'unable_to_complete_action',
-        );
+        return const AuthStatusResponse(status: 'pending_verification');
       }
 
       if (existing != null && existing.emailVerified) {
@@ -115,11 +111,7 @@ class BackendAuthService {
       );
       if (existingByUserId != null &&
           existingByUserId.normalizedEmail != normalizedEmail) {
-        throw AuthException(
-          'Unable to complete this action',
-          statusCode: 400,
-          code: 'unable_to_complete_action',
-        );
+        return const AuthStatusResponse(status: 'pending_verification');
       }
 
       stage = _startTiming();

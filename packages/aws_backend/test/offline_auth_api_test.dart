@@ -211,6 +211,110 @@ void main() {
       expect(oldVerifyResponse['statusCode'], equals(400));
     });
 
+    test(
+      'register stays neutral when email belongs to another userId',
+      () async {
+        final firstRegister = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'userId': 'user-jane',
+            'name': 'Jane Doe',
+            'dateOfBirth': '1990-06-15',
+            'email': 'jane@example.com',
+            'password': 'secret123',
+          }),
+        }, router);
+
+        expect(firstRegister['statusCode'], equals(200));
+        expect(emailSender.codes['jane@example.com'], hasLength(1));
+
+        final secondRegister = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'userId': 'different-user',
+            'name': 'Jane Clone',
+            'dateOfBirth': '1991-06-15',
+            'email': 'jane@example.com',
+            'password': 'secret456',
+          }),
+        }, router);
+
+        expect(secondRegister['statusCode'], equals(200));
+        final secondBody =
+            jsonDecode(secondRegister['body'] as String)
+                as Map<String, dynamic>;
+        expect(secondBody['status'], equals('pending_verification'));
+        expect(
+          await recordStore.getPrincipalByUserId('different-user'),
+          isNull,
+        );
+        expect(emailSender.codes['jane@example.com'], hasLength(1));
+      },
+    );
+
+    test(
+      'register stays neutral when userId belongs to another email',
+      () async {
+        final firstRegister = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'userId': 'user-jane',
+            'name': 'Jane Doe',
+            'dateOfBirth': '1990-06-15',
+            'email': 'jane@example.com',
+            'password': 'secret123',
+          }),
+        }, router);
+
+        expect(firstRegister['statusCode'], equals(200));
+
+        final secondRegister = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'userId': 'user-jane',
+            'name': 'Jane Doe',
+            'dateOfBirth': '1990-06-15',
+            'email': 'other@example.com',
+            'password': 'secret456',
+          }),
+        }, router);
+
+        expect(secondRegister['statusCode'], equals(200));
+        final secondBody =
+            jsonDecode(secondRegister['body'] as String)
+                as Map<String, dynamic>;
+        expect(secondBody['status'], equals('pending_verification'));
+        expect(emailSender.codes.containsKey('other@example.com'), isFalse);
+
+        final principal = await recordStore.getPrincipalByUserId('user-jane');
+        expect(principal?.email, equals('jane@example.com'));
+        expect(principal?.normalizedEmail, equals('jane@example.com'));
+      },
+    );
+
+    test('resend stays neutral when email does not exist', () async {
+      final resendResponse = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/resend-verification-code',
+        'headers': <String, String>{},
+        'body': jsonEncode({'email': 'missing@example.com'}),
+      }, router);
+
+      expect(resendResponse['statusCode'], equals(200));
+      final resendBody =
+          jsonDecode(resendResponse['body'] as String) as Map<String, dynamic>;
+      expect(resendBody['status'], equals('sent'));
+      expect(emailSender.codes.containsKey('missing@example.com'), isFalse);
+    });
+
     test('admin can create adhoc user', () async {
       final adminResponse = await authService.register(
         RegisterRequest(

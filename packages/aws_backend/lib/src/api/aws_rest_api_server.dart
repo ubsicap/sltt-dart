@@ -46,7 +46,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'POST',
       'path': '/api/auth/register',
       'description':
-          'Start self-registration for standard users and send a 6-digit verification code valid for 10 minutes. Response remains neutral when the email already exists.',
+          'Start self-registration for standard users and send a 6-digit verification code valid for 10 minutes. Response remains neutral when the submitted email or userId already maps to an existing account.',
       'requestBody': {
         'type': 'object',
         'required': ['userId', 'name', 'dateOfBirth', 'email', 'password'],
@@ -69,7 +69,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'POST',
       'path': '/api/auth/verify-email',
       'description':
-          'Verify the 6-digit email code and issue access and refresh tokens.',
+          'Verify the 6-digit email code and issue access and refresh tokens. Invalid email/code/account-state combinations return the same neutral invalid-or-expired response.',
       'requestBody': {
         'type': 'object',
         'required': ['email', 'code'],
@@ -93,7 +93,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'POST',
       'path': '/api/auth/resend-verification-code',
       'description':
-          'Resend the verification code for an unverified email registration. Response remains neutral.',
+          'Resend the verification code for an unverified email registration. Response remains neutral whether the email is missing, already verified, or pending.',
       'requestBody': {
         'type': 'object',
         'required': ['email'],
