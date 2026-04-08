@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:convert';
 
 enum AuthIdentityKind {
@@ -70,6 +72,12 @@ class AuthPrincipal {
     this.deletedAt,
     required this.assignedProjectIds,
     required this.verificationVersion,
+    this.registrationAttemptAt_orig_,
+    this.registrationAttemptAt_last_,
+    this.registrationOutcome_orig_,
+    this.registrationOutcome_last_,
+    this.registrationSourceIp_orig_,
+    this.registrationSourceIp_last_,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -92,6 +100,12 @@ class AuthPrincipal {
   final DateTime? deletedAt;
   final List<String> assignedProjectIds;
   final int verificationVersion;
+  final DateTime? registrationAttemptAt_orig_;
+  final DateTime? registrationAttemptAt_last_;
+  final String? registrationOutcome_orig_;
+  final String? registrationOutcome_last_;
+  final String? registrationSourceIp_orig_;
+  final String? registrationSourceIp_last_;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -116,6 +130,12 @@ class AuthPrincipal {
     DateTime? deletedAt,
     List<String>? assignedProjectIds,
     int? verificationVersion,
+    DateTime? registrationAttemptAt_orig_,
+    DateTime? registrationAttemptAt_last_,
+    String? registrationOutcome_orig_,
+    String? registrationOutcome_last_,
+    String? registrationSourceIp_orig_,
+    String? registrationSourceIp_last_,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -138,6 +158,18 @@ class AuthPrincipal {
       deletedAt: deletedAt ?? this.deletedAt,
       assignedProjectIds: assignedProjectIds ?? this.assignedProjectIds,
       verificationVersion: verificationVersion ?? this.verificationVersion,
+      registrationAttemptAt_orig_:
+          registrationAttemptAt_orig_ ?? this.registrationAttemptAt_orig_,
+      registrationAttemptAt_last_:
+          registrationAttemptAt_last_ ?? this.registrationAttemptAt_last_,
+      registrationOutcome_orig_:
+          registrationOutcome_orig_ ?? this.registrationOutcome_orig_,
+      registrationOutcome_last_:
+          registrationOutcome_last_ ?? this.registrationOutcome_last_,
+      registrationSourceIp_orig_:
+          registrationSourceIp_orig_ ?? this.registrationSourceIp_orig_,
+      registrationSourceIp_last_:
+          registrationSourceIp_last_ ?? this.registrationSourceIp_last_,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -162,6 +194,16 @@ class AuthPrincipal {
     'deletedAt': deletedAt?.toUtc().toIso8601String(),
     'assignedProjectIds': assignedProjectIds,
     'verificationVersion': verificationVersion,
+    'registrationAttemptAt_orig_': registrationAttemptAt_orig_
+        ?.toUtc()
+        .toIso8601String(),
+    'registrationAttemptAt_last_': registrationAttemptAt_last_
+        ?.toUtc()
+        .toIso8601String(),
+    'registrationOutcome_orig_': registrationOutcome_orig_,
+    'registrationOutcome_last_': registrationOutcome_last_,
+    'registrationSourceIp_orig_': registrationSourceIp_orig_,
+    'registrationSourceIp_last_': registrationSourceIp_last_,
     'createdAt': createdAt.toUtc().toIso8601String(),
     'updatedAt': updatedAt.toUtc().toIso8601String(),
   }..removeWhere((key, value) => value == null);
@@ -194,6 +236,16 @@ class AuthPrincipal {
               .whereType<String>()
               .toList(growable: false),
       verificationVersion: (json['verificationVersion'] as num?)?.toInt() ?? 0,
+      registrationAttemptAt_orig_: _parseDateTime(
+        json['registrationAttemptAt_orig_'],
+      ),
+      registrationAttemptAt_last_: _parseDateTime(
+        json['registrationAttemptAt_last_'],
+      ),
+      registrationOutcome_orig_: json['registrationOutcome_orig_'] as String?,
+      registrationOutcome_last_: json['registrationOutcome_last_'] as String?,
+      registrationSourceIp_orig_: json['registrationSourceIp_orig_'] as String?,
+      registrationSourceIp_last_: json['registrationSourceIp_last_'] as String?,
       createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now().toUtc(),
       updatedAt: _parseDateTime(json['updatedAt']) ?? DateTime.now().toUtc(),
     );

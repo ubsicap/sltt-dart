@@ -14,6 +14,8 @@ import 'password_hash_service.dart';
 import 'token_service.dart';
 
 class BackendAuthService {
+  static const String _authEventSchema = 'auth_event_v1';
+
   BackendAuthService({
     required AuthRecordStore recordStore,
     required AuthAppStateStore appStateStore,
@@ -65,7 +67,10 @@ class BackendAuthService {
     return _tokenService.verifyAccessToken(value.substring(7));
   }
 
-  Future<AuthStatusResponse> register(RegisterRequest request) async {
+  Future<AuthStatusResponse> register(
+    RegisterRequest request, {
+    String? sourceIp,
+  }) async {
     final total = _startTiming();
     final userId = request.userId.trim();
     final name = request.name.trim();
@@ -95,10 +100,40 @@ class BackendAuthService {
       );
 
       if (existing != null && existing.userId != userId) {
+        await _recordStore.putPrincipal(
+          _withRegistrationMetadata(
+            existing,
+            outcome: 'register_existing_email_different_user',
+            attemptAt: DateTime.now().toUtc(),
+            sourceIp: sourceIp,
+          ),
+        );
+        _logAuthEvent(
+          'register_existing_email_different_user',
+          email: normalizedEmail,
+          userId: userId,
+          principalUserId: existing.userId,
+          sourceIp: sourceIp,
+        );
         return const AuthStatusResponse(status: 'pending_verification');
       }
 
       if (existing != null && existing.emailVerified) {
+        await _recordStore.putPrincipal(
+          _withRegistrationMetadata(
+            existing,
+            outcome: 'register_existing_email_same_user_verified',
+            attemptAt: DateTime.now().toUtc(),
+            sourceIp: sourceIp,
+          ),
+        );
+        _logAuthEvent(
+          'register_existing_email_same_user_verified',
+          email: normalizedEmail,
+          userId: userId,
+          principalUserId: existing.userId,
+          sourceIp: sourceIp,
+        );
         return const AuthStatusResponse(status: 'pending_verification');
       }
 
@@ -111,6 +146,21 @@ class BackendAuthService {
       );
       if (existingByUserId != null &&
           existingByUserId.normalizedEmail != normalizedEmail) {
+        await _recordStore.putPrincipal(
+          _withRegistrationMetadata(
+            existingByUserId,
+            outcome: 'register_existing_user_different_email',
+            attemptAt: DateTime.now().toUtc(),
+            sourceIp: sourceIp,
+          ),
+        );
+        _logAuthEvent(
+          'register_existing_user_different_email',
+          email: normalizedEmail,
+          userId: userId,
+          principalUserId: existingByUserId.userId,
+          sourceIp: sourceIp,
+        );
         return const AuthStatusResponse(status: 'pending_verification');
       }
 
@@ -140,6 +190,12 @@ class BackendAuthService {
                     dateOfBirth: dateOfBirth,
                     assignedProjectIds: const <String>[],
                     verificationVersion: 0,
+                    registrationAttemptAt_orig_: now,
+                    registrationAttemptAt_last_: now,
+                    registrationOutcome_orig_: 'register_new',
+                    registrationOutcome_last_: 'register_new',
+                    registrationSourceIp_orig_: sourceIp,
+                    registrationSourceIp_last_: sourceIp,
                     createdAt: now,
                     updatedAt: now,
                   ))
@@ -153,6 +209,16 @@ class BackendAuthService {
                 passwordIterations: passwordHash.iterations,
                 accountStatus: AuthAccountStatus.pendingVerification,
                 emailVerified: false,
+                registrationAttemptAt_orig_: existing == null ? now : null,
+                registrationAttemptAt_last_: now,
+                registrationOutcome_orig_: existing == null
+                    ? 'register_new'
+                    : null,
+                registrationOutcome_last_: existing == null
+                    ? 'register_new'
+                    : 'register_existing_pending_same_user',
+                registrationSourceIp_orig_: existing == null ? sourceIp : null,
+                registrationSourceIp_last_: sourceIp,
                 updatedAt: now,
               );
 
@@ -182,6 +248,14 @@ class BackendAuthService {
         stage,
         extra: {'email': normalizedEmail},
       );
+      _logAuthEvent(
+        existing == null
+            ? 'register_new'
+            : 'register_existing_pending_same_user',
+        email: normalizedEmail,
+        userId: principal.userId,
+        sourceIp: sourceIp,
+      );
       return const AuthStatusResponse(status: 'pending_verification');
     } finally {
       _logTiming(
@@ -192,7 +266,10 @@ class BackendAuthService {
     }
   }
 
-  Future<AuthenticatedResponse> verifyEmail(VerifyEmailRequest request) async {
+  Future<AuthenticatedResponse> verifyEmail(
+    VerifyEmailRequest request, {
+    String? sourceIp,
+  }) async {
     final total = _startTiming();
     final normalizedEmail = _normalizeEmail(request.email);
     try {
@@ -204,6 +281,12 @@ class BackendAuthService {
         extra: {'email': normalizedEmail, 'found': principal != null},
       );
       if (principal == null || principal.isDeleted) {
+        _logAuthEvent(
+          'verify_invalid_code',
+          email: normalizedEmail,
+          sourceIp: sourceIp,
+          detail: 'principal_missing_or_deleted',
+        );
         throw AuthException(
           'Invalid or expired code',
           statusCode: 400,
@@ -220,6 +303,13 @@ class BackendAuthService {
       );
       if (challenge == null ||
           challenge.expiresAt.isBefore(DateTime.now().toUtc())) {
+        _logAuthEvent(
+          'verify_invalid_code',
+          email: normalizedEmail,
+          userId: principal.userId,
+          sourceIp: sourceIp,
+          detail: 'challenge_missing_or_expired',
+        );
         throw AuthException(
           'Invalid or expired code',
           statusCode: 400,
@@ -234,6 +324,13 @@ class BackendAuthService {
       );
       _logTiming('verify.checkCode', stage, extra: {'email': normalizedEmail});
       if (!isCodeValid) {
+        _logAuthEvent(
+          'verify_invalid_code',
+          email: normalizedEmail,
+          userId: principal.userId,
+          sourceIp: sourceIp,
+          detail: 'code_mismatch',
+        );
         throw AuthException(
           'Invalid or expired code',
           statusCode: 400,
@@ -284,6 +381,12 @@ class BackendAuthService {
         stage,
         extra: {'userId': verifiedPrincipal.userId},
       );
+      _logAuthEvent(
+        'verify_success',
+        email: normalizedEmail,
+        userId: verifiedPrincipal.userId,
+        sourceIp: sourceIp,
+      );
       return AuthenticatedResponse(
         status: 'verified',
         userId: verifiedPrincipal.userId,
@@ -295,12 +398,20 @@ class BackendAuthService {
   }
 
   Future<AuthStatusResponse> resendVerificationCode(
-    ResendVerificationCodeRequest request,
-  ) async {
-    final principal = await _recordStore.getPrincipalByEmail(
-      _normalizeEmail(request.email),
-    );
+    ResendVerificationCodeRequest request, {
+    String? sourceIp,
+  }) async {
+    final normalizedEmail = _normalizeEmail(request.email);
+    final principal = await _recordStore.getPrincipalByEmail(normalizedEmail);
     if (principal == null || principal.emailVerified || principal.isDeleted) {
+      _logAuthEvent(
+        principal == null
+            ? 'resend_missing_email'
+            : 'resend_ignored_non_pending_account',
+        email: normalizedEmail,
+        userId: principal?.userId,
+        sourceIp: sourceIp,
+      );
       return const AuthStatusResponse(status: 'sent');
     }
     final existing = await _recordStore.getEmailChallenge(principal.userId);
@@ -308,15 +419,31 @@ class BackendAuthService {
       principal,
       resendCount: (existing?.resendCount ?? 0) + 1,
     );
+    _logAuthEvent(
+      'resend_sent',
+      email: normalizedEmail,
+      userId: principal.userId,
+      sourceIp: sourceIp,
+      resendCount: (existing?.resendCount ?? 0) + 1,
+    );
     return const AuthStatusResponse(status: 'sent');
   }
 
-  Future<AuthenticatedResponse> login(LoginRequest request) async {
+  Future<AuthenticatedResponse> login(
+    LoginRequest request, {
+    String? sourceIp,
+  }) async {
     final total = _startTiming();
     final identifier = request.identifier.trim();
     final password = request.password;
     try {
       if (identifier.isEmpty || password.isEmpty) {
+        _logAuthEvent(
+          'login_invalid_credentials',
+          userId: null,
+          sourceIp: sourceIp,
+          detail: 'missing_identifier_or_password',
+        );
         throw AuthException(
           'Invalid credentials',
           statusCode: 401,
@@ -331,6 +458,13 @@ class BackendAuthService {
         extra: {'identifier': identifier, 'found': principal != null},
       );
       if (principal == null || principal.isDeleted || !principal.isActive) {
+        _logAuthEvent(
+          'login_invalid_credentials',
+          identifier: identifier,
+          userId: principal?.userId,
+          sourceIp: sourceIp,
+          detail: 'principal_missing_or_inactive',
+        );
         throw AuthException(
           'Invalid credentials',
           statusCode: 401,
@@ -351,6 +485,13 @@ class BackendAuthService {
         extra: {'userId': principal.userId},
       );
       if (!isPasswordValid) {
+        _logAuthEvent(
+          'login_invalid_credentials',
+          identifier: identifier,
+          userId: principal.userId,
+          sourceIp: sourceIp,
+          detail: 'password_mismatch',
+        );
         throw AuthException(
           'Invalid credentials',
           statusCode: 401,
@@ -365,6 +506,12 @@ class BackendAuthService {
         stage,
         extra: {'userId': principal.userId},
       );
+      _logAuthEvent(
+        'login_success',
+        identifier: identifier,
+        userId: principal.userId,
+        sourceIp: sourceIp,
+      );
       return AuthenticatedResponse(
         status: 'authenticated',
         userId: principal.userId,
@@ -375,9 +522,17 @@ class BackendAuthService {
     }
   }
 
-  Future<AuthenticatedResponse> refresh(RefreshRequest request) async {
+  Future<AuthenticatedResponse> refresh(
+    RefreshRequest request, {
+    String? sourceIp,
+  }) async {
     final total = _startTiming();
     if (request.refreshToken.trim().isEmpty) {
+      _logAuthEvent(
+        'refresh_invalid_credentials',
+        sourceIp: sourceIp,
+        detail: 'missing_refresh_token',
+      );
       throw AuthException(
         'Invalid credentials',
         statusCode: 401,
@@ -398,6 +553,11 @@ class BackendAuthService {
       if (session == null ||
           session.isRevoked ||
           session.expiresAt.isBefore(DateTime.now().toUtc())) {
+        _logAuthEvent(
+          'refresh_invalid_credentials',
+          sourceIp: sourceIp,
+          detail: 'session_missing_revoked_or_expired',
+        );
         throw AuthException(
           'Invalid credentials',
           statusCode: 401,
@@ -413,6 +573,12 @@ class BackendAuthService {
         extra: {'userId': session.userId},
       );
       if (principal == null || principal.isDeleted || !principal.isActive) {
+        _logAuthEvent(
+          'refresh_invalid_credentials',
+          userId: session.userId,
+          sourceIp: sourceIp,
+          detail: 'principal_missing_or_inactive',
+        );
         throw AuthException(
           'Invalid credentials',
           statusCode: 401,
@@ -435,6 +601,11 @@ class BackendAuthService {
         'refresh.issueSessionTokens',
         stage,
         extra: {'userId': principal.userId},
+      );
+      _logAuthEvent(
+        'refresh_success',
+        userId: principal.userId,
+        sourceIp: sourceIp,
       );
       return AuthenticatedResponse(
         status: 'authenticated',
@@ -879,6 +1050,97 @@ class BackendAuthService {
 
   String _normalizeEmail(String email) => email.trim().toLowerCase();
   String _normalizeUsername(String username) => username.trim().toLowerCase();
+
+  AuthPrincipal _withRegistrationMetadata(
+    AuthPrincipal principal, {
+    required String outcome,
+    required DateTime attemptAt,
+    required String? sourceIp,
+  }) {
+    return principal.copyWith(
+      registrationAttemptAt_orig_:
+          principal.registrationAttemptAt_orig_ ?? attemptAt,
+      registrationAttemptAt_last_: attemptAt,
+      registrationOutcome_orig_: principal.registrationOutcome_orig_ ?? outcome,
+      registrationOutcome_last_: outcome,
+      registrationSourceIp_orig_:
+          principal.registrationSourceIp_orig_ ?? sourceIp,
+      registrationSourceIp_last_: sourceIp,
+      updatedAt: attemptAt,
+    );
+  }
+
+  void _logAuthEvent(
+    String event, {
+    String? email,
+    String? identifier,
+    String? userId,
+    String? principalUserId,
+    String? sourceIp,
+    int? resendCount,
+    String? detail,
+  }) {
+    final payload = <String, Object?>{
+      'schema': _authEventSchema,
+      'event': event,
+      'at': DateTime.now().toUtc().toIso8601String(),
+      'emailMasked': email == null ? null : _maskEmailForLog(email),
+      'emailHash': email == null ? null : _stableHash(email),
+      'identifierMasked': identifier == null
+          ? null
+          : _maskIdentifierForLog(identifier),
+      'userId': userId,
+      'principalUserId': principalUserId,
+      'sourceIpMasked': sourceIp == null ? null : _maskIpForLog(sourceIp),
+      'resendCount': resendCount,
+      'detail': detail,
+    }..removeWhere((key, value) => value == null);
+    SlttLogger.logger.info('[AuthEvent] ${jsonEncode(payload)}');
+  }
+
+  String _maskEmailForLog(String email) {
+    final parts = email.split('@');
+    if (parts.length != 2) {
+      return _maskIdentifierForLog(email);
+    }
+    final local = parts.first;
+    final maskedLocal = local.length <= 2
+        ? '${local.isEmpty ? '*' : local[0]}*'
+        : '${local.substring(0, 2)}***';
+    return '$maskedLocal@${parts.last}';
+  }
+
+  String _maskIdentifierForLog(String identifier) {
+    final trimmed = identifier.trim();
+    if (trimmed.length <= 3) {
+      return '${trimmed.isEmpty ? '*' : trimmed[0]}**';
+    }
+    return '${trimmed.substring(0, 3)}***';
+  }
+
+  String _maskIpForLog(String sourceIp) {
+    final trimmed = sourceIp.trim();
+    if (trimmed.contains('.')) {
+      final parts = trimmed.split('.');
+      if (parts.length == 4) {
+        return '${parts[0]}.${parts[1]}.${parts[2]}.0';
+      }
+    }
+    if (trimmed.contains(':')) {
+      final parts = trimmed.split(':');
+      return parts.length <= 2
+          ? '$trimmed::*'
+          : '${parts.take(2).join(':')}::*';
+    }
+    return 'unknown';
+  }
+
+  String _stableHash(String value) {
+    return crypto.sha256
+        .convert(utf8.encode(value))
+        .toString()
+        .substring(0, 16);
+  }
 
   Stopwatch _startTiming() => Stopwatch()..start();
 

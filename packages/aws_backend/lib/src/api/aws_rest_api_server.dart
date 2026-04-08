@@ -450,6 +450,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       final body = await _readBodyMap(request);
       final result = await _requireAuthService().register(
         RegisterRequest.fromJson(body),
+        sourceIp: _extractSourceIp(request),
       );
       return _jsonResponse(200, result.toJson());
     });
@@ -460,6 +461,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       final body = await _readBodyMap(request);
       final result = await _requireAuthService().verifyEmail(
         VerifyEmailRequest.fromJson(body),
+        sourceIp: _extractSourceIp(request),
       );
       return _jsonResponse(200, result.toJson());
     });
@@ -470,6 +472,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       final body = await _readBodyMap(request);
       final result = await _requireAuthService().resendVerificationCode(
         ResendVerificationCodeRequest.fromJson(body),
+        sourceIp: _extractSourceIp(request),
       );
       return _jsonResponse(200, result.toJson());
     });
@@ -480,6 +483,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       final body = await _readBodyMap(request);
       final result = await _requireAuthService().login(
         LoginRequest.fromJson(body),
+        sourceIp: _extractSourceIp(request),
       );
       return _jsonResponse(200, result.toJson());
     });
@@ -490,6 +494,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       final body = await _readBodyMap(request);
       final result = await _requireAuthService().refresh(
         RefreshRequest.fromJson(body),
+        sourceIp: _extractSourceIp(request),
       );
       return _jsonResponse(200, result.toJson());
     });
@@ -968,6 +973,18 @@ class AwsRestApiServer extends BaseRestApiServer {
       headers: headers.cast<String, String>(),
       body: body,
     );
+  }
+
+  String? _extractSourceIp(Request request) {
+    final forwardedFor = request.headers['x-forwarded-for']?.trim();
+    if (forwardedFor != null && forwardedFor.isNotEmpty) {
+      return forwardedFor.split(',').first.trim();
+    }
+    final realIp = request.headers['x-real-ip']?.trim();
+    if (realIp != null && realIp.isNotEmpty) {
+      return realIp;
+    }
+    return null;
   }
 
   /// Convert Shelf Response to API Gateway response

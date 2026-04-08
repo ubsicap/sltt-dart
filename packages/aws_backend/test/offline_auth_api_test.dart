@@ -47,7 +47,7 @@ void main() {
       final registerResponse = await server.handleApiGatewayEvent({
         'httpMethod': 'POST',
         'path': '/api/auth/register',
-        'headers': <String, String>{},
+        'headers': <String, String>{'x-forwarded-for': '203.0.113.10'},
         'body': jsonEncode({
           'userId': 'user-jane',
           'name': 'Jane Doe',
@@ -59,6 +59,25 @@ void main() {
 
       expect(registerResponse['statusCode'], equals(200));
       expect(emailSender.codes['jane@example.com'], hasLength(1));
+      final registeredPrincipal = await recordStore.getPrincipalByUserId(
+        'user-jane',
+      );
+      expect(
+        registeredPrincipal?.registrationOutcome_orig_,
+        equals('register_new'),
+      );
+      expect(
+        registeredPrincipal?.registrationOutcome_last_,
+        equals('register_new'),
+      );
+      expect(
+        registeredPrincipal?.registrationSourceIp_orig_,
+        equals('203.0.113.10'),
+      );
+      expect(
+        registeredPrincipal?.registrationSourceIp_last_,
+        equals('203.0.113.10'),
+      );
 
       final verifyResponse = await server.handleApiGatewayEvent({
         'httpMethod': 'POST',
@@ -195,12 +214,14 @@ void main() {
       final resendResponse = await server.handleApiGatewayEvent({
         'httpMethod': 'POST',
         'path': '/api/auth/resend-verification-code',
-        'headers': <String, String>{},
+        'headers': <String, String>{'x-forwarded-for': '203.0.113.20'},
         'body': jsonEncode({'email': 'jane@example.com'}),
       }, router);
       expect(resendResponse['statusCode'], equals(200));
       final secondCode = emailSender.codes['jane@example.com']!.last;
       expect(secondCode, isNot(equals(firstCode)));
+      final challenge = await recordStore.getEmailChallenge('user-jane');
+      expect(challenge?.resendCount, equals(1));
 
       final oldVerifyResponse = await server.handleApiGatewayEvent({
         'httpMethod': 'POST',
@@ -217,7 +238,7 @@ void main() {
         final firstRegister = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',
           'path': '/api/auth/register',
-          'headers': <String, String>{},
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.30'},
           'body': jsonEncode({
             'userId': 'user-jane',
             'name': 'Jane Doe',
@@ -233,7 +254,7 @@ void main() {
         final secondRegister = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',
           'path': '/api/auth/register',
-          'headers': <String, String>{},
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.31'},
           'body': jsonEncode({
             'userId': 'different-user',
             'name': 'Jane Clone',
@@ -253,6 +274,12 @@ void main() {
           isNull,
         );
         expect(emailSender.codes['jane@example.com'], hasLength(1));
+        final principal = await recordStore.getPrincipalByUserId('user-jane');
+        expect(
+          principal?.registrationOutcome_last_,
+          equals('register_existing_email_different_user'),
+        );
+        expect(principal?.registrationSourceIp_last_, equals('203.0.113.31'));
       },
     );
 
@@ -262,7 +289,7 @@ void main() {
         final firstRegister = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',
           'path': '/api/auth/register',
-          'headers': <String, String>{},
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.40'},
           'body': jsonEncode({
             'userId': 'user-jane',
             'name': 'Jane Doe',
@@ -277,7 +304,7 @@ void main() {
         final secondRegister = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',
           'path': '/api/auth/register',
-          'headers': <String, String>{},
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.41'},
           'body': jsonEncode({
             'userId': 'user-jane',
             'name': 'Jane Doe',
@@ -297,6 +324,11 @@ void main() {
         final principal = await recordStore.getPrincipalByUserId('user-jane');
         expect(principal?.email, equals('jane@example.com'));
         expect(principal?.normalizedEmail, equals('jane@example.com'));
+        expect(
+          principal?.registrationOutcome_last_,
+          equals('register_existing_user_different_email'),
+        );
+        expect(principal?.registrationSourceIp_last_, equals('203.0.113.41'));
       },
     );
 
