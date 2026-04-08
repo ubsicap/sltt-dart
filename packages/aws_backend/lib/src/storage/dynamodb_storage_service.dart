@@ -76,6 +76,7 @@ String? _cachedStorageId;
 ///   read_batch:
 ///     operation: BatchGetItem in batchGetEntityState
 ///     key_fields: [pk, sk]
+///     usage_notes: API results are keyed by the composite identity from `BaseStorageService.batchEntityStateKey(...)`, not by `entityId` alone, so same entityIds across domains do not collide.
 ///     keys:
 ///       pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion
 ///       sk: $states#state#entityId_entity1
@@ -884,16 +885,30 @@ class DynamoDBStorageService extends BaseStorageService {
     final items = await _batchGetItems(dynamoKeys);
     final out = <String, BaseEntityState?>{};
 
-    // Decode found items and map by entityId
+    // Decode found items and map by composite state identity
     for (final item in items) {
       final decoded = _decodeItem(item, excludeStorageKeys: true);
       final state = deserializeEntityStateSafely(decoded);
-      out[state.entityId] = state;
+      out[BaseStorageService.batchEntityStateKey(
+            domainType: state.domainType,
+            domainId: state.change_domainId,
+            entityType: state.entityType,
+            entityId: state.entityId,
+          )] =
+          state;
     }
 
-    // Ensure all requested entityIds present; fill missing with null
+    // Ensure all requested identities are present; fill missing with null
     for (final k in keys) {
-      out.putIfAbsent(k.entityId, () => null);
+      out.putIfAbsent(
+        BaseStorageService.batchEntityStateKey(
+          domainType: k.domainType,
+          domainId: k.domainId,
+          entityType: k.entityType,
+          entityId: k.entityId,
+        ),
+        () => null,
+      );
     }
 
     return out;

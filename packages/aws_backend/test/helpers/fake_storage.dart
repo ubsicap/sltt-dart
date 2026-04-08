@@ -146,7 +146,12 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
         entityType: key.entityType,
         entityId: key.entityId,
       );
-      results['${key.domainType}|${key.domainId}|${key.entityType}|${key.entityId}'] =
+      results[BaseStorageService.batchEntityStateKey(
+            domainType: key.domainType,
+            domainId: key.domainId,
+            entityType: key.entityType,
+            entityId: key.entityId,
+          )] =
           result;
     }
     return results;

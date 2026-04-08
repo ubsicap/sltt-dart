@@ -289,17 +289,22 @@ class ChangeProcessingService {
                 String entityId,
               })
             >[];
-        final entityIdsToFetch = <String>{};
+        final stateKeysToFetch = <String>{};
 
         for (final ctx in incomingChangeContext) {
-          final entityId = ctx.changeLogEntry.entityId;
-          if (!entityStateCache.containsKey(entityId) &&
-              entityIdsToFetch.add(entityId)) {
+          final stateKey = BaseStorageService.batchEntityStateKey(
+            domainType: ctx.changeLogEntry.domainType,
+            domainId: ctx.changeLogEntry.domainId,
+            entityType: ctx.changeLogEntry.entityType,
+            entityId: ctx.changeLogEntry.entityId,
+          );
+          if (!entityStateCache.containsKey(stateKey) &&
+              stateKeysToFetch.add(stateKey)) {
             keysToFetch.add((
               domainType: ctx.changeLogEntry.domainType,
               domainId: ctx.changeLogEntry.domainId,
               entityType: ctx.changeLogEntry.entityType,
-              entityId: entityId,
+              entityId: ctx.changeLogEntry.entityId,
             ));
           }
         }
@@ -315,7 +320,15 @@ class ChangeProcessingService {
           );
           entityStateCache.addAll(fetchedStates);
           for (final key in keysToFetch) {
-            entityStateCache.putIfAbsent(key.entityId, () => null);
+            entityStateCache.putIfAbsent(
+              BaseStorageService.batchEntityStateKey(
+                domainType: key.domainType,
+                domainId: key.domainId,
+                entityType: key.entityType,
+                entityId: key.entityId,
+              ),
+              () => null,
+            );
           }
         }
 
@@ -333,10 +346,15 @@ class ChangeProcessingService {
         for (final ctx in incomingChangeContext) {
           try {
             final changeLogEntry = ctx.changeLogEntry;
-            final entityId = changeLogEntry.entityId;
+            final entityStateKey = BaseStorageService.batchEntityStateKey(
+              domainType: changeLogEntry.domainType,
+              domainId: changeLogEntry.domainId,
+              entityType: changeLogEntry.entityType,
+              entityId: changeLogEntry.entityId,
+            );
             final BaseEntityState? entityState =
-                entityStateCache.containsKey(entityId)
-                ? entityStateCache[entityId]
+                entityStateCache.containsKey(entityStateKey)
+                ? entityStateCache[entityStateKey]
                 : null;
 
             try {
@@ -439,7 +457,7 @@ class ChangeProcessingService {
               result: result,
             ));
 
-            entityStateCache[entityId] = workingState;
+            entityStateCache[entityStateKey] = workingState;
           } catch (e, stackTrace) {
             resultsSummary.errors.add({
               'changeIndex': ctx.changeIndex,
@@ -505,8 +523,13 @@ class ChangeProcessingService {
             includeStateUpdates: includeStateUpdates,
           );
 
-          final entityId = metadata.changeLogEntry.entityId;
-          entityStateCache[entityId] = updateResults.newEntityState;
+          final entityStateKey = BaseStorageService.batchEntityStateKey(
+            domainType: metadata.changeLogEntry.domainType,
+            domainId: metadata.changeLogEntry.domainId,
+            entityType: metadata.changeLogEntry.entityType,
+            entityId: metadata.changeLogEntry.entityId,
+          );
+          entityStateCache[entityStateKey] = updateResults.newEntityState;
         }
 
         batchStart = batchEnd;

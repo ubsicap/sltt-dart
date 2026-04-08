@@ -168,30 +168,19 @@ class AuthAppStateStore {
       return;
     }
 
-    final changesByDomainKey = <String, List<Map<String, dynamic>>>{};
-    for (final change in changes) {
-      final domainType = (change['domainType'] as String? ?? '').trim();
-      final domainId = (change['domainId'] as String? ?? '').trim();
-      final domainKey = '$domainType|$domainId';
-      changesByDomainKey.putIfAbsent(domainKey, () => <Map<String, dynamic>>[]);
-      changesByDomainKey[domainKey]!.add(change);
-    }
-
-    for (final domainChanges in changesByDomainKey.values) {
-      final result = await ChangeProcessingService.storeChanges(
-        storageMode: 'save',
-        changes: domainChanges,
-        srcStorageType: 'local',
-        srcStorageId: _authSourceStorageId,
-        storage: _storage,
-        includeChangeUpdates: false,
-        includeStateUpdates: false,
+    final result = await ChangeProcessingService.storeChanges(
+      storageMode: 'save',
+      changes: changes,
+      srcStorageType: 'local',
+      srcStorageId: _authSourceStorageId,
+      storage: _storage,
+      includeChangeUpdates: false,
+      includeStateUpdates: false,
+    );
+    if (!result.isSuccess) {
+      throw StateError(
+        result.errorMessage ?? 'Failed to store auth project membership',
       );
-      if (!result.isSuccess) {
-        throw StateError(
-          result.errorMessage ?? 'Failed to store auth project membership',
-        );
-      }
     }
   }
 

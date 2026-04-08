@@ -112,7 +112,12 @@ class InMemoryStorage implements BaseStorageService {
   }) async {
     final result = <String, BaseEntityState?>{};
     for (final key in keys) {
-      result[key.entityId] = await getEntityState(
+      result[BaseStorageService.batchEntityStateKey(
+        domainType: key.domainType,
+        domainId: key.domainId,
+        entityType: key.entityType,
+        entityId: key.entityId,
+      )] = await getEntityState(
         domainType: key.domainType,
         domainId: key.domainId,
         entityType: key.entityType,

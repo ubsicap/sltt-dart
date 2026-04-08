@@ -130,11 +130,44 @@ void main() {
 
           final states = await storage.batchGetEntityState(keys: keys);
 
-          expect(states.containsKey('proj-batch-task-1'), isTrue);
-          expect(states.containsKey('proj-batch-task-2'), isTrue);
-          expect(states['proj-batch-task-1'], isNotNull);
-          expect(states['proj-batch-task-2'], isNotNull);
-          expect(states['proj-batch-task-MISSING'], isNull);
+          expect(
+            states.containsKey(
+              BaseStorageService.batchEntityStateKey(
+                domainType: 'project',
+                domainId: 'proj-batch',
+                entityType: 'task',
+                entityId: 'proj-batch-task-1',
+              ),
+            ),
+            isTrue,
+          );
+          expect(
+            states[BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: 'proj-batch',
+              entityType: 'task',
+              entityId: 'proj-batch-task-1',
+            )],
+            isNotNull,
+          );
+          expect(
+            states[BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: 'proj-batch',
+              entityType: 'task',
+              entityId: 'proj-batch-task-2',
+            )],
+            isNotNull,
+          );
+          expect(
+            states[BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: 'proj-batch',
+              entityType: 'task',
+              entityId: 'proj-batch-task-MISSING',
+            )],
+            isNull,
+          );
         },
       );
 

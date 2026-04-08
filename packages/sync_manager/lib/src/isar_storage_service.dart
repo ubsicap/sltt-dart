@@ -1121,7 +1121,13 @@ class IsarStorageService extends BaseStorageService {
             entityType: k.entityType,
             entityId: k.entityId,
           );
-          out[k.entityId] = state;
+          out[BaseStorageService.batchEntityStateKey(
+                domainType: k.domainType,
+                domainId: k.domainId,
+                entityType: k.entityType,
+                entityId: k.entityId,
+              )] =
+              state;
         }
         continue;
       }
@@ -1141,7 +1147,13 @@ class IsarStorageService extends BaseStorageService {
       }
 
       for (final k in items) {
-        out[k.entityId] = exactByComposite['${k.domainId}|${k.entityId}'];
+        out[BaseStorageService.batchEntityStateKey(
+              domainType: k.domainType,
+              domainId: k.domainId,
+              entityType: k.entityType,
+              entityId: k.entityId,
+            )] =
+            exactByComposite['${k.domainId}|${k.entityId}'];
       }
     }
 
@@ -1891,7 +1903,13 @@ class IsarStorageService extends BaseStorageService {
       final existingByEntityId = await batchGetEntityState(keys: keys);
       for (final state in groupStates) {
         isNewByIdentity[stateIdentity(state)] =
-            existingByEntityId[state.entityId] == null;
+            existingByEntityId[BaseStorageService.batchEntityStateKey(
+              domainType: state.domainType,
+              domainId: state.change_domainId,
+              entityType: state.entityType,
+              entityId: state.entityId,
+            )] ==
+            null;
       }
     }
 

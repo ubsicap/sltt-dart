@@ -59,6 +59,16 @@ class ChangeLogAndStateRequest {
 /// This interface defines the contract that all storage services must implement,
 /// whether they use local Isar databases, DynamoDB, or other storage backends.
 abstract class BaseStorageService {
+  /// Canonical key for batch state lookups.
+  static String batchEntityStateKey({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+  }) {
+    return '$domainType|$domainId|$entityType|$entityId';
+  }
+
   /// Generate a short (16 char), human-ish storage id: YYMMDDHHMM + 2 timezone + 1 random [A-Z] + 2 random [0-9A-Z]
   static String generateShortStorageId() {
     final now = DateTime.now();
@@ -124,14 +134,13 @@ abstract class BaseStorageService {
   /// Batch version of getEntityState.
   ///
   /// Given a list of keys (domainType, domainId, entityType, entityId),
-  /// returns a map keyed by entityId with nullable BaseEntityState values.
+  /// returns a map keyed by the composite identity produced by
+  /// [BaseStorageService.batchEntityStateKey] with nullable BaseEntityState
+  /// values.
   ///
   /// Notes:
   /// Storage backends should override with a
   ///   more efficient bulk implementation when supported.
-  /// - The returned map is keyed by entityId. Callers should ensure that the
-  ///   entityIds in the provided keys list are unique within the batch to avoid
-  ///   key collisions.
   Future<Map<String, BaseEntityState?>> batchGetEntityState({
     required List<
       ({String domainType, String domainId, String entityType, String entityId})
