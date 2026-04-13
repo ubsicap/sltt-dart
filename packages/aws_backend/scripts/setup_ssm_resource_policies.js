@@ -76,6 +76,7 @@ function main() {
 
   // List of SSM parameters to grant access to
   const ssmPrefix = `/sltt/infra/${stage}`;
+  const authPrefix = `/sltt/auth/${stage}`;
   const parametersToGrant = [
     `${ssmPrefix}/dynamodb/table-name`,
     `${ssmPrefix}/dynamodb/table-arn`,
@@ -89,6 +90,12 @@ function main() {
     `${ssmPrefix}/cross-account-role-arn`,
     `${ssmPrefix}/account-id`,
     `${ssmPrefix}/region`,
+    `${authPrefix}/jwt-secret`,
+    `${authPrefix}/verification-code-secret`,
+    `${authPrefix}/access-token-ttl-minutes`,
+    `${authPrefix}/refresh-token-ttl-days`,
+    `${authPrefix}/email-mode`,
+    `${authPrefix}/ses-from-email`,
   ];
 
   parametersToGrant.forEach((paramName) => {

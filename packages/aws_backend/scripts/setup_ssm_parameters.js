@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Post-deployment script to set SSM parameters from shared-infra CloudFormation outputs.
- * This creates SSM parameters in the shared account that secondary deployments can reference.
+ * Post-deployment script to set SSM parameters from shared-infra CloudFormation outputs
+ * and keep auth configuration parameters in sync for secondary deployments.
  *
  * Usage:
  *   node setup_ssm_parameters.js [options]
@@ -10,6 +10,13 @@
  *   --shared-infra-stage: Shared infra stage (default: prd)
  *   --aws-profile: AWS profile to use (default: sltt-dart-prd)
  *   --aws-region: AWS region (default: us-east-1)
+ *   --auth-stage: Auth parameter stage (default: shared-infra-stage)
+ *   --auth-email-mode: AUTH_EMAIL_MODE value (default: ses)
+ *   --auth-ses-from-email: AUTH_SES_FROM_EMAIL value (default: no-reply@sltt-bible.net)
+ *   --auth-access-token-ttl-minutes: AUTH_ACCESS_TOKEN_TTL_MINUTES value (default: 60)
+ *   --auth-refresh-token-ttl-days: AUTH_REFRESH_TOKEN_TTL_DAYS value (default: 30)
+ *   --auth-jwt-secret: Optional AUTH_JWT_SECRET value to write as SecureString
+ *   --verification-code-secret: Optional AUTH_VERIFICATION_CODE_SECRET value to write as SecureString
  *
  * Example:
  *   node setup_ssm_parameters.js --shared-infra-stage prd --aws-profile sltt-dart-prd
@@ -55,7 +62,7 @@ function runAws(command, { profile, region } = {}) {
   }
 }
 
-function putSsmParameter(name, value, { profile, region } = {}) {
+function putSsmParameter(name, value, { profile, region, type = 'String' } = {}) {
   const profileArg = profile ? ` --profile ${profile}` : '';
   const regionArg = region ? ` --region ${region}` : '';
 
@@ -64,7 +71,7 @@ function putSsmParameter(name, value, { profile, region } = {}) {
     const tempFile = path.join(os.tmpdir(), `ssm-param-${Date.now()}.txt`);
     try {
       fs.writeFileSync(tempFile, value, 'utf8');
-      const command = `aws ssm put-parameter --name "${name}" --value file://${tempFile} --type String --overwrite${profileArg}${regionArg}`;
+      const command = `aws ssm put-parameter --name "${name}" --value file://${tempFile} --type ${type} --overwrite${profileArg}${regionArg}`;
       execSync(command, { stdio: ['ignore', 'pipe', 'pipe'] });
     } finally {
       // Clean up temp file
@@ -75,7 +82,7 @@ function putSsmParameter(name, value, { profile, region } = {}) {
       }
     }
   } else {
-    const command = `aws ssm put-parameter --name "${name}" --value "${value}" --type String --overwrite${profileArg}${regionArg}`;
+    const command = `aws ssm put-parameter --name "${name}" --value "${value}" --type ${type} --overwrite${profileArg}${regionArg}`;
     try {
       execSync(command, { stdio: ['ignore', 'pipe', 'pipe'] });
     } catch (error) {
@@ -86,14 +93,40 @@ function putSsmParameter(name, value, { profile, region } = {}) {
   }
 }
 
+function getSsmParameter(name, { profile, region, withDecryption = false } = {}) {
+  const decryptArg = withDecryption ? ' --with-decryption' : '';
+  try {
+    return runAws(
+      `ssm get-parameter --name "${name}"${decryptArg} --query "Parameter.Value" --output text`,
+      { profile, region }
+    );
+  } catch (error) {
+    if (`${error.message}`.includes('ParameterNotFound')) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 function main() {
   const args = parseArgs();
   const sharedInfraStage = args['shared-infra-stage'] || 'prd';
   const awsProfile = args['aws-profile'] || 'sltt-dart-prd';
   const awsRegion = args['aws-region'] || 'us-east-1';
+  const authStage = args['auth-stage'] || sharedInfraStage;
+  const authEmailMode = args['auth-email-mode'] || 'ses';
+  const authSesFromEmail =
+    args['auth-ses-from-email'] || 'no-reply@sltt-bible.net';
+  const authAccessTokenTtlMinutes =
+    args['auth-access-token-ttl-minutes'] || '60';
+  const authRefreshTokenTtlDays =
+    args['auth-refresh-token-ttl-days'] || '30';
+  const authJwtSecret = args['auth-jwt-secret'];
+  const verificationCodeSecret = args['verification-code-secret'];
 
   const stackName = `sltt-shared-infra-${sharedInfraStage}`;
   const ssmPrefix = `/sltt/infra/${sharedInfraStage}`;
+  const authPrefix = `/sltt/auth/${authStage}`;
 
   console.log(
     `Setting up SSM parameters from shared-infra stack '${stackName}' with profile '${awsProfile}', region '${awsRegion}'.`
@@ -226,6 +259,88 @@ function main() {
   } catch (error) {
     console.error(`  ✗ ${ssmPrefix}/region`);
     console.error(`    ${error.message}`);
+  }
+
+  console.log(`\nSetting auth SSM parameters:`);
+  const authParameters = [
+    {
+      name: `${authPrefix}/access-token-ttl-minutes`,
+      value: authAccessTokenTtlMinutes,
+      type: 'String',
+    },
+    {
+      name: `${authPrefix}/refresh-token-ttl-days`,
+      value: authRefreshTokenTtlDays,
+      type: 'String',
+    },
+    {
+      name: `${authPrefix}/email-mode`,
+      value: authEmailMode,
+      type: 'String',
+    },
+    {
+      name: `${authPrefix}/ses-from-email`,
+      value: authSesFromEmail,
+      type: 'String',
+    },
+  ];
+
+  for (const parameter of authParameters) {
+    try {
+      putSsmParameter(parameter.name, parameter.value, {
+        profile: awsProfile,
+        region: awsRegion,
+        type: parameter.type,
+      });
+      console.log(`  ✓ ${parameter.name}`);
+    } catch (error) {
+      console.error(`  ✗ ${parameter.name}`);
+      console.error(`    ${error.message}`);
+      process.exit(1);
+    }
+  }
+
+  const secretParameters = [
+    {
+      name: `${authPrefix}/jwt-secret`,
+      value: authJwtSecret,
+      helpLabel: '--auth-jwt-secret',
+    },
+    {
+      name: `${authPrefix}/verification-code-secret`,
+      value: verificationCodeSecret,
+      helpLabel: '--verification-code-secret',
+    },
+  ];
+
+  for (const parameter of secretParameters) {
+    if (parameter.value) {
+      try {
+        putSsmParameter(parameter.name, parameter.value, {
+          profile: awsProfile,
+          region: awsRegion,
+          type: 'SecureString',
+        });
+        console.log(`  ✓ ${parameter.name} (updated)`);
+      } catch (error) {
+        console.error(`  ✗ ${parameter.name}`);
+        console.error(`    ${error.message}`);
+        process.exit(1);
+      }
+      continue;
+    }
+
+    const existingValue = getSsmParameter(parameter.name, {
+      profile: awsProfile,
+      region: awsRegion,
+      withDecryption: true,
+    });
+    if (existingValue) {
+      console.log(`  ✓ ${parameter.name} (already set)`);
+    } else {
+      console.log(`  ⓘ ${parameter.name} (not set)`);
+      console.log(`    Provide ${parameter.helpLabel} to create it.`);
+    }
   }
 
   console.log(

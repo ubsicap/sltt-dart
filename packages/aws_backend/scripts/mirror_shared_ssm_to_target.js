@@ -48,6 +48,37 @@ function runAws(command, profile, region) {
   return execSync(full, { stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
 }
 
+function getParameterValue(name, profile, region, withDecryption = false) {
+  const decryptArg = withDecryption ? ' --with-decryption' : '';
+  try {
+    return runAws(
+      `ssm get-parameter --name "${name}"${decryptArg} --query "Parameter.Value" --output text`,
+      profile,
+      region,
+    );
+  } catch (error) {
+    if (`${error.message}`.includes('ParameterNotFound')) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function putParameter(name, value, type, profile, region) {
+  const tempPath = path.join(os.tmpdir(), `sltt-ssm-${Date.now()}-${Math.random()}.txt`);
+  try {
+    fs.writeFileSync(tempPath, value, { encoding: 'utf8', mode: 0o600 });
+    const fileUri = `file://${tempPath.replace(/\\/g, '/')}`;
+    runAws(
+      `ssm put-parameter --name "${name}" --type ${type} --value "${fileUri}" --overwrite`,
+      profile,
+      region,
+    );
+  } finally {
+    fs.rmSync(tempPath, { force: true });
+  }
+}
+
 function main() {
   const args = parseArgs();
   const sourceProfile = String(args['source-profile'] || 'sltt-dart-prd');
@@ -57,6 +88,7 @@ function main() {
 
   const stackName = `sltt-shared-infra-${stage}`;
   const ssmPrefix = `/sltt/infra/${stage}`;
+  const authPrefix = `/sltt/auth/${stage}`;
 
   console.log(`Mirroring SSM from '${sourceProfile}' to '${targetProfile}' for ${ssmPrefix} (${region}).`);
 
@@ -138,6 +170,44 @@ function main() {
     region,
   );
   console.log(`  ✓ ${ssmPrefix}/region`);
+
+  const authStringParameters = [
+    'access-token-ttl-minutes',
+    'refresh-token-ttl-days',
+    'email-mode',
+    'ses-from-email',
+  ];
+  for (const key of authStringParameters) {
+    const sourceName = `${authPrefix}/${key}`;
+    const sourceValue = getParameterValue(sourceName, sourceProfile, region);
+    if (!sourceValue) {
+      console.warn(`  ⓘ ${sourceName} (not set in source, skipping)`);
+      continue;
+    }
+    runAws(
+      `ssm put-parameter --name "${sourceName}" --type String --value "${sourceValue}" --overwrite`,
+      targetProfile,
+      region,
+    );
+    console.log(`  ✓ ${sourceName}`);
+  }
+
+  const authSecretParameters = ['jwt-secret', 'verification-code-secret'];
+  for (const key of authSecretParameters) {
+    const sourceName = `${authPrefix}/${key}`;
+    const sourceValue = getParameterValue(
+      sourceName,
+      sourceProfile,
+      region,
+      true,
+    );
+    if (!sourceValue) {
+      console.warn(`  ⓘ ${sourceName} (not set in source, skipping)`);
+      continue;
+    }
+    putParameter(sourceName, sourceValue, 'SecureString', targetProfile, region);
+    console.log(`  ✓ ${sourceName}`);
+  }
 
   console.log('Done. Mirrored SSM parameters into target account.');
 }
