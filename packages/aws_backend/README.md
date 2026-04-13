@@ -292,6 +292,36 @@ npm run deploy:secondary:dev
 
 **Note**: `PROJECT_ID` is no longer needed as an environment variable. Projects are now identified by the `projectId` field in the change data itself.
 
+#### Secret Bootstrap Shell Syntax
+
+The `ensure_auth_secret.js` script defaults to fail-safe behavior when a secret
+is missing. It only creates a missing secret when
+`ALLOW_SECRET_BOOTSTRAP=true` is set for the command.
+
+macOS/Linux (bash/zsh):
+
+```bash
+ALLOW_SECRET_BOOTSTRAP=true npm run ensure-jwt-secret:sltt-dart-prd
+ALLOW_SECRET_BOOTSTRAP=true npm run ensure-verification-code-secret:sltt-dart-prd
+```
+
+Windows cmd.exe:
+
+```cmd
+set ALLOW_SECRET_BOOTSTRAP=true && npm run ensure-jwt-secret:sltt-dart-prd
+set ALLOW_SECRET_BOOTSTRAP=true && npm run ensure-verification-code-secret:sltt-dart-prd
+```
+
+Windows PowerShell:
+
+```powershell
+$env:ALLOW_SECRET_BOOTSTRAP='true'; npm run ensure-jwt-secret:sltt-dart-prd
+$env:ALLOW_SECRET_BOOTSTRAP='true'; npm run ensure-verification-code-secret:sltt-dart-prd
+```
+
+Without `ALLOW_SECRET_BOOTSTRAP=true`, ensure scripts fail and print next steps
+instead of creating or rotating secrets.
+
 ## DynamoDB Schema
 
 The service uses a project-based multi-tenant DynamoDB schema:
