@@ -267,6 +267,7 @@ class AuthEmailChallenge {
     required this.expiresAt,
     required this.createdAt,
     required this.resendCount,
+    required this.failedAttemptCount,
     required this.challengeVersion,
   });
 
@@ -277,6 +278,7 @@ class AuthEmailChallenge {
   final DateTime expiresAt;
   final DateTime createdAt;
   final int resendCount;
+  final int failedAttemptCount;
   final int challengeVersion;
 
   int get ttlEpochSeconds => expiresAt.toUtc().millisecondsSinceEpoch ~/ 1000;
@@ -289,9 +291,33 @@ class AuthEmailChallenge {
     'expiresAt': expiresAt.toUtc().toIso8601String(),
     'createdAt': createdAt.toUtc().toIso8601String(),
     'resendCount': resendCount,
+    'failedAttemptCount': failedAttemptCount,
     'challengeVersion': challengeVersion,
     'ttlEpochSeconds': ttlEpochSeconds,
   };
+
+  AuthEmailChallenge copyWith({
+    String? codeHash,
+    String? codeSalt,
+    int? hashIterations,
+    DateTime? expiresAt,
+    DateTime? createdAt,
+    int? resendCount,
+    int? failedAttemptCount,
+    int? challengeVersion,
+  }) {
+    return AuthEmailChallenge(
+      userId: userId,
+      codeHash: codeHash ?? this.codeHash,
+      codeSalt: codeSalt ?? this.codeSalt,
+      hashIterations: hashIterations ?? this.hashIterations,
+      expiresAt: expiresAt ?? this.expiresAt,
+      createdAt: createdAt ?? this.createdAt,
+      resendCount: resendCount ?? this.resendCount,
+      failedAttemptCount: failedAttemptCount ?? this.failedAttemptCount,
+      challengeVersion: challengeVersion ?? this.challengeVersion,
+    );
+  }
 
   factory AuthEmailChallenge.fromJson(Map<String, dynamic> json) {
     return AuthEmailChallenge(
@@ -302,6 +328,7 @@ class AuthEmailChallenge {
       expiresAt: _parseDateTime(json['expiresAt']) ?? DateTime.now().toUtc(),
       createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now().toUtc(),
       resendCount: (json['resendCount'] as num?)?.toInt() ?? 0,
+      failedAttemptCount: (json['failedAttemptCount'] as num?)?.toInt() ?? 0,
       challengeVersion: (json['challengeVersion'] as num?)?.toInt() ?? 0,
     );
   }

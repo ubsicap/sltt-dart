@@ -16,6 +16,7 @@ import 'token_service.dart';
 class BackendAuthService {
   static const String _authEventSchema = 'auth_event_v1';
   static const int _maxVerificationEmailsPerWindow = 3;
+  static const int _maxVerificationCodeAttemptsPerChallenge = 5;
 
   BackendAuthService({
     required AuthRecordStore recordStore,
@@ -353,12 +354,36 @@ class BackendAuthService {
       );
       _logTiming('verify.checkCode', stage, extra: {'email': normalizedEmail});
       if (!isCodeValid) {
+        final failedAttemptCount = challenge.failedAttemptCount + 1;
+        stage = _startTiming();
+        if (failedAttemptCount >= _maxVerificationCodeAttemptsPerChallenge) {
+          await _recordStore.deleteEmailChallenge(principal.userId);
+          _logTiming(
+            'verify.deleteChallengeAfterFailedAttempts',
+            stage,
+            extra: {'userId': principal.userId},
+          );
+        } else {
+          await _recordStore.putEmailChallenge(
+            challenge.copyWith(failedAttemptCount: failedAttemptCount),
+          );
+          _logTiming(
+            'verify.putChallengeFailedAttempts',
+            stage,
+            extra: {
+              'userId': principal.userId,
+              'failedAttemptCount': failedAttemptCount,
+            },
+          );
+        }
         _logAuthEvent(
           'verify_invalid_code',
           email: normalizedEmail,
           userId: principal.userId,
           sourceIp: sourceIp,
-          detail: 'code_mismatch',
+          detail: failedAttemptCount >= _maxVerificationCodeAttemptsPerChallenge
+              ? 'code_mismatch_challenge_invalidated'
+              : 'code_mismatch',
         );
         throw AuthException(
           'Invalid or expired code',
@@ -945,6 +970,7 @@ class BackendAuthService {
         expiresAt: expiresAt,
         createdAt: now,
         resendCount: resendCount,
+        failedAttemptCount: 0,
         challengeVersion: challengeVersion,
       );
 
@@ -1292,10 +1318,32 @@ class BackendAuthServiceFactory {
     final refreshDays = int.tryParse(
       environment['AUTH_REFRESH_TOKEN_TTL_DAYS'] ?? '',
     );
+    final emailMode = (environment['AUTH_EMAIL_MODE'] ?? 'log')
+        .trim()
+        .toLowerCase();
+    final sesFromEmail = (environment['AUTH_SES_FROM_EMAIL'] ?? '').trim();
+    final verificationCodeSecret =
+        (environment['AUTH_VERIFICATION_CODE_SECRET'] ?? '').trim();
     final region =
         environment['AWS_REGION'] ??
         environment['AWS_DEFAULT_REGION'] ??
         'us-east-1';
+
+    final AuthEmailSender emailSender;
+    if (emailMode == 'ses') {
+      if (sesFromEmail.isEmpty) {
+        throw StateError(
+          'AUTH_SES_FROM_EMAIL is required when AUTH_EMAIL_MODE=ses',
+        );
+      }
+      emailSender = SesAuthEmailSender(
+        credentials: credentials,
+        region: region,
+        fromEmail: sesFromEmail,
+      );
+    } else {
+      emailSender = LogAuthEmailSender();
+    }
 
     final store = DynamoAuthRecordStore(
       tableName: authTable,
@@ -1311,8 +1359,10 @@ class BackendAuthServiceFactory {
         jwtSecret: jwtSecret,
         accessTokenLifetime: Duration(minutes: accessMinutes ?? 60),
       ),
-      emailSender: LogAuthEmailSender(),
-      verificationCodeSecret: jwtSecret,
+      emailSender: emailSender,
+      verificationCodeSecret: verificationCodeSecret.isEmpty
+          ? jwtSecret
+          : verificationCodeSecret,
       refreshLifetime: Duration(days: refreshDays ?? 30),
     );
   }

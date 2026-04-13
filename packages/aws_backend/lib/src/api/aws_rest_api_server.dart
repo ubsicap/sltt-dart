@@ -77,7 +77,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'POST',
       'path': '/api/auth/verify-email',
       'description':
-          'Verify the 6-digit email code and issue access and refresh tokens. Invalid email/code/account-state combinations return the same neutral invalid-or-expired response.',
+          'Verify the 6-digit email code and issue access and refresh tokens. Invalid email/code/account-state combinations return the same neutral invalid-or-expired response. Repeated invalid code attempts invalidate the active challenge and require requesting a new verification code.',
       'requestBody': {
         'type': 'object',
         'required': ['email', 'code'],

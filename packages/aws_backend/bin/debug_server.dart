@@ -104,6 +104,10 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
         Platform.environment['AUTH_ACCESS_TOKEN_TTL_MINUTES'];
     final authRefreshTokenTtlDays =
         Platform.environment['AUTH_REFRESH_TOKEN_TTL_DAYS'];
+    final authEmailMode = Platform.environment['AUTH_EMAIL_MODE'];
+    final authSesFromEmail = Platform.environment['AUTH_SES_FROM_EMAIL'];
+    final authVerificationCodeSecret =
+        Platform.environment['AUTH_VERIFICATION_CODE_SECRET'];
 
     mediaStorage = AwsMediaStorage(
       bucketName: mediaBucket ?? '',
@@ -130,8 +134,13 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('   AUTH_TABLE_ARN: $authTableArn');
     print('   AUTH_ACCESS_TOKEN_TTL_MINUTES: $authAccessTokenTtlMinutes');
     print('   AUTH_REFRESH_TOKEN_TTL_DAYS: $authRefreshTokenTtlDays');
+    print('   AUTH_EMAIL_MODE: $authEmailMode');
+    print('   AUTH_SES_FROM_EMAIL: $authSesFromEmail');
     print(
       '   AUTH_JWT_SECRET: ${authJwtSecret == null || authJwtSecret.isEmpty ? '(missing)' : '(set)'}',
+    );
+    print(
+      '   AUTH_VERIFICATION_CODE_SECRET: ${authVerificationCodeSecret == null || authVerificationCodeSecret.isEmpty ? '(missing)' : '(set)'}',
     );
     if (gitHealthEnvironment.containsKey('GIT_SHORT_CHANGESET')) {
       print(

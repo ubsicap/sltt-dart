@@ -256,6 +256,59 @@ void main() {
       expect(oldVerifyResponse['statusCode'], equals(400));
     });
 
+    test(
+      'verify invalidates challenge after max failed code attempts and resend issues a new challenge',
+      () async {
+        await authService.register(
+          RegisterRequest(
+            userId: 'user-jane',
+            name: 'Jane Doe',
+            dateOfBirth: '1990-06-15',
+            email: 'jane@example.com',
+            password: 'secret123',
+          ),
+        );
+
+        final firstCode = emailSender.codes['jane@example.com']!.single;
+
+        for (var attempt = 0; attempt < 5; attempt++) {
+          final invalidVerifyResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/verify-email',
+            'headers': <String, String>{},
+            'body': jsonEncode({'email': 'jane@example.com', 'code': '000000'}),
+          }, router);
+          expect(invalidVerifyResponse['statusCode'], equals(400));
+        }
+
+        final challengeAfterFailures = await recordStore.getEmailChallenge(
+          'user-jane',
+        );
+        expect(challengeAfterFailures, isNull);
+
+        final resendResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/resend-verification-code',
+          'headers': <String, String>{},
+          'body': jsonEncode({'email': 'jane@example.com'}),
+        }, router);
+        expect(resendResponse['statusCode'], equals(200));
+
+        final allCodes = emailSender.codes['jane@example.com']!;
+        expect(allCodes, hasLength(2));
+        final secondCode = allCodes.last;
+        expect(secondCode, isNot(equals(firstCode)));
+
+        final verifyWithNewCode = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/verify-email',
+          'headers': <String, String>{},
+          'body': jsonEncode({'email': 'jane@example.com', 'code': secondCode}),
+        }, router);
+        expect(verifyWithNewCode['statusCode'], equals(200));
+      },
+    );
+
     test('register clamps verification emails after three sends', () async {
       for (var attempt = 0; attempt < 4; attempt++) {
         final response = await server.handleApiGatewayEvent({

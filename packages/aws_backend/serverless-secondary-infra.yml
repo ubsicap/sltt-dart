@@ -45,8 +45,11 @@ provider:
     AUTH_TABLE: ${self:custom.authTable}
     AUTH_TABLE_ARN: ${self:custom.authTableArn}
     AUTH_JWT_SECRET: ${ssm:/sltt/auth/${self:provider.stage}/jwt-secret, ''}
+    AUTH_VERIFICATION_CODE_SECRET: ${ssm:/sltt/auth/${self:provider.stage}/verification-code-secret, ''}
     AUTH_ACCESS_TOKEN_TTL_MINUTES: ${ssm:/sltt/auth/${self:provider.stage}/access-token-ttl-minutes, '60'}
     AUTH_REFRESH_TOKEN_TTL_DAYS: ${ssm:/sltt/auth/${self:provider.stage}/refresh-token-ttl-days, '30'}
+    AUTH_EMAIL_MODE: ${ssm:/sltt/auth/${self:provider.stage}/email-mode, 'ses'}
+    AUTH_SES_FROM_EMAIL: ${ssm:/sltt/auth/${self:provider.stage}/ses-from-email, 'no-reply@sltt-bible.net'}
     DYNAMODB_REGION: ${self:custom.sharedInfraRegion}
     SHARED_INFRA_ASSUME_ROLE_ARN: ${ssm:${self:custom.sharedInfraArnPath}/cross-account-role-arn}
     ASSUME_ROLE_SESSION_NAME: sltt-secondary-infra-${self:provider.stage}
@@ -110,6 +113,10 @@ provider:
       Resource:
         - ${self:custom.mediaBucketArn}
         - ${self:custom.mediaBucketArn}/*
+    - Effect: Allow
+      Action:
+        - ses:SendEmail
+      Resource: '*'
     - Effect: Allow
       Action:
         - ssm:GetParameter

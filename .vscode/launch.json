@@ -62,8 +62,11 @@
                 "AUTH_TABLE": "sltt-shared-infra-auth",
                 "AUTH_TABLE_ARN": "arn:aws:dynamodb:us-east-1:379334555674:table/sltt-shared-infra-auth",
                 "AUTH_JWT_SECRET": "${input:authJwtSecret}",
+                "AUTH_VERIFICATION_CODE_SECRET": "${input:authVerificationCodeSecret}",
                 "AUTH_ACCESS_TOKEN_TTL_MINUTES": "60",
                 "AUTH_REFRESH_TOKEN_TTL_DAYS": "30",
+                "AUTH_EMAIL_MODE": "ses",
+                "AUTH_SES_FROM_EMAIL": "no-reply@sltt-bible.net",
                 "MEDIA_BUCKET": "sltt-shared-infra-media-worm-379334555674",
                 "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
                 "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",
@@ -130,8 +133,11 @@
                 "AUTH_TABLE": "sltt-shared-infra-auth",
                 "AUTH_TABLE_ARN": "arn:aws:dynamodb:us-east-1:379334555674:table/sltt-shared-infra-auth",
                 "AUTH_JWT_SECRET": "${input:authJwtSecret}",
+                "AUTH_VERIFICATION_CODE_SECRET": "${input:authVerificationCodeSecret}",
                 "AUTH_ACCESS_TOKEN_TTL_MINUTES": "60",
                 "AUTH_REFRESH_TOKEN_TTL_DAYS": "30",
+                "AUTH_EMAIL_MODE": "ses",
+                "AUTH_SES_FROM_EMAIL": "no-reply@sltt-bible.net",
                 "MEDIA_BUCKET": "sltt-shared-infra-media-worm-379334555674",
                 "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
                 "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",
@@ -261,6 +267,11 @@
         {
             "id": "authJwtSecret",
             "description": "AUTH_JWT_SECRET for local AWS backend debug sessions",
+            "type": "promptString",
+        },
+        {
+            "id": "authVerificationCodeSecret",
+            "description": "AUTH_VERIFICATION_CODE_SECRET for local AWS backend debug sessions",
             "type": "promptString",
         }
     ]
