@@ -441,7 +441,7 @@ class BackendAuthService {
         userId: verifiedPrincipal.userId,
         sourceIp: sourceIp,
       );
-      return AuthenticatedResponse(
+      return AuthenticatedResponse.fromTokenPair(
         status: 'verified',
         userId: verifiedPrincipal.userId,
         tokens: tokens,
@@ -577,7 +577,7 @@ class BackendAuthService {
         userId: principal.userId,
         sourceIp: sourceIp,
       );
-      return AuthenticatedResponse(
+      return AuthenticatedResponse.fromTokenPair(
         status: 'authenticated',
         userId: principal.userId,
         tokens: tokens,
@@ -666,7 +666,7 @@ class BackendAuthService {
         userId: principal.userId,
         sourceIp: sourceIp,
       );
-      return AuthenticatedResponse(
+      return AuthenticatedResponse.fromTokenPair(
         status: 'authenticated',
         userId: principal.userId,
         tokens: tokenPair,

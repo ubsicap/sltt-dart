@@ -630,22 +630,60 @@ class AuthStatusResponse {
   Map<String, dynamic> toJson() => _$AuthStatusResponseToJson(this);
 }
 
-class AuthenticatedResponse extends AuthStatusResponse {
+@JsonSerializable(includeIfNull: false, checked: true)
+class AuthenticatedResponse {
   const AuthenticatedResponse({
-    required super.status,
+    required this.status,
+    this.message,
     required this.userId,
-    required this.tokens,
+    required this.accessToken,
+    required this.refreshToken,
+    required this.expiresAt,
   });
 
-  final String userId;
-  final AuthTokenPair tokens;
+  factory AuthenticatedResponse.fromTokenPair({
+    required String status,
+    String? message,
+    required String userId,
+    required AuthTokenPair tokens,
+  }) {
+    return AuthenticatedResponse(
+      status: status,
+      message: message,
+      userId: userId,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt: tokens.expiresAt,
+    );
+  }
 
-  @override
-  Map<String, dynamic> toJson() => {
-    ...super.toJson(),
-    'userId': userId,
-    ...tokens.toJson(),
-  };
+  @JsonKey(defaultValue: '')
+  final String status;
+  final String? message;
+  @JsonKey(defaultValue: '')
+  final String userId;
+  @JsonKey(defaultValue: '')
+  final String accessToken;
+  @JsonKey(defaultValue: '')
+  final String refreshToken;
+  @JsonKey(
+    fromJson: _requiredUtcDateTimeFromJson,
+    toJson: _requiredUtcDateTimeToJson,
+  )
+  final DateTime expiresAt;
+
+  factory AuthenticatedResponse.fromJson(Map<String, dynamic> json) =>
+      _$AuthenticatedResponseFromJson(json);
+
+  AuthTokenPair get tokens => AuthTokenPair(
+    accessToken: accessToken,
+    refreshToken: refreshToken,
+    expiresAt: expiresAt,
+  );
+
+  AuthTokenPair toAuthTokenPair() => tokens;
+
+  Map<String, dynamic> toJson() => _$AuthenticatedResponseToJson(this);
 }
 
 @JsonSerializable(includeIfNull: false, checked: true)

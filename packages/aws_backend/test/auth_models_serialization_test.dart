@@ -190,11 +190,9 @@ void main() {
       final response = AuthenticatedResponse(
         status: 'authenticated',
         userId: 'user-1',
-        tokens: AuthTokenPair(
-          accessToken: 'access',
-          refreshToken: 'refresh',
-          expiresAt: DateTime.parse('2026-04-14T16:00:00Z'),
-        ),
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        expiresAt: DateTime.parse('2026-04-14T16:00:00Z'),
       );
 
       expect(
@@ -206,6 +204,18 @@ void main() {
           'refreshToken': 'refresh',
           'expiresAt': '2026-04-14T16:00:00.000Z',
         }),
+      );
+      expect(response.tokens.accessToken, equals('access'));
+      expect(response.toAuthTokenPair().refreshToken, equals('refresh'));
+
+      final roundTrip = AuthenticatedResponse.fromJson(response.toJson());
+      expect(roundTrip.status, equals('authenticated'));
+      expect(roundTrip.userId, equals('user-1'));
+      expect(roundTrip.accessToken, equals('access'));
+      expect(roundTrip.refreshToken, equals('refresh'));
+      expect(
+        roundTrip.expiresAt,
+        equals(DateTime.parse('2026-04-14T16:00:00Z')),
       );
     });
   });

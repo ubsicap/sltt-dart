@@ -319,6 +319,34 @@ AuthStatusResponse _$AuthStatusResponseFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$AuthStatusResponseToJson(AuthStatusResponse instance) =>
     <String, dynamic>{'status': instance.status, 'message': ?instance.message};
 
+AuthenticatedResponse _$AuthenticatedResponseFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('AuthenticatedResponse', json, ($checkedConvert) {
+  final val = AuthenticatedResponse(
+    status: $checkedConvert('status', (v) => v as String? ?? ''),
+    message: $checkedConvert('message', (v) => v as String?),
+    userId: $checkedConvert('userId', (v) => v as String? ?? ''),
+    accessToken: $checkedConvert('accessToken', (v) => v as String? ?? ''),
+    refreshToken: $checkedConvert('refreshToken', (v) => v as String? ?? ''),
+    expiresAt: $checkedConvert(
+      'expiresAt',
+      (v) => _requiredUtcDateTimeFromJson(v),
+    ),
+  );
+  return val;
+});
+
+Map<String, dynamic> _$AuthenticatedResponseToJson(
+  AuthenticatedResponse instance,
+) => <String, dynamic>{
+  'status': instance.status,
+  'message': ?instance.message,
+  'userId': instance.userId,
+  'accessToken': instance.accessToken,
+  'refreshToken': instance.refreshToken,
+  'expiresAt': _requiredUtcDateTimeToJson(instance.expiresAt),
+};
+
 AdHocUserSummary _$AdHocUserSummaryFromJson(Map<String, dynamic> json) =>
     $checkedCreate('AdHocUserSummary', json, ($checkedConvert) {
       final val = AdHocUserSummary(
