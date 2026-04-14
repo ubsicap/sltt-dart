@@ -2,6 +2,11 @@
 
 import 'dart:convert';
 
+import 'package:json_annotation/json_annotation.dart';
+import 'package:sltt_core/sltt_core.dart';
+
+part 'auth_models.g.dart';
+
 enum AuthIdentityKind {
   emailPassword('email_password'),
   usernamePassword('username_password');
@@ -258,6 +263,7 @@ class AuthPrincipal {
   }
 }
 
+@JsonSerializable(includeIfNull: true, checked: true)
 class AuthEmailChallenge {
   AuthEmailChallenge({
     required this.userId,
@@ -272,27 +278,33 @@ class AuthEmailChallenge {
   });
 
   final String userId;
+  @JsonKey(defaultValue: '')
   final String codeHash;
+  @JsonKey(defaultValue: '')
   final String codeSalt;
+  @JsonKey(defaultValue: 1)
   final int hashIterations;
+  @JsonKey(
+    fromJson: _requiredUtcDateTimeFromJson,
+    toJson: _requiredUtcDateTimeToJson,
+  )
   final DateTime expiresAt;
+  @JsonKey(
+    fromJson: _requiredUtcDateTimeFromJson,
+    toJson: _requiredUtcDateTimeToJson,
+  )
   final DateTime createdAt;
+  @JsonKey(defaultValue: 0)
   final int resendCount;
+  @JsonKey(defaultValue: 0)
   final int failedAttemptCount;
+  @JsonKey(defaultValue: 0)
   final int challengeVersion;
 
   int get ttlEpochSeconds => expiresAt.toUtc().millisecondsSinceEpoch ~/ 1000;
 
   Map<String, dynamic> toJson() => {
-    'userId': userId,
-    'codeHash': codeHash,
-    'codeSalt': codeSalt,
-    'hashIterations': hashIterations,
-    'expiresAt': expiresAt.toUtc().toIso8601String(),
-    'createdAt': createdAt.toUtc().toIso8601String(),
-    'resendCount': resendCount,
-    'failedAttemptCount': failedAttemptCount,
-    'challengeVersion': challengeVersion,
+    ..._$AuthEmailChallengeToJson(this),
     'ttlEpochSeconds': ttlEpochSeconds,
   };
 
@@ -319,21 +331,11 @@ class AuthEmailChallenge {
     );
   }
 
-  factory AuthEmailChallenge.fromJson(Map<String, dynamic> json) {
-    return AuthEmailChallenge(
-      userId: json['userId'] as String,
-      codeHash: json['codeHash'] as String? ?? '',
-      codeSalt: json['codeSalt'] as String? ?? '',
-      hashIterations: (json['hashIterations'] as num?)?.toInt() ?? 1,
-      expiresAt: _parseDateTime(json['expiresAt']) ?? DateTime.now().toUtc(),
-      createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now().toUtc(),
-      resendCount: (json['resendCount'] as num?)?.toInt() ?? 0,
-      failedAttemptCount: (json['failedAttemptCount'] as num?)?.toInt() ?? 0,
-      challengeVersion: (json['challengeVersion'] as num?)?.toInt() ?? 0,
-    );
-  }
+  factory AuthEmailChallenge.fromJson(Map<String, dynamic> json) =>
+      _$AuthEmailChallengeFromJson(json);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class AuthSessionRecord {
   AuthSessionRecord({
     required this.userId,
@@ -346,9 +348,22 @@ class AuthSessionRecord {
 
   final String userId;
   final String sessionId;
+  @JsonKey(defaultValue: '')
   final String refreshTokenHash;
+  @JsonKey(
+    fromJson: _requiredUtcDateTimeFromJson,
+    toJson: _requiredUtcDateTimeToJson,
+  )
   final DateTime createdAt;
+  @JsonKey(
+    fromJson: _requiredUtcDateTimeFromJson,
+    toJson: _requiredUtcDateTimeToJson,
+  )
   final DateTime expiresAt;
+  @JsonKey(
+    fromJson: _nullableUtcDateTimeFromJson,
+    toJson: _nullableUtcDateTimeToJson,
+  )
   final DateTime? revokedAt;
 
   bool get isRevoked => revokedAt != null;
@@ -366,25 +381,12 @@ class AuthSessionRecord {
   }
 
   Map<String, dynamic> toJson() => {
-    'userId': userId,
-    'sessionId': sessionId,
-    'refreshTokenHash': refreshTokenHash,
-    'createdAt': createdAt.toUtc().toIso8601String(),
-    'expiresAt': expiresAt.toUtc().toIso8601String(),
-    'revokedAt': revokedAt?.toUtc().toIso8601String(),
+    ..._$AuthSessionRecordToJson(this),
     'ttlEpochSeconds': ttlEpochSeconds,
-  }..removeWhere((key, value) => value == null);
+  };
 
-  factory AuthSessionRecord.fromJson(Map<String, dynamic> json) {
-    return AuthSessionRecord(
-      userId: json['userId'] as String,
-      sessionId: json['sessionId'] as String,
-      refreshTokenHash: json['refreshTokenHash'] as String? ?? '',
-      createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now().toUtc(),
-      expiresAt: _parseDateTime(json['expiresAt']) ?? DateTime.now().toUtc(),
-      revokedAt: _parseDateTime(json['revokedAt']),
-    );
-  }
+  factory AuthSessionRecord.fromJson(Map<String, dynamic> json) =>
+      _$AuthSessionRecordFromJson(json);
 }
 
 class AuthenticatedSession {
@@ -419,6 +421,7 @@ class AuthTokenPair {
   };
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class RegisterRequest {
   RegisterRequest({
     required this.userId,
@@ -428,83 +431,92 @@ class RegisterRequest {
     required this.password,
   });
 
+  @JsonKey(defaultValue: '')
   final String userId;
+  @JsonKey(defaultValue: '')
   final String name;
+  @JsonKey(defaultValue: '')
   final String dateOfBirth;
+  @JsonKey(defaultValue: '')
   final String email;
+  @JsonKey(defaultValue: '')
   final String password;
 
-  factory RegisterRequest.fromJson(Map<String, dynamic> json) {
-    return RegisterRequest(
-      userId: json['userId'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      dateOfBirth: json['dateOfBirth'] as String? ?? '',
-      email: json['email'] as String? ?? '',
-      password: json['password'] as String? ?? '',
-    );
-  }
+  factory RegisterRequest.fromJson(Map<String, dynamic> json) =>
+      _$RegisterRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RegisterRequestToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class VerifyEmailRequest {
   VerifyEmailRequest({required this.email, required this.code});
 
+  @JsonKey(defaultValue: '')
   final String email;
+  @JsonKey(defaultValue: '')
   final String code;
 
-  factory VerifyEmailRequest.fromJson(Map<String, dynamic> json) {
-    return VerifyEmailRequest(
-      email: json['email'] as String? ?? '',
-      code: json['code'] as String? ?? '',
-    );
-  }
+  factory VerifyEmailRequest.fromJson(Map<String, dynamic> json) =>
+      _$VerifyEmailRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$VerifyEmailRequestToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class ResendVerificationCodeRequest {
   ResendVerificationCodeRequest({required this.email});
 
+  @JsonKey(defaultValue: '')
   final String email;
 
-  factory ResendVerificationCodeRequest.fromJson(Map<String, dynamic> json) {
-    return ResendVerificationCodeRequest(email: json['email'] as String? ?? '');
-  }
+  factory ResendVerificationCodeRequest.fromJson(Map<String, dynamic> json) =>
+      _$ResendVerificationCodeRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ResendVerificationCodeRequestToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class LoginRequest {
   LoginRequest({required this.identifier, required this.password});
 
+  @JsonKey(defaultValue: '', readValue: _readLoginIdentifier)
   final String identifier;
+  @JsonKey(defaultValue: '')
   final String password;
 
-  factory LoginRequest.fromJson(Map<String, dynamic> json) {
-    return LoginRequest(
-      identifier:
-          (json['identifier'] ?? json['email'] ?? json['username'] ?? '')
-              as String,
-      password: json['password'] as String? ?? '',
-    );
-  }
+  factory LoginRequest.fromJson(Map<String, dynamic> json) =>
+      _$LoginRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$LoginRequestToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class RefreshRequest {
   RefreshRequest({required this.refreshToken});
 
+  @JsonKey(defaultValue: '')
   final String refreshToken;
 
-  factory RefreshRequest.fromJson(Map<String, dynamic> json) {
-    return RefreshRequest(refreshToken: json['refreshToken'] as String? ?? '');
-  }
+  factory RefreshRequest.fromJson(Map<String, dynamic> json) =>
+      _$RefreshRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RefreshRequestToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class LogoutRequest {
   LogoutRequest({this.refreshToken});
 
   final String? refreshToken;
 
-  factory LogoutRequest.fromJson(Map<String, dynamic> json) {
-    return LogoutRequest(refreshToken: json['refreshToken'] as String?);
-  }
+  factory LogoutRequest.fromJson(Map<String, dynamic> json) =>
+      _$LogoutRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$LogoutRequestToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class CreateAdHocUserRequest {
   CreateAdHocUserRequest({
     required this.userId,
@@ -516,29 +528,27 @@ class CreateAdHocUserRequest {
     required this.adminPassword,
   });
 
+  @JsonKey(defaultValue: '')
   final String userId;
+  @JsonKey(defaultValue: '')
   final String name;
+  @JsonKey(defaultValue: '')
   final String username;
+  @JsonKey(defaultValue: '')
   final String password;
   final String? dateOfBirth;
+  @JsonKey(fromJson: _stringListFromJson, defaultValue: <String>[])
   final List<String> projectIds;
+  @JsonKey(defaultValue: '')
   final String adminPassword;
 
-  factory CreateAdHocUserRequest.fromJson(Map<String, dynamic> json) {
-    return CreateAdHocUserRequest(
-      userId: json['userId'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      username: json['username'] as String? ?? '',
-      password: json['password'] as String? ?? '',
-      dateOfBirth: json['dateOfBirth'] as String?,
-      projectIds: (json['projectIds'] as List<dynamic>? ?? const <dynamic>[])
-          .whereType<String>()
-          .toList(growable: false),
-      adminPassword: json['adminPassword'] as String? ?? '',
-    );
-  }
+  factory CreateAdHocUserRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateAdHocUserRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CreateAdHocUserRequestToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class UpdateAdHocProjectsRequest {
   UpdateAdHocProjectsRequest({
     required this.addProjectIds,
@@ -546,52 +556,48 @@ class UpdateAdHocProjectsRequest {
     required this.adminPassword,
   });
 
+  @JsonKey(fromJson: _stringListFromJson, defaultValue: <String>[])
   final List<String> addProjectIds;
+  @JsonKey(fromJson: _stringListFromJson, defaultValue: <String>[])
   final List<String> removeProjectIds;
+  @JsonKey(defaultValue: '')
   final String adminPassword;
 
-  factory UpdateAdHocProjectsRequest.fromJson(Map<String, dynamic> json) {
-    return UpdateAdHocProjectsRequest(
-      addProjectIds:
-          (json['addProjectIds'] as List<dynamic>? ?? const <dynamic>[])
-              .whereType<String>()
-              .toList(growable: false),
-      removeProjectIds:
-          (json['removeProjectIds'] as List<dynamic>? ?? const <dynamic>[])
-              .whereType<String>()
-              .toList(growable: false),
-      adminPassword: json['adminPassword'] as String? ?? '',
-    );
-  }
+  factory UpdateAdHocProjectsRequest.fromJson(Map<String, dynamic> json) =>
+      _$UpdateAdHocProjectsRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$UpdateAdHocProjectsRequestToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class ResetAdHocPasswordRequest {
   ResetAdHocPasswordRequest({
     required this.adminPassword,
     required this.newPassword,
   });
 
+  @JsonKey(defaultValue: '')
   final String adminPassword;
+  @JsonKey(defaultValue: '')
   final String newPassword;
 
-  factory ResetAdHocPasswordRequest.fromJson(Map<String, dynamic> json) {
-    return ResetAdHocPasswordRequest(
-      adminPassword: json['adminPassword'] as String? ?? '',
-      newPassword: json['newPassword'] as String? ?? '',
-    );
-  }
+  factory ResetAdHocPasswordRequest.fromJson(Map<String, dynamic> json) =>
+      _$ResetAdHocPasswordRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ResetAdHocPasswordRequestToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class DeleteAdHocUserRequest {
   DeleteAdHocUserRequest({required this.adminPassword});
 
+  @JsonKey(defaultValue: '')
   final String adminPassword;
 
-  factory DeleteAdHocUserRequest.fromJson(Map<String, dynamic> json) {
-    return DeleteAdHocUserRequest(
-      adminPassword: json['adminPassword'] as String? ?? '',
-    );
-  }
+  factory DeleteAdHocUserRequest.fromJson(Map<String, dynamic> json) =>
+      _$DeleteAdHocUserRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$DeleteAdHocUserRequestToJson(this);
 }
 
 class AuthStatusResponse {
@@ -666,5 +672,24 @@ DateTime? _parseDateTime(dynamic value) {
   }
   return null;
 }
+
+DateTime _requiredUtcDateTimeFromJson(dynamic value) =>
+    _parseDateTime(value) ?? DateTime.now().toUtc();
+
+String _requiredUtcDateTimeToJson(DateTime value) =>
+    const UtcDateTimeConverter().toJson(value);
+
+DateTime? _nullableUtcDateTimeFromJson(dynamic value) => _parseDateTime(value);
+
+String? _nullableUtcDateTimeToJson(DateTime? value) =>
+    value == null ? null : const UtcDateTimeConverter().toJson(value);
+
+List<String> _stringListFromJson(dynamic value) =>
+    (value is List ? value : const <dynamic>[]).whereType<String>().toList(
+      growable: false,
+    );
+
+Object? _readLoginIdentifier(Map json, String key) =>
+    json[key] ?? json['email'] ?? json['username'];
 
 String encodeJsonString(Map<String, dynamic> value) => jsonEncode(value);
