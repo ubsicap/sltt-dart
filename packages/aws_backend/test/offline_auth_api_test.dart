@@ -708,6 +708,199 @@ void main() {
     });
 
     test(
+      'resend throws when email lookup resolves to username principal',
+      () async {
+        final now = DateTime.now().toUtc();
+        await recordStore.putPrincipal(
+          UsernameAuthPrincipal(
+            userId: 'broken-user',
+            username: 'broken.user',
+            normalizedUsername: 'broken.user',
+            passwordHash: 'hash',
+            passwordSalt: 'salt',
+            passwordIterations: 1000,
+            accountStatus: AuthAccountStatus.pendingVerification,
+            emailVerified: false,
+            isAdHoc: false,
+            displayName: 'Broken User',
+            assignedProjectIds: const <String>[],
+            verificationVersion: 0,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+        await recordStore.putEmailLookup('broken@example.com', 'broken-user');
+
+        expect(
+          () => authService.resendVerificationCode(
+            ResendVerificationCodeRequest(email: 'broken@example.com'),
+          ),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
+
+    test(
+      'list ignores email principals incorrectly flagged as adhoc',
+      () async {
+        final adminHash = await PasswordHashService(
+          iterations: 1000,
+        ).hashPassword('admin-pass');
+        final now = DateTime.now().toUtc();
+        await recordStore.putPrincipal(
+          EmailAuthPrincipal(
+            userId: 'admin-user',
+            email: 'admin@example.com',
+            normalizedEmail: 'admin@example.com',
+            passwordHash: adminHash.hash,
+            passwordSalt: adminHash.salt,
+            passwordIterations: adminHash.iterations,
+            accountStatus: AuthAccountStatus.active,
+            emailVerified: true,
+            isAdHoc: false,
+            displayName: 'Admin User',
+            assignedProjectIds: const <String>[],
+            verificationVersion: 0,
+            createdAt: now,
+            updatedAt: now,
+            verifiedAt: now,
+          ),
+        );
+        await recordStore.putPrincipal(
+          EmailAuthPrincipal(
+            userId: 'broken-adhoc',
+            email: 'broken-adhoc@example.com',
+            normalizedEmail: 'broken-adhoc@example.com',
+            passwordHash: 'hash',
+            passwordSalt: 'salt',
+            passwordIterations: 1000,
+            accountStatus: AuthAccountStatus.active,
+            emailVerified: true,
+            isAdHoc: true,
+            displayName: 'Broken Adhoc',
+            assignedProjectIds: const <String>['project-1'],
+            verificationVersion: 0,
+            createdAt: now,
+            updatedAt: now,
+            verifiedAt: now,
+          ),
+        );
+
+        await storage.testStoreState(
+          entityState: DynamoEntityState.fromJson({
+            'entityId': 'admin-user',
+            'entityType': kEntityTypeMember,
+            'domainType': 'project',
+            'unknownJson': '{}',
+            'change_domainId': 'project-1',
+            'change_domainId_orig_': 'project-1',
+            'change_changeAt': now.toIso8601String(),
+            'change_changeAt_orig_': now.toIso8601String(),
+            'change_cid': 'admin-member',
+            'change_cid_orig_': 'admin-member',
+            'change_changeBy': 'seed',
+            'change_changeBy_orig_': 'seed',
+            'change_storedAt': now.toIso8601String(),
+            'change_storedAt_orig_': now.toIso8601String(),
+            'data_parentId': '',
+            'data_parentId_changeAt_': now.toIso8601String(),
+            'data_parentId_cid_': 'admin-member',
+            'data_parentId_changeBy_': 'seed',
+            'data_parentProp': kEntityTypeMemberCollection,
+            'data_parentProp_changeAt_': now.toIso8601String(),
+            'data_parentProp_cid_': 'admin-member',
+            'data_parentProp_changeBy_': 'seed',
+            'role': 'admin',
+            'userId': 'admin-user',
+          }),
+        );
+
+        final response = await authService.listAdHocUsers(
+          session: const AuthenticatedSession(
+            userId: 'admin-user',
+            sessionId: 'session-1',
+            isAdHoc: false,
+            emailVerified: true,
+          ),
+        );
+
+        expect(response.items, isEmpty);
+      },
+    );
+
+    test(
+      'update adhoc projects rejects email principal incorrectly flagged as adhoc',
+      () async {
+        final adminHash = await PasswordHashService(
+          iterations: 1000,
+        ).hashPassword('admin-pass');
+        final now = DateTime.now().toUtc();
+        await recordStore.putPrincipal(
+          EmailAuthPrincipal(
+            userId: 'admin-user',
+            email: 'admin@example.com',
+            normalizedEmail: 'admin@example.com',
+            passwordHash: adminHash.hash,
+            passwordSalt: adminHash.salt,
+            passwordIterations: adminHash.iterations,
+            accountStatus: AuthAccountStatus.active,
+            emailVerified: true,
+            isAdHoc: false,
+            displayName: 'Admin User',
+            assignedProjectIds: const <String>[],
+            verificationVersion: 0,
+            createdAt: now,
+            updatedAt: now,
+            verifiedAt: now,
+          ),
+        );
+        await recordStore.putPrincipal(
+          EmailAuthPrincipal(
+            userId: 'broken-adhoc',
+            email: 'broken-adhoc@example.com',
+            normalizedEmail: 'broken-adhoc@example.com',
+            passwordHash: 'hash',
+            passwordSalt: 'salt',
+            passwordIterations: 1000,
+            accountStatus: AuthAccountStatus.active,
+            emailVerified: true,
+            isAdHoc: true,
+            displayName: 'Broken Adhoc',
+            assignedProjectIds: const <String>['project-1'],
+            verificationVersion: 0,
+            createdAt: now,
+            updatedAt: now,
+            verifiedAt: now,
+          ),
+        );
+
+        expect(
+          () => authService.updateAdHocProjects(
+            session: const AuthenticatedSession(
+              userId: 'admin-user',
+              sessionId: 'session-1',
+              isAdHoc: false,
+              emailVerified: true,
+            ),
+            userId: 'broken-adhoc',
+            request: UpdateAdHocProjectsRequest(
+              addProjectIds: const <String>['project-1'],
+              removeProjectIds: const <String>[],
+              adminPassword: 'admin-pass',
+            ),
+          ),
+          throwsA(
+            isA<AuthException>().having(
+              (error) => error.code,
+              'code',
+              'unable_to_complete_action',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
       'project updates only remove explicitly requested memberships',
       () async {
         final adminResponse = await authService.register(

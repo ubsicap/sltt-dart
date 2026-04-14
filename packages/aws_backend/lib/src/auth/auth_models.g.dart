@@ -6,6 +6,223 @@ part of 'auth_models.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+EmailAuthPrincipal _$EmailAuthPrincipalFromJson(Map<String, dynamic> json) =>
+    $checkedCreate('EmailAuthPrincipal', json, ($checkedConvert) {
+      final val = EmailAuthPrincipal(
+        userId: $checkedConvert('userId', (v) => v as String),
+        email: $checkedConvert('email', (v) => v as String),
+        normalizedEmail: $checkedConvert('normalizedEmail', (v) => v as String),
+        passwordHash: $checkedConvert('passwordHash', (v) => v as String),
+        passwordSalt: $checkedConvert('passwordSalt', (v) => v as String),
+        passwordIterations: $checkedConvert(
+          'passwordIterations',
+          (v) => (v as num).toInt(),
+        ),
+        accountStatus: $checkedConvert(
+          'accountStatus',
+          (v) => $enumDecode(_$AuthAccountStatusEnumMap, v),
+        ),
+        emailVerified: $checkedConvert('emailVerified', (v) => v as bool),
+        isAdHoc: $checkedConvert('isAdHoc', (v) => v as bool),
+        displayName: $checkedConvert('displayName', (v) => v as String),
+        dateOfBirth: $checkedConvert('dateOfBirth', (v) => v as String?),
+        verifiedAt: $checkedConvert(
+          'verifiedAt',
+          (v) => _nullableUtcDateTimeFromJson(v),
+        ),
+        deletedAt: $checkedConvert(
+          'deletedAt',
+          (v) => _nullableUtcDateTimeFromJson(v),
+        ),
+        assignedProjectIds: $checkedConvert(
+          'assignedProjectIds',
+          (v) => _stringListFromJson(v),
+        ),
+        verificationVersion: $checkedConvert(
+          'verificationVersion',
+          (v) => (v as num).toInt(),
+        ),
+        registrationAttemptAt_orig_: $checkedConvert(
+          'registrationAttemptAt_orig_',
+          (v) => _nullableUtcDateTimeFromJson(v),
+        ),
+        registrationAttemptAt_last_: $checkedConvert(
+          'registrationAttemptAt_last_',
+          (v) => _nullableUtcDateTimeFromJson(v),
+        ),
+        registrationOutcome_orig_: $checkedConvert(
+          'registrationOutcome_orig_',
+          (v) => v as String?,
+        ),
+        registrationOutcome_last_: $checkedConvert(
+          'registrationOutcome_last_',
+          (v) => v as String?,
+        ),
+        registrationSourceIp_orig_: $checkedConvert(
+          'registrationSourceIp_orig_',
+          (v) => v as String?,
+        ),
+        registrationSourceIp_last_: $checkedConvert(
+          'registrationSourceIp_last_',
+          (v) => v as String?,
+        ),
+        createdAt: $checkedConvert(
+          'createdAt',
+          (v) => _requiredUtcDateTimeFromJson(v),
+        ),
+        updatedAt: $checkedConvert(
+          'updatedAt',
+          (v) => _requiredUtcDateTimeFromJson(v),
+        ),
+      );
+      return val;
+    });
+
+Map<String, dynamic> _$EmailAuthPrincipalToJson(EmailAuthPrincipal instance) =>
+    <String, dynamic>{
+      'userId': instance.userId,
+      'passwordHash': instance.passwordHash,
+      'passwordSalt': instance.passwordSalt,
+      'passwordIterations': instance.passwordIterations,
+      'accountStatus': _$AuthAccountStatusEnumMap[instance.accountStatus]!,
+      'emailVerified': instance.emailVerified,
+      'isAdHoc': instance.isAdHoc,
+      'displayName': instance.displayName,
+      'dateOfBirth': ?instance.dateOfBirth,
+      'verifiedAt': ?_nullableUtcDateTimeToJson(instance.verifiedAt),
+      'deletedAt': ?_nullableUtcDateTimeToJson(instance.deletedAt),
+      'assignedProjectIds': instance.assignedProjectIds,
+      'verificationVersion': instance.verificationVersion,
+      'registrationAttemptAt_orig_': ?_nullableUtcDateTimeToJson(
+        instance.registrationAttemptAt_orig_,
+      ),
+      'registrationAttemptAt_last_': ?_nullableUtcDateTimeToJson(
+        instance.registrationAttemptAt_last_,
+      ),
+      'registrationOutcome_orig_': ?instance.registrationOutcome_orig_,
+      'registrationOutcome_last_': ?instance.registrationOutcome_last_,
+      'registrationSourceIp_orig_': ?instance.registrationSourceIp_orig_,
+      'registrationSourceIp_last_': ?instance.registrationSourceIp_last_,
+      'createdAt': _requiredUtcDateTimeToJson(instance.createdAt),
+      'updatedAt': _requiredUtcDateTimeToJson(instance.updatedAt),
+      'email': instance.email,
+      'normalizedEmail': instance.normalizedEmail,
+    };
+
+const _$AuthAccountStatusEnumMap = {
+  AuthAccountStatus.pendingVerification: 'pending_verification',
+  AuthAccountStatus.active: 'active',
+  AuthAccountStatus.deleted: 'deleted',
+};
+
+UsernameAuthPrincipal _$UsernameAuthPrincipalFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('UsernameAuthPrincipal', json, ($checkedConvert) {
+  final val = UsernameAuthPrincipal(
+    userId: $checkedConvert('userId', (v) => v as String),
+    username: $checkedConvert('username', (v) => v as String),
+    normalizedUsername: $checkedConvert(
+      'normalizedUsername',
+      (v) => v as String,
+    ),
+    passwordHash: $checkedConvert('passwordHash', (v) => v as String),
+    passwordSalt: $checkedConvert('passwordSalt', (v) => v as String),
+    passwordIterations: $checkedConvert(
+      'passwordIterations',
+      (v) => (v as num).toInt(),
+    ),
+    accountStatus: $checkedConvert(
+      'accountStatus',
+      (v) => $enumDecode(_$AuthAccountStatusEnumMap, v),
+    ),
+    emailVerified: $checkedConvert('emailVerified', (v) => v as bool),
+    isAdHoc: $checkedConvert('isAdHoc', (v) => v as bool),
+    displayName: $checkedConvert('displayName', (v) => v as String),
+    dateOfBirth: $checkedConvert('dateOfBirth', (v) => v as String?),
+    verifiedAt: $checkedConvert(
+      'verifiedAt',
+      (v) => _nullableUtcDateTimeFromJson(v),
+    ),
+    deletedAt: $checkedConvert(
+      'deletedAt',
+      (v) => _nullableUtcDateTimeFromJson(v),
+    ),
+    assignedProjectIds: $checkedConvert(
+      'assignedProjectIds',
+      (v) => _stringListFromJson(v),
+    ),
+    verificationVersion: $checkedConvert(
+      'verificationVersion',
+      (v) => (v as num).toInt(),
+    ),
+    registrationAttemptAt_orig_: $checkedConvert(
+      'registrationAttemptAt_orig_',
+      (v) => _nullableUtcDateTimeFromJson(v),
+    ),
+    registrationAttemptAt_last_: $checkedConvert(
+      'registrationAttemptAt_last_',
+      (v) => _nullableUtcDateTimeFromJson(v),
+    ),
+    registrationOutcome_orig_: $checkedConvert(
+      'registrationOutcome_orig_',
+      (v) => v as String?,
+    ),
+    registrationOutcome_last_: $checkedConvert(
+      'registrationOutcome_last_',
+      (v) => v as String?,
+    ),
+    registrationSourceIp_orig_: $checkedConvert(
+      'registrationSourceIp_orig_',
+      (v) => v as String?,
+    ),
+    registrationSourceIp_last_: $checkedConvert(
+      'registrationSourceIp_last_',
+      (v) => v as String?,
+    ),
+    createdAt: $checkedConvert(
+      'createdAt',
+      (v) => _requiredUtcDateTimeFromJson(v),
+    ),
+    updatedAt: $checkedConvert(
+      'updatedAt',
+      (v) => _requiredUtcDateTimeFromJson(v),
+    ),
+  );
+  return val;
+});
+
+Map<String, dynamic> _$UsernameAuthPrincipalToJson(
+  UsernameAuthPrincipal instance,
+) => <String, dynamic>{
+  'userId': instance.userId,
+  'passwordHash': instance.passwordHash,
+  'passwordSalt': instance.passwordSalt,
+  'passwordIterations': instance.passwordIterations,
+  'accountStatus': _$AuthAccountStatusEnumMap[instance.accountStatus]!,
+  'emailVerified': instance.emailVerified,
+  'isAdHoc': instance.isAdHoc,
+  'displayName': instance.displayName,
+  'dateOfBirth': ?instance.dateOfBirth,
+  'verifiedAt': ?_nullableUtcDateTimeToJson(instance.verifiedAt),
+  'deletedAt': ?_nullableUtcDateTimeToJson(instance.deletedAt),
+  'assignedProjectIds': instance.assignedProjectIds,
+  'verificationVersion': instance.verificationVersion,
+  'registrationAttemptAt_orig_': ?_nullableUtcDateTimeToJson(
+    instance.registrationAttemptAt_orig_,
+  ),
+  'registrationAttemptAt_last_': ?_nullableUtcDateTimeToJson(
+    instance.registrationAttemptAt_last_,
+  ),
+  'registrationOutcome_orig_': ?instance.registrationOutcome_orig_,
+  'registrationOutcome_last_': ?instance.registrationOutcome_last_,
+  'registrationSourceIp_orig_': ?instance.registrationSourceIp_orig_,
+  'registrationSourceIp_last_': ?instance.registrationSourceIp_last_,
+  'createdAt': _requiredUtcDateTimeToJson(instance.createdAt),
+  'updatedAt': _requiredUtcDateTimeToJson(instance.updatedAt),
+  'username': instance.username,
+  'normalizedUsername': instance.normalizedUsername,
+};
+
 AuthEmailChallenge _$AuthEmailChallengeFromJson(Map<String, dynamic> json) =>
     $checkedCreate('AuthEmailChallenge', json, ($checkedConvert) {
       final val = AuthEmailChallenge(

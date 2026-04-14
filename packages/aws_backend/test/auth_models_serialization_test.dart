@@ -2,6 +2,199 @@ import 'package:aws_backend/src/auth/auth_models.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('AuthPrincipal variants', () {
+    test('fromJson returns EmailAuthPrincipal for email identities', () {
+      final principal = AuthPrincipal.fromJson({
+        'userId': 'user-1',
+        'identityKind': 'email_password',
+        'email': 'person@example.com',
+        'normalizedEmail': 'person@example.com',
+        'passwordHash': 'hash',
+        'passwordSalt': 'salt',
+        'passwordIterations': 120000,
+        'accountStatus': 'pending_verification',
+        'emailVerified': false,
+        'isAdHoc': false,
+        'displayName': 'Person',
+        'assignedProjectIds': <String>[],
+        'verificationVersion': 0,
+        'createdAt': '2026-04-14T10:00:00.000Z',
+        'updatedAt': '2026-04-14T10:00:00.000Z',
+      });
+
+      expect(principal, isA<EmailAuthPrincipal>());
+      expect(principal.email, equals('person@example.com'));
+      expect(principal.username, isNull);
+      expect(principal.toJson().containsKey('username'), isFalse);
+    });
+
+    test('fromJson returns UsernameAuthPrincipal for username identities', () {
+      final principal = AuthPrincipal.fromJson({
+        'userId': 'user-2',
+        'identityKind': 'username_password',
+        'username': 'local.user',
+        'normalizedUsername': 'local.user',
+        'passwordHash': 'hash',
+        'passwordSalt': 'salt',
+        'passwordIterations': 120000,
+        'accountStatus': 'active',
+        'emailVerified': true,
+        'isAdHoc': true,
+        'displayName': 'Local User',
+        'assignedProjectIds': <String>['proj-a'],
+        'verificationVersion': 0,
+        'createdAt': '2026-04-14T10:00:00.000Z',
+        'updatedAt': '2026-04-14T10:00:00.000Z',
+      });
+
+      expect(principal, isA<UsernameAuthPrincipal>());
+      expect(principal.username, equals('local.user'));
+      expect(principal.email, isNull);
+      expect(principal.toJson().containsKey('email'), isFalse);
+    });
+
+    test('copyWith preserves EmailAuthPrincipal subtype', () {
+      final principal = EmailAuthPrincipal(
+        userId: 'user-1',
+        email: 'person@example.com',
+        normalizedEmail: 'person@example.com',
+        passwordHash: 'hash',
+        passwordSalt: 'salt',
+        passwordIterations: 120000,
+        accountStatus: AuthAccountStatus.pendingVerification,
+        emailVerified: false,
+        isAdHoc: false,
+        displayName: 'Person',
+        assignedProjectIds: const <String>[],
+        verificationVersion: 0,
+        createdAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+        updatedAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+      );
+
+      final updated = principal.copyWith(displayName: 'Updated Person');
+
+      expect(updated, isA<EmailAuthPrincipal>());
+      expect(updated.displayName, equals('Updated Person'));
+      expect(updated.email, equals('person@example.com'));
+    });
+
+    test('copyWith preserves UsernameAuthPrincipal subtype', () {
+      final principal = UsernameAuthPrincipal(
+        userId: 'user-2',
+        username: 'local.user',
+        normalizedUsername: 'local.user',
+        passwordHash: 'hash',
+        passwordSalt: 'salt',
+        passwordIterations: 120000,
+        accountStatus: AuthAccountStatus.active,
+        emailVerified: true,
+        isAdHoc: true,
+        displayName: 'Local User',
+        assignedProjectIds: const <String>['proj-a'],
+        verificationVersion: 0,
+        createdAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+        updatedAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+      );
+
+      final updated = principal.copyWith(
+        assignedProjectIds: const <String>['proj-a', 'proj-b'],
+      );
+
+      expect(updated, isA<UsernameAuthPrincipal>());
+      expect(updated.username, equals('local.user'));
+      expect(
+        updated.assignedProjectIds,
+        equals(const <String>['proj-a', 'proj-b']),
+      );
+    });
+
+    test('rejects email identities with missing email fields', () {
+      expect(
+        () => EmailAuthPrincipal(
+          userId: 'user-1',
+          email: '',
+          normalizedEmail: 'person@example.com',
+          passwordHash: 'hash',
+          passwordSalt: 'salt',
+          passwordIterations: 120000,
+          accountStatus: AuthAccountStatus.pendingVerification,
+          emailVerified: false,
+          isAdHoc: false,
+          displayName: 'Person',
+          assignedProjectIds: const <String>[],
+          verificationVersion: 0,
+          createdAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+          updatedAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects username identities with missing username fields', () {
+      expect(
+        () => UsernameAuthPrincipal(
+          userId: 'user-2',
+          username: ' ',
+          normalizedUsername: 'local.user',
+          passwordHash: 'hash',
+          passwordSalt: 'salt',
+          passwordIterations: 120000,
+          accountStatus: AuthAccountStatus.active,
+          emailVerified: true,
+          isAdHoc: true,
+          displayName: 'Local User',
+          assignedProjectIds: const <String>['proj-a'],
+          verificationVersion: 0,
+          createdAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+          updatedAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('fromJson rejects email identities without email payload', () {
+      expect(
+        () => AuthPrincipal.fromJson({
+          'userId': 'user-1',
+          'identityKind': 'email_password',
+          'passwordHash': 'hash',
+          'passwordSalt': 'salt',
+          'passwordIterations': 120000,
+          'accountStatus': 'pending_verification',
+          'emailVerified': false,
+          'isAdHoc': false,
+          'displayName': 'Person',
+          'assignedProjectIds': <String>[],
+          'verificationVersion': 0,
+          'createdAt': '2026-04-14T10:00:00.000Z',
+          'updatedAt': '2026-04-14T10:00:00.000Z',
+        }),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('fromJson rejects username identities without username payload', () {
+      expect(
+        () => AuthPrincipal.fromJson({
+          'userId': 'user-2',
+          'identityKind': 'username_password',
+          'passwordHash': 'hash',
+          'passwordSalt': 'salt',
+          'passwordIterations': 120000,
+          'accountStatus': 'active',
+          'emailVerified': true,
+          'isAdHoc': true,
+          'displayName': 'Local User',
+          'assignedProjectIds': <String>['proj-a'],
+          'verificationVersion': 0,
+          'createdAt': '2026-04-14T10:00:00.000Z',
+          'updatedAt': '2026-04-14T10:00:00.000Z',
+        }),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+  });
+
   group('AuthEmailChallenge serialization', () {
     test('round-trips UTC timestamps and includes ttlEpochSeconds', () {
       final challenge = AuthEmailChallenge(

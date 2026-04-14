@@ -7,6 +7,7 @@ import 'package:sltt_core/sltt_core.dart';
 
 part 'auth_models.g.dart';
 
+@JsonEnum(valueField: 'value')
 enum AuthIdentityKind {
   emailPassword('email_password'),
   usernamePassword('username_password');
@@ -16,13 +17,16 @@ enum AuthIdentityKind {
   final String value;
 
   static AuthIdentityKind fromValue(String value) {
-    return AuthIdentityKind.values.firstWhere(
-      (kind) => kind.value == value,
-      orElse: () => AuthIdentityKind.emailPassword,
+    return _enumByValue(
+      AuthIdentityKind.values,
+      value,
+      'identityKind',
+      (kind) => kind.value,
     );
   }
 }
 
+@JsonEnum(valueField: 'value')
 enum AuthAccountStatus {
   pendingVerification('pending_verification'),
   active('active'),
@@ -33,9 +37,11 @@ enum AuthAccountStatus {
   final String value;
 
   static AuthAccountStatus fromValue(String value) {
-    return AuthAccountStatus.values.firstWhere(
-      (status) => status.value == value,
-      orElse: () => AuthAccountStatus.pendingVerification,
+    return _enumByValue(
+      AuthAccountStatus.values,
+      value,
+      'accountStatus',
+      (status) => status.value,
     );
   }
 }
@@ -63,8 +69,8 @@ class AuthException implements Exception {
   String toString() => 'AuthException($statusCode, $code, $message)';
 }
 
-class AuthPrincipal {
-  AuthPrincipal({
+abstract class AuthPrincipal {
+  AuthPrincipal._({
     required this.userId,
     required this.identityKind,
     required this.passwordHash,
@@ -74,50 +80,106 @@ class AuthPrincipal {
     required this.emailVerified,
     required this.isAdHoc,
     required this.displayName,
-    this.dateOfBirth,
-    this.email,
-    this.normalizedEmail,
-    this.username,
-    this.normalizedUsername,
-    this.verifiedAt,
-    this.deletedAt,
+    required this.dateOfBirth,
+    required this.verifiedAt,
+    required this.deletedAt,
     required this.assignedProjectIds,
     required this.verificationVersion,
-    this.registrationAttemptAt_orig_,
-    this.registrationAttemptAt_last_,
-    this.registrationOutcome_orig_,
-    this.registrationOutcome_last_,
-    this.registrationSourceIp_orig_,
-    this.registrationSourceIp_last_,
+    required this.registrationAttemptAt_orig_,
+    required this.registrationAttemptAt_last_,
+    required this.registrationOutcome_orig_,
+    required this.registrationOutcome_last_,
+    required this.registrationSourceIp_orig_,
+    required this.registrationSourceIp_last_,
     required this.createdAt,
     required this.updatedAt,
   });
 
+  factory AuthPrincipal.fromJson(Map<String, dynamic> json) {
+    final identityKind = _strictIdentityKindFromJson(json['identityKind']);
+    switch (identityKind) {
+      case AuthIdentityKind.emailPassword:
+        _requireNonEmptyIdentityField('email', json['email'] as String?);
+        _requireNonEmptyIdentityField(
+          'normalizedEmail',
+          json['normalizedEmail'] as String?,
+        );
+        return EmailAuthPrincipal.fromJson(json);
+      case AuthIdentityKind.usernamePassword:
+        _requireNonEmptyIdentityField('username', json['username'] as String?);
+        _requireNonEmptyIdentityField(
+          'normalizedUsername',
+          json['normalizedUsername'] as String?,
+        );
+        return UsernameAuthPrincipal.fromJson(json);
+    }
+  }
+
+  @JsonKey()
   final String userId;
+  @JsonKey()
   final AuthIdentityKind identityKind;
-  final String? email;
-  final String? normalizedEmail;
-  final String? username;
-  final String? normalizedUsername;
+  abstract final String? email;
+  abstract final String? normalizedEmail;
+  abstract final String? username;
+  abstract final String? normalizedUsername;
+  @JsonKey()
   final String passwordHash;
+  @JsonKey()
   final String passwordSalt;
+  @JsonKey()
   final int passwordIterations;
+  @JsonKey()
   final AuthAccountStatus accountStatus;
+  @JsonKey()
   final bool emailVerified;
+  @JsonKey()
   final bool isAdHoc;
+  @JsonKey()
   final String displayName;
+  @JsonKey()
   final String? dateOfBirth;
+  @JsonKey(
+    fromJson: _nullableUtcDateTimeFromJson,
+    toJson: _nullableUtcDateTimeToJson,
+  )
   final DateTime? verifiedAt;
+  @JsonKey(
+    fromJson: _nullableUtcDateTimeFromJson,
+    toJson: _nullableUtcDateTimeToJson,
+  )
   final DateTime? deletedAt;
+  @JsonKey(fromJson: _stringListFromJson)
   final List<String> assignedProjectIds;
+  @JsonKey()
   final int verificationVersion;
+  @JsonKey(
+    fromJson: _nullableUtcDateTimeFromJson,
+    toJson: _nullableUtcDateTimeToJson,
+  )
   final DateTime? registrationAttemptAt_orig_;
+  @JsonKey(
+    fromJson: _nullableUtcDateTimeFromJson,
+    toJson: _nullableUtcDateTimeToJson,
+  )
   final DateTime? registrationAttemptAt_last_;
+  @JsonKey()
   final String? registrationOutcome_orig_;
+  @JsonKey()
   final String? registrationOutcome_last_;
+  @JsonKey()
   final String? registrationSourceIp_orig_;
+  @JsonKey()
   final String? registrationSourceIp_last_;
+  @JsonKey(
+    fromJson: _requiredUtcDateTimeFromJson,
+    toJson: _requiredUtcDateTimeToJson,
+  )
   final DateTime createdAt;
+  @JsonKey(
+    fromJson: _requiredUtcDateTimeFromJson,
+    toJson: _requiredUtcDateTimeToJson,
+  )
   final DateTime updatedAt;
 
   bool get isDeleted => accountStatus == AuthAccountStatus.deleted;
@@ -149,12 +211,215 @@ class AuthPrincipal {
     String? registrationSourceIp_last_,
     DateTime? createdAt,
     DateTime? updatedAt,
+  });
+
+  Map<String, dynamic> toJson();
+}
+
+@JsonSerializable(includeIfNull: false, checked: true)
+class EmailAuthPrincipal extends AuthPrincipal {
+  EmailAuthPrincipal({
+    required super.userId,
+    required String email,
+    required String normalizedEmail,
+    required super.passwordHash,
+    required super.passwordSalt,
+    required super.passwordIterations,
+    required super.accountStatus,
+    required super.emailVerified,
+    required super.isAdHoc,
+    required super.displayName,
+    super.dateOfBirth,
+    super.verifiedAt,
+    super.deletedAt,
+    required super.assignedProjectIds,
+    required super.verificationVersion,
+    super.registrationAttemptAt_orig_,
+    super.registrationAttemptAt_last_,
+    super.registrationOutcome_orig_,
+    super.registrationOutcome_last_,
+    super.registrationSourceIp_orig_,
+    super.registrationSourceIp_last_,
+    required super.createdAt,
+    required super.updatedAt,
+  }) : email = _requireNonEmptyIdentityField('email', email),
+       normalizedEmail = _requireNonEmptyIdentityField(
+         'normalizedEmail',
+         normalizedEmail,
+       ),
+       super._(identityKind: AuthIdentityKind.emailPassword);
+
+  @override
+  @JsonKey()
+  final String email;
+  @override
+  @JsonKey()
+  final String normalizedEmail;
+  @override
+  String? get username => null;
+  @override
+  String? get normalizedUsername => null;
+
+  @override
+  EmailAuthPrincipal copyWith({
+    AuthIdentityKind? identityKind,
+    String? email,
+    String? normalizedEmail,
+    String? username,
+    String? normalizedUsername,
+    String? passwordHash,
+    String? passwordSalt,
+    int? passwordIterations,
+    AuthAccountStatus? accountStatus,
+    bool? emailVerified,
+    bool? isAdHoc,
+    String? displayName,
+    String? dateOfBirth,
+    DateTime? verifiedAt,
+    DateTime? deletedAt,
+    List<String>? assignedProjectIds,
+    int? verificationVersion,
+    DateTime? registrationAttemptAt_orig_,
+    DateTime? registrationAttemptAt_last_,
+    String? registrationOutcome_orig_,
+    String? registrationOutcome_last_,
+    String? registrationSourceIp_orig_,
+    String? registrationSourceIp_last_,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
-    return AuthPrincipal(
+    if (identityKind != null && identityKind != this.identityKind) {
+      throw ArgumentError('Cannot change identityKind for EmailAuthPrincipal');
+    }
+    if (username != null || normalizedUsername != null) {
+      throw ArgumentError(
+        'EmailAuthPrincipal does not support username fields',
+      );
+    }
+    return EmailAuthPrincipal(
       userId: userId,
-      identityKind: identityKind ?? this.identityKind,
       email: email ?? this.email,
       normalizedEmail: normalizedEmail ?? this.normalizedEmail,
+      passwordHash: passwordHash ?? this.passwordHash,
+      passwordSalt: passwordSalt ?? this.passwordSalt,
+      passwordIterations: passwordIterations ?? this.passwordIterations,
+      accountStatus: accountStatus ?? this.accountStatus,
+      emailVerified: emailVerified ?? this.emailVerified,
+      isAdHoc: isAdHoc ?? this.isAdHoc,
+      displayName: displayName ?? this.displayName,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      verifiedAt: verifiedAt ?? this.verifiedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      assignedProjectIds: assignedProjectIds ?? this.assignedProjectIds,
+      verificationVersion: verificationVersion ?? this.verificationVersion,
+      registrationAttemptAt_orig_:
+          registrationAttemptAt_orig_ ?? this.registrationAttemptAt_orig_,
+      registrationAttemptAt_last_:
+          registrationAttemptAt_last_ ?? this.registrationAttemptAt_last_,
+      registrationOutcome_orig_:
+          registrationOutcome_orig_ ?? this.registrationOutcome_orig_,
+      registrationOutcome_last_:
+          registrationOutcome_last_ ?? this.registrationOutcome_last_,
+      registrationSourceIp_orig_:
+          registrationSourceIp_orig_ ?? this.registrationSourceIp_orig_,
+      registrationSourceIp_last_:
+          registrationSourceIp_last_ ?? this.registrationSourceIp_last_,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  factory EmailAuthPrincipal.fromJson(Map<String, dynamic> json) =>
+      _$EmailAuthPrincipalFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$EmailAuthPrincipalToJson(this);
+}
+
+@JsonSerializable(includeIfNull: false, checked: true)
+class UsernameAuthPrincipal extends AuthPrincipal {
+  UsernameAuthPrincipal({
+    required super.userId,
+    required String username,
+    required String normalizedUsername,
+    required super.passwordHash,
+    required super.passwordSalt,
+    required super.passwordIterations,
+    required super.accountStatus,
+    required super.emailVerified,
+    required super.isAdHoc,
+    required super.displayName,
+    super.dateOfBirth,
+    super.verifiedAt,
+    super.deletedAt,
+    required super.assignedProjectIds,
+    required super.verificationVersion,
+    super.registrationAttemptAt_orig_,
+    super.registrationAttemptAt_last_,
+    super.registrationOutcome_orig_,
+    super.registrationOutcome_last_,
+    super.registrationSourceIp_orig_,
+    super.registrationSourceIp_last_,
+    required super.createdAt,
+    required super.updatedAt,
+  }) : username = _requireNonEmptyIdentityField('username', username),
+       normalizedUsername = _requireNonEmptyIdentityField(
+         'normalizedUsername',
+         normalizedUsername,
+       ),
+       super._(identityKind: AuthIdentityKind.usernamePassword);
+
+  @override
+  String? get email => null;
+  @override
+  String? get normalizedEmail => null;
+  @override
+  @JsonKey()
+  final String username;
+  @override
+  @JsonKey()
+  final String normalizedUsername;
+
+  @override
+  UsernameAuthPrincipal copyWith({
+    AuthIdentityKind? identityKind,
+    String? email,
+    String? normalizedEmail,
+    String? username,
+    String? normalizedUsername,
+    String? passwordHash,
+    String? passwordSalt,
+    int? passwordIterations,
+    AuthAccountStatus? accountStatus,
+    bool? emailVerified,
+    bool? isAdHoc,
+    String? displayName,
+    String? dateOfBirth,
+    DateTime? verifiedAt,
+    DateTime? deletedAt,
+    List<String>? assignedProjectIds,
+    int? verificationVersion,
+    DateTime? registrationAttemptAt_orig_,
+    DateTime? registrationAttemptAt_last_,
+    String? registrationOutcome_orig_,
+    String? registrationOutcome_last_,
+    String? registrationSourceIp_orig_,
+    String? registrationSourceIp_last_,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    if (identityKind != null && identityKind != this.identityKind) {
+      throw ArgumentError(
+        'Cannot change identityKind for UsernameAuthPrincipal',
+      );
+    }
+    if (email != null || normalizedEmail != null) {
+      throw ArgumentError(
+        'UsernameAuthPrincipal does not support email fields',
+      );
+    }
+    return UsernameAuthPrincipal(
+      userId: userId,
       username: username ?? this.username,
       normalizedUsername: normalizedUsername ?? this.normalizedUsername,
       passwordHash: passwordHash ?? this.passwordHash,
@@ -186,81 +451,11 @@ class AuthPrincipal {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'userId': userId,
-    'identityKind': identityKind.value,
-    'email': email,
-    'normalizedEmail': normalizedEmail,
-    'username': username,
-    'normalizedUsername': normalizedUsername,
-    'passwordHash': passwordHash,
-    'passwordSalt': passwordSalt,
-    'passwordIterations': passwordIterations,
-    'accountStatus': accountStatus.value,
-    'emailVerified': emailVerified,
-    'isAdHoc': isAdHoc,
-    'displayName': displayName,
-    'dateOfBirth': dateOfBirth,
-    'verifiedAt': verifiedAt?.toUtc().toIso8601String(),
-    'deletedAt': deletedAt?.toUtc().toIso8601String(),
-    'assignedProjectIds': assignedProjectIds,
-    'verificationVersion': verificationVersion,
-    'registrationAttemptAt_orig_': registrationAttemptAt_orig_
-        ?.toUtc()
-        .toIso8601String(),
-    'registrationAttemptAt_last_': registrationAttemptAt_last_
-        ?.toUtc()
-        .toIso8601String(),
-    'registrationOutcome_orig_': registrationOutcome_orig_,
-    'registrationOutcome_last_': registrationOutcome_last_,
-    'registrationSourceIp_orig_': registrationSourceIp_orig_,
-    'registrationSourceIp_last_': registrationSourceIp_last_,
-    'createdAt': createdAt.toUtc().toIso8601String(),
-    'updatedAt': updatedAt.toUtc().toIso8601String(),
-  }..removeWhere((key, value) => value == null);
+  factory UsernameAuthPrincipal.fromJson(Map<String, dynamic> json) =>
+      _$UsernameAuthPrincipalFromJson(json);
 
-  factory AuthPrincipal.fromJson(Map<String, dynamic> json) {
-    return AuthPrincipal(
-      userId: json['userId'] as String,
-      identityKind: AuthIdentityKind.fromValue(
-        json['identityKind'] as String? ?? AuthIdentityKind.emailPassword.value,
-      ),
-      email: json['email'] as String?,
-      normalizedEmail: json['normalizedEmail'] as String?,
-      username: json['username'] as String?,
-      normalizedUsername: json['normalizedUsername'] as String?,
-      passwordHash: json['passwordHash'] as String? ?? '',
-      passwordSalt: json['passwordSalt'] as String? ?? '',
-      passwordIterations: (json['passwordIterations'] as num?)?.toInt() ?? 0,
-      accountStatus: AuthAccountStatus.fromValue(
-        json['accountStatus'] as String? ??
-            AuthAccountStatus.pendingVerification.value,
-      ),
-      emailVerified: json['emailVerified'] as bool? ?? false,
-      isAdHoc: json['isAdHoc'] as bool? ?? false,
-      displayName: json['displayName'] as String? ?? '',
-      dateOfBirth: json['dateOfBirth'] as String?,
-      verifiedAt: _parseDateTime(json['verifiedAt']),
-      deletedAt: _parseDateTime(json['deletedAt']),
-      assignedProjectIds:
-          (json['assignedProjectIds'] as List<dynamic>? ?? const <dynamic>[])
-              .whereType<String>()
-              .toList(growable: false),
-      verificationVersion: (json['verificationVersion'] as num?)?.toInt() ?? 0,
-      registrationAttemptAt_orig_: _parseDateTime(
-        json['registrationAttemptAt_orig_'],
-      ),
-      registrationAttemptAt_last_: _parseDateTime(
-        json['registrationAttemptAt_last_'],
-      ),
-      registrationOutcome_orig_: json['registrationOutcome_orig_'] as String?,
-      registrationOutcome_last_: json['registrationOutcome_last_'] as String?,
-      registrationSourceIp_orig_: json['registrationSourceIp_orig_'] as String?,
-      registrationSourceIp_last_: json['registrationSourceIp_last_'] as String?,
-      createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now().toUtc(),
-      updatedAt: _parseDateTime(json['updatedAt']) ?? DateTime.now().toUtc(),
-    );
-  }
+  @override
+  Map<String, dynamic> toJson() => _$UsernameAuthPrincipalToJson(this);
 }
 
 @JsonSerializable(includeIfNull: true, checked: true)
@@ -745,6 +940,42 @@ DateTime? _nullableUtcDateTimeFromJson(dynamic value) => _parseDateTime(value);
 
 String? _nullableUtcDateTimeToJson(DateTime? value) =>
     value == null ? null : const UtcDateTimeConverter().toJson(value);
+
+AuthIdentityKind _strictIdentityKindFromJson(dynamic value) {
+  if (value is! String || value.isEmpty) {
+    throw ArgumentError.value(
+      value,
+      'identityKind',
+      'identityKind is required',
+    );
+  }
+  return _enumByValue(
+    AuthIdentityKind.values,
+    value,
+    'identityKind',
+    (kind) => kind.value,
+  );
+}
+
+T _enumByValue<T>(
+  Iterable<T> values,
+  String value,
+  String field,
+  String Function(T) toValue,
+) {
+  return values.firstWhere(
+    (candidate) => toValue(candidate) == value,
+    orElse: () => throw ArgumentError.value(value, field, 'Unsupported $field'),
+  );
+}
+
+String _requireNonEmptyIdentityField(String field, String? value) {
+  final trimmed = value?.trim() ?? '';
+  if (trimmed.isEmpty) {
+    throw ArgumentError.value(value, field, '$field is required');
+  }
+  return trimmed;
+}
 
 List<String> _stringListFromJson(dynamic value) =>
     (value is List ? value : const <dynamic>[]).whereType<String>().toList(

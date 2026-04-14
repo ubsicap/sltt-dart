@@ -183,9 +183,8 @@ class BackendAuthService {
       final now = DateTime.now().toUtc();
       final principal =
           (existing ??
-                  AuthPrincipal(
+                  EmailAuthPrincipal(
                     userId: userId,
-                    identityKind: AuthIdentityKind.emailPassword,
                     email: email,
                     normalizedEmail: normalizedEmail,
                     passwordHash: passwordHash.hash,
@@ -247,11 +246,15 @@ class BackendAuthService {
       );
 
       stage = _startTiming();
-      final challengeIssue = await _maybeIssueVerificationChallenge(
+      final emailPrincipal = _requireEmailPrincipal(
         principal,
+        operation: 'register',
+      );
+      final challengeIssue = await _maybeIssueVerificationChallenge(
+        emailPrincipal,
         existingChallenge: existing == null
             ? null
-            : await _recordStore.getEmailChallenge(principal.userId),
+            : await _recordStore.getEmailChallenge(emailPrincipal.userId),
         sourceIp: sourceIp,
         clampEvent: 'register_email_clamped',
       );
@@ -479,8 +482,12 @@ class BackendAuthService {
       return const AuthStatusResponse(status: 'sent');
     }
     final existing = await _recordStore.getEmailChallenge(principal.userId);
-    final challengeIssue = await _maybeIssueVerificationChallenge(
+    final emailPrincipal = _requireEmailPrincipal(
       principal,
+      operation: 'resendVerificationCode',
+    );
+    final challengeIssue = await _maybeIssueVerificationChallenge(
+      emailPrincipal,
       existingChallenge: existing,
       sourceIp: sourceIp,
       clampEvent: 'resend_email_clamped',
@@ -742,9 +749,8 @@ class BackendAuthService {
     }
     final hash = await _passwordHashService.hashPassword(password);
     final now = DateTime.now().toUtc();
-    final principal = AuthPrincipal(
+    final principal = UsernameAuthPrincipal(
       userId: userId,
-      identityKind: AuthIdentityKind.usernamePassword,
       username: username,
       normalizedUsername: normalizedUsername,
       passwordHash: hash.hash,
@@ -789,6 +795,7 @@ class BackendAuthService {
     }
     final items = await _recordStore.listAdHocPrincipals();
     final visible = items
+        .whereType<UsernameAuthPrincipal>()
         .where(
           (principal) =>
               principal.assignedProjectIds.any(adminProjects.contains),
@@ -938,7 +945,7 @@ class BackendAuthService {
   }
 
   Future<void> _issueVerificationChallenge(
-    AuthPrincipal principal, {
+    EmailAuthPrincipal principal, {
     required int resendCount,
   }) async {
     final total = _startTiming();
@@ -984,14 +991,14 @@ class BackendAuthService {
 
       stage = _startTiming();
       await _emailSender.sendVerificationCode(
-        toEmail: principal.email ?? '',
+        toEmail: principal.email,
         code: code,
         expiresAt: challenge.expiresAt,
       );
       _logTiming(
         'challenge.sendVerificationCode',
         stage,
-        extra: {'email': principal.email ?? ''},
+        extra: {'email': principal.email},
       );
     } finally {
       _logTiming('challenge.total', total, extra: {'userId': principal.userId});
@@ -999,7 +1006,7 @@ class BackendAuthService {
   }
 
   Future<({bool sent, int resendCount})> _maybeIssueVerificationChallenge(
-    AuthPrincipal principal, {
+    EmailAuthPrincipal principal, {
     required AuthEmailChallenge? existingChallenge,
     required String? sourceIp,
     required String clampEvent,
@@ -1078,13 +1085,28 @@ class BackendAuthService {
     }
   }
 
-  Future<AuthPrincipal> _requireAdHocPrincipal(String userId) async {
+  Future<UsernameAuthPrincipal> _requireAdHocPrincipal(String userId) async {
     final principal = await _recordStore.getPrincipalByUserId(userId);
-    if (principal == null || !principal.isAdHoc || principal.isDeleted) {
+    if (principal == null ||
+        principal is! UsernameAuthPrincipal ||
+        !principal.isAdHoc ||
+        principal.isDeleted) {
       throw AuthException(
         'Unable to complete this action',
         statusCode: 404,
         code: 'unable_to_complete_action',
+      );
+    }
+    return principal;
+  }
+
+  EmailAuthPrincipal _requireEmailPrincipal(
+    AuthPrincipal principal, {
+    required String operation,
+  }) {
+    if (principal is! EmailAuthPrincipal) {
+      throw StateError(
+        'Expected EmailAuthPrincipal during $operation for user ${principal.userId}',
       );
     }
     return principal;
@@ -1288,11 +1310,11 @@ class BackendAuthService {
     );
   }
 
-  AdHocUserSummary _toAdHocSummary(AuthPrincipal principal) {
+  AdHocUserSummary _toAdHocSummary(UsernameAuthPrincipal principal) {
     return AdHocUserSummary(
       userId: principal.userId,
       name: principal.displayName,
-      username: principal.username ?? '',
+      username: principal.username,
       dateOfBirth: principal.dateOfBirth,
       projectIds: principal.assignedProjectIds,
       status: principal.accountStatus.value,
