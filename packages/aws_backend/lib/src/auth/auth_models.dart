@@ -389,6 +389,7 @@ class AuthSessionRecord {
       _$AuthSessionRecordFromJson(json);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class AuthenticatedSession {
   const AuthenticatedSession({
     required this.userId,
@@ -397,12 +398,22 @@ class AuthenticatedSession {
     required this.emailVerified,
   });
 
+  @JsonKey(defaultValue: '')
   final String userId;
+  @JsonKey(defaultValue: '')
   final String sessionId;
+  @JsonKey(defaultValue: false)
   final bool isAdHoc;
+  @JsonKey(defaultValue: false)
   final bool emailVerified;
+
+  factory AuthenticatedSession.fromJson(Map<String, dynamic> json) =>
+      _$AuthenticatedSessionFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AuthenticatedSessionToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class AuthTokenPair {
   const AuthTokenPair({
     required this.accessToken,
@@ -410,15 +421,20 @@ class AuthTokenPair {
     required this.expiresAt,
   });
 
+  @JsonKey(defaultValue: '')
   final String accessToken;
+  @JsonKey(defaultValue: '')
   final String refreshToken;
+  @JsonKey(
+    fromJson: _requiredUtcDateTimeFromJson,
+    toJson: _requiredUtcDateTimeToJson,
+  )
   final DateTime expiresAt;
 
-  Map<String, dynamic> toJson() => {
-    'accessToken': accessToken,
-    'refreshToken': refreshToken,
-    'expiresAt': expiresAt.toUtc().toIso8601String(),
-  };
+  factory AuthTokenPair.fromJson(Map<String, dynamic> json) =>
+      _$AuthTokenPairFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AuthTokenPairToJson(this);
 }
 
 @JsonSerializable(includeIfNull: false, checked: true)
@@ -600,15 +616,18 @@ class DeleteAdHocUserRequest {
   Map<String, dynamic> toJson() => _$DeleteAdHocUserRequestToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class AuthStatusResponse {
   const AuthStatusResponse({required this.status, this.message});
 
+  @JsonKey(defaultValue: '')
   final String status;
   final String? message;
 
-  Map<String, dynamic> toJson() =>
-      {'status': status, 'message': message}
-        ..removeWhere((key, value) => value == null);
+  factory AuthStatusResponse.fromJson(Map<String, dynamic> json) =>
+      _$AuthStatusResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AuthStatusResponseToJson(this);
 }
 
 class AuthenticatedResponse extends AuthStatusResponse {
@@ -629,6 +648,7 @@ class AuthenticatedResponse extends AuthStatusResponse {
   };
 }
 
+@JsonSerializable(includeIfNull: false, checked: true)
 class AdHocUserSummary {
   const AdHocUserSummary({
     required this.userId,
@@ -639,31 +659,35 @@ class AdHocUserSummary {
     required this.status,
   });
 
+  @JsonKey(defaultValue: '')
   final String userId;
+  @JsonKey(defaultValue: '')
   final String name;
+  @JsonKey(defaultValue: '')
   final String username;
   final String? dateOfBirth;
+  @JsonKey(fromJson: _stringListFromJson, defaultValue: <String>[])
   final List<String> projectIds;
+  @JsonKey(defaultValue: '')
   final String status;
 
-  Map<String, dynamic> toJson() => {
-    'userId': userId,
-    'name': name,
-    'username': username,
-    'dateOfBirth': dateOfBirth,
-    'projectIds': projectIds,
-    'status': status,
-  }..removeWhere((key, value) => value == null);
+  factory AdHocUserSummary.fromJson(Map<String, dynamic> json) =>
+      _$AdHocUserSummaryFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AdHocUserSummaryToJson(this);
 }
 
+@JsonSerializable(includeIfNull: false, checked: true, explicitToJson: true)
 class AdHocUsersResponse {
   const AdHocUsersResponse({required this.items});
 
+  @JsonKey(defaultValue: <AdHocUserSummary>[])
   final List<AdHocUserSummary> items;
 
-  Map<String, dynamic> toJson() => {
-    'items': items.map((item) => item.toJson()).toList(growable: false),
-  };
+  factory AdHocUsersResponse.fromJson(Map<String, dynamic> json) =>
+      _$AdHocUsersResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AdHocUsersResponseToJson(this);
 }
 
 DateTime? _parseDateTime(dynamic value) {

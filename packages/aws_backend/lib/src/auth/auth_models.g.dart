@@ -88,6 +88,50 @@ Map<String, dynamic> _$AuthSessionRecordToJson(AuthSessionRecord instance) =>
       'revokedAt': ?_nullableUtcDateTimeToJson(instance.revokedAt),
     };
 
+AuthenticatedSession _$AuthenticatedSessionFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('AuthenticatedSession', json, ($checkedConvert) {
+  final val = AuthenticatedSession(
+    userId: $checkedConvert('userId', (v) => v as String? ?? ''),
+    sessionId: $checkedConvert('sessionId', (v) => v as String? ?? ''),
+    isAdHoc: $checkedConvert('isAdHoc', (v) => v as bool? ?? false),
+    emailVerified: $checkedConvert('emailVerified', (v) => v as bool? ?? false),
+  );
+  return val;
+});
+
+Map<String, dynamic> _$AuthenticatedSessionToJson(
+  AuthenticatedSession instance,
+) => <String, dynamic>{
+  'userId': instance.userId,
+  'sessionId': instance.sessionId,
+  'isAdHoc': instance.isAdHoc,
+  'emailVerified': instance.emailVerified,
+};
+
+AuthTokenPair _$AuthTokenPairFromJson(Map<String, dynamic> json) =>
+    $checkedCreate('AuthTokenPair', json, ($checkedConvert) {
+      final val = AuthTokenPair(
+        accessToken: $checkedConvert('accessToken', (v) => v as String? ?? ''),
+        refreshToken: $checkedConvert(
+          'refreshToken',
+          (v) => v as String? ?? '',
+        ),
+        expiresAt: $checkedConvert(
+          'expiresAt',
+          (v) => _requiredUtcDateTimeFromJson(v),
+        ),
+      );
+      return val;
+    });
+
+Map<String, dynamic> _$AuthTokenPairToJson(AuthTokenPair instance) =>
+    <String, dynamic>{
+      'accessToken': instance.accessToken,
+      'refreshToken': instance.refreshToken,
+      'expiresAt': _requiredUtcDateTimeToJson(instance.expiresAt),
+    };
+
 RegisterRequest _$RegisterRequestFromJson(Map<String, dynamic> json) =>
     $checkedCreate('RegisterRequest', json, ($checkedConvert) {
       final val = RegisterRequest(
@@ -262,3 +306,61 @@ DeleteAdHocUserRequest _$DeleteAdHocUserRequestFromJson(
 Map<String, dynamic> _$DeleteAdHocUserRequestToJson(
   DeleteAdHocUserRequest instance,
 ) => <String, dynamic>{'adminPassword': instance.adminPassword};
+
+AuthStatusResponse _$AuthStatusResponseFromJson(Map<String, dynamic> json) =>
+    $checkedCreate('AuthStatusResponse', json, ($checkedConvert) {
+      final val = AuthStatusResponse(
+        status: $checkedConvert('status', (v) => v as String? ?? ''),
+        message: $checkedConvert('message', (v) => v as String?),
+      );
+      return val;
+    });
+
+Map<String, dynamic> _$AuthStatusResponseToJson(AuthStatusResponse instance) =>
+    <String, dynamic>{'status': instance.status, 'message': ?instance.message};
+
+AdHocUserSummary _$AdHocUserSummaryFromJson(Map<String, dynamic> json) =>
+    $checkedCreate('AdHocUserSummary', json, ($checkedConvert) {
+      final val = AdHocUserSummary(
+        userId: $checkedConvert('userId', (v) => v as String? ?? ''),
+        name: $checkedConvert('name', (v) => v as String? ?? ''),
+        username: $checkedConvert('username', (v) => v as String? ?? ''),
+        dateOfBirth: $checkedConvert('dateOfBirth', (v) => v as String?),
+        projectIds: $checkedConvert(
+          'projectIds',
+          (v) => v == null ? [] : _stringListFromJson(v),
+        ),
+        status: $checkedConvert('status', (v) => v as String? ?? ''),
+      );
+      return val;
+    });
+
+Map<String, dynamic> _$AdHocUserSummaryToJson(AdHocUserSummary instance) =>
+    <String, dynamic>{
+      'userId': instance.userId,
+      'name': instance.name,
+      'username': instance.username,
+      'dateOfBirth': ?instance.dateOfBirth,
+      'projectIds': instance.projectIds,
+      'status': instance.status,
+    };
+
+AdHocUsersResponse _$AdHocUsersResponseFromJson(Map<String, dynamic> json) =>
+    $checkedCreate('AdHocUsersResponse', json, ($checkedConvert) {
+      final val = AdHocUsersResponse(
+        items: $checkedConvert(
+          'items',
+          (v) =>
+              (v as List<dynamic>?)
+                  ?.map(
+                    (e) => AdHocUserSummary.fromJson(e as Map<String, dynamic>),
+                  )
+                  .toList() ??
+              [],
+        ),
+      );
+      return val;
+    });
+
+Map<String, dynamic> _$AdHocUsersResponseToJson(AdHocUsersResponse instance) =>
+    <String, dynamic>{'items': instance.items.map((e) => e.toJson()).toList()};

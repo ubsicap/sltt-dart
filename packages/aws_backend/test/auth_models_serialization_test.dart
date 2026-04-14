@@ -127,4 +127,86 @@ void main() {
       expect(request.adminPassword, equals('admin'));
     });
   });
+
+  group('Response DTO serialization', () {
+    test('AuthTokenPair round-trips expiresAt in UTC', () {
+      final pair = AuthTokenPair(
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        expiresAt: DateTime.parse('2026-04-14T16:00:00Z'),
+      );
+
+      final json = pair.toJson();
+      final roundTrip = AuthTokenPair.fromJson(json);
+
+      expect(roundTrip.accessToken, equals(pair.accessToken));
+      expect(roundTrip.refreshToken, equals(pair.refreshToken));
+      expect(roundTrip.expiresAt, equals(pair.expiresAt));
+    });
+
+    test('AuthStatusResponse omits null message', () {
+      const response = AuthStatusResponse(status: 'sent');
+
+      expect(response.toJson(), equals({'status': 'sent'}));
+    });
+
+    test('AdHocUserSummary filters null dateOfBirth from JSON output', () {
+      const summary = AdHocUserSummary(
+        userId: 'user-1',
+        name: 'Name',
+        username: 'local.user',
+        dateOfBirth: null,
+        projectIds: <String>['proj-a'],
+        status: 'active',
+      );
+
+      expect(summary.toJson().containsKey('dateOfBirth'), isFalse);
+    });
+
+    test('AdHocUsersResponse round-trips nested items', () {
+      const response = AdHocUsersResponse(
+        items: <AdHocUserSummary>[
+          AdHocUserSummary(
+            userId: 'user-1',
+            name: 'Name',
+            username: 'local.user',
+            dateOfBirth: '2000-01-01',
+            projectIds: <String>['proj-a'],
+            status: 'active',
+          ),
+        ],
+      );
+
+      final roundTrip = AdHocUsersResponse.fromJson(response.toJson());
+      expect(roundTrip.items, hasLength(1));
+      expect(roundTrip.items.single.username, equals('local.user'));
+      expect(
+        roundTrip.items.single.projectIds,
+        equals(const <String>['proj-a']),
+      );
+    });
+
+    test('AuthenticatedResponse keeps flattened token fields', () {
+      final response = AuthenticatedResponse(
+        status: 'authenticated',
+        userId: 'user-1',
+        tokens: AuthTokenPair(
+          accessToken: 'access',
+          refreshToken: 'refresh',
+          expiresAt: DateTime.parse('2026-04-14T16:00:00Z'),
+        ),
+      );
+
+      expect(
+        response.toJson(),
+        equals({
+          'status': 'authenticated',
+          'userId': 'user-1',
+          'accessToken': 'access',
+          'refreshToken': 'refresh',
+          'expiresAt': '2026-04-14T16:00:00.000Z',
+        }),
+      );
+    });
+  });
 }
