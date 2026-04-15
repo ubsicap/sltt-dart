@@ -23,7 +23,7 @@ class LogAuthEmailSender implements AuthEmailSender {
     required DateTime expiresAt,
   }) async {
     SlttLogger.logger.info(
-      '[Auth] Verification code for $toEmail: $code (expires ${expiresAt.toUtc().toIso8601String()})',
+      '[AuthEvent] Verification code for $toEmail: $code (expires ${expiresAt.toUtc().toIso8601String()})',
     );
   }
 }
@@ -113,7 +113,7 @@ class SesAuthEmailSender implements AuthEmailSender {
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final messageId = responseJson['MessageId'] as String?;
     SlttLogger.logger.info(
-      '[Auth] SES verification email sent to $normalizedRecipient messageId=${messageId ?? 'unknown'}',
+      '[AuthEvent] SES verification email sent to $normalizedRecipient messageId=${messageId ?? 'unknown'}',
     );
   }
 }
