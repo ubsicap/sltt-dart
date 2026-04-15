@@ -43,6 +43,9 @@ class LogAuthEmailSender implements AuthEmailSender {
       'Subject: ${emailContent.subject}\n'
       'TextBody:\n${emailContent.textBody}',
     );
+    SlttLogger.logger.info(
+      '[AuthEvent] Verification code for $toEmail: $code (expires ${expiresAt.toUtc().toIso8601String()})',
+    );
   }
 }
 
