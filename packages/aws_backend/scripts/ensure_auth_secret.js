@@ -165,7 +165,7 @@ function main() {
   );
 
   const bootstrapEnabled =
-    String(process.env.ALLOW_SECRET_BOOTSTRAP || 'false').toLowerCase() ===
+    String(process.env.ALLOW_SECRET_BOOTSTRAP || 'false').trim().toLowerCase() ===
     'true';
 
   const parameterName = `/sltt/auth/${stage}/${parameterSuffix}`;
