@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
-import 'dart:isolate';
 
 import 'package:xml/xml.dart';
 
@@ -24,9 +22,82 @@ class VerificationEmailTemplateRenderer {
        _nowProvider = nowProvider ?? DateTime.now;
 
   static const String _subject = 'Your SLTT verification code';
-  static const String _templatePackageUri =
-      'package:aws_backend/src/auth/templates/verification_email.template.html';
-  static Future<String>? _cachedTemplateContents;
+  static const String _templateContents =
+      '''<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Your SLTT verification code</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#f4f7fb; color:#10233f; font-family:Arial, Helvetica, sans-serif;">
+    <div data-plain-text="ignore" style="display:none; max-height:0; overflow:hidden; opacity:0;">
+      Your SLTT verification code is {{verification_code}}.
+    </div>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100%; border-collapse:collapse; background-color:#f4f7fb;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="width:100%; max-width:560px; border-collapse:separate; background-color:#ffffff; border:1px solid #d9e3f0; border-radius:18px;">
+            <tr>
+              <td style="padding:28px 24px 12px 24px;">
+                <p style="margin:0 0 12px 0; font-size:13px; line-height:20px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#42658c;">
+                  SLTT
+                </p>
+                <h1 style="margin:0; font-size:28px; line-height:34px; font-weight:700; color:#10233f;">
+                  Verify your email
+                </h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 8px 24px;">
+                <p data-plain-text-role="paragraph" style="margin:0; font-size:16px; line-height:24px; color:#304763;">
+                  Use this six-digit code to verify your email address in the app.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:20px 24px 24px 24px;">
+                <div style="display:inline-block; min-width:220px; padding:18px 24px; border:1px solid #c7d8ef; border-radius:18px; background-color:#eef4ff; text-align:center;">
+                  <p style="margin:0 0 8px 0; font-size:12px; line-height:16px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#5f7b9e;">
+                    Verification code
+                  </p>
+                  <p data-plain-text-role="code" style="margin:0; font-size:34px; line-height:40px; font-weight:700; letter-spacing:0.32em; color:#0d2a57; font-family:'Courier New', Courier, monospace; text-indent:0.32em;">
+                    {{verification_code}}
+                  </p>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 16px 24px;">
+                <p data-plain-text-role="paragraph" style="margin:0; font-size:16px; line-height:24px; color:#304763;">
+                  This code expires <strong>{{expires_in}}</strong>.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 28px 24px;">
+                <p data-plain-text-role="paragraph" style="margin:0 0 12px 0; font-size:16px; line-height:24px; color:#304763;">
+                  For your security:
+                </p>
+                <ul style="margin:0; padding-left:20px; color:#304763;">
+                  <li data-plain-text-role="list-item" style="margin:0 0 8px 0; font-size:15px; line-height:22px;">
+                    Enter this code only in the SLTT verification screen.
+                  </li>
+                  <li data-plain-text-role="list-item" style="margin:0 0 8px 0; font-size:15px; line-height:22px;">
+                    Do not share this code with anyone.
+                  </li>
+                  <li data-plain-text-role="list-item" style="margin:0; font-size:15px; line-height:22px;">
+                    If you did not request this code, you can ignore this message.
+                  </li>
+                </ul>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+''';
 
   final Future<String> Function() _templateLoader;
   final DateTime Function() _nowProvider;
@@ -54,19 +125,7 @@ class VerificationEmailTemplateRenderer {
     );
   }
 
-  static Future<String> _loadTemplateContents() {
-    return _cachedTemplateContents ??= () async {
-      final resolvedUri = await Isolate.resolvePackageUri(
-        Uri.parse(_templatePackageUri),
-      );
-      if (resolvedUri == null) {
-        throw StateError(
-          'Unable to resolve verification email template: $_templatePackageUri',
-        );
-      }
-      return File.fromUri(resolvedUri).readAsString();
-    }();
-  }
+  static Future<String> _loadTemplateContents() async => _templateContents;
 
   static String _renderHtmlBody({
     required String template,

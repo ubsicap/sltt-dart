@@ -19,6 +19,10 @@
 - When adding or changing AWS backend environment variables used by local debug runs, keep `packages/aws_backend/bin/debug_server.dart` and `.vscode/launch.json` in sync with the same variable names, defaults, and operator-facing hints.
   - This applies especially to new auth settings alongside existing storage/media settings.
 
+- For AWS backend Lambda deployments using compiled Dart `bootstrap`, do not assume non-Dart assets are packaged just because they exist in the repo.
+  - Dart imports only load Dart libraries. Files like `.html` are not importable as strings and are not automatically included in the Lambda artifact.
+  - If runtime code needs template content, prefer embedding it in Dart (or generated Dart source) unless packaging rules explicitly include the asset files.
+
 - Do not automatically add code just so deserialization works; always confirm with the repository maintainer before adding such code.
    - such code may mask data that is required to be added upstream
    - as an example of what NOT to auto add:
