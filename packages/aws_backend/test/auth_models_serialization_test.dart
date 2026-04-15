@@ -25,6 +25,7 @@ void main() {
       expect(principal, isA<EmailAuthPrincipal>());
       expect(principal.email, equals('person@example.com'));
       expect(principal.username, isNull);
+      expect(principal.toJson()['identityKind'], equals('email_password'));
       expect(principal.toJson().containsKey('username'), isFalse);
     });
 
@@ -50,6 +51,7 @@ void main() {
       expect(principal, isA<UsernameAuthPrincipal>());
       expect(principal.username, equals('local.user'));
       expect(principal.email, isNull);
+      expect(principal.toJson()['identityKind'], equals('username_password'));
       expect(principal.toJson().containsKey('email'), isFalse);
     });
 
@@ -130,11 +132,57 @@ void main() {
       );
     });
 
+    test('rejects EmailAuthPrincipal with mismatched identityKind', () {
+      expect(
+        () => EmailAuthPrincipal(
+          userId: 'user-1',
+          identityKind: AuthIdentityKind.usernamePassword,
+          email: 'person@example.com',
+          normalizedEmail: 'person@example.com',
+          passwordHash: 'hash',
+          passwordSalt: 'salt',
+          passwordIterations: 120000,
+          accountStatus: AuthAccountStatus.pendingVerification,
+          emailVerified: false,
+          isAdHoc: false,
+          displayName: 'Person',
+          assignedProjectIds: const <String>[],
+          verificationVersion: 0,
+          createdAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+          updatedAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('rejects username identities with missing username fields', () {
       expect(
         () => UsernameAuthPrincipal(
           userId: 'user-2',
           username: ' ',
+          normalizedUsername: 'local.user',
+          passwordHash: 'hash',
+          passwordSalt: 'salt',
+          passwordIterations: 120000,
+          accountStatus: AuthAccountStatus.active,
+          emailVerified: true,
+          isAdHoc: true,
+          displayName: 'Local User',
+          assignedProjectIds: const <String>['proj-a'],
+          verificationVersion: 0,
+          createdAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+          updatedAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects UsernameAuthPrincipal with mismatched identityKind', () {
+      expect(
+        () => UsernameAuthPrincipal(
+          userId: 'user-2',
+          identityKind: AuthIdentityKind.emailPassword,
+          username: 'local.user',
           normalizedUsername: 'local.user',
           passwordHash: 'hash',
           passwordSalt: 'salt',

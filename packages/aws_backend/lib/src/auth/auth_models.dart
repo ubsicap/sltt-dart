@@ -220,6 +220,7 @@ abstract class AuthPrincipal {
 class EmailAuthPrincipal extends AuthPrincipal {
   EmailAuthPrincipal({
     required super.userId,
+    super.identityKind = AuthIdentityKind.emailPassword,
     required String email,
     required String normalizedEmail,
     required super.passwordHash,
@@ -247,7 +248,15 @@ class EmailAuthPrincipal extends AuthPrincipal {
          'normalizedEmail',
          normalizedEmail,
        ),
-       super._(identityKind: AuthIdentityKind.emailPassword);
+       super._() {
+    if (identityKind != AuthIdentityKind.emailPassword) {
+      throw ArgumentError.value(
+        identityKind,
+        'identityKind',
+        'EmailAuthPrincipal requires identityKind=email_password',
+      );
+    }
+  }
 
   @override
   @JsonKey()
@@ -340,6 +349,7 @@ class EmailAuthPrincipal extends AuthPrincipal {
 class UsernameAuthPrincipal extends AuthPrincipal {
   UsernameAuthPrincipal({
     required super.userId,
+    super.identityKind = AuthIdentityKind.usernamePassword,
     required String username,
     required String normalizedUsername,
     required super.passwordHash,
@@ -367,7 +377,15 @@ class UsernameAuthPrincipal extends AuthPrincipal {
          'normalizedUsername',
          normalizedUsername,
        ),
-       super._(identityKind: AuthIdentityKind.usernamePassword);
+       super._() {
+    if (identityKind != AuthIdentityKind.usernamePassword) {
+      throw ArgumentError.value(
+        identityKind,
+        'identityKind',
+        'UsernameAuthPrincipal requires identityKind=username_password',
+      );
+    }
+  }
 
   @override
   String? get email => null;

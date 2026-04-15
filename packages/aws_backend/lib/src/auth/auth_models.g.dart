@@ -10,6 +10,12 @@ EmailAuthPrincipal _$EmailAuthPrincipalFromJson(Map<String, dynamic> json) =>
     $checkedCreate('EmailAuthPrincipal', json, ($checkedConvert) {
       final val = EmailAuthPrincipal(
         userId: $checkedConvert('userId', (v) => v as String),
+        identityKind: $checkedConvert(
+          'identityKind',
+          (v) =>
+              $enumDecodeNullable(_$AuthIdentityKindEnumMap, v) ??
+              AuthIdentityKind.emailPassword,
+        ),
         email: $checkedConvert('email', (v) => v as String),
         normalizedEmail: $checkedConvert('normalizedEmail', (v) => v as String),
         passwordHash: $checkedConvert('passwordHash', (v) => v as String),
@@ -81,6 +87,7 @@ EmailAuthPrincipal _$EmailAuthPrincipalFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$EmailAuthPrincipalToJson(EmailAuthPrincipal instance) =>
     <String, dynamic>{
       'userId': instance.userId,
+      'identityKind': _$AuthIdentityKindEnumMap[instance.identityKind]!,
       'passwordHash': instance.passwordHash,
       'passwordSalt': instance.passwordSalt,
       'passwordIterations': instance.passwordIterations,
@@ -109,6 +116,11 @@ Map<String, dynamic> _$EmailAuthPrincipalToJson(EmailAuthPrincipal instance) =>
       'normalizedEmail': instance.normalizedEmail,
     };
 
+const _$AuthIdentityKindEnumMap = {
+  AuthIdentityKind.emailPassword: 'email_password',
+  AuthIdentityKind.usernamePassword: 'username_password',
+};
+
 const _$AuthAccountStatusEnumMap = {
   AuthAccountStatus.pendingVerification: 'pending_verification',
   AuthAccountStatus.active: 'active',
@@ -120,6 +132,12 @@ UsernameAuthPrincipal _$UsernameAuthPrincipalFromJson(
 ) => $checkedCreate('UsernameAuthPrincipal', json, ($checkedConvert) {
   final val = UsernameAuthPrincipal(
     userId: $checkedConvert('userId', (v) => v as String),
+    identityKind: $checkedConvert(
+      'identityKind',
+      (v) =>
+          $enumDecodeNullable(_$AuthIdentityKindEnumMap, v) ??
+          AuthIdentityKind.usernamePassword,
+    ),
     username: $checkedConvert('username', (v) => v as String),
     normalizedUsername: $checkedConvert(
       'normalizedUsername',
@@ -195,6 +213,7 @@ Map<String, dynamic> _$UsernameAuthPrincipalToJson(
   UsernameAuthPrincipal instance,
 ) => <String, dynamic>{
   'userId': instance.userId,
+  'identityKind': _$AuthIdentityKindEnumMap[instance.identityKind]!,
   'passwordHash': instance.passwordHash,
   'passwordSalt': instance.passwordSalt,
   'passwordIterations': instance.passwordIterations,
