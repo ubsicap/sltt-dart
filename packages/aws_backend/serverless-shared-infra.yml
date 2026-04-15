@@ -515,6 +515,14 @@ resources:
                   Resource:
                     - !GetAtt MediaBucket.Arn
                     - !Sub '${MediaBucket.Arn}/*'
+          - PolicyName: SESAccess
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - ses:SendEmail
+                  Resource: '*'
 
     # Store cross-account role ARN in SSM for secondary stacks to reference
     SsmCrossAccountRoleArn:
