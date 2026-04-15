@@ -1,3 +1,4 @@
 last_export_arn
 diag-export
 .secrets/
+tool/generated/

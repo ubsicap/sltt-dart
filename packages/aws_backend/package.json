@@ -8,6 +8,7 @@
     "test": "test"
   },
   "scripts": {
+    "generate:verification-email-preview": "dart run tool/render_verification_email_preview.dart",
     "build": "build.bat",
     "build:linux": "rm -f bootstrap && dart compile exe bin/bootstrap.dart -o bootstrap && chmod +x bootstrap",
     "deploy:sltt-dart-prd:shared-infra": "npx serverless deploy --config serverless-shared-infra.yml --aws-profile sltt-dart-prd --verbose && npm run setup:ssm-parameters && npm run setup:ssm-resource-policies && npm run setup:ssm-cross-account-access:dev",

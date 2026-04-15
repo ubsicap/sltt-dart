@@ -5,6 +5,8 @@ import 'package:aws_signature_v4/aws_signature_v4.dart';
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 
+import 'verification_email_template.dart';
+
 abstract class AuthEmailSender {
   Future<void> sendVerificationCode({
     required String toEmail,
@@ -32,12 +34,16 @@ class SesAuthEmailSender implements AuthEmailSender {
     required this.region,
     required this.fromEmail,
     http.Client? httpClient,
-  }) : _httpClient = httpClient ?? http.Client();
+    VerificationEmailTemplateRenderer? templateRenderer,
+  }) : _httpClient = httpClient ?? http.Client(),
+       _templateRenderer =
+           templateRenderer ?? VerificationEmailTemplateRenderer();
 
   final AWSCredentials credentials;
   final String region;
   final String fromEmail;
   final http.Client _httpClient;
+  final VerificationEmailTemplateRenderer _templateRenderer;
 
   @override
   Future<void> sendVerificationCode({
@@ -53,15 +59,10 @@ class SesAuthEmailSender implements AuthEmailSender {
     final uri = Uri.parse(
       'https://email.$region.amazonaws.com/v2/email/outbound-emails',
     );
-    final textBody =
-        'SLTT verification code\n\n'
-        'Use this six-digit code to verify your email address in the app:\n\n'
-        '$code\n\n'
-        'This code expires at ${expiresAt.toUtc().toIso8601String()}.\n\n'
-        'For your security:\n'
-        '- Enter this code only in the SLTT verification screen.\n'
-        '- Do not share this code with anyone.\n'
-        '- If you did not request this code, you can ignore this message.';
+    final emailContent = await _templateRenderer.render(
+      code: code,
+      expiresAt: expiresAt,
+    );
     final payload = <String, dynamic>{
       'FromEmailAddress': fromEmail,
       'Destination': {
@@ -69,9 +70,10 @@ class SesAuthEmailSender implements AuthEmailSender {
       },
       'Content': {
         'Simple': {
-          'Subject': {'Data': 'Your SLTT verification code'},
+          'Subject': {'Data': emailContent.subject},
           'Body': {
-            'Text': {'Data': textBody},
+            'Html': {'Data': emailContent.htmlBody},
+            'Text': {'Data': emailContent.textBody},
           },
         },
       },
