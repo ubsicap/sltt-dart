@@ -46,7 +46,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'POST',
       'path': '/api/auth/register',
       'description':
-          'Start self-registration for standard users and send a 6-digit verification code valid for 10 minutes. Response remains neutral when the submitted email or userId already maps to an existing account.',
+          'Start self-registration for standard users and send a 6-digit verification code valid for 10 minutes. Response remains neutral when the submitted email or userId already maps to an existing account, except a pending unverified email can be reclaimed by a different userId after the prior verification challenge is missing or expired.',
       'requestBody': {
         'type': 'object',
         'required': ['userId', 'name', 'dateOfBirth', 'email', 'password'],

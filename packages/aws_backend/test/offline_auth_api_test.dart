@@ -427,6 +427,77 @@ void main() {
     );
 
     test(
+      'register reclaims stale pending email for a different userId',
+      () async {
+        final firstRegister = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.32'},
+          'body': jsonEncode({
+            'userId': 'user-jane',
+            'name': 'Jane Doe',
+            'dateOfBirth': '1990-06-15',
+            'email': 'jane@example.com',
+            'password': 'secret123',
+          }),
+        }, router);
+
+        expect(firstRegister['statusCode'], equals(200));
+        expect(emailSender.codes['jane@example.com'], hasLength(1));
+
+        final firstChallenge = await recordStore.getEmailChallenge('user-jane');
+        expect(firstChallenge, isNotNull);
+        await recordStore.putEmailChallenge(
+          firstChallenge!.copyWith(
+            expiresAt: DateTime.now().toUtc().subtract(
+              const Duration(minutes: 1),
+            ),
+          ),
+        );
+
+        final secondRegister = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.33'},
+          'body': jsonEncode({
+            'userId': 'different-user',
+            'name': 'Jane Reclaim',
+            'dateOfBirth': '1991-06-15',
+            'email': 'jane@example.com',
+            'password': 'secret456',
+          }),
+        }, router);
+
+        expect(secondRegister['statusCode'], equals(200));
+        final secondBody =
+            jsonDecode(secondRegister['body'] as String)
+                as Map<String, dynamic>;
+        expect(secondBody['status'], equals('pending_verification'));
+
+        final reclaimedPrincipal = await recordStore.getPrincipalByUserId(
+          'different-user',
+        );
+        expect(reclaimedPrincipal, isNotNull);
+        expect(reclaimedPrincipal?.email, equals('jane@example.com'));
+        expect(
+          reclaimedPrincipal?.registrationOutcome_last_,
+          equals('register_reclaimed_stale_pending_email_different_user'),
+        );
+        expect(
+          reclaimedPrincipal?.registrationSourceIp_last_,
+          equals('203.0.113.33'),
+        );
+        expect(emailSender.codes['jane@example.com'], hasLength(2));
+
+        final stalePrincipal = await recordStore.getPrincipalByUserId(
+          'user-jane',
+        );
+        expect(stalePrincipal, isNotNull);
+        expect(stalePrincipal?.emailVerified, isFalse);
+      },
+    );
+
+    test(
       'register stays neutral when userId belongs to another email',
       () async {
         final firstRegister = await server.handleApiGatewayEvent({

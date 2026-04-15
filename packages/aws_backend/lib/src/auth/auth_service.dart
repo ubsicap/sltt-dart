@@ -107,29 +107,52 @@ class BackendAuthService {
         extra: {'email': normalizedEmail, 'found': existing != null},
       );
 
+      var existingForRegistration = existing;
+      var reclaimedStalePendingEmailFromUserId = false;
+
       if (existing != null && existing.userId != userId) {
-        await _recordStore.putPrincipal(
-          _withRegistrationMetadata(
-            existing,
-            outcome: 'register_existing_email_different_user',
-            attemptAt: DateTime.now().toUtc(),
+        final canReclaimStalePendingEmail =
+            existing is EmailAuthPrincipal &&
+            !existing.emailVerified &&
+            !existing.isDeleted &&
+            existing.accountStatus == AuthAccountStatus.pendingVerification &&
+            await _isChallengeMissingOrExpired(existing.userId);
+        if (canReclaimStalePendingEmail) {
+          existingForRegistration = null;
+          reclaimedStalePendingEmailFromUserId = true;
+          _logAuthEvent(
+            'register_reclaimed_stale_pending_email_different_user',
+            email: normalizedEmail,
+            userId: userId,
+            principalUserId: existing.userId,
             sourceIp: sourceIp,
-          ),
-        );
-        _logAuthEvent(
-          'register_existing_email_different_user',
-          email: normalizedEmail,
-          userId: userId,
-          principalUserId: existing.userId,
-          sourceIp: sourceIp,
-        );
-        return const AuthStatusResponse(status: 'pending_verification');
+            detail: 'previous_verification_missing_or_expired',
+          );
+        } else {
+          await _recordStore.putPrincipal(
+            _withRegistrationMetadata(
+              existing,
+              outcome: 'register_existing_email_different_user',
+              attemptAt: DateTime.now().toUtc(),
+              sourceIp: sourceIp,
+            ),
+          );
+          _logAuthEvent(
+            'register_existing_email_different_user',
+            email: normalizedEmail,
+            userId: userId,
+            principalUserId: existing.userId,
+            sourceIp: sourceIp,
+          );
+          return const AuthStatusResponse(status: 'pending_verification');
+        }
       }
 
-      if (existing != null && existing.emailVerified) {
+      if (existingForRegistration != null &&
+          existingForRegistration.emailVerified) {
         await _recordStore.putPrincipal(
           _withRegistrationMetadata(
-            existing,
+            existingForRegistration,
             outcome: 'register_existing_email_same_user_verified',
             attemptAt: DateTime.now().toUtc(),
             sourceIp: sourceIp,
@@ -139,7 +162,7 @@ class BackendAuthService {
           'register_existing_email_same_user_verified',
           email: normalizedEmail,
           userId: userId,
-          principalUserId: existing.userId,
+          principalUserId: existingForRegistration.userId,
           sourceIp: sourceIp,
         );
         return const AuthStatusResponse(status: 'pending_verification');
@@ -182,7 +205,7 @@ class BackendAuthService {
 
       final now = DateTime.now().toUtc();
       final principal =
-          (existing ??
+          (existingForRegistration ??
                   EmailAuthPrincipal(
                     userId: userId,
                     email: email,
@@ -216,15 +239,21 @@ class BackendAuthService {
                 passwordIterations: passwordHash.iterations,
                 accountStatus: AuthAccountStatus.pendingVerification,
                 emailVerified: false,
-                registrationAttemptAt_orig_: existing == null ? now : null,
+                registrationAttemptAt_orig_: existingForRegistration == null
+                    ? now
+                    : null,
                 registrationAttemptAt_last_: now,
-                registrationOutcome_orig_: existing == null
+                registrationOutcome_orig_: existingForRegistration == null
                     ? 'register_new'
                     : null,
-                registrationOutcome_last_: existing == null
+                registrationOutcome_last_: reclaimedStalePendingEmailFromUserId
+                    ? 'register_reclaimed_stale_pending_email_different_user'
+                    : existingForRegistration == null
                     ? 'register_new'
                     : 'register_existing_pending_same_user',
-                registrationSourceIp_orig_: existing == null ? sourceIp : null,
+                registrationSourceIp_orig_: existingForRegistration == null
+                    ? sourceIp
+                    : null,
                 registrationSourceIp_last_: sourceIp,
                 updatedAt: now,
               );
@@ -252,7 +281,7 @@ class BackendAuthService {
       );
       final challengeIssue = await _maybeIssueVerificationChallenge(
         emailPrincipal,
-        existingChallenge: existing == null
+        existingChallenge: existingForRegistration == null
             ? null
             : await _recordStore.getEmailChallenge(emailPrincipal.userId),
         sourceIp: sourceIp,
@@ -264,7 +293,9 @@ class BackendAuthService {
         extra: {'email': normalizedEmail},
       );
       _logAuthEvent(
-        existing == null
+        reclaimedStalePendingEmailFromUserId
+            ? 'register_reclaimed_stale_pending_email_different_user'
+            : existingForRegistration == null
             ? 'register_new'
             : 'register_existing_pending_same_user',
         email: normalizedEmail,
@@ -1073,6 +1104,16 @@ class BackendAuthService {
 
     await _issueVerificationChallenge(principal, resendCount: 0);
     return (sent: true, resendCount: 0);
+  }
+
+  Future<bool> _isChallengeMissingOrExpired(String userId) async {
+    final challenge = await _recordStore.getEmailChallenge(userId);
+    if (challenge == null) {
+      return true;
+    }
+
+    final now = DateTime.now().toUtc();
+    return !challenge.expiresAt.isAfter(now);
   }
 
   Future<void> _confirmAdminPassword(
