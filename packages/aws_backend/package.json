@@ -42,6 +42,7 @@
     "logs:secondary:dev": "npx serverless logs --config serverless-secondary-infra.yml --function api --stage dev --aws-profile sltt-dart-dev --startTime 1h",
     "logs:secondary:tst": "npx serverless logs --config serverless-secondary-infra.yml --function api --stage tst --aws-profile sltt-dart-dev --startTime 1h",
     "logs:secondary:sltt-backend:dev": "npx serverless logs --config serverless-secondary-infra.yml --function api --stage dev --aws-profile sltt-dart-prd --startTime 1h",
+    "logs:secondary:sltt-backend:dev:auth": "aws logs tail /aws/lambda/sltt-secondary-infra-dev-api --since 1h --profile sltt-dart-prd --region us-east-1 --format short --filter-pattern Auth",
     "logs:auth-events:dev": "aws logs tail /aws/lambda/sltt-secondary-infra-dev-api --since 1h --profile sltt-dart-dev --region us-east-1 --format short --filter-pattern AuthEvent",
     "logs:auth-events:tst": "aws logs tail /aws/lambda/sltt-secondary-infra-tst-api --since 1h --profile sltt-dart-dev --region us-east-1 --format short --filter-pattern AuthEvent",
     "logs:auth-events:prod": "aws logs tail /aws/lambda/sltt-secondary-infra-prod-api --since 1h --profile sltt-dart-prd --region us-east-1 --format short --filter-pattern AuthEvent",
