@@ -16,14 +16,32 @@ abstract class AuthEmailSender {
 }
 
 class LogAuthEmailSender implements AuthEmailSender {
+  LogAuthEmailSender({VerificationEmailTemplateRenderer? templateRenderer})
+    : _templateRenderer =
+          templateRenderer ?? VerificationEmailTemplateRenderer();
+
+  final VerificationEmailTemplateRenderer _templateRenderer;
+
   @override
   Future<void> sendVerificationCode({
     required String toEmail,
     required String code,
     required DateTime expiresAt,
   }) async {
+    final normalizedRecipient = toEmail.trim();
+    if (normalizedRecipient.isEmpty) {
+      throw StateError('Recipient email is required for verification send');
+    }
+
+    final emailContent = await _templateRenderer.render(
+      code: code,
+      expiresAt: expiresAt,
+    );
     SlttLogger.logger.info(
-      '[AuthEvent] Verification code for $toEmail: $code (expires ${expiresAt.toUtc().toIso8601String()})',
+      '[AuthEvent] Simulated verification email send\n'
+      'To: $normalizedRecipient\n'
+      'Subject: ${emailContent.subject}\n'
+      'TextBody:\n${emailContent.textBody}',
     );
   }
 }
