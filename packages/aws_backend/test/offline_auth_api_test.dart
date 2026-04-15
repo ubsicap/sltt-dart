@@ -490,6 +490,80 @@ void main() {
       expect(emailSender.codes.containsKey('missing@example.com'), isFalse);
     });
 
+    test('verify logs challenge_not_found when challenge is missing', () async {
+      await authService.register(
+        RegisterRequest(
+          userId: 'user-jane',
+          name: 'Jane Doe',
+          dateOfBirth: '1990-06-15',
+          email: 'jane@example.com',
+          password: 'secret123',
+        ),
+      );
+
+      await recordStore.deleteEmailChallenge('user-jane');
+
+      final verifyResponse = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/verify-email',
+        'headers': <String, String>{'x-forwarded-for': '203.0.113.80'},
+        'body': jsonEncode({
+          'email': 'jane@example.com',
+          'code': emailSender.codes['jane@example.com']!.single,
+        }),
+      }, router);
+
+      expect(verifyResponse['statusCode'], equals(400));
+      expect(
+        responseBody(verifyResponse)['code'],
+        equals('invalid_or_expired_code'),
+      );
+
+      final event = authEventPayload('verify_invalid_code');
+      expect(event['detail'], equals('challenge_not_found'));
+    });
+
+    test('verify logs challenge_expired when challenge is expired', () async {
+      await authService.register(
+        RegisterRequest(
+          userId: 'user-jane',
+          name: 'Jane Doe',
+          dateOfBirth: '1990-06-15',
+          email: 'jane@example.com',
+          password: 'secret123',
+        ),
+      );
+
+      final challenge = await recordStore.getEmailChallenge('user-jane');
+      expect(challenge, isNotNull);
+      await recordStore.putEmailChallenge(
+        challenge!.copyWith(
+          expiresAt: DateTime.now().toUtc().subtract(
+            const Duration(minutes: 1),
+          ),
+        ),
+      );
+
+      final verifyResponse = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/verify-email',
+        'headers': <String, String>{'x-forwarded-for': '203.0.113.81'},
+        'body': jsonEncode({
+          'email': 'jane@example.com',
+          'code': emailSender.codes['jane@example.com']!.single,
+        }),
+      }, router);
+
+      expect(verifyResponse['statusCode'], equals(400));
+      expect(
+        responseBody(verifyResponse)['code'],
+        equals('invalid_or_expired_code'),
+      );
+
+      final event = authEventPayload('verify_invalid_code');
+      expect(event['detail'], equals('challenge_expired'));
+    });
+
     test(
       'register returns validation details and logs invalid request',
       () async {

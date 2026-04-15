@@ -334,14 +334,51 @@ class BackendAuthService {
         stage,
         extra: {'userId': principal.userId},
       );
-      if (challenge == null ||
-          challenge.expiresAt.isBefore(DateTime.now().toUtc())) {
+      if (challenge == null) {
+        _logTiming(
+          'verify.challengeState',
+          _startTiming(),
+          extra: {'userId': principal.userId, 'exists': false},
+        );
         _logAuthEvent(
           'verify_invalid_code',
           email: normalizedEmail,
           userId: principal.userId,
           sourceIp: sourceIp,
-          detail: 'challenge_missing_or_expired',
+          detail: 'challenge_not_found',
+        );
+        throw AuthException(
+          'Invalid or expired code',
+          statusCode: 400,
+          code: 'invalid_or_expired_code',
+        );
+      }
+
+      final challengeNow = DateTime.now().toUtc();
+      final isChallengeExpired = challenge.expiresAt.isBefore(challengeNow);
+      final secondsUntilExpiry = challenge.expiresAt
+          .difference(challengeNow)
+          .inSeconds;
+      _logTiming(
+        'verify.challengeState',
+        _startTiming(),
+        extra: {
+          'userId': principal.userId,
+          'exists': true,
+          'isExpired': isChallengeExpired,
+          'secondsUntilExpiry': secondsUntilExpiry,
+          'expiresAt': challenge.expiresAt.toIso8601String(),
+          'resendCount': challenge.resendCount,
+          'failedAttemptCount': challenge.failedAttemptCount,
+        },
+      );
+      if (isChallengeExpired) {
+        _logAuthEvent(
+          'verify_invalid_code',
+          email: normalizedEmail,
+          userId: principal.userId,
+          sourceIp: sourceIp,
+          detail: 'challenge_expired',
         );
         throw AuthException(
           'Invalid or expired code',
