@@ -134,6 +134,46 @@ void main() {
         }),
       );
     });
+
+    test('strict mode rejects leading or trailing whitespace', () {
+      final details = validateRegistrationForProfile(
+        profile: RegistrationValidationProfile.selfRegistration,
+        whitespaceMode: RegistrationValidationWhitespaceMode.strict,
+        fields: const RegistrationValidationFields(
+          userId: ' user-jane',
+          name: 'Jane Doe ',
+          dateOfBirth: ' 1990-06-15',
+          email: 'jane@example.com ',
+          password: '   exception: permit leading/trailing ws in passwords  ',
+        ),
+      );
+
+      expect(
+        details,
+        equals({
+          'userId': RegistrationValidationErrorCode.leadingOrTrailingWhitespace,
+          'name': RegistrationValidationErrorCode.leadingOrTrailingWhitespace,
+          'dateOfBirth':
+              RegistrationValidationErrorCode.leadingOrTrailingWhitespace,
+          'email': RegistrationValidationErrorCode.leadingOrTrailingWhitespace,
+        }),
+      );
+    });
+
+    test('tolerant mode preserves existing trim-acceptance behavior', () {
+      final details = validateRegistrationForProfile(
+        profile: RegistrationValidationProfile.selfRegistration,
+        fields: const RegistrationValidationFields(
+          userId: ' user-jane ',
+          name: ' Jane Doe ',
+          dateOfBirth: ' 1990-06-15 ',
+          email: ' jane@example.com ',
+          password: 'secret123',
+        ),
+      );
+
+      expect(details, isEmpty);
+    });
   });
 
   group('validateRegistrationForProfile adHocAdminRegistration', () {

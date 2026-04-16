@@ -709,6 +709,49 @@ void main() {
     });
 
     test(
+      'register rejects leading and trailing whitespace in strict mode',
+      () async {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{'x-forwarded-for': '203.0.113.83'},
+          'body': jsonEncode({
+            'userId': ' user-jane',
+            'name': 'Jane Doe ',
+            'dateOfBirth': '1990-06-15',
+            'email': 'jane@example.com ',
+            'password': 'secret123',
+          }),
+        }, router);
+
+        expect(response['statusCode'], equals(400));
+        expect(
+          responseBody(response),
+          equals({
+            'error': 'Unable to complete this action',
+            'code': 'invalid_request',
+            'details': {
+              'userId': 'leading_or_trailing_whitespace',
+              'name': 'leading_or_trailing_whitespace',
+              'email': 'leading_or_trailing_whitespace',
+            },
+          }),
+        );
+
+        final event = authEventPayload('register_invalid_request');
+        expect(event['detail'], equals('invalid_fields'));
+        expect(
+          event['validationDetails'],
+          equals({
+            'userId': 'leading_or_trailing_whitespace',
+            'name': 'leading_or_trailing_whitespace',
+            'email': 'leading_or_trailing_whitespace',
+          }),
+        );
+      },
+    );
+
+    test(
       'verify returns validation details and logs invalid request',
       () async {
         final response = await server.handleApiGatewayEvent({

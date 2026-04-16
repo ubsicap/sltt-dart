@@ -1,5 +1,7 @@
 enum RegistrationValidationProfile { selfRegistration, adHocAdminRegistration }
 
+enum RegistrationValidationWhitespaceMode { tolerant, strict }
+
 class RegistrationValidationField {
   static const String userId = 'userId';
   static const String name = 'name';
@@ -19,6 +21,8 @@ class RegistrationValidationErrorCode {
   static const String ageOutOfRange = 'age_out_of_range';
   static const String passwordTooWeak = 'password_too_weak';
   static const String passwordMismatch = 'password_mismatch';
+  static const String leadingOrTrailingWhitespace =
+      'leading_or_trailing_whitespace';
 }
 
 class RegistrationValidationFields {
@@ -53,6 +57,8 @@ Map<String, String> validateRegistrationForProfile({
   required RegistrationValidationFields fields,
   DateTime? now,
   Map<String, String>? fieldKeyOverrides,
+  RegistrationValidationWhitespaceMode whitespaceMode =
+      RegistrationValidationWhitespaceMode.tolerant,
 }) {
   switch (profile) {
     case RegistrationValidationProfile.selfRegistration:
@@ -60,12 +66,14 @@ Map<String, String> validateRegistrationForProfile({
         fields: fields,
         now: now,
         fieldKeyOverrides: fieldKeyOverrides,
+        whitespaceMode: whitespaceMode,
       );
     case RegistrationValidationProfile.adHocAdminRegistration:
       return _validateAdHocAdminRegistration(
         fields: fields,
         now: now,
         fieldKeyOverrides: fieldKeyOverrides,
+        whitespaceMode: whitespaceMode,
       );
   }
 }
@@ -74,8 +82,38 @@ Map<String, String> _validateSelfRegistration({
   required RegistrationValidationFields fields,
   required DateTime? now,
   required Map<String, String>? fieldKeyOverrides,
+  required RegistrationValidationWhitespaceMode whitespaceMode,
 }) {
   final details = <String, String>{};
+
+  _validateNoEdgeWhitespaceIfStrict(
+    details,
+    field: RegistrationValidationField.userId,
+    value: fields.userId,
+    whitespaceMode: whitespaceMode,
+    fieldKeyOverrides: fieldKeyOverrides,
+  );
+  _validateNoEdgeWhitespaceIfStrict(
+    details,
+    field: RegistrationValidationField.name,
+    value: fields.name,
+    whitespaceMode: whitespaceMode,
+    fieldKeyOverrides: fieldKeyOverrides,
+  );
+  _validateNoEdgeWhitespaceIfStrict(
+    details,
+    field: RegistrationValidationField.dateOfBirth,
+    value: fields.dateOfBirth,
+    whitespaceMode: whitespaceMode,
+    fieldKeyOverrides: fieldKeyOverrides,
+  );
+  _validateNoEdgeWhitespaceIfStrict(
+    details,
+    field: RegistrationValidationField.email,
+    value: fields.email,
+    whitespaceMode: whitespaceMode,
+    fieldKeyOverrides: fieldKeyOverrides,
+  );
 
   _validateRequired(
     details,
@@ -119,8 +157,38 @@ Map<String, String> _validateAdHocAdminRegistration({
   required RegistrationValidationFields fields,
   required DateTime? now,
   required Map<String, String>? fieldKeyOverrides,
+  required RegistrationValidationWhitespaceMode whitespaceMode,
 }) {
   final details = <String, String>{};
+
+  _validateNoEdgeWhitespaceIfStrict(
+    details,
+    field: RegistrationValidationField.userId,
+    value: fields.userId,
+    whitespaceMode: whitespaceMode,
+    fieldKeyOverrides: fieldKeyOverrides,
+  );
+  _validateNoEdgeWhitespaceIfStrict(
+    details,
+    field: RegistrationValidationField.name,
+    value: fields.name,
+    whitespaceMode: whitespaceMode,
+    fieldKeyOverrides: fieldKeyOverrides,
+  );
+  _validateNoEdgeWhitespaceIfStrict(
+    details,
+    field: RegistrationValidationField.username,
+    value: fields.username,
+    whitespaceMode: whitespaceMode,
+    fieldKeyOverrides: fieldKeyOverrides,
+  );
+  _validateNoEdgeWhitespaceIfStrict(
+    details,
+    field: RegistrationValidationField.dateOfBirth,
+    value: fields.dateOfBirth,
+    whitespaceMode: whitespaceMode,
+    fieldKeyOverrides: fieldKeyOverrides,
+  );
 
   _validateRequired(
     details,
@@ -167,9 +235,13 @@ void _validateRequired(
   required String? value,
   required Map<String, String>? fieldKeyOverrides,
 }) {
+  final resolvedField = _fieldKey(field, fieldKeyOverrides);
+  if (details.containsKey(resolvedField)) {
+    return;
+  }
+
   if ((value ?? '').trim().isEmpty) {
-    details[_fieldKey(field, fieldKeyOverrides)] =
-        RegistrationValidationErrorCode.required;
+    details[resolvedField] = RegistrationValidationErrorCode.required;
   }
 }
 
@@ -180,6 +252,9 @@ void _validateFullName(
 }) {
   final name = (value ?? '').trim();
   final field = _fieldKey(RegistrationValidationField.name, fieldKeyOverrides);
+  if (details.containsKey(field)) {
+    return;
+  }
   if (name.isEmpty) {
     details[field] = RegistrationValidationErrorCode.required;
     return;
@@ -196,6 +271,9 @@ void _validateEmail(
 }) {
   final email = (value ?? '').trim();
   final field = _fieldKey(RegistrationValidationField.email, fieldKeyOverrides);
+  if (details.containsKey(field)) {
+    return;
+  }
   if (email.isEmpty) {
     details[field] = RegistrationValidationErrorCode.required;
     return;
@@ -217,6 +295,9 @@ void _validateDateOfBirth(
     RegistrationValidationField.dateOfBirth,
     fieldKeyOverrides,
   );
+  if (details.containsKey(field)) {
+    return;
+  }
   final dobText = (value ?? '').trim();
   if (dobText.isEmpty) {
     if (required) {
@@ -271,6 +352,9 @@ void _validateConfirmPasswordIfProvided(
     RegistrationValidationField.confirmPassword,
     fieldKeyOverrides,
   );
+  if (details.containsKey(field)) {
+    return;
+  }
   if (confirmPassword.isEmpty) {
     details[field] = RegistrationValidationErrorCode.required;
     return;
@@ -282,6 +366,28 @@ void _validateConfirmPasswordIfProvided(
 
 String _fieldKey(String canonical, Map<String, String>? overrides) {
   return overrides?[canonical] ?? canonical;
+}
+
+void _validateNoEdgeWhitespaceIfStrict(
+  Map<String, String> details, {
+  required String field,
+  required String? value,
+  required RegistrationValidationWhitespaceMode whitespaceMode,
+  required Map<String, String>? fieldKeyOverrides,
+}) {
+  if (whitespaceMode != RegistrationValidationWhitespaceMode.strict) {
+    return;
+  }
+
+  final raw = value ?? '';
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty || raw == trimmed) {
+    return;
+  }
+
+  final resolvedField = _fieldKey(field, fieldKeyOverrides);
+  details[resolvedField] =
+      RegistrationValidationErrorCode.leadingOrTrailingWhitespace;
 }
 
 int _ageInYears(DateTime dateOfBirth, DateTime today) {

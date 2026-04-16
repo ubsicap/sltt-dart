@@ -74,33 +74,39 @@ class BackendAuthService {
     String? sourceIp,
   }) async {
     final total = _startTiming();
-    final userId = request.userId.trim();
-    final name = request.name.trim();
-    final dateOfBirth = request.dateOfBirth.trim();
-    final email = request.email.trim();
+    final rawUserId = request.userId;
+    final rawName = request.name;
+    final rawDateOfBirth = request.dateOfBirth;
+    final rawEmail = request.email;
     final password = request.password;
 
     try {
       final validationDetails = validateRegistrationForProfile(
         profile: RegistrationValidationProfile.selfRegistration,
         fields: RegistrationValidationFields(
-          userId: userId,
-          name: name,
-          dateOfBirth: dateOfBirth,
-          email: email,
+          userId: rawUserId,
+          name: rawName,
+          dateOfBirth: rawDateOfBirth,
+          email: rawEmail,
           password: password,
         ),
+        whitespaceMode: RegistrationValidationWhitespaceMode.strict,
       );
       if (validationDetails.isNotEmpty) {
         _throwInvalidRequest(
           event: 'register_invalid_request',
           details: validationDetails,
-          email: email.isEmpty ? null : _normalizeEmail(email),
-          userId: userId.isEmpty ? null : userId,
+          email: rawEmail.trim().isEmpty ? null : _normalizeEmail(rawEmail),
+          userId: rawUserId.trim().isEmpty ? null : rawUserId.trim(),
           sourceIp: sourceIp,
           detail: 'invalid_fields',
         );
       }
+
+      final userId = rawUserId.trim();
+      final name = rawName.trim();
+      final dateOfBirth = rawDateOfBirth.trim();
+      final email = rawEmail.trim();
       final normalizedEmail = _normalizeEmail(email);
 
       var stage = _startTiming();
@@ -315,7 +321,7 @@ class BackendAuthService {
       _logTiming(
         'register.total',
         total,
-        extra: {'email': email.trim().toLowerCase()},
+        extra: {'email': rawEmail.trim().toLowerCase()},
       );
     }
   }
