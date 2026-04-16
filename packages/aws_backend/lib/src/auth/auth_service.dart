@@ -81,13 +81,16 @@ class BackendAuthService {
     final password = request.password;
 
     try {
-      final validationDetails = _requiredFieldDetails({
-        'userId': userId,
-        'name': name,
-        'dateOfBirth': dateOfBirth,
-        'email': email,
-        'password': password,
-      });
+      final validationDetails = validateRegistrationForProfile(
+        profile: RegistrationValidationProfile.selfRegistration,
+        fields: RegistrationValidationFields(
+          userId: userId,
+          name: name,
+          dateOfBirth: dateOfBirth,
+          email: email,
+          password: password,
+        ),
+      );
       if (validationDetails.isNotEmpty) {
         _throwInvalidRequest(
           event: 'register_invalid_request',
@@ -95,6 +98,7 @@ class BackendAuthService {
           email: email.isEmpty ? null : _normalizeEmail(email),
           userId: userId.isEmpty ? null : userId,
           sourceIp: sourceIp,
+          detail: 'invalid_fields',
         );
       }
       final normalizedEmail = _normalizeEmail(email);
@@ -1261,6 +1265,7 @@ class BackendAuthService {
     String? identifier,
     String? userId,
     String? sourceIp,
+    String detail = 'missing_required_fields',
   }) {
     _logAuthEvent(
       event,
@@ -1268,7 +1273,7 @@ class BackendAuthService {
       identifier: identifier,
       userId: userId,
       sourceIp: sourceIp,
-      detail: 'missing_required_fields',
+      detail: detail,
       validationDetails: details,
     );
     throw AuthException(

@@ -661,10 +661,52 @@ void main() {
         );
 
         final event = authEventPayload('register_invalid_request');
-        expect(event['detail'], equals('missing_required_fields'));
+        expect(event['detail'], equals('invalid_fields'));
         expect(event['validationDetails'], equals({'userId': 'required'}));
       },
     );
+
+    test('register validates full field rules with shared codes', () async {
+      final response = await server.handleApiGatewayEvent({
+        'httpMethod': 'POST',
+        'path': '/api/auth/register',
+        'headers': <String, String>{'x-forwarded-for': '203.0.113.82'},
+        'body': jsonEncode({
+          'userId': 'user-jane',
+          'name': 'J',
+          'dateOfBirth': 'not-a-date',
+          'email': 'not-an-email',
+          'password': '1234567',
+        }),
+      }, router);
+
+      expect(response['statusCode'], equals(400));
+      expect(
+        responseBody(response),
+        equals({
+          'error': 'Unable to complete this action',
+          'code': 'invalid_request',
+          'details': {
+            'name': 'min_length',
+            'email': 'invalid_email_format',
+            'dateOfBirth': 'invalid_date_format',
+            'password': 'password_too_weak',
+          },
+        }),
+      );
+
+      final event = authEventPayload('register_invalid_request');
+      expect(event['detail'], equals('invalid_fields'));
+      expect(
+        event['validationDetails'],
+        equals({
+          'name': 'min_length',
+          'email': 'invalid_email_format',
+          'dateOfBirth': 'invalid_date_format',
+          'password': 'password_too_weak',
+        }),
+      );
+    });
 
     test(
       'verify returns validation details and logs invalid request',
