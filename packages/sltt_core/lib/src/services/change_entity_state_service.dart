@@ -85,31 +85,17 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     changeLogEntry: changeLogEntry,
     entityState: entityState,
     storageType: storageType,
-    cloudStoredPair: cs,
   );
 
-  if (duplicateCheck.isDuplicate) {
-    // For duplicates, do not emit change data; only apply minimal state updates.
-    // When duplicate handling produces state updates, storage remains the
-    // authority for stateDataHash and must recompute it from merged state.
-    var duplicateStateUpdates = <String, dynamic>{
-      ...duplicateCheck.stateUpdates,
-    };
-    if (duplicateStateUpdates.isNotEmpty && entityState != null) {
-      final merged = <String, dynamic>{
-        ...entityState.toJson(),
-        ...duplicateStateUpdates,
-      };
-      duplicateStateUpdates['stateDataHash'] = computeStateDataHash(merged);
-    }
-
+  if (duplicateCheck.isDuplicate && storageType == 'cloud') {
+    // Cloud is authoritative for duplicate CIDs. Do not emit any updates.
     return GetUpdateResults(
       isDuplicate: true,
-      stateUpdates: duplicateStateUpdates,
+      stateUpdates: const <String, dynamic>{},
       changeUpdates: const <String, dynamic>{},
       operationCounts: OperationCounts(
-        duplicate: duplicateStateUpdates.isEmpty ? 1 : 0,
-        clouded: duplicateStateUpdates.isNotEmpty ? 1 : 0,
+        duplicate: duplicateCheck.isClouded ? 0 : 1,
+        clouded: duplicateCheck.isClouded ? 1 : 0,
       ),
     );
   }
@@ -136,6 +122,8 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   final fieldChangesOrNoOps = getFieldChangesOrNoOps(
     changeLogEntry,
     entityState,
+    isDuplicate: duplicateCheck.isDuplicate,
+    cidStateFields: duplicateCheck.cidStateFields,
   );
   final fieldChanges = fieldChangesOrNoOps.fieldChanges;
   final noOpFields = fieldChangesOrNoOps.noOpFields;
@@ -149,6 +137,9 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     storageType: storageType,
     storageMode: storageMode,
     cs: cs,
+    isDuplicate: duplicateCheck.isDuplicate,
+    isClouded: duplicateCheck.isClouded,
+    cidStateFields: duplicateCheck.cidStateFields,
   );
 
   final changeDataUpdates = {...updates.changeDataUpdates};
@@ -190,6 +181,14 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
     }
   }
 
+  if (changeLogEntry.stateDataHash != null &&
+      changeLogEntry.stateDataHash != stateDataHash) {
+    // TODO(lan-local-team-storage): this currently keeps only the latest
+    // sender-reported hash mismatch and assumes warnings originated from
+    // changeLogEntry.storageId. Revisit warning provenance for multi-hop sync.
+    additionalWarnings['stateDataHash'] = changeLogEntry.stateDataHash;
+  }
+
   // Build the full set of change-log entry updates callers can apply
   // Decide whether to preserve incoming change data in the change-log entry.
   // In "sync" mode we generally preserve the incoming data when it originated
@@ -224,23 +223,28 @@ GetUpdateResults getUpdatesForChangeLogEntryAndEntityState(
   }
 
   return GetUpdateResults(
-    isDuplicate: false,
+    isDuplicate: duplicateCheck.isDuplicate,
     stateUpdates: stateUpdates,
     changeUpdates: changeLogEntryUpdates,
-    operationCounts: OperationCounts(
-      create: operation == kChangeOperationCreate ? 1 : 0,
-      update:
-          [
-            kChangeOperationUpdate,
-            kChangeOperationPartialUpdate,
-          ].contains(operation)
-          ? 1
-          : 0,
-      partialUpdate: operation == kChangeOperationPartialUpdate ? 1 : 0,
-      outdated: operation == kChangeOperationOutdated ? 1 : 0,
-      delete: operation == kChangeOperationDelete ? 1 : 0,
-      noOp: operation == kChangeOperationNoOp ? 1 : 0,
-    ),
+    operationCounts: duplicateCheck.isDuplicate
+        ? OperationCounts(
+            duplicate: duplicateCheck.isClouded ? 0 : 1,
+            clouded: duplicateCheck.isClouded ? 1 : 0,
+          )
+        : OperationCounts(
+            create: operation == kChangeOperationCreate ? 1 : 0,
+            update:
+                [
+                  kChangeOperationUpdate,
+                  kChangeOperationPartialUpdate,
+                ].contains(operation)
+                ? 1
+                : 0,
+            partialUpdate: operation == kChangeOperationPartialUpdate ? 1 : 0,
+            outdated: operation == kChangeOperationOutdated ? 1 : 0,
+            delete: operation == kChangeOperationDelete ? 1 : 0,
+            noOp: operation == kChangeOperationNoOp ? 1 : 0,
+          ),
   );
 }
 
@@ -258,6 +262,8 @@ Map<String, dynamic> getAdditionalWarnings({
   if (['create', 'update', 'delete'].contains(operation) &&
       (storageMode != 'save' || changeLogEntry.operation.isNotEmpty) &&
       changeLogEntry.operation != operation) {
+    // TODO(lan-local-team-storage): assumes warning values came from
+    // changeLogEntry.storageId and does not preserve warning history.
     additionalWarnings['operation'] = changeLogEntry.operation;
   }
   if (entityState == null) {
@@ -301,16 +307,13 @@ Map<String, dynamic> getAdditionalWarnings({
 /// Result type for getMaybeIsduplicateCid
 class GetMaybeIsDuplicateCidResult {
   final bool isDuplicate;
-
-  /// Minimal state updates to apply when a duplicate is detected.
-  /// Examples:
-  ///  - {'change_cloudAt': '...'} for latest-level duplicates
-  ///  - {'data_<field>_cloudAt_': '...'} for field-level duplicates
-  final Map<String, dynamic> stateUpdates;
+  final bool isClouded;
+  final List<String> cidStateFields;
 
   GetMaybeIsDuplicateCidResult({
     required this.isDuplicate,
-    required this.stateUpdates,
+    required this.isClouded,
+    required this.cidStateFields,
   });
 }
 
@@ -322,69 +325,65 @@ GetMaybeIsDuplicateCidResult getMaybeIsDuplicateCidResult({
   required BaseChangeLogEntry changeLogEntry,
   required BaseEntityState? entityState,
   required String storageType,
-  CloudStoredPair? cloudStoredPair,
 }) {
   // Implement the logic to check for duplicate cid
   bool isDuplicate = false;
-  final stateUpdates = <String, dynamic>{};
+  bool isClouded = false;
+  final cidStateFields = <String>{};
 
   if (entityState == null) {
     // If no entity state, it's not our duplicate
     return GetMaybeIsDuplicateCidResult(
       isDuplicate: false,
-      stateUpdates: const <String, dynamic>{},
+      isClouded: false,
+      cidStateFields: const <String>[],
     );
   }
 
   final entityStateJson = entityState.toJson();
   final changeLogCid = changeLogEntry.cid;
 
-  final changeLogEntryCloudAt = changeLogEntry.cloudAt?.toIso8601String();
+  final changeLogEntryCloudAt = changeLogEntry.cloudAt
+      ?.toUtc()
+      .toIso8601String();
 
-  // Use provided cloud/stored pair (cs) if supplied so both values are
-  // consistent for the current invocation with other helpers.
-  final CloudStoredPair localCs =
-      cloudStoredPair ?? computeCloudAndStoredAt(changeLogEntry, storageType);
-  final String computedStoredAt = localCs.storedAt;
-
-  if (entityState.change_cid == changeLogCid) {
+  final latestLevelDuplicate = entityState.change_cid == changeLogCid;
+  if (latestLevelDuplicate) {
     isDuplicate = true;
-    if (storageType == 'local' &&
-        changeLogEntryCloudAt != null &&
-        entityStateJson['change_cloudAt'] != changeLogEntryCloudAt) {
-      // Update latest-level cloudAt
-      stateUpdates['change_cloudAt'] = changeLogEntryCloudAt;
-      // Also persist the storedAt so callers can persist change_storedAt
-      stateUpdates['change_storedAt'] = computedStoredAt;
-    }
   }
 
-  if (!isDuplicate) {
-    // Check if any field in the entity state matches the change log entry cid
-    for (final key in entityStateJson.keys) {
-      if (key.endsWith('_cid_') && entityStateJson[key] == changeLogCid) {
-        isDuplicate = true;
-
-        /// get field without _cid_ and lookup field_cloudAt_
-        final fieldWithoutCid = key.substring(0, key.length - 4);
-        final entityStateFieldCloudAt =
-            entityStateJson['${fieldWithoutCid}_cloudAt_'];
-        if (changeLogEntryCloudAt != null &&
-            entityStateFieldCloudAt != changeLogEntryCloudAt) {
-          // Update field-level cloudAt
-          stateUpdates['${fieldWithoutCid}_cloudAt_'] = changeLogEntryCloudAt;
-          // Also set latest-level storedAt for the change so downstream callers
-          // have the storedAt that corresponds to this cloudAt.
-          stateUpdates['change_storedAt'] = computedStoredAt;
+  for (final key in entityStateJson.keys) {
+    if (key.endsWith('_cid_') && entityStateJson[key] == changeLogCid) {
+      isDuplicate = true;
+      if (key.startsWith('data_') && key.length > 10) {
+        final field = key.substring(5, key.length - 5);
+        if (field.isNotEmpty) {
+          cidStateFields.add(field);
         }
-        break;
       }
     }
   }
 
+  if (isDuplicate && storageType == 'local' && changeLogEntryCloudAt != null) {
+    final latestCloudDrift =
+        latestLevelDuplicate &&
+        entityStateJson['change_cloudAt'] != changeLogEntryCloudAt;
+
+    var anyFieldCloudDrift = false;
+    for (final field in cidStateFields) {
+      final existingFieldCloudAt = entityStateJson['data_${field}_cloudAt_'];
+      if (existingFieldCloudAt != changeLogEntryCloudAt) {
+        anyFieldCloudDrift = true;
+        break;
+      }
+    }
+    isClouded = latestCloudDrift || anyFieldCloudDrift;
+  }
+
   return GetMaybeIsDuplicateCidResult(
     isDuplicate: isDuplicate,
-    stateUpdates: stateUpdates,
+    isClouded: isClouded,
+    cidStateFields: cidStateFields.toList()..sort(),
   );
 }
 
@@ -438,8 +437,10 @@ class GetFieldChangesOrNoOpResult {
 /// returns { fieldChanges: Map<String, dynamic>, noOpFields: List<String> }
 GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
   BaseChangeLogEntry changeLogEntry,
-  BaseEntityState? entityState,
-) {
+  BaseEntityState? entityState, {
+  bool isDuplicate = false,
+  List<String> cidStateFields = const <String>[],
+}) {
   final changeData = changeLogEntry.getData();
   // Reject encoded null values in change data. Consumers currently expect
   // concrete values; encoded JSON nulls can cause ambiguous semantics and
@@ -458,6 +459,11 @@ GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
 
   if (entityState != null) {
     final existingData = entityState.toJson();
+    final cidStateFieldSet = cidStateFields.toSet();
+    final String incomingChangeAt = changeLogEntry.changeAt.toIso8601String();
+    final String? incomingCloudAt = changeLogEntry.cloudAt
+        ?.toUtc()
+        .toIso8601String();
 
     incomingData.forEach((field, value) {
       // Debug: log comparison to aid diagnosing noOp/update classification
@@ -475,6 +481,33 @@ GetFieldChangesOrNoOpResult getFieldChangesOrNoOps(
       }
       final entityFieldKey =
           'data_$field'; // Change log has 'rank', entity has 'data_rank'
+      if (isDuplicate && cidStateFieldSet.contains(field)) {
+        final valueChanged =
+            stableStringify(existingData[entityFieldKey]) !=
+            stableStringify(value);
+
+        final metaPairs = <String, dynamic>{
+          'data_${field}_changeAt_': incomingChangeAt,
+          'data_${field}_cid_': changeLogEntry.cid,
+          'data_${field}_changeBy_': changeLogEntry.changeBy,
+          'data_${field}_dataSchemaRev_': changeLogEntry.dataSchemaRev,
+          'data_${field}_cloudAt_': incomingCloudAt,
+        };
+
+        final metaChanged = metaPairs.entries.any(
+          (entry) =>
+              stableStringify(existingData[entry.key]) !=
+              stableStringify(entry.value),
+        );
+
+        if (valueChanged || metaChanged) {
+          fieldChanges[field] = value;
+        } else {
+          noOpFields.add(field);
+        }
+        return;
+      }
+
       if (stableStringify(existingData[entityFieldKey]) !=
           stableStringify(value)) {
         fieldChanges[field] = value;
@@ -510,6 +543,9 @@ GetDataAndStateUpdatesOrOutdatedBysResult getDataAndStateUpdatesOrOutdatedBys({
   required String storageType,
   required String storageMode,
   CloudStoredPair? cs,
+  bool isDuplicate = false,
+  bool isClouded = false,
+  List<String> cidStateFields = const <String>[],
 }) {
   // Reject null values in fieldChanges. Null data values are not supported yet
   // and should be handled upstream by callers that construct change data.
@@ -522,6 +558,7 @@ GetDataAndStateUpdatesOrOutdatedBysResult getDataAndStateUpdatesOrOutdatedBys({
   }
   final fieldUpdates = <String, dynamic>{};
   final outdatedBys = <String>[];
+  final cidStateFieldSet = cidStateFields.toSet();
 
   bool isChangeNewerThanLatest = false;
 
@@ -561,6 +598,15 @@ GetDataAndStateUpdatesOrOutdatedBysResult getDataAndStateUpdatesOrOutdatedBys({
           outdatedBys.add(field);
         }
       });
+    }
+
+    if (isDuplicate && isClouded) {
+      for (final field in cidStateFieldSet) {
+        if (fieldChanges.containsKey(field)) {
+          fieldUpdates[field] = fieldChanges[field];
+          outdatedBys.remove(field);
+        }
+      }
     }
   } else {
     SlttLogger.logger.fine(
@@ -657,6 +703,10 @@ GetDataAndStateUpdatesOrOutdatedBysResult getDataAndStateUpdatesOrOutdatedBys({
       'change_cloudAt': computedCloudAt,
       'change_storedAt': computedStoredAt,
     },
+    if (isDuplicate && isClouded && fieldUpdates.isEmpty) ...{
+      'change_cloudAt': computedCloudAt,
+      'change_storedAt': computedStoredAt,
+    },
     // add optional state fields for field-drift detection, remove later
     ...optionalStateFields.map((key, value) => MapEntry(key, value)),
     // add optional data fields for field-drift detection, remove later
@@ -695,11 +745,25 @@ GetDataAndStateUpdatesOrOutdatedBysResult getDataAndStateUpdatesOrOutdatedBys({
     noOpFields: noOpFields,
     outdatedBys: outdatedBys,
   );
+
+  if (isDuplicate && cidStateFieldSet.isNotEmpty) {
+    for (final field in cidStateFieldSet) {
+      stateUpdates.remove('data_$field');
+    }
+  }
+
+  final changeDataUpdates = <String, dynamic>{...fieldUpdates};
+  if (isDuplicate && cidStateFieldSet.isNotEmpty) {
+    changeDataUpdates.removeWhere(
+      (key, value) => cidStateFieldSet.contains(key),
+    );
+  }
+
   return GetDataAndStateUpdatesOrOutdatedBysResult(
     cloudAt: computedCloudAt,
     storedAt: computedStoredAt,
     stateUpdates: stateUpdates,
-    changeDataUpdates: fieldUpdates,
+    changeDataUpdates: changeDataUpdates,
     outdatedBys: outdatedBys,
     operation: operation,
   );

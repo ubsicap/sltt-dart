@@ -130,11 +130,44 @@ void main() {
 
           final states = await storage.batchGetEntityState(keys: keys);
 
-          expect(states.containsKey('proj-batch-task-1'), isTrue);
-          expect(states.containsKey('proj-batch-task-2'), isTrue);
-          expect(states['proj-batch-task-1'], isNotNull);
-          expect(states['proj-batch-task-2'], isNotNull);
-          expect(states['proj-batch-task-MISSING'], isNull);
+          expect(
+            states.containsKey(
+              BaseStorageService.batchEntityStateKey(
+                domainType: 'project',
+                domainId: 'proj-batch',
+                entityType: 'task',
+                entityId: 'proj-batch-task-1',
+              ),
+            ),
+            isTrue,
+          );
+          expect(
+            states[BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: 'proj-batch',
+              entityType: 'task',
+              entityId: 'proj-batch-task-1',
+            )],
+            isNotNull,
+          );
+          expect(
+            states[BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: 'proj-batch',
+              entityType: 'task',
+              entityId: 'proj-batch-task-2',
+            )],
+            isNotNull,
+          );
+          expect(
+            states[BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: 'proj-batch',
+              entityType: 'task',
+              entityId: 'proj-batch-task-MISSING',
+            )],
+            isNull,
+          );
         },
       );
 
@@ -1482,28 +1515,39 @@ void main() {
               entityId: 'test-project-entity-dup-hash',
             );
             expect(after, isNotNull);
+            final afterState = after!;
+
+            final duplicateEntry = deserializeChangeLogEntryUsingRegistry(
+              duplicateRemoteChange,
+            );
+            final duplicateProbe = getUpdatesForChangeLogEntryAndEntityState(
+              duplicateEntry,
+              staleBeforeDuplicate,
+              storageMode: 'sync',
+              storageType: 'local',
+              targetStorageId: await localStorage.getStorageId(),
+            );
 
             final mergedForHash = <String, dynamic>{
-              ...before!.toJson(),
-              'change_cloudAt': remoteCloudAt,
-              'change_storedAt': after!.change_storedAt.toIso8601String(),
+              ...staleBeforeDuplicate.toJson(),
+              ...duplicateProbe.stateUpdates,
             };
             final expectedStateDataHash = computeStateDataHash(mergedForHash);
 
             expect(
-              after.stateDataHash,
+              afterState.stateDataHash,
               equals(expectedStateDataHash),
               reason:
                   'Final stateDataHash should be computed from merged state updates over existing state',
             );
             expect(
-              after.stateDataHash,
+              afterState.stateDataHash,
               isNot(equals(remoteStateDataHash)),
               reason:
                   'Storage should be authoritative and not trust incoming remote stateDataHash',
             );
             expect(
-              after.stateDataHash,
+              afterState.stateDataHash,
               isNot(equals('staleStateDataHash')),
               reason:
                   'Storage should not keep stale local stateDataHash after duplicate sync updates',
@@ -2434,6 +2478,7 @@ void main() {
             updateResults: updateResults,
             result: result,
             changeLogEntry: entry,
+            storageMode: 'save',
             includeChangeUpdates: false,
             includeStateUpdates: false,
           );
@@ -2470,6 +2515,7 @@ void main() {
           updateResults: updateResults,
           result: result,
           changeLogEntry: entry,
+          storageMode: 'save',
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -2495,6 +2541,7 @@ void main() {
             operationCounts: OperationCounts(),
           ),
           changeLogEntry: entry1,
+          storageMode: 'save',
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -2512,6 +2559,7 @@ void main() {
             operationCounts: OperationCounts(),
           ),
           changeLogEntry: entry2,
+          storageMode: 'save',
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -2536,6 +2584,7 @@ void main() {
             operationCounts: OperationCounts(),
           ),
           changeLogEntry: entry,
+          storageMode: 'save',
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -2561,6 +2610,7 @@ void main() {
             operationCounts: OperationCounts(),
           ),
           changeLogEntry: entry,
+          storageMode: 'save',
           includeChangeUpdates: false,
           includeStateUpdates: false,
         );
@@ -2584,6 +2634,7 @@ void main() {
             operationCounts: OperationCounts(),
           ),
           changeLogEntry: entry,
+          storageMode: 'save',
           includeChangeUpdates: true,
           includeStateUpdates: true,
         );

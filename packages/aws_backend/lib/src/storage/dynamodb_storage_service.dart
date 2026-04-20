@@ -61,6 +61,7 @@ String? _cachedStorageId;
 ///   write:
 ///     operation: Put state item in updateChangeLogAndStates and testStoreState
 ///     key_fields: [pk, sk, gsi2pk, gsi2sk]
+///     usage_notes: Within a single batch, the latest pending state write must be deduped by the full state key `(domainId, entityType, entityId)`, not by `entityId` alone, because the same entityId can appear in multiple domains.
 ///     keys:
 ///       pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion
 ///       sk: $states#state#entityId_entity1
@@ -75,6 +76,7 @@ String? _cachedStorageId;
 ///   read_batch:
 ///     operation: BatchGetItem in batchGetEntityState
 ///     key_fields: [pk, sk]
+///     usage_notes: API results are keyed by the composite identity from `BaseStorageService.batchEntityStateKey(...)`, not by `entityId` alone, so same entityIds across domains do not collide.
 ///     keys:
 ///       pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion
 ///       sk: $states#state#entityId_entity1
@@ -96,12 +98,14 @@ String? _cachedStorageId;
 ///   etsc_write_read:
 ///     operation: Upsert and stats/reset reads for change-log counters
 ///     key_fields: [pk, sk]
+///     usage_notes: latestChangeAt/cid track latest-by-changeAt while seq tracks latest-by-seq
 ///     keys:
 ///       pk: $sltt#etsc#domainType_project#domainId_abc123
 ///       sk: $etsc#etsc#entityType_portion
 ///   etss_write_read:
 ///     operation: Upsert and stats/reset reads for entity-state counters
 ///     key_fields: [pk, sk]
+///     usage_notes: latestChangeAt/cid track latest-by-changeAt while seq tracks latest-by-seq
 ///     keys:
 ///       pk: $sltt#etss#domainType_project#domainId_abc123
 ///       sk: $etss#etss#entityType_portion
@@ -316,8 +320,9 @@ class DynamoDBStorageService extends BaseStorageService {
     final outChanges = <BaseChangeLogEntry>[];
     final outStates = <BaseEntityState?>[];
     final changeItemsToPut = <Map<String, dynamic>>[];
-    // the states need to be unique, so only update the latest for each entityId
-    final stateItemsToPutByEntityId = <String, Map<String, dynamic>>{};
+    // the states need to be unique within a batch, keyed by the full state
+    // identity so the same entityId can be written in multiple domains.
+    final stateItemsToPutByKey = <String, Map<String, dynamic>>{};
     final syncStatesToUpsert =
         <
           ({
@@ -375,9 +380,8 @@ class DynamoDBStorageService extends BaseStorageService {
 
         if (!req.skipStateWrite) {
           // Prepare entity state item for batch put
-          stateItemsToPutByEntityId[newState.entityId] = _buildEntityStateItem(
-            newState,
-          );
+          stateItemsToPutByKey[_stateBatchKey(newState)] =
+              _buildEntityStateItem(newState);
 
           // Queue sync state update for entity state
           syncStatesToUpsert.add((
@@ -398,8 +402,8 @@ class DynamoDBStorageService extends BaseStorageService {
     }
 
     // Phase 3: Batch write entity states
-    if (stateItemsToPutByEntityId.isNotEmpty) {
-      await _batchPutItems(stateItemsToPutByEntityId.values.toList());
+    if (stateItemsToPutByKey.isNotEmpty) {
+      await _batchPutItems(stateItemsToPutByKey.values.toList());
     }
 
     // Phase 4: Batch upsert entity type sync states
@@ -466,6 +470,10 @@ class DynamoDBStorageService extends BaseStorageService {
       'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, rank: rank)},
       ..._encodeJson(stateJson),
     };
+  }
+
+  String _stateBatchKey(BaseEntityState state) {
+    return '${state.domainType}|${state.change_domainId}|${state.entityType}|${state.entityId}';
   }
 
   /// Batch puts items to DynamoDB (max 25 per request).
@@ -555,7 +563,8 @@ class DynamoDBStorageService extends BaseStorageService {
           String,
           ({
             String entityType,
-            DynamoChangeLogEntry latestChange,
+            DynamoChangeLogEntry latestChangeAtChange,
+            DynamoChangeLogEntry latestSeqChange,
             int creates,
             int updates,
             int deletes,
@@ -570,22 +579,30 @@ class DynamoDBStorageService extends BaseStorageService {
       if (existing == null) {
         grouped[key] = (
           entityType: syncState.entityType,
-          latestChange: syncState.change,
+          latestChangeAtChange: syncState.change,
+          latestSeqChange: syncState.change,
           creates: syncState.operationCounts.create,
           updates: syncState.operationCounts.update,
           deletes: syncState.operationCounts.delete,
           forChangeLog: syncState.forChangeLog,
         );
       } else {
-        // Keep the latest change
-        final latestChange =
-            syncState.change.changeAt.isAfter(existing.latestChange.changeAt)
+        // Track latest-by-time and latest-by-seq independently.
+        final latestChangeAtChange =
+            syncState.change.changeAt.isAfter(
+              existing.latestChangeAtChange.changeAt,
+            )
             ? syncState.change
-            : existing.latestChange;
+            : existing.latestChangeAtChange;
+        final latestSeqChange =
+            syncState.change.seq >= existing.latestSeqChange.seq
+            ? syncState.change
+            : existing.latestSeqChange;
 
         grouped[key] = (
           entityType: existing.entityType,
-          latestChange: latestChange,
+          latestChangeAtChange: latestChangeAtChange,
+          latestSeqChange: latestSeqChange,
           creates: existing.creates + syncState.operationCounts.create,
           updates: existing.updates + syncState.operationCounts.update,
           deletes: existing.deletes + syncState.operationCounts.delete,
@@ -599,7 +616,7 @@ class DynamoDBStorageService extends BaseStorageService {
     for (final entry in grouped.values) {
       final pk = _entityTypeSyncStatePrimaryKey(
         domainType: domainType,
-        domainId: entry.latestChange.domainId,
+        domainId: entry.latestChangeAtChange.domainId,
         forChangeLog: entry.forChangeLog,
       );
       final sk = _entityTypeSyncStateSortKey(
@@ -641,34 +658,38 @@ class DynamoDBStorageService extends BaseStorageService {
 
       if (existing != null) {
         // Determine latest change metadata
-        if (data.latestChange.changeAt.isAfter(existing.changeAt) ||
-            data.latestChange.changeAt.isAtSameMomentAs(existing.changeAt)) {
-          latestChangeAt = data.latestChange.changeAt;
-          latestCid = data.latestChange.cid;
-          latestSeq = data.latestChange.seq;
+        if (data.latestChangeAtChange.changeAt.isAfter(existing.changeAt) ||
+            data.latestChangeAtChange.changeAt.isAtSameMomentAs(
+              existing.changeAt,
+            )) {
+          latestChangeAt = data.latestChangeAtChange.changeAt;
+          latestCid = data.latestChangeAtChange.cid;
         } else {
           latestChangeAt = existing.changeAt;
           latestCid = existing.cid;
-          latestSeq = existing.seq;
         }
+        latestSeq = data.latestSeqChange.seq > existing.seq
+            ? data.latestSeqChange.seq
+            : existing.seq;
 
         created = existing.created + data.creates;
         updated = existing.updated + data.updates;
         deleted = existing.deleted + data.deletes;
         storedAt_orig_ = existing.storedAt_orig_ ?? existing.storedAt;
       } else {
-        latestChangeAt = data.latestChange.changeAt;
-        latestCid = data.latestChange.cid;
-        latestSeq = data.latestChange.seq;
+        latestChangeAt = data.latestChangeAtChange.changeAt;
+        latestCid = data.latestChangeAtChange.cid;
+        latestSeq = data.latestSeqChange.seq;
         created = data.creates;
         updated = data.updates;
         deleted = data.deletes;
-        storedAt_orig_ = data.latestChange.storedAt ?? DateTime.now().toUtc();
+        storedAt_orig_ =
+            data.latestChangeAtChange.storedAt ?? DateTime.now().toUtc();
       }
 
       final newState = DynamoEntityTypeSyncState(
         entityType: data.entityType,
-        domainId: data.latestChange.domainId,
+        domainId: data.latestChangeAtChange.domainId,
         domainType: domainType,
         storageId: storageId,
         storageType: getStorageType(),
@@ -678,13 +699,13 @@ class DynamoDBStorageService extends BaseStorageService {
         created: created,
         updated: updated,
         deleted: deleted,
-        storedAt: data.latestChange.storedAt ?? DateTime.now().toUtc(),
+        storedAt: data.latestChangeAtChange.storedAt ?? DateTime.now().toUtc(),
         storedAt_orig_: storedAt_orig_,
       );
 
       final pk = _entityTypeSyncStatePrimaryKey(
         domainType: domainType,
-        domainId: data.latestChange.domainId,
+        domainId: data.latestChangeAtChange.domainId,
         forChangeLog: data.forChangeLog,
       );
       final sk = _entityTypeSyncStateSortKey(
@@ -864,16 +885,30 @@ class DynamoDBStorageService extends BaseStorageService {
     final items = await _batchGetItems(dynamoKeys);
     final out = <String, BaseEntityState?>{};
 
-    // Decode found items and map by entityId
+    // Decode found items and map by composite state identity
     for (final item in items) {
       final decoded = _decodeItem(item, excludeStorageKeys: true);
       final state = deserializeEntityStateSafely(decoded);
-      out[state.entityId] = state;
+      out[BaseStorageService.batchEntityStateKey(
+            domainType: state.domainType,
+            domainId: state.change_domainId,
+            entityType: state.entityType,
+            entityId: state.entityId,
+          )] =
+          state;
     }
 
-    // Ensure all requested entityIds present; fill missing with null
+    // Ensure all requested identities are present; fill missing with null
     for (final k in keys) {
-      out.putIfAbsent(k.entityId, () => null);
+      out.putIfAbsent(
+        BaseStorageService.batchEntityStateKey(
+          domainType: k.domainType,
+          domainId: k.domainId,
+          entityType: k.entityType,
+          entityId: k.entityId,
+        ),
+        () => null,
+      );
     }
 
     return out;
@@ -1952,6 +1987,7 @@ class DynamoDBStorageService extends BaseStorageService {
     final rank = stateJson['data_rank']?.toString();
     // computeDataHash
     final stateDataHash = computeStateDataHash(stateJson);
+    // ignore: non_constant_identifier_names
     final stateDataHash_orig_ = stateDataHash;
 
     final item = <String, dynamic>{
@@ -2354,5 +2390,54 @@ class DynamoDBStorageService extends BaseStorageService {
       }
     }
     return attr;
+  }
+
+  // ----------------------------------------------------------------------
+  // DynamoDB Export Helpers
+  // ----------------------------------------------------------------------
+  /// Start an export job via DynamoDB ExportTableToPointInTime API.
+  ///
+  /// The [exportRequest] should match the AWS API payload (e.g. include
+  /// `TableArn`, `S3Bucket`, `S3Prefix`, `ExportFormat`, `RoleArn`, etc.).
+  /// Returns the decoded JSON response from AWS on success.
+  Future<Map<String, dynamic>> startExportToS3(
+    Map<String, dynamic> exportRequest,
+  ) async {
+    final response = await _dynamoRequest(
+      'ExportTableToPointInTime',
+      exportRequest,
+    );
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to start ExportTableToPointInTime: ${response.body}',
+      );
+    }
+    return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+  }
+
+  /// List export jobs via DynamoDB ListExports API.
+  ///
+  /// [listRequest] may include `TableArn`, `MaxResults`, `NextToken`, etc.
+  Future<Map<String, dynamic>> listExports(
+    Map<String, dynamic> listRequest,
+  ) async {
+    final response = await _dynamoRequest('ListExports', listRequest);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to list exports: ${response.body}');
+    }
+    return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+  }
+
+  /// Describe a specific export job via DynamoDB DescribeExport API.
+  ///
+  /// [describeRequest] should include `ExportArn`.
+  Future<Map<String, dynamic>> describeExport(
+    Map<String, dynamic> describeRequest,
+  ) async {
+    final response = await _dynamoRequest('DescribeExport', describeRequest);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to describe export: ${response.body}');
+    }
+    return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
   }
 }

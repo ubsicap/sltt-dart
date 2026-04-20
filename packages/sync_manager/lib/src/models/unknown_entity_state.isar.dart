@@ -117,12 +117,18 @@ void registerIsarUnknownEntityStateStorageGroup(
     IsarEntityStateStorageGroup<IsarUnknownEntityState>(
       entityType: EntityType.unknown,
       fromJson: IsarUnknownEntityState.fromJson,
-      put: (state) async => await isar.isarUnknownEntityStates.put(
-        state as IsarUnknownEntityState,
-      ),
-      putAll: (states) async => await isar.isarUnknownEntityStates.putAll(
-        states.cast<IsarUnknownEntityState>(),
-      ),
+      put: (state) async =>
+          // ignore: experimental_member_use
+          await isar.isarUnknownEntityStates.putByIndex(
+            r'change_domainId_entityId',
+            state as IsarUnknownEntityState,
+          ),
+      putAll: (states) async =>
+          // ignore: experimental_member_use
+          await isar.isarUnknownEntityStates.putAllByIndex(
+            r'change_domainId_entityId',
+            states.cast<IsarUnknownEntityState>(),
+          ),
       collection: (isar) => isar.isarUnknownEntityStates,
       findByDomainAndEntity: (isar, domainId, entityId) => isar
           .isarUnknownEntityStates

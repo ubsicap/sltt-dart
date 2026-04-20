@@ -16,6 +16,8 @@ custom:
   # Shared infrastructure values from SSM (can be cross-account via SSM resource policy)
   dynamoDbTable: ${ssm:${self:custom.sharedInfraArnPath}/dynamodb/table-name}
   dynamoDbTableArn: ${ssm:${self:custom.sharedInfraArnPath}/dynamodb/table-arn}
+  authTable: ${ssm:${self:custom.sharedInfraArnPath}/auth/table-name}
+  authTableArn: ${ssm:${self:custom.sharedInfraArnPath}/auth/table-arn}
   mediaBucket: ${ssm:${self:custom.sharedInfraArnPath}/s3/bucket-name}
   mediaBucketArn: ${ssm:${self:custom.sharedInfraArnPath}/s3/bucket-arn}
   mediaCloudFrontDomain: ${ssm:${self:custom.sharedInfraArnPath}/cloudfront/domain}
@@ -39,6 +41,15 @@ provider:
     GIT_SHORT_CHANGESET: ${env:GIT_SHORT_CHANGESET, ''}
     GIT_DIRTY_FLAG: ${env:GIT_DIRTY_FLAG, ''}
     DYNAMODB_TABLE: ${self:custom.dynamoDbTable}
+    DYNAMODB_TABLE_ARN: ${self:custom.dynamoDbTableArn}
+    AUTH_TABLE: ${self:custom.authTable}
+    AUTH_TABLE_ARN: ${self:custom.authTableArn}
+    AUTH_JWT_SECRET: ${ssm:/sltt/auth/${self:provider.stage}/jwt-secret, ''}
+    AUTH_VERIFICATION_CODE_SECRET: ${ssm:/sltt/auth/${self:provider.stage}/verification-code-secret, ''}
+    AUTH_ACCESS_TOKEN_TTL_MINUTES: ${ssm:/sltt/auth/${self:provider.stage}/access-token-ttl-minutes, '60'}
+    AUTH_REFRESH_TOKEN_TTL_DAYS: ${ssm:/sltt/auth/${self:provider.stage}/refresh-token-ttl-days, '30'}
+    AUTH_EMAIL_MODE: ${ssm:/sltt/auth/${self:provider.stage}/email-mode, 'ses'}
+    AUTH_SES_FROM_EMAIL: ${ssm:/sltt/auth/${self:provider.stage}/ses-from-email, 'no-reply@sltt-bible.net'}
     DYNAMODB_REGION: ${self:custom.sharedInfraRegion}
     SHARED_INFRA_ASSUME_ROLE_ARN: ${ssm:${self:custom.sharedInfraArnPath}/cross-account-role-arn}
     ASSUME_ROLE_SESSION_NAME: sltt-secondary-infra-${self:provider.stage}
@@ -46,6 +57,7 @@ provider:
     MEDIA_CLOUDFRONT_DOMAIN: ${self:custom.mediaCloudFrontDomain}
     MEDIA_CLOUDFRONT_KEY_PAIR_ID: ${self:custom.mediaCloudFrontKeyPairId}
     MEDIA_CLOUDFRONT_PRIVATE_KEY: ${self:custom.mediaCloudFrontPrivateKey}
+    SLTT_LOG_LEVEL: INFO
 
   # IAM permissions for shared DynamoDB + S3 resources
   iamRoleStatements:
@@ -65,6 +77,30 @@ provider:
         - ${self:custom.dynamoDbTableArn}/index/*
     - Effect: Allow
       Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:Query
+        - dynamodb:Scan
+      Resource:
+        - ${self:custom.authTableArn}
+    - Effect: Allow
+      Action:
+        - dynamodb:ExportTableToPointInTime
+      Resource:
+        - ${self:custom.dynamoDbTableArn}
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeExport
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:${self:custom.sharedInfraAccountId}:table/${self:custom.dynamoDbTable}/export/*
+    - Effect: Allow
+      Action:
+        - dynamodb:ListExports
+      Resource: '*'
+    - Effect: Allow
+      Action:
         - s3:AbortMultipartUpload
         - s3:CreateMultipartUpload
         - s3:GetObject
@@ -79,10 +115,15 @@ provider:
         - ${self:custom.mediaBucketArn}/*
     - Effect: Allow
       Action:
+        - ses:SendEmail
+      Resource: '*'
+    - Effect: Allow
+      Action:
         - ssm:GetParameter
         - ssm:GetParameters
       Resource:
         - ${self:custom.sharedInfraArnPath}/*
+        - arn:aws:ssm:${self:provider.region}:*:parameter/sltt/auth/${self:provider.stage}/*
     - Effect: Allow
       Action:
         - sts:AssumeRole
@@ -102,6 +143,59 @@ functions:
           path: /
           method: ANY
           cors: true
+
+resources:
+  Resources:
+    AuthApiWebAcl:
+      Type: AWS::WAFv2::WebACL
+      Properties:
+        Name: sltt-secondary-infra-${self:provider.stage}-auth-api
+        Scope: REGIONAL
+        DefaultAction:
+          Allow: {}
+        VisibilityConfig:
+          CloudWatchMetricsEnabled: true
+          MetricName: sltt-secondary-infra-${self:provider.stage}-auth-api
+          SampledRequestsEnabled: true
+        Rules:
+          - Name: auth-api-rate-limit-100-per-5-min
+            Priority: 0
+            Action:
+              Block: {}
+            Statement:
+              RateBasedStatement:
+                AggregateKeyType: IP
+                Limit: 100
+                ScopeDownStatement:
+                  ByteMatchStatement:
+                    FieldToMatch:
+                      UriPath: {}
+                    PositionalConstraint: STARTS_WITH
+                    SearchString: /api/auth/
+                    TextTransformations:
+                      - Priority: 0
+                        Type: NONE
+            VisibilityConfig:
+              CloudWatchMetricsEnabled: true
+              MetricName: auth-api-rate-limit-100-per-5-min
+              SampledRequestsEnabled: true
+
+    AuthApiWebAclAssociation:
+      Type: AWS::WAFv2::WebACLAssociation
+      Properties:
+        ResourceArn:
+          Fn::Join:
+            - ''
+            - - 'arn:aws:apigateway:'
+              - Ref: AWS::Region
+              - '::/restapis/'
+              - Ref: ApiGatewayRestApi
+              - '/stages/'
+              - ${self:provider.stage}
+        WebACLArn:
+          Fn::GetAtt:
+            - AuthApiWebAcl
+            - Arn
 
 # Package configuration
 package:

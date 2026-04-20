@@ -4,9 +4,12 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/entity_state_job_queue_counts.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 
+import 'entity_state_pagination_service.dart';
+import 'entity_state_pagination_service_config.dart';
 import 'isar_storage_service.dart';
 
 class SyncManager {
@@ -28,25 +31,154 @@ class SyncManager {
   // Debounced sync state
   Timer? _syncDebounceTimer;
   StreamSubscription<void>? _changeLogSubscription;
+  StreamSubscription<EntityStateFetchEvent>? _singleEntityStateSubscription;
+  StreamSubscription<EntityStateFetchEvent>? _collectionEntityStateSubscription;
   bool _autoOutsyncEnabled = false;
 
   // Public getters for testing
   bool get autoOutsyncEnabled => _autoOutsyncEnabled;
   StreamSubscription<void>? get changeLogSubscription => _changeLogSubscription;
+  EntityStatePaginationService? _entityStatePaginationService;
+  Stream<EntityStateFetchEvent> get singleEntityStateEvents =>
+      entityStatePaginationService.singleEntityEvents;
+  Stream<EntityStateFetchEvent> get collectionEntityStateEvents =>
+      entityStatePaginationService.collectionEntityEvents;
+  EntityStatePaginationServiceConfig _entityStatePaginationServiceConfig =
+      const EntityStatePaginationServiceConfig();
+
+  EntityStatePaginationService _createEntityStatePaginationService() {
+    final config = _entityStatePaginationServiceConfig;
+    return EntityStatePaginationService(
+      baseUrl: _cloudStorageUrl,
+      maxConcurrentRequests: config.maxConcurrentRequests,
+      singleRequestDebounce: config.singleRequestDebounce,
+      workspacePrefix: config.workspacePrefix,
+      persistJobs: config.persistJobs,
+      persistenceDbDirectory: config.persistenceDbDirectory,
+      persistenceDbNamePrefix: config.persistenceDbNamePrefix,
+      persistenceInspector: config.persistenceInspector,
+      onStoreFetchedItems: storeFetchedEntityStates,
+    );
+  }
+
+  EntityStatePaginationService get entityStatePaginationService {
+    _entityStatePaginationService ??= _createEntityStatePaginationService()
+      ..startProcessing();
+    if (_initialized) {
+      _ensureEntityStateEventSubscriptions();
+    }
+    return _entityStatePaginationService!;
+  }
+
+  Stream<EntityStateJobQueueCounts>
+  get entityStatePaginationJobQueueCountEvents =>
+      entityStatePaginationService.queueCountEvents;
 
   /// Configure the cloud storage URL (useful for testing with localhost)
   void configureCloudUrl(String cloudUrl) {
     _cloudStorageUrl = cloudUrl;
+    _entityStatePaginationService?.updateBaseUrl(cloudUrl);
     SlttLogger.logger.info(
       '[SyncManager] Cloud URL configured to: $_cloudStorageUrl',
     );
   }
 
+  String enqueueJobFetchEntityState({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+    String? parentId,
+  }) {
+    return entityStatePaginationService.enqueueJobFetchEntityState(
+      domainType: domainType,
+      domainId: domainId,
+      entityType: entityType,
+      entityId: entityId,
+      parentId: parentId,
+    );
+  }
+
+  String enqueueJobFetchEntityStateCollection({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    String? parentId,
+    int limit = 100,
+    String? cursor,
+  }) {
+    return entityStatePaginationService.enqueueJobFetchEntityStateCollection(
+      domainType: domainType,
+      domainId: domainId,
+      entityType: entityType,
+      parentId: parentId,
+      limit: limit,
+      cursor: cursor,
+    );
+  }
+
+  void startEntityStatePaginationService() {
+    entityStatePaginationService.startProcessing();
+  }
+
+  void stopEntityStatePaginationService() {
+    _entityStatePaginationService?.stopProcessing();
+  }
+
+  EntityStateJobQueueCounts getEntityStatePaginationJobQueueCounts() {
+    final service = _entityStatePaginationService;
+    if (service == null) {
+      return const EntityStateJobQueueCounts(
+        queuedSingle: 0,
+        queuedCollection: 0,
+        queuedTotal: 0,
+        activeSingle: 0,
+        activeCollection: 0,
+        activeTotal: 0,
+        enabled: false,
+      );
+    }
+
+    return service.currentQueueCounts;
+  }
+
+  Map<String, dynamic> getEntityStatePaginationDebugInfo() {
+    final service = _entityStatePaginationService;
+    return {
+      'cloudUrl': _cloudStorageUrl,
+      'serviceInitialized': service != null,
+      'queueCounts': getEntityStatePaginationJobQueueCounts().toJson(),
+      'persistence':
+          service?.debugPersistenceInfo() ??
+          {'persistJobs': false, 'openInCurrentIsolate': false},
+    };
+  }
+
   Future<void> initialize({
     IsarStorageService? localStorage,
     bool closeStorageOnDispose = true,
+    EntityStatePaginationService? entityStatePaginationService,
+    EntityStatePaginationServiceConfig entityStatePaginationServiceConfig =
+        const EntityStatePaginationServiceConfig(),
   }) async {
     if (_initialized) return;
+
+    _entityStatePaginationServiceConfig = entityStatePaginationServiceConfig;
+    _entityStatePaginationService = entityStatePaginationService;
+    if (_entityStatePaginationService != null) {
+      _entityStatePaginationService!.updateBaseUrl(_cloudStorageUrl);
+      _entityStatePaginationService!.setStoreFetchedItemsCallback(
+        storeFetchedEntityStates,
+      );
+      // Pre-load persisted jobs so queue counts are visible immediately, even
+      // before the user triggers processing. Must happen before startProcessing
+      // so the _resumeRequested guard prevents a redundant DB load.
+      await _entityStatePaginationService!.initialize();
+      if (entityStatePaginationServiceConfig.startProcessingOnInitialize &&
+          !_entityStatePaginationService!.isProcessingEnabled) {
+        _entityStatePaginationService!.startProcessing();
+      }
+    }
 
     _localStorage = localStorage ?? LocalStorageService.instance;
     _ownsLocalStorage = closeStorageOnDispose || localStorage == null;
@@ -58,6 +190,8 @@ class SyncManager {
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 300);
     _dio.options.sendTimeout = const Duration(seconds: 300);
+
+    _ensureEntityStateEventSubscriptions();
 
     _initialized = true;
     SlttLogger.logger.info(
@@ -148,6 +282,45 @@ class SyncManager {
       'error': (e as dynamic).response?.toString() ?? e.toString(),
       'errorStackTrace': stackTrace.toString(),
     };
+  }
+
+  String _entityStateKey({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+  }) {
+    return '$domainType/$domainId/$entityType/$entityId';
+  }
+
+  String? _extractIncomingStateDataHashWarning(
+    Map<String, dynamic> incomingChange,
+  ) {
+    final operationInfoRaw = incomingChange['operationInfoJson'];
+    if (operationInfoRaw == null) {
+      return null;
+    }
+
+    try {
+      dynamic operationInfo;
+      if (operationInfoRaw is String && operationInfoRaw.isNotEmpty) {
+        operationInfo = jsonDecode(operationInfoRaw);
+      } else if (operationInfoRaw is Map) {
+        operationInfo = operationInfoRaw;
+      }
+      if (operationInfo is! Map) {
+        return null;
+      }
+
+      final warnings = operationInfo['warnings'];
+      if (warnings is! Map) {
+        return null;
+      }
+
+      return warnings['stateDataHash']?.toString();
+    } catch (_) {
+      return null;
+    }
   }
 
   // Get all projects that have changes to sync
@@ -270,6 +443,9 @@ class SyncManager {
   }) async {
     ProjectCursorChanges projectCursorChanges = {};
     StorageSummaries storageSummaries = {};
+    final finalStateHashesByKey = <String, _StateHashSnapshot>{};
+    final queuedEntityStateFetchKeys = <String>{};
+    final warningBasedRefetchKeys = <String>{};
     try {
       SlttLogger.logger.info('[SyncManager] Starting downsync from cloud...');
 
@@ -348,7 +524,7 @@ class SyncManager {
           final encodedDomainId = Uri.encodeComponent(domainId);
           // router.get('/api/changes/<domainCollection>/<domainId>', _handleGetChanges);
           final url =
-              '$_cloudStorageUrl/api/changes/$collection/$encodedDomainId?stateChanged=true&cursor=$cursor';
+              '$_cloudStorageUrl/api/changes/$collection/$encodedDomainId?cursor=$cursor';
 
           final response = await _dio.get(url);
           final changesResponseData = response.data as Map<String, dynamic>;
@@ -398,18 +574,40 @@ class SyncManager {
             final incomingChanges = changesBatch
                 .cast<Map<String, dynamic>>()
                 .toList();
+            final changesToApply = incomingChanges
+                .where((change) => change['stateChanged'] == true)
+                .toList();
+            final changesStateFalse = incomingChanges
+                .where((change) => change['stateChanged'] != true)
+                .toList();
             projectCursorChanges['$domainId/$cursor'] = incomingChanges;
-
-            // Apply changes directly to state storage
-            final results = await ChangeProcessingService.storeChanges(
-              storageMode: 'sync',
-              changes: incomingChanges,
-              srcStorageType: srcStorageType,
-              srcStorageId: srcStorageId,
-              storage: _localStorage,
-              includeChangeUpdates: true,
-              includeStateUpdates: true,
+            _updateCloudStateDataHashes(
+              incomingChanges: incomingChanges,
+              finalStateHashesByKey: finalStateHashesByKey,
+              domainTypeContext: domainType,
+              domainIdContext: domainId,
             );
+            _updateStateChangedFalseStateDataHashes(
+              changesStateFalse: changesStateFalse,
+              finalStateHashesByKey: finalStateHashesByKey,
+              warningBasedRefetchKeys: warningBasedRefetchKeys,
+              domainTypeContext: domainType,
+              domainIdContext: domainId,
+            );
+
+            // Apply only stateChanged=true changes to avoid sync pre-validation
+            // rejection for stateChanged=false entries.
+            final results = changesToApply.isEmpty
+                ? const ChangeProcessingResult(resultsSummary: null)
+                : await ChangeProcessingService.storeChanges(
+                    storageMode: 'sync',
+                    changes: changesToApply,
+                    srcStorageType: srcStorageType,
+                    srcStorageId: srcStorageId,
+                    storage: _localStorage,
+                    includeChangeUpdates: true,
+                    includeStateUpdates: true,
+                  );
 
             // TODO: how to handle more gracefully so we don't get stuck?
             if (results.isError) {
@@ -429,10 +627,17 @@ class SyncManager {
             }
 
             storageSummaries['$domainId/$cursor'] = results.resultsSummary;
+            _updateLocalStateDataHashes(
+              stateUpdates: results.resultsSummary?.stateUpdates ?? const [],
+              finalStateHashesByKey: finalStateHashesByKey,
+              domainTypeContext: domainType,
+              domainIdContext: domainId,
+            );
+
             totalChangesForProject += incomingChanges.length;
 
             SlttLogger.logger.info(
-              '[SyncManager] Applied ${incomingChanges.length} changes for $domainType $domainId (batch)',
+              '[SyncManager] Downloaded ${incomingChanges.length} changes for $domainType $domainId (batch); applied ${changesToApply.length}',
             );
 
             // Update sync state for this project if we processed any changes
@@ -475,6 +680,27 @@ class SyncManager {
       SlttLogger.logger.info(
         '[SyncManager] Downsync completed. Total changes: $totalDownloadedCount',
       );
+
+      final mismatchCount = _queueMismatchedEntityStateRefetches(
+        finalStateHashesByKey: finalStateHashesByKey,
+        queuedEntityStateFetchKeys: queuedEntityStateFetchKeys,
+      );
+      final warningRefetchCount = _queueWarningBasedEntityStateRefetches(
+        warningBasedRefetchKeys: warningBasedRefetchKeys,
+        finalStateHashesByKey: finalStateHashesByKey,
+        queuedEntityStateFetchKeys: queuedEntityStateFetchKeys,
+      );
+
+      if (mismatchCount > 0) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Downsync hash reconciliation found $mismatchCount mismatched entity state hash(es); queued targeted state refetch.',
+        );
+      }
+      if (warningRefetchCount > 0) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Downsync warning-based reconciliation queued $warningRefetchCount targeted state refetch(es).',
+        );
+      }
 
       return DownsyncResult(
         success: true,
@@ -608,10 +834,115 @@ class SyncManager {
     await _localStorage.clearAllCursorSyncStates();
   }
 
+  Future<Map<String, int>?> _fetchLatestSeqByEntityTypeFromCloudStats({
+    required String domainType,
+    required String domainId,
+  }) async {
+    try {
+      final collection = getCollectionByDomain(domainType);
+      if (collection == null || collection.isEmpty) {
+        return null;
+      }
+
+      final response = await _dio.get(
+        '$_cloudStorageUrl/api/stats/$collection/$domainId',
+      );
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final stats = response.data as Map<String, dynamic>;
+      final parsed = DomainStatsResponse.fromJson(stats);
+      final out = <String, int>{};
+      final entityTypeStats = parsed.entityTypeStats;
+      if (entityTypeStats == null) {
+        return out;
+      }
+
+      entityTypeStats.entityTypes.forEach((entityType, summary) {
+        if (summary.latestSeq >= 0) {
+          out[entityType] = summary.latestSeq;
+        }
+      });
+
+      return out;
+    } catch (e) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Failed to fetch latest seq via /api/stats for $domainType $domainId: $e',
+      );
+      return null;
+    }
+  }
+
+  Future<void> storeFetchedEntityStates({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required List<Map<String, dynamic>> items,
+    required DateTime storedAt,
+  }) async {
+    if (items.isEmpty) return;
+
+    final states = <BaseEntityState>[];
+    for (final item in items) {
+      final state = _localStorage.createEntityStateFromJson(
+        entityType: entityType,
+        json: item,
+      );
+      states.add(state);
+    }
+
+    if (states.isEmpty) return;
+
+    final mismatchedContextCount = states
+        .where(
+          (state) =>
+              state.domainType != domainType ||
+              state.change_domainId != domainId,
+        )
+        .length;
+    if (mismatchedContextCount > 0) {
+      SlttLogger.logger.warning(
+        '[SyncManager] storeFetchedEntityStates received '
+        '$mismatchedContextCount state(s) outside callback context '
+        '($entityType/$domainType/$domainId).',
+      );
+    }
+
+    final grouped =
+        <(String domainType, String domainId), List<BaseEntityState>>{};
+    for (final state in states) {
+      final key = (state.domainType, state.change_domainId);
+      grouped.putIfAbsent(key, () => <BaseEntityState>[]).add(state);
+    }
+
+    for (final entry in grouped.entries) {
+      final domainType = entry.key.$1;
+      final domainId = entry.key.$2;
+      final latestSeqByEntityType =
+          await _fetchLatestSeqByEntityTypeFromCloudStats(
+            domainType: domainType,
+            domainId: domainId,
+          );
+
+      await _localStorage.batchPutEntityStates(
+        states: entry.value,
+        storedAt: storedAt,
+        latestSeqByEntityType: latestSeqByEntityType,
+      );
+    }
+  }
+
   Future<void> close() async {
     if (_initialized) {
       // Clean up auto-sync resources
       disableAutoOutsync();
+      await _singleEntityStateSubscription?.cancel();
+      _singleEntityStateSubscription = null;
+      await _collectionEntityStateSubscription?.cancel();
+      _collectionEntityStateSubscription = null;
+      await _entityStatePaginationService?.dispose();
+      _entityStatePaginationService = null;
 
       if (_ownsLocalStorage) {
         await _localStorage.close();
@@ -621,6 +952,284 @@ class SyncManager {
       SlttLogger.logger.info('[SyncManager] Closed');
     }
   }
+
+  void _ensureEntityStateEventSubscriptions() {
+    final service = _entityStatePaginationService;
+    if (service == null) {
+      return;
+    }
+
+    _singleEntityStateSubscription ??= service.singleEntityEvents.listen(
+      (event) => unawaited(_handleFetchedEntityStateEvent(event)),
+      onError: (error, stackTrace) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Error from single entity-state stream: $error',
+        );
+      },
+    );
+
+    _collectionEntityStateSubscription ??= service.collectionEntityEvents
+        .listen(
+          (event) => unawaited(_handleFetchedEntityStateEvent(event)),
+          onError: (error, stackTrace) {
+            SlttLogger.logger.warning(
+              '[SyncManager] Error from collection entity-state stream: $error',
+            );
+          },
+        );
+  }
+
+  Future<void> _handleFetchedEntityStateEvent(
+    EntityStateFetchEvent event,
+  ) async {
+    if (event.hasError) {
+      return;
+    }
+
+    // Progress-only hook: storage is handled directly by
+    // EntityStatePaginationService via onStoreFetchedItems callback.
+    SlttLogger.logger.fine(
+      '[SyncManager] Entity-state progress event '
+      '(${event.entityType}/${event.domainType}/${event.domainId}) '
+      'items=${event.items.length} hasMore=${event.hasMore} complete=${event.isComplete}',
+    );
+  }
+
+  void _updateCloudStateDataHashes({
+    required List<Map<String, dynamic>> incomingChanges,
+    required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required String domainTypeContext,
+    required String domainIdContext,
+  }) {
+    for (final incomingChange in incomingChanges) {
+      final cloudStateDataHash = incomingChange['stateDataHash']?.toString();
+      final updateKeys = _extractUpdateKeysFromChange(
+        incomingChange,
+        domainTypeContext: domainTypeContext,
+        domainIdContext: domainIdContext,
+        reason: 'malformed incoming change during downsync hash reconciliation',
+      );
+      if (updateKeys == null) continue;
+
+      final updateDomainType = updateKeys['domainType']!;
+      final updateDomainId = updateKeys['domainId']!;
+      final updateEntityType = updateKeys['entityType']!;
+      final updateEntityId = updateKeys['entityId']!;
+
+      final key = _entityStateKey(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+      );
+
+      final previous = finalStateHashesByKey[key];
+      finalStateHashesByKey[key] = _StateHashSnapshot(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+        parentId: incomingChange['parentId']?.toString() ?? previous?.parentId,
+        cloudStateDataHash: cloudStateDataHash ?? previous?.cloudStateDataHash,
+        localStateDataHash: previous?.localStateDataHash,
+      );
+    }
+  }
+
+  void _updateLocalStateDataHashes({
+    required List<Map<String, dynamic>> stateUpdates,
+    required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required String domainTypeContext,
+    required String domainIdContext,
+  }) {
+    for (final stateUpdate in stateUpdates) {
+      final updateKeys = _extractUpdateKeysFromChange(
+        stateUpdate,
+        domainTypeContext: domainTypeContext,
+        domainIdContext: domainIdContext,
+        reason: 'malformed state update during downsync',
+      );
+      if (updateKeys == null) continue;
+
+      final updateDomainType = updateKeys['domainType']!;
+      final updateDomainId = updateKeys['domainId']!;
+      final updateEntityType = updateKeys['entityType']!;
+      final updateEntityId = updateKeys['entityId']!;
+
+      final key = _entityStateKey(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+      );
+      final previous = finalStateHashesByKey[key];
+      finalStateHashesByKey[key] = _StateHashSnapshot(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+        parentId: stateUpdate['parentId']?.toString() ?? previous?.parentId,
+        cloudStateDataHash: previous?.cloudStateDataHash,
+        localStateDataHash: stateUpdate['stateDataHash']?.toString(),
+      );
+    }
+  }
+
+  void _updateStateChangedFalseStateDataHashes({
+    required List<Map<String, dynamic>> changesStateFalse,
+    required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required Set<String> warningBasedRefetchKeys,
+    required String domainTypeContext,
+    required String domainIdContext,
+  }) {
+    for (final incomingChange in changesStateFalse) {
+      final warningStateDataHash = _extractIncomingStateDataHashWarning(
+        incomingChange,
+      );
+      if (warningStateDataHash == null || warningStateDataHash.isEmpty) {
+        continue;
+      }
+
+      final updateKeys = _extractUpdateKeysFromChange(
+        incomingChange,
+        domainTypeContext: domainTypeContext,
+        domainIdContext: domainIdContext,
+        reason:
+            'malformed stateChanged=false change during warning-based reconciliation',
+      );
+      if (updateKeys == null) continue;
+
+      final updateDomainType = updateKeys['domainType']!;
+      final updateDomainId = updateKeys['domainId']!;
+      final updateEntityType = updateKeys['entityType']!;
+      final updateEntityId = updateKeys['entityId']!;
+
+      final key = _entityStateKey(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+      );
+      warningBasedRefetchKeys.add(key);
+      final previous = finalStateHashesByKey[key];
+
+      finalStateHashesByKey[key] = _StateHashSnapshot(
+        domainType: updateDomainType,
+        domainId: updateDomainId,
+        entityType: updateEntityType,
+        entityId: updateEntityId,
+        parentId: incomingChange['parentId']?.toString() ?? previous?.parentId,
+        cloudStateDataHash:
+            previous?.cloudStateDataHash ??
+            incomingChange['stateDataHash']?.toString(),
+        // For warning-based stateChanged=false changes, always carry forward
+        // the warning hash so mismatch detection can enqueue a refetch.
+        localStateDataHash: warningStateDataHash,
+      );
+    }
+  }
+
+  int _queueMismatchedEntityStateRefetches({
+    required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required Set<String> queuedEntityStateFetchKeys,
+  }) {
+    var mismatchCount = 0;
+    for (final snapshot in finalStateHashesByKey.values) {
+      final cloudStateDataHash = snapshot.cloudStateDataHash;
+      final localStateDataHash = snapshot.localStateDataHash;
+      if (cloudStateDataHash != null &&
+          localStateDataHash != null &&
+          localStateDataHash != cloudStateDataHash) {
+        mismatchCount++;
+        final key = _entityStateKey(
+          domainType: snapshot.domainType,
+          domainId: snapshot.domainId,
+          entityType: snapshot.entityType,
+          entityId: snapshot.entityId,
+        );
+        if (queuedEntityStateFetchKeys.add(key)) {
+          enqueueJobFetchEntityState(
+            domainType: snapshot.domainType,
+            domainId: snapshot.domainId,
+            entityType: snapshot.entityType,
+            entityId: snapshot.entityId,
+            parentId: snapshot.parentId,
+          );
+        }
+      }
+    }
+
+    return mismatchCount;
+  }
+
+  int _queueWarningBasedEntityStateRefetches({
+    required Set<String> warningBasedRefetchKeys,
+    required Map<String, _StateHashSnapshot> finalStateHashesByKey,
+    required Set<String> queuedEntityStateFetchKeys,
+  }) {
+    var warningRefetchCount = 0;
+    for (final key in warningBasedRefetchKeys) {
+      final snapshot = finalStateHashesByKey[key];
+      if (snapshot == null) continue;
+      if (!queuedEntityStateFetchKeys.add(key)) continue;
+      warningRefetchCount++;
+      enqueueJobFetchEntityState(
+        domainType: snapshot.domainType,
+        domainId: snapshot.domainId,
+        entityType: snapshot.entityType,
+        entityId: snapshot.entityId,
+        parentId: snapshot.parentId,
+      );
+    }
+    return warningRefetchCount;
+  }
+
+  Map<String, String>? _extractUpdateKeysFromChange(
+    Map<String, dynamic> change, {
+    required String domainTypeContext,
+    required String domainIdContext,
+    required String reason,
+  }) {
+    final updateDomainType = change['domainType']?.toString();
+    final updateDomainId = change['domainId']?.toString();
+    final updateEntityType = change['entityType']?.toString();
+    final updateEntityId = change['entityId']?.toString();
+    if (updateDomainType == null ||
+        updateDomainId == null ||
+        updateEntityType == null ||
+        updateEntityId == null) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Skipping $reason for $domainTypeContext $domainIdContext: $change',
+      );
+      return null;
+    }
+    return {
+      'domainType': updateDomainType,
+      'domainId': updateDomainId,
+      'entityType': updateEntityType,
+      'entityId': updateEntityId,
+    };
+  }
+}
+
+class _StateHashSnapshot {
+  final String domainType;
+  final String domainId;
+  final String entityType;
+  final String entityId;
+  final String? parentId;
+  final String? cloudStateDataHash;
+  final String? localStateDataHash;
+
+  const _StateHashSnapshot({
+    required this.domainType,
+    required this.domainId,
+    required this.entityType,
+    required this.entityId,
+    required this.parentId,
+    required this.cloudStateDataHash,
+    required this.localStateDataHash,
+  });
 }
 
 // Result classes

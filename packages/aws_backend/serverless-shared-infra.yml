@@ -9,6 +9,7 @@ custom:
 
   # Resource naming without stage suffix since there's only one infrastructure
   dynamoDbTable: ${self:service}-changes-states
+  authTable: ${self:service}-auth
   mediaBucket: ${self:service}-media-worm-${aws:accountId}
 
   # CloudFront public key from SSM (setup required before deployment)
@@ -77,6 +78,32 @@ resources:
             Value: ${self:service}
           - Key: Purpose
             Value: Shared infrastructure for SLTT API deployments
+
+    AuthTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.authTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        TimeToLiveSpecification:
+          AttributeName: ttlEpochSeconds
+          Enabled: true
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+        Tags:
+          - Key: Service
+            Value: ${self:service}
+          - Key: Purpose
+            Value: Shared authentication state for SLTT API deployments
 
     # S3 bucket for media storage with WORM (Write Once Read Many) capabilities
     MediaBucket:
@@ -322,6 +349,24 @@ resources:
         Value: !GetAtt ChangesTable.Arn
         Description: DynamoDB table ARN for SLTT changes
 
+    AuthTableNameParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/auth/table-name
+        Type: String
+        Tier: Advanced
+        Value: !Ref AuthTable
+        Description: DynamoDB table name for SLTT auth state
+
+    AuthTableArnParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/auth/table-arn
+        Type: String
+        Tier: Advanced
+        Value: !GetAtt AuthTable.Arn
+        Description: DynamoDB table ARN for SLTT auth state
+
     MediaBucketNameParameter:
       Type: AWS::SSM::Parameter
       Properties:
@@ -428,6 +473,30 @@ resources:
                   Resource:
                     - !GetAtt ChangesTable.Arn
                     - !Sub '${ChangesTable.Arn}/index/*'
+                - Effect: Allow
+                  Action:
+                    - dynamodb:GetItem
+                    - dynamodb:PutItem
+                    - dynamodb:UpdateItem
+                    - dynamodb:DeleteItem
+                    - dynamodb:Query
+                    - dynamodb:Scan
+                  Resource:
+                    - !GetAtt AuthTable.Arn
+                - Effect: Allow
+                  Action:
+                    - dynamodb:ExportTableToPointInTime
+                  Resource:
+                    - !GetAtt ChangesTable.Arn
+                - Effect: Allow
+                  Action:
+                    - dynamodb:DescribeExport
+                  Resource:
+                    - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChangesTable}/export/*'
+                - Effect: Allow
+                  Action:
+                    - dynamodb:ListExports
+                  Resource: '*'
           - PolicyName: S3Access
             PolicyDocument:
               Version: '2012-10-17'
@@ -446,6 +515,14 @@ resources:
                   Resource:
                     - !GetAtt MediaBucket.Arn
                     - !Sub '${MediaBucket.Arn}/*'
+          - PolicyName: SESAccess
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - ses:SendEmail
+                  Resource: '*'
 
     # Store cross-account role ARN in SSM for secondary stacks to reference
     SsmCrossAccountRoleArn:
@@ -470,6 +547,18 @@ resources:
       Value: !GetAtt ChangesTable.Arn
       Export:
         Name: ${self:service}-dynamodb-table-arn
+
+    AuthTableName:
+      Description: Auth table name
+      Value: !Ref AuthTable
+      Export:
+        Name: ${self:service}-auth-table-name
+
+    AuthTableArn:
+      Description: Auth table ARN
+      Value: !GetAtt AuthTable.Arn
+      Export:
+        Name: ${self:service}-auth-table-arn
 
     MediaBucketName:
       Description: S3 media bucket name
@@ -517,6 +606,8 @@ resources:
       Value: |
         /sltt/infra/prd/dynamodb/table-name
         /sltt/infra/prd/dynamodb/table-arn
+        /sltt/infra/prd/auth/table-name
+        /sltt/infra/prd/auth/table-arn
         /sltt/infra/prd/s3/bucket-name
         /sltt/infra/prd/s3/bucket-arn
         /sltt/infra/prd/cloudfront/domain

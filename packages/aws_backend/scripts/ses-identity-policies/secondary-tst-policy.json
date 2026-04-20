@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowSecondaryInfraTstLambdaSend",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::379334555674:role/sltt-shared-infra-cross-account-access"
+      },
+      "Action": [
+        "ses:SendEmail",
+        "ses:SendRawEmail"
+      ],
+      "Resource": "arn:aws:ses:us-east-1:379334555674:identity/sltt-bible.net",
+      "Condition": {
+        "StringLike": {
+          "ses:FromAddress": "*@sltt-bible.net"
+        }
+      }
+    }
+  ]
+}

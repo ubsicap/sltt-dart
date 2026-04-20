@@ -34,6 +34,9 @@ class SlttLogger {
   static bool _initialized = false;
 
   static void init({SlttLogLevel level = SlttLogLevel.warning}) {
+    // Ensure records from named loggers propagate to the root listener.
+    hierarchicalLoggingEnabled = true;
+
     // Prefer SLTT_LOG_LEVEL env var, then an explicit argument (default WARNING)
     // Read the environment in a try/catch because
     // some test runners restrict access to Platform.environment.
@@ -70,28 +73,12 @@ class SlttLogger {
     Logger.root.level = _levelFromName(level.value);
   }
 
-  static Logger get logger => _logger;
-}
-
-// Auto-initialize logger on import so SLTT_LOG_LEVEL (if set) takes effect
-// without needing to call SlttLogger.init() from test code. This is a
-// best-effort call and failures are ignored so test runners that
-// restrict environment access won't crash. We perform the init inside a
-// final initializer closure (an expression) so the library stays valid
-// and the analyzer won't complain about top-level statements.
-// Run init at library load time. Using a final and an explicit ignore so
-// the analyzer won't complain about the symbol being unused. This
-// executes SlttLogger.init() when the library is loaded.
-// ignore: unused_element
-final _slttLoggerAutoInit = _runSlttLoggerInit();
-
-int _runSlttLoggerInit() {
-  try {
-    SlttLogger.init();
-  } catch (_) {
-    // ignore any environment access restrictions
+  static Logger get logger {
+    if (!_initialized) {
+      init();
+    }
+    return _logger;
   }
-  return 0;
 }
 
 Level? _levelFromName(String name) {

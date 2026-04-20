@@ -1,0 +1,6 @@
+reporter: compact
+concurrency: 1
+fail_fast: true
+
+tags:
+  network:

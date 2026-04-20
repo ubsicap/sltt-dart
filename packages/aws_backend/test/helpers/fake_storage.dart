@@ -31,6 +31,18 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
   }
 
   final String _storageId = 'test-storage';
+  final Map<String, BaseEntityState> _entityStates = {};
+  final Map<String, BaseChangeLogEntry> _changes = {};
+  Map<String, dynamic> startExportResponse = const {
+    'ExportDescription': <String, dynamic>{'ExportStatus': 'IN_PROGRESS'},
+  };
+  final List<Map<String, dynamic>> startExportRequests = [];
+  Map<String, dynamic> listExportsResponse = const {
+    'ExportSummaries': <Map<String, dynamic>>[],
+  };
+  final Map<String, Map<String, dynamic>> describeExportResponses = {};
+  final List<Map<String, dynamic>> listExportsRequests = [];
+  final List<Map<String, dynamic>> describeExportRequests = [];
 
   @override
   String getStorageType() => 'cloud';
@@ -46,7 +58,13 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
 
   @override
   Future<List<String>> getAllDomainIds({required String domainType}) async {
-    return ['__test1', 'project1'];
+    final ids = <String>{'__test1', 'project1'};
+    for (final state in _entityStates.values) {
+      if (state.domainType == domainType) {
+        ids.add(state.change_domainId);
+      }
+    }
+    return ids.toList(growable: false);
   }
 
   @override
@@ -110,8 +128,7 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     required String entityType,
     required String entityId,
   }) async {
-    // For unit tests we simulate that no prior state exists by default.
-    return null;
+    return _entityStates['$domainType|$domainId|$entityType|$entityId'];
   }
 
   @override
@@ -129,10 +146,48 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
         entityType: key.entityType,
         entityId: key.entityId,
       );
-      results['${key.domainType}|${key.domainId}|${key.entityType}|${key.entityId}'] =
+      results[BaseStorageService.batchEntityStateKey(
+            domainType: key.domainType,
+            domainId: key.domainId,
+            entityType: key.entityType,
+            entityId: key.entityId,
+          )] =
           result;
     }
     return results;
+  }
+
+  @override
+  Future<Map<String, dynamic>> startExportToS3(
+    Map<String, dynamic> exportRequest,
+  ) async {
+    startExportRequests.add(Map<String, dynamic>.from(exportRequest));
+    return Map<String, dynamic>.from(startExportResponse);
+  }
+
+  @override
+  Future<Map<String, dynamic>> listExports(
+    Map<String, dynamic> listRequest,
+  ) async {
+    listExportsRequests.add(Map<String, dynamic>.from(listRequest));
+    return Map<String, dynamic>.from(listExportsResponse);
+  }
+
+  @override
+  Future<Map<String, dynamic>> describeExport(
+    Map<String, dynamic> describeRequest,
+  ) async {
+    describeExportRequests.add(Map<String, dynamic>.from(describeRequest));
+    final exportArn = describeRequest['ExportArn'] as String?;
+    final response = exportArn == null
+        ? null
+        : describeExportResponses[exportArn];
+    if (response == null) {
+      throw StateError(
+        'No fake describeExport response configured for $exportArn',
+      );
+    }
+    return Map<String, dynamic>.from(response);
   }
 
   @override
@@ -192,6 +247,8 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
 
     // Construct a DynamoChangeLogEntry (uses registered serializers)
     final newChange = DynamoChangeLogEntry.fromJson(mergedChangeJson);
+    _changes['${newChange.domainType}|${newChange.domainId}|${newChange.cid}'] =
+        newChange;
 
     final now = DateTime.now().toUtc();
     // Build new entity state JSON by merging prior state (if any) with updates.
@@ -243,6 +300,8 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
         mergedState['data_parentProp_changeBy_'] ?? newChange.changeBy;
 
     final newState = DynamoEntityState.fromJson(mergedState);
+    _entityStates['$domainType|${newChange.domainId}|${newChange.entityType}|${newState.entityId}'] =
+        newState;
 
     // Validate core storage responsibilities (no mutation)
     ChangeProcessingService.checkCoreChangeStorageResponsibilities(
@@ -254,6 +313,24 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     );
 
     return (newChangeLogEntry: newChange, newEntityState: newState);
+  }
+
+  @override
+  Future<TEntityState> testStoreState<TEntityState extends BaseEntityState>({
+    required TEntityState entityState,
+  }) async {
+    _entityStates['${entityState.domainType}|${entityState.change_domainId}|${entityState.entityType}|${entityState.entityId}'] =
+        entityState;
+    return entityState;
+  }
+
+  @override
+  Future<BaseChangeLogEntry> testStoreChangeFromJson({
+    required Map<String, dynamic> changeJson,
+  }) async {
+    final change = DynamoChangeLogEntry.fromJson(changeJson);
+    _changes['${change.domainType}|${change.domainId}|${change.cid}'] = change;
+    return change;
   }
 
   @override
@@ -273,4 +350,40 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     required String domainId,
     bool isAdminReset = false,
   }) async {}
+}
+
+class FakeAwsMediaStorage extends AwsMediaStorage {
+  FakeAwsMediaStorage()
+    : super(
+        bucketName: 'test-bucket',
+        region: 'us-east-1',
+        credentials: _testCredentials,
+      );
+
+  String? lastPrefix;
+  int? lastMaxKeys;
+  String? lastContinuationToken;
+  Map<String, dynamic> listResponse = const {
+    'items': <Map<String, dynamic>>[],
+    'isTruncated': false,
+    'nextContinuationToken': null,
+  };
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<void> close() async {}
+
+  @override
+  Future<Map<String, dynamic>> listObjectsWithPresignedUrls({
+    required String prefix,
+    int? maxKeys,
+    String? continuationToken,
+  }) async {
+    lastPrefix = prefix;
+    lastMaxKeys = maxKeys;
+    lastContinuationToken = continuationToken;
+    return Map<String, dynamic>.from(listResponse);
+  }
 }

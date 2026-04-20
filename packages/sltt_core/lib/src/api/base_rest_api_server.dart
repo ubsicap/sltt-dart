@@ -131,6 +131,13 @@ abstract class BaseRestApiServer {
     // Default: no custom routes
   }
 
+  /// Additional server-specific endpoint docs to include in `/api/help`.
+  ///
+  /// Subclasses that add routes via [addCustomRoutes] should also override
+  /// this getter so the documentation stays aligned with runtime behavior.
+  @protected
+  List<Map<String, dynamic>> get customApiDocEndpoints => const [];
+
   /// Validate `entityCollection` path parameter and map it to an entity type.
   ///
   /// Returns a map with keys `{ 'error': String? , 'entityType': String? }`.
@@ -763,6 +770,7 @@ abstract class BaseRestApiServer {
             },
           },
         },
+        ...customApiDocEndpoints,
         // Generalized domain-scoped endpoints
         {
           'method': 'GET',
@@ -846,7 +854,13 @@ abstract class BaseRestApiServer {
             {'name': 'domainId', 'type': 'string', 'required': true},
             {'name': 'entityType', 'type': 'string', 'required': true},
             {'name': 'cursor', 'type': 'string', 'required': false},
-            {'name': 'limit', 'type': 'integer', 'required': false},
+            {
+              'name': 'limit',
+              'type': 'integer',
+              'required': false,
+              'description':
+                  'Optional maximum number of results to return. If omitted, storage/backend defaults apply.',
+            },
             {
               'name': 'parentId',
               'type': 'string',
@@ -1909,13 +1923,13 @@ abstract class BaseRestApiServer {
         }
       }
 
-      // Parse limit parameter
-      int limit = 100; // Default limit
+      // Parse limit parameter (optional; backend can enforce defaults/max)
+      int? limit;
       if (limitStr != null && limitStr.isNotEmpty) {
         try {
           limit = int.parse(limitStr);
-          if (limit <= 0 || limit > 1000) {
-            return _errorResponse('Limit must be between 1 and 1000', 400);
+          if (limit <= 0) {
+            return _errorResponse('Limit must be a positive integer', 400);
           }
         } catch (e) {
           return _errorResponse(
@@ -1995,7 +2009,7 @@ abstract class BaseRestApiServer {
           '${domainType}Id': domainId,
           'entityType': entityType,
           'entityId': entityId,
-          'state': stateData?.toJson(),
+          'state': jsonDecode(stableStringify(stateData?.toJson())) ?? {},
           'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},
@@ -2440,7 +2454,7 @@ abstract class BaseRestApiServer {
       return Response.ok(
         jsonEncode({
           'message': 'Change log entry stored successfully',
-          'change': storedChange.toJson(),
+          'change': jsonDecode(stableStringify(storedChange.toJson())) ?? {},
           'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),
         headers: {'Content-Type': 'application/json'},

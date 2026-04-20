@@ -26,6 +26,12 @@ abstract class BaseEntityState
   @override
   final int? schemaVersion;
 
+  // Optional computed hash of the serialized state data.
+  // Note: we keep `stateDataHash` optional to avoid forcing a migration
+  // for existing Isar databases. We require `stateDataHash_orig_` to
+  // capture the original serialized hash value. We could make
+  // `stateDataHash` required, but that would require migrating existing
+  // Isar DBs or prompting users to rebuild them.
   @override
   final String? stateDataHash;
   @override

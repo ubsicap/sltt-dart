@@ -135,11 +135,18 @@ void registerIsarPortionDataEntityStateStorageGroup(
     IsarEntityStateStorageGroup<IsarPortionDataEntityState>(
           entityType: EntityType.portion,
           fromJson: IsarPortionDataEntityState.fromJson,
-          put: (state) async => await isar.isarPortionDataEntityStates.put(
-            state as IsarPortionDataEntityState,
-          ),
-          putAll: (states) async => await isar.isarPortionDataEntityStates
-              .putAll(states.cast<IsarPortionDataEntityState>()),
+          put: (state) async =>
+              // ignore: experimental_member_use
+              await isar.isarPortionDataEntityStates.putByIndex(
+                r'change_domainId_entityId',
+                state as IsarPortionDataEntityState,
+              ),
+          putAll: (states) async =>
+              // ignore: experimental_member_use
+              await isar.isarPortionDataEntityStates.putAllByIndex(
+                r'change_domainId_entityId',
+                states.cast<IsarPortionDataEntityState>(),
+              ),
           collection: (isar) => isar.isarPortionDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarPortionDataEntityStates

@@ -165,11 +165,18 @@ void registerIsarMarkerDataEntityStateStorageGroup(
     IsarEntityStateStorageGroup<IsarMarkerDataEntityState>(
           entityType: EntityType.marker,
           fromJson: IsarMarkerDataEntityState.fromJson,
-          put: (state) async => await isar.isarMarkerDataEntityStates.put(
-            state as IsarMarkerDataEntityState,
-          ),
-          putAll: (states) async => await isar.isarMarkerDataEntityStates
-              .putAll(states.cast<IsarMarkerDataEntityState>()),
+          put: (state) async =>
+              // ignore: experimental_member_use
+              await isar.isarMarkerDataEntityStates.putByIndex(
+                r'change_domainId_entityId',
+                state as IsarMarkerDataEntityState,
+              ),
+          putAll: (states) async =>
+              // ignore: experimental_member_use
+              await isar.isarMarkerDataEntityStates.putAllByIndex(
+                r'change_domainId_entityId',
+                states.cast<IsarMarkerDataEntityState>(),
+              ),
           collection: (isar) => isar.isarMarkerDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarMarkerDataEntityStates

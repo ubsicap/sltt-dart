@@ -204,11 +204,18 @@ void registerIsarNoteCommentChatDataEntityStateStorageGroup(
     IsarEntityStateStorageGroup<IsarNoteCommentChatDataEntityState>(
           entityType: EntityType.comment,
           fromJson: IsarNoteCommentChatDataEntityState.fromJson,
-          put: (state) async => await isar.isarNoteCommentChatDataEntityStates
-              .put(state as IsarNoteCommentChatDataEntityState),
-          putAll: (states) async => await isar
-              .isarNoteCommentChatDataEntityStates
-              .putAll(states.cast<IsarNoteCommentChatDataEntityState>()),
+          put: (state) async =>
+              // ignore: experimental_member_use
+              await isar.isarNoteCommentChatDataEntityStates.putByIndex(
+                r'change_domainId_entityId',
+                state as IsarNoteCommentChatDataEntityState,
+              ),
+          putAll: (states) async =>
+              // ignore: experimental_member_use
+              await isar.isarNoteCommentChatDataEntityStates.putAllByIndex(
+                r'change_domainId_entityId',
+                states.cast<IsarNoteCommentChatDataEntityState>(),
+              ),
           collection: (isar) => isar.isarNoteCommentChatDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarNoteCommentChatDataEntityStates

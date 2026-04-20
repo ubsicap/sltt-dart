@@ -261,6 +261,13 @@ void main() {
           await statsTests['includes entityTypeCollections unknown for unknown entityType']!();
         },
       );
+
+      test(
+        'entityTypeStats latestSeq is independent from latestChangeAt',
+        () async {
+          await statsTests['entityTypeStats latestSeq is independent from latestChangeAt']!();
+        },
+      );
     });
 
     test('verifies all suite tests are being run', () async {
@@ -303,6 +310,7 @@ void main() {
         'storedAfter with future timestamp returns empty',
         'includes entityTypeCollections for known entityType',
         'includes entityTypeCollections unknown for unknown entityType',
+        'entityTypeStats latestSeq is independent from latestChangeAt',
       };
 
       // Check that we have the same number of tests

@@ -94,10 +94,17 @@ echo "   Access Key ID: ${AWS_ACCESS_KEY_ID:0:8}..."
 AWS_REGION="us-east-1"
 DYNAMODB_REGION="us-east-1"
 DYNAMODB_TABLE="sltt-backend-changes-$STAGE"
+DYNAMODB_TABLE_ARN=$(aws dynamodb describe-table --table-name "$DYNAMODB_TABLE" --region "$DYNAMODB_REGION" --profile "$AWS_PROFILE" --query "Table.TableArn" --output text 2>/dev/null)
+
+if [ -z "$DYNAMODB_TABLE_ARN" ] || [ "$DYNAMODB_TABLE_ARN" = "None" ]; then
+  echo "❌ Failed to resolve DynamoDB table ARN for table: $DYNAMODB_TABLE"
+  exit 1
+fi
 
 echo "🗄️  Environment variables:"
 echo "   AWS_REGION: $AWS_REGION"
 echo "   DYNAMODB_TABLE: $DYNAMODB_TABLE"
+echo "   DYNAMODB_TABLE_ARN: $DYNAMODB_TABLE_ARN"
 echo "   USE_CLOUD_STORAGE: $USE_CLOUD_STORAGE"
 echo "   LOCAL_DEBUGGER: $LOCAL_DEBUGGER"
 
@@ -110,6 +117,7 @@ exec env \
   AWS_REGION="$AWS_REGION" \
   DYNAMODB_REGION="$DYNAMODB_REGION" \
   DYNAMODB_TABLE="$DYNAMODB_TABLE" \
+  DYNAMODB_TABLE_ARN="$DYNAMODB_TABLE_ARN" \
   STAGE="$STAGE" \
   USE_CLOUD_STORAGE="$USE_CLOUD_STORAGE" \
   LOCAL_DEBUGGER="$LOCAL_DEBUGGER" \

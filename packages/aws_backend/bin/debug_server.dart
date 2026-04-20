@@ -97,6 +97,17 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
         Platform.environment['MEDIA_CLOUDFRONT_KEY_PAIR_ID'];
     final cloudFrontPrivateKey =
         Platform.environment['MEDIA_CLOUDFRONT_PRIVATE_KEY'];
+    final authTable = Platform.environment['AUTH_TABLE'];
+    final authTableArn = Platform.environment['AUTH_TABLE_ARN'];
+    final authJwtSecret = Platform.environment['AUTH_JWT_SECRET'];
+    final authAccessTokenTtlMinutes =
+        Platform.environment['AUTH_ACCESS_TOKEN_TTL_MINUTES'];
+    final authRefreshTokenTtlDays =
+        Platform.environment['AUTH_REFRESH_TOKEN_TTL_DAYS'];
+    final authEmailMode = Platform.environment['AUTH_EMAIL_MODE'];
+    final authSesFromEmail = Platform.environment['AUTH_SES_FROM_EMAIL'];
+    final authVerificationCodeSecret =
+        Platform.environment['AUTH_VERIFICATION_CODE_SECRET'];
 
     mediaStorage = AwsMediaStorage(
       bucketName: mediaBucket ?? '',
@@ -119,6 +130,18 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('   MEDIA_BUCKET: $mediaBucket');
     print('   CLOUDFRONT_DOMAIN: $cloudFrontDomain');
     print('   CLOUDFRONT_KEY_PAIR_ID: $cloudFrontKeyPairId');
+    print('   AUTH_TABLE: $authTable');
+    print('   AUTH_TABLE_ARN: $authTableArn');
+    print('   AUTH_ACCESS_TOKEN_TTL_MINUTES: $authAccessTokenTtlMinutes');
+    print('   AUTH_REFRESH_TOKEN_TTL_DAYS: $authRefreshTokenTtlDays');
+    print('   AUTH_EMAIL_MODE: $authEmailMode');
+    print('   AUTH_SES_FROM_EMAIL: $authSesFromEmail');
+    print(
+      '   AUTH_JWT_SECRET: ${authJwtSecret == null || authJwtSecret.isEmpty ? '(missing)' : '(set)'}',
+    );
+    print(
+      '   AUTH_VERIFICATION_CODE_SECRET: ${authVerificationCodeSecret == null || authVerificationCodeSecret.isEmpty ? '(missing)' : '(set)'}',
+    );
     if (gitHealthEnvironment.containsKey('GIT_SHORT_CHANGESET')) {
       print(
         '   GIT_SHORT_CHANGESET: ${gitHealthEnvironment['GIT_SHORT_CHANGESET']}',
@@ -136,11 +159,23 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('✅ DynamoDB connection established');
 
     // Create server instance
+    final authService = BackendAuthServiceFactory.createFromEnvironment(
+      credentials: credentials,
+      appStorage: storage,
+      environment: Platform.environment,
+    );
+    await authService?.initialize();
+    if (authService == null) {
+      print(
+        '⚠️  Auth service is disabled. Set AUTH_TABLE and AUTH_JWT_SECRET to exercise auth routes locally.',
+      );
+    }
     final serverInstance = AwsRestApiServer(
       serverName: 'Debug AWS Backend',
       storage: storage,
       mediaStorage: mediaStorage,
       healthEnvironmentOverrides: gitHealthEnvironment,
+      authService: authService,
     );
 
     print('🚀 Starting debug server...');
@@ -158,6 +193,16 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('   GET  /api/ids/projects                  - List all projects');
     print('   GET  /api/changes/projects/{id}         - Get project changes');
     print('   GET  /api/state/projects/{id}/portions  - Get entity states');
+    if (authService != null) {
+      print(
+        '   POST /api/auth/register                 - Start self-registration',
+      );
+      print('   POST /api/auth/verify-email             - Verify email code');
+      print(
+        '   POST /api/auth/login                    - Login with email or username',
+      );
+      print('   GET  /api/admin/adhoc-users             - List AdHoc users');
+    }
     print('');
     print('Press Ctrl+C to stop the server');
 
@@ -165,6 +210,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     ProcessSignal.sigint.watch().listen((signal) async {
       print('\n🛑 Shutting down debug server...');
       await serverInstance.stop();
+      await authService?.close();
       print('✅ Debug server stopped');
       exit(0);
     });

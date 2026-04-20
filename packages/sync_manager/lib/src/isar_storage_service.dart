@@ -805,7 +805,8 @@ class IsarStorageService extends BaseStorageService {
           String,
           ({
             String entityType,
-            client.IsarChangeLogEntry latestChange,
+            client.IsarChangeLogEntry latestChangeAtChange,
+            client.IsarChangeLogEntry latestSeqChange,
             int creates,
             int updates,
             int deletes,
@@ -819,21 +820,29 @@ class IsarStorageService extends BaseStorageService {
       if (existing == null) {
         grouped[key] = (
           entityType: syncState.entityType,
-          latestChange: syncState.change,
+          latestChangeAtChange: syncState.change,
+          latestSeqChange: syncState.change,
           creates: syncState.operationCounts.create,
           updates: syncState.operationCounts.update,
           deletes: syncState.operationCounts.delete,
         );
       } else {
-        // Keep the latest change
-        final latestChange =
-            syncState.change.changeAt.isAfter(existing.latestChange.changeAt)
+        // Track latest-by-time and latest-by-seq independently.
+        final latestChangeAtChange =
+            syncState.change.changeAt.isAfter(
+              existing.latestChangeAtChange.changeAt,
+            )
             ? syncState.change
-            : existing.latestChange;
+            : existing.latestChangeAtChange;
+        final latestSeqChange =
+            syncState.change.seq >= existing.latestSeqChange.seq
+            ? syncState.change
+            : existing.latestSeqChange;
 
         grouped[key] = (
           entityType: existing.entityType,
-          latestChange: latestChange,
+          latestChangeAtChange: latestChangeAtChange,
+          latestSeqChange: latestSeqChange,
           creates: existing.creates + syncState.operationCounts.create,
           updates: existing.updates + syncState.operationCounts.update,
           deletes: existing.deletes + syncState.operationCounts.delete,
@@ -850,7 +859,7 @@ class IsarStorageService extends BaseStorageService {
           .where()
           .entityTypeDomainIdEqualTo(
             entityType,
-            grouped[entityType]!.latestChange.domainId,
+            grouped[entityType]!.latestChangeAtChange.domainId,
           )
           .findFirst();
       if (existing != null) {
@@ -877,35 +886,39 @@ class IsarStorageService extends BaseStorageService {
 
       if (existing != null) {
         // Determine latest change metadata
-        if (data.latestChange.changeAt.isAfter(existing.changeAt) ||
-            data.latestChange.changeAt.isAtSameMomentAs(existing.changeAt)) {
-          latestChangeAt = data.latestChange.changeAt;
-          latestCid = data.latestChange.cid;
-          latestSeq = data.latestChange.seq;
+        if (data.latestChangeAtChange.changeAt.isAfter(existing.changeAt) ||
+            data.latestChangeAtChange.changeAt.isAtSameMomentAs(
+              existing.changeAt,
+            )) {
+          latestChangeAt = data.latestChangeAtChange.changeAt;
+          latestCid = data.latestChangeAtChange.cid;
         } else {
           latestChangeAt = existing.changeAt;
           latestCid = existing.cid;
-          latestSeq = existing.seq;
         }
+        latestSeq = data.latestSeqChange.seq > existing.seq
+            ? data.latestSeqChange.seq
+            : existing.seq;
 
         created = existing.created + data.creates;
         updated = existing.updated + data.updates;
         deleted = existing.deleted + data.deletes;
         storedAt_orig_ = existing.storedAt_orig_!;
       } else {
-        latestChangeAt = data.latestChange.changeAt;
-        latestCid = data.latestChange.cid;
-        latestSeq = data.latestChange.seq;
+        latestChangeAt = data.latestChangeAtChange.changeAt;
+        latestCid = data.latestChangeAtChange.cid;
+        latestSeq = data.latestSeqChange.seq;
         created = data.creates;
         updated = data.updates;
         deleted = data.deletes;
-        storedAt_orig_ = data.latestChange.storedAt ?? DateTime.now().toUtc();
+        storedAt_orig_ =
+            data.latestChangeAtChange.storedAt ?? DateTime.now().toUtc();
       }
 
       final newState = IsarEntityTypeSyncState(
         id: existing?.id ?? Isar.autoIncrement,
         entityType: data.entityType,
-        domainId: data.latestChange.domainId,
+        domainId: data.latestChangeAtChange.domainId,
         domainType: domainType,
         storageId: _storageId,
         storageType: getStorageType(),
@@ -915,7 +928,7 @@ class IsarStorageService extends BaseStorageService {
         created: created,
         updated: updated,
         deleted: deleted,
-        storedAt: data.latestChange.storedAt ?? DateTime.now().toUtc(),
+        storedAt: data.latestChangeAtChange.storedAt ?? DateTime.now().toUtc(),
         storedAt_orig_: storedAt_orig_,
       );
 
@@ -1108,7 +1121,13 @@ class IsarStorageService extends BaseStorageService {
             entityType: k.entityType,
             entityId: k.entityId,
           );
-          out[k.entityId] = state;
+          out[BaseStorageService.batchEntityStateKey(
+                domainType: k.domainType,
+                domainId: k.domainId,
+                entityType: k.entityType,
+                entityId: k.entityId,
+              )] =
+              state;
         }
         continue;
       }
@@ -1128,7 +1147,13 @@ class IsarStorageService extends BaseStorageService {
       }
 
       for (final k in items) {
-        out[k.entityId] = exactByComposite['${k.domainId}|${k.entityId}'];
+        out[BaseStorageService.batchEntityStateKey(
+              domainType: k.domainType,
+              domainId: k.domainId,
+              entityType: k.entityType,
+              entityId: k.entityId,
+            )] =
+            exactByComposite['${k.domainId}|${k.entityId}'];
       }
     }
 
@@ -1694,6 +1719,228 @@ class IsarStorageService extends BaseStorageService {
 
     // Use the type-safe finder function instead of dynamic collection access
     return await storageGroup.findByDomainAndEntity(_isar, domainId, entityId);
+  }
+
+  BaseEntityState _copyEntityStateWithStoredAt({
+    required BaseEntityState state,
+    required DateTime storedAt,
+  }) {
+    final entityTypeEnum = EntityType.values.firstWhere(
+      (e) => e.value == state.entityType,
+      orElse: () => EntityType.unknown,
+    );
+
+    final normalizedStoredAt = storedAt.toUtc();
+    final updatedJson = {
+      ...state.toJson(),
+      'change_storedAt': normalizedStoredAt.toIso8601String(),
+    };
+
+    return _createEntityStateFromJson(
+      entityTypeEnum,
+      updatedJson,
+      state.entityType,
+    );
+  }
+
+  Future<void> _upsertEntityTypeSyncStatesForStateWrites({
+    required List<({BaseEntityState state, bool isNew})> items,
+    required DateTime storedAt,
+    Map<String, int>? latestSeqByEntityType,
+  }) async {
+    if (items.isEmpty) return;
+
+    final normalizedStoredAt = storedAt.toUtc();
+
+    final grouped =
+        <
+          (String entityType, String domainId),
+          ({BaseEntityState latestState, int creates, int updates})
+        >{};
+
+    for (final item in items) {
+      final key = (item.state.entityType, item.state.change_domainId);
+      final existing = grouped[key];
+      if (existing == null) {
+        grouped[key] = (
+          latestState: item.state,
+          creates: item.isNew ? 1 : 0,
+          updates: item.isNew ? 0 : 1,
+        );
+        continue;
+      }
+
+      final latestState =
+          item.state.change_changeAt.isAfter(
+            existing.latestState.change_changeAt,
+          )
+          ? item.state
+          : existing.latestState;
+
+      grouped[key] = (
+        latestState: latestState,
+        creates: existing.creates + (item.isNew ? 1 : 0),
+        updates: existing.updates + (item.isNew ? 0 : 1),
+      );
+    }
+
+    final statesToPut = <IsarEntityTypeSyncState>[];
+    for (final entry in grouped.entries) {
+      final entityType = entry.key.$1;
+      final domainId = entry.key.$2;
+      final data = entry.value;
+      final latestState = data.latestState;
+      final providedLatestSeq = latestSeqByEntityType?[entityType];
+
+      final existing = await _isar.isarEntityTypeSyncStates
+          .where()
+          .entityTypeDomainIdEqualTo(entityType, domainId)
+          .findFirst();
+
+      late final DateTime latestChangeAt;
+      late final String latestCid;
+      late final int latestSeq;
+      if (existing == null ||
+          latestState.change_changeAt.isAfter(existing.changeAt) ||
+          latestState.change_changeAt.isAtSameMomentAs(existing.changeAt)) {
+        latestChangeAt = latestState.change_changeAt;
+        latestCid = latestState.change_cid;
+      } else {
+        latestChangeAt = existing.changeAt;
+        latestCid = existing.cid;
+      }
+
+      final existingSeq = existing?.seq ?? 0;
+      final providedSeq = providedLatestSeq ?? -1;
+      latestSeq = providedSeq > existingSeq ? providedSeq : existingSeq;
+
+      final nextState = IsarEntityTypeSyncState(
+        id: existing?.id ?? Isar.autoIncrement,
+        entityType: entityType,
+        domainId: domainId,
+        domainType: latestState.domainType,
+        storageId: _storageId,
+        storageType: getStorageType(),
+        cid: latestCid,
+        changeAt: latestChangeAt,
+        seq: latestSeq,
+        created: (existing?.created ?? 0) + data.creates,
+        updated: (existing?.updated ?? 0) + data.updates,
+        deleted: existing?.deleted ?? 0,
+        storedAt: normalizedStoredAt,
+        storedAt_orig_: existing?.storedAt_orig_ ?? normalizedStoredAt,
+      );
+      statesToPut.add(nextState);
+    }
+
+    if (statesToPut.isNotEmpty) {
+      await _isar.isarEntityTypeSyncStates.putAllByEntityTypeDomainId(
+        statesToPut,
+      );
+      SlttLogger.logger.fine(
+        '[$_logPrefix] Batch upserted ${statesToPut.length} entity type sync states from direct state writes',
+      );
+    }
+  }
+
+  Future<void> batchPutEntityStates({
+    required List<BaseEntityState> states,
+    required DateTime storedAt,
+    Map<String, int>? latestSeqByEntityType,
+  }) async {
+    if (states.isEmpty) return;
+
+    final normalizedByEntityType = <EntityType, List<BaseEntityState>>{};
+    final normalizedStates = <BaseEntityState>[];
+    final isNewByIdentity = <String, bool>{};
+
+    String stateIdentity(BaseEntityState state) =>
+        '${state.entityType}|${state.change_domainId}|${state.entityId}';
+
+    for (final state in states) {
+      final entityTypeEnum = EntityType.values.firstWhere(
+        (e) => e.value == state.entityType,
+        orElse: () => EntityType.unknown,
+      );
+      if (entityTypeEnum == EntityType.unknown) {
+        throw ArgumentError('Unsupported entity type: ${state.entityType}');
+      }
+
+      final normalizedState = _copyEntityStateWithStoredAt(
+        state: state,
+        storedAt: storedAt,
+      );
+      normalizedStates.add(normalizedState);
+
+      normalizedByEntityType
+          .putIfAbsent(entityTypeEnum, () => <BaseEntityState>[])
+          .add(normalizedState);
+    }
+
+    final lookupGroups =
+        <
+          (String domainType, String domainId, String entityType),
+          List<BaseEntityState>
+        >{};
+    for (final state in normalizedStates) {
+      final key = (state.domainType, state.change_domainId, state.entityType);
+      lookupGroups.putIfAbsent(key, () => <BaseEntityState>[]).add(state);
+    }
+
+    for (final entry in lookupGroups.entries) {
+      final groupStates = entry.value;
+      final keys = groupStates
+          .map(
+            (state) => (
+              domainType: state.domainType,
+              domainId: state.change_domainId,
+              entityType: state.entityType,
+              entityId: state.entityId,
+            ),
+          )
+          .toList();
+
+      final existingByEntityId = await batchGetEntityState(keys: keys);
+      for (final state in groupStates) {
+        isNewByIdentity[stateIdentity(state)] =
+            existingByEntityId[BaseStorageService.batchEntityStateKey(
+              domainType: state.domainType,
+              domainId: state.change_domainId,
+              entityType: state.entityType,
+              entityId: state.entityId,
+            )] ==
+            null;
+      }
+    }
+
+    final syncItems = <({BaseEntityState state, bool isNew})>[];
+    for (final entry in normalizedByEntityType.entries) {
+      for (final state in entry.value) {
+        final identity = stateIdentity(state);
+        syncItems.add((
+          state: state,
+          isNew: isNewByIdentity[identity] ?? false,
+        ));
+      }
+    }
+
+    await _isar.writeTxn(() async {
+      for (final entry in normalizedByEntityType.entries) {
+        final group = _entityStateRegistry.get(entry.key);
+        if (group == null) {
+          throw StateError(
+            'No storage group registered for entity type: ${entry.key.value}',
+          );
+        }
+        await group.putAll(entry.value);
+      }
+
+      await _upsertEntityTypeSyncStatesForStateWrites(
+        items: syncItems,
+        storedAt: storedAt,
+        latestSeqByEntityType: latestSeqByEntityType,
+      );
+    });
   }
 
   /// Delete all changes - useful for testing cleanup

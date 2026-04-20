@@ -215,11 +215,18 @@ void registerIsarPassageDataEntityStateStorageGroup(
     IsarEntityStateStorageGroup<IsarPassageDataEntityState>(
           entityType: EntityType.passage,
           fromJson: IsarPassageDataEntityState.fromJson,
-          put: (state) async => await isar.isarPassageDataEntityStates.put(
-            state as IsarPassageDataEntityState,
-          ),
-          putAll: (states) async => await isar.isarPassageDataEntityStates
-              .putAll(states.cast<IsarPassageDataEntityState>()),
+          put: (state) async =>
+              // ignore: experimental_member_use
+              await isar.isarPassageDataEntityStates.putByIndex(
+                r'change_domainId_entityId',
+                state as IsarPassageDataEntityState,
+              ),
+          putAll: (states) async =>
+              // ignore: experimental_member_use
+              await isar.isarPassageDataEntityStates.putAllByIndex(
+                r'change_domainId_entityId',
+                states.cast<IsarPassageDataEntityState>(),
+              ),
           collection: (isar) => isar.isarPassageDataEntityStates,
           findByDomainAndEntity: (isar, projectId, entityId) => isar
               .isarPassageDataEntityStates

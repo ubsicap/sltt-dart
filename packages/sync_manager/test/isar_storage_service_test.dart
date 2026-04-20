@@ -6,6 +6,7 @@ import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
+import 'package:sync_manager/src/models/isar_entity_type_sync_state.dart';
 import 'package:sync_manager/src/models/isar_storage_state.dart';
 import 'package:sync_manager/src/models/isar_task_state.dart';
 import 'package:sync_manager/src/models/unknown_entity_state.isar.dart';
@@ -425,6 +426,311 @@ void main() {
       );
       expect(result, isNull);
     });
+
+    test(
+      'batchPutEntityStates sets change_storedAt from provided storedAt',
+      () async {
+        const projectId = 'proj-batch-put-entity-states';
+        const entityId1 = 'task-batch-1';
+        const entityId2 = 'task-batch-2';
+
+        final initialChangeAt = DateTime.parse('2023-01-01T03:00:00Z');
+        final updatedStoredAt = DateTime.parse('2023-01-01T03:05:00Z');
+
+        Future<void> seedTask(
+          String entityId,
+          String name,
+          int minutesOffset,
+        ) async {
+          final changeData = changePayload(
+            projectId: projectId,
+            entityType: 'task',
+            entityId: entityId,
+            changeAt: initialChangeAt.add(Duration(minutes: minutesOffset)),
+            operation: 'create',
+            data: {
+              'nameLocal': name,
+              'parentId': 'root',
+              'parentProp': 'tList',
+            },
+          );
+
+          final seedResult = await ChangeProcessingService.storeChanges(
+            storageMode: 'save',
+            changes: [changeData],
+            srcStorageType: 'local',
+            srcStorageId: 'local-client',
+            storage: storage,
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+          expect(seedResult.isSuccess, isTrue, reason: seedResult.errorMessage);
+        }
+
+        await seedTask(entityId1, 'Task batch one', 0);
+        await seedTask(entityId2, 'Task batch two', 1);
+
+        final state1 = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId1,
+        );
+        final state2 = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId2,
+        );
+
+        expect(state1, isNotNull);
+        expect(state2, isNotNull);
+
+        await storage.batchPutEntityStates(
+          states: [state1!, state2!],
+          storedAt: updatedStoredAt,
+        );
+
+        final updated1 = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId1,
+        );
+        final updated2 = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId2,
+        );
+
+        expect(updated1, isNotNull);
+        expect(updated2, isNotNull);
+        expect(updated1!.change_storedAt, equals(updatedStoredAt.toUtc()));
+        expect(updated2!.change_storedAt, equals(updatedStoredAt.toUtc()));
+      },
+    );
+
+    test(
+      'batchPutEntityStates upserts fetched state without preserving local isar id',
+      () async {
+        const projectId = 'proj-batch-put-upsert-by-identity';
+        const entityId = 'task-batch-upsert';
+        final initialChangeAt = DateTime.parse('2023-01-01T04:00:00Z');
+        final updatedStoredAt = DateTime.parse('2023-01-01T04:05:00Z');
+
+        final seedResult = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [
+            changePayload(
+              projectId: projectId,
+              entityType: 'task',
+              entityId: entityId,
+              changeAt: initialChangeAt,
+              operation: 'create',
+              data: {
+                'nameLocal': 'Task fetched upsert',
+                'parentId': 'root',
+                'parentProp': 'tList',
+              },
+            ),
+          ],
+          srcStorageType: 'local',
+          srcStorageId: 'local-client',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(seedResult.isSuccess, isTrue, reason: seedResult.errorMessage);
+
+        final existingState = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId,
+        );
+        expect(existingState, isNotNull);
+
+        final fetchedJson = Map<String, dynamic>.from(existingState!.toJson())
+          ..remove('id');
+        final fetchedState = storage.createEntityStateFromJson(
+          entityType: 'task',
+          json: fetchedJson,
+        );
+
+        await storage.batchPutEntityStates(
+          states: [fetchedState],
+          storedAt: updatedStoredAt,
+        );
+
+        final storedState = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId,
+        );
+        final allStates = await storage.isar.isarTaskStates.where().findAll();
+
+        expect(storedState, isNotNull);
+        expect(storedState!.change_storedAt, equals(updatedStoredAt.toUtc()));
+        expect(allStates, hasLength(1));
+      },
+    );
+
+    test(
+      'batchPutEntityStates increments entity type sync-state create/update counts',
+      () async {
+        const projectId = 'proj-batch-put-sync-state';
+        const existingEntityId = 'task-batch-sync-existing';
+        const newEntityId = 'task-batch-sync-new';
+        final initialChangeAt = DateTime.parse('2023-01-01T05:00:00Z');
+        final updatedStoredAt = DateTime.parse('2023-01-01T05:05:00Z');
+
+        final seedResult = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [
+            changePayload(
+              projectId: projectId,
+              entityType: 'task',
+              entityId: existingEntityId,
+              changeAt: initialChangeAt,
+              operation: 'create',
+              data: {
+                'nameLocal': 'Task existing for batch sync-state',
+                'parentId': 'root',
+                'parentProp': 'tList',
+              },
+            ),
+          ],
+          srcStorageType: 'local',
+          srcStorageId: 'local-client',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
+        expect(seedResult.isSuccess, isTrue, reason: seedResult.errorMessage);
+
+        final beforeSyncState = await storage.isar.isarEntityTypeSyncStates
+            .where()
+            .entityTypeDomainIdEqualTo('task', projectId)
+            .findFirst();
+        expect(beforeSyncState, isNotNull);
+
+        final existingState = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: existingEntityId,
+        );
+        expect(existingState, isNotNull);
+
+        final newStateJson = {
+          ...existingState!.toJson(),
+          'entityId': newEntityId,
+          'change_cid': generateCid(entityType: EntityType.task),
+          'change_changeAt': initialChangeAt
+              .add(const Duration(minutes: 1))
+              .toIso8601String(),
+          'change_storedAt': initialChangeAt
+              .add(const Duration(minutes: 1))
+              .toIso8601String(),
+          'data_nameLocal': 'Task new for batch sync-state',
+        };
+        final newState = storage.createEntityStateFromJson(
+          entityType: 'task',
+          json: newStateJson,
+        );
+
+        final preNewEntity = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: newEntityId,
+        );
+        expect(preNewEntity, isNull);
+
+        await storage.batchPutEntityStates(
+          states: [existingState, newState],
+          storedAt: updatedStoredAt,
+        );
+
+        final afterSyncState = await storage.isar.isarEntityTypeSyncStates
+            .where()
+            .entityTypeDomainIdEqualTo('task', projectId)
+            .findFirst();
+        expect(afterSyncState, isNotNull);
+        expect(afterSyncState!.created, equals(beforeSyncState!.created + 1));
+        expect(afterSyncState.updated, equals(beforeSyncState.updated + 1));
+      },
+    );
+
+    test(
+      'batchPutEntityStates applies provided latestSeqByEntityType map',
+      () async {
+        const projectId = 'proj-batch-put-latest-seq';
+        const entityId1 = 'task-batch-seq-1';
+        const entityId2 = 'task-batch-seq-2';
+        final initialChangeAt = DateTime.parse('2023-01-01T05:30:00Z');
+        final updatedStoredAt = DateTime.parse('2023-01-01T05:35:00Z');
+
+        Future<void> seedTask(String entityId, int minutesOffset) async {
+          final seedResult = await ChangeProcessingService.storeChanges(
+            storageMode: 'save',
+            changes: [
+              changePayload(
+                projectId: projectId,
+                entityType: 'task',
+                entityId: entityId,
+                changeAt: initialChangeAt.add(Duration(minutes: minutesOffset)),
+                operation: 'create',
+                data: {
+                  'nameLocal': 'Task batch latest seq $entityId',
+                  'parentId': 'root',
+                  'parentProp': 'tList',
+                },
+              ),
+            ],
+            srcStorageType: 'local',
+            srcStorageId: 'local-client',
+            storage: storage,
+            includeChangeUpdates: false,
+            includeStateUpdates: false,
+          );
+          expect(seedResult.isSuccess, isTrue, reason: seedResult.errorMessage);
+        }
+
+        await seedTask(entityId1, 0);
+        await seedTask(entityId2, 1);
+
+        final state1 = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId1,
+        );
+        final state2 = await storage.getEntityState(
+          domainType: 'project',
+          domainId: projectId,
+          entityType: 'task',
+          entityId: entityId2,
+        );
+        expect(state1, isNotNull);
+        expect(state2, isNotNull);
+
+        await storage.batchPutEntityStates(
+          states: [state1!, state2!],
+          storedAt: updatedStoredAt,
+          latestSeqByEntityType: {'task': 888},
+        );
+
+        final syncState = await storage.isar.isarEntityTypeSyncStates
+            .where()
+            .entityTypeDomainIdEqualTo('task', projectId)
+            .findFirst();
+        expect(syncState, isNotNull);
+        expect(syncState!.seq, equals(888));
+      },
+    );
   });
 
   group('IsarStorageService batchGetEntityState domain isolation', () {
@@ -459,48 +765,65 @@ void main() {
       expect(result.isSuccess, isTrue, reason: result.errorMessage);
     }
 
-    test('does not leak same entityId across different domainIds', () async {
-      const sharedEntityId = '__test_multi_domainIds_eid_seed_1';
-      const domain1 = '__test_multi_domainIds_1';
-      const domain2 = '__test_multi_domainIds_2';
+    test(
+      'returns both states for same entityId across different domainIds',
+      () async {
+        const sharedEntityId = '__test_multi_domainIds_eid_seed_1';
+        const domain1 = '__test_multi_domainIds_1';
+        const domain2 = '__test_multi_domainIds_2';
 
-      await seedTaskState(
-        domainId: domain1,
-        entityId: sharedEntityId,
-        nameLocal: 'Task in domain 1',
-        changeAt: baseTime,
-      );
+        await seedTaskState(
+          domainId: domain1,
+          entityId: sharedEntityId,
+          nameLocal: 'Task in domain 1',
+          changeAt: baseTime,
+        );
+        await seedTaskState(
+          domainId: domain2,
+          entityId: sharedEntityId,
+          nameLocal: 'Task in domain 2',
+          changeAt: baseTime.add(const Duration(minutes: 1)),
+        );
 
-      // batchGetEntityState is keyed by entityId, so same-entityId
-      // cross-domain checks are verified via separate calls.
-      final d1 = await storage.batchGetEntityState(
-        keys: [
-          (
-            domainType: 'project',
-            domainId: domain1,
-            entityType: 'task',
-            entityId: sharedEntityId,
-          ),
-        ],
-      );
-      final d1State = d1[sharedEntityId];
-      expect(d1State, isNotNull);
-      expect(d1State!.toJson()['change_domainId'], equals(domain1));
-      expect(d1State.toJson()['data_nameLocal'], equals('Task in domain 1'));
+        final results = await storage.batchGetEntityState(
+          keys: [
+            (
+              domainType: 'project',
+              domainId: domain1,
+              entityType: 'task',
+              entityId: sharedEntityId,
+            ),
+            (
+              domainType: 'project',
+              domainId: domain2,
+              entityType: 'task',
+              entityId: sharedEntityId,
+            ),
+          ],
+        );
+        final d1State =
+            results[BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: domain1,
+              entityType: 'task',
+              entityId: sharedEntityId,
+            )];
+        expect(d1State, isNotNull);
+        expect(d1State!.toJson()['change_domainId'], equals(domain1));
+        expect(d1State.toJson()['data_nameLocal'], equals('Task in domain 1'));
 
-      // Same entityId in another domain should not resolve to domain1's state.
-      final d2 = await storage.batchGetEntityState(
-        keys: [
-          (
-            domainType: 'project',
-            domainId: domain2,
-            entityType: 'task',
-            entityId: sharedEntityId,
-          ),
-        ],
-      );
-      expect(d2[sharedEntityId], isNull);
-    });
+        final d2State =
+            results[BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: domain2,
+              entityType: 'task',
+              entityId: sharedEntityId,
+            )];
+        expect(d2State, isNotNull);
+        expect(d2State!.toJson()['change_domainId'], equals(domain2));
+        expect(d2State.toJson()['data_nameLocal'], equals('Task in domain 2'));
+      },
+    );
 
     test(
       'returns correct states for multi-domain batch with unique entityIds',
@@ -540,13 +863,65 @@ void main() {
           ],
         );
 
-        expect(result[entity1], isNotNull);
-        expect(result[entity1]!.toJson()['change_domainId'], equals(domain1));
-        expect(result[entity1]!.toJson()['data_nameLocal'], equals('Task A'));
+        expect(
+          result[BaseStorageService.batchEntityStateKey(
+            domainType: 'project',
+            domainId: domain1,
+            entityType: 'task',
+            entityId: entity1,
+          )],
+          isNotNull,
+        );
+        expect(
+          result[BaseStorageService.batchEntityStateKey(
+                domainType: 'project',
+                domainId: domain1,
+                entityType: 'task',
+                entityId: entity1,
+              )]!
+              .toJson()['change_domainId'],
+          equals(domain1),
+        );
+        expect(
+          result[BaseStorageService.batchEntityStateKey(
+                domainType: 'project',
+                domainId: domain1,
+                entityType: 'task',
+                entityId: entity1,
+              )]!
+              .toJson()['data_nameLocal'],
+          equals('Task A'),
+        );
 
-        expect(result[entity2], isNotNull);
-        expect(result[entity2]!.toJson()['change_domainId'], equals(domain2));
-        expect(result[entity2]!.toJson()['data_nameLocal'], equals('Task B'));
+        expect(
+          result[BaseStorageService.batchEntityStateKey(
+            domainType: 'project',
+            domainId: domain2,
+            entityType: 'task',
+            entityId: entity2,
+          )],
+          isNotNull,
+        );
+        expect(
+          result[BaseStorageService.batchEntityStateKey(
+                domainType: 'project',
+                domainId: domain2,
+                entityType: 'task',
+                entityId: entity2,
+              )]!
+              .toJson()['change_domainId'],
+          equals(domain2),
+        );
+        expect(
+          result[BaseStorageService.batchEntityStateKey(
+                domainType: 'project',
+                domainId: domain2,
+                entityType: 'task',
+                entityId: entity2,
+              )]!
+              .toJson()['data_nameLocal'],
+          equals('Task B'),
+        );
       },
     );
   });
@@ -1805,8 +2180,24 @@ void main() {
           ],
         );
 
-        expect(results.containsKey(entityId), isTrue);
-        final state = results[entityId];
+        expect(
+          results.containsKey(
+            BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: domainId,
+              entityType: unknownEntityType,
+              entityId: entityId,
+            ),
+          ),
+          isTrue,
+        );
+        final state =
+            results[BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: domainId,
+              entityType: unknownEntityType,
+              entityId: entityId,
+            )];
         expect(state, isNotNull);
         expect(state, isA<IsarUnknownEntityState>());
         expect(state!.entityType, equals(unknownEntityType));
@@ -1831,8 +2222,26 @@ void main() {
           ],
         );
 
-        expect(results.containsKey(missingId), isTrue);
-        expect(results[missingId], isNull);
+        expect(
+          results.containsKey(
+            BaseStorageService.batchEntityStateKey(
+              domainType: 'project',
+              domainId: domainId,
+              entityType: unknownEntityType,
+              entityId: missingId,
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          results[BaseStorageService.batchEntityStateKey(
+            domainType: 'project',
+            domainId: domainId,
+            entityType: unknownEntityType,
+            entityId: missingId,
+          )],
+          isNull,
+        );
       },
     );
 
@@ -1877,11 +2286,52 @@ void main() {
           ],
         );
 
-        expect(results['task-alongside-random'], isNotNull);
-        expect(results['task-alongside-random'], isA<IsarTaskState>());
-        expect(results[entityId], isNotNull);
-        expect(results[entityId], isA<IsarUnknownEntityState>());
-        expect(results[entityId]!.entityType, equals(unknownEntityType));
+        expect(
+          results[BaseStorageService.batchEntityStateKey(
+            domainType: 'project',
+            domainId: domainId,
+            entityType: 'task',
+            entityId: 'task-alongside-random',
+          )],
+          isNotNull,
+        );
+        expect(
+          results[BaseStorageService.batchEntityStateKey(
+            domainType: 'project',
+            domainId: domainId,
+            entityType: 'task',
+            entityId: 'task-alongside-random',
+          )],
+          isA<IsarTaskState>(),
+        );
+        expect(
+          results[BaseStorageService.batchEntityStateKey(
+            domainType: 'project',
+            domainId: domainId,
+            entityType: unknownEntityType,
+            entityId: entityId,
+          )],
+          isNotNull,
+        );
+        expect(
+          results[BaseStorageService.batchEntityStateKey(
+            domainType: 'project',
+            domainId: domainId,
+            entityType: unknownEntityType,
+            entityId: entityId,
+          )],
+          isA<IsarUnknownEntityState>(),
+        );
+        expect(
+          results[BaseStorageService.batchEntityStateKey(
+                domainType: 'project',
+                domainId: domainId,
+                entityType: unknownEntityType,
+                entityId: entityId,
+              )]!
+              .entityType,
+          equals(unknownEntityType),
+        );
       },
     );
   });

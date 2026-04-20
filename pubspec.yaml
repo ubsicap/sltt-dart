@@ -11,6 +11,7 @@ environment:
 workspace:
   - packages/sltt_core
   - packages/aws_backend
+  - packages/dynamodb_export_tools
   - packages/sync_manager
 dev_dependencies:
   test: ^1.24.0

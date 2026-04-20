@@ -531,6 +531,8 @@ IsarUnknownEntityState _isarUnknownEntityStateDeserialize(
     entityType: reader.readStringOrNull(offsets[44]) ?? kEntityTypeUnknown,
     id: id,
     schemaVersion: reader.readLongOrNull(offsets[45]),
+    stateDataHash: reader.readStringOrNull(offsets[46]),
+    stateDataHash_orig_: reader.readStringOrNull(offsets[47]),
     unknownJson: reader.readString(offsets[48]),
   );
   return object;
@@ -10888,6 +10890,11 @@ IsarUnknownEntityState _$IsarUnknownEntityStateFromJson(
       (v) => v as String,
     ),
     unknownJson: $checkedConvert('unknownJson', (v) => v as String),
+    stateDataHash: $checkedConvert('stateDataHash', (v) => v as String?),
+    stateDataHash_orig_: $checkedConvert(
+      'stateDataHash_orig_',
+      (v) => v as String?,
+    ),
     data_name: $checkedConvert('data_name', (v) => v as String?),
     data_name_dataSchemaRev_: $checkedConvert(
       'data_name_dataSchemaRev_',
@@ -10972,6 +10979,8 @@ Map<String, dynamic> _$IsarUnknownEntityStateToJson(
   'domainType': instance.domainType,
   'unknownJson': instance.unknownJson,
   'schemaVersion': instance.schemaVersion,
+  'stateDataHash': instance.stateDataHash,
+  'stateDataHash_orig_': instance.stateDataHash_orig_,
   'change_domainId_orig_': instance.change_domainId_orig_,
   'change_changeAt': instance.change_changeAt.toIso8601String(),
   'change_changeAt_orig_': instance.change_changeAt_orig_.toIso8601String(),

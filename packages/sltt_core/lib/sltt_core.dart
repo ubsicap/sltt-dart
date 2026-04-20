@@ -2,6 +2,7 @@
 export 'src/api/base_rest_api_server.dart';
 export 'src/api/domain_types.dart';
 export 'src/api/models/api_models.dart';
+export 'src/auth/registration_validation.dart';
 export 'src/logging.dart';
 export 'src/models/base_change_log_entry.dart';
 export 'src/models/base_data_fields.dart';
@@ -34,4 +35,5 @@ export 'src/storage/media/file_media_storage.dart';
 export 'src/storage/media/null_media_storage.dart';
 export 'src/storage/stats/entity_type_stats.dart';
 export 'src/storage/stats/entity_type_summary.dart';
+export 'src/utils/concurrency_utils.dart';
 export 'src/utils/json_utils.dart';

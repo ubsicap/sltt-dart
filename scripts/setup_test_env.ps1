@@ -45,9 +45,12 @@ if (-not (Test-Path -LiteralPath $targetIsarDir)) {
   New-Item -ItemType Directory -Force -Path $targetIsarDir | Out-Null
 }
 
-# Copy the DLL
-Copy-Item -LiteralPath $foundDll -Destination $targetIsarDir -Force
-Write-Host "Copied isar.dll to $targetIsarDir"
+# Copy the DLL under both names. Some test kernels request libisar.dll.
+$targetIsarDll = Join-Path $targetIsarDir 'isar.dll'
+$targetLibIsarDll = Join-Path $targetIsarDir 'libisar.dll'
+Copy-Item -LiteralPath $foundDll -Destination $targetIsarDll -Force
+Copy-Item -LiteralPath $foundDll -Destination $targetLibIsarDll -Force
+Write-Host "Copied isar.dll and libisar.dll to $targetIsarDir"
 
 # Prepend the folder that contains the DLL to PATH for this session only
 $isarWindowsDir = Split-Path -Parent $foundDll
@@ -60,13 +63,18 @@ Write-Host "Prepending '$isarWindowsDir' to PATH for this session"
 $tempDir = $env:TEMP
 if (-not $tempDir) { $tempDir = $env:TMP }
 if ($tempDir -and (Test-Path $tempDir)) {
-  Copy-Item -LiteralPath $foundDll -Destination (Join-Path $tempDir 'isar.dll') -Force
-  Write-Host "Copied isar.dll to '$tempDir' for test kernel access"
+  $tempIsarDll = Join-Path $tempDir 'isar.dll'
+  $tempLibIsarDll = Join-Path $tempDir 'libisar.dll'
+  Copy-Item -LiteralPath $foundDll -Destination $tempIsarDll -Force
+  Copy-Item -LiteralPath $foundDll -Destination $tempLibIsarDll -Force
+  Write-Host "Copied isar.dll and libisar.dll to '$tempDir' for test kernel access"
 }
 
 # Also set an explicit env var to allow code to use it when resolving the DLL
 $env:ISAR_DLL_PATH = $isarWindowsDir
 Write-Host "Setting ISAR_DLL_PATH to '$isarWindowsDir'"
+$env:ISAR_LIBRARY_PATH = $targetLibIsarDll
+Write-Host "Setting ISAR_LIBRARY_PATH to '$targetLibIsarDll'"
 
 if ($SetupOnly) {
   Write-Host 'Setup complete; not running tests (use without -SetupOnly to run tests).'

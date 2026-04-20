@@ -615,6 +615,81 @@ class AwsMediaStorage extends BaseMediaStorage {
     return presigned;
   }
 
+  /// List objects under a prefix and return presigned GET URLs for each object.
+  ///
+  /// Returns a map with keys: `items` (list of {key,size,lastModified,getUrl}),
+  /// `isTruncated` (bool), and `nextContinuationToken` (String?).
+  Future<Map<String, dynamic>> listObjectsWithPresignedUrls({
+    required String prefix,
+    int? maxKeys,
+    String? continuationToken,
+  }) async {
+    await initialize();
+
+    final normalizedPrefix = _normalizeKey(prefix).trim();
+    if (normalizedPrefix.isEmpty) {
+      throw ArgumentError.value(prefix, 'prefix', 'prefix must not be empty');
+    }
+
+    final query = <String, String>{
+      'list-type': '2',
+      'prefix': normalizedPrefix,
+    };
+    if (maxKeys != null) query['max-keys'] = maxKeys.toString();
+    if (continuationToken != null && continuationToken.isNotEmpty) {
+      query['continuation-token'] = continuationToken;
+    }
+
+    final request = AWSHttpRequest(
+      method: AWSHttpMethod.get,
+      uri: Uri(
+        scheme: 'https',
+        host: _endpointHost(),
+        path: '/',
+        queryParameters: query,
+      ),
+      headers: {'host': _endpointHost()},
+    );
+
+    final response = await _sendSigned(request);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to list objects: ${response.body}');
+    }
+
+    final doc = XmlDocument.parse(response.body);
+    final items = <Map<String, dynamic>>[];
+
+    for (final contents in doc.findAllElements('Contents')) {
+      final key = _text(contents, 'Key');
+      final sizeStr = _text(contents, 'Size');
+      final lastModifiedStr = _text(contents, 'LastModified');
+      if (key == null) continue;
+      final size = int.tryParse(sizeStr ?? '0') ?? 0;
+      final lastModified = lastModifiedStr != null
+          ? DateTime.tryParse(lastModifiedStr)
+          : null;
+      final presigned = await _presignUri(method: AWSHttpMethod.get, key: key);
+
+      items.add({
+        'key': key,
+        'size': size,
+        'lastModified': lastModified?.toUtc().toIso8601String(),
+        'getUrl': presigned.toString(),
+      });
+    }
+
+    final isTruncated =
+        (_text(doc.rootElement, 'IsTruncated') ?? '').toLowerCase().trim() ==
+        'true';
+    final nextToken = _text(doc.rootElement, 'NextContinuationToken');
+
+    return {
+      'items': items,
+      'isTruncated': isTruncated,
+      'nextContinuationToken': nextToken,
+    };
+  }
+
   Map<String, String>? _canonicalizeHeaders(
     Map<String, String>? headers, {
     required String host,

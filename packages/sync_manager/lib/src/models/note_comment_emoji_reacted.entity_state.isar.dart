@@ -154,11 +154,17 @@ void registerIsarNoteCommentEmojiReactedDataEntityStateStorageGroup(
     IsarEntityStateStorageGroup<IsarNoteCommentEmojiReactedDataEntityState>(
           entityType: EntityType.commentReaction,
           fromJson: IsarNoteCommentEmojiReactedDataEntityState.fromJson,
-          put: (state) async => await isar
-              .isarNoteCommentEmojiReactedDataEntityStates
-              .put(state as IsarNoteCommentEmojiReactedDataEntityState),
+          put: (state) async =>
+              // ignore: experimental_member_use
+              await isar.isarNoteCommentEmojiReactedDataEntityStates.putByIndex(
+                r'change_domainId_entityId',
+                state as IsarNoteCommentEmojiReactedDataEntityState,
+              ),
           putAll: (states) async =>
-              await isar.isarNoteCommentEmojiReactedDataEntityStates.putAll(
+              await isar.isarNoteCommentEmojiReactedDataEntityStates
+              // ignore: experimental_member_use
+              .putAllByIndex(
+                r'change_domainId_entityId',
                 states.cast<IsarNoteCommentEmojiReactedDataEntityState>(),
               ),
           collection: (isar) =>
