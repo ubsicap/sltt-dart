@@ -26,6 +26,7 @@ SLTT 2.0 delivered meaningful value for sign language translation teams, but the
 - Local team storage and LAN-hosted collaboration scenarios required hosts that were independent of the current user auth session on the host device, and thus led to duplicated and complicated separate storage of changes and files outside of the browser which needed to be synced with the browser changes.
 - Lack of local state persistence meant clients had to replay long change histories on every load, leading to performance issues and, as projects grew, potential memory pressure.
 - IDs encoded hierarchical relationships and made it difficult to allow for efficiently moving data between parents.
+- Disk space management was hard to detect and support in browser storage, leading to code complexity, user confusion and support burden.
 
 At the same time, SLTT 3 is expected to support a broader product surface than the initial 2026 roadmap alone. In addition to desktop-first delivery, the platform needs to leave room for:
 
@@ -57,6 +58,7 @@ Due to future LAN/local team scenarios, this RFC recommends a hybrid synchroniza
 - Show how 2026 milestones fit into a coherent longer-term architecture.
 - Preserve architectural headroom for LAN collaboration, mobile clients, reporting, and partner APIs.
 - Separate current implemented facts from target architecture and validation work.
+- Disk space management strategy for local clients
 - Propose a developer deployment workflow that safeguards table information.
 - Propose a developer and support workflow that allows for SQL inspection of local and cloud data.
 
@@ -65,8 +67,7 @@ Due to future LAN/local team scenarios, this RFC recommends a hybrid synchroniza
 - Finalizing every database schema for every entity type.
 - UI/UX design decisions for desktop or mobile.
 - Locking in a final reporting schema or analytics stack in 2026.
-- Specifying every auth endpoint and policy detail in this document.
-- Replacing follow-up ADRs for sync performance, auth, search, or reporting implementation details.
+- Specifying every endpoint and policy detail in this document.
 
 ## 6. Current State
 
@@ -78,9 +79,10 @@ The current codebase already provides a strong starting point for the recommende
 - In the current desktop implementation, persisted local entity state is stored in Isar. This reduces translation overhead between local and cloud-facing state models, supports reactive UI updates when persisted state changes, and helps keep client-side state materialization aligned with backend behavior.
 - The current implementation work on concurrent entity-state downloads demonstrates that state retrieval remains important, especially for recovery and performance testing.
 - The current direction toward persisted entity state also creates room for lazy loading and lower memory pressure, which should improve startup behavior for larger projects.
-Additionally, the developer and support workflow allows for SQL inspection of local and cloud data, supporting debugging and validation.
+- Additionally, the developer and support workflow allows for SQL inspection of local and cloud data, supporting debugging and validation.
 
-This RFC therefore builds on existing architecture rather than replacing it with a wholly new conceptual model.
+This RFC therefore builds on an existing POC architecture rather than replacing it with a wholly new conceptual model.
+
 
 ## 7. Recommended Architecture
 
@@ -93,6 +95,25 @@ For Dart and Flutter clients, the normal operating mode is sequential change-bas
 This design keeps the architecture flexible while making one preference explicit: SLTT should battle-test the same change ingestion, merge, and materialization path that future LAN hosts will need to run.
 
 ### 7.2 Target Platform Shape
+### 7.3 Local Disk Space Management Strategy
+
+Efficient local disk space management is critical for offline-first operation and robust media handling. The following strategy is recommended:
+
+1. **Use Filesystem Temp Storage for Cloud-Backed Media**
+	- Media files that have already been uploaded to the cloud should be stored in the operating system's temporary storage locations. This allows the OS to automatically reclaim space as needed, minimizing manual cleanup and reducing the risk of filling up the device.
+
+2. **Preserve Unsynced Data in App Storage Paths**
+	- Media files and database content that have not yet been uploaded to the cloud must be stored in application-specific storage paths. This ensures that unsynced data is not lost due to OS cleanup and remains available for upload when connectivity is restored.
+
+    - Question: how might uninstalling the unsynced data?
+
+3. **Update File Accessed Attribute on Use**
+	- Whenever a media resource is played or accessed, the application should update the file's last accessed attribute. This signals to the OS that the file is still in use and should not be prematurely deleted.
+
+4. **Let OS Manage Cleanup of Cloud-Backed Files**
+	- Rely on the operating system to determine when to clear cloud-server-stored files that have not been accessed in a while. This leverages built-in OS policies for temporary storage management and reduces the need for custom cleanup logic.
+
+This approach balances reliability for unsynced data with efficient use of device storage for media that is safely backed up in the cloud.
 
 The recommended target shape is:
 
