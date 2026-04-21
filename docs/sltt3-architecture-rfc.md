@@ -18,12 +18,18 @@ This RFC is not intended to finalize every implementation detail. Its purpose is
 
 SLTT 2.0 delivered meaningful value for sign language translation teams, but the product accumulated technical and workflow pressure in several areas:
 
-- Browser and PWA constraints complicated installation, permissions, disk space management, video processing, and offline reliability.
+- Need for mobile clients and lack of native mobile platform compatibility pressured us toward duplicating and supporting yet another complicated state materialization pathway.
+- Browser upgrades and bugs complicated installation, permissions, disk space management, and video processing.
 - Auth0 login UI/UX was often confusing for end users and support staff, and did not provide a clear path to support future fully offline use cases.
+- AWS deployment in master account with other non SLTT services making it unsafe to to allow other developers to have direct access to backends
+- AWS resources manually created vs. deployed via infrastructure as code, making it harder to maintain and replicate environments for development and testing.
+- changes did not have `modBy` until late in development
+- S3 file keys also encoded project hierarchy and made it difficult to allow for moving media between parents without moving.
 - Lack of backend state persistence meant new clients had to sequentially download long change histories to determine state, and thus, for example, forced the reporting backend to duplicate replay logic in order to process and serve reporting state data.
 - Too much client-specific merging and state logic made portability challenging and led to duplicated logic across other clients and systems, rather than allowing state to be served through a stable API and changes to be processed with shared code.
 - Merge conflicts were resolved on a per-object basis, leading to loss of changes which could otherwise be safely merged.
 - Local team storage and LAN-hosted collaboration scenarios required hosts that were independent of the current user auth session on the host device, and thus led to duplicated and complicated separate storage of changes and files outside of the browser which needed to be synced with the browser changes.
+- Offline local team storage assumes that all local team storage clients should share data and media that have not yet been uploaded to the cloud and thus also share the responsibility for uploading to the cloud whichever client is able to do that first, but this requirement led to complicated exceptional code instead of being a natural consequence of LAN-compatible sync and media storage API architecture.
 - Lack of local state persistence meant clients had to replay long change histories on every load, leading to performance issues and, as projects grew, potential memory pressure.
 - IDs encoded hierarchical relationships and made it difficult to allow for efficiently moving data between parents.
 - Disk space management was hard to detect and support in browser storage, leading to code complexity, user confusion and support burden.
@@ -36,6 +42,12 @@ At the same time, SLTT 3 is expected to support a broader product surface than t
 - support and debugging tools for support teams and developers,
 - external reporting APIs for partner access,
 - future integrations that depend on stable server-side behavior rather than client-specific logic.
+
+### SLTT 2.0 did the following things well that we want to preserve:
+
+#### Developer-and-Debug Friendly:
+- ability to use local debugger to connect to backend in order to preflight changes and find and fix issues
+- modBy (changeBy) on changes to support debugging and reporting by user
 
 ## 3. Problem Statement
 
@@ -55,6 +67,34 @@ Due to future LAN/local team scenarios, this RFC recommends a hybrid synchroniza
 - Clarify the preferred sync model and the role of full entity-state retrieval.
 - Clarify the role of persisted local state in startup performance, lazy loading, and memory usage.
 - Recommend a backward-compatibility convention for entity model evolution.
+
+## 7.4 Backward Compatibility for Data Evolution
+
+Maintaining backward compatibility as data models evolve is essential for long-lived projects and multi-version client/server deployments. The following strategies are recommended:
+
+1. **Syncing Preserves Data for New (or Old) Schemas**
+    - each state class supports `unknownJson` to preserve and merge data that is not recognized by the client's class schema.
+    - each database is expected to handle unknown schemas to capture and preserve and merge data for unknown entity types
+
+2. **Additive Changes**
+	- Expect additive changes (adding new fields, endpoints, or entity types) over breaking changes. Removing or renaming fields should be avoided unless a clear migration path is provided.
+
+3. **Old fields remain populated**
+	- Ensure that old fields continue to be populated even when new fields are added. This helps maintain compatibility with older clients and prevents data loss.
+
+4. **Test with Mixed Versions**
+	- Regularly test with mixed-version clients and servers to ensure backward and forward compatibility, especially during rolling upgrades or staged deployments.
+
+5. **Stable API Contracts**
+	- Keep API contracts stable and document all changes. Use explicit versioning in API routes (e.g., `/v1/`, `/v2/`) if incompatible changes are required.
+
+6. **Documentation and Communication**
+	- Clearly document all data model changes, compatibility expectations, and migration steps for both internal and external consumers.
+
+By following these practices, SLTT 3 can evolve its data models and APIs without disrupting existing users or integrations.
+
+And can help guarantee that any client can serve as a LAN host in the future with newer or older clients.
+
 - Show how 2026 milestones fit into a coherent longer-term architecture.
 - Preserve architectural headroom for LAN collaboration, mobile clients, reporting, and partner APIs.
 - Separate current implemented facts from target architecture and validation work.
