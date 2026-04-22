@@ -34,7 +34,7 @@ class AuthAppStateStore {
     for (final projectId in addSet) {
       changes.add(
         _buildChangeJson(
-          domainType: 'project',
+          domainType: kDomainProject,
           domainId: projectId,
           entityType: kEntityTypeMember,
           entityId: principal.userId,
@@ -56,7 +56,7 @@ class AuthAppStateStore {
     for (final projectId in removeSet) {
       changes.add(
         _buildChangeJson(
-          domainType: 'project',
+          domainType: kDomainProject,
           domainId: projectId,
           entityType: kEntityTypeMember,
           entityId: principal.userId,
@@ -97,11 +97,13 @@ class AuthAppStateStore {
   }
 
   Future<List<String>> getAdminProjectIdsForUser(String userId) async {
-    final projectIds = await _storage.getAllDomainIds(domainType: 'project');
+    final projectIds = await _storage.getAllDomainIds(
+      domainType: kDomainProject,
+    );
     final adminProjects = <String>[];
     for (final projectId in projectIds) {
       final state = await _storage.getEntityState(
-        domainType: 'project',
+        domainType: kDomainProject,
         domainId: projectId,
         entityType: kEntityTypeMember,
         entityId: userId,
@@ -132,7 +134,7 @@ class AuthAppStateStore {
       storageMode: 'save',
       changes: <Map<String, dynamic>>[
         _buildChangeJson(
-          domainType: 'user',
+          domainType: kDomainUser,
           domainId: principal.userId,
           entityType: kEntityTypeUserProfile,
           entityId: 'default',
