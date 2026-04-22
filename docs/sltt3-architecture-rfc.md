@@ -8,8 +8,78 @@ Related milestone: 2026 Milestone 4 - Architecture Documentation
 
 ## 1. Summary
 
-SLTT 3 needs an architecture that supports offline-first operation and networked collaboration, stable API contracts, and a clear path to future deployment shapes beyond the initial 2026 desktop-first product. This RFC recommends a platform architecture in which Flutter clients and future clients consume a shared REST API and synchronization model, while core server and merge logic remain portable enough to run in cloud and LAN-hosted environments.
+SLTT 3 needs an architecture that can cleanly support both desktop and mobile clients each supporting both offline-first operation and networked collaboration.
 
+Departing from SLTT 2.0 PWA and electron deployment architectures, this RFC recommends a platform architecture in which
+1) Flutter provides the user-friendly native desktop and mobile client experiences with full access to system resources and multi-threaded processing.
+2) Dart is used to share common code between client and server, especially for api and synchronization services that can run in both cloud-hosted and LAN-hosted environments.
+3) Almost all SLTT AWS resources are hosted in an SLTT-only account to prevent accidentally affecting non-SLTT projects/services.
+4) AWS serverless resources are more consistently managed permissions and deployments via "infrastructure as code", and separate between core shared resources (e.g. S3 media bucket) and secondary resources (like API deployments) to allow for safer concurrent development and testing.
+5) Isar provides sync data reactivity and lazy-loading local database services and pre-compiled schema queries.
+6) Custom self-registration and ad-hoc admin user-registration flows (instead of Auth0)
+
+## Key sub-system differences (vs 2.0)
+
+#### Auth
+
+##### DynamoDB
+- separate auth table for self-registration (no longer Auth0 hosted)
+
+#### REST API
+- Access to latest state across all entity types
+- LAN compatible surface (auth, change sync, states, media, and stats)
+
+##### Shelf Server
+- server instance can be used in cloud and local clients (LAN hosting or debugging)
+
+#### Data Storage
+- Latest entity state is persisted for all entity types
+
+##### AWS DynamoDB
+- segments change logs across any number of domain types (not just Project domain data)
+
+#### Sync Model
+- per-field Last Write Wins (LWW) merging
+- entity state materialization from change logs, LAN-hosting compatible
+- entity state-based downsync/requests as fallback for divergence, bootstrap, and simple clients
+
+##### AWS DynamoDB
+- Batches 12 changes + 12 materialized entity states at a time
+
+#### Isar
+- Batch Puts 10000 changes/entities at a time.
+
+##### AWS Websocket
+- Recommend foreground sync of changes to reduce overhead associated with REST request latency
+
+#### Media Storage
+- storage key (media id) decoupled from project hierarchy for easier moving/copying between projects
+
+##### AWS S3
+- presigned multi-part uploads results in whole file stored
+
+##### AWS CloudFront
+- media downloaded via pre-signed URLs for edge cache support
+
+##### Local Filesystem
+- files stored in the cloud are stored in system's temp storage to let OS manage cleanup of old files
+- accessed attribute updated on use to prevent OS cleanup of most-recently used files
+
+##### File Transfer Manager
+- follows LAN-hosting patterns where multiple clients may share responsibility for uploading and downloading of files
+- bounded concurrency for uploads and downloads to avoid overwhelming network
+- uses Range header for resumable downloading, and concatenates downloaded parts into single file
+
+### Debug / Support
+- SQL inspection of local and cloud data for debugging and validation
+- Deploy backend to individual developer accounts
+- Run debug server instance locally to connect with aws resources
+
+-----
+Another 2.0 issue:
+multi-tab support in browser created state out of sync with the database with data loss
+
+----- previous
 The recommendation is intentionally flexible at the API surface while still expressing a preferred synchronization path. SLTT 3 supports both change-based and state-based downsyncing. For Dart and Flutter clients, sequential change-based downsync with local state materialization may prove more performant and cost-effective, while also building confidence in future LAN-hosted operation, where clients are expected to materialize changes to entity state. Full entity-state retrieval can then supplement this as a fallback for repair, initial loading, and interoperability with other clients and systems. In any case, persisted local state should allow clients to lazy-load data as needed, maintain a lower memory profile, and reduce time to first useful interaction.
 
 This RFC is not intended to finalize every implementation detail. Its purpose is to align product and engineering around a recommended architecture, identify validation work that must happen in 2026, and preserve a credible path to future capabilities including LAN collaboration, mobile clients, reporting dashboards, and external reporting APIs.
