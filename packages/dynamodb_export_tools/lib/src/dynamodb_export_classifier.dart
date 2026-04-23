@@ -23,6 +23,7 @@ class DynamoExportItemClassification {
     this.parentId,
     this.parentProp,
     this.rank,
+    this.changeAtOrig,
     this.unsupportedReason,
   });
 
@@ -35,7 +36,10 @@ class DynamoExportItemClassification {
   final String? entityId;
   final String? parentId;
   final String? parentProp;
+
+  /// deprecated in gsi2sk in favor of changeAt_orig_
   final String? rank;
+  final String? changeAtOrig;
   final String? unsupportedReason;
 
   bool get isSupported => unsupportedReason == null;
@@ -122,6 +126,7 @@ class DynamoExportClassifier {
         entityId: skFields['entityId'],
         parentId: gsi2PkFields['parentId'],
         parentProp: gsi2SkFields['parentProp'],
+        changeAtOrig: gsi2SkFields['changeAt_orig_'],
         rank: gsi2SkFields['rank'],
       );
     }
@@ -189,12 +194,22 @@ class DynamoExportClassifier {
   Map<String, String> _parseFields(String compositeKey) {
     final fields = <String, String>{};
     for (final segment in compositeKey.split('#')) {
+      String fieldName;
+      String fieldValue;
       final separator = segment.indexOf('_');
+
+      /// Handle fields that end with an underscore
+      /// e.g. changeAt_orig_ + _{timestamp}
+      final int separator2 = segment.indexOf('__');
       if (separator <= 0 || separator == segment.length - 1) {
         continue;
       }
-      final fieldName = segment.substring(0, separator);
-      final fieldValue = segment.substring(separator + 1);
+      final int resolvedSeparator =
+          (separator2 > 0 && separator2 < segment.length - 1)
+          ? separator2 + 1
+          : separator;
+      fieldName = segment.substring(0, resolvedSeparator);
+      fieldValue = segment.substring(resolvedSeparator + 1);
       switch (fieldName) {
         case 'domainType':
         case 'domainId':
@@ -203,6 +218,7 @@ class DynamoExportClassifier {
         case 'parentId':
         case 'parentProp':
         case 'rank':
+        case 'changeAt_orig_':
           fields[fieldName] = fieldValue;
       }
     }

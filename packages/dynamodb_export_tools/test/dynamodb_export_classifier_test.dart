@@ -29,6 +29,23 @@ void main() {
         sk: r'$states#state#entityId_entity1',
         gsi2pk:
             r'$sltt#state#domainType_project#domainId_abc123#entityType_note#parentId_parent1',
+        gsi2sk: 'parentProp_tasks#changeAt_orig__2023-01-01T00:00:00Z',
+      );
+
+      expect(result.family, DynamoExportItemFamily.entityState);
+      expect(result.logicalTableName, 'entity_state__note');
+      expect(result.usesRawFallback, isFalse);
+      expect(result.parentId, 'parent1');
+      expect(result.parentProp, 'tasks');
+      expect(result.changeAtOrig, '2023-01-01T00:00:00Z');
+    });
+
+    test('routes entity state items dynamically by entityType - old rank sk', () {
+      final result = classifier.classifyCompositeKeys(
+        pk: r'$sltt#state#domainType_project#domainId_abc123#entityType_note',
+        sk: r'$states#state#entityId_entity1',
+        gsi2pk:
+            r'$sltt#state#domainType_project#domainId_abc123#entityType_note#parentId_parent1',
         gsi2sk: 'parentProp_tasks#rank_001',
       );
 

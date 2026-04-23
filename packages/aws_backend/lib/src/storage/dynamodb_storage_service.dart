@@ -27,7 +27,7 @@ String? _cachedStorageId;
 ///   seq: 42
 ///   parentId: parent1
 ///   parentProp: tasks
-///   rank: 001
+///   change_changeAt_orig_: 2023-01-01T00:00:00Z
 ///
 /// change_log:
 ///   write:
@@ -66,7 +66,7 @@ String? _cachedStorageId;
 ///       pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion
 ///       sk: $states#state#entityId_entity1
 ///       gsi2pk: $sltt#state#domainType_project#domainId_abc123#entityType_portion#parentId_parent1
-///       gsi2sk: parentProp_tasks#rank_001
+///       gsi2sk: parentProp_tasks#changeAt_orig__2023-01-01T00:00:00Z
 ///   read_single:
 ///     operation: GetItem in getEntityState
 ///     key_fields: [pk, sk]
@@ -150,7 +150,7 @@ String? _cachedStorageId;
 /// pk: '$sltt#state#domainType_project#domainId_abc123#entityType_portion'
 /// sk: '$states#state#entityId_entity1'
 /// gsi2pk: '$sltt#state#domainType_project#domainId_abc123#entityType_portion#parentId_parent1'
-/// gsi2sk: 'parentProp_tasks' or 'parentProp_tasks#rank_001'
+/// gsi2sk: 'parentProp_tasks' or 'parentProp_tasks#changeAt_orig__2023-01-01T00:00:00Z'
 /// ```
 class DynamoDBStorageService extends BaseStorageService {
   DynamoDBStorageService({
@@ -448,7 +448,7 @@ class DynamoDBStorageService extends BaseStorageService {
     final stateJson = state.toJson();
     final parentId = stateJson['data_parentId'] as String? ?? '';
     final parentProp = stateJson['data_parentProp'] as String? ?? '';
-    final rank = stateJson['data_rank']?.toString();
+    final changeAtOrig = stateJson['change_changeAt_orig_']?.toString() ?? '';
 
     return {
       'pk': {
@@ -467,7 +467,7 @@ class DynamoDBStorageService extends BaseStorageService {
           parentId: parentId,
         ),
       },
-      'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, rank: rank)},
+      'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, changeAtOrig: changeAtOrig)},
       ..._encodeJson(stateJson),
     };
   }
@@ -1978,13 +1978,13 @@ class DynamoDBStorageService extends BaseStorageService {
   Future<void> _putEntityState<TEntityState extends BaseEntityState>(
     TEntityState state,
   ) async {
-    // Extract parentId, parentProp, and rank from state for GSI2
+    // Extract parentId, parentProp, and changeAt_orig from state for GSI2
     final stateJson = state.toJson();
     final parentId = stateJson['data_parentId'] as String? ?? '';
     final parentProp = stateJson['data_parentProp'] as String? ?? '';
 
-    // Extract rank from data_rank if present
-    final rank = stateJson['data_rank']?.toString();
+    // Extract changeAt_orig from change_changeAt_orig_ if present
+    final changeAtOrig = stateJson['change_changeAt_orig_']?.toString() ?? '';
     // computeDataHash
     final stateDataHash = computeStateDataHash(stateJson);
     // ignore: non_constant_identifier_names
@@ -2007,7 +2007,7 @@ class DynamoDBStorageService extends BaseStorageService {
           parentId: parentId,
         ),
       },
-      'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, rank: rank)},
+      'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, changeAtOrig: changeAtOrig)},
       ..._encodeJson({
         ...stateJson,
         'stateDataHash': stateDataHash,
@@ -2268,13 +2268,13 @@ class DynamoDBStorageService extends BaseStorageService {
   }) =>
       '\$$_servicePrefix#state#domainType_$domainType#domainId_$domainId#entityType_$entityType#parentId_$parentId';
 
-  /// Generates GSI2 sort key for entity states (for sorting by parentProp and rank).
+  /// Generates GSI2 sort key for entity states (for sorting by parentProp and changeAt_orig).
   ///
-  /// Format: `parentProp_P` (when rank is null/missing)
-  ///         `parentProp_P#rank_R` (when rank exists)
-  String _stateGsi2SortKey({required String parentProp, String? rank}) {
-    if (rank != null && rank.isNotEmpty) {
-      return 'parentProp_$parentProp#rank_$rank';
+  /// Format: `parentProp_P` (when changeAt_orig is empty)
+  ///         `parentProp_P#changeAt_orig__{ISO}` (when changeAt_orig exists)
+  String _stateGsi2SortKey({required String parentProp, String? changeAtOrig}) {
+    if (changeAtOrig != null && changeAtOrig.isNotEmpty) {
+      return 'parentProp_$parentProp#changeAt_orig__$changeAtOrig';
     }
     return 'parentProp_$parentProp';
   }

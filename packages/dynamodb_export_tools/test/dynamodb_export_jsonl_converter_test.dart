@@ -43,7 +43,9 @@ void main() {
               'S':
                   r'$sltt#state#domainType_project#domainId_abc123#entityType_note#parentId_video1',
             },
-            'gsi2sk': {'S': 'parentProp_notes#rank_001'},
+            'gsi2sk': {
+              'S': 'parentProp_notes#changeAt_orig__2023-01-01T00:00:00Z',
+            },
             'title': {'S': 'hello'},
           },
         }),
