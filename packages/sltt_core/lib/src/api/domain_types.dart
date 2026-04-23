@@ -5,9 +5,13 @@ const String kCollectionProject = 'projects';
 const String kDomainUser = 'user';
 const String kCollectionUser = 'users';
 
+const String kDomainMembership = 'membership';
+const String kCollectionMembership = 'memberships';
+
 enum DomainType {
   project(value: kDomainProject),
   user(value: kDomainUser),
+  membership(value: kDomainMembership),
   unknown(value: 'unknown');
 
   final String value;
@@ -20,6 +24,8 @@ enum DomainType {
         return DomainType.project;
       case kDomainUser:
         return DomainType.user;
+      case kDomainMembership:
+        return DomainType.membership;
       default:
         return DomainType.unknown;
     }
@@ -31,6 +37,8 @@ enum DomainType {
         return kCollectionProject;
       case DomainType.user:
         return kCollectionUser;
+      case DomainType.membership:
+        return kCollectionMembership;
       case DomainType.unknown:
         throw Exception('Unknown domain type does not have a collection name');
     }
@@ -38,7 +46,11 @@ enum DomainType {
 }
 
 /// Returns all supported domain types.
-List<String> getAllDomainTypes() => [kDomainProject, kDomainUser];
+List<String> getAllDomainTypes() => [
+  kDomainProject,
+  kDomainUser,
+  kDomainMembership,
+];
 
 /// Returns the collection name for a given domain type.
 /// Example: getCollectionByDomain('project') → 'projects'
@@ -48,6 +60,8 @@ String? getCollectionByDomain(String domainType) {
       return kCollectionProject;
     case kDomainUser:
       return kCollectionUser;
+    case kDomainMembership:
+      return kCollectionMembership;
     default:
       return null;
   }
@@ -61,6 +75,8 @@ String? getDomainByCollection(String collectionName) {
       return kDomainProject;
     case kCollectionUser:
       return kDomainUser;
+    case kCollectionMembership:
+      return kDomainMembership;
     default:
       return null;
   }
