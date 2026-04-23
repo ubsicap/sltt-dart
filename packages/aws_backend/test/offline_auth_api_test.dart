@@ -62,6 +62,120 @@ void main() {
       router = server.getRouter();
     });
 
+    group('logout flow', () {
+      test('logout succeeds with bearer and refreshToken', () async {
+        final registerResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'userId': 'logout-user',
+            'name': 'Logout User',
+            'dateOfBirth': '1990-01-01',
+            'email': 'logout@example.com',
+            'password': 'secret123',
+          }),
+        }, router);
+        expect(registerResponse['statusCode'], equals(200));
+
+        final verifyResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/verify-email',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'email': 'logout@example.com',
+            'code': emailSender.codes['logout@example.com']!.last,
+          }),
+        }, router);
+        expect(verifyResponse['statusCode'], equals(200));
+        final verifyBody =
+            jsonDecode(verifyResponse['body'] as String)
+                as Map<String, dynamic>;
+
+        final logoutResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/logout',
+          'headers': <String, String>{
+            'authorization': 'Bearer ${verifyBody['accessToken']}',
+          },
+          'body': jsonEncode({'refreshToken': verifyBody['refreshToken']}),
+        }, router);
+
+        expect(logoutResponse['statusCode'], equals(200));
+        expect(responseBody(logoutResponse)['status'], equals('logged_out'));
+      });
+
+      test('logout without authorization header returns 401', () async {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/logout',
+          'headers': <String, String>{},
+          'body': jsonEncode({}),
+        }, router);
+        expect(response['statusCode'], equals(401));
+      });
+
+      test('logout with malformed authorization returns 401', () async {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/logout',
+          'headers': <String, String>{'authorization': 'InvalidToken'},
+          'body': jsonEncode({}),
+        }, router);
+        expect(response['statusCode'], equals(401));
+      });
+
+      test('logout revokes provided refresh token', () async {
+        final registerResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'userId': 'logout-revoke-user',
+            'name': 'Logout Revoke',
+            'dateOfBirth': '1990-01-02',
+            'email': 'logout-revoke@example.com',
+            'password': 'secret123',
+          }),
+        }, router);
+        expect(registerResponse['statusCode'], equals(200));
+
+        final verifyResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/verify-email',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'email': 'logout-revoke@example.com',
+            'code': emailSender.codes['logout-revoke@example.com']!.last,
+          }),
+        }, router);
+        expect(verifyResponse['statusCode'], equals(200));
+        final verifyBody =
+            jsonDecode(verifyResponse['body'] as String)
+                as Map<String, dynamic>;
+
+        final logoutResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/logout',
+          'headers': <String, String>{
+            'authorization': 'Bearer ${verifyBody['accessToken']}',
+          },
+          'body': jsonEncode({'refreshToken': verifyBody['refreshToken']}),
+        }, router);
+
+        expect(logoutResponse['statusCode'], equals(200));
+
+        final refreshRetry = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/refresh',
+          'headers': <String, String>{},
+          'body': jsonEncode({'refreshToken': verifyBody['refreshToken']}),
+        }, router);
+
+        expect(refreshRetry['statusCode'], equals(401));
+      });
+    });
+
     tearDown(() async {
       await logSubscription.cancel();
       SlttLogger.setLevel(SlttLogLevel.warning);

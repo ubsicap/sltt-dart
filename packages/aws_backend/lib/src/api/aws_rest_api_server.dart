@@ -196,7 +196,11 @@ class AwsRestApiServer extends BaseRestApiServer {
     {
       'method': 'POST',
       'path': '/api/auth/logout',
-      'description': 'Revoke the current authenticated session.',
+      'description':
+          'Revoke the current authenticated session. Requires an "Authorization: Bearer <accessToken>" header; optionally accepts a "refreshToken" in the request body to revoke the refresh token.',
+      'security': [
+        {'bearerAuth': []},
+      ],
       'requestBody': {
         'type': 'object',
         'properties': {
