@@ -102,7 +102,7 @@ String? _cachedStorageId;
 ///     keys:
 ///       gsi3pk: $sltt#crossDomain#domainType_{project|user|membership}
 ///       gsi3sk_prefix (all of type): states#entityType_{project|user|member}
-///       gsi3sk_prefix (specific):  states#entityType_{project|user|member}#entityId_{projectId|userId|userId}#domainId_{projectId|userId|projectId}#changeAt_orig__{timestamp}
+///       gsi3sk_prefix (specific):  states#entityType_{project|user|member}#entityId_{projectId|userId/'default'|userId}#domainId_{projectId|userId|projectId}#changeAt_orig__{timestamp}
 ///
 /// entity_type_sync_state:
 ///   etsc_write_read:
