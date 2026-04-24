@@ -453,6 +453,90 @@ class AwsRestApiServer extends BaseRestApiServer {
         },
       },
     },
+    {
+      'method': 'GET',
+      'path': '/api/admin/storage/entity-states',
+      'description':
+          'Query GSI3 for root/top-level entity states for a given domainType. '
+          'Supports optional scoping by entityId prefix, cursor-based pagination, '
+          'sparse field projection, and sort direction control.',
+      'parameters': [
+        {
+          'name': 'domainType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'The domain type to query (e.g. "project", "organisation"). '
+              'Used to construct the GSI3 partition key.',
+        },
+        {
+          'name': 'entityIdPrefix',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Optional prefix to scope results to a subset of entity IDs. '
+              'Restricts gsi3sk to items beginning with '
+              '"states#entityType_{rootType}#entityId_{prefix}#".',
+        },
+        {
+          'name': 'limit',
+          'type': 'integer',
+          'required': false,
+          'description':
+              'Maximum number of items to return in a single page. '
+              'If omitted, DynamoDB default page sizing applies.',
+        },
+        {
+          'name': 'cursor',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Opaque base64url-encoded pagination cursor returned as "nextCursor" '
+              'in a previous response. Pass this to retrieve the next page of results.',
+        },
+        {
+          'name': 'fields',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Comma-separated list of attribute names to include in each returned item '
+              '(e.g. "id,name,status"). When omitted, all attributes are returned. '
+              'Uses DynamoDB ProjectionExpression with safe reserved-word aliasing.',
+        },
+        {
+          'name': 'sortDirection',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Sort order for GSI3 results. Accepted values: "asc" (default) or "desc". '
+              'Maps to ScanIndexForward in the DynamoDB Query call.',
+        },
+      ],
+      'responses': [
+        {
+          'status': 200,
+          'description': 'Query succeeded.',
+          'shape': {
+            'items': 'List of decoded entity state objects matching the query.',
+            'nextCursor':
+                'Opaque pagination cursor to pass as "cursor" in the next request. '
+                'Null when no further pages exist.',
+            'count': 'Number of items returned in this page.',
+          },
+        },
+        {
+          'status': 400,
+          'description':
+              'Invalid or missing parameters. Returned when "domainType" is absent, '
+              '"limit" is non-integer, or "sortDirection" is not "asc"/"desc".',
+        },
+        {
+          'status': 500,
+          'description':
+              'Unexpected server error. Check server logs for details.',
+        },
+      ],
+    },
   ];
 
   /// Get the router for use in debugging or custom server setups
