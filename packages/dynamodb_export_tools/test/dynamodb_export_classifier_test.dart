@@ -143,5 +143,65 @@ void main() {
       expect(result.isSupported, isFalse);
       expect(result.unsupportedReason, contains('missing entityType'));
     });
+    group('gsi3 cross-domain', () {
+      test('routes cross-domain entity state items via gsi3', () {
+        final result = classifier.classifyCompositeKeys(
+          pk: r'$sltt#state#domainType_project#domainId_abc123#entityType_project',
+          sk: r'$states#state#entityId_abc123',
+          gsi3pk: r'$sltt#crossDomain#domainType_project',
+          gsi3sk:
+              r'states#entityType_project#entityId_abc123#domainId_abc123#changeAt_orig__2023-01-01T00:00:00Z',
+        );
+
+        expect(result.family, DynamoExportItemFamily.entityState);
+        expect(result.logicalTableName, 'entity_state__project');
+        expect(result.usesRawFallback, isFalse);
+        expect(result.changeAtOrig, '2023-01-01T00:00:00Z');
+      });
+
+      test('routes membership cross-domain entity state via gsi3', () {
+        final result = classifier.classifyCompositeKeys(
+          pk: r'$sltt#state#domainType_project#domainId_proj1#entityType_membership',
+          sk: r'$states#state#entityId_user1',
+          gsi3pk: r'$sltt#crossDomain#domainType_membership',
+          gsi3sk:
+              r'states#entityType_member#entityId_user1#domainId_proj1#changeAt_orig__2023-01-01T00:00:00Z',
+        );
+
+        expect(result.family, DynamoExportItemFamily.entityState);
+        expect(result.logicalTableName, 'entity_state__membership');
+        expect(result.usesRawFallback, isFalse);
+        expect(result.entityId, 'user1');
+        expect(result.domainId, 'proj1');
+        expect(result.changeAtOrig, '2023-01-01T00:00:00Z');
+      });
+
+      test('handles gsi3sk prefix-only form without entityId or changeAt', () {
+        final result = classifier.classifyCompositeKeys(
+          pk: r'$sltt#state#domainType_project#domainId_abc123#entityType_project',
+          sk: r'$states#state#entityId_abc123',
+          gsi3pk: r'$sltt#crossDomain#domainType_project',
+          gsi3sk: r'states#entityType_project',
+        );
+
+        expect(result.family, DynamoExportItemFamily.entityState);
+        expect(result.logicalTableName, 'entity_state__project');
+        expect(result.usesRawFallback, isFalse);
+        expect(result.changeAtOrig, isNull);
+      });
+
+      test('classifyDecodedItem passes gsi3 fields through to classification', () {
+        final result = classifier.classifyDecodedItem({
+          'pk':
+              r'$sltt#state#domainType_project#domainId_abc123#entityType_project',
+          'sk': r'$states#state#entityId_abc123',
+          'gsi3pk': r'$sltt#crossDomain#domainType_project',
+          'gsi3sk':
+              r'states#entityType_project#entityId_abc123#domainId_abc123#changeAt_orig__2023-01-01T00:00:00Z',
+        });
+
+        expect(result.changeAtOrig, '2023-01-01T00:00:00Z');
+      });
+    });
   });
 }

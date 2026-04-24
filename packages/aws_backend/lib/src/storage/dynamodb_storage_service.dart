@@ -93,6 +93,16 @@ String? _cachedStorageId;
 ///     key_fields: [pk_prefix]
 ///     keys:
 ///       pk_prefix: $sltt#state#domainType_project#domainId_abc123
+///   read_cross_domain:
+///     operation: Query GSI3 in getCrossDomainEntityStates
+///     key_fields: [gsi3pk, gsi3sk]
+///     usage_notes: gsi3pk/gsi3sk written for singleton root entities
+///       (e.g. project) where entityId == domainId, but also special cases like
+///       membership where domainId is projectId and entityId is userId
+///     keys:
+///       gsi3pk: $sltt#crossDomain#domainType_{project|user|membership}
+///       gsi3sk_prefix (all of type): states#entityType_{project|user|member}
+///       gsi3sk_prefix (specific):  states#entityType_{project|user|member}#entityId_{projectId|userId|userId}#domainId_{projectId|userId|projectId}#changeAt_orig__{timestamp}
 ///
 /// entity_type_sync_state:
 ///   etsc_write_read:
@@ -449,8 +459,7 @@ class DynamoDBStorageService extends BaseStorageService {
     final parentId = stateJson['data_parentId'] as String? ?? '';
     final parentProp = stateJson['data_parentProp'] as String? ?? '';
     final changeAtOrig = stateJson['change_changeAt_orig_']?.toString() ?? '';
-
-    return {
+    final item = <String, dynamic>{
       'pk': {
         'S': _statePrimaryKey(
           domainType: state.domainType,
@@ -467,9 +476,30 @@ class DynamoDBStorageService extends BaseStorageService {
           parentId: parentId,
         ),
       },
-      'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, changeAtOrig: changeAtOrig)},
+      'gsi2sk': {
+        'S': _stateGsi2SortKey(
+          parentProp: parentProp,
+          changeAtOrig: changeAtOrig,
+        ),
+      },
       ..._encodeJson(stateJson),
     };
+
+    // Conditionally add GSI3 keys only for root/top-level entities. GSI3
+    // indexes root entities by domainType and entityType+entityId+domainId+changeAt_orig_.
+    // by default we want to index singleton root entities (e.g. project) identified by their  matching entityId and domainId. However, we also should index domainTypes like membership have a list where domainId is projectId and entityId is userId
+    if ((state.entityId == state.change_domainId) ||
+        getDomainRootEntityType(state.domainType) == state.entityType) {
+      item['gsi3pk'] = {
+        'S': '\$sltt#crossDomain#domainType_${state.domainType}',
+      };
+      item['gsi3sk'] = {
+        'S':
+            'states#entityType_${state.entityType}#entityId_${state.entityId}#domainId_${state.change_domainId}#changeAt_orig__$changeAtOrig',
+      };
+    }
+
+    return item;
   }
 
   String _stateBatchKey(BaseEntityState state) {
@@ -1373,6 +1403,103 @@ class DynamoDBStorageService extends BaseStorageService {
     };
   }
 
+  /// Query GSI3 for root/top-level entity states for a domainType.
+  /// If `entityIdPrefix` is provided, restricts results to items whose
+  /// `gsi3sk` begins with `states#entityId_{entityIdPrefix}#` (useful to scope to a
+  /// single user's entityId prefix).
+  Future<EntityStateQueryResult> getCrossDomainEntityStates({
+    required String domainType,
+    String? entityIdPrefix,
+    int? limit,
+    String? cursor,
+    List<String>? projectionExpressionFields,
+    String sortDirection = 'asc',
+  }) async {
+    await initialize();
+
+    final gsi3pk = '\$sltt#crossDomain#domainType_$domainType';
+    final rootEntityType = getDomainRootEntityType(domainType);
+
+    final payload = <String, dynamic>{
+      'TableName': tableName,
+      'IndexName': 'GSI3',
+      'ScanIndexForward': sortDirection == 'asc',
+    };
+
+    if (limit != null) {
+      payload['Limit'] = limit;
+    }
+
+    // FIX 2 & 3: base64-decode → JSON-parse the cursor into the full key map.
+    // DynamoDB requires ALL key attributes (table pk+sk AND GSI gsi3pk+gsi3sk).
+    if (cursor != null) {
+      final decoded = utf8.decode(base64Url.decode(cursor));
+      final keyMap = jsonDecode(decoded) as Map<String, dynamic>;
+      payload['ExclusiveStartKey'] = keyMap;
+    }
+
+    // Use ExpressionAttributeNames to safely alias every projected field,
+    // guarding against reserved-word collisions (e.g. "name", "status", "data").
+    if (projectionExpressionFields != null &&
+        projectionExpressionFields.isNotEmpty) {
+      final nameAliases = <String, String>{};
+      final projectionParts = <String>[];
+
+      for (final field in projectionExpressionFields) {
+        final alias = '#proj_$field';
+        nameAliases[alias] = field;
+        projectionParts.add(alias);
+      }
+
+      payload['ProjectionExpression'] = projectionParts.join(', ');
+      // Merge into ExpressionAttributeNames (may already exist from key conditions)
+      payload['ExpressionAttributeNames'] = {
+        ...?payload['ExpressionAttributeNames'] as Map<String, String>?,
+        ...nameAliases,
+      };
+    }
+
+    String keyCondition = 'gsi3pk = :pk';
+    final expressionValues = <String, dynamic>{
+      ':pk': {'S': gsi3pk},
+    };
+
+    if (entityIdPrefix != null && entityIdPrefix.isNotEmpty) {
+      keyCondition += ' AND begins_with(gsi3sk, :skPrefix)';
+      expressionValues[':skPrefix'] = {
+        'S': 'states#entityType_$rootEntityType#entityId_$entityIdPrefix#',
+      };
+    }
+
+    payload['KeyConditionExpression'] = keyCondition;
+    payload['ExpressionAttributeValues'] = expressionValues;
+
+    final response = await _dynamoRequest('Query', payload);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to query root entity states: ${response.body}');
+    }
+
+    final body =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    final items = body['Items'] as List<dynamic>? ?? <dynamic>[];
+
+    final results = <Map<String, dynamic>>[];
+    for (final item in items) {
+      results.add(
+        _decodeItem(item as Map<String, dynamic>, excludeStorageKeys: true),
+      );
+    }
+
+    // encode LastEvaluatedKey → nextCursor so callers can paginate.
+    String? nextCursor;
+    if (body.containsKey('LastEvaluatedKey')) {
+      final lek = body['LastEvaluatedKey'];
+      nextCursor = base64Url.encode(utf8.encode(jsonEncode(lek)));
+    }
+
+    return EntityStateQueryResult(items: results, nextCursor: nextCursor);
+  }
+
   @override
   Future<void> upsertEntityTypeSyncStates({
     required String domainType,
@@ -2007,7 +2134,12 @@ class DynamoDBStorageService extends BaseStorageService {
           parentId: parentId,
         ),
       },
-      'gsi2sk': {'S': _stateGsi2SortKey(parentProp: parentProp, changeAtOrig: changeAtOrig)},
+      'gsi2sk': {
+        'S': _stateGsi2SortKey(
+          parentProp: parentProp,
+          changeAtOrig: changeAtOrig,
+        ),
+      },
       ..._encodeJson({
         ...stateJson,
         'stateDataHash': stateDataHash,
@@ -2348,7 +2480,9 @@ class DynamoDBStorageService extends BaseStorageService {
               entry.key == 'gsi1pk' ||
               entry.key == 'gsi1sk' ||
               entry.key == 'gsi2pk' ||
-              entry.key == 'gsi2sk')) {
+              entry.key == 'gsi2sk' ||
+              entry.key == 'gsi3pk' ||
+              entry.key == 'gsi3sk')) {
         continue;
       }
       result[entry.key] = _decodeValue(entry.value);
@@ -2440,4 +2574,13 @@ class DynamoDBStorageService extends BaseStorageService {
     }
     return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
   }
+}
+
+/// Result wrapper so callers can paginate using [nextCursor].
+class EntityStateQueryResult {
+  final List<Map<String, dynamic>> items;
+  final String?
+  nextCursor; // base64(jsonStringified(LastEvaluatedKey)), null if no more pages
+
+  const EntityStateQueryResult({required this.items, this.nextCursor});
 }

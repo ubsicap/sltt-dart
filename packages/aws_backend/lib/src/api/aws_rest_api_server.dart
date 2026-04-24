@@ -487,6 +487,89 @@ class AwsRestApiServer extends BaseRestApiServer {
     router.post('/api/admin/storage/export/create', _handleExportCreate);
     router.get('/api/admin/storage/export/list', _handleExportList);
     router.get('/api/admin/storage/export/list-files', _handleExportListFiles);
+
+    router.get(
+      '/api/admin/storage/entity-states',
+      _handleGetCrossDomainEntityStates,
+    );
+  }
+
+  Future<Response> _handleGetCrossDomainEntityStates(Request request) async {
+    try {
+      // --- Required param ---
+      final domainType = request.url.queryParameters['domainType'];
+      if (domainType == null || domainType.isEmpty) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Missing required query parameter: domainType',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // --- Optional params ---
+      final entityIdPrefix = request.url.queryParameters['entityIdPrefix'];
+      final cursor = request.url.queryParameters['cursor'];
+      final sortDirection =
+          request.url.queryParameters['sortDirection'] ?? 'asc';
+
+      final limitRaw = request.url.queryParameters['limit'];
+      final int? limit = limitRaw != null ? int.tryParse(limitRaw) : null;
+      if (limitRaw != null && limit == null) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Invalid value for limit: must be an integer',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      if (sortDirection != 'asc' && sortDirection != 'desc') {
+        return Response(
+          400,
+          body: jsonEncode({'error': 'sortDirection must be "asc" or "desc"'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Comma-separated field names, e.g. ?fields=id,name,status
+      final fieldsRaw = request.url.queryParameters['fields'];
+      final List<String>? projectionFields = fieldsRaw
+          ?.split(',')
+          .map((f) => f.trim())
+          .where((f) => f.isNotEmpty)
+          .toList();
+
+      final dynamo = storage as DynamoDBStorageService;
+
+      final result = await dynamo.getCrossDomainEntityStates(
+        domainType: domainType,
+        entityIdPrefix: entityIdPrefix,
+        limit: limit,
+        cursor: cursor,
+        projectionExpressionFields: projectionFields,
+        sortDirection: sortDirection,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'items': result.items
+              .map((item) => jsonDecode(stableStringify(item)))
+              .toList(), // <-- add this
+          'nextCursor': result.nextCursor,
+          'count': result.items.length,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, st) {
+      SlttLogger.logger.severe('getCrossDomainEntityStates failed: $e\n$st');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
   }
 
   Future<Response> _handleAuthRegister(Request request) async {
