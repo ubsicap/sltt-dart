@@ -1,4 +1,6 @@
 // Generated helper constants and accessors for domain types and collections
+import 'package:sltt_core/sltt_core.dart' show EntityType;
+
 const String kDomainProject = 'project';
 const String kCollectionProject = 'projects';
 
@@ -45,12 +47,64 @@ enum DomainType {
   }
 }
 
+const String kDomainEntityRootParentId = 'root';
+
+class DomainTypeProfile {
+  final DomainType domainType;
+  final EntityType domainIdEntityType;
+  final String? rootEntityIdParentProp;
+  final EntityType rootEntityIdEntityType;
+
+  String get rootParentId => kDomainEntityRootParentId;
+  bool get hasSeparateDomainIdEntityType =>
+      domainIdEntityType != rootEntityIdEntityType;
+
+  const DomainTypeProfile({
+    required this.domainType,
+    required this.domainIdEntityType,
+    required this.rootEntityIdEntityType,
+    required this.rootEntityIdParentProp,
+  });
+}
+
+Map<String, DomainTypeProfile> _domainTypeRootEntityProfiles = {
+  kDomainProject: const DomainTypeProfile(
+    domainType: DomainType.project,
+    domainIdEntityType: EntityType.project,
+    rootEntityIdEntityType: EntityType.project,
+    rootEntityIdParentProp: kCollectionProject,
+  ),
+  kDomainUser: const DomainTypeProfile(
+    domainType: DomainType.user,
+    domainIdEntityType: EntityType.userProfile,
+    rootEntityIdEntityType: EntityType.userProfile,
+    rootEntityIdParentProp: kCollectionUser,
+  ),
+
+  /// Note: membership domain has a different entity type for domainId (project) vs rootEntityId (member)
+  /// this allows us to capture multiple members per project,
+  /// and also a reverse GSI on entityId (userId) to query all memberships
+  /// for a user across all their projects.
+  kDomainMembership: const DomainTypeProfile(
+    domainType: DomainType.membership,
+    domainIdEntityType: EntityType.project,
+    rootEntityIdEntityType: EntityType.member,
+    rootEntityIdParentProp: kCollectionMembership,
+  ),
+};
+
+DomainTypeProfile? getDomainTypeProfile(String domainType) {
+  return _domainTypeRootEntityProfiles[domainType];
+}
+
+String? getDomainRootEntityType(String domainType) {
+  return _domainTypeRootEntityProfiles[domainType]
+      ?.rootEntityIdEntityType
+      .value;
+}
+
 /// Returns all supported domain types.
-List<String> getAllDomainTypes() => [
-  kDomainProject,
-  kDomainUser,
-  kDomainMembership,
-];
+List<String> getAllDomainTypes() => _domainTypeRootEntityProfiles.keys.toList();
 
 /// Returns the collection name for a given domain type.
 /// Example: getCollectionByDomain('project') → 'projects'

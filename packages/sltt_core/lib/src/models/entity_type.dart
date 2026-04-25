@@ -1,6 +1,5 @@
 // import 'dart:math';
 
-import '../api/domain_types.dart';
 import 'id_service.dart';
 
 // Top-level constants for entity type string values. Use these wherever a
@@ -15,10 +14,6 @@ const String kEntityTypeUserPreferences = 'user_preferences';
 const String kEntityTypeUserPreferencesCollection = 'user_preferences';
 
 const String kEntityIdDefaultUserPreferences = 'default_preferences';
-
-const String kDomainProjectRootEntityType = kEntityTypeProject;
-const String kDomainUserRootEntityType = kEntityTypeUserProfile;
-const String kDomainMembershipRootEntityType = kEntityTypeMember;
 
 // Project entities
 const String kEntityTypeMissing = 'missing';
@@ -159,19 +154,6 @@ String? getEntityByCollection(String collectionName) {
       return kEntityTypeComment;
     case kEntityTypeCommentReactionCollection:
       return kEntityTypeCommentReaction;
-    default:
-      return null;
-  }
-}
-
-String? getDomainRootEntityType(String domainType) {
-  switch (domainType) {
-    case kDomainProject:
-      return kDomainProjectRootEntityType;
-    case kDomainUser:
-      return kDomainUserRootEntityType;
-    case kDomainMembership:
-      return kDomainMembershipRootEntityType;
     default:
       return null;
   }
