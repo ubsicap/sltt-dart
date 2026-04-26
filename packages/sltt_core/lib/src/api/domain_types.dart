@@ -56,8 +56,8 @@ class DomainTypeProfile {
   final EntityType rootEntityIdEntityType;
 
   String get rootParentId => kDomainEntityRootParentId;
-  bool get hasSeparateDomainIdEntityType =>
-      domainIdEntityType != rootEntityIdEntityType;
+  bool get hasSharedEntityType => domainIdEntityType == rootEntityIdEntityType;
+  bool get hasSeparateDomainIdEntityType => !hasSharedEntityType;
 
   const DomainTypeProfile({
     required this.domainType,

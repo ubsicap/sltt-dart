@@ -1990,17 +1990,27 @@ abstract class BaseRestApiServer {
       }
       final entityType = resolvedEntity['entityType'] as String;
 
+      final domainTypeProfile = getDomainTypeProfile(domainType);
       final entityId = request.params['entityId'];
-      if (entityId == null || entityId.isEmpty) {
+      final shouldUseDomainIdAsEntityId =
+          domainTypeProfile != null &&
+          domainTypeProfile.rootEntityIdEntityType.value == entityType &&
+          domainTypeProfile.hasSharedEntityType;
+      if (!shouldUseDomainIdAsEntityId &&
+          (entityId == null || entityId.isEmpty)) {
         return _errorResponse('Entity ID is required', 400);
       }
+
+      final String resolvedEntityId = shouldUseDomainIdAsEntityId
+          ? domainId
+          : entityId!;
 
       // Get entity state data
       final stateData = await storage.getEntityState(
         domainType: domainType,
         domainId: domainId,
         entityType: entityType,
-        entityId: entityId,
+        entityId: resolvedEntityId,
       );
 
       return Response.ok(
@@ -2008,7 +2018,7 @@ abstract class BaseRestApiServer {
           'domainId': domainId,
           '${domainType}Id': domainId,
           'entityType': entityType,
-          'entityId': entityId,
+          'entityId': resolvedEntityId,
           'state': jsonDecode(stableStringify(stateData?.toJson())) ?? {},
           'timestamp': DateTime.now().toUtc().toIso8601String(),
         }),

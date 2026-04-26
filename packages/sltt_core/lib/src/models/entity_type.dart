@@ -6,8 +6,6 @@ import 'id_service.dart';
 // stable string literal for an entity type is needed to avoid duplication.
 
 // User entities
-const String kEntityTypeUser = 'user';
-const String kEntityTypeUserCollection = 'users';
 const String kEntityTypeUserProfile = 'user_profile';
 const String kEntityTypeUserProfileCollection = 'user_profiles';
 const String kEntityTypeUserPreferences = 'user_preferences';
@@ -75,8 +73,6 @@ String? getCollectionByEntity(String entityType) {
       return kEntityTypeStageCollection;
     case kEntityTypeTask:
       return kEntityTypeTaskCollection;
-    case kEntityTypeUser:
-      return kEntityTypeUserCollection;
     case kEntityTypeMember:
       return kEntityTypeMemberCollection;
     case kEntityTypeMessage:
@@ -126,8 +122,6 @@ String? getEntityByCollection(String collectionName) {
       return kEntityTypeStage;
     case kEntityTypeTaskCollection:
       return kEntityTypeTask;
-    case kEntityTypeUserCollection:
-      return kEntityTypeUser;
     case kEntityTypeMemberCollection:
       return kEntityTypeMember;
     case kEntityTypeMessageCollection:
@@ -172,7 +166,6 @@ enum EntityType {
   plan(kEntityTypePlan),
   stage(kEntityTypeStage),
   task(kEntityTypeTask),
-  user(kEntityTypeUser),
   member(kEntityTypeMember),
   message(kEntityTypeMessage),
   portion(kEntityTypePortion),
@@ -204,7 +197,6 @@ enum EntityType {
     kEntityTypePlan: 'plan',
     kEntityTypeStage: 'stag',
     kEntityTypeTask: 'task',
-    kEntityTypeUser: 'user',
     kEntityTypeMember: 'memb',
     kEntityTypeMessage: 'mesg',
     kEntityTypePortion: 'prtn',

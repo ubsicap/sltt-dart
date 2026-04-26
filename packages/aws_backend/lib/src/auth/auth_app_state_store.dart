@@ -137,7 +137,7 @@ class AuthAppStateStore {
           domainType: kDomainUser,
           domainId: principal.userId,
           entityType: kEntityTypeUserProfile,
-          entityId: 'default',
+          entityId: principal.userId,
           parentProp: kEntityTypeUserProfileCollection,
           changeBy: changeBy,
           deleted: deleted,

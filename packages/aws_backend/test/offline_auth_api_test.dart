@@ -255,12 +255,6 @@ void main() {
           domainType: 'user',
           domainId: verifyBody['userId'] as String,
           entityType: kEntityTypeUserProfile,
-          entityId: 'default',
-        );
-        final userState = await storage.getEntityState(
-          domainType: 'user',
-          domainId: verifyBody['userId'] as String,
-          entityType: kEntityTypeUser,
           entityId: verifyBody['userId'] as String,
         );
         expect(profileState, isA<DynamoEntityState>());
@@ -274,7 +268,6 @@ void main() {
               profileState?.toJson()['data_emailVerified'],
           isTrue,
         );
-        expect(userState, isNull);
       });
 
       test('refresh rotates refresh token and invalidates old token', () async {
