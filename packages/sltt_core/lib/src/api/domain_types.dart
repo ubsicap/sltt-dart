@@ -88,6 +88,10 @@ Map<String, DomainTypeProfile> _domainTypeRootEntityProfiles = {
   kDomainMembership: const DomainTypeProfile(
     domainType: DomainType.membership,
     domainIdEntityType: EntityType.project,
+
+    /// actually uses id of EntityType.user for foreign key reference to user
+    /// but the data stored in the membership table includes role info
+    /// that belongs to the EntityType.member
     rootEntityIdEntityType: EntityType.member,
     rootEntityIdParentProp: kCollectionMembership,
   ),
