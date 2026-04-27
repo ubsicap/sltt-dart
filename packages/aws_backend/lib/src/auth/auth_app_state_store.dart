@@ -120,8 +120,7 @@ class AuthAppStateStore {
               .trim()
               .toLowerCase();
       final deleted = json['data_deleted'] as bool? ?? false;
-      if (!deleted &&
-          (role == 'admin' || role == 'superadmin' || role == 'super_admin')) {
+      if (!deleted && (role == MemberType.admin.name)) {
         adminProjects.add(projectId);
       }
     }
