@@ -13,6 +13,10 @@ const String kEntityTypeUserPreferencesCollection = 'user_preferences';
 
 const String kEntityIdDefaultUserPreferences = 'default_preferences';
 
+// Membership entities
+const String kEntityTypeMember = 'member';
+const String kEntityTypeMemberCollection = 'members'; // unused. use memberships
+
 // Project entities
 const String kEntityTypeMissing = 'missing';
 const String kEntityTypeUnknown = 'unknown';
@@ -28,8 +32,6 @@ const String kEntityTypeStage = 'stage';
 const String kEntityTypeStageCollection = 'stages';
 const String kEntityTypeTask = 'task';
 const String kEntityTypeTaskCollection = 'tasks';
-const String kEntityTypeMember = 'member';
-const String kEntityTypeMemberCollection = 'members';
 const String kEntityTypeMessage = 'message';
 const String kEntityTypeMessageCollection = 'messages';
 const String kEntityTypePortion = 'portion';

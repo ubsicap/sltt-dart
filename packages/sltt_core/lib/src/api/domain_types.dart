@@ -52,7 +52,7 @@ const String kDomainEntityRootParentId = 'root';
 class DomainTypeProfile {
   final DomainType domainType;
   final EntityType domainIdEntityType;
-  final String? rootEntityIdParentProp;
+  final String rootEntityIdParentProp;
   final EntityType rootEntityIdEntityType;
 
   String get rootParentId => kDomainEntityRootParentId;

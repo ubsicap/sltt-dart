@@ -1007,7 +1007,7 @@ void main() {
           entityState: DynamoEntityState.fromJson({
             'entityId': adminUserId,
             'entityType': kEntityTypeMember,
-            'domainType': 'project',
+            'domainType': kDomainMembership,
             'unknownJson': '{}',
             'change_domainId': 'project-1',
             'change_domainId_orig_': 'project-1',
@@ -1019,11 +1019,11 @@ void main() {
             'change_changeBy_orig_': 'seed',
             'change_storedAt': DateTime.now().toUtc().toIso8601String(),
             'change_storedAt_orig_': DateTime.now().toUtc().toIso8601String(),
-            'data_parentId': '',
+            'data_parentId': kDomainEntityRootParentId,
             'data_parentId_changeAt_': DateTime.now().toUtc().toIso8601String(),
             'data_parentId_cid_': 'admin-member',
             'data_parentId_changeBy_': 'seed',
-            'data_parentProp': kEntityTypeMemberCollection,
+            'data_parentProp': kCollectionMembership,
             'data_parentProp_changeAt_': DateTime.now()
                 .toUtc()
                 .toIso8601String(),
@@ -1152,7 +1152,7 @@ void main() {
             entityState: DynamoEntityState.fromJson({
               'entityId': 'admin-user',
               'entityType': kEntityTypeMember,
-              'domainType': 'project',
+              'domainType': kDomainMembership,
               'unknownJson': '{}',
               'change_domainId': 'project-1',
               'change_domainId_orig_': 'project-1',
@@ -1168,7 +1168,7 @@ void main() {
               'data_parentId_changeAt_': now.toIso8601String(),
               'data_parentId_cid_': 'admin-member',
               'data_parentId_changeBy_': 'seed',
-              'data_parentProp': kEntityTypeMemberCollection,
+              'data_parentProp': kCollectionMembership,
               'data_parentProp_changeAt_': now.toIso8601String(),
               'data_parentProp_cid_': 'admin-member',
               'data_parentProp_changeBy_': 'seed',
@@ -1287,7 +1287,7 @@ void main() {
             entityState: DynamoEntityState.fromJson({
               'entityId': adminUserId,
               'entityType': kEntityTypeMember,
-              'domainType': 'project',
+              'domainType': kDomainMembership,
               'unknownJson': '{}',
               'change_domainId': 'project-1',
               'change_domainId_orig_': 'project-1',
@@ -1305,7 +1305,7 @@ void main() {
                   .toIso8601String(),
               'data_parentId_cid_': 'admin-member',
               'data_parentId_changeBy_': 'seed',
-              'data_parentProp': kEntityTypeMemberCollection,
+              'data_parentProp': kCollectionMembership,
               'data_parentProp_changeAt_': DateTime.now()
                   .toUtc()
                   .toIso8601String(),
@@ -1371,13 +1371,13 @@ void main() {
           expect(updatedPrincipal?.assignedProjectIds, equals(['project-2']));
 
           final removedMembership = await storage.getEntityState(
-            domainType: 'project',
+            domainType: kDomainMembership,
             domainId: 'project-1',
             entityType: kEntityTypeMember,
             entityId: 'adhoc-local-user',
           );
           final retainedMembership = await storage.getEntityState(
-            domainType: 'project',
+            domainType: kDomainMembership,
             domainId: 'project-2',
             entityType: kEntityTypeMember,
             entityId: 'adhoc-local-user',

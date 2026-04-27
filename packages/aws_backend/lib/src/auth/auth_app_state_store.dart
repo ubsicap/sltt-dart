@@ -34,11 +34,12 @@ class AuthAppStateStore {
     for (final projectId in addSet) {
       changes.add(
         _buildChangeJson(
-          domainType: kDomainProject,
+          domainType: kDomainMembership,
           domainId: projectId,
           entityType: kEntityTypeMember,
           entityId: principal.userId,
-          parentProp: kEntityTypeMemberCollection,
+          parentProp: kCollectionMembership,
+          parentId: kDomainEntityRootParentId,
           changeBy: changeBy,
           deleted: false,
           customFields: {
@@ -56,11 +57,12 @@ class AuthAppStateStore {
     for (final projectId in removeSet) {
       changes.add(
         _buildChangeJson(
-          domainType: kDomainProject,
+          domainType: kDomainMembership,
           domainId: projectId,
           entityType: kEntityTypeMember,
           entityId: principal.userId,
-          parentProp: kEntityTypeMemberCollection,
+          parentProp: kCollectionMembership,
+          parentId: kDomainEntityRootParentId,
           changeBy: changeBy,
           deleted: true,
           customFields: {
@@ -97,13 +99,14 @@ class AuthAppStateStore {
   }
 
   Future<List<String>> getAdminProjectIdsForUser(String userId) async {
+    // TODO: use getCrossDomainEntityStates
     final projectIds = await _storage.getAllDomainIds(
-      domainType: kDomainProject,
+      domainType: kDomainMembership,
     );
     final adminProjects = <String>[];
     for (final projectId in projectIds) {
       final state = await _storage.getEntityState(
-        domainType: kDomainProject,
+        domainType: kDomainMembership,
         domainId: projectId,
         entityType: kEntityTypeMember,
         entityId: userId,
@@ -139,6 +142,7 @@ class AuthAppStateStore {
           entityType: kEntityTypeUserProfile,
           entityId: principal.userId,
           parentProp: kEntityTypeUserProfileCollection,
+          parentId: kDomainEntityRootParentId,
           changeBy: changeBy,
           deleted: deleted,
           customFields: {
@@ -199,6 +203,7 @@ class AuthAppStateStore {
     required String entityId,
     required String entityType,
     required String parentProp,
+    required String parentId,
     required String changeBy,
     required Map<String, dynamic> customFields,
     bool deleted = false,
@@ -206,7 +211,7 @@ class AuthAppStateStore {
     final now = DateTime.now().toUtc();
     final entity = EntityType.tryFromString(entityType) ?? EntityType.unknown;
     final data = <String, dynamic>{
-      'parentId': '',
+      'parentId': parentId,
       'parentProp': parentProp,
       'deleted': deleted,
       ...customFields,
