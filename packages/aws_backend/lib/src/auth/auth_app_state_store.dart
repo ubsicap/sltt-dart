@@ -99,6 +99,7 @@ class AuthAppStateStore {
   }
 
   Future<List<String>> getAdminProjectIdsForUser(String userId) async {
+    // TODO: detect super admin role?
     // TODO: use getCrossDomainEntityStates
     final projectIds = await _storage.getAllDomainIds(
       domainType: kDomainMembership,
