@@ -14,6 +14,7 @@ export 'src/models/entity_type.dart';
 export 'src/models/enums.dart';
 export 'src/models/id_service.dart';
 export 'src/models/media_object_type.dart';
+export 'src/models/membership.dart';
 export 'src/models/project_data_fields.dart';
 export 'src/models/serializable_group.dart';
 export 'src/models/sync_state.dart';
