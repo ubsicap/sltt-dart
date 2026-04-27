@@ -1412,7 +1412,7 @@ class DynamoDBStorageService extends BaseStorageService {
     String? entityIdPrefix,
     int? limit,
     String? cursor,
-    List<String>? projectionExpressionFields,
+    Set<String>? projectionExpressionFields,
     String sortDirection = 'asc',
   }) async {
     await initialize();

@@ -620,11 +620,11 @@ class AwsRestApiServer extends BaseRestApiServer {
 
       // Comma-separated field names, e.g. ?fields=id,name,status
       final fieldsRaw = request.url.queryParameters['fields'];
-      final List<String>? projectionFields = fieldsRaw
+      final projectionFields = fieldsRaw
           ?.split(',')
           .map((f) => f.trim())
           .where((f) => f.isNotEmpty)
-          .toList();
+          .toSet();
 
       final dynamo = storage as DynamoDBStorageService;
 

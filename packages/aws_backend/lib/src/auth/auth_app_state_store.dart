@@ -1,12 +1,14 @@
 import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
+import 'package:aws_backend/src/storage/dynamodb_storage_service.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'auth_models.dart';
 
 class AuthAppStateStore {
-  AuthAppStateStore({required BaseStorageService storage}) : _storage = storage;
+  AuthAppStateStore({required BaseStorageService storage})
+    : _storage = storage as DynamoDBStorageService;
 
-  final BaseStorageService _storage;
+  final DynamoDBStorageService _storage;
   static const String _authSourceStorageId = 'auth-backend';
 
   Future<void> upsertVerifiedUserProfile({
@@ -101,9 +103,17 @@ class AuthAppStateStore {
   Future<List<String>> getAdminProjectIdsForUser(String userId) async {
     // TODO: detect super admin role?
     // TODO: use getCrossDomainEntityStates
-    final projectIds = await _storage.getAllDomainIds(
-      domainType: kDomainMembership,
-    );
+    const String changeDomainIdField = 'change_domainId';
+    final projectIds = await _storage
+        .getCrossDomainEntityStates(
+          domainType: kDomainMembership,
+          entityIdPrefix: userId,
+          projectionExpressionFields: {changeDomainIdField},
+        )
+        .then(
+          (result) =>
+              result.items.map((s) => s[changeDomainIdField] as String).toSet(),
+        );
     final adminProjects = <String>[];
     for (final projectId in projectIds) {
       final state = await _storage.getEntityState(
