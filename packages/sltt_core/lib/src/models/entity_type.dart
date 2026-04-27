@@ -15,7 +15,7 @@ const String kEntityIdDefaultUserPreferences = 'default_preferences';
 
 // Membership entities
 const String kEntityTypeMember = 'member';
-const String kEntityTypeMemberCollection = 'members'; // unused. use memberships
+const String kEntityTypeMemberCollection = 'members';
 
 // Project entities
 const String kEntityTypeMissing = 'missing';
