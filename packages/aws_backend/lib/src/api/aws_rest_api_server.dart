@@ -573,6 +573,16 @@ class AwsRestApiServer extends BaseRestApiServer {
     router.get('/api/admin/storage/export/list-files', _handleExportListFiles);
 
     router.get(
+      '/api/cross-domain/<domainType>/states/<entityType>/<entityId>',
+      _handleGetCrossDomainEntityStates,
+    );
+
+    router.get(
+      '/api/admin/cross-domain/<domainType>/states/<entityType>',
+      _handleGetCrossDomainEntityStates,
+    );
+
+    router.get(
       '/api/admin/storage/entity-states',
       _handleGetCrossDomainEntityStates,
     );
@@ -593,7 +603,9 @@ class AwsRestApiServer extends BaseRestApiServer {
       }
 
       // --- Optional params ---
-      final entityIdPrefix = request.url.queryParameters['entityIdPrefix'];
+      final entityIdPrefix =
+          request.url.queryParameters['entityId'] ??
+          request.url.queryParameters['entityIdPrefix'];
       final cursor = request.url.queryParameters['cursor'];
       final sortDirection =
           request.url.queryParameters['sortDirection'] ?? 'asc';
