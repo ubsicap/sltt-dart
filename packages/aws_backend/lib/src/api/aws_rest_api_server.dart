@@ -455,44 +455,30 @@ class AwsRestApiServer extends BaseRestApiServer {
     },
     {
       'method': 'GET',
-      'path': '/api/admin/storage/entity-states',
+      'path': '/api/cross-domain/<domainType>/states/<entityType>/<entityId>',
       'description':
-          'Query GSI3 for root/top-level entity states for a given domainType. '
-          'Supports optional scoping by entityId prefix, cursor-based pagination, '
-          'sparse field projection, and sort direction control.',
+          'Retrieve a single cross-domain entity state by domain type, entity type, and entity ID.',
       'parameters': [
         {
           'name': 'domainType',
           'type': 'string',
           'required': true,
           'description':
-              'The domain type to query (e.g. "project", "organisation"). '
-              'Used to construct the GSI3 partition key.',
+              'The domain type for the cross-domain state (e.g. "project", "membership").',
         },
         {
-          'name': 'entityIdPrefix',
+          'name': 'entityType',
           'type': 'string',
-          'required': false,
+          'required': true,
           'description':
-              'Optional prefix to scope results to a subset of entity IDs. '
-              'Restricts gsi3sk to items beginning with '
-              '"states#entityType_{rootType}#entityId_{prefix}#".',
+              'The entity type for the requested state (e.g. "project", "member").',
         },
         {
-          'name': 'limit',
-          'type': 'integer',
-          'required': false,
-          'description':
-              'Maximum number of items to return in a single page. '
-              'If omitted, DynamoDB default page sizing applies.',
-        },
-        {
-          'name': 'cursor',
+          'name': 'entityId',
           'type': 'string',
-          'required': false,
+          'required': true,
           'description':
-              'Opaque base64url-encoded pagination cursor returned as "nextCursor" '
-              'in a previous response. Pass this to retrieve the next page of results.',
+              'The identifier of the entity whose state should be returned.',
         },
         {
           'name': 'fields',
@@ -500,16 +486,88 @@ class AwsRestApiServer extends BaseRestApiServer {
           'required': false,
           'description':
               'Comma-separated list of attribute names to include in each returned item '
-              '(e.g. "id,name,status"). When omitted, all attributes are returned. '
-              'Uses DynamoDB ProjectionExpression with safe reserved-word aliasing.',
+              '(e.g. "id,name,status"). When omitted, all attributes are returned.',
+        },
+      ],
+      'responses': [
+        {
+          'status': 200,
+          'description': 'Query succeeded.',
+          'shape': {
+            'items': 'List of decoded entity state objects matching the query.',
+            'nextCursor':
+                'Opaque pagination cursor to pass as "cursor" in the next request. '
+                'Null when no further pages exist.',
+            'count': 'Number of items returned in this page.',
+          },
+        },
+        {'status': 400, 'description': 'Invalid or missing path parameters.'},
+        {
+          'status': 403,
+          'description':
+              'Super admin privileges are required to access this endpoint without an entityId.',
+        },
+        {
+          'status': 500,
+          'description':
+              'Unexpected server error. Check server logs for details.',
+        },
+      ],
+    },
+    {
+      'method': 'GET',
+      'path': '/api/super/cross-domain/<domainType>/states/<entityType>',
+      'description':
+          'Query cross-domain entity states for a domain type and entity type. '
+          'This route requires super user privileges when an entityId is not supplied.',
+      'parameters': [
+        {
+          'name': 'domainType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'The domain type to query (e.g. "project", "membership").',
+        },
+        {
+          'name': 'entityType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'The entity type to query states for (e.g. "project", "member").',
+        },
+        {
+          'name': 'entityId',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Optional entity ID to scope results to a specific entity.',
+        },
+        {
+          'name': 'limit',
+          'type': 'integer',
+          'required': false,
+          'description': 'Maximum number of items to return in a single page.',
+        },
+        {
+          'name': 'cursor',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Opaque pagination cursor returned as "nextCursor" in a previous response.',
+        },
+        {
+          'name': 'fields',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Comma-separated list of attribute names to include in each returned item.',
         },
         {
           'name': 'sortDirection',
           'type': 'string',
           'required': false,
           'description':
-              'Sort order for GSI3 results. Accepted values: "asc" (default) or "desc". '
-              'Maps to ScanIndexForward in the DynamoDB Query call.',
+              'Sort order for results. Accepted values: "asc" (default) or "desc".',
         },
       ],
       'responses': [
@@ -527,8 +585,12 @@ class AwsRestApiServer extends BaseRestApiServer {
         {
           'status': 400,
           'description':
-              'Invalid or missing parameters. Returned when "domainType" is absent, '
-              '"limit" is non-integer, or "sortDirection" is not "asc"/"desc".',
+              'Invalid or missing path parameters, or invalid pagination settings.',
+        },
+        {
+          'status': 403,
+          'description':
+              'Super user privileges are required to query entity states without an entityId.',
         },
         {
           'status': 500,
@@ -583,29 +645,49 @@ class AwsRestApiServer extends BaseRestApiServer {
     );
 
     router.get(
-      '/api/admin/storage/entity-states',
+      '/api/super/cross-domain/<domainType>/states/<entityType>',
       _handleGetCrossDomainEntityStates,
     );
   }
 
   Future<Response> _handleGetCrossDomainEntityStates(Request request) async {
     try {
-      // --- Required param ---
-      final domainType = request.url.queryParameters['domainType'];
+      // --- Required params ---
+      final domainType = request.params['domainType'];
       if (domainType == null || domainType.isEmpty) {
         return Response(
           400,
           body: jsonEncode({
-            'error': 'Missing required query parameter: domainType',
+            'error': 'Missing required path parameter: domainType',
           }),
           headers: {'Content-Type': 'application/json'},
         );
       }
 
-      // --- Optional params ---
-      final entityIdPrefix =
-          request.url.queryParameters['entityId'] ??
-          request.url.queryParameters['entityIdPrefix'];
+      final entityType = request.params['entityType'];
+      if (entityType == null || entityType.isEmpty) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Missing required path parameter: entityType',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final entityId = request.params['entityId'];
+      if (entityId == null && !request.url.path.startsWith('api/super/')) {
+        // TODO: also verify the current authenticated user is a super user
+        return Response(
+          403,
+          body: jsonEncode({
+            'error':
+                'Super user privileges are required to query entity states without an entityId',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
       final cursor = request.url.queryParameters['cursor'];
       final sortDirection =
           request.url.queryParameters['sortDirection'] ?? 'asc';
@@ -642,7 +724,7 @@ class AwsRestApiServer extends BaseRestApiServer {
 
       final result = await dynamo.getCrossDomainEntityStates(
         domainType: domainType,
-        entityIdPrefix: entityIdPrefix,
+        entityIdPrefix: entityId,
         limit: limit,
         cursor: cursor,
         projectionExpressionFields: projectionFields,
