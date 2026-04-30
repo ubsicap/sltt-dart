@@ -942,7 +942,7 @@ class BackendAuthService {
   }) async {
     await _confirmAdminPassword(session.userId, request.adminPassword);
     final principal = await _requireAdHocPrincipal(userId);
-    await _requireAdminForProjects(
+    await _requireAdminForAnyAssignedProject(
       session.userId,
       principal.assignedProjectIds,
     );
@@ -1173,6 +1173,30 @@ class BackendAuthService {
       userId,
     );
     if (!requested.every(adminProjects.contains)) {
+      throw AuthException(
+        'Unable to complete this action',
+        statusCode: 403,
+        code: 'insufficient_permissions',
+      );
+    }
+  }
+
+  Future<void> _requireAdminForAnyAssignedProject(
+    String userId,
+    List<String> projectIds,
+  ) async {
+    final requested = projectIds.where((id) => id.trim().isNotEmpty).toSet();
+    if (requested.isEmpty) {
+      throw AuthException(
+        'Unable to complete this action',
+        statusCode: 403,
+        code: 'insufficient_permissions',
+      );
+    }
+    final adminProjects = await _appStateStore.getAdminProjectIdsForUser(
+      userId,
+    );
+    if (!requested.any(adminProjects.contains)) {
       throw AuthException(
         'Unable to complete this action',
         statusCode: 403,
