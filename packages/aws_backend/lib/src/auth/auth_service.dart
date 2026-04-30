@@ -864,14 +864,22 @@ class BackendAuthService {
 
   Future<AdHocUsersResponse> listAdHocUsers({
     required AuthenticatedSession session,
+    bool superMode = false,
   }) async {
+    final items = await _recordStore.listAdHocPrincipals();
+    if (superMode) {
+      final all = items
+          .whereType<UsernameAuthPrincipal>()
+          .map(_toAdHocSummary)
+          .toList(growable: false);
+      return AdHocUsersResponse(items: all);
+    }
     final adminProjects = await _appStateStore.getAdminProjectIdsForUser(
       session.userId,
     );
     if (adminProjects.isEmpty) {
       return const AdHocUsersResponse(items: <AdHocUserSummary>[]);
     }
-    final items = await _recordStore.listAdHocPrincipals();
     final visible = items
         .whereType<UsernameAuthPrincipal>()
         .where(

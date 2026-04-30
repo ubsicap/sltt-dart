@@ -224,6 +224,15 @@ class AwsRestApiServer extends BaseRestApiServer {
       ],
     },
     {
+      'method': 'GET',
+      'path': '/api/super/admin/adhoc-users',
+      'description':
+          'List all AdHoc users across all projects. Requires super user privileges.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+    },
+    {
       'method': 'POST',
       'path': '/api/admin/adhoc-users',
       'description':
@@ -616,6 +625,7 @@ class AwsRestApiServer extends BaseRestApiServer {
     router.post('/api/auth/refresh', _handleAuthRefresh);
     router.post('/api/auth/logout', _handleAuthLogout);
     router.get('/api/admin/adhoc-users', _handleAdminListAdHocUsers);
+    router.get('/api/super/admin/adhoc-users', _handleSuperAdminListAdHocUsers);
     router.post('/api/admin/adhoc-users', _handleAdminCreateAdHocUser);
     router.put(
       '/api/admin/adhoc-users/<userId>/projects',
@@ -812,6 +822,17 @@ class AwsRestApiServer extends BaseRestApiServer {
       final result = await _requireAuthService().logout(
         session: session,
         request: LogoutRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleSuperAdminListAdHocUsers(Request request) async {
+    return _handleAuthRequest(() async {
+      final session = _requireAuthenticatedSession(request);
+      final result = await _requireAuthService().listAdHocUsers(
+        session: session,
+        superMode: true,
       );
       return _jsonResponse(200, result.toJson());
     });
