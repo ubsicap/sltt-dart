@@ -842,6 +842,10 @@ class BackendAuthService {
           ? null
           : request.dateOfBirth?.trim(),
       assignedProjectIds: request.projectIds,
+      memberships: {
+        for (final projectId in request.projectIds)
+          projectId: MemberType.translator.name,
+      },
       verificationVersion: 0,
       createdAt: now,
       updatedAt: now,
@@ -921,8 +925,21 @@ class BackendAuthService {
       ...principal.assignedProjectIds,
       ...addProjectIds,
     }..removeAll(removeProjectIds);
+    final updatedMemberships = Map<String, String>.from(
+      principal.memberships ?? const <String, String>{},
+    );
+    for (final projectId in addProjectIds) {
+      updatedMemberships.putIfAbsent(
+        projectId,
+        () => MemberType.translator.name,
+      );
+    }
+    for (final projectId in removeProjectIds) {
+      updatedMemberships.remove(projectId);
+    }
     final updated = principal.copyWith(
       assignedProjectIds: updatedProjectIds.toList(growable: false),
+      memberships: updatedMemberships,
       updatedAt: DateTime.now().toUtc(),
     );
     await _recordStore.putPrincipal(updated);
@@ -931,8 +948,109 @@ class BackendAuthService {
       projectIdsToAdd: addProjectIds,
       projectIdsToRemove: removeProjectIds,
       changeBy: session.userId,
+      memberRoles: {
+        for (final projectId in addProjectIds)
+          projectId: MemberType.translator.name,
+      },
     );
     return _toAdHocSummary(updated);
+  }
+
+  Future<Map<String, dynamic>> updateUserMemberships({
+    required AuthenticatedSession session,
+    required String userId,
+    required UpdateUserMembershipsRequest request,
+  }) async {
+    await _confirmAdminPassword(session.userId, request.adminPassword);
+
+    final memberAdditions = <String, String>{
+      for (final entry in request.memberAdditions.entries)
+        entry.key.trim(): entry.value.trim(),
+    }..removeWhere((key, value) => key.isEmpty || value.isEmpty);
+    final validatedMemberAdditions = <String, String>{};
+    for (final entry in memberAdditions.entries) {
+      final normalizedRole = entry.value.trim().toLowerCase();
+      MemberType? memberType;
+      try {
+        memberType = MemberType.values.firstWhere(
+          (type) => type.name.toLowerCase() == normalizedRole,
+        );
+      } catch (_) {
+        memberType = null;
+      }
+      if (memberType == null ||
+          memberType == MemberType.system ||
+          memberType == MemberType.superAdmin ||
+          memberType == MemberType.unknown) {
+        throw AuthException(
+          'Unable to complete this action',
+          code: 'invalid_request',
+        );
+      }
+      validatedMemberAdditions[entry.key] = memberType.name;
+    }
+    final memberRemovals = request.memberRemovals
+        .map((projectId) => projectId.trim())
+        .where((projectId) => projectId.isNotEmpty)
+        .toSet();
+    final overlap = validatedMemberAdditions.keys.toSet().intersection(
+      memberRemovals,
+    );
+    if (overlap.isNotEmpty) {
+      throw AuthException(
+        'Unable to complete this action',
+        code: 'invalid_request',
+      );
+    }
+
+    final principal = await _recordStore.getPrincipalByUserId(userId);
+    if (principal == null || principal.isDeleted) {
+      throw AuthException(
+        'Unable to complete this action',
+        statusCode: 404,
+        code: 'unable_to_complete_action',
+      );
+    }
+
+    await _requireAdminForProjects(session.userId, <String>[
+      ...validatedMemberAdditions.keys,
+      ...memberRemovals,
+    ]);
+
+    final updatedProjectIds = {
+      ...principal.assignedProjectIds,
+      ...validatedMemberAdditions.keys,
+    }..removeAll(memberRemovals);
+    final updatedMemberships =
+        Map<String, String>.from(
+            principal.memberships ?? const <String, String>{},
+          )
+          ..addAll(validatedMemberAdditions)
+          ..removeWhere((projectId, _) => memberRemovals.contains(projectId));
+
+    final updated = principal.copyWith(
+      assignedProjectIds: updatedProjectIds.toList(growable: false),
+      memberships: updatedMemberships,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    await _recordStore.putPrincipal(updated);
+    await _appStateStore.upsertVerifiedUserProfile(
+      principal: updated,
+      changeBy: session.userId,
+    );
+    await _appStateStore.applyProjectAssignmentChanges(
+      principal: updated,
+      projectIdsToAdd: validatedMemberAdditions.keys,
+      projectIdsToRemove: memberRemovals,
+      changeBy: session.userId,
+      memberRoles: validatedMemberAdditions,
+    );
+
+    return <String, dynamic>{
+      'userId': updated.userId,
+      'assignedProjectIds': updated.assignedProjectIds,
+      'memberships': updated.memberships ?? const <String, String>{},
+    };
   }
 
   Future<AuthStatusResponse> resetAdHocPassword({

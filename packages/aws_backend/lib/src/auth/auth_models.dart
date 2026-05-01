@@ -84,6 +84,7 @@ abstract class AuthPrincipal {
     required this.verifiedAt,
     required this.deletedAt,
     required this.assignedProjectIds,
+    this.memberships,
     required this.verificationVersion,
     required this.registrationAttemptAt_orig_,
     required this.registrationAttemptAt_last_,
@@ -151,6 +152,8 @@ abstract class AuthPrincipal {
   final DateTime? deletedAt;
   @JsonKey(fromJson: _stringListFromJson)
   final List<String> assignedProjectIds;
+  @JsonKey(fromJson: _nullableStringStringMapFromJson, includeIfNull: false)
+  final Map<String, String>? memberships;
   @JsonKey()
   final int verificationVersion;
   @JsonKey(
@@ -202,6 +205,7 @@ abstract class AuthPrincipal {
     DateTime? verifiedAt,
     DateTime? deletedAt,
     List<String>? assignedProjectIds,
+    Map<String, String>? memberships,
     int? verificationVersion,
     DateTime? registrationAttemptAt_orig_,
     DateTime? registrationAttemptAt_last_,
@@ -234,6 +238,7 @@ class EmailAuthPrincipal extends AuthPrincipal {
     super.verifiedAt,
     super.deletedAt,
     required super.assignedProjectIds,
+    super.memberships,
     required super.verificationVersion,
     super.registrationAttemptAt_orig_,
     super.registrationAttemptAt_last_,
@@ -287,6 +292,7 @@ class EmailAuthPrincipal extends AuthPrincipal {
     DateTime? verifiedAt,
     DateTime? deletedAt,
     List<String>? assignedProjectIds,
+    Map<String, String>? memberships,
     int? verificationVersion,
     DateTime? registrationAttemptAt_orig_,
     DateTime? registrationAttemptAt_last_,
@@ -320,6 +326,7 @@ class EmailAuthPrincipal extends AuthPrincipal {
       verifiedAt: verifiedAt ?? this.verifiedAt,
       deletedAt: deletedAt ?? this.deletedAt,
       assignedProjectIds: assignedProjectIds ?? this.assignedProjectIds,
+      memberships: memberships ?? this.memberships,
       verificationVersion: verificationVersion ?? this.verificationVersion,
       registrationAttemptAt_orig_:
           registrationAttemptAt_orig_ ?? this.registrationAttemptAt_orig_,
@@ -363,6 +370,7 @@ class UsernameAuthPrincipal extends AuthPrincipal {
     super.verifiedAt,
     super.deletedAt,
     required super.assignedProjectIds,
+    super.memberships,
     required super.verificationVersion,
     super.registrationAttemptAt_orig_,
     super.registrationAttemptAt_last_,
@@ -416,6 +424,7 @@ class UsernameAuthPrincipal extends AuthPrincipal {
     DateTime? verifiedAt,
     DateTime? deletedAt,
     List<String>? assignedProjectIds,
+    Map<String, String>? memberships,
     int? verificationVersion,
     DateTime? registrationAttemptAt_orig_,
     DateTime? registrationAttemptAt_last_,
@@ -451,6 +460,7 @@ class UsernameAuthPrincipal extends AuthPrincipal {
       verifiedAt: verifiedAt ?? this.verifiedAt,
       deletedAt: deletedAt ?? this.deletedAt,
       assignedProjectIds: assignedProjectIds ?? this.assignedProjectIds,
+      memberships: memberships ?? this.memberships,
       verificationVersion: verificationVersion ?? this.verificationVersion,
       registrationAttemptAt_orig_:
           registrationAttemptAt_orig_ ?? this.registrationAttemptAt_orig_,
@@ -799,6 +809,27 @@ class UpdateAdHocProjectsRequest {
 }
 
 @JsonSerializable(includeIfNull: false, checked: true)
+class UpdateUserMembershipsRequest {
+  UpdateUserMembershipsRequest({
+    required this.memberAdditions,
+    required this.memberRemovals,
+    required this.adminPassword,
+  });
+
+  @JsonKey(fromJson: _stringStringMapFromJson, defaultValue: <String, String>{})
+  final Map<String, String> memberAdditions;
+  @JsonKey(fromJson: _stringListFromJson, defaultValue: <String>[])
+  final List<String> memberRemovals;
+  @JsonKey(defaultValue: '')
+  final String adminPassword;
+
+  factory UpdateUserMembershipsRequest.fromJson(Map<String, dynamic> json) =>
+      _$UpdateUserMembershipsRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$UpdateUserMembershipsRequestToJson(this);
+}
+
+@JsonSerializable(includeIfNull: false, checked: true)
 class ResetAdHocPasswordRequest {
   ResetAdHocPasswordRequest({
     required this.adminPassword,
@@ -999,6 +1030,32 @@ List<String> _stringListFromJson(dynamic value) =>
     (value is List ? value : const <dynamic>[]).whereType<String>().toList(
       growable: false,
     );
+
+Map<String, String> _stringStringMapFromJson(dynamic value) {
+  if (value is! Map) {
+    return const <String, String>{};
+  }
+  final normalized = <String, String>{};
+  value.forEach((key, mapValue) {
+    if (key is! String || mapValue is! String) {
+      return;
+    }
+    final normalizedKey = key.trim();
+    final normalizedValue = mapValue.trim();
+    if (normalizedKey.isEmpty || normalizedValue.isEmpty) {
+      return;
+    }
+    normalized[normalizedKey] = normalizedValue;
+  });
+  return normalized;
+}
+
+Map<String, String>? _nullableStringStringMapFromJson(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+  return _stringStringMapFromJson(value);
+}
 
 Object? _readLoginIdentifier(Map json, String key) =>
     json[key] ?? json['email'] ?? json['username'];

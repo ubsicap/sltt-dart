@@ -110,6 +110,39 @@ void main() {
       );
     });
 
+    test('supports memberships map serialization and copyWith', () {
+      final principal = UsernameAuthPrincipal(
+        userId: 'user-3',
+        username: 'map.user',
+        normalizedUsername: 'map.user',
+        passwordHash: 'hash',
+        passwordSalt: 'salt',
+        passwordIterations: 120000,
+        accountStatus: AuthAccountStatus.active,
+        emailVerified: true,
+        isAdHoc: true,
+        displayName: 'Map User',
+        assignedProjectIds: const <String>['proj-a'],
+        memberships: const <String, String>{'proj-a': 'translator'},
+        verificationVersion: 0,
+        createdAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+        updatedAt: DateTime.parse('2026-04-14T10:00:00.000Z'),
+      );
+
+      final updated = principal.copyWith(
+        memberships: const <String, String>{
+          'proj-a': 'admin',
+          'proj-b': 'translator',
+        },
+      );
+
+      expect(updated.memberships?['proj-a'], equals('admin'));
+      expect(updated.memberships?['proj-b'], equals('translator'));
+      final roundTrip = AuthPrincipal.fromJson(updated.toJson());
+      expect(roundTrip.memberships?['proj-a'], equals('admin'));
+      expect(roundTrip.memberships?['proj-b'], equals('translator'));
+    });
+
     test('rejects email identities with missing email fields', () {
       expect(
         () => EmailAuthPrincipal(
@@ -365,6 +398,31 @@ void main() {
 
       expect(request.addProjectIds, isEmpty);
       expect(request.removeProjectIds, isEmpty);
+      expect(request.adminPassword, equals('admin'));
+    });
+
+    test('UpdateUserMembershipsRequest normalizes map/list fields', () {
+      final request = UpdateUserMembershipsRequest.fromJson({
+        'memberAdditions': {
+          ' project-1 ': ' admin ',
+          'project-2': 'translator',
+          'project-3': 1,
+        },
+        'memberRemovals': ['project-4', 3, null, ' project-5 '],
+        'adminPassword': 'admin',
+      });
+
+      expect(
+        request.memberAdditions,
+        equals(const <String, String>{
+          'project-1': 'admin',
+          'project-2': 'translator',
+        }),
+      );
+      expect(
+        request.memberRemovals,
+        equals(const <String>['project-4', ' project-5 ']),
+      );
       expect(request.adminPassword, equals('admin'));
     });
   });

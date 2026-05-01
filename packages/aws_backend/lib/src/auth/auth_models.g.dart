@@ -44,6 +44,10 @@ EmailAuthPrincipal _$EmailAuthPrincipalFromJson(Map<String, dynamic> json) =>
           'assignedProjectIds',
           (v) => _stringListFromJson(v),
         ),
+        memberships: $checkedConvert(
+          'memberships',
+          (v) => _nullableStringStringMapFromJson(v),
+        ),
         verificationVersion: $checkedConvert(
           'verificationVersion',
           (v) => (v as num).toInt(),
@@ -99,6 +103,7 @@ Map<String, dynamic> _$EmailAuthPrincipalToJson(EmailAuthPrincipal instance) =>
       'verifiedAt': ?_nullableUtcDateTimeToJson(instance.verifiedAt),
       'deletedAt': ?_nullableUtcDateTimeToJson(instance.deletedAt),
       'assignedProjectIds': instance.assignedProjectIds,
+      'memberships': ?instance.memberships,
       'verificationVersion': instance.verificationVersion,
       'registrationAttemptAt_orig_': ?_nullableUtcDateTimeToJson(
         instance.registrationAttemptAt_orig_,
@@ -169,6 +174,10 @@ UsernameAuthPrincipal _$UsernameAuthPrincipalFromJson(
       'assignedProjectIds',
       (v) => _stringListFromJson(v),
     ),
+    memberships: $checkedConvert(
+      'memberships',
+      (v) => _nullableStringStringMapFromJson(v),
+    ),
     verificationVersion: $checkedConvert(
       'verificationVersion',
       (v) => (v as num).toInt(),
@@ -225,6 +234,7 @@ Map<String, dynamic> _$UsernameAuthPrincipalToJson(
   'verifiedAt': ?_nullableUtcDateTimeToJson(instance.verifiedAt),
   'deletedAt': ?_nullableUtcDateTimeToJson(instance.deletedAt),
   'assignedProjectIds': instance.assignedProjectIds,
+  'memberships': ?instance.memberships,
   'verificationVersion': instance.verificationVersion,
   'registrationAttemptAt_orig_': ?_nullableUtcDateTimeToJson(
     instance.registrationAttemptAt_orig_,
@@ -510,6 +520,31 @@ Map<String, dynamic> _$UpdateAdHocProjectsRequestToJson(
 ) => <String, dynamic>{
   'addProjectIds': instance.addProjectIds,
   'removeProjectIds': instance.removeProjectIds,
+  'adminPassword': instance.adminPassword,
+};
+
+UpdateUserMembershipsRequest _$UpdateUserMembershipsRequestFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('UpdateUserMembershipsRequest', json, ($checkedConvert) {
+  final val = UpdateUserMembershipsRequest(
+    memberAdditions: $checkedConvert(
+      'memberAdditions',
+      (v) => v == null ? {} : _stringStringMapFromJson(v),
+    ),
+    memberRemovals: $checkedConvert(
+      'memberRemovals',
+      (v) => v == null ? [] : _stringListFromJson(v),
+    ),
+    adminPassword: $checkedConvert('adminPassword', (v) => v as String? ?? ''),
+  );
+  return val;
+});
+
+Map<String, dynamic> _$UpdateUserMembershipsRequestToJson(
+  UpdateUserMembershipsRequest instance,
+) => <String, dynamic>{
+  'memberAdditions': instance.memberAdditions,
+  'memberRemovals': instance.memberRemovals,
   'adminPassword': instance.adminPassword,
 };
 

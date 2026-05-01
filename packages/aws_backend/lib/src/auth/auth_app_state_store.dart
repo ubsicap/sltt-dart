@@ -27,6 +27,7 @@ class AuthAppStateStore {
     required Iterable<String> projectIdsToAdd,
     required Iterable<String> projectIdsToRemove,
     required String changeBy,
+    Map<String, String>? memberRoles,
   }) async {
     final addSet = _normalizeProjectIds(projectIdsToAdd);
     final removeSet = _normalizeProjectIds(projectIdsToRemove)
@@ -34,6 +35,9 @@ class AuthAppStateStore {
 
     final changes = <Map<String, dynamic>>[];
     for (final projectId in addSet) {
+      final role = (memberRoles?[projectId]?.trim().isNotEmpty ?? false)
+          ? memberRoles![projectId]!.trim()
+          : MemberType.translator.name;
       changes.add(
         _buildChangeJson(
           domainType: kDomainMembership,
@@ -46,7 +50,7 @@ class AuthAppStateStore {
           deleted: false,
           customFields: {
             'userId': principal.userId,
-            'role': 'translator',
+            'role': role,
             'name': principal.displayName,
             'username': principal.username,
             'email': principal.email,
@@ -69,7 +73,8 @@ class AuthAppStateStore {
           deleted: true,
           customFields: {
             'userId': principal.userId,
-            'role': 'translator',
+            'role':
+                principal.memberships?[projectId] ?? MemberType.translator.name,
             'name': principal.displayName,
             'username': principal.username,
             'email': principal.email,

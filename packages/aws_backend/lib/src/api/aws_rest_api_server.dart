@@ -289,6 +289,32 @@ class AwsRestApiServer extends BaseRestApiServer {
       },
     },
     {
+      'method': 'PUT',
+      'path': '/api/admin/user/{userId}/memberships',
+      'description':
+          'Apply explicit membership additions/removals for any user. Caller must be an admin of every project listed in memberAdditions or memberRemovals. Untouched memberships are preserved.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+      'requestBody': {
+        'type': 'object',
+        'required': ['adminPassword'],
+        'properties': {
+          'memberAdditions': {
+            'type': 'object',
+            'description':
+                'Map of projectId to role name (for example, {"project-1": "translator"}).',
+            'additionalProperties': {'type': 'string'},
+          },
+          'memberRemovals': {
+            'type': 'array',
+            'items': {'type': 'string'},
+          },
+          'adminPassword': {'type': 'string'},
+        },
+      },
+    },
+    {
       'method': 'POST',
       'path': '/api/admin/adhoc-users/{userId}/reset-password',
       'description':
@@ -631,6 +657,10 @@ class AwsRestApiServer extends BaseRestApiServer {
       '/api/admin/adhoc-users/<userId>/projects',
       _handleAdminUpdateAdHocProjects,
     );
+    router.put(
+      '/api/admin/user/<userId>/memberships',
+      _handleAdminUpdateUserMemberships,
+    );
     router.post(
       '/api/admin/adhoc-users/<userId>/reset-password',
       _handleAdminResetAdHocPassword,
@@ -870,6 +900,19 @@ class AwsRestApiServer extends BaseRestApiServer {
         request: UpdateAdHocProjectsRequest.fromJson(body),
       );
       return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAdminUpdateUserMemberships(Request request) async {
+    return _handleAuthRequest(() async {
+      final session = _requireAuthenticatedSession(request);
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().updateUserMemberships(
+        session: session,
+        userId: request.params['userId'] ?? '',
+        request: UpdateUserMembershipsRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result);
     });
   }
 
