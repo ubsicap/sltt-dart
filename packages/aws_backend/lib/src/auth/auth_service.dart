@@ -862,6 +862,10 @@ class BackendAuthService {
       projectIdsToAdd: request.projectIds,
       projectIdsToRemove: const <String>[],
       changeBy: session.userId,
+      memberRoles: {
+        for (final projectId in request.projectIds)
+          projectId: MemberType.translator.name,
+      },
     );
     return _toAdHocSummary(principal);
   }

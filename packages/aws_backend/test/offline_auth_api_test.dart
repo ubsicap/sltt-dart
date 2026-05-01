@@ -1350,6 +1350,9 @@ void main() {
             projectIdsToAdd: const <String>['project-2'],
             projectIdsToRemove: const <String>[],
             changeBy: adminUserId,
+            memberRoles: <String, String>{
+              'project-2': MemberType.translator.name,
+            },
           );
 
           final updateResponse = await server.handleApiGatewayEvent({
