@@ -86,6 +86,42 @@ class AuthAppStateStore {
       );
     }
 
+    final updateSet = projectRoles.keys
+        .where((projectId) => !addSet.contains(projectId))
+        .where((projectId) => !removeSet.contains(projectId))
+        .toSet();
+    for (final projectId in updateSet) {
+      final trimmedRole = projectRoles[projectId]?.trim();
+      if (trimmedRole == null || trimmedRole.isEmpty) {
+        continue;
+      }
+      final existingRole = principal.memberships?[projectId]?.trim();
+      if (existingRole == trimmedRole) {
+        continue;
+      }
+      changes.add(
+        _buildChangeJson(
+          domainType: kDomainMembership,
+          domainId: projectId,
+          entityType: kEntityTypeMember,
+          entityId: principal.userId,
+          parentProp: kCollectionMembership,
+          parentId: kDomainEntityRootParentId,
+          changeBy: changeBy,
+          deleted: false,
+          customFields: {
+            'userId': principal.userId,
+            'role': trimmedRole,
+            'name': principal.displayName,
+            'username': principal.username,
+            'email': principal.email,
+            'isAdHoc': principal.isAdHoc,
+            'emailVerified': principal.emailVerified,
+          },
+        ),
+      );
+    }
+
     await _storeProjectMemberChanges(changes);
   }
 

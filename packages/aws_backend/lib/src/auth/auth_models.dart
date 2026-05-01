@@ -764,6 +764,7 @@ class CreateAdHocUserRequest {
     required this.password,
     this.dateOfBirth,
     required this.projectIds,
+    this.projectRoles,
     required this.adminPassword,
   });
 
@@ -778,6 +779,8 @@ class CreateAdHocUserRequest {
   final String? dateOfBirth;
   @JsonKey(fromJson: _stringListFromJson, defaultValue: <String>[])
   final List<String> projectIds;
+  @JsonKey(fromJson: _nullableStringStringMapFromJson)
+  final Map<String, String>? projectRoles;
   @JsonKey(defaultValue: '')
   final String adminPassword;
 
@@ -790,8 +793,9 @@ class CreateAdHocUserRequest {
 @JsonSerializable(includeIfNull: false, checked: true)
 class UpdateAdHocProjectsRequest {
   UpdateAdHocProjectsRequest({
-    required this.addProjectIds,
-    required this.removeProjectIds,
+    this.addProjectIds = const <String>[],
+    this.removeProjectIds = const <String>[],
+    this.projectRoles,
     required this.adminPassword,
   });
 
@@ -799,6 +803,8 @@ class UpdateAdHocProjectsRequest {
   final List<String> addProjectIds;
   @JsonKey(fromJson: _stringListFromJson, defaultValue: <String>[])
   final List<String> removeProjectIds;
+  @JsonKey(fromJson: _nullableStringStringMapFromJson)
+  final Map<String, String>? projectRoles;
   @JsonKey(defaultValue: '')
   final String adminPassword;
 
@@ -938,6 +944,7 @@ class AdHocUserSummary {
     required this.username,
     required this.dateOfBirth,
     required this.projectIds,
+    this.projectRoles,
     required this.status,
   });
 
@@ -950,6 +957,8 @@ class AdHocUserSummary {
   final String? dateOfBirth;
   @JsonKey(fromJson: _stringListFromJson, defaultValue: <String>[])
   final List<String> projectIds;
+  @JsonKey(fromJson: _nullableStringStringMapFromJson)
+  final Map<String, String>? projectRoles;
   @JsonKey(defaultValue: '')
   final String status;
 

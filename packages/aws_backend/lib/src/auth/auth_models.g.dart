@@ -481,6 +481,10 @@ CreateAdHocUserRequest _$CreateAdHocUserRequestFromJson(
       'projectIds',
       (v) => v == null ? [] : _stringListFromJson(v),
     ),
+    projectRoles: $checkedConvert(
+      'projectRoles',
+      (v) => _nullableStringStringMapFromJson(v),
+    ),
     adminPassword: $checkedConvert('adminPassword', (v) => v as String? ?? ''),
   );
   return val;
@@ -495,6 +499,7 @@ Map<String, dynamic> _$CreateAdHocUserRequestToJson(
   'password': instance.password,
   'dateOfBirth': ?instance.dateOfBirth,
   'projectIds': instance.projectIds,
+  'projectRoles': ?instance.projectRoles,
   'adminPassword': instance.adminPassword,
 };
 
@@ -510,6 +515,10 @@ UpdateAdHocProjectsRequest _$UpdateAdHocProjectsRequestFromJson(
       'removeProjectIds',
       (v) => v == null ? [] : _stringListFromJson(v),
     ),
+    projectRoles: $checkedConvert(
+      'projectRoles',
+      (v) => _nullableStringStringMapFromJson(v),
+    ),
     adminPassword: $checkedConvert('adminPassword', (v) => v as String? ?? ''),
   );
   return val;
@@ -520,6 +529,7 @@ Map<String, dynamic> _$UpdateAdHocProjectsRequestToJson(
 ) => <String, dynamic>{
   'addProjectIds': instance.addProjectIds,
   'removeProjectIds': instance.removeProjectIds,
+  'projectRoles': ?instance.projectRoles,
   'adminPassword': instance.adminPassword,
 };
 
@@ -629,6 +639,10 @@ AdHocUserSummary _$AdHocUserSummaryFromJson(Map<String, dynamic> json) =>
           'projectIds',
           (v) => v == null ? [] : _stringListFromJson(v),
         ),
+        projectRoles: $checkedConvert(
+          'projectRoles',
+          (v) => _nullableStringStringMapFromJson(v),
+        ),
         status: $checkedConvert('status', (v) => v as String? ?? ''),
       );
       return val;
@@ -641,6 +655,7 @@ Map<String, dynamic> _$AdHocUserSummaryToJson(AdHocUserSummary instance) =>
       'username': instance.username,
       'dateOfBirth': ?instance.dateOfBirth,
       'projectIds': instance.projectIds,
+      'projectRoles': ?instance.projectRoles,
       'status': instance.status,
     };
 

@@ -787,6 +787,31 @@ class BackendAuthService {
     return const AuthStatusResponse(status: 'logged_out');
   }
 
+  Map<String, String> _normalizeAdHocProjectRoles(Map<String, String>? roles) {
+    final normalized = <String, String>{};
+    for (final entry in (roles ?? const <String, String>{}).entries) {
+      final projectId = entry.key.trim();
+      final role = entry.value.trim();
+      if (projectId.isEmpty || role.isEmpty) {
+        continue;
+      }
+      final memberType = MemberType.values.firstWhere(
+        (type) => type.name.toLowerCase() == role.toLowerCase(),
+        orElse: () => MemberType.unknown,
+      );
+      if (memberType == MemberType.system ||
+          memberType == MemberType.superAdmin ||
+          memberType == MemberType.unknown) {
+        throw AuthException(
+          'Unable to complete this action',
+          code: 'invalid_request',
+        );
+      }
+      normalized[projectId] = memberType.name;
+    }
+    return normalized;
+  }
+
   Future<AdHocUserSummary> createAdHocUser({
     required AuthenticatedSession session,
     required CreateAdHocUserRequest request,
@@ -827,6 +852,7 @@ class BackendAuthService {
     }
     final hash = await _passwordHashService.hashPassword(password);
     final now = DateTime.now().toUtc();
+    final requestedRoles = _normalizeAdHocProjectRoles(request.projectRoles);
     final principal = UsernameAuthPrincipal(
       userId: userId,
       username: username,
@@ -844,7 +870,7 @@ class BackendAuthService {
       assignedProjectIds: request.projectIds,
       memberships: {
         for (final projectId in request.projectIds)
-          projectId: MemberType.translator.name,
+          projectId: requestedRoles[projectId] ?? MemberType.translator.name,
       },
       verificationVersion: 0,
       createdAt: now,
@@ -864,7 +890,7 @@ class BackendAuthService {
       changeBy: session.userId,
       projectRoles: {
         for (final projectId in request.projectIds)
-          projectId: MemberType.translator.name,
+          projectId: requestedRoles[projectId] ?? MemberType.translator.name,
       },
     );
     return _toAdHocSummary(principal);
@@ -921,6 +947,7 @@ class BackendAuthService {
         code: 'invalid_request',
       );
     }
+    final requestedRoles = _normalizeAdHocProjectRoles(request.projectRoles);
     await _requireAdminForProjects(
       session.userId,
       {...addProjectIds, ...removeProjectIds}.toList(growable: false),
@@ -933,13 +960,22 @@ class BackendAuthService {
       principal.memberships ?? const <String, String>{},
     );
     for (final projectId in addProjectIds) {
-      updatedMemberships.putIfAbsent(
-        projectId,
-        () => MemberType.translator.name,
-      );
+      updatedMemberships[projectId] =
+          requestedRoles[projectId] ?? MemberType.translator.name;
     }
     for (final projectId in removeProjectIds) {
       updatedMemberships.remove(projectId);
+    }
+    for (final entry in requestedRoles.entries) {
+      final projectId = entry.key;
+      if (addProjectIds.contains(projectId) ||
+          removeProjectIds.contains(projectId)) {
+        continue;
+      }
+      if (!updatedProjectIds.contains(projectId)) {
+        continue;
+      }
+      updatedMemberships[projectId] = entry.value;
     }
     final updated = principal.copyWith(
       assignedProjectIds: updatedProjectIds.toList(growable: false),
@@ -953,8 +989,9 @@ class BackendAuthService {
       projectIdsToRemove: removeProjectIds,
       changeBy: session.userId,
       projectRoles: {
-        for (final projectId in addProjectIds)
-          projectId: MemberType.translator.name,
+        for (final projectId in requestedRoles.keys)
+          if (!removeProjectIds.contains(projectId))
+            projectId: requestedRoles[projectId] ?? MemberType.translator.name,
       },
     );
     return _toAdHocSummary(updated);
@@ -1560,6 +1597,7 @@ class BackendAuthService {
       username: principal.username,
       dateOfBirth: principal.dateOfBirth,
       projectIds: principal.assignedProjectIds,
+      projectRoles: principal.memberships,
       status: principal.accountStatus.value,
     );
   }
