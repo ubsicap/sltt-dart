@@ -1350,7 +1350,7 @@ void main() {
             projectIdsToAdd: const <String>['project-2'],
             projectIdsToRemove: const <String>[],
             changeBy: adminUserId,
-            memberRoles: <String, String>{
+            projectRoles: <String, String>{
               'project-2': MemberType.translator.name,
             },
           );

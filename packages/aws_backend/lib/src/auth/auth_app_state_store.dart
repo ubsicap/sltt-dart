@@ -27,7 +27,7 @@ class AuthAppStateStore {
     required Iterable<String> projectIdsToAdd,
     required Iterable<String> projectIdsToRemove,
     required String changeBy,
-    required Map<String, String> memberRoles,
+    required Map<String, String> projectRoles,
   }) async {
     final addSet = _normalizeProjectIds(projectIdsToAdd);
     final removeSet = _normalizeProjectIds(projectIdsToRemove)
@@ -35,7 +35,7 @@ class AuthAppStateStore {
 
     final changes = <Map<String, dynamic>>[];
     for (final projectId in addSet) {
-      final trimmedRole = memberRoles[projectId]?.trim();
+      final trimmedRole = projectRoles[projectId]?.trim();
       final role = (trimmedRole?.isNotEmpty ?? false)
           ? trimmedRole!
           : MemberType.translator.name;
@@ -102,7 +102,7 @@ class AuthAppStateStore {
       principal: principal,
       projectIdsToAdd: const <String>[],
       projectIdsToRemove: principal.assignedProjectIds,
-      memberRoles: const {},
+      projectRoles: const {},
       changeBy: changeBy,
     );
   }

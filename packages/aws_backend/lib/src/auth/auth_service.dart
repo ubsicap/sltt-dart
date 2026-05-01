@@ -862,7 +862,7 @@ class BackendAuthService {
       projectIdsToAdd: request.projectIds,
       projectIdsToRemove: const <String>[],
       changeBy: session.userId,
-      memberRoles: {
+      projectRoles: {
         for (final projectId in request.projectIds)
           projectId: MemberType.translator.name,
       },
@@ -952,7 +952,7 @@ class BackendAuthService {
       projectIdsToAdd: addProjectIds,
       projectIdsToRemove: removeProjectIds,
       changeBy: session.userId,
-      memberRoles: {
+      projectRoles: {
         for (final projectId in addProjectIds)
           projectId: MemberType.translator.name,
       },
@@ -1047,7 +1047,7 @@ class BackendAuthService {
       projectIdsToAdd: validatedMemberAdditions.keys,
       projectIdsToRemove: memberRemovals,
       changeBy: session.userId,
-      memberRoles: validatedMemberAdditions,
+      projectRoles: validatedMemberAdditions,
     );
 
     return <String, dynamic>{
