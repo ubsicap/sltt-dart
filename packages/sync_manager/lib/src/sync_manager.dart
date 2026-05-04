@@ -264,7 +264,12 @@ class SyncManager {
     dynamic e,
     StackTrace stackTrace,
   ) {
-    final response = (e as dynamic).response;
+    dynamic response;
+    try {
+      response = (e as dynamic).response;
+    } catch (_) {
+      response = null;
+    }
     if (response != null) {
       SlttLogger.logger.severe(
         '[SyncManager] [$context] [Error ${response.statusCode} (${response.statusMessage})] Error details: $response',
@@ -279,7 +284,7 @@ class SyncManager {
     );
 
     return {
-      'error': (e as dynamic).response?.toString() ?? e.toString(),
+      'error': response?.toString() ?? e.toString(),
       'errorStackTrace': stackTrace.toString(),
     };
   }
@@ -536,7 +541,8 @@ class SyncManager {
             // TODO Deserialize response data
             final changesBatch =
                 changesResponseData['changes'] as List<dynamic>;
-            final nextCursor = changesResponseData['cursor'] as int;
+            final nextCursor =
+                changesResponseData['cursor'] as int? ?? highestSeqForProject;
             highestSeqForProject = nextCursor;
             /*
                final responseData = <String, dynamic>{
