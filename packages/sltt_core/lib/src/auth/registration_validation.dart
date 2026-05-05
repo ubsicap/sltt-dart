@@ -23,6 +23,8 @@ class RegistrationValidationErrorCode {
   static const String passwordMismatch = 'password_mismatch';
   static const String leadingOrTrailingWhitespace =
       'leading_or_trailing_whitespace';
+  static const String alreadyExists = 'already_exists';
+  static const String invalidCredentials = 'invalid_credentials';
 }
 
 class RegistrationValidationFields {

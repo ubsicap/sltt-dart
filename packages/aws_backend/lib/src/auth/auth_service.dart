@@ -822,13 +822,21 @@ class BackendAuthService {
     final username = request.username.trim();
     final name = request.name.trim();
     final password = request.password;
-    if (userId.isEmpty ||
-        username.isEmpty ||
-        name.isEmpty ||
-        password.isEmpty) {
-      throw AuthException(
-        'Unable to complete this action',
-        code: 'invalid_request',
+    final validationDetails = validateRegistrationForProfile(
+      profile: RegistrationValidationProfile.adHocAdminRegistration,
+      fields: RegistrationValidationFields(
+        userId: userId,
+        name: name,
+        username: username,
+        password: password,
+        dateOfBirth: request.dateOfBirth,
+      ),
+      whitespaceMode: RegistrationValidationWhitespaceMode.strict,
+    );
+    if (validationDetails.isNotEmpty) {
+      _throwInvalidRequest(
+        event: 'create_adhoc_user_invalid_request',
+        details: validationDetails,
       );
     }
     final existingByUserId = await _recordStore.getPrincipalByUserId(userId);
@@ -836,7 +844,11 @@ class BackendAuthService {
       throw AuthException(
         'Unable to complete this action',
         statusCode: 400,
-        code: 'unable_to_complete_action',
+        code: 'invalid_request',
+        details: const {
+          RegistrationValidationField.userId:
+              RegistrationValidationErrorCode.alreadyExists,
+        },
       );
     }
     final normalizedUsername = _normalizeUsername(username);
@@ -847,7 +859,11 @@ class BackendAuthService {
       throw AuthException(
         'Unable to complete this action',
         statusCode: 400,
-        code: 'unable_to_complete_action',
+        code: 'invalid_request',
+        details: const {
+          RegistrationValidationField.username:
+              RegistrationValidationErrorCode.alreadyExists,
+        },
       );
     }
     final hash = await _passwordHashService.hashPassword(password);
@@ -1100,6 +1116,25 @@ class BackendAuthService {
     required ResetAdHocPasswordRequest request,
   }) async {
     await _confirmAdminPassword(session.userId, request.adminPassword);
+    final newPassword = request.newPassword;
+    if (newPassword.isEmpty) {
+      _throwInvalidRequest(
+        event: 'reset_adhoc_password_invalid_request',
+        details: const {
+          RegistrationValidationField.password:
+              RegistrationValidationErrorCode.required,
+        },
+      );
+    }
+    if (newPassword.length < kMinimumRegistrationPasswordLength) {
+      _throwInvalidRequest(
+        event: 'reset_adhoc_password_invalid_request',
+        details: const {
+          RegistrationValidationField.password:
+              RegistrationValidationErrorCode.passwordTooWeak,
+        },
+      );
+    }
     final principal = await _requireAdHocPrincipal(userId);
     await _requireAdminForAnyAssignedProject(
       session.userId,
