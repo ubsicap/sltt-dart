@@ -80,11 +80,14 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
   AwsMediaStorage? mediaStorage;
 
   try {
+    final credentialsService = AwsCredentialsService();
+
     // Get credentials first - may throw AwsCredentialsException
-    final credentials = await AwsCredentialsService().getOrCreateCredentials();
+    final credentials = await credentialsService.getOrCreateCredentials();
     storage = StorageFactory.createStorage(
       credentials: credentials,
       useLocalDynamoDB: useLocalDynamoDB,
+      credentialsResolver: credentialsService.getOrCreateCredentials,
     );
 
     final mediaBucket = Platform.environment['MEDIA_BUCKET'];
@@ -163,6 +166,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
       credentials: credentials,
       appStorage: storage,
       environment: Platform.environment,
+      credentialsResolver: credentialsService.getOrCreateCredentials,
     );
     await authService?.initialize();
     if (authService == null) {

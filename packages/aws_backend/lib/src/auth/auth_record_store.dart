@@ -231,14 +231,17 @@ class DynamoAuthRecordStore implements AuthRecordStore {
     this.region = 'us-east-1',
     this.useLocalDynamoDB = false,
     this.localEndpoint,
+    Future<AWSCredentials> Function()? credentialsResolver,
     http.Client? httpClient,
-  }) : _httpClient = httpClient ?? http.Client();
+  }) : _credentialsResolver = credentialsResolver,
+       _httpClient = httpClient ?? http.Client();
 
   final String tableName;
   final String region;
   final bool useLocalDynamoDB;
   final String? localEndpoint;
   final AWSCredentials credentials;
+  final Future<AWSCredentials> Function()? _credentialsResolver;
   final http.Client _httpClient;
 
   bool _initialized = false;
@@ -590,7 +593,10 @@ class DynamoAuthRecordStore implements AuthRecordStore {
     }
 
     final signer = AWSSigV4Signer(
-      credentialsProvider: AWSCredentialsProvider(credentials),
+      credentialsProvider: AWSCredentialsProvider(
+        await (_credentialsResolver?.call() ??
+            Future<AWSCredentials>.value(credentials)),
+      ),
     );
     final encodedBody = utf8.encode(body);
     final signedRequest = await signer.sign(

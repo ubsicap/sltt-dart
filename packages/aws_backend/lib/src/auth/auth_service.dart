@@ -1609,6 +1609,7 @@ class BackendAuthServiceFactory {
     required BaseStorageService appStorage,
     required Map<String, String> environment,
     bool useLocalDynamoDB = false,
+    Future<AWSCredentials> Function()? credentialsResolver,
   }) {
     final authTable = (environment['AUTH_TABLE'] ?? '').trim();
     final jwtSecret = (environment['AUTH_JWT_SECRET'] ?? '').trim();
@@ -1643,6 +1644,7 @@ class BackendAuthServiceFactory {
         credentials: credentials,
         region: region,
         fromEmail: sesFromEmail,
+        credentialsResolver: credentialsResolver,
       );
     } else {
       emailSender = LogAuthEmailSender();
@@ -1653,6 +1655,7 @@ class BackendAuthServiceFactory {
       credentials: credentials,
       region: region,
       useLocalDynamoDB: useLocalDynamoDB,
+      credentialsResolver: credentialsResolver,
     );
     return BackendAuthService(
       recordStore: store,

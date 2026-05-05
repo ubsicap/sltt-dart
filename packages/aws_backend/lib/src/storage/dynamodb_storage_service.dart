@@ -169,14 +169,17 @@ class DynamoDBStorageService extends BaseStorageService {
     this.useLocalDynamoDB = false,
     this.localEndpoint,
     required this.credentials,
+    Future<AWSCredentials> Function()? credentialsResolver,
     http.Client? httpClient,
-  }) : _httpClient = httpClient ?? http.Client();
+  }) : _credentialsResolver = credentialsResolver,
+       _httpClient = httpClient ?? http.Client();
 
   final String tableName;
   final String region;
   final bool useLocalDynamoDB;
   final String? localEndpoint;
   final AWSCredentials credentials;
+  final Future<AWSCredentials> Function()? _credentialsResolver;
 
   final http.Client _httpClient;
 
@@ -2239,8 +2242,11 @@ class DynamoDBStorageService extends BaseStorageService {
       return _httpClient.post(uri, headers: headers, body: body);
     }
 
+    final signingCredentials =
+        await (_credentialsResolver?.call() ??
+            Future<AWSCredentials>.value(credentials));
     final signer = AWSSigV4Signer(
-      credentialsProvider: AWSCredentialsProvider(credentials),
+      credentialsProvider: AWSCredentialsProvider(signingCredentials),
     );
 
     final encodedBody = utf8.encode(body);
