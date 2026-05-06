@@ -18,12 +18,13 @@ Departing from SLTT 2.0 PWA and electron deployment architectures, this RFC reco
 5) Isar provides sync data reactivity and lazy-loading local database services and pre-compiled schema queries.
 6) Custom self-registration and ad-hoc admin user-registration flows (instead of Auth0)
 
-## Key sub-system differences (vs 2.0)
+## 2.0 Key sub-system differences (vs 2.0)
 
 #### Auth
 
 ##### DynamoDB
-- separate auth table for self-registration (no longer Auth0 hosted)
+- auth table for self-registration and adhoc user-registration (no longer Auth0 hosted)
+- project membership (project access control) stored in its own domain type for prioritized sync support and history analysis.
 
 #### REST API
 - Access to latest state across all entity types
@@ -36,27 +37,28 @@ Departing from SLTT 2.0 PWA and electron deployment architectures, this RFC reco
 - Latest entity state is persisted for all entity types
 
 ##### AWS DynamoDB
-- segments change logs across any number of domain types (not just Project domain data)
+- change logs are segmented across any number of domain types (not just Project domain data)
 
 #### Sync Model
 - per-field Last Write Wins (LWW) merging
+- always store losing/outdated changes (for better recovery assurance, debugging)
 - entity state materialization from change logs, LAN-hosting compatible
-- entity state-based downsync/requests as fallback for divergence, bootstrap, and simple clients
+- entity state-based downsync/requests as fallback for divergence, bootstrap, and simple (online-only) clients
 
 ##### AWS DynamoDB
-- Batches 12 changes + 12 materialized entity states at a time
+- stores up to 12 changes + 12 materialized entity states per batch write
 
-#### Isar
+##### Isar
 - Batch Puts 10000 changes/entities at a time.
 
 ##### AWS Websocket
-- Recommend foreground sync of changes to reduce overhead associated with REST request latency
+- Foreground sync of changes to reduce overhead associated with paginated REST request latency
 
 #### Media Storage
 - storage key (media id) decoupled from project hierarchy for easier moving/copying between projects
 
 ##### AWS S3
-- presigned multi-part uploads results in whole file stored
+- presigned multi-part uploads results in whole file stored, to simplify media processing and downloading options.
 
 ##### AWS CloudFront
 - media downloaded via pre-signed URLs for edge cache support
@@ -68,75 +70,39 @@ Departing from SLTT 2.0 PWA and electron deployment architectures, this RFC reco
 ##### File Transfer Manager
 - follows LAN-hosting patterns where multiple clients may share responsibility for uploading and downloading of files
 - bounded concurrency for uploads and downloads to avoid overwhelming network
-- uses Range header for resumable downloading, and concatenates downloaded parts into single file
+- uses Range header for resumable downloading, then concatenates downloaded parts into single file
+
+### Versioning and Backward Compatibility
+- fields should be additive and old fields should remain populated
+- core merge logic depends on strict field naming conventions to ensure forward and backward compatibility
+- serialization merges unknown fields and unknown entity types
+- deserialization preserves unknown fields for serialization
+- full data field versions should be preserved for LAN-host readiness
 
 ### Debug / Support
-- SQL inspection of local and cloud data for debugging and validation
 - Deploy backend to individual developer accounts
+- Support dev deployments in multiple dev accounts
 - Run debug server instance locally to connect with aws resources
+- Inspect local and cloud data using (DuckDB-based) SQL inspection
 
------
-Another 2.0 issue:
-multi-tab support in browser created state out of sync with the database with data loss
-
------ previous
-The recommendation is intentionally flexible at the API surface while still expressing a preferred synchronization path. SLTT 3 supports both change-based and state-based downsyncing. For Dart and Flutter clients, sequential change-based downsync with local state materialization may prove more performant and cost-effective, while also building confidence in future LAN-hosted operation, where clients are expected to materialize changes to entity state. Full entity-state retrieval can then supplement this as a fallback for repair, initial loading, and interoperability with other clients and systems. In any case, persisted local state should allow clients to lazy-load data as needed, maintain a lower memory profile, and reduce time to first useful interaction.
-
-This RFC is not intended to finalize every implementation detail. Its purpose is to align product and engineering around a recommended architecture, identify validation work that must happen in 2026, and preserve a credible path to future capabilities including LAN collaboration, mobile clients, reporting dashboards, and external reporting APIs.
-
-## 2. Context
+## 3. Context
 
 SLTT 2.0 delivered meaningful value for sign language translation teams, but the product accumulated technical and workflow pressure in several areas:
 
-- Need for mobile clients and lack of native mobile platform compatibility pressured us toward duplicating and supporting yet another complicated state materialization pathway.
+- Need for mobile clients and lack of native mobile platform compatibility pressured us toward duplicating and supporting multiple complicated state materialization pathways.
+- Lack of local state persistence meant clients had to replay long change histories on every load, leading to performance issues and, as projects grew, potential memory pressure.
+- Lack of backend state persistence meant new clients had to sequentially download long change histories to determine state, and thus, for example, forced the reporting backend to duplicate replay logic in order to process and serve reporting state data.
 - Browser upgrades and bugs complicated installation, permissions, disk space management, and video processing.
 - Auth0 login UI/UX was often confusing for end users and support staff, and did not provide a clear path to support future fully offline use cases.
-- AWS deployment in master account with other non SLTT services making it unsafe to to allow other developers to have direct access to backends
-- AWS resources manually created vs. deployed via infrastructure as code, making it harder to maintain and replicate environments for development and testing.
-- changes did not have `modBy` until late in development
-- S3 file keys also encoded project hierarchy and made it difficult to allow for moving media between parents without moving.
-- Lack of backend state persistence meant new clients had to sequentially download long change histories to determine state, and thus, for example, forced the reporting backend to duplicate replay logic in order to process and serve reporting state data.
-- Too much client-specific merging and state logic made portability challenging and led to duplicated logic across other clients and systems, rather than allowing state to be served through a stable API and changes to be processed with shared code.
-- Merge conflicts were resolved on a per-object basis, leading to loss of changes which could otherwise be safely merged.
+- Data IDs encoded hierarchical relationships and made it difficult to allow for efficiently and cleanly moving data between parents.
+- S3 file keys encoded project hierarchy and made it difficult to allow for moving media between parents without re-copying several large files or requiring change log processing to determine final project parent.
+- Merge conflicts were resolved on a per-object basis, leading to loss of data which could otherwise have been safely merged.
+- A non-reactive browser database meant multi-tab scenarios could lead to out-of-sync state and data loss without complicated database management.
 - Local team storage and LAN-hosted collaboration scenarios required hosts that were independent of the current user auth session on the host device, and thus led to duplicated and complicated separate storage of changes and files outside of the browser which needed to be synced with the browser changes.
 - Offline local team storage assumes that all local team storage clients should share data and media that have not yet been uploaded to the cloud and thus also share the responsibility for uploading to the cloud whichever client is able to do that first, but this requirement led to complicated exceptional code instead of being a natural consequence of LAN-compatible sync and media storage API architecture.
-- Lack of local state persistence meant clients had to replay long change histories on every load, leading to performance issues and, as projects grew, potential memory pressure.
-- IDs encoded hierarchical relationships and made it difficult to allow for efficiently moving data between parents.
-- Disk space management was hard to detect and support in browser storage, leading to code complexity, user confusion and support burden.
-
-At the same time, SLTT 3 is expected to support a broader product surface than the initial 2026 roadmap alone. In addition to desktop-first delivery, the platform needs to leave room for:
-
-- full offline collaboration with LAN-hosted local team storage,
-- mobile clients optimized for phone and tablet workflows,
-- reporting dashboards for internal monitoring and planning,
-- support and debugging tools for support teams and developers,
-- external reporting APIs for partner access,
-- future integrations that depend on stable server-side behavior rather than client-specific logic.
-
-### SLTT 2.0 did the following things well that we want to preserve:
-
-#### Developer-and-Debug Friendly:
-- ability to use local debugger to connect to backend in order to preflight changes and find and fix issues
-- modBy (changeBy) on changes to support debugging and reporting by user
-
-## 3. Problem Statement
-
-SLTT 3 needs an offline-first, API-based platform architecture that can:
-
-- support day-to-day client operation with predictable sync behavior,
-- provide a reliable fallback path when client and server state diverge,
-- allow clients to persist state locally so they can lazy-load data, lower memory usage, and shorten startup time,
-- preserve the option for any suitable device to become a LAN host for a local team,
-- avoid coupling reporting and partner integrations to process raw sync storage
-
-Due to future LAN/local team scenarios, this RFC recommends a hybrid synchronization approach: support state-based pulling as needed, but treat change-based downsync as the primary operating mode for Dart and Flutter clients so the same merge and materialization logic used in the backend is battle-tested in the clients that may later serve as LAN hosts.
-
-## 4. Goals
-
-- Define a recommended target architecture for SLTT 3 platform services and clients.
-- Clarify the preferred sync model and the role of full entity-state retrieval.
-- Clarify the role of persisted local state in startup performance, lazy loading, and memory usage.
-- Recommend a backward-compatibility convention for entity model evolution.
+- Browser-based disk space management was hard to detect and support in due to security isolation from system resources, leading to code complexity, user confusion and support burden.
+- AWS deployment in master account with other non SLTT services making it unsafe to to allow other developers to have direct access to backends.
+- AWS resources manually created vs. deployed via infrastructure as code, making it harder to maintain and replicate environments for development and testing.
 
 ## 7.4 Backward Compatibility for Data Evolution
 
