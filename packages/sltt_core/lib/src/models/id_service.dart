@@ -4,30 +4,37 @@ import 'dart:math';
 
 import 'package:sltt_core/sltt_core.dart' show generateRandomChars;
 
+import '../services/date_time_service.dart';
+
 /// Generates a unique core ID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HH{UC}-{4-character-random}
 /// ({String? userId}) embed 2 character hash of the userId after the timezone hour offset, 'UK' by default
 /// Generates a unique core ID (Change ID) in format: (local) YYYY-mmdd-HHMMss-sss[-_]HH{UC}-{4-character-random}-{suffix}
 /// ({String? userId}) embed 2 character hash of the userId after the timezone hour offset, 'UK' by default
 String generateCoreId({String? userId, required String suffix}) {
-  final now = DateTime.now();
-  final local = now.toLocal();
+  final context = generateCoreIdWithContext(userId: userId);
+  return context.computeCoreId(suffix);
+}
 
-  // Format: YYYY-mmdd-HHMMss-sss
-  final datePart =
-      '${local.year.toString().padLeft(4, '0')}-'
-      '${local.month.toString().padLeft(2, '0')}${local.day.toString().padLeft(2, '0')}-'
-      '${local.hour.toString().padLeft(2, '0')}${local.minute.toString().padLeft(2, '0')}${local.second.toString().padLeft(2, '0')}-'
-      '${local.millisecond.toString().padLeft(3, '0')}';
-
-  // Timezone offset: ±HHmm
-  final offset = local.timeZoneOffset;
-  final offsetSign = offset.isNegative ? '-' : '_';
-  final offsetHours = offset.inHours.abs().toString().padLeft(2, '0');
-  final timezonePart = '$offsetSign$offsetHours';
-
-  // 4-character random part
-  final rng = Random();
-  final randomPart = generateRandomChars(4, rng: rng);
+CoreIdContext generateCoreIdWithContext({String? userId}) {
+  final hlc = HlcTimestampGenerator.generate();
+  final localHlc = hlc.toLocal();
+  final localOffset = localHlc.timeZoneOffset;
+  final localOffsetSign = localOffset.isNegative ? '-' : '_';
+  final localOffsetHours = localOffset.inHours.abs().toString().padLeft(2, '0');
+  final localDtSeparator = '-';
+  final localYearPart = localHlc.year.toString().padLeft(4, '0');
+  final localMonthPart = localHlc.month.toString().padLeft(2, '0');
+  final localHourPart = localHlc.hour.toString().padLeft(2, '0');
+  final localMinutePart = localHlc.minute.toString().padLeft(2, '0');
+  final localSecondPart = localHlc.second.toString().padLeft(2, '0');
+  final localMillisecond = localHlc.millisecond.toString().padLeft(3, '0');
+  final localDatePartString =
+      '$localYearPart$localDtSeparator'
+      '$localMonthPart${localHlc.day.toString().padLeft(2, '0')}$localDtSeparator'
+      '$localHourPart$localMinutePart$localSecondPart$localDtSeparator'
+      '$localMillisecond';
+  final localTimezonePart = '$localOffsetSign$localOffsetHours';
+  final randomPart = generateRandomChars(4, rng: Random());
   final userCode = (userId != null)
       ? generateRandomChars(
           2,
@@ -35,7 +42,67 @@ String generateCoreId({String? userId, required String suffix}) {
           rng: Random(userId.hashCode),
         )
       : 'UK';
-  return '$datePart$timezonePart$userCode-$randomPart-$suffix';
+
+  return CoreIdContext(
+    hlc: hlc,
+    localHlc: localHlc,
+    localOffset: localOffset,
+    localOffsetSign: localOffsetSign,
+    localOffsetHours: localOffsetHours,
+    localDtSeparator: localDtSeparator,
+    localYearPart: localYearPart,
+    localMonthPart: localMonthPart,
+    localHourPart: localHourPart,
+    localMinutePart: localMinutePart,
+    localSecondPart: localSecondPart,
+    localMillisecond: localMillisecond,
+    localDatePartString: localDatePartString,
+    localTimezonePart: localTimezonePart,
+    randomPart: randomPart,
+    userCode: userCode,
+  );
+}
+
+class CoreIdContext {
+  final DateTime hlc;
+  final DateTime localHlc;
+  final Duration localOffset;
+  final String localOffsetSign;
+  final String localOffsetHours;
+  final String localDtSeparator;
+  final String localYearPart;
+  final String localMonthPart;
+  final String localHourPart;
+  final String localMinutePart;
+  final String localSecondPart;
+  final String localMillisecond;
+  final String localDatePartString;
+  final String localTimezonePart;
+  final String randomPart;
+  final String userCode;
+
+  CoreIdContext({
+    required this.hlc,
+    required this.localHlc,
+    required this.localOffset,
+    required this.localOffsetSign,
+    required this.localOffsetHours,
+    required this.localDtSeparator,
+    required this.localYearPart,
+    required this.localMonthPart,
+    required this.localHourPart,
+    required this.localMinutePart,
+    required this.localSecondPart,
+    required this.localMillisecond,
+    required this.localDatePartString,
+    required this.localTimezonePart,
+    required this.randomPart,
+    required this.userCode,
+  });
+
+  String computeCoreId(String suffix) {
+    return '$localDatePartString$localTimezonePart$userCode-$randomPart-$suffix';
+  }
 }
 
 /// Extracts the YYYY (year) part from an id string.
