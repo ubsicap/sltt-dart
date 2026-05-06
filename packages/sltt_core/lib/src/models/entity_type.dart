@@ -256,9 +256,37 @@ enum EntityType {
     required EntityType entityType,
     String? userId,
   }) {
-    final suffix = getSuffix(entityType: entityType);
-    final entityId = generateCoreId(userId: userId, suffix: suffix);
-    return entityId;
+    final entityIdWithContext = generateEntityIdWithContext(
+      entityType: entityType,
+      userId: userId,
+    );
+    return entityIdWithContext.computeEntityId();
+  }
+
+  static EntityIdContext generateEntityIdWithContext({
+    required EntityType entityType,
+    String? userId,
+  }) {
+    final coreIdContext = generateCoreIdWithContext(userId: userId);
+    return EntityIdContext(
+      entityType: entityType,
+      hlc: coreIdContext.hlc,
+      localHlc: coreIdContext.localHlc,
+      localOffset: coreIdContext.localOffset,
+      localOffsetSign: coreIdContext.localOffsetSign,
+      localOffsetHours: coreIdContext.localOffsetHours,
+      localDtSeparator: coreIdContext.localDtSeparator,
+      localYearPart: coreIdContext.localYearPart,
+      localMonthPart: coreIdContext.localMonthPart,
+      localHourPart: coreIdContext.localHourPart,
+      localMinutePart: coreIdContext.localMinutePart,
+      localSecondPart: coreIdContext.localSecondPart,
+      localMillisecond: coreIdContext.localMillisecond,
+      localDatePartString: coreIdContext.localDatePartString,
+      localTimezonePart: coreIdContext.localTimezonePart,
+      randomPart: coreIdContext.randomPart,
+      userCode: coreIdContext.userCode,
+    );
   }
 
   /// Extract entity type suffix from an entity ID
@@ -291,4 +319,32 @@ String generateCid({required EntityType entityType, String? userId}) {
     userId: userId,
   );
   return '$entityId-cid';
+}
+
+class EntityIdContext extends CoreIdContext {
+  EntityType entityType;
+  EntityIdContext({
+    required this.entityType,
+    required super.hlc,
+    required super.localHlc,
+    required super.localOffset,
+    required super.localOffsetSign,
+    required super.localOffsetHours,
+    required super.localDtSeparator,
+    required super.localYearPart,
+    required super.localMonthPart,
+    required super.localHourPart,
+    required super.localMinutePart,
+    required super.localSecondPart,
+    required super.localMillisecond,
+    required super.localDatePartString,
+    required super.localTimezonePart,
+    required super.randomPart,
+    required super.userCode,
+  });
+
+  String computeEntityId() {
+    final suffix = EntityType.getSuffix(entityType: entityType);
+    return super.computeCoreId(suffix);
+  }
 }
