@@ -1,3 +1,5 @@
+import 'package:unorm_dart/unorm_dart.dart' as unorm;
+
 enum RegistrationValidationProfile { selfRegistration, adHocAdminRegistration }
 
 enum RegistrationValidationWhitespaceMode { tolerant, strict }
@@ -16,9 +18,11 @@ class RegistrationValidationField {
 class RegistrationValidationErrorCode {
   static const String required = 'required';
   static const String minLength = 'min_length';
+  static const String maxLength = 'max_length';
   static const String invalidEmailFormat = 'invalid_email_format';
   static const String invalidDateFormat = 'invalid_date_format';
   static const String ageOutOfRange = 'age_out_of_range';
+  static const String invalidUsernameFormat = 'invalid_username_format';
   static const String passwordTooWeak = 'password_too_weak';
   static const String passwordMismatch = 'password_mismatch';
   static const String leadingOrTrailingWhitespace =
@@ -52,7 +56,12 @@ class RegistrationValidationFields {
 const int kMinimumRegistrationAgeYears = 13;
 const int kMaximumRegistrationAgeYears = 100;
 const int kMinimumRegistrationNameLength = 2;
+const int kMaximumRegistrationNameLength = 32;
 const int kMinimumRegistrationPasswordLength = 8;
+const int kMaximumRegistrationUsernameLength = 20;
+const int kRegistrationUsernameSuffixLength = 3;
+const int kMaximumRegistrationUsernamePrefixLength =
+    kMaximumRegistrationUsernameLength - kRegistrationUsernameSuffixLength;
 
 Map<String, String> validateRegistrationForProfile({
   required RegistrationValidationProfile profile,
@@ -209,6 +218,11 @@ Map<String, String> _validateAdHocAdminRegistration({
     value: fields.username,
     fieldKeyOverrides: fieldKeyOverrides,
   );
+  _validateUsername(
+    details,
+    value: fields.username,
+    fieldKeyOverrides: fieldKeyOverrides,
+  );
   _validateDateOfBirth(
     details,
     value: fields.dateOfBirth,
@@ -263,8 +277,52 @@ void _validateFullName(
   }
   if (name.length < kMinimumRegistrationNameLength) {
     details[field] = RegistrationValidationErrorCode.minLength;
+    return;
+  }
+  if (name.length > kMaximumRegistrationNameLength) {
+    details[field] = RegistrationValidationErrorCode.maxLength;
   }
 }
+
+void _validateUsername(
+  Map<String, String> details, {
+  required String? value,
+  required Map<String, String>? fieldKeyOverrides,
+}) {
+  final field = _fieldKey(
+    RegistrationValidationField.username,
+    fieldKeyOverrides,
+  );
+  if (details.containsKey(field)) {
+    return;
+  }
+
+  final raw = (value ?? '').trim();
+  if (raw.isEmpty) {
+    details[field] = RegistrationValidationErrorCode.required;
+    return;
+  }
+  if (raw.length > kMaximumRegistrationUsernameLength) {
+    details[field] = RegistrationValidationErrorCode.maxLength;
+    return;
+  }
+
+  final normalized = normalizeRegistrationUsername(raw);
+  if (normalized != raw) {
+    details[field] = RegistrationValidationErrorCode.invalidUsernameFormat;
+    return;
+  }
+  if (!_usernameFormat.hasMatch(raw)) {
+    details[field] = RegistrationValidationErrorCode.invalidUsernameFormat;
+  }
+}
+
+final RegExp _usernameFormat = RegExp(
+  '^'
+  '[a-z0-9]{1,$kMaximumRegistrationUsernamePrefixLength}'
+  '[0-9]{$kRegistrationUsernameSuffixLength}'
+  r'$',
+);
 
 void _validateEmail(
   Map<String, String> details, {
@@ -402,3 +460,26 @@ int _ageInYears(DateTime dateOfBirth, DateTime today) {
   }
   return age;
 }
+
+String normalizeRegistrationUsernamePrefix(String input) {
+  final normalized = unorm.nfkc(input).toLowerCase();
+  final buffer = StringBuffer();
+  for (final rune in normalized.runes) {
+    if (_isAsciiLowerLetter(rune) || _isAsciiDigit(rune)) {
+      buffer.writeCharCode(rune);
+    }
+  }
+  return buffer.toString();
+}
+
+String normalizeRegistrationUsername(String input) {
+  final normalized = normalizeRegistrationUsernamePrefix(input);
+  if (normalized.length <= kMaximumRegistrationUsernameLength) {
+    return normalized;
+  }
+  return normalized.substring(0, kMaximumRegistrationUsernameLength);
+}
+
+bool _isAsciiLowerLetter(int rune) => rune >= 97 && rune <= 122;
+
+bool _isAsciiDigit(int rune) => rune >= 48 && rune <= 57;

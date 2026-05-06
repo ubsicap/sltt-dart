@@ -14,6 +14,7 @@ dependencies:
   dio: ^5.4.0
   meta: ^1.10.0
   http: ^1.0.0
+  unorm_dart: ^0.3.2
 
   # Local persistence
   path: ^1.8.0

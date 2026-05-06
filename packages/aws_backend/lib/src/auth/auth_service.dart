@@ -1478,7 +1478,8 @@ class BackendAuthService {
   }
 
   String _normalizeEmail(String email) => email.trim().toLowerCase();
-  String _normalizeUsername(String username) => username.trim().toLowerCase();
+  String _normalizeUsername(String username) =>
+      normalizeRegistrationUsername(username);
 
   Map<String, String> _requiredFieldDetails(Map<String, String> fields) {
     final details = <String, String>{};

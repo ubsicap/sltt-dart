@@ -194,5 +194,96 @@ void main() {
         equals({'username': RegistrationValidationErrorCode.required}),
       );
     });
+
+    test('rejects full name longer than maximum length', () {
+      final details = validateRegistrationForProfile(
+        profile: RegistrationValidationProfile.adHocAdminRegistration,
+        fields: RegistrationValidationFields(
+          userId: 'adhoc-1',
+          name: 'a' * (kMaximumRegistrationNameLength + 1),
+          username: 'validuser123',
+          dateOfBirth: '',
+          password: 'secret123',
+        ),
+      );
+
+      expect(
+        details,
+        equals({'name': RegistrationValidationErrorCode.maxLength}),
+      );
+    });
+
+    test('rejects username longer than maximum length', () {
+      final details = validateRegistrationForProfile(
+        profile: RegistrationValidationProfile.adHocAdminRegistration,
+        fields: const RegistrationValidationFields(
+          userId: 'adhoc-1',
+          name: 'John Doe',
+          username: 'abcdefghijklmnopqr123',
+          dateOfBirth: '',
+          password: 'secret123',
+        ),
+      );
+
+      expect(
+        details,
+        equals({'username': RegistrationValidationErrorCode.maxLength}),
+      );
+    });
+
+    test('rejects username with punctuation', () {
+      final details = validateRegistrationForProfile(
+        profile: RegistrationValidationProfile.adHocAdminRegistration,
+        fields: const RegistrationValidationFields(
+          userId: 'adhoc-1',
+          name: 'John Doe',
+          username: 'john.doe123',
+          dateOfBirth: '',
+          password: 'secret123',
+        ),
+      );
+
+      expect(
+        details,
+        equals({
+          'username': RegistrationValidationErrorCode.invalidUsernameFormat,
+        }),
+      );
+    });
+
+    test('rejects username without three digit suffix', () {
+      final details = validateRegistrationForProfile(
+        profile: RegistrationValidationProfile.adHocAdminRegistration,
+        fields: const RegistrationValidationFields(
+          userId: 'adhoc-1',
+          name: 'John Doe',
+          username: 'johndoe12',
+          dateOfBirth: '',
+          password: 'secret123',
+        ),
+      );
+
+      expect(
+        details,
+        equals({
+          'username': RegistrationValidationErrorCode.invalidUsernameFormat,
+        }),
+      );
+    });
+
+    test('accepts normalized alphanumeric username with 3 digit suffix', () {
+      final details = validateRegistrationForProfile(
+        profile: RegistrationValidationProfile.adHocAdminRegistration,
+        fields: const RegistrationValidationFields(
+          userId: 'adhoc-1',
+          name: 'John Doe',
+          username: 'johndoe123',
+          dateOfBirth: '',
+          password: 'secret123',
+        ),
+      );
+
+      expect(details, isEmpty);
+    });
   });
 }
