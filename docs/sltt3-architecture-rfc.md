@@ -1,14 +1,8 @@
 # RFC: SLTT 3 Platform Architecture
 
-Status: Draft for discussion
-Last updated: 2026-04-02
-Primary audience: Product and engineering
-Secondary audience: Outside technical partners
-Related milestone: 2026 Milestone 4 - Architecture Documentation
-
 ## 1. Summary
 
-SLTT 3 needs an architecture that can cleanly support both desktop and mobile clients each supporting both offline-first operation and networked collaboration.
+SLTT 3 needs an architecture that can cleanly support both desktop and mobile clients, each supporting both offline-first operation and networked collaboration.
 
 Departing from SLTT 2.0 PWA and electron deployment architectures, this RFC recommends a platform architecture in which
 1) Flutter provides the user-friendly native desktop and mobile client experiences with full access to system resources and multi-threaded processing.
@@ -20,66 +14,71 @@ Departing from SLTT 2.0 PWA and electron deployment architectures, this RFC reco
 
 ## 2.0 Key sub-system differences (vs 2.0)
 
-#### Auth
+### Auth
 
-##### DynamoDB
+#### DynamoDB
 - auth table for self-registration and adhoc user-registration (no longer Auth0 hosted)
 - project membership (project access control) stored in its own domain type for prioritized sync support and history analysis.
 
-#### REST API
+### LAN-hosting (local team storage)
+- all architecture decisions have future LAN-hosting in mind, rather than as an afterthought (which leads to complicated exceptions or duplication of logic, database, or API surfaces).
+
+### REST API
 - Access to latest state across all entity types
 - LAN compatible surface (auth, change sync, states, media, and stats)
 
-##### Shelf Server
+#### Shelf Server
 - server instance can be used in cloud and local clients (LAN hosting or debugging)
 
-#### Data Storage
+### Persistence Data Models
 - Latest entity state is persisted for all entity types
+- client and cloud db data models should be compatible for serialization and deserialization
+- most field data should be flat (avoid nesting) to maintain compatibility with cloud or db queries as needed
 
-##### AWS DynamoDB
+#### Versioning and Backward Compatibility
+- fields should be additive and old fields should remain populated unless/until forcing clients to upgrade is acceptable
+- core merge logic depends on strict field naming conventions to ensure forward and backward compatibility
+- serialization merges unknown fields and unknown entity types
+- deserialization preserves unknown fields for serialization
+- all field/value versions should be preserved for LAN-host readiness
+
+#### AWS DynamoDB
 - change logs are segmented across any number of domain types (not just Project domain data)
 
-#### Sync Model
+### Sync Model
 - per-field Last Write Wins (LWW) merging
 - always store losing/outdated changes (for better recovery assurance, debugging)
 - entity state materialization from change logs, LAN-hosting compatible
-- entity state-based downsync/requests as fallback for divergence, bootstrap, and simple (online-only) clients
+- entity state-based downsync/requests as fallback for divergence, parallelized loading or simple (online-only) clients
 
-##### AWS DynamoDB
+#### AWS DynamoDB
 - stores up to 12 changes + 12 materialized entity states per batch write
 
-##### Isar
+#### Isar
 - Batch Puts 10000 changes/entities at a time.
 
-##### AWS Websocket
+#### AWS Websocket
 - Foreground sync of changes to reduce overhead associated with paginated REST request latency
 
-#### Media Storage
+### Media Storage
 - storage key (media id) decoupled from project hierarchy for easier moving/copying between projects
 
-##### AWS S3
+#### AWS S3
 - presigned multi-part uploads results in whole file stored, to simplify media processing and downloading options.
 
-##### AWS CloudFront
+#### AWS CloudFront
 - media downloaded via pre-signed URLs for edge cache support
 
-##### Local Filesystem
+#### Local Filesystem
 - files stored in the cloud are stored in system's temp storage to let OS manage cleanup of old files
 - accessed attribute updated on use to prevent OS cleanup of most-recently used files
 
-##### File Transfer Manager
+#### File Transfer Manager
 - follows LAN-hosting patterns where multiple clients may share responsibility for uploading and downloading of files
 - bounded concurrency for uploads and downloads to avoid overwhelming network
 - uses Range header for resumable downloading, then concatenates downloaded parts into single file
 
-### Versioning and Backward Compatibility
-- fields should be additive and old fields should remain populated
-- core merge logic depends on strict field naming conventions to ensure forward and backward compatibility
-- serialization merges unknown fields and unknown entity types
-- deserialization preserves unknown fields for serialization
-- full data field versions should be preserved for LAN-host readiness
-
-### Debug / Support
+### Dev Deployment / Debug / Support
 - Deploy backend to individual developer accounts
 - Support dev deployments in multiple dev accounts
 - Run debug server instance locally to connect with aws resources
@@ -91,7 +90,7 @@ SLTT 2.0 delivered meaningful value for sign language translation teams, but the
 
 - Need for mobile clients and lack of native mobile platform compatibility pressured us toward duplicating and supporting multiple complicated state materialization pathways.
 - Lack of local state persistence meant clients had to replay long change histories on every load, leading to performance issues and, as projects grew, potential memory pressure.
-- Lack of backend state persistence meant new clients had to sequentially download long change histories to determine state, and thus, for example, forced the reporting backend to duplicate replay logic in order to process and serve reporting state data.
+- Lack of backend state persistence meant new clients had to sequentially download long change histories to determine state, and thus, for example, forced the reporting backend to duplicate replay logic in order to process, store, and serve reporting state data.
 - Browser upgrades and bugs complicated installation, permissions, disk space management, and video processing.
 - Auth0 login UI/UX was often confusing for end users and support staff, and did not provide a clear path to support future fully offline use cases.
 - Data IDs encoded hierarchical relationships and made it difficult to allow for efficiently and cleanly moving data between parents.
