@@ -192,6 +192,9 @@ class EntityStatePaginationJobPersistenceStore {
       next.storageError = null;
 
       await isar.entityStatePaginationJobRecords.put(next);
+      SlttLogger.logger.info(
+        '[EntityStateQueue] Persisting queued job: ${next.jobKey} (priority=${next.priority}, isCollection=${next.isCollection}):\n${jsonEncode({'jobKey': next.jobKey, 'scopeKey': next.scopeKey, 'domainType': next.domainType, 'domainId': next.domainId, 'entityType': next.entityType, 'isCollection': next.isCollection, 'entityId': next.entityId, 'parentId': next.parentId, 'limit': next.limit, 'cursor': next.cursor, 'hasMore': next.hasMore, 'priority': next.priority, 'enqueuedAt': next.enqueuedAt.toIso8601String()})}',
+      );
       await _appendTransitionLog(
         isar: isar,
         jobRecord: next,

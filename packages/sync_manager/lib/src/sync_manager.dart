@@ -687,11 +687,11 @@ class SyncManager {
         '[SyncManager] Downsync completed. Total changes: $totalDownloadedCount',
       );
 
-      final mismatchCount = _queueMismatchedEntityStateRefetches(
+      final mismatchCount = await _queueMismatchedEntityStateRefetches(
         finalStateHashesByKey: finalStateHashesByKey,
         queuedEntityStateFetchKeys: queuedEntityStateFetchKeys,
       );
-      final warningRefetchCount = _queueWarningBasedEntityStateRefetches(
+      final warningRefetchCount = await _queueWarningBasedEntityStateRefetches(
         warningBasedRefetchKeys: warningBasedRefetchKeys,
         finalStateHashesByKey: finalStateHashesByKey,
         queuedEntityStateFetchKeys: queuedEntityStateFetchKeys,
@@ -1135,10 +1135,10 @@ class SyncManager {
     }
   }
 
-  int _queueMismatchedEntityStateRefetches({
+  Future<int> _queueMismatchedEntityStateRefetches({
     required Map<String, _StateHashSnapshot> finalStateHashesByKey,
     required Set<String> queuedEntityStateFetchKeys,
-  }) {
+  }) async {
     var mismatchCount = 0;
     for (final snapshot in finalStateHashesByKey.values) {
       final cloudStateDataHash = snapshot.cloudStateDataHash;
@@ -1154,6 +1154,14 @@ class SyncManager {
           entityId: snapshot.entityId,
         );
         if (queuedEntityStateFetchKeys.add(key)) {
+          await _logLocalEntityStateForEnqueue(
+            domainType: snapshot.domainType,
+            domainId: snapshot.domainId,
+            entityType: snapshot.entityType,
+            entityId: snapshot.entityId,
+            parentId: snapshot.parentId,
+            snapshot: snapshot,
+          );
           enqueueJobFetchEntityState(
             domainType: snapshot.domainType,
             domainId: snapshot.domainId,
@@ -1168,17 +1176,25 @@ class SyncManager {
     return mismatchCount;
   }
 
-  int _queueWarningBasedEntityStateRefetches({
+  Future<int> _queueWarningBasedEntityStateRefetches({
     required Set<String> warningBasedRefetchKeys,
     required Map<String, _StateHashSnapshot> finalStateHashesByKey,
     required Set<String> queuedEntityStateFetchKeys,
-  }) {
+  }) async {
     var warningRefetchCount = 0;
     for (final key in warningBasedRefetchKeys) {
       final snapshot = finalStateHashesByKey[key];
       if (snapshot == null) continue;
       if (!queuedEntityStateFetchKeys.add(key)) continue;
       warningRefetchCount++;
+      await _logLocalEntityStateForEnqueue(
+        domainType: snapshot.domainType,
+        domainId: snapshot.domainId,
+        entityType: snapshot.entityType,
+        entityId: snapshot.entityId,
+        parentId: snapshot.parentId,
+        snapshot: snapshot,
+      );
       enqueueJobFetchEntityState(
         domainType: snapshot.domainType,
         domainId: snapshot.domainId,
@@ -1188,6 +1204,50 @@ class SyncManager {
       );
     }
     return warningRefetchCount;
+  }
+
+  /// extra debugging logs to audit enqueued entity state refetches
+  Future<void> _logLocalEntityStateForEnqueue({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String entityId,
+    String? parentId,
+    _StateHashSnapshot? snapshot,
+  }) async {
+    try {
+      final localState = await _localStorage.getEntityState(
+        domainType: domainType,
+        domainId: domainId,
+        entityType: entityType,
+        entityId: entityId,
+      );
+      if (localState == null) {
+        SlttLogger.logger.info(
+          '[SyncManager] Enqueuing entity state download for '
+          '$domainType/$domainId/$entityType/$entityId parentId=${parentId ?? 'none'}; '
+          'local state not found. snapshot=${snapshot?.toString() ?? 'none'}',
+        );
+        return;
+      }
+
+      final localStateJson = stableStringify(localState.toJson());
+      final localStatePretty = const JsonEncoder.withIndent(
+        '  ',
+      ).convert(jsonDecode(localStateJson));
+      SlttLogger.logger.info(
+        '[SyncManager] Enqueuing entity state download for '
+        '$domainType/$domainId/$entityType/$entityId parentId=${parentId ?? 'none'}; '
+        'snapshot=${snapshot?.toString() ?? 'none'} local state: $localStatePretty',
+      );
+    } catch (e, stackTrace) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Failed to read local entity state before enqueuing download '
+        'for $domainType/$domainId/$entityType/$entityId: $e',
+        e,
+        stackTrace,
+      );
+    }
   }
 
   Map<String, String>? _extractUpdateKeysFromChange(
@@ -1236,6 +1296,19 @@ class _StateHashSnapshot {
     required this.cloudStateDataHash,
     required this.localStateDataHash,
   });
+
+  @override
+  String toString() {
+    return 'StateHashSnapshot('
+        'domainType=$domainType, '
+        'domainId=$domainId, '
+        'entityType=$entityType, '
+        'entityId=$entityId, '
+        'parentId=${parentId ?? 'none'}, '
+        'cloudStateDataHash=${cloudStateDataHash ?? 'null'}, '
+        'localStateDataHash=${localStateDataHash ?? 'null'}'
+        ')';
+  }
 }
 
 // Result classes
