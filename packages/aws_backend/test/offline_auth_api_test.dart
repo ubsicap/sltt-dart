@@ -1472,6 +1472,111 @@ void main() {
       );
 
       test(
+        'project role-only updates also update membership state role',
+        () async {
+          final adminResponse = await authService.register(
+            RegisterRequest(
+              userId: 'admin-user-role-sync',
+              name: 'Admin User',
+              dateOfBirth: '1980-01-01',
+              email: 'admin.role.sync@example.com',
+              password: 'admin-pass',
+            ),
+          );
+          expect(adminResponse.status, equals('pending_verification'));
+          final adminVerify = await authService.verifyEmail(
+            VerifyEmailRequest(
+              email: 'admin.role.sync@example.com',
+              code: emailSender.codes['admin.role.sync@example.com']!.last,
+            ),
+          );
+          final adminUserId = adminVerify.userId;
+
+          final now = DateTime.now().toUtc().toIso8601String();
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': adminUserId,
+              'entityType': kEntityTypeMember,
+              'domainType': kDomainMembership,
+              'unknownJson': '{}',
+              'change_domainId': 'project-1',
+              'change_domainId_orig_': 'project-1',
+              'change_changeAt': now,
+              'change_changeAt_orig_': now,
+              'change_cid': 'admin-member-role-sync',
+              'change_cid_orig_': 'admin-member-role-sync',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': now,
+              'change_storedAt_orig_': now,
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': now,
+              'data_parentId_cid_': 'admin-member-role-sync',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionMembership,
+              'data_parentProp_changeAt_': now,
+              'data_parentProp_cid_': 'admin-member-role-sync',
+              'data_parentProp_changeBy_': 'seed',
+              'role': 'admin',
+              'userId': adminUserId,
+            }),
+          );
+
+          final createResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/admin/adhoc-users',
+            'headers': <String, String>{
+              'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
+            },
+            'body': jsonEncode({
+              'userId': 'adhoc-role-sync-user',
+              'name': 'Role Sync User',
+              'username': 'rolesync123',
+              'password': 'secret123',
+              'projectIds': ['project-1'],
+              'adminPassword': 'admin-pass',
+            }),
+          }, router);
+          expect(createResponse['statusCode'], equals(201));
+
+          final updateResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'PUT',
+            'path': '/api/admin/adhoc-users/adhoc-role-sync-user/projects',
+            'headers': <String, String>{
+              'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
+            },
+            'body': jsonEncode({
+              'projectRoles': {'project-1': MemberType.consultant.name},
+              'adminPassword': 'admin-pass',
+            }),
+          }, router);
+
+          expect(updateResponse['statusCode'], equals(200));
+          final updateBody =
+              jsonDecode(updateResponse['body'] as String)
+                  as Map<String, dynamic>;
+          expect(
+            (updateBody['projectRoles'] as Map<String, dynamic>)['project-1'],
+            equals(MemberType.consultant.name),
+          );
+
+          final membershipState = await storage.getEntityState(
+            domainType: kDomainMembership,
+            domainId: 'project-1',
+            entityType: kEntityTypeMember,
+            entityId: 'adhoc-role-sync-user',
+          );
+          expect(membershipState, isNotNull);
+          final membershipJson = membershipState!.toJson();
+          expect(membershipJson['data_deleted'], isFalse);
+          expect(
+            membershipJson['data_role'],
+            equals(MemberType.consultant.name),
+          );
+        },
+      );
+
+      test(
         'admin can update generic user memberships without overwriting untouched memberships',
         () async {
           final adminResponse = await authService.register(

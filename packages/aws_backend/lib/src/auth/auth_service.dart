@@ -1000,7 +1000,7 @@ class BackendAuthService {
     );
     await _recordStore.putPrincipal(updated);
     await _appStateStore.applyProjectAssignmentChanges(
-      principal: updated,
+      principal: principal,
       projectIdsToAdd: addProjectIds,
       projectIdsToRemove: removeProjectIds,
       changeBy: session.userId,
