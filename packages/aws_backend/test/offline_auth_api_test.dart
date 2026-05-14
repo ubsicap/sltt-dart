@@ -1069,6 +1069,80 @@ void main() {
         expect((listBody['items'] as List<dynamic>).length, equals(1));
       });
 
+      test('rejects adhoc creation with admin project role', () async {
+        final adminResponse = await authService.register(
+          RegisterRequest(
+            userId: 'admin-user',
+            name: 'Admin User',
+            dateOfBirth: '1980-01-01',
+            email: 'admin@example.com',
+            password: 'admin-pass',
+          ),
+        );
+        expect(adminResponse.status, equals('pending_verification'));
+        final adminVerify = await authService.verifyEmail(
+          VerifyEmailRequest(
+            email: 'admin@example.com',
+            code: emailSender.codes['admin@example.com']!.last,
+          ),
+        );
+        final adminUserId = adminVerify.userId;
+
+        await storage.testStoreState(
+          entityState: DynamoEntityState.fromJson({
+            'entityId': adminUserId,
+            'entityType': kEntityTypeMember,
+            'domainType': kDomainMembership,
+            'unknownJson': '{}',
+            'change_domainId': 'project-1',
+            'change_domainId_orig_': 'project-1',
+            'change_changeAt': DateTime.now().toUtc().toIso8601String(),
+            'change_changeAt_orig_': DateTime.now().toUtc().toIso8601String(),
+            'change_cid': 'admin-member',
+            'change_cid_orig_': 'admin-member',
+            'change_changeBy': 'seed',
+            'change_changeBy_orig_': 'seed',
+            'change_storedAt': DateTime.now().toUtc().toIso8601String(),
+            'change_storedAt_orig_': DateTime.now().toUtc().toIso8601String(),
+            'data_parentId': kDomainEntityRootParentId,
+            'data_parentId_changeAt_': DateTime.now().toUtc().toIso8601String(),
+            'data_parentId_cid_': 'admin-member',
+            'data_parentId_changeBy_': 'seed',
+            'data_parentProp': kCollectionMembership,
+            'data_parentProp_changeAt_': DateTime.now()
+                .toUtc()
+                .toIso8601String(),
+            'data_parentProp_cid_': 'admin-member',
+            'data_parentProp_changeBy_': 'seed',
+            'role': 'admin',
+            'userId': adminUserId,
+          }),
+        );
+
+        final createResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/admin/adhoc-users',
+          'headers': <String, String>{
+            'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
+          },
+          'body': jsonEncode({
+            'userId': 'adhoc-admin-role-user',
+            'name': 'Admin Role User',
+            'username': 'adminroleuser123',
+            'password': 'secret123',
+            'projectIds': ['project-1'],
+            'projectRoles': {'project-1': MemberType.admin.name},
+            'adminPassword': 'admin-pass',
+          }),
+        }, router);
+
+        expect(createResponse['statusCode'], equals(400));
+        final body =
+            jsonDecode(createResponse['body'] as String)
+                as Map<String, dynamic>;
+        expect(body['code'], equals('invalid_request'));
+      });
+
       test('rejects adhoc username with punctuation', () async {
         final adminResponse = await authService.register(
           RegisterRequest(
@@ -1659,6 +1733,91 @@ void main() {
           );
         },
       );
+
+      test('rejects adhoc project role update to admin', () async {
+        final adminResponse = await authService.register(
+          RegisterRequest(
+            userId: 'admin-user-role-reject',
+            name: 'Admin User',
+            dateOfBirth: '1980-01-01',
+            email: 'admin.role.reject@example.com',
+            password: 'admin-pass',
+          ),
+        );
+        expect(adminResponse.status, equals('pending_verification'));
+        final adminVerify = await authService.verifyEmail(
+          VerifyEmailRequest(
+            email: 'admin.role.reject@example.com',
+            code: emailSender.codes['admin.role.reject@example.com']!.last,
+          ),
+        );
+
+        await storage.testStoreState(
+          entityState: DynamoEntityState.fromJson({
+            'entityId': adminVerify.userId,
+            'entityType': kEntityTypeMember,
+            'domainType': kDomainMembership,
+            'unknownJson': '{}',
+            'change_domainId': 'project-1',
+            'change_domainId_orig_': 'project-1',
+            'change_changeAt': DateTime.now().toUtc().toIso8601String(),
+            'change_changeAt_orig_': DateTime.now().toUtc().toIso8601String(),
+            'change_cid': 'admin-member-reject',
+            'change_cid_orig_': 'admin-member-reject',
+            'change_changeBy': 'seed',
+            'change_changeBy_orig_': 'seed',
+            'change_storedAt': DateTime.now().toUtc().toIso8601String(),
+            'change_storedAt_orig_': DateTime.now().toUtc().toIso8601String(),
+            'data_parentId': kDomainEntityRootParentId,
+            'data_parentId_changeAt_': DateTime.now().toUtc().toIso8601String(),
+            'data_parentId_cid_': 'admin-member-reject',
+            'data_parentId_changeBy_': 'seed',
+            'data_parentProp': kCollectionMembership,
+            'data_parentProp_changeAt_': DateTime.now()
+                .toUtc()
+                .toIso8601String(),
+            'data_parentProp_cid_': 'admin-member-reject',
+            'data_parentProp_changeBy_': 'seed',
+            'role': 'admin',
+            'userId': adminVerify.userId,
+          }),
+        );
+
+        final createResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/admin/adhoc-users',
+          'headers': <String, String>{
+            'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
+          },
+          'body': jsonEncode({
+            'userId': 'adhoc-update-role-reject',
+            'name': 'Reject Update User',
+            'username': 'rejectupdate123',
+            'password': 'secret123',
+            'projectIds': ['project-1'],
+            'adminPassword': 'admin-pass',
+          }),
+        }, router);
+        expect(createResponse['statusCode'], equals(201));
+
+        final updateResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'PUT',
+          'path': '/api/admin/adhoc-users/adhoc-update-role-reject/projects',
+          'headers': <String, String>{
+            'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
+          },
+          'body': jsonEncode({
+            'projectRoles': {'project-1': MemberType.admin.name},
+            'adminPassword': 'admin-pass',
+          }),
+        }, router);
+
+        expect(updateResponse['statusCode'], equals(400));
+        final updateBody =
+            jsonDecode(updateResponse['body'] as String)
+                as Map<String, dynamic>;
+        expect(updateBody['code'], equals('invalid_request'));
+      });
 
       test(
         'admin can update generic user memberships without overwriting untouched memberships',

@@ -236,7 +236,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'POST',
       'path': '/api/admin/adhoc-users',
       'description':
-          'Create an AdHoc user with username/password credentials and assign managed projects.',
+          'Create an AdHoc user with username/password credentials and assign managed projects. AdHoc users may not be assigned the Admin role.',
       'security': [
         {'bearerAuth': []},
       ],
@@ -260,6 +260,12 @@ class AwsRestApiServer extends BaseRestApiServer {
             'type': 'array',
             'items': {'type': 'string'},
           },
+          'projectRoles': {
+            'type': 'object',
+            'description':
+                'Optional map of projectId to role name for initial assignments. Admin role is not permitted for AdHoc users.',
+            'additionalProperties': {'type': 'string'},
+          },
           'adminPassword': {'type': 'string'},
         },
       },
@@ -268,7 +274,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'PUT',
       'path': '/api/admin/adhoc-users/{userId}/projects',
       'description':
-          'Apply explicit project assignment changes for an AdHoc user and optionally update per-project roles. Caller must be an admin of every project listed in addProjectIds or removeProjectIds.',
+          'Apply explicit project assignment changes for an AdHoc user and optionally update per-project roles. Caller must be an admin of every project listed in addProjectIds or removeProjectIds. Admin role is not permitted for AdHoc users.',
       'security': [
         {'bearerAuth': []},
       ],
@@ -287,7 +293,7 @@ class AwsRestApiServer extends BaseRestApiServer {
           'projectRoles': {
             'type': 'object',
             'description':
-                'Optional map of projectId to role name (for example, {"project-1": "consultant"}). This can be provided alongside add/remove changes or by itself for role-only updates.',
+                'Optional map of projectId to role name (for example, {"project-1": "consultant"}). This can be provided alongside add/remove changes or by itself for role-only updates. Admin role is not permitted for AdHoc users.',
             'additionalProperties': {'type': 'string'},
           },
           'adminPassword': {'type': 'string'},

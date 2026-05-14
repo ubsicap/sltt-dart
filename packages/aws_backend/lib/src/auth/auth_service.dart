@@ -801,6 +801,7 @@ class BackendAuthService {
       );
       if (memberType == MemberType.system ||
           memberType == MemberType.superAdmin ||
+          memberType == MemberType.admin ||
           memberType == MemberType.unknown) {
         throw AuthException(
           'Unable to complete this action',
