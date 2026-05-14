@@ -8,9 +8,9 @@ import 'auth_models.dart';
 
 /// Auth table key access map.
 ///
-/// There are currently no GSIs on this table. Every access pattern uses the
-/// base table `pk`/`sk`, and TTL cleanup relies on `ttlEpochSeconds` stored on
-/// challenge/session items.
+/// Base table uses `pk`/`sk` for point lookups and per-user queries. GSI1 is
+/// used for principal listing, and TTL cleanup relies on `ttlEpochSeconds`
+/// stored on challenge/session items.
 ///
 /// sample_values:
 ///   userId: user_123
@@ -71,10 +71,12 @@ import 'auth_models.dart';
 ///       sk: LOOKUP
 ///
 /// adhoc_listing:
-///   read_scan:
-///     operation: Scan in listAdHocPrincipals
-///     key_fields: [itemType filter]
-///     notes: No index yet; this scans for itemType = principal and filters in memory.
+///   write_query:
+///     operation: PutItem in putPrincipal, Query in listAdHocPrincipals
+///     key_fields: [gsi1pk, gsi1sk]
+///     keys:
+///       gsi1pk: principal
+///       gsi1sk: STATUS#active#KIND#username_password#ADHOC#1#USER#user_123
 
 abstract class AuthRecordStore {
   Future<void> initialize();
@@ -313,7 +315,17 @@ class DynamoAuthRecordStore implements AuthRecordStore {
     await _putItem(
       pk: _userPk(principal.userId),
       sk: _principalSk(),
-      payload: {'itemType': 'principal', ...principal.toJson()},
+      payload: {
+        'itemType': 'principal',
+        'gsi1pk': _principalListingGsiPk(),
+        'gsi1sk': _principalListingGsiSk(
+          accountStatus: principal.accountStatus,
+          identityKind: principal.identityKind,
+          isAdHoc: principal.isAdHoc,
+          userId: principal.userId,
+        ),
+        ...principal.toJson(),
+      },
     );
   }
 
@@ -438,8 +450,24 @@ class DynamoAuthRecordStore implements AuthRecordStore {
 
   @override
   Future<List<AuthPrincipal>> listAdHocPrincipals() async {
-    final items = await _scanPrincipals();
-    return items
+    final results = <String, Map<String, dynamic>>{};
+    for (final status in _nonDeletedStatuses) {
+      for (final kind in AuthIdentityKind.values) {
+        final items = await _queryPrincipalsByPrefix(
+          accountStatus: status,
+          identityKind: kind,
+          isAdHoc: true,
+        );
+        for (final item in items) {
+          final userId = item['userId'] as String?;
+          if (userId == null || userId.isEmpty) {
+            continue;
+          }
+          results[userId] = item;
+        }
+      }
+    }
+    return results.values
         .map(AuthPrincipal.fromJson)
         .where((principal) => principal.isAdHoc && !principal.isDeleted)
         .toList(growable: false);
@@ -459,6 +487,18 @@ class DynamoAuthRecordStore implements AuthRecordStore {
       'AttributeDefinitions': [
         {'AttributeName': 'pk', 'AttributeType': 'S'},
         {'AttributeName': 'sk', 'AttributeType': 'S'},
+        {'AttributeName': 'gsi1pk', 'AttributeType': 'S'},
+        {'AttributeName': 'gsi1sk', 'AttributeType': 'S'},
+      ],
+      'GlobalSecondaryIndexes': [
+        {
+          'IndexName': _principalListingIndexName,
+          'KeySchema': [
+            {'AttributeName': 'gsi1pk', 'KeyType': 'HASH'},
+            {'AttributeName': 'gsi1sk', 'KeyType': 'RANGE'},
+          ],
+          'Projection': {'ProjectionType': 'ALL'},
+        },
       ],
       'BillingMode': 'PAY_PER_REQUEST',
       'TimeToLiveSpecification': {
@@ -555,17 +595,29 @@ class DynamoAuthRecordStore implements AuthRecordStore {
         .toList(growable: false);
   }
 
-  Future<List<Map<String, dynamic>>> _scanPrincipals() async {
+  Future<List<Map<String, dynamic>>> _queryPrincipalsByPrefix({
+    required AuthAccountStatus accountStatus,
+    required AuthIdentityKind identityKind,
+    required bool isAdHoc,
+  }) async {
     await initialize();
-    final response = await _dynamoRequest('Scan', {
+    final gsi1skPrefix = _principalListingGsiSkPrefix(
+      accountStatus: accountStatus,
+      identityKind: identityKind,
+      isAdHoc: isAdHoc,
+    );
+    final response = await _dynamoRequest('Query', {
       'TableName': tableName,
-      'FilterExpression': 'itemType = :itemType',
+      'IndexName': _principalListingIndexName,
+      'KeyConditionExpression':
+          'gsi1pk = :gsi1pk AND begins_with(gsi1sk, :gsi1skPrefix)',
       'ExpressionAttributeValues': {
-        ':itemType': {'S': 'principal'},
+        ':gsi1pk': {'S': _principalListingGsiPk()},
+        ':gsi1skPrefix': {'S': gsi1skPrefix},
       },
     });
     if (response.statusCode != 200) {
-      throw Exception('Failed to scan auth principals: ${response.body}');
+      throw Exception('Failed to query auth principals: ${response.body}');
     }
     final body =
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
@@ -688,4 +740,33 @@ class DynamoAuthRecordStore implements AuthRecordStore {
   String _emailChallengeSk() => 'CHALLENGE#EMAIL';
   String _sessionSk(String sessionId) => 'SESSION#$sessionId';
   String _sessionTokenPk(String tokenHash) => 'SESSIONTOKEN#$tokenHash';
+  static const String _principalListingIndexName = 'GSI1';
+  static const List<AuthAccountStatus> _nonDeletedStatuses =
+      <AuthAccountStatus>[
+        AuthAccountStatus.pendingVerification,
+        AuthAccountStatus.active,
+      ];
+  String _principalListingGsiPk() => 'principal';
+  String _principalListingGsiSkPrefix({
+    required AuthAccountStatus accountStatus,
+    required AuthIdentityKind identityKind,
+    required bool isAdHoc,
+  }) {
+    final adHocBit = isAdHoc ? '1' : '0';
+    return 'STATUS#${accountStatus.value}#KIND#${identityKind.value}#ADHOC#$adHocBit#USER#';
+  }
+
+  String _principalListingGsiSk({
+    required AuthAccountStatus accountStatus,
+    required AuthIdentityKind identityKind,
+    required bool isAdHoc,
+    required String userId,
+  }) {
+    final prefix = _principalListingGsiSkPrefix(
+      accountStatus: accountStatus,
+      identityKind: identityKind,
+      isAdHoc: isAdHoc,
+    );
+    return '$prefix$userId';
+  }
 }
