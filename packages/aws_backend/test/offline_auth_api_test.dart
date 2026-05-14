@@ -1471,6 +1471,90 @@ void main() {
         },
       );
 
+      test('admin can delete adhoc user from sole admin project', () async {
+        final adminResponse = await authService.register(
+          RegisterRequest(
+            userId: 'admin-user',
+            name: 'Admin User',
+            dateOfBirth: '1980-01-01',
+            email: 'admin@example.com',
+            password: 'admin-pass',
+          ),
+        );
+        expect(adminResponse.status, equals('pending_verification'));
+        final adminVerify = await authService.verifyEmail(
+          VerifyEmailRequest(
+            email: 'admin@example.com',
+            code: emailSender.codes['admin@example.com']!.last,
+          ),
+        );
+        final adminUserId = adminVerify.userId;
+
+        await storage.testStoreState(
+          entityState: DynamoEntityState.fromJson({
+            'entityId': adminUserId,
+            'entityType': kEntityTypeMember,
+            'domainType': kDomainMembership,
+            'unknownJson': '{}',
+            'change_domainId': 'project-1',
+            'change_domainId_orig_': 'project-1',
+            'change_changeAt': DateTime.now().toUtc().toIso8601String(),
+            'change_changeAt_orig_': DateTime.now().toUtc().toIso8601String(),
+            'change_cid': 'admin-member',
+            'change_cid_orig_': 'admin-member',
+            'change_changeBy': 'seed',
+            'change_changeBy_orig_': 'seed',
+            'change_storedAt': DateTime.now().toUtc().toIso8601String(),
+            'change_storedAt_orig_': DateTime.now().toUtc().toIso8601String(),
+            'data_parentId': '',
+            'data_parentId_changeAt_': DateTime.now().toUtc().toIso8601String(),
+            'data_parentId_cid_': 'admin-member',
+            'data_parentId_changeBy_': 'seed',
+            'data_parentProp': kCollectionMembership,
+            'data_parentProp_changeAt_': DateTime.now()
+                .toUtc()
+                .toIso8601String(),
+            'data_parentProp_cid_': 'admin-member',
+            'data_parentProp_changeBy_': 'seed',
+            'role': 'admin',
+            'userId': adminUserId,
+          }),
+        );
+
+        final createResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/admin/adhoc-users',
+          'headers': <String, String>{
+            'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
+          },
+          'body': jsonEncode({
+            'userId': 'adhoc-local-user',
+            'name': 'Local User',
+            'username': 'localuser123',
+            'password': 'secret123',
+            'projectIds': ['project-1'],
+            'adminPassword': 'admin-pass',
+          }),
+        }, router);
+        expect(createResponse['statusCode'], equals(201));
+
+        final deleteResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'DELETE',
+          'path': '/api/admin/adhoc-users/adhoc-local-user',
+          'headers': <String, String>{
+            'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
+          },
+          'body': jsonEncode({'adminPassword': 'admin-pass'}),
+        }, router);
+        expect(deleteResponse['statusCode'], equals(200));
+
+        final deletedPrincipal = await recordStore.getPrincipalByUserId(
+          'adhoc-local-user',
+        );
+        expect(deletedPrincipal, isNotNull);
+        expect(deletedPrincipal!.isDeleted, isTrue);
+      });
+
       test(
         'project role-only updates also update membership state role',
         () async {
