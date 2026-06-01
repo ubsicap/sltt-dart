@@ -508,6 +508,7 @@ resources:
                     - dynamodb:Scan
                   Resource:
                     - !GetAtt AuthTable.Arn
+                    - !Sub '${AuthTable.Arn}/index/*'
                 - Effect: Allow
                   Action:
                     - dynamodb:ExportTableToPointInTime
