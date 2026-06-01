@@ -77,18 +77,6 @@ import 'auth_models.dart';
 ///     keys:
 ///       gsi1pk: principal
 ///       gsi1sk: STATUS#active#KIND#username_password#ADHOC#1#USER#user_123
-///
-/// principal_listing_backfill_migration:
-///   read_scan_write:
-///     operation: Scan in _scanPrincipals, PutItem in _backfillMissingPrincipalListingGsi
-///     key_fields: [pk, sk] and [gsi1pk, gsi1sk]
-///     notes: Temporary migration path for principal rows that predate GSI1 population.
-///     keys:
-///       scan_filter: itemType = principal
-///       rewritten_pk: USER#user_123
-///       rewritten_sk: PRINCIPAL
-///       rewritten_gsi1pk: principal
-///       rewritten_gsi1sk: STATUS#active#KIND#username_password#ADHOC#1#USER#user_123
 
 abstract class AuthRecordStore {
   Future<void> initialize();
@@ -259,7 +247,6 @@ class DynamoAuthRecordStore implements AuthRecordStore {
   final http.Client _httpClient;
 
   bool _initialized = false;
-  Future<void>? _principalListingBackfillFuture;
   late String _endpoint;
   late Map<String, String> _baseHeaders;
 
@@ -463,8 +450,6 @@ class DynamoAuthRecordStore implements AuthRecordStore {
 
   @override
   Future<List<AuthPrincipal>> listAdHocPrincipals() async {
-    await _ensurePrincipalListingGsiBackfilled();
-
     final results = <String, Map<String, dynamic>>{};
     for (final status in _nonDeletedStatuses) {
       for (final kind in AuthIdentityKind.values) {
@@ -486,28 +471,6 @@ class DynamoAuthRecordStore implements AuthRecordStore {
         .map(AuthPrincipal.fromJson)
         .where((principal) => principal.isAdHoc && !principal.isDeleted)
         .toList(growable: false);
-  }
-
-  Future<void> _ensurePrincipalListingGsiBackfilled() {
-    return _principalListingBackfillFuture ??=
-        _backfillMissingPrincipalListingGsi();
-  }
-
-  Future<void> _backfillMissingPrincipalListingGsi() async {
-    final items = await _scanPrincipals();
-    for (final item in items) {
-      final hasGsi1pk =
-          item['gsi1pk'] is String && (item['gsi1pk'] as String).isNotEmpty;
-      final hasGsi1sk =
-          item['gsi1sk'] is String && (item['gsi1sk'] as String).isNotEmpty;
-      if (hasGsi1pk && hasGsi1sk) {
-        continue;
-      }
-
-      // Temporary migration: re-write principal to populate listing GSI keys.
-      final principal = AuthPrincipal.fromJson(item);
-      await putPrincipal(principal);
-    }
   }
 
   Future<void> createTableIfNotExists() async {
@@ -622,27 +585,6 @@ class DynamoAuthRecordStore implements AuthRecordStore {
     });
     if (response.statusCode != 200) {
       throw Exception('Failed to query auth items: ${response.body}');
-    }
-    final body =
-        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-    final items = body['Items'] as List<dynamic>? ?? const <dynamic>[];
-    return items
-        .whereType<Map<String, dynamic>>()
-        .map(_decodeItem)
-        .toList(growable: false);
-  }
-
-  Future<List<Map<String, dynamic>>> _scanPrincipals() async {
-    await initialize();
-    final response = await _dynamoRequest('Scan', {
-      'TableName': tableName,
-      'FilterExpression': 'itemType = :itemType',
-      'ExpressionAttributeValues': {
-        ':itemType': {'S': 'principal'},
-      },
-    });
-    if (response.statusCode != 200) {
-      throw Exception('Failed to scan auth principals: ${response.body}');
     }
     final body =
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
