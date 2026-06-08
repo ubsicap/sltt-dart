@@ -787,6 +787,32 @@ class BackendAuthService {
     return const AuthStatusResponse(status: 'logged_out');
   }
 
+  Map<String, String> _normalizeAdHocProjectRoles(Map<String, String>? roles) {
+    final normalized = <String, String>{};
+    for (final entry in (roles ?? const <String, String>{}).entries) {
+      final projectId = entry.key.trim();
+      final role = entry.value.trim();
+      if (projectId.isEmpty || role.isEmpty) {
+        continue;
+      }
+      final memberType = MemberType.values.firstWhere(
+        (type) => type.name.toLowerCase() == role.toLowerCase(),
+        orElse: () => MemberType.unknown,
+      );
+      if (memberType == MemberType.system ||
+          memberType == MemberType.superAdmin ||
+          memberType == MemberType.admin ||
+          memberType == MemberType.unknown) {
+        throw AuthException(
+          'Unable to complete this action',
+          code: 'invalid_request',
+        );
+      }
+      normalized[projectId] = memberType.name;
+    }
+    return normalized;
+  }
+
   Future<AdHocUserSummary> createAdHocUser({
     required AuthenticatedSession session,
     required CreateAdHocUserRequest request,
@@ -797,13 +823,21 @@ class BackendAuthService {
     final username = request.username.trim();
     final name = request.name.trim();
     final password = request.password;
-    if (userId.isEmpty ||
-        username.isEmpty ||
-        name.isEmpty ||
-        password.isEmpty) {
-      throw AuthException(
-        'Unable to complete this action',
-        code: 'invalid_request',
+    final validationDetails = validateRegistrationForProfile(
+      profile: RegistrationValidationProfile.adHocAdminRegistration,
+      fields: RegistrationValidationFields(
+        userId: userId,
+        name: name,
+        username: username,
+        password: password,
+        dateOfBirth: request.dateOfBirth,
+      ),
+      whitespaceMode: RegistrationValidationWhitespaceMode.strict,
+    );
+    if (validationDetails.isNotEmpty) {
+      _throwInvalidRequest(
+        event: 'create_adhoc_user_invalid_request',
+        details: validationDetails,
       );
     }
     final existingByUserId = await _recordStore.getPrincipalByUserId(userId);
@@ -811,7 +845,11 @@ class BackendAuthService {
       throw AuthException(
         'Unable to complete this action',
         statusCode: 400,
-        code: 'unable_to_complete_action',
+        code: 'invalid_request',
+        details: const {
+          RegistrationValidationField.userId:
+              RegistrationValidationErrorCode.alreadyExists,
+        },
       );
     }
     final normalizedUsername = _normalizeUsername(username);
@@ -822,11 +860,16 @@ class BackendAuthService {
       throw AuthException(
         'Unable to complete this action',
         statusCode: 400,
-        code: 'unable_to_complete_action',
+        code: 'invalid_request',
+        details: const {
+          RegistrationValidationField.username:
+              RegistrationValidationErrorCode.alreadyExists,
+        },
       );
     }
     final hash = await _passwordHashService.hashPassword(password);
     final now = DateTime.now().toUtc();
+    final requestedRoles = _normalizeAdHocProjectRoles(request.projectRoles);
     final principal = UsernameAuthPrincipal(
       userId: userId,
       username: username,
@@ -842,6 +885,10 @@ class BackendAuthService {
           ? null
           : request.dateOfBirth?.trim(),
       assignedProjectIds: request.projectIds,
+      memberships: {
+        for (final projectId in request.projectIds)
+          projectId: requestedRoles[projectId] ?? MemberType.translator.name,
+      },
       verificationVersion: 0,
       createdAt: now,
       updatedAt: now,
@@ -858,20 +905,32 @@ class BackendAuthService {
       projectIdsToAdd: request.projectIds,
       projectIdsToRemove: const <String>[],
       changeBy: session.userId,
+      projectRoles: {
+        for (final projectId in request.projectIds)
+          projectId: requestedRoles[projectId] ?? MemberType.translator.name,
+      },
     );
     return _toAdHocSummary(principal);
   }
 
   Future<AdHocUsersResponse> listAdHocUsers({
     required AuthenticatedSession session,
+    bool superMode = false,
   }) async {
+    final items = await _recordStore.listAdHocPrincipals();
+    if (superMode) {
+      final all = items
+          .whereType<UsernameAuthPrincipal>()
+          .map(_toAdHocSummary)
+          .toList(growable: false);
+      return AdHocUsersResponse(items: all);
+    }
     final adminProjects = await _appStateStore.getAdminProjectIdsForUser(
       session.userId,
     );
     if (adminProjects.isEmpty) {
       return const AdHocUsersResponse(items: <AdHocUserSummary>[]);
     }
-    final items = await _recordStore.listAdHocPrincipals();
     final visible = items
         .whereType<UsernameAuthPrincipal>()
         .where(
@@ -905,6 +964,7 @@ class BackendAuthService {
         code: 'invalid_request',
       );
     }
+    final requestedRoles = _normalizeAdHocProjectRoles(request.projectRoles);
     await _requireAdminForProjects(
       session.userId,
       {...addProjectIds, ...removeProjectIds}.toList(growable: false),
@@ -913,18 +973,142 @@ class BackendAuthService {
       ...principal.assignedProjectIds,
       ...addProjectIds,
     }..removeAll(removeProjectIds);
+    final updatedMemberships = Map<String, String>.from(
+      principal.memberships ?? const <String, String>{},
+    );
+    for (final projectId in addProjectIds) {
+      updatedMemberships[projectId] =
+          requestedRoles[projectId] ?? MemberType.translator.name;
+    }
+    for (final projectId in removeProjectIds) {
+      updatedMemberships.remove(projectId);
+    }
+    for (final entry in requestedRoles.entries) {
+      final projectId = entry.key;
+      if (addProjectIds.contains(projectId) ||
+          removeProjectIds.contains(projectId)) {
+        continue;
+      }
+      if (!updatedProjectIds.contains(projectId)) {
+        continue;
+      }
+      updatedMemberships[projectId] = entry.value;
+    }
     final updated = principal.copyWith(
       assignedProjectIds: updatedProjectIds.toList(growable: false),
+      memberships: updatedMemberships,
       updatedAt: DateTime.now().toUtc(),
     );
     await _recordStore.putPrincipal(updated);
     await _appStateStore.applyProjectAssignmentChanges(
-      principal: updated,
+      principal: principal,
       projectIdsToAdd: addProjectIds,
       projectIdsToRemove: removeProjectIds,
       changeBy: session.userId,
+      projectRoles: {
+        for (final projectId in requestedRoles.keys)
+          if (!removeProjectIds.contains(projectId))
+            projectId: requestedRoles[projectId] ?? MemberType.translator.name,
+      },
     );
     return _toAdHocSummary(updated);
+  }
+
+  Future<Map<String, dynamic>> updateUserMemberships({
+    required AuthenticatedSession session,
+    required String userId,
+    required UpdateUserMembershipsRequest request,
+  }) async {
+    await _confirmAdminPassword(session.userId, request.adminPassword);
+
+    final memberAdditions = <String, String>{
+      for (final entry in request.memberAdditions.entries)
+        entry.key.trim(): entry.value.trim(),
+    }..removeWhere((key, value) => key.isEmpty || value.isEmpty);
+    final validatedMemberAdditions = <String, String>{};
+    for (final entry in memberAdditions.entries) {
+      final normalizedRole = entry.value.trim().toLowerCase();
+      MemberType? memberType;
+      try {
+        memberType = MemberType.values.firstWhere(
+          (type) => type.name.toLowerCase() == normalizedRole,
+        );
+      } catch (_) {
+        memberType = null;
+      }
+      if (memberType == null ||
+          memberType == MemberType.system ||
+          memberType == MemberType.superAdmin ||
+          memberType == MemberType.unknown) {
+        throw AuthException(
+          'Unable to complete this action',
+          code: 'invalid_request',
+        );
+      }
+      validatedMemberAdditions[entry.key] = memberType.name;
+    }
+    final memberRemovals = request.memberRemovals
+        .map((projectId) => projectId.trim())
+        .where((projectId) => projectId.isNotEmpty)
+        .toSet();
+    final overlap = validatedMemberAdditions.keys.toSet().intersection(
+      memberRemovals,
+    );
+    if (overlap.isNotEmpty) {
+      throw AuthException(
+        'Unable to complete this action',
+        code: 'invalid_request',
+      );
+    }
+
+    final principal = await _recordStore.getPrincipalByUserId(userId);
+    if (principal == null || principal.isDeleted) {
+      throw AuthException(
+        'Unable to complete this action',
+        statusCode: 404,
+        code: 'unable_to_complete_action',
+      );
+    }
+
+    await _requireAdminForProjects(session.userId, <String>[
+      ...validatedMemberAdditions.keys,
+      ...memberRemovals,
+    ]);
+
+    final updatedProjectIds = {
+      ...principal.assignedProjectIds,
+      ...validatedMemberAdditions.keys,
+    }..removeAll(memberRemovals);
+    final updatedMemberships =
+        Map<String, String>.from(
+            principal.memberships ?? const <String, String>{},
+          )
+          ..addAll(validatedMemberAdditions)
+          ..removeWhere((projectId, _) => memberRemovals.contains(projectId));
+
+    final updated = principal.copyWith(
+      assignedProjectIds: updatedProjectIds.toList(growable: false),
+      memberships: updatedMemberships,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    await _recordStore.putPrincipal(updated);
+    await _appStateStore.upsertVerifiedUserProfile(
+      principal: updated,
+      changeBy: session.userId,
+    );
+    await _appStateStore.applyProjectAssignmentChanges(
+      principal: updated,
+      projectIdsToAdd: validatedMemberAdditions.keys,
+      projectIdsToRemove: memberRemovals,
+      changeBy: session.userId,
+      projectRoles: validatedMemberAdditions,
+    );
+
+    return <String, dynamic>{
+      'userId': updated.userId,
+      'assignedProjectIds': updated.assignedProjectIds,
+      'memberships': updated.memberships ?? const <String, String>{},
+    };
   }
 
   Future<AuthStatusResponse> resetAdHocPassword({
@@ -933,8 +1117,27 @@ class BackendAuthService {
     required ResetAdHocPasswordRequest request,
   }) async {
     await _confirmAdminPassword(session.userId, request.adminPassword);
+    final newPassword = request.newPassword;
+    if (newPassword.isEmpty) {
+      _throwInvalidRequest(
+        event: 'reset_adhoc_password_invalid_request',
+        details: const {
+          RegistrationValidationField.password:
+              RegistrationValidationErrorCode.required,
+        },
+      );
+    }
+    if (newPassword.length < kMinimumRegistrationPasswordLength) {
+      _throwInvalidRequest(
+        event: 'reset_adhoc_password_invalid_request',
+        details: const {
+          RegistrationValidationField.password:
+              RegistrationValidationErrorCode.passwordTooWeak,
+        },
+      );
+    }
     final principal = await _requireAdHocPrincipal(userId);
-    await _requireAdminForProjects(
+    await _requireAdminForAnyAssignedProject(
       session.userId,
       principal.assignedProjectIds,
     );
@@ -1173,6 +1376,30 @@ class BackendAuthService {
     }
   }
 
+  Future<void> _requireAdminForAnyAssignedProject(
+    String userId,
+    List<String> projectIds,
+  ) async {
+    final requested = projectIds.where((id) => id.trim().isNotEmpty).toSet();
+    if (requested.isEmpty) {
+      throw AuthException(
+        'Unable to complete this action',
+        statusCode: 403,
+        code: 'insufficient_permissions',
+      );
+    }
+    final adminProjects = await _appStateStore.getAdminProjectIdsForUser(
+      userId,
+    );
+    if (!requested.any(adminProjects.contains)) {
+      throw AuthException(
+        'Unable to complete this action',
+        statusCode: 403,
+        code: 'insufficient_permissions',
+      );
+    }
+  }
+
   Future<UsernameAuthPrincipal> _requireAdHocPrincipal(String userId) async {
     final principal = await _recordStore.getPrincipalByUserId(userId);
     if (principal == null ||
@@ -1252,7 +1479,8 @@ class BackendAuthService {
   }
 
   String _normalizeEmail(String email) => email.trim().toLowerCase();
-  String _normalizeUsername(String username) => username.trim().toLowerCase();
+  String _normalizeUsername(String username) =>
+      normalizeRegistrationUsername(username);
 
   Map<String, String> _requiredFieldDetails(Map<String, String> fields) {
     final details = <String, String>{};
@@ -1406,6 +1634,7 @@ class BackendAuthService {
       username: principal.username,
       dateOfBirth: principal.dateOfBirth,
       projectIds: principal.assignedProjectIds,
+      projectRoles: principal.memberships,
       status: principal.accountStatus.value,
     );
   }
@@ -1417,6 +1646,7 @@ class BackendAuthServiceFactory {
     required BaseStorageService appStorage,
     required Map<String, String> environment,
     bool useLocalDynamoDB = false,
+    Future<AWSCredentials> Function()? credentialsResolver,
   }) {
     final authTable = (environment['AUTH_TABLE'] ?? '').trim();
     final jwtSecret = (environment['AUTH_JWT_SECRET'] ?? '').trim();
@@ -1451,6 +1681,7 @@ class BackendAuthServiceFactory {
         credentials: credentials,
         region: region,
         fromEmail: sesFromEmail,
+        credentialsResolver: credentialsResolver,
       );
     } else {
       emailSender = LogAuthEmailSender();
@@ -1461,6 +1692,7 @@ class BackendAuthServiceFactory {
       credentials: credentials,
       region: region,
       useLocalDynamoDB: useLocalDynamoDB,
+      credentialsResolver: credentialsResolver,
     );
     return BackendAuthService(
       recordStore: store,

@@ -47,6 +47,10 @@ resources:
             AttributeType: S
           - AttributeName: gsi2sk
             AttributeType: S
+          - AttributeName: gsi3pk
+            AttributeType: S
+          - AttributeName: gsi3sk
+            AttributeType: S
         KeySchema:
           - AttributeName: pk
             KeyType: HASH
@@ -66,6 +70,14 @@ resources:
               - AttributeName: gsi2pk
                 KeyType: HASH
               - AttributeName: gsi2sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GSI3
+            KeySchema:
+              - AttributeName: gsi3pk
+                KeyType: HASH
+              - AttributeName: gsi3sk
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
@@ -89,11 +101,24 @@ resources:
             AttributeType: S
           - AttributeName: sk
             AttributeType: S
+          - AttributeName: gsi1pk
+            AttributeType: S
+          - AttributeName: gsi1sk
+            AttributeType: S
         KeySchema:
           - AttributeName: pk
             KeyType: HASH
           - AttributeName: sk
             KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - AttributeName: gsi1pk
+                KeyType: HASH
+              - AttributeName: gsi1sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
         TimeToLiveSpecification:
           AttributeName: ttlEpochSeconds
           Enabled: true
@@ -483,6 +508,7 @@ resources:
                     - dynamodb:Scan
                   Resource:
                     - !GetAtt AuthTable.Arn
+                    - !Sub '${AuthTable.Arn}/index/*'
                 - Effect: Allow
                   Action:
                     - dynamodb:ExportTableToPointInTime

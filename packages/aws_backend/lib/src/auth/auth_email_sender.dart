@@ -54,6 +54,7 @@ class SesAuthEmailSender implements AuthEmailSender {
     required this.credentials,
     required this.region,
     required this.fromEmail,
+    this.credentialsResolver,
     http.Client? httpClient,
     VerificationEmailTemplateRenderer? templateRenderer,
   }) : _httpClient = httpClient ?? http.Client(),
@@ -63,6 +64,7 @@ class SesAuthEmailSender implements AuthEmailSender {
   final AWSCredentials credentials;
   final String region;
   final String fromEmail;
+  final Future<AWSCredentials> Function()? credentialsResolver;
   final http.Client _httpClient;
   final VerificationEmailTemplateRenderer _templateRenderer;
 
@@ -102,8 +104,11 @@ class SesAuthEmailSender implements AuthEmailSender {
 
     final body = jsonEncode(payload);
     final encodedBody = utf8.encode(body);
+    final signingCredentials =
+        await (credentialsResolver?.call() ??
+            Future<AWSCredentials>.value(credentials));
     final signer = AWSSigV4Signer(
-      credentialsProvider: AWSCredentialsProvider(credentials),
+      credentialsProvider: AWSCredentialsProvider(signingCredentials),
     );
     final signedRequest = await signer.sign(
       AWSHttpRequest(

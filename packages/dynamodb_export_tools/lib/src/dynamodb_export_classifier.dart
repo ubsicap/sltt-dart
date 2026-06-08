@@ -23,6 +23,7 @@ class DynamoExportItemClassification {
     this.parentId,
     this.parentProp,
     this.rank,
+    this.changeAtOrig,
     this.unsupportedReason,
   });
 
@@ -35,7 +36,10 @@ class DynamoExportItemClassification {
   final String? entityId;
   final String? parentId;
   final String? parentProp;
+
+  /// deprecated in gsi2sk in favor of changeAt_orig_
   final String? rank;
+  final String? changeAtOrig;
   final String? unsupportedReason;
 
   bool get isSupported => unsupportedReason == null;
@@ -54,6 +58,8 @@ class DynamoExportClassifier {
     final sk = item['sk']?.toString();
     final gsi2pk = item['gsi2pk']?.toString();
     final gsi2sk = item['gsi2sk']?.toString();
+    final gsi3pk = item['gsi3pk']?.toString();
+    final gsi3sk = item['gsi3sk']?.toString();
 
     if (pk == null || pk.isEmpty || sk == null || sk.isEmpty) {
       return const DynamoExportItemClassification(
@@ -69,6 +75,8 @@ class DynamoExportClassifier {
       sk: sk,
       gsi2pk: gsi2pk,
       gsi2sk: gsi2sk,
+      gsi3pk: gsi3pk,
+      gsi3sk: gsi3sk,
     );
   }
 
@@ -77,6 +85,8 @@ class DynamoExportClassifier {
     required String sk,
     String? gsi2pk,
     String? gsi2sk,
+    String? gsi3pk,
+    String? gsi3sk,
   }) {
     final pkFields = _parseFields(pk);
     final skFields = _parseFields(sk);
@@ -86,6 +96,12 @@ class DynamoExportClassifier {
     final gsi2SkFields = gsi2sk == null
         ? const <String, String>{}
         : _parseFields(gsi2sk);
+    final gsi3PkFields = gsi3pk == null
+        ? const <String, String>{}
+        : _parseFields(gsi3pk);
+    final gsi3SkFields = gsi3sk == null
+        ? const <String, String>{}
+        : _parseFields(gsi3sk);
 
     if (pk.startsWith(r'$sltt#change#') && sk.startsWith(r'$changes#change#')) {
       return DynamoExportItemClassification(
@@ -120,8 +136,10 @@ class DynamoExportClassifier {
         domainId: pkFields['domainId'],
         entityType: entityType,
         entityId: skFields['entityId'],
-        parentId: gsi2PkFields['parentId'],
+        parentId: gsi2PkFields['parentId'] ?? gsi3PkFields['parentId'],
         parentProp: gsi2SkFields['parentProp'],
+        changeAtOrig:
+            gsi2SkFields['changeAt_orig_'] ?? gsi3SkFields['changeAt_orig_'],
         rank: gsi2SkFields['rank'],
       );
     }
@@ -189,12 +207,22 @@ class DynamoExportClassifier {
   Map<String, String> _parseFields(String compositeKey) {
     final fields = <String, String>{};
     for (final segment in compositeKey.split('#')) {
+      String fieldName;
+      String fieldValue;
       final separator = segment.indexOf('_');
+
+      /// Handle fields that end with an underscore
+      /// e.g. changeAt_orig_ + _{timestamp}
+      final int separator2 = segment.indexOf('__');
       if (separator <= 0 || separator == segment.length - 1) {
         continue;
       }
-      final fieldName = segment.substring(0, separator);
-      final fieldValue = segment.substring(separator + 1);
+      final int resolvedSeparator =
+          (separator2 > 0 && separator2 < segment.length - 1)
+          ? separator2 + 1
+          : separator;
+      fieldName = segment.substring(0, resolvedSeparator);
+      fieldValue = segment.substring(resolvedSeparator + 1);
       switch (fieldName) {
         case 'domainType':
         case 'domainId':
@@ -203,6 +231,7 @@ class DynamoExportClassifier {
         case 'parentId':
         case 'parentProp':
         case 'rank':
+        case 'changeAt_orig_':
           fields[fieldName] = fieldValue;
       }
     }

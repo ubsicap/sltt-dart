@@ -196,7 +196,11 @@ class AwsRestApiServer extends BaseRestApiServer {
     {
       'method': 'POST',
       'path': '/api/auth/logout',
-      'description': 'Revoke the current authenticated session.',
+      'description':
+          'Revoke the current authenticated session. Requires an "Authorization: Bearer <accessToken>" header; optionally accepts a "refreshToken" in the request body to revoke the refresh token.',
+      'security': [
+        {'bearerAuth': []},
+      ],
       'requestBody': {
         'type': 'object',
         'properties': {
@@ -220,10 +224,19 @@ class AwsRestApiServer extends BaseRestApiServer {
       ],
     },
     {
+      'method': 'GET',
+      'path': '/api/super/admin/adhoc-users',
+      'description':
+          'List all AdHoc users across all projects. Requires super user privileges.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+    },
+    {
       'method': 'POST',
       'path': '/api/admin/adhoc-users',
       'description':
-          'Create an AdHoc user with username/password credentials and assign managed projects.',
+          'Create an AdHoc user with username/password credentials and assign managed projects. AdHoc users may not be assigned the Admin role.',
       'security': [
         {'bearerAuth': []},
       ],
@@ -247,6 +260,12 @@ class AwsRestApiServer extends BaseRestApiServer {
             'type': 'array',
             'items': {'type': 'string'},
           },
+          'projectRoles': {
+            'type': 'object',
+            'description':
+                'Optional map of projectId to role name for initial assignments. Admin role is not permitted for AdHoc users.',
+            'additionalProperties': {'type': 'string'},
+          },
           'adminPassword': {'type': 'string'},
         },
       },
@@ -255,7 +274,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'method': 'PUT',
       'path': '/api/admin/adhoc-users/{userId}/projects',
       'description':
-          'Apply explicit project assignment changes for an AdHoc user. Caller must be an admin of every project listed in addProjectIds or removeProjectIds.',
+          'Apply explicit project assignment changes for an AdHoc user and optionally update per-project roles. Caller must be an admin of every project listed in addProjectIds or removeProjectIds. Admin role is not permitted for AdHoc users.',
       'security': [
         {'bearerAuth': []},
       ],
@@ -268,6 +287,38 @@ class AwsRestApiServer extends BaseRestApiServer {
             'items': {'type': 'string'},
           },
           'removeProjectIds': {
+            'type': 'array',
+            'items': {'type': 'string'},
+          },
+          'projectRoles': {
+            'type': 'object',
+            'description':
+                'Optional map of projectId to role name (for example, {"project-1": "consultant"}). This can be provided alongside add/remove changes or by itself for role-only updates. Admin role is not permitted for AdHoc users.',
+            'additionalProperties': {'type': 'string'},
+          },
+          'adminPassword': {'type': 'string'},
+        },
+      },
+    },
+    {
+      'method': 'PUT',
+      'path': '/api/admin/user/{userId}/memberships',
+      'description':
+          'Apply explicit membership additions/removals for any user. Caller must be an admin of every project listed in memberAdditions or memberRemovals. Untouched memberships are preserved.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+      'requestBody': {
+        'type': 'object',
+        'required': ['adminPassword'],
+        'properties': {
+          'memberAdditions': {
+            'type': 'object',
+            'description':
+                'Map of projectId to role name (for example, {"project-1": "translator"}).',
+            'additionalProperties': {'type': 'string'},
+          },
+          'memberRemovals': {
             'type': 'array',
             'items': {'type': 'string'},
           },
@@ -449,6 +500,152 @@ class AwsRestApiServer extends BaseRestApiServer {
         },
       },
     },
+    {
+      'method': 'GET',
+      'path': '/api/cross-domain/<domainType>/states/<entityType>/<entityId>',
+      'description':
+          'Retrieve a single cross-domain entity state by domain type, entity type, and entity ID.',
+      'parameters': [
+        {
+          'name': 'domainType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'The domain type for the cross-domain state (e.g. "project", "membership").',
+        },
+        {
+          'name': 'entityType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'The entity type for the requested state (e.g. "project", "member").',
+        },
+        {
+          'name': 'entityId',
+          'type': 'string',
+          'required': true,
+          'description':
+              'The identifier of the entity whose state should be returned.',
+        },
+        {
+          'name': 'fields',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Comma-separated list of attribute names to include in each returned item '
+              '(e.g. "id,name,status"). When omitted, all attributes are returned.',
+        },
+      ],
+      'responses': [
+        {
+          'status': 200,
+          'description': 'Query succeeded.',
+          'shape': {
+            'items': 'List of decoded entity state objects matching the query.',
+            'nextCursor':
+                'Opaque pagination cursor to pass as "cursor" in the next request. '
+                'Null when no further pages exist.',
+            'count': 'Number of items returned in this page.',
+          },
+        },
+        {'status': 400, 'description': 'Invalid or missing path parameters.'},
+        {
+          'status': 403,
+          'description':
+              'Super admin privileges are required to access this endpoint without an entityId.',
+        },
+        {
+          'status': 500,
+          'description':
+              'Unexpected server error. Check server logs for details.',
+        },
+      ],
+    },
+    {
+      'method': 'GET',
+      'path': '/api/super/cross-domain/<domainType>/states/<entityType>',
+      'description':
+          'Query cross-domain entity states for a domain type and entity type. '
+          'This route requires super user privileges when an entityId is not supplied.',
+      'parameters': [
+        {
+          'name': 'domainType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'The domain type to query (e.g. "project", "membership").',
+        },
+        {
+          'name': 'entityType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'The entity type to query states for (e.g. "project", "member").',
+        },
+        {
+          'name': 'entityId',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Optional entity ID to scope results to a specific entity.',
+        },
+        {
+          'name': 'limit',
+          'type': 'integer',
+          'required': false,
+          'description': 'Maximum number of items to return in a single page.',
+        },
+        {
+          'name': 'cursor',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Opaque pagination cursor returned as "nextCursor" in a previous response.',
+        },
+        {
+          'name': 'fields',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Comma-separated list of attribute names to include in each returned item.',
+        },
+        {
+          'name': 'sortDirection',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Sort order for results. Accepted values: "asc" (default) or "desc".',
+        },
+      ],
+      'responses': [
+        {
+          'status': 200,
+          'description': 'Query succeeded.',
+          'shape': {
+            'items': 'List of decoded entity state objects matching the query.',
+            'nextCursor':
+                'Opaque pagination cursor to pass as "cursor" in the next request. '
+                'Null when no further pages exist.',
+            'count': 'Number of items returned in this page.',
+          },
+        },
+        {
+          'status': 400,
+          'description':
+              'Invalid or missing path parameters, or invalid pagination settings.',
+        },
+        {
+          'status': 403,
+          'description':
+              'Super user privileges are required to query entity states without an entityId.',
+        },
+        {
+          'status': 500,
+          'description':
+              'Unexpected server error. Check server logs for details.',
+        },
+      ],
+    },
   ];
 
   /// Get the router for use in debugging or custom server setups
@@ -466,10 +663,15 @@ class AwsRestApiServer extends BaseRestApiServer {
     router.post('/api/auth/refresh', _handleAuthRefresh);
     router.post('/api/auth/logout', _handleAuthLogout);
     router.get('/api/admin/adhoc-users', _handleAdminListAdHocUsers);
+    router.get('/api/super/admin/adhoc-users', _handleSuperAdminListAdHocUsers);
     router.post('/api/admin/adhoc-users', _handleAdminCreateAdHocUser);
     router.put(
       '/api/admin/adhoc-users/<userId>/projects',
       _handleAdminUpdateAdHocProjects,
+    );
+    router.put(
+      '/api/admin/user/<userId>/memberships',
+      _handleAdminUpdateUserMemberships,
     );
     router.post(
       '/api/admin/adhoc-users/<userId>/reset-password',
@@ -483,6 +685,121 @@ class AwsRestApiServer extends BaseRestApiServer {
     router.post('/api/admin/storage/export/create', _handleExportCreate);
     router.get('/api/admin/storage/export/list', _handleExportList);
     router.get('/api/admin/storage/export/list-files', _handleExportListFiles);
+
+    router.get(
+      '/api/cross-domain/<domainType>/states/<entityType>/<entityId>',
+      _handleGetCrossDomainEntityStates,
+    );
+
+    router.get(
+      '/api/admin/cross-domain/<domainType>/states/<entityType>',
+      _handleGetCrossDomainEntityStates,
+    );
+
+    router.get(
+      '/api/super/cross-domain/<domainType>/states/<entityType>',
+      _handleGetCrossDomainEntityStates,
+    );
+  }
+
+  Future<Response> _handleGetCrossDomainEntityStates(Request request) async {
+    try {
+      // --- Required params ---
+      final domainType = request.params['domainType'];
+      if (domainType == null || domainType.isEmpty) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Missing required path parameter: domainType',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final entityType = request.params['entityType'];
+      if (entityType == null || entityType.isEmpty) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Missing required path parameter: entityType',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final entityId = request.params['entityId'];
+      if (entityId == null && !request.url.path.startsWith('api/super/')) {
+        // TODO: also verify the current authenticated user is a super user
+        return Response(
+          403,
+          body: jsonEncode({
+            'error':
+                'Super user privileges are required to query entity states without an entityId',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final cursor = request.url.queryParameters['cursor'];
+      final sortDirection =
+          request.url.queryParameters['sortDirection'] ?? 'asc';
+
+      final limitRaw = request.url.queryParameters['limit'];
+      final int? limit = limitRaw != null ? int.tryParse(limitRaw) : null;
+      if (limitRaw != null && limit == null) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Invalid value for limit: must be an integer',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      if (sortDirection != 'asc' && sortDirection != 'desc') {
+        return Response(
+          400,
+          body: jsonEncode({'error': 'sortDirection must be "asc" or "desc"'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      // Comma-separated field names, e.g. ?fields=id,name,status
+      final fieldsRaw = request.url.queryParameters['fields'];
+      final projectionFields = fieldsRaw
+          ?.split(',')
+          .map((f) => f.trim())
+          .where((f) => f.isNotEmpty)
+          .toSet();
+
+      final dynamo = storage as DynamoDBStorageService;
+
+      final result = await dynamo.getCrossDomainEntityStates(
+        domainType: domainType,
+        entityIdPrefix: entityId,
+        limit: limit,
+        cursor: cursor,
+        projectionExpressionFields: projectionFields,
+        sortDirection: sortDirection,
+      );
+
+      return Response.ok(
+        jsonEncode({
+          'items': result.items
+              .map((item) => jsonDecode(stableStringify(item)))
+              .toList(), // <-- add this
+          'nextCursor': result.nextCursor,
+          'count': result.items.length,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } catch (e, st) {
+      SlttLogger.logger.severe('getCrossDomainEntityStates failed: $e\n$st');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
   }
 
   Future<Response> _handleAuthRegister(Request request) async {
@@ -552,6 +869,17 @@ class AwsRestApiServer extends BaseRestApiServer {
     });
   }
 
+  Future<Response> _handleSuperAdminListAdHocUsers(Request request) async {
+    return _handleAuthRequest(() async {
+      final session = _requireAuthenticatedSession(request);
+      final result = await _requireAuthService().listAdHocUsers(
+        session: session,
+        superMode: true,
+      );
+      return _jsonResponse(200, result.toJson());
+    });
+  }
+
   Future<Response> _handleAdminListAdHocUsers(Request request) async {
     return _handleAuthRequest(() async {
       final session = _requireAuthenticatedSession(request);
@@ -584,6 +912,19 @@ class AwsRestApiServer extends BaseRestApiServer {
         request: UpdateAdHocProjectsRequest.fromJson(body),
       );
       return _jsonResponse(200, result.toJson());
+    });
+  }
+
+  Future<Response> _handleAdminUpdateUserMemberships(Request request) async {
+    return _handleAuthRequest(() async {
+      final session = _requireAuthenticatedSession(request);
+      final body = await _readBodyMap(request);
+      final result = await _requireAuthService().updateUserMemberships(
+        session: session,
+        userId: request.params['userId'] ?? '',
+        request: UpdateUserMembershipsRequest.fromJson(body),
+      );
+      return _jsonResponse(200, result);
     });
   }
 

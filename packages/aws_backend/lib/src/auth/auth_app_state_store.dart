@@ -1,12 +1,14 @@
 import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
+import 'package:aws_backend/src/storage/dynamodb_storage_service.dart';
 import 'package:sltt_core/sltt_core.dart';
 
 import 'auth_models.dart';
 
 class AuthAppStateStore {
-  AuthAppStateStore({required BaseStorageService storage}) : _storage = storage;
+  AuthAppStateStore({required BaseStorageService storage})
+    : _storage = storage as DynamoDBStorageService;
 
-  final BaseStorageService _storage;
+  final DynamoDBStorageService _storage;
   static const String _authSourceStorageId = 'auth-backend';
 
   Future<void> upsertVerifiedUserProfile({
@@ -25,6 +27,7 @@ class AuthAppStateStore {
     required Iterable<String> projectIdsToAdd,
     required Iterable<String> projectIdsToRemove,
     required String changeBy,
+    required Map<String, String> projectRoles,
   }) async {
     final addSet = _normalizeProjectIds(projectIdsToAdd);
     final removeSet = _normalizeProjectIds(projectIdsToRemove)
@@ -32,18 +35,23 @@ class AuthAppStateStore {
 
     final changes = <Map<String, dynamic>>[];
     for (final projectId in addSet) {
+      final trimmedRole = projectRoles[projectId]?.trim();
+      final role = (trimmedRole?.isNotEmpty ?? false)
+          ? trimmedRole!
+          : MemberType.translator.name;
       changes.add(
         _buildChangeJson(
-          domainType: 'project',
+          domainType: kDomainMembership,
           domainId: projectId,
           entityType: kEntityTypeMember,
           entityId: principal.userId,
-          parentProp: kEntityTypeMemberCollection,
+          parentProp: kCollectionMembership,
+          parentId: kDomainEntityRootParentId,
           changeBy: changeBy,
           deleted: false,
           customFields: {
             'userId': principal.userId,
-            'role': 'translator',
+            'role': role,
             'name': principal.displayName,
             'username': principal.username,
             'email': principal.email,
@@ -56,16 +64,54 @@ class AuthAppStateStore {
     for (final projectId in removeSet) {
       changes.add(
         _buildChangeJson(
-          domainType: 'project',
+          domainType: kDomainMembership,
           domainId: projectId,
           entityType: kEntityTypeMember,
           entityId: principal.userId,
-          parentProp: kEntityTypeMemberCollection,
+          parentProp: kCollectionMembership,
+          parentId: kDomainEntityRootParentId,
           changeBy: changeBy,
           deleted: true,
           customFields: {
             'userId': principal.userId,
-            'role': 'translator',
+            'role':
+                principal.memberships?[projectId] ?? MemberType.translator.name,
+            'name': principal.displayName,
+            'username': principal.username,
+            'email': principal.email,
+            'isAdHoc': principal.isAdHoc,
+            'emailVerified': principal.emailVerified,
+          },
+        ),
+      );
+    }
+
+    final updateSet = projectRoles.keys
+        .where((projectId) => !addSet.contains(projectId))
+        .where((projectId) => !removeSet.contains(projectId))
+        .toSet();
+    for (final projectId in updateSet) {
+      final trimmedRole = projectRoles[projectId]?.trim();
+      if (trimmedRole == null || trimmedRole.isEmpty) {
+        continue;
+      }
+      final existingRole = principal.memberships?[projectId]?.trim();
+      if (existingRole == trimmedRole) {
+        continue;
+      }
+      changes.add(
+        _buildChangeJson(
+          domainType: kDomainMembership,
+          domainId: projectId,
+          entityType: kEntityTypeMember,
+          entityId: principal.userId,
+          parentProp: kCollectionMembership,
+          parentId: kDomainEntityRootParentId,
+          changeBy: changeBy,
+          deleted: false,
+          customFields: {
+            'userId': principal.userId,
+            'role': trimmedRole,
             'name': principal.displayName,
             'username': principal.username,
             'email': principal.email,
@@ -92,16 +138,29 @@ class AuthAppStateStore {
       principal: principal,
       projectIdsToAdd: const <String>[],
       projectIdsToRemove: principal.assignedProjectIds,
+      projectRoles: const {},
       changeBy: changeBy,
     );
   }
 
   Future<List<String>> getAdminProjectIdsForUser(String userId) async {
-    final projectIds = await _storage.getAllDomainIds(domainType: 'project');
+    // TODO: detect super admin role?
+    // TODO: use getCrossDomainEntityStates
+    const String changeDomainIdField = 'change_domainId';
+    final projectIds = await _storage
+        .getCrossDomainEntityStates(
+          domainType: kDomainMembership,
+          entityIdPrefix: userId,
+          projectionExpressionFields: {changeDomainIdField},
+        )
+        .then(
+          (result) =>
+              result.items.map((s) => s[changeDomainIdField] as String).toSet(),
+        );
     final adminProjects = <String>[];
     for (final projectId in projectIds) {
       final state = await _storage.getEntityState(
-        domainType: 'project',
+        domainType: kDomainMembership,
         domainId: projectId,
         entityType: kEntityTypeMember,
         entityId: userId,
@@ -115,8 +174,7 @@ class AuthAppStateStore {
               .trim()
               .toLowerCase();
       final deleted = json['data_deleted'] as bool? ?? false;
-      if (!deleted &&
-          (role == 'admin' || role == 'superadmin' || role == 'super_admin')) {
+      if (!deleted && (role == MemberType.admin.name)) {
         adminProjects.add(projectId);
       }
     }
@@ -132,11 +190,12 @@ class AuthAppStateStore {
       storageMode: 'save',
       changes: <Map<String, dynamic>>[
         _buildChangeJson(
-          domainType: 'user',
+          domainType: kDomainUser,
           domainId: principal.userId,
           entityType: kEntityTypeUserProfile,
-          entityId: 'default',
+          entityId: principal.userId,
           parentProp: kEntityTypeUserProfileCollection,
+          parentId: kDomainEntityRootParentId,
           changeBy: changeBy,
           deleted: deleted,
           customFields: {
@@ -197,6 +256,7 @@ class AuthAppStateStore {
     required String entityId,
     required String entityType,
     required String parentProp,
+    required String parentId,
     required String changeBy,
     required Map<String, dynamic> customFields,
     bool deleted = false,
@@ -204,7 +264,7 @@ class AuthAppStateStore {
     final now = DateTime.now().toUtc();
     final entity = EntityType.tryFromString(entityType) ?? EntityType.unknown;
     final data = <String, dynamic>{
-      'parentId': '',
+      'parentId': parentId,
       'parentProp': parentProp,
       'deleted': deleted,
       ...customFields,

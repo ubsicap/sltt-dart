@@ -68,6 +68,49 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
   }
 
   @override
+  Future<EntityStateQueryResult> getCrossDomainEntityStates({
+    required String domainType,
+    String? entityIdPrefix,
+    int? limit,
+    String? cursor,
+    Set<String>? projectionExpressionFields,
+    String sortDirection = 'asc',
+  }) async {
+    final allStates = _entityStates.values.where(
+      (s) => s.domainType == domainType,
+    );
+    final filtered = entityIdPrefix != null
+        ? allStates.where((s) => s.entityId.startsWith(entityIdPrefix))
+        : allStates;
+    final sorted = filtered.toList()
+      ..sort((a, b) => a.change_domainId.compareTo(b.change_domainId));
+    if (sortDirection.toLowerCase() == 'desc') {
+      sorted.reversed.toList();
+    }
+    final startIndex = cursor != null
+        ? sorted.indexWhere((s) => s.entityId == cursor) + 1
+        : 0;
+    final paged = sorted.skip(startIndex).take(limit ?? sorted.length).toList();
+    final nextCursor = (startIndex + paged.length) < sorted.length
+        ? paged.last.entityId
+        : null;
+    final items = paged.map((state) => state.toJson()).toList();
+    final filteredItems = projectionExpressionFields != null
+        ? items
+              .map(
+                (item) => Map<String, dynamic>.fromEntries(
+                  item.entries.where(
+                    (entry) => projectionExpressionFields.contains(entry.key),
+                  ),
+                ),
+              )
+              .toList()
+        : items;
+
+    return EntityStateQueryResult(items: filteredItems, nextCursor: nextCursor);
+  }
+
+  @override
   Future<Map<String, dynamic>> getEntityStates({
     required String domainType,
     required String domainId,
