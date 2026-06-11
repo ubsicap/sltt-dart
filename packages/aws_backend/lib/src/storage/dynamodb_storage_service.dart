@@ -1443,11 +1443,11 @@ class DynamoDBStorageService extends BaseStorageService {
       payload['ExclusiveStartKey'] = keyMap;
     }
 
-    if (includeTestDomains || excludeDeleted) {
+    if (!includeTestDomains || excludeDeleted) {
       // If we need to filter out test domains or deleted items, we must project those fields.
       projectionExpressionFields = {
         ...?projectionExpressionFields,
-        if (includeTestDomains) 'change_domainId',
+        if (!includeTestDomains) 'change_domainId',
         if (excludeDeleted) 'data_deleted',
       };
     }
