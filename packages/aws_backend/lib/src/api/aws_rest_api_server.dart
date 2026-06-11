@@ -528,6 +528,20 @@ class AwsRestApiServer extends BaseRestApiServer {
               'The identifier of the entity whose state should be returned.',
         },
         {
+          'name': 'excludeDeleted',
+          'type': 'boolean',
+          'required': false,
+          'description':
+              'Whether to exclude deleted states from the results. Defaults to false.',
+        },
+        {
+          'name': 'includeTestDomains',
+          'type': 'boolean',
+          'required': false,
+          'description':
+              'Whether to include test entities in the results. Defaults to false.',
+        },
+        {
           'name': 'fields',
           'type': 'string',
           'required': false,
@@ -588,6 +602,20 @@ class AwsRestApiServer extends BaseRestApiServer {
           'required': false,
           'description':
               'Optional entity ID to scope results to a specific entity.',
+        },
+        {
+          'name': 'excludeDeleted',
+          'type': 'boolean',
+          'required': false,
+          'description':
+              'Whether to exclude deleted states from the results. Defaults to false.',
+        },
+        {
+          'name': 'includeTestDomains',
+          'type': 'boolean',
+          'required': false,
+          'description':
+              'Whether to include test entities in the results. Defaults to false.',
         },
         {
           'name': 'limit',
@@ -740,6 +768,12 @@ class AwsRestApiServer extends BaseRestApiServer {
         );
       }
 
+      final excludeDeletedRaw = request.url.queryParameters['excludeDeleted'];
+      final excludeDeleted = excludeDeletedRaw == 'true';
+      final includeTestEntitiesRaw =
+          request.url.queryParameters['includeTestDomains'];
+      final includeTestDomains = includeTestEntitiesRaw == 'true';
+
       final cursor = request.url.queryParameters['cursor'];
       final sortDirection =
           request.url.queryParameters['sortDirection'] ?? 'asc';
@@ -781,6 +815,8 @@ class AwsRestApiServer extends BaseRestApiServer {
         cursor: cursor,
         projectionExpressionFields: projectionFields,
         sortDirection: sortDirection,
+        excludeDeleted: excludeDeleted,
+        includeTestDomains: includeTestDomains,
       );
 
       return Response.ok(

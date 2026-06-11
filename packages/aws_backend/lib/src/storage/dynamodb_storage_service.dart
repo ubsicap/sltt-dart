@@ -1417,6 +1417,8 @@ class DynamoDBStorageService extends BaseStorageService {
     String? cursor,
     Set<String>? projectionExpressionFields,
     String sortDirection = 'asc',
+    bool excludeDeleted = false,
+    bool includeTestDomains = false,
   }) async {
     await initialize();
 
@@ -1439,6 +1441,15 @@ class DynamoDBStorageService extends BaseStorageService {
       final decoded = utf8.decode(base64Url.decode(cursor));
       final keyMap = jsonDecode(decoded) as Map<String, dynamic>;
       payload['ExclusiveStartKey'] = keyMap;
+    }
+
+    if (includeTestDomains || excludeDeleted) {
+      // If we need to filter out test domains or deleted items, we must project those fields.
+      projectionExpressionFields = {
+        ...?projectionExpressionFields,
+        if (includeTestDomains) 'change_domainId',
+        if (excludeDeleted) 'data_deleted',
+      };
     }
 
     // Use ExpressionAttributeNames to safely alias every projected field,
@@ -1488,9 +1499,18 @@ class DynamoDBStorageService extends BaseStorageService {
 
     final results = <Map<String, dynamic>>[];
     for (final item in items) {
-      results.add(
-        _decodeItem(item as Map<String, dynamic>, excludeStorageKeys: true),
+      final decodedItem = _decodeItem(
+        item as Map<String, dynamic>,
+        excludeStorageKeys: true,
       );
+      if (excludeDeleted && decodedItem['data_deleted'] == true) {
+        continue;
+      }
+      if (!includeTestDomains &&
+          decodedItem['change_domainId'].toString().startsWith('__test')) {
+        continue;
+      }
+      results.add(decodedItem);
     }
 
     // encode LastEvaluatedKey → nextCursor so callers can paginate.
