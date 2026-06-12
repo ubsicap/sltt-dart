@@ -720,8 +720,8 @@ class AwsRestApiServer extends BaseRestApiServer {
     );
 
     router.get(
-      '/api/cross-domain/<domainType>/states/<entityType>',
-      _handleGetCrossDomainEntityStates,
+      '/api/cross-domain/project/states/project',
+      _handleGetCrossDomainProjectStates,
     );
 
     router.get(
@@ -733,6 +733,10 @@ class AwsRestApiServer extends BaseRestApiServer {
       '/api/super/cross-domain/<domainType>/states/<entityType>',
       _handleGetCrossDomainEntityStates,
     );
+  }
+
+  Future<Response> _handleGetCrossDomainProjectStates(Request request) async {
+    return _handleGetCrossDomainEntityStates(request);
   }
 
   Future<Response> _handleGetCrossDomainEntityStates(Request request) async {
