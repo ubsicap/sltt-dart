@@ -720,6 +720,11 @@ class AwsRestApiServer extends BaseRestApiServer {
     );
 
     router.get(
+      '/api/cross-domain/<domainType>/states/<entityType>',
+      _handleGetCrossDomainEntityStates,
+    );
+
+    router.get(
       '/api/admin/cross-domain/<domainType>/states/<entityType>',
       _handleGetCrossDomainEntityStates,
     );
