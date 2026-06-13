@@ -125,6 +125,158 @@ void main() {
         expect(response['statusCode'], equals(401));
       });
 
+      test(
+        'GET /api/cross-domain/project/states/project requires authorization',
+        () async {
+          final response = await server.handleApiGatewayEvent({
+            'httpMethod': 'GET',
+            'path': '/api/cross-domain/project/states/project',
+            'headers': <String, String>{},
+          }, router);
+
+          expect(response['statusCode'], equals(401));
+        },
+      );
+
+      test(
+        'GET /api/cross-domain/project/states/project returns only authorized projects',
+        () async {
+          const userId = 'project-user-1';
+          final registerResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/register',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'userId': userId,
+              'name': 'Project User',
+              'dateOfBirth': '1990-01-01',
+              'email': 'project-user@example.com',
+              'password': 'secret123',
+            }),
+          }, router);
+          expect(registerResponse['statusCode'], equals(200));
+
+          final verifyResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/verify-email',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'email': 'project-user@example.com',
+              'code': emailSender.codes['project-user@example.com']!.last,
+            }),
+          }, router);
+          expect(verifyResponse['statusCode'], equals(200));
+          final verifyBody =
+              jsonDecode(verifyResponse['body'] as String)
+                  as Map<String, dynamic>;
+          final accessToken = verifyBody['accessToken'] as String;
+
+          final iso = DateTime.now().toUtc().toIso8601String();
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': userId,
+              'entityType': kEntityTypeMember,
+              'domainType': kDomainMembership,
+              'unknownJson': '{}',
+              'change_domainId': 'project-1',
+              'change_domainId_orig_': 'project-1',
+              'change_changeAt': iso,
+              'change_changeAt_orig_': iso,
+              'change_cid': 'member-1',
+              'change_cid_orig_': 'member-1',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': iso,
+              'change_storedAt_orig_': iso,
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': iso,
+              'data_parentId_cid_': 'member-1',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionMembership,
+              'data_parentProp_changeAt_': iso,
+              'data_parentProp_cid_': 'member-1',
+              'data_parentProp_changeBy_': 'seed',
+              'data_role': 'admin',
+              'data_isAdHoc': false,
+              'data_name': 'Project User',
+              'data_email': 'project-user@example.com',
+            }),
+          );
+
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': 'project-1',
+              'entityType': kEntityTypeProject,
+              'domainType': kDomainProject,
+              'unknownJson': '{}',
+              'change_domainId': 'project-1',
+              'change_domainId_orig_': 'project-1',
+              'change_changeAt': iso,
+              'change_changeAt_orig_': iso,
+              'change_cid': 'project-1-cid',
+              'change_cid_orig_': 'project-1-cid',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': iso,
+              'change_storedAt_orig_': iso,
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': iso,
+              'data_parentId_cid_': 'project-1-cid',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionProject,
+              'data_parentProp_changeAt_': iso,
+              'data_parentProp_cid_': 'project-1-cid',
+              'data_parentProp_changeBy_': 'seed',
+              'data_name': 'Authorized Project',
+            }),
+          );
+
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': 'project-unauthorized',
+              'entityType': kEntityTypeProject,
+              'domainType': kDomainProject,
+              'unknownJson': '{}',
+              'change_domainId': 'project-unauthorized',
+              'change_domainId_orig_': 'project-unauthorized',
+              'change_changeAt': iso,
+              'change_changeAt_orig_': iso,
+              'change_cid': 'project-unauthorized-cid',
+              'change_cid_orig_': 'project-unauthorized-cid',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': iso,
+              'change_storedAt_orig_': iso,
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': iso,
+              'data_parentId_cid_': 'project-unauthorized-cid',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionProject,
+              'data_parentProp_changeAt_': iso,
+              'data_parentProp_cid_': 'project-unauthorized-cid',
+              'data_parentProp_changeBy_': 'seed',
+              'data_name': 'Unauthorized Project',
+            }),
+          );
+
+          final projectResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'GET',
+            'path': '/api/cross-domain/project/states/project',
+            'headers': <String, String>{'authorization': 'Bearer $accessToken'},
+          }, router);
+
+          expect(projectResponse['statusCode'], equals(200));
+          final projectBody =
+              jsonDecode(projectResponse['body'] as String)
+                  as Map<String, dynamic>;
+          expect(projectBody['count'], equals(1));
+          final items = (projectBody['items'] as List<dynamic>);
+          expect(items, hasLength(1));
+          expect(items.first['entityId'], equals('project-1'));
+          expect(items.first['change_domainId'], equals('project-1'));
+        },
+      );
+
       test('logout revokes provided refresh token', () async {
         final registerResponse = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',

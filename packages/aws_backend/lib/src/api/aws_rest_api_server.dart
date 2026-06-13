@@ -577,6 +577,80 @@ class AwsRestApiServer extends BaseRestApiServer {
     },
     {
       'method': 'GET',
+      'path': '/api/cross-domain/project/states/project',
+      'description':
+          'Query project entity states for the current authenticated user based on their membership records. Requires an Authorization bearer token.',
+      'parameters': [
+        {
+          'name': 'excludeDeleted',
+          'type': 'boolean',
+          'required': false,
+          'description':
+              'Whether to exclude deleted states from the results. Defaults to false.',
+        },
+        {
+          'name': 'includeTestDomains',
+          'type': 'boolean',
+          'required': false,
+          'description':
+              'Whether to include test entities in the results. Defaults to false.',
+        },
+        {
+          'name': 'limit',
+          'type': 'integer',
+          'required': false,
+          'description': 'Maximum number of items to return in a single page.',
+        },
+        {
+          'name': 'cursor',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Opaque pagination cursor returned as "nextCursor" in a previous response.',
+        },
+        {
+          'name': 'fields',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Comma-separated list of attribute names to include in each returned item. '
+              'When omitted, all attributes are returned.',
+        },
+        {
+          'name': 'sortDirection',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Sort order for results. Accepted values: "asc" (default) or "desc".',
+        },
+      ],
+      'responses': [
+        {
+          'status': 200,
+          'description': 'Query succeeded.',
+          'shape': {
+            'items':
+                'List of decoded project entity state objects matching the query.',
+            'nextCursor':
+                'Opaque pagination cursor to pass as "cursor" in the next request. '
+                'Null when no further pages exist.',
+            'count': 'Number of items returned in this page.',
+          },
+        },
+        {'status': 400, 'description': 'Invalid query parameters.'},
+        {
+          'status': 401,
+          'description': 'Authorization bearer token is required.',
+        },
+        {
+          'status': 500,
+          'description':
+              'Unexpected server error. Check server logs for details.',
+        },
+      ],
+    },
+    {
+      'method': 'GET',
       'path': '/api/super/cross-domain/<domainType>/states/<entityType>',
       'description':
           'Query cross-domain entity states for a domain type and entity type. '
@@ -736,7 +810,133 @@ class AwsRestApiServer extends BaseRestApiServer {
   }
 
   Future<Response> _handleGetCrossDomainProjectStates(Request request) async {
-    return _handleGetCrossDomainEntityStates(request);
+    try {
+      final session = _requireAuthenticatedSession(request);
+      final dynamo = storage as DynamoDBStorageService;
+
+      final excludeDeletedRaw = request.url.queryParameters['excludeDeleted'];
+      final excludeDeleted = excludeDeletedRaw == 'true';
+      final includeTestEntitiesRaw =
+          request.url.queryParameters['includeTestDomains'];
+      final includeTestDomains = includeTestEntitiesRaw == 'true';
+      final cursor = request.url.queryParameters['cursor'];
+      final sortDirection =
+          request.url.queryParameters['sortDirection'] ?? 'asc';
+
+      final limitRaw = request.url.queryParameters['limit'];
+      final int? limit = limitRaw != null ? int.tryParse(limitRaw) : null;
+      if (limitRaw != null && limit == null) {
+        return Response(
+          400,
+          body: jsonEncode({
+            'error': 'Invalid value for limit: must be an integer',
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      if (sortDirection != 'asc' && sortDirection != 'desc') {
+        return Response(
+          400,
+          body: jsonEncode({'error': 'sortDirection must be "asc" or "desc"'}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final fieldsRaw = request.url.queryParameters['fields'];
+      final projectionFields = fieldsRaw
+          ?.split(',')
+          .map((f) => f.trim())
+          .where((f) => f.isNotEmpty)
+          .toSet();
+
+      final membershipResult = await dynamo.getCrossDomainEntityStates(
+        domainType: kDomainMembership,
+        entityIdPrefix: session.userId,
+        limit: null,
+        cursor: null,
+        projectionExpressionFields: {
+          'entityId',
+          'change_domainId',
+          'data_role',
+          'data_isAdHoc',
+          'data_name',
+          'data_email',
+          'data_deleted',
+        },
+        sortDirection: 'asc',
+        excludeDeleted: false,
+        includeTestDomains: includeTestDomains,
+      );
+
+      final projectIds = <String>{};
+      for (final item in membershipResult.items) {
+        if (item['data_deleted'] == true) {
+          continue;
+        }
+        final projectId = item['change_domainId'];
+        if (projectId is String && projectId.isNotEmpty) {
+          projectIds.add(projectId);
+        }
+      }
+
+      await dynamo.getCrossDomainEntityStates(
+        domainType: kDomainUser,
+        entityIdPrefix: session.userId,
+        limit: null,
+        cursor: null,
+        projectionExpressionFields: {'data_name', 'data_email'},
+        sortDirection: 'asc',
+        excludeDeleted: false,
+        includeTestDomains: includeTestDomains,
+      );
+      // User profile is fetched for authorization/context purposes.
+
+      if (projectIds.isEmpty) {
+        return Response.ok(
+          jsonEncode({'items': <dynamic>[], 'nextCursor': null, 'count': 0}),
+          headers: {'Content-Type': 'application/json'},
+        );
+      }
+
+      final projectProjectionFields = projectionFields == null
+          ? null
+          : {...projectionFields, 'change_domainId'};
+
+      final projectResult = await dynamo.getCrossDomainEntityStates(
+        domainType: kDomainProject,
+        entityIdPrefix: null,
+        limit: limit,
+        cursor: cursor,
+        projectionExpressionFields: projectProjectionFields,
+        sortDirection: sortDirection,
+        excludeDeleted: excludeDeleted,
+        includeTestDomains: includeTestDomains,
+      );
+
+      final filteredItems = projectResult.items
+          .where((item) => projectIds.contains(item['change_domainId']))
+          .toList();
+
+      return Response.ok(
+        jsonEncode({
+          'items': filteredItems
+              .map((item) => jsonDecode(stableStringify(item)))
+              .toList(),
+          'nextCursor': projectResult.nextCursor,
+          'count': filteredItems.length,
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    } on AuthException catch (e) {
+      return _jsonResponse(e.statusCode, e.toJson());
+    } catch (e, st) {
+      SlttLogger.logger.severe('getCrossDomainProjectStates failed: $e\n$st');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
   }
 
   Future<Response> _handleGetCrossDomainEntityStates(Request request) async {

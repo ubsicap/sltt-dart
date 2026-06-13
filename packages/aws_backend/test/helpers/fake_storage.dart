@@ -75,14 +75,24 @@ class FakeDynamoDBStorageService extends DynamoDBStorageService {
     String? cursor,
     Set<String>? projectionExpressionFields,
     String sortDirection = 'asc',
+    bool excludeDeleted = false,
+    bool includeTestDomains = false,
   }) async {
     final allStates = _entityStates.values.where(
       (s) => s.domainType == domainType,
     );
-    final filtered = entityIdPrefix != null
+    final filteredByEntityId = entityIdPrefix != null
         ? allStates.where((s) => s.entityId.startsWith(entityIdPrefix))
         : allStates;
-    final sorted = filtered.toList()
+    final filteredByDeleted = excludeDeleted
+        ? filteredByEntityId.where((s) => s.data_deleted != true)
+        : filteredByEntityId;
+    final filteredByTestDomain = includeTestDomains
+        ? filteredByDeleted
+        : filteredByDeleted.where(
+            (s) => !s.change_domainId.startsWith('__test'),
+          );
+    final sorted = filteredByTestDomain.toList()
       ..sort((a, b) => a.change_domainId.compareTo(b.change_domainId));
     if (sortDirection.toLowerCase() == 'desc') {
       sorted.reversed.toList();
