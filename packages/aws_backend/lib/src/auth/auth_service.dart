@@ -1111,6 +1111,46 @@ class BackendAuthService {
     };
   }
 
+  Future<void> assignCurrentUserAsAdminToProject({
+    required AuthenticatedSession session,
+    required String projectId,
+  }) async {
+    final principal = await _recordStore.getPrincipalByUserId(session.userId);
+    if (principal == null || principal.isDeleted) {
+      throw AuthException(
+        'Unable to complete this action',
+        statusCode: 404,
+        code: 'unable_to_complete_action',
+      );
+    }
+
+    final updatedProjectIds = {...principal.assignedProjectIds, projectId}
+      ..removeWhere((id) => id.trim().isEmpty);
+    final updatedMemberships = Map<String, String>.from(
+      principal.memberships ?? const <String, String>{},
+    );
+    updatedMemberships[projectId] = MemberType.admin.name;
+
+    final updated = principal.copyWith(
+      assignedProjectIds: updatedProjectIds.toList(growable: false),
+      memberships: updatedMemberships,
+      updatedAt: DateTime.now().toUtc(),
+    );
+
+    await _recordStore.putPrincipal(updated);
+    // await _appStateStore.upsertVerifiedUserProfile(
+    //   principal: updated,
+    //   changeBy: session.userId,
+    // );
+    await _appStateStore.applyProjectAssignmentChanges(
+      principal: updated,
+      projectIdsToAdd: {projectId},
+      projectIdsToRemove: const <String>[],
+      changeBy: session.userId,
+      projectRoles: {projectId: MemberType.admin.name},
+    );
+  }
+
   Future<AuthStatusResponse> resetAdHocPassword({
     required AuthenticatedSession session,
     required String userId,

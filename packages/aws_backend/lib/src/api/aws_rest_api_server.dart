@@ -7,6 +7,7 @@ import 'package:sltt_core/sltt_core.dart';
 
 import '../auth/auth_models.dart';
 import '../auth/auth_service.dart';
+import '../models/dynamo_change_log_entry.dart';
 import '../storage/dynamodb_storage_service.dart';
 import '../storage/media/aws_media_storage.dart';
 
@@ -213,6 +214,42 @@ class AwsRestApiServer extends BaseRestApiServer {
           'status': {'type': 'string', 'example': 'logged_out'},
         },
       },
+    },
+    {
+      'method': 'POST',
+      'path': '/api/project',
+      'description':
+          'Create a new project in requested status and assign the current user as the project admin.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+      'requestBody': {
+        'type': 'object',
+        'required': ['publicId', 'teamName'],
+        'properties': {
+          'publicId': {'type': 'string'},
+          'teamName': {'type': 'string'},
+          'signLanguage': {'type': 'string'},
+        },
+      },
+      'response': {
+        'type': 'object',
+        'properties': {
+          'projectId': {'type': 'string'},
+          'status': {'type': 'string', 'example': 'requested'},
+          'publicId': {'type': 'string'},
+          'teamName': {'type': 'string'},
+          'signLanguage': {'type': 'string'},
+        },
+      },
+      'errorResponses': [
+        {
+          'statusCode': 400,
+          'code': 'invalid_request',
+          'description':
+              'Missing required fields or invalid payload values return safe validation error details.',
+        },
+      ],
     },
     {
       'method': 'GET',
@@ -764,6 +801,7 @@ class AwsRestApiServer extends BaseRestApiServer {
     router.post('/api/auth/login', _handleAuthLogin);
     router.post('/api/auth/refresh', _handleAuthRefresh);
     router.post('/api/auth/logout', _handleAuthLogout);
+    router.post('/api/project', _handleCreateRequestedProject);
     router.get('/api/admin/adhoc-users', _handleAdminListAdHocUsers);
     router.get('/api/super/admin/adhoc-users', _handleSuperAdminListAdHocUsers);
     router.post('/api/admin/adhoc-users', _handleAdminCreateAdHocUser);
@@ -1112,6 +1150,109 @@ class AwsRestApiServer extends BaseRestApiServer {
       );
       return _jsonResponse(200, result.toJson());
     });
+  }
+
+  Future<Response> _handleCreateRequestedProject(Request request) async {
+    try {
+      final session = _requireAuthenticatedSession(request);
+      final body = await _readBodyMap(request);
+
+      final publicId = (body['publicId'] as String?)?.trim() ?? '';
+      final teamName = (body['teamName'] as String?)?.trim() ?? '';
+      final signLanguage = (body['signLanguage'] as String?)?.trim() ?? '';
+
+      final details = <String, String>{};
+      if (publicId.isEmpty) {
+        details['publicId'] = 'required';
+      }
+      if (teamName.isEmpty) {
+        details['teamName'] = 'required';
+      }
+      if (details.isNotEmpty) {
+        return _jsonResponse(400, {
+          'error': 'Invalid request',
+          'code': 'invalid_request',
+          'details': details,
+        });
+      }
+
+      final projectId = EntityType.generateEntityId(
+        entityType: EntityType.project,
+        userId: session.userId,
+      );
+      final now = DateTime.now().toUtc();
+
+      final projectData = <String, dynamic>{
+        'publicId': publicId,
+        'teamName': teamName,
+        'signLanguage': signLanguage,
+        'status': 'requested',
+        'parentId': kDomainEntityRootParentId,
+        'parentProp': kCollectionProject,
+      }..removeWhere((_, value) => value == null);
+
+      final projectChange = DynamoChangeLogEntry(
+        cid: generateCid(
+          entityType: EntityType.project,
+          userId: session.userId,
+        ),
+        storageId: '',
+        domainType: kDomainProject,
+        domainId: projectId,
+        entityType: kEntityTypeProject,
+        operation: kChangeOperationNotYetDefined,
+        stateChanged: false,
+        changeAt: now,
+        entityId: projectId,
+        dataJson: stableStringify(projectData),
+        changeBy: session.userId,
+        unknownJson: '{}',
+        operationInfoJson: '{}',
+      );
+
+      final createResult = await ChangeProcessingService.storeChanges(
+        storageMode: 'save',
+        changes: [projectChange.toJson()],
+        srcStorageType: 'local',
+        srcStorageId: 'auth-backend',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+
+      if (!createResult.isSuccess) {
+        return _jsonResponse(createResult.errorCode ?? 500, {
+          'error': createResult.errorMessage ?? 'Failed to create project',
+        });
+      }
+
+      await _requireAuthService().assignCurrentUserAsAdminToProject(
+        session: session,
+        projectId: projectId,
+      );
+
+      return _jsonResponse(200, {
+        'projectId': projectId,
+        'status': 'requested',
+        'publicId': publicId,
+        'teamName': teamName,
+        'signLanguage': signLanguage,
+      });
+    } on AuthException catch (e) {
+      return _jsonResponse(e.statusCode, e.toJson());
+    } on ArgumentError catch (e) {
+      return _jsonResponse(400, {
+        'error': 'Invalid request',
+        'code': 'invalid_request',
+        'details': {'message': e.message ?? 'Invalid request body'},
+      });
+    } catch (e, st) {
+      SlttLogger.logger.severe('createRequestedProject failed: $e\n$st');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
   }
 
   Future<Response> _handleSuperAdminListAdHocUsers(Request request) async {

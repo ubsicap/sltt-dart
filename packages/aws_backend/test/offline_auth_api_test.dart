@@ -259,6 +259,37 @@ void main() {
             }),
           );
 
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': 'self-project-user',
+              'entityType': kEntityTypeMember,
+              'domainType': kDomainMembership,
+              'unknownJson': '{}',
+              'change_domainId': 'self-project',
+              'change_domainId_orig_': 'self-project',
+              'change_changeAt': iso,
+              'change_changeAt_orig_': iso,
+              'change_cid': 'self-member',
+              'change_cid_orig_': 'self-member',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': iso,
+              'change_storedAt_orig_': iso,
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': iso,
+              'data_parentId_cid_': 'self-member',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionMembership,
+              'data_parentProp_changeAt_': iso,
+              'data_parentProp_cid_': 'self-member',
+              'data_parentProp_changeBy_': 'seed',
+              'data_role': 'admin',
+              'data_isAdHoc': false,
+              'data_name': 'Project User',
+              'data_email': 'project-user@example.com',
+            }),
+          );
+
           final projectResponse = await server.handleApiGatewayEvent({
             'httpMethod': 'GET',
             'path': '/api/cross-domain/project/states/project',
@@ -421,6 +452,85 @@ void main() {
           isTrue,
         );
       });
+
+      test(
+        'POST /api/project creates requested project and assigns current user as admin',
+        () async {
+          final registerResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/register',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'userId': 'project-creator',
+              'name': 'Project Creator',
+              'dateOfBirth': '1990-01-01',
+              'email': 'creator@example.com',
+              'password': 'secret123',
+            }),
+          }, router);
+          expect(registerResponse['statusCode'], equals(200));
+
+          final verifyResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/verify-email',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'email': 'creator@example.com',
+              'code': emailSender.codes['creator@example.com']!.single,
+            }),
+          }, router);
+          expect(verifyResponse['statusCode'], equals(200));
+          final verifyBody =
+              jsonDecode(verifyResponse['body'] as String)
+                  as Map<String, dynamic>;
+          final accessToken = verifyBody['accessToken'] as String;
+
+          final createResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/project',
+            'headers': <String, String>{'authorization': 'Bearer $accessToken'},
+            'body': jsonEncode({
+              'publicId': 'project-creator-id',
+              'teamName': 'Creator Team',
+              'signLanguage': 'ASL',
+            }),
+          }, router);
+
+          expect(createResponse['statusCode'], equals(200));
+          final createBody =
+              jsonDecode(createResponse['body'] as String)
+                  as Map<String, dynamic>;
+          expect(createBody['projectId'], isNotEmpty);
+          expect(createBody['status'], equals('requested'));
+          expect(createBody['publicId'], equals('project-creator-id'));
+          expect(createBody['teamName'], equals('Creator Team'));
+          expect(createBody['signLanguage'], equals('ASL'));
+
+          final projectId = createBody['projectId'] as String;
+          final principal = await recordStore.getPrincipalByUserId(
+            'project-creator',
+          );
+          expect(principal, isNotNull);
+          expect(principal?.assignedProjectIds, contains(projectId));
+          expect(
+            principal?.memberships?[projectId],
+            equals(MemberType.admin.name),
+          );
+
+          final membershipState = await storage.getEntityState(
+            domainType: kDomainMembership,
+            domainId: projectId,
+            entityType: kEntityTypeMember,
+            entityId: 'project-creator',
+          );
+          expect(membershipState, isNotNull);
+          expect(
+            membershipState?.toJson()['role'] ??
+                membershipState?.toJson()['data_role'],
+            equals(MemberType.admin.name),
+          );
+        },
+      );
 
       test('refresh rotates refresh token and invalidates old token', () async {
         final registerResponse = await server.handleApiGatewayEvent({
