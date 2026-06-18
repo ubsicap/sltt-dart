@@ -918,18 +918,6 @@ class AwsRestApiServer extends BaseRestApiServer {
         }
       }
 
-      await dynamo.getCrossDomainEntityStates(
-        domainType: kDomainUser,
-        entityIdPrefix: session.userId,
-        limit: null,
-        cursor: null,
-        projectionExpressionFields: {'data_name', 'data_email'},
-        sortDirection: 'asc',
-        excludeDeleted: false,
-        includeTestDomains: includeTestDomains,
-      );
-      // User profile is fetched for authorization/context purposes.
-
       if (projectIds.isEmpty) {
         return Response.ok(
           jsonEncode({'items': <dynamic>[], 'nextCursor': null, 'count': 0}),
