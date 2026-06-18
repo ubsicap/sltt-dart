@@ -252,6 +252,113 @@ class AwsRestApiServer extends BaseRestApiServer {
       ],
     },
     {
+      'method': 'PUT',
+      'path': '/api/admin/project/{projectId}',
+      'description':
+          'Update editable project fields created by POST /api/project. Requires authentication.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+      'requestBody': {
+        'type': 'object',
+        'properties': {
+          'publicId': {'type': 'string'},
+          'teamName': {'type': 'string'},
+          'signLanguage': {'type': 'string'},
+          'status': {'type': 'string'},
+          'parentId': {'type': 'string'},
+          'parentProp': {'type': 'string'},
+        },
+      },
+      'response': {
+        'type': 'object',
+        'properties': {
+          'projectId': {'type': 'string'},
+          'updated': {'type': 'boolean'},
+        },
+      },
+      'errorResponses': [
+        {
+          'statusCode': 400,
+          'code': 'invalid_request',
+          'description':
+              'Missing required fields or invalid payload values return safe validation error details.',
+        },
+      ],
+    },
+    {
+      'method': 'PUT',
+      'path': '/api/super/admin/project/{projectId}',
+      'description':
+          'Update required project metadata as a super admin. Requires authentication.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+      'requestBody': {
+        'type': 'object',
+        'required': [
+          'publicId',
+          'teamName',
+          'teamId',
+          'name',
+          'signLanguage',
+          'status',
+        ],
+        'properties': {
+          'publicId': {'type': 'string'},
+          'teamName': {'type': 'string'},
+          'teamId': {'type': 'string'},
+          'name': {'type': 'string'},
+          'signLanguage': {'type': 'string'},
+          'status': {'type': 'string'},
+          'deleted': {'type': 'boolean'},
+        },
+      },
+      'response': {
+        'type': 'object',
+        'properties': {
+          'projectId': {'type': 'string'},
+          'publicId': {'type': 'string'},
+          'teamName': {'type': 'string'},
+          'teamId': {'type': 'string'},
+          'name': {'type': 'string'},
+          'signLanguage': {'type': 'string'},
+          'status': {'type': 'string'},
+          'deleted': {'type': 'boolean'},
+        },
+      },
+      'errorResponses': [
+        {
+          'statusCode': 400,
+          'code': 'invalid_request',
+          'description':
+              'Missing required fields or invalid payload values return safe validation error details.',
+        },
+      ],
+    },
+    {
+      'method': 'DELETE',
+      'path': '/api/super/admin/project/{projectId}',
+      'description':
+          'Soft delete a project by setting deleted=true in the project record. Requires authentication.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+      'response': {
+        'type': 'object',
+        'properties': {
+          'projectId': {'type': 'string'},
+          'deleted': {'type': 'boolean', 'example': true},
+        },
+      },
+      'errorResponses': [
+        {
+          'statusCode': 400,
+          'description': 'Missing or invalid projectId path parameter.',
+        },
+      ],
+    },
+    {
       'method': 'GET',
       'path': '/api/admin/adhoc-users',
       'description':
@@ -802,6 +909,15 @@ class AwsRestApiServer extends BaseRestApiServer {
     router.post('/api/auth/refresh', _handleAuthRefresh);
     router.post('/api/auth/logout', _handleAuthLogout);
     router.post('/api/project', _handleCreateRequestedProject);
+    router.put('/api/admin/project/<projectId>', _handleAdminUpdateProject);
+    router.put(
+      '/api/super/admin/project/<projectId>',
+      _handleSuperAdminUpdateProject,
+    );
+    router.delete(
+      '/api/super/admin/project/<projectId>',
+      _handleSuperAdminDeleteProject,
+    );
     router.get('/api/admin/adhoc-users', _handleAdminListAdHocUsers);
     router.get('/api/super/admin/adhoc-users', _handleSuperAdminListAdHocUsers);
     router.post('/api/admin/adhoc-users', _handleAdminCreateAdHocUser);
@@ -1243,6 +1359,286 @@ class AwsRestApiServer extends BaseRestApiServer {
     }
   }
 
+  Future<Response> _handleAdminUpdateProject(Request request) async {
+    try {
+      final session = _requireAuthenticatedSession(request);
+      final projectId = request.params['projectId'];
+      if (projectId == null || projectId.trim().isEmpty) {
+        return _jsonResponse(400, {
+          'error': 'Missing required path parameter: projectId',
+        });
+      }
+
+      await _requireAdminProjectMembership(
+        projectId: projectId,
+        userId: session.userId,
+      );
+
+      final body = await _readBodyMap(request);
+      final allowedFields = {
+        'publicId',
+        'teamName',
+        'signLanguage',
+        'status',
+        'parentId',
+        'parentProp',
+      };
+      final updateData = <String, dynamic>{};
+      for (final entry in body.entries) {
+        if (allowedFields.contains(entry.key) && entry.value != null) {
+          updateData[entry.key] = entry.value;
+        }
+      }
+      if (updateData.isEmpty) {
+        return _jsonResponse(400, {
+          'error': 'Invalid request',
+          'code': 'invalid_request',
+          'details': {
+            'message':
+                'At least one updatable field must be provided: publicId, teamName, signLanguage, status, parentId, parentProp.',
+          },
+        });
+      }
+
+      final now = DateTime.now().toUtc();
+      final change = DynamoChangeLogEntry(
+        cid: generateCid(
+          entityType: EntityType.project,
+          userId: session.userId,
+        ),
+        storageId: '',
+        domainType: kDomainProject,
+        domainId: projectId,
+        entityType: kEntityTypeProject,
+        operation: kChangeOperationNotYetDefined,
+        stateChanged: false,
+        changeAt: now,
+        entityId: projectId,
+        dataJson: stableStringify(updateData),
+        changeBy: session.userId,
+        unknownJson: '{}',
+        operationInfoJson: '{}',
+      );
+
+      final result = await ChangeProcessingService.storeChanges(
+        storageMode: 'save',
+        changes: [change.toJson()],
+        srcStorageType: 'local',
+        srcStorageId: 'auth-backend',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+
+      if (!result.isSuccess) {
+        return _jsonResponse(result.errorCode ?? 500, {
+          'error': result.errorMessage ?? 'Failed to update project',
+        });
+      }
+
+      return _jsonResponse(200, {'projectId': projectId, 'updated': true});
+    } on AuthException catch (e) {
+      return _jsonResponse(e.statusCode, e.toJson());
+    } on ArgumentError catch (e) {
+      return _jsonResponse(400, {
+        'error': 'Invalid request',
+        'code': 'invalid_request',
+        'details': {'message': e.message ?? 'Invalid request body'},
+      });
+    } catch (e, st) {
+      SlttLogger.logger.severe('adminUpdateProject failed: $e\n$st');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  Future<Response> _handleSuperAdminUpdateProject(Request request) async {
+    try {
+      final session = _requireAuthenticatedSession(request);
+      final projectId = request.params['projectId'];
+      if (projectId == null || projectId.trim().isEmpty) {
+        return _jsonResponse(400, {
+          'error': 'Missing required path parameter: projectId',
+        });
+      }
+
+      final body = await _readBodyMap(request);
+      final publicId = (body['publicId'] as String?)?.trim();
+      final teamName = (body['teamName'] as String?)?.trim();
+      final teamId = (body['teamId'] as String?)?.trim();
+      final name = (body['name'] as String?)?.trim();
+      final signLanguage = (body['signLanguage'] as String?)?.trim();
+      final status = (body['status'] as String?)?.trim();
+      final deletedValue = body['deleted'];
+
+      final details = <String, String>{};
+      if (publicId == null) {
+        details['publicId'] = 'required';
+      }
+      if (teamName == null) {
+        details['teamName'] = 'required';
+      }
+      if (teamId == null) {
+        details['teamId'] = 'required';
+      }
+      if (name == null) {
+        details['name'] = 'required';
+      }
+      if (signLanguage == null) {
+        details['signLanguage'] = 'required';
+      }
+      if (status == null) {
+        details['status'] = 'required';
+      }
+      if (details.isNotEmpty) {
+        return _jsonResponse(400, {
+          'error': 'Invalid request',
+          'code': 'invalid_request',
+          'details': details,
+        });
+      }
+
+      if (deletedValue != null && deletedValue is! bool) {
+        return _jsonResponse(400, {
+          'error': 'Invalid request',
+          'code': 'invalid_request',
+          'details': {'deleted': 'must be a boolean'},
+        });
+      }
+
+      final projectData = <String, dynamic>{
+        'publicId': publicId,
+        'teamName': teamName,
+        'teamId': teamId,
+        'name': name,
+        'signLanguage': signLanguage,
+        'status': status,
+        if (deletedValue != null) 'deleted': deletedValue,
+      }..removeWhere((_, value) => value == null);
+
+      final now = DateTime.now().toUtc();
+      final change = DynamoChangeLogEntry(
+        cid: generateCid(
+          entityType: EntityType.project,
+          userId: session.userId,
+        ),
+        storageId: '',
+        domainType: kDomainProject,
+        domainId: projectId,
+        entityType: kEntityTypeProject,
+        operation: kChangeOperationNotYetDefined,
+        stateChanged: false,
+        changeAt: now,
+        entityId: projectId,
+        dataJson: stableStringify(projectData),
+        changeBy: session.userId,
+        unknownJson: '{}',
+        operationInfoJson: '{}',
+      );
+
+      final result = await ChangeProcessingService.storeChanges(
+        storageMode: 'save',
+        changes: [change.toJson()],
+        srcStorageType: 'local',
+        srcStorageId: 'auth-backend',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+
+      if (!result.isSuccess) {
+        return _jsonResponse(result.errorCode ?? 500, {
+          'error': result.errorMessage ?? 'Failed to update project',
+        });
+      }
+
+      return _jsonResponse(200, {
+        'projectId': projectId,
+        'publicId': publicId,
+        'teamName': teamName,
+        'teamId': teamId,
+        'name': name,
+        'signLanguage': signLanguage,
+        'status': status,
+        if (deletedValue != null) 'deleted': deletedValue,
+      });
+    } on AuthException catch (e) {
+      return _jsonResponse(e.statusCode, e.toJson());
+    } on ArgumentError catch (e) {
+      return _jsonResponse(400, {
+        'error': 'Invalid request',
+        'code': 'invalid_request',
+        'details': {'message': e.message ?? 'Invalid request body'},
+      });
+    } catch (e, st) {
+      SlttLogger.logger.severe('superAdminUpdateProject failed: $e\n$st');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
+  Future<Response> _handleSuperAdminDeleteProject(Request request) async {
+    try {
+      final session = _requireAuthenticatedSession(request);
+      final projectId = request.params['projectId'];
+      if (projectId == null || projectId.trim().isEmpty) {
+        return _jsonResponse(400, {
+          'error': 'Missing required path parameter: projectId',
+        });
+      }
+
+      final now = DateTime.now().toUtc();
+      final change = DynamoChangeLogEntry(
+        cid: generateCid(
+          entityType: EntityType.project,
+          userId: session.userId,
+        ),
+        storageId: '',
+        domainType: kDomainProject,
+        domainId: projectId,
+        entityType: kEntityTypeProject,
+        operation: kChangeOperationNotYetDefined,
+        stateChanged: false,
+        changeAt: now,
+        entityId: projectId,
+        dataJson: stableStringify({'deleted': true}),
+        changeBy: session.userId,
+        unknownJson: '{}',
+        operationInfoJson: '{}',
+      );
+
+      final result = await ChangeProcessingService.storeChanges(
+        storageMode: 'save',
+        changes: [change.toJson()],
+        srcStorageType: 'local',
+        srcStorageId: 'auth-backend',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+
+      if (!result.isSuccess) {
+        return _jsonResponse(result.errorCode ?? 500, {
+          'error': result.errorMessage ?? 'Failed to delete project',
+        });
+      }
+
+      return _jsonResponse(200, {'projectId': projectId, 'deleted': true});
+    } on AuthException catch (e) {
+      return _jsonResponse(e.statusCode, e.toJson());
+    } catch (e, st) {
+      SlttLogger.logger.severe('superAdminDeleteProject failed: $e\n$st');
+      return Response.internalServerError(
+        body: jsonEncode({'error': e.toString()}),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+  }
+
   Future<Response> _handleSuperAdminListAdHocUsers(Request request) async {
     return _handleAuthRequest(() async {
       final session = _requireAuthenticatedSession(request);
@@ -1313,6 +1709,34 @@ class AwsRestApiServer extends BaseRestApiServer {
       );
       return _jsonResponse(200, result.toJson());
     });
+  }
+
+  Future<void> _requireAdminProjectMembership({
+    required String projectId,
+    required String userId,
+  }) async {
+    final membershipState = await storage.getEntityState(
+      domainType: kDomainMembership,
+      domainId: projectId,
+      entityType: kEntityTypeMember,
+      entityId: userId,
+    );
+    if (membershipState == null) {
+      throw AuthException(
+        'Administrator membership required',
+        statusCode: 403,
+        code: 'forbidden',
+      );
+    }
+    final json = membershipState.toJson();
+    final role = json['data_role'] as String?;
+    if (role != MemberType.admin.name) {
+      throw AuthException(
+        'Administrator membership required',
+        statusCode: 403,
+        code: 'forbidden',
+      );
+    }
   }
 
   Future<Response> _handleAdminDeleteAdHocUser(Request request) async {

@@ -532,6 +532,240 @@ void main() {
         },
       );
 
+      test(
+        'PUT /api/admin/project/{projectId} updates permitted project fields',
+        () async {
+          final registerResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/register',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'userId': 'project-updater',
+              'name': 'Project Updater',
+              'dateOfBirth': '1990-01-01',
+              'email': 'updater@example.com',
+              'password': 'secret123',
+            }),
+          }, router);
+          expect(registerResponse['statusCode'], equals(200));
+
+          final verifyResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/verify-email',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'email': 'updater@example.com',
+              'code': emailSender.codes['updater@example.com']!.single,
+            }),
+          }, router);
+          expect(verifyResponse['statusCode'], equals(200));
+          final verifyBody =
+              jsonDecode(verifyResponse['body'] as String)
+                  as Map<String, dynamic>;
+          final accessToken = verifyBody['accessToken'] as String;
+
+          final createResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/project',
+            'headers': <String, String>{'authorization': 'Bearer $accessToken'},
+            'body': jsonEncode({
+              'publicId': 'project-updater-id',
+              'teamName': 'Updater Team',
+              'signLanguage': 'BSL',
+            }),
+          }, router);
+          expect(createResponse['statusCode'], equals(200));
+          final createBody =
+              jsonDecode(createResponse['body'] as String)
+                  as Map<String, dynamic>;
+          final projectId = createBody['projectId'] as String;
+
+          final updateResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'PUT',
+            'path': '/api/admin/project/$projectId',
+            'headers': <String, String>{'authorization': 'Bearer $accessToken'},
+            'body': jsonEncode({
+              'teamName': 'Updated Team Name',
+              'signLanguage': 'ASL',
+              'status': 'active',
+            }),
+          }, router);
+          expect(updateResponse['statusCode'], equals(200));
+          final updateBody =
+              jsonDecode(updateResponse['body'] as String)
+                  as Map<String, dynamic>;
+          expect(updateBody['projectId'], equals(projectId));
+          expect(updateBody['updated'], isTrue);
+
+          final projectState = await storage.getEntityState(
+            domainType: kDomainProject,
+            domainId: projectId,
+            entityType: kEntityTypeProject,
+            entityId: projectId,
+          );
+          expect(projectState, isNotNull);
+          expect(
+            projectState?.toJson()['data_teamName'] ??
+                projectState?.toJson()['teamName'],
+            equals('Updated Team Name'),
+          );
+          expect(
+            projectState?.toJson()['data_status'] ??
+                projectState?.toJson()['status'],
+            equals('active'),
+          );
+        },
+      );
+
+      test(
+        'PUT /api/super/admin/project/{projectId} updates required super fields',
+        () async {
+          final registerResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/register',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'userId': 'super-project-updater',
+              'name': 'Super Updater',
+              'dateOfBirth': '1990-01-01',
+              'email': 'super-updater@example.com',
+              'password': 'secret123',
+            }),
+          }, router);
+          expect(registerResponse['statusCode'], equals(200));
+
+          final verifyResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/verify-email',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'email': 'super-updater@example.com',
+              'code': emailSender.codes['super-updater@example.com']!.single,
+            }),
+          }, router);
+          expect(verifyResponse['statusCode'], equals(200));
+          final verifyBody =
+              jsonDecode(verifyResponse['body'] as String)
+                  as Map<String, dynamic>;
+          final accessToken = verifyBody['accessToken'] as String;
+
+          final createResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/project',
+            'headers': <String, String>{'authorization': 'Bearer $accessToken'},
+            'body': jsonEncode({
+              'publicId': 'super-project-id',
+              'teamName': 'Super Team',
+              'signLanguage': 'ASL',
+            }),
+          }, router);
+          expect(createResponse['statusCode'], equals(200));
+          final createBody =
+              jsonDecode(createResponse['body'] as String)
+                  as Map<String, dynamic>;
+          final projectId = createBody['projectId'] as String;
+
+          final superUpdateResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'PUT',
+            'path': '/api/super/admin/project/$projectId',
+            'headers': <String, String>{'authorization': 'Bearer $accessToken'},
+            'body': jsonEncode({
+              'publicId': 'super-project-id',
+              'teamName': 'Super Team Updated',
+              'teamId': '',
+              'name': '',
+              'signLanguage': 'ASL',
+              'status': 'approved',
+              'deleted': false,
+            }),
+          }, router);
+          expect(superUpdateResponse['statusCode'], equals(200));
+          final superUpdateBody =
+              jsonDecode(superUpdateResponse['body'] as String)
+                  as Map<String, dynamic>;
+          expect(superUpdateBody['projectId'], equals(projectId));
+          expect(superUpdateBody['publicId'], equals('super-project-id'));
+          expect(superUpdateBody['teamName'], equals('Super Team Updated'));
+          expect(superUpdateBody['status'], equals('approved'));
+          expect(superUpdateBody['deleted'], isFalse);
+        },
+      );
+
+      test(
+        'DELETE /api/super/admin/project/{projectId} soft deletes the project',
+        () async {
+          final registerResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/register',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'userId': 'project-deleter',
+              'name': 'Project Deleter',
+              'dateOfBirth': '1990-01-01',
+              'email': 'deleter@example.com',
+              'password': 'secret123',
+            }),
+          }, router);
+          expect(registerResponse['statusCode'], equals(200));
+
+          final verifyResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/verify-email',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'email': 'deleter@example.com',
+              'code': emailSender.codes['deleter@example.com']!.single,
+            }),
+          }, router);
+          expect(verifyResponse['statusCode'], equals(200));
+          final verifyBody =
+              jsonDecode(verifyResponse['body'] as String)
+                  as Map<String, dynamic>;
+          final accessToken = verifyBody['accessToken'] as String;
+
+          final createResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/project',
+            'headers': <String, String>{'authorization': 'Bearer $accessToken'},
+            'body': jsonEncode({
+              'publicId': 'deleter-project-id',
+              'teamName': 'Deleter Team',
+              'signLanguage': 'ASL',
+            }),
+          }, router);
+          expect(createResponse['statusCode'], equals(200));
+          final createBody =
+              jsonDecode(createResponse['body'] as String)
+                  as Map<String, dynamic>;
+          final projectId = createBody['projectId'] as String;
+
+          final deleteResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'DELETE',
+            'path': '/api/super/admin/project/$projectId',
+            'headers': <String, String>{'authorization': 'Bearer $accessToken'},
+          }, router);
+          expect(deleteResponse['statusCode'], equals(200));
+          final deleteBody =
+              jsonDecode(deleteResponse['body'] as String)
+                  as Map<String, dynamic>;
+          expect(deleteBody['projectId'], equals(projectId));
+          expect(deleteBody['deleted'], isTrue);
+
+          final projectState = await storage.getEntityState(
+            domainType: kDomainProject,
+            domainId: projectId,
+            entityType: kEntityTypeProject,
+            entityId: projectId,
+          );
+          expect(projectState, isNotNull);
+          expect(
+            projectState?.toJson()['data_deleted'] ??
+                projectState?.toJson()['deleted'],
+            isTrue,
+          );
+        },
+      );
+
       test('refresh rotates refresh token and invalidates old token', () async {
         final registerResponse = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',

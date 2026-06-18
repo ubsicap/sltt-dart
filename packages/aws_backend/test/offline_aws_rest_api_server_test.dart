@@ -52,6 +52,45 @@ void main() {
       expect(body['endpoints'], isNotEmpty);
     });
 
+    test('api/help includes new project admin endpoints', () async {
+      final response = await server.handleApiGatewayEvent({
+        'httpMethod': 'GET',
+        'path': '/api/help',
+        'headers': <String, String>{},
+      }, router);
+
+      expect(response['statusCode'], equals(200));
+      final body =
+          jsonDecode(response['body'] as String) as Map<String, dynamic>;
+      final endpoints = (body['endpoints'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
+
+      expect(
+        endpoints.any(
+          (endpoint) =>
+              endpoint['method'] == 'PUT' &&
+              endpoint['path'] == '/api/admin/project/{projectId}',
+        ),
+        isTrue,
+      );
+      expect(
+        endpoints.any(
+          (endpoint) =>
+              endpoint['method'] == 'PUT' &&
+              endpoint['path'] == '/api/super/admin/project/{projectId}',
+        ),
+        isTrue,
+      );
+      expect(
+        endpoints.any(
+          (endpoint) =>
+              endpoint['method'] == 'DELETE' &&
+              endpoint['path'] == '/api/super/admin/project/{projectId}',
+        ),
+        isTrue,
+      );
+    });
+
     test('GET /api/domains returns domains and collections', () async {
       final response = await server.handleApiGatewayEvent({
         'httpMethod': 'GET',
