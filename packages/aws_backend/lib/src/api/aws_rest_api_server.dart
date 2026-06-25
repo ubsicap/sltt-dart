@@ -1545,9 +1545,42 @@ class AwsRestApiServer extends BaseRestApiServer {
         operationInfoJson: '{}',
       );
 
+      final changes = <Map<String, dynamic>>[change.toJson()];
+      if (teamId != null && teamId.isNotEmpty) {
+        final teamState = await storage.getEntityState(
+          domainType: kDomainTeam,
+          domainId: teamId,
+          entityType: kEntityTypeTeam,
+          entityId: teamId,
+        );
+
+        final existingTeamName = teamState?.toJson()['data_name'] as String?;
+        if (teamState == null || existingTeamName != teamName) {
+          final teamChange = DynamoChangeLogEntry(
+            cid: generateCid(
+              entityType: EntityType.team,
+              userId: session.userId,
+            ),
+            storageId: '',
+            domainType: kDomainTeam,
+            domainId: teamId,
+            entityType: kEntityTypeTeam,
+            operation: kChangeOperationNotYetDefined,
+            stateChanged: false,
+            changeAt: now,
+            entityId: teamId,
+            dataJson: stableStringify({'name': teamName}),
+            changeBy: session.userId,
+            unknownJson: '{}',
+            operationInfoJson: '{}',
+          );
+          changes.add(teamChange.toJson());
+        }
+      }
+
       final result = await ChangeProcessingService.storeChanges(
         storageMode: 'save',
-        changes: [change.toJson()],
+        changes: changes,
         srcStorageType: 'local',
         srcStorageId: 'auth-backend',
         storage: storage,
