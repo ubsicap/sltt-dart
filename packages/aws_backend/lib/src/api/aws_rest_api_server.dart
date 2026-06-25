@@ -229,6 +229,7 @@ class AwsRestApiServer extends BaseRestApiServer {
         'properties': {
           'publicId': {'type': 'string'},
           'teamName': {'type': 'string'},
+          'teamId': {'type': 'string'},
           'signLanguage': {'type': 'string'},
         },
       },
@@ -239,6 +240,7 @@ class AwsRestApiServer extends BaseRestApiServer {
           'status': {'type': 'string', 'example': 'requested'},
           'publicId': {'type': 'string'},
           'teamName': {'type': 'string'},
+          'teamId': {'type': 'string'},
           'signLanguage': {'type': 'string'},
         },
       },
@@ -264,6 +266,7 @@ class AwsRestApiServer extends BaseRestApiServer {
         'properties': {
           'publicId': {'type': 'string'},
           'teamName': {'type': 'string'},
+          'teamId': {'type': 'string'},
           'signLanguage': {'type': 'string'},
           'status': {'type': 'string'},
           'parentId': {'type': 'string'},
@@ -1263,6 +1266,7 @@ class AwsRestApiServer extends BaseRestApiServer {
 
       final publicId = (body['publicId'] as String?)?.trim() ?? '';
       final teamName = (body['teamName'] as String?)?.trim() ?? '';
+      final teamId = (body['teamId'] as String?)?.trim();
       final signLanguage = (body['signLanguage'] as String?)?.trim() ?? '';
 
       final details = <String, String>{};
@@ -1289,6 +1293,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       final projectData = <String, dynamic>{
         'publicId': publicId,
         'teamName': teamName,
+        'teamId': teamId,
         'signLanguage': signLanguage,
         'status': 'requested',
         'parentId': kDomainEntityRootParentId,
@@ -1340,6 +1345,7 @@ class AwsRestApiServer extends BaseRestApiServer {
         'status': 'requested',
         'publicId': publicId,
         'teamName': teamName,
+        if (teamId != null && teamId.isNotEmpty) 'teamId': teamId,
         'signLanguage': signLanguage,
       });
     } on AuthException catch (e) {
@@ -1378,6 +1384,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       final allowedFields = {
         'publicId',
         'teamName',
+        'teamId',
         'signLanguage',
         'status',
         'parentId',
@@ -1395,7 +1402,7 @@ class AwsRestApiServer extends BaseRestApiServer {
           'code': 'invalid_request',
           'details': {
             'message':
-                'At least one updatable field must be provided: publicId, teamName, signLanguage, status, parentId, parentProp.',
+                'At least one updatable field must be provided: publicId, teamName, teamId, signLanguage, status, parentId, parentProp.',
           },
         });
       }
