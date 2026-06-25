@@ -1,6 +1,9 @@
 // Generated helper constants and accessors for domain types and collections
 import 'package:sltt_core/sltt_core.dart' show EntityType;
 
+const String kDomainTeam = 'team';
+const String kCollectionTeam = 'teams';
+
 const String kDomainProject = 'project';
 const String kCollectionProject = 'projects';
 
@@ -14,6 +17,7 @@ enum DomainType {
   project(value: kDomainProject),
   user(value: kDomainUser),
   membership(value: kDomainMembership),
+  team(value: kDomainTeam),
   unknown(value: 'unknown');
 
   final String value;
@@ -22,6 +26,8 @@ enum DomainType {
 
   static DomainType tryFromString(String value) {
     switch (value) {
+      case kDomainTeam:
+        return DomainType.team;
       case kDomainProject:
         return DomainType.project;
       case kDomainUser:
@@ -35,6 +41,8 @@ enum DomainType {
 
   String get collectionName {
     switch (this) {
+      case DomainType.team:
+        return kCollectionTeam;
       case DomainType.project:
         return kCollectionProject;
       case DomainType.user:
@@ -68,6 +76,12 @@ class DomainTypeProfile {
 }
 
 Map<String, DomainTypeProfile> _domainTypeRootEntityProfiles = {
+  kDomainTeam: const DomainTypeProfile(
+    domainType: DomainType.team,
+    domainIdEntityType: EntityType.team,
+    rootEntityIdEntityType: EntityType.team,
+    rootEntityIdParentProp: kCollectionTeam,
+  ),
   kDomainProject: const DomainTypeProfile(
     domainType: DomainType.project,
     domainIdEntityType: EntityType.project,
