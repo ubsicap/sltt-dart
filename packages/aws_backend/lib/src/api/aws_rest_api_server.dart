@@ -1547,35 +1547,23 @@ class AwsRestApiServer extends BaseRestApiServer {
 
       final changes = <Map<String, dynamic>>[change.toJson()];
       if (teamId != null && teamId.isNotEmpty) {
-        final teamState = await storage.getEntityState(
+        /// NOTE: in 'save' mode, the team change will not be stored if this change does not result in a state change
+        final maybeTeamChange = DynamoChangeLogEntry(
+          cid: generateCid(entityType: EntityType.team, userId: session.userId),
+          storageId: '',
           domainType: kDomainTeam,
           domainId: teamId,
           entityType: kEntityTypeTeam,
+          operation: kChangeOperationNotYetDefined,
+          stateChanged: false,
+          changeAt: now,
           entityId: teamId,
+          dataJson: stableStringify({'name': teamName}),
+          changeBy: session.userId,
+          unknownJson: '{}',
+          operationInfoJson: '{}',
         );
-
-        final existingTeamName = teamState?.toJson()['data_name'] as String?;
-        if (teamState == null || existingTeamName != teamName) {
-          final teamChange = DynamoChangeLogEntry(
-            cid: generateCid(
-              entityType: EntityType.team,
-              userId: session.userId,
-            ),
-            storageId: '',
-            domainType: kDomainTeam,
-            domainId: teamId,
-            entityType: kEntityTypeTeam,
-            operation: kChangeOperationNotYetDefined,
-            stateChanged: false,
-            changeAt: now,
-            entityId: teamId,
-            dataJson: stableStringify({'name': teamName}),
-            changeBy: session.userId,
-            unknownJson: '{}',
-            operationInfoJson: '{}',
-          );
-          changes.add(teamChange.toJson());
-        }
+        changes.add(maybeTeamChange.toJson());
       }
 
       final result = await ChangeProcessingService.storeChanges(
