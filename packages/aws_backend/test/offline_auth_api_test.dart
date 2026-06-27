@@ -308,6 +308,216 @@ void main() {
         },
       );
 
+      test(
+        'GET /api/cross-domain/team/states/team requires authorization',
+        () async {
+          final response = await server.handleApiGatewayEvent({
+            'httpMethod': 'GET',
+            'path': '/api/cross-domain/team/states/team',
+            'headers': <String, String>{},
+          }, router);
+
+          expect(response['statusCode'], equals(401));
+        },
+      );
+
+      test(
+        'GET /api/cross-domain/team/states/team returns only authorized teams',
+        () async {
+          const userId = 'team-user-1';
+          final registerResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/register',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'userId': userId,
+              'name': 'Team User',
+              'dateOfBirth': '1990-01-01',
+              'email': 'team-user@example.com',
+              'password': 'secret123',
+            }),
+          }, router);
+          expect(registerResponse['statusCode'], equals(200));
+
+          final verifyResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/verify-email',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'email': 'team-user@example.com',
+              'code': emailSender.codes['team-user@example.com']!.last,
+            }),
+          }, router);
+          expect(verifyResponse['statusCode'], equals(200));
+          final verifyBody =
+              jsonDecode(verifyResponse['body'] as String)
+                  as Map<String, dynamic>;
+          final accessToken = verifyBody['accessToken'] as String;
+
+          final iso = DateTime.now().toUtc().toIso8601String();
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': userId,
+              'entityType': kEntityTypeMember,
+              'domainType': kDomainMembership,
+              'unknownJson': '{}',
+              'change_domainId': 'project-1',
+              'change_domainId_orig_': 'project-1',
+              'change_changeAt': iso,
+              'change_changeAt_orig_': iso,
+              'change_cid': 'member-1',
+              'change_cid_orig_': 'member-1',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': iso,
+              'change_storedAt_orig_': iso,
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': iso,
+              'data_parentId_cid_': 'member-1',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionMembership,
+              'data_parentProp_changeAt_': iso,
+              'data_parentProp_cid_': 'member-1',
+              'data_parentProp_changeBy_': 'seed',
+              'data_role': 'admin',
+              'data_isAdHoc': false,
+              'data_name': 'Team User',
+              'data_email': 'team-user@example.com',
+            }),
+          );
+
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': 'project-1',
+              'entityType': kEntityTypeProject,
+              'domainType': kDomainProject,
+              'unknownJson': '{}',
+              'change_domainId': 'project-1',
+              'change_domainId_orig_': 'project-1',
+              'change_changeAt': iso,
+              'change_changeAt_orig_': iso,
+              'change_cid': 'project-1-cid',
+              'change_cid_orig_': 'project-1-cid',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': iso,
+              'change_storedAt_orig_': iso,
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': iso,
+              'data_parentId_cid_': 'project-1-cid',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionProject,
+              'data_parentProp_changeAt_': iso,
+              'data_parentProp_cid_': 'project-1-cid',
+              'data_parentProp_changeBy_': 'seed',
+              'data_name': 'Authorized Project',
+              'data_teamId': 'team-1',
+            }),
+          );
+
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': 'project-unauthorized',
+              'entityType': kEntityTypeProject,
+              'domainType': kDomainProject,
+              'unknownJson': '{}',
+              'change_domainId': 'project-unauthorized',
+              'change_domainId_orig_': 'project-unauthorized',
+              'change_changeAt': iso,
+              'change_changeAt_orig_': iso,
+              'change_cid': 'project-unauthorized-cid',
+              'change_cid_orig_': 'project-unauthorized-cid',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': iso,
+              'change_storedAt_orig_': iso,
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': iso,
+              'data_parentId_cid_': 'project-unauthorized-cid',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionProject,
+              'data_parentProp_changeAt_': iso,
+              'data_parentProp_cid_': 'project-unauthorized-cid',
+              'data_parentProp_changeBy_': 'seed',
+              'data_name': 'Unauthorized Project',
+              'data_teamId': 'team-unauthorized',
+            }),
+          );
+
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': 'team-1',
+              'entityType': kEntityTypeTeam,
+              'domainType': kDomainTeam,
+              'unknownJson': '{}',
+              'change_domainId': 'team-1',
+              'change_domainId_orig_': 'team-1',
+              'change_changeAt': iso,
+              'change_changeAt_orig_': iso,
+              'change_cid': 'team-1-cid',
+              'change_cid_orig_': 'team-1-cid',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': iso,
+              'change_storedAt_orig_': iso,
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': iso,
+              'data_parentId_cid_': 'team-1-cid',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionTeam,
+              'data_parentProp_changeAt_': iso,
+              'data_parentProp_cid_': 'team-1-cid',
+              'data_parentProp_changeBy_': 'seed',
+              'data_name': 'Authorized Team',
+            }),
+          );
+
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': 'team-unauthorized',
+              'entityType': kEntityTypeTeam,
+              'domainType': kDomainTeam,
+              'unknownJson': '{}',
+              'change_domainId': 'team-unauthorized',
+              'change_domainId_orig_': 'team-unauthorized',
+              'change_changeAt': iso,
+              'change_changeAt_orig_': iso,
+              'change_cid': 'team-unauthorized-cid',
+              'change_cid_orig_': 'team-unauthorized-cid',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': iso,
+              'change_storedAt_orig_': iso,
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': iso,
+              'data_parentId_cid_': 'team-unauthorized-cid',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionTeam,
+              'data_parentProp_changeAt_': iso,
+              'data_parentProp_cid_': 'team-unauthorized-cid',
+              'data_parentProp_changeBy_': 'seed',
+              'data_name': 'Unauthorized Team',
+            }),
+          );
+
+          final teamResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'GET',
+            'path': '/api/cross-domain/team/states/team',
+            'headers': <String, String>{'authorization': 'Bearer $accessToken'},
+          }, router);
+
+          expect(teamResponse['statusCode'], equals(200));
+          final teamBody =
+              jsonDecode(teamResponse['body'] as String)
+                  as Map<String, dynamic>;
+          expect(teamBody['count'], equals(1));
+          final items = (teamBody['items'] as List<dynamic>);
+          expect(items, hasLength(1));
+          expect(items.first['entityId'], equals('team-1'));
+          expect(items.first['change_domainId'], equals('team-1'));
+        },
+      );
+
       test('logout revokes provided refresh token', () async {
         final registerResponse = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',
