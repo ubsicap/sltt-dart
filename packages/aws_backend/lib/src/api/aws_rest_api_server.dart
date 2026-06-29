@@ -1738,6 +1738,10 @@ class AwsRestApiServer extends BaseRestApiServer {
         details['status'] = 'required';
       }
       if (details.isNotEmpty) {
+        SlttLogger.logger.warning(
+          'superAdminUpdateProject invalid request: '
+          'projectId=$projectId, body=$body, details=$details',
+        );
         return _jsonResponse(400, {
           'error': 'Invalid request',
           'code': 'invalid_request',
@@ -1746,6 +1750,10 @@ class AwsRestApiServer extends BaseRestApiServer {
       }
 
       if (deletedValue != null && deletedValue is! bool) {
+        SlttLogger.logger.warning(
+          'superAdminUpdateProject invalid deleted field: '
+          'projectId=$projectId, deleted=$deletedValue, body=$body',
+        );
         return _jsonResponse(400, {
           'error': 'Invalid request',
           'code': 'invalid_request',
@@ -1783,7 +1791,28 @@ class AwsRestApiServer extends BaseRestApiServer {
         operationInfoJson: '{}',
       );
 
-      final changes = <Map<String, dynamic>>[change.toJson()];
+      final projectResult = await ChangeProcessingService.storeChanges(
+        storageMode: 'save',
+        changes: [change.toJson()],
+        srcStorageType: 'local',
+        srcStorageId: 'auth-backend',
+        storage: storage,
+        includeChangeUpdates: false,
+        includeStateUpdates: false,
+      );
+
+      if (!projectResult.isSuccess) {
+        SlttLogger.logger.warning(
+          'superAdminUpdateProject storeChanges failed: '
+          'projectId=$projectId, body=$body, '
+          'errorCode=${projectResult.errorCode}, '
+          'errorMessage=${projectResult.errorMessage}',
+        );
+        return _jsonResponse(projectResult.errorCode ?? 500, {
+          'error': projectResult.errorMessage ?? 'Failed to update project',
+        });
+      }
+
       if (teamId != null && teamId.isNotEmpty) {
         /// NOTE: in 'save' mode, the team change will not be stored if this change does not result in a state change
         final maybeTeamChange = DynamoChangeLogEntry(
@@ -1796,28 +1825,37 @@ class AwsRestApiServer extends BaseRestApiServer {
           stateChanged: false,
           changeAt: now,
           entityId: teamId,
-          dataJson: stableStringify({'name': teamName}),
+          dataJson: stableStringify({
+            'name': teamName,
+            'parentId': kDomainEntityRootParentId,
+            'parentProp': kCollectionTeam,
+          }),
           changeBy: session.userId,
           unknownJson: '{}',
           operationInfoJson: '{}',
         );
-        changes.add(maybeTeamChange.toJson());
-      }
 
-      final result = await ChangeProcessingService.storeChanges(
-        storageMode: 'save',
-        changes: changes,
-        srcStorageType: 'local',
-        srcStorageId: 'auth-backend',
-        storage: storage,
-        includeChangeUpdates: false,
-        includeStateUpdates: false,
-      );
+        final teamResult = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [maybeTeamChange.toJson()],
+          srcStorageType: 'local',
+          srcStorageId: 'auth-backend',
+          storage: storage,
+          includeChangeUpdates: false,
+          includeStateUpdates: false,
+        );
 
-      if (!result.isSuccess) {
-        return _jsonResponse(result.errorCode ?? 500, {
-          'error': result.errorMessage ?? 'Failed to update project',
-        });
+        if (!teamResult.isSuccess) {
+          SlttLogger.logger.warning(
+            'superAdminUpdateProject team storeChanges failed: '
+            'projectId=$projectId, teamId=$teamId, body=$body, '
+            'errorCode=${teamResult.errorCode}, '
+            'errorMessage=${teamResult.errorMessage}',
+          );
+          return _jsonResponse(teamResult.errorCode ?? 500, {
+            'error': teamResult.errorMessage ?? 'Failed to update team',
+          });
+        }
       }
 
       return _jsonResponse(200, {
