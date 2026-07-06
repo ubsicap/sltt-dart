@@ -111,6 +111,62 @@ void main() {
       ); // Short storage ID format
     });
 
+    test(
+      'createEntityStateFromJson falls back to unknown storage group for known entityType without concrete registration',
+      () async {
+        final fallbackDbName = '${testDbName}_unknown_fallback';
+        final fallbackStorage = IsarStorageService(
+          fallbackDbName,
+          'TestFallback',
+        );
+
+        await fallbackStorage.deleteDatabase();
+        await fallbackStorage.initialize(
+          providedEntityStateSchemas: const <CollectionSchema>[],
+          registerStorageGroups: (registry, isar) {
+            registerIsarUnknownEntityStateStorageGroup(registry, isar);
+          },
+        );
+
+        final payload = {
+          'domainType': 'project',
+          'entityType': 'project',
+          'entityId': 'project-unknown-1',
+          'unknownJson': '{}',
+          'change_domainId': 'project-unknown-1',
+          'change_domainId_orig_': 'project-unknown-1',
+          'change_changeAt': baseTime.toIso8601String(),
+          'change_changeAt_orig_': baseTime.toIso8601String(),
+          'change_storedAt': baseTime.toIso8601String(),
+          'change_storedAt_orig_': baseTime.toIso8601String(),
+          'change_cid': 'cid-unknown-1',
+          'change_cid_orig_': 'cid-unknown-1',
+          'change_changeBy': 'tester',
+          'change_changeBy_orig_': 'tester',
+          'data_parentId': 'root',
+          'data_parentId_changeAt_': baseTime.toIso8601String(),
+          'data_parentId_cid_': 'cid-unknown-1',
+          'data_parentId_changeBy_': 'tester',
+          'data_parentProp': 'pList',
+          'data_parentProp_changeAt_': baseTime.toIso8601String(),
+          'data_parentProp_cid_': 'cid-unknown-1',
+          'data_parentProp_changeBy_': 'tester',
+        };
+
+        final state = fallbackStorage.createEntityStateFromJson(
+          entityType: 'project',
+          json: payload,
+        );
+
+        expect(state, isA<IsarUnknownEntityState>());
+        expect(state.entityType, equals('project'));
+        expect(state.entityId, equals('project-unknown-1'));
+
+        await fallbackStorage.close();
+        await fallbackStorage.deleteDatabase();
+      },
+    );
+
     test('creates and retrieves changes', () async {
       final projectId = 'proj-basic';
       final changeData = changePayload(

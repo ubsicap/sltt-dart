@@ -577,6 +577,14 @@ class IsarStorageService extends BaseStorageService {
       return storageGroup.fromJson(json);
     }
 
+    final unknownStorageGroup = _entityStateRegistry.get(EntityType.unknown);
+    if (unknownStorageGroup != null) {
+      SlttLogger.logger.warning(
+        'Falling back to unknown entity storage group for entityType="$originalTypeString"',
+      );
+      return unknownStorageGroup.fromJson(json);
+    }
+
     throw UnimplementedError('Unknown entity type: $originalTypeString');
   }
 
