@@ -588,6 +588,13 @@ class IsarStorageService extends BaseStorageService {
     throw UnimplementedError('Unknown entity type: $originalTypeString');
   }
 
+  IsarEntityStateStorageGroup? _getStorageGroupWithUnknownFallback(
+    EntityType entityTypeEnum,
+  ) {
+    return _entityStateRegistry.get(entityTypeEnum) ??
+        _entityStateRegistry.get(EntityType.unknown);
+  }
+
   @override
   BaseEntityState createEntityStateFromJson({
     required String entityType,
@@ -761,7 +768,9 @@ class IsarStorageService extends BaseStorageService {
         final entityTypeEnum = entry.key;
         final states = entry.value;
 
-        final storageGroup = _entityStateRegistry.get(entityTypeEnum);
+        final storageGroup = _getStorageGroupWithUnknownFallback(
+          entityTypeEnum,
+        );
         if (storageGroup == null) {
           throw UnimplementedError(
             'No storage group registered for entity type: $entityTypeEnum',
@@ -1870,9 +1879,6 @@ class IsarStorageService extends BaseStorageService {
         (e) => e.value == state.entityType,
         orElse: () => EntityType.unknown,
       );
-      if (entityTypeEnum == EntityType.unknown) {
-        throw ArgumentError('Unsupported entity type: ${state.entityType}');
-      }
 
       final normalizedState = _copyEntityStateWithStoredAt(
         state: state,
@@ -1934,7 +1940,7 @@ class IsarStorageService extends BaseStorageService {
 
     await _isar.writeTxn(() async {
       for (final entry in normalizedByEntityType.entries) {
-        final group = _entityStateRegistry.get(entry.key);
+        final group = _getStorageGroupWithUnknownFallback(entry.key);
         if (group == null) {
           throw StateError(
             'No storage group registered for entity type: ${entry.key.value}',
