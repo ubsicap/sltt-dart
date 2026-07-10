@@ -191,7 +191,7 @@ enum EntityType {
   /// Entity type suffix mapping for consistent entity ID generation
   /// Uses most representative 4 characters, padding with Z where needed
   static const Map<String, String> suffixMapping = {
-    kEntityTypeUserProfile: 'uPro',
+    kEntityTypeUserProfile: 'user',
     kEntityTypeUserPreferences: 'uPre',
     kEntityTypeProject: 'proj',
     kEntityTypeTeam: 'team',
