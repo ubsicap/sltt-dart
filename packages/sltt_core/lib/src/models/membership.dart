@@ -1,6 +1,6 @@
 enum MemberType {
   system,
-  superAdmin,
+  // superAdmin, // use super user mode + admin instead of this role
   admin,
   translator,
   consultant,
@@ -14,8 +14,8 @@ int getMemberRank(MemberType type) {
   switch (type) {
     case MemberType.system:
       return 6;
-    case MemberType.superAdmin:
-      return 5;
+    // case MemberType.superAdmin:
+    //   return 5;
     case MemberType.admin:
       return 4;
     case MemberType.translator:

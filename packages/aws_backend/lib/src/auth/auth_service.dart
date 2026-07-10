@@ -800,7 +800,6 @@ class BackendAuthService {
         orElse: () => MemberType.unknown,
       );
       if (memberType == MemberType.system ||
-          memberType == MemberType.superAdmin ||
           memberType == MemberType.admin ||
           memberType == MemberType.unknown) {
         throw AuthException(
@@ -1038,7 +1037,6 @@ class BackendAuthService {
       }
       if (memberType == null ||
           memberType == MemberType.system ||
-          memberType == MemberType.superAdmin ||
           memberType == MemberType.unknown) {
         throw AuthException(
           'Unable to complete this action',
