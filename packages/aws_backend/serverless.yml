@@ -277,6 +277,7 @@ resources:
               Principal: '*'
               Action:
                 - s3:PutObject
+                - s3:CompleteMultipartUpload
               Resource:
                 - arn:aws:s3:::${self:custom.mediaBucket}/*
               Condition:
