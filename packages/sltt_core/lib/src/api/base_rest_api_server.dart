@@ -8,6 +8,40 @@ import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 
+/// Marker exception for API-level conflicts that should return 409.
+abstract class ApiConflictException implements Exception {
+  String get message;
+}
+
+/// Exception thrown when an S3 object write is rejected due to an existing
+/// object or concurrent write conflict.
+class AwsMediaStorageConflictException implements ApiConflictException {
+  AwsMediaStorageConflictException(this.message, this.remoteFileKey);
+
+  @override
+  final String message;
+  final String remoteFileKey;
+
+  @override
+  String toString() => 'AwsMediaStorageConflictException: $message';
+}
+
+class AwsMediaStorageObjectAlreadyExistsException
+    extends AwsMediaStorageConflictException {
+  AwsMediaStorageObjectAlreadyExistsException(
+    String remoteFileKey,
+    String message,
+  ) : super(message, remoteFileKey);
+}
+
+class AwsMediaStorageConcurrentUploadConflictException
+    extends AwsMediaStorageConflictException {
+  AwsMediaStorageConcurrentUploadConflictException(
+    String remoteFileKey,
+    String message,
+  ) : super(message, remoteFileKey);
+}
+
 /// Base REST API server that provides common functionality for all storage types.
 ///
 /// This eliminates code duplication between different server implementations
@@ -2245,6 +2279,10 @@ abstract class BaseRestApiServer {
       );
     } on UnsupportedError catch (e) {
       return _errorResponse(e.message ?? 'Media storage not configured', 501);
+    } on AwsMediaStorageObjectAlreadyExistsException catch (e, st) {
+      return _errorResponse('Failed to complete multipart upload: $e', 412, st);
+    } on AwsMediaStorageConflictException catch (e, st) {
+      return _errorResponse('Failed to complete multipart upload: $e', 409, st);
     } catch (e, st) {
       return _errorResponse('Failed to complete multipart upload: $e', 500, st);
     }
