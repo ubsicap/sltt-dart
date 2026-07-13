@@ -272,6 +272,16 @@ resources:
               Condition:
                 StringEquals:
                   AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${MediaCloudFrontDistribution}
+            - Sid: EnforceIfNoneMatchOnPut
+              Effect: Deny
+              Principal: '*'
+              Action:
+                - s3:PutObject
+              Resource:
+                - arn:aws:s3:::${self:custom.mediaBucket}/*
+              Condition:
+                Null:
+                  's3:if-none-match': true
   Outputs:
     MediaCloudFrontDomainName:
       Value: !GetAtt MediaCloudFrontDistribution.DomainName
