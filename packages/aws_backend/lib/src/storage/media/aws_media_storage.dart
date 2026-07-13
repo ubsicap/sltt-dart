@@ -10,6 +10,34 @@ import 'package:pointycastle/export.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:xml/xml.dart';
 
+/// Exception thrown when an S3 object write is rejected due to an existing
+/// object or concurrent write conflict.
+class AwsMediaStorageConflictException implements Exception {
+  AwsMediaStorageConflictException(this.message, this.remoteFileKey);
+
+  final String message;
+  final String remoteFileKey;
+
+  @override
+  String toString() => 'AwsMediaStorageConflictException: $message';
+}
+
+class AwsMediaStorageObjectAlreadyExistsException
+    extends AwsMediaStorageConflictException {
+  AwsMediaStorageObjectAlreadyExistsException(
+    String remoteFileKey,
+    String message,
+  ) : super(message, remoteFileKey);
+}
+
+class AwsMediaStorageConcurrentUploadConflictException
+    extends AwsMediaStorageConflictException {
+  AwsMediaStorageConcurrentUploadConflictException(
+    String remoteFileKey,
+    String message,
+  ) : super(message, remoteFileKey);
+}
+
 /// S3-backed media storage that issues presigned URLs and lists multipart parts.
 class AwsMediaStorage extends BaseMediaStorage {
   AwsMediaStorage({
@@ -422,10 +450,28 @@ class AwsMediaStorage extends BaseMediaStorage {
     final request = AWSHttpRequest(
       method: AWSHttpMethod.post,
       uri: _objectUri(key, {'uploadId': uploadId}),
-      headers: {'host': _endpointHost(), 'content-type': 'application/xml'},
+      headers: {
+        'host': _endpointHost(),
+        'content-type': 'application/xml',
+        'if-none-match': '*',
+      },
     );
 
     final response = await _sendSigned(request, body: payloadBytes);
+
+    if (response.statusCode == 412) {
+      throw AwsMediaStorageObjectAlreadyExistsException(
+        key,
+        'Failed to complete multipart upload because the object already exists',
+      );
+    }
+
+    if (response.statusCode == 409) {
+      throw AwsMediaStorageConcurrentUploadConflictException(
+        key,
+        'Failed to complete multipart upload due to a concurrent upload conflict',
+      );
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
