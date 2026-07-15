@@ -338,20 +338,6 @@ resources:
               Resource:
                 - arn:aws:s3:::${self:custom.mediaBucket}
                 - arn:aws:s3:::${self:custom.mediaBucket}/*
-            - Sid: DenyMissingIfNoneMatchOnPut
-              Effect: Deny
-              Principal: '*'
-              Action:
-                - s3:PutObject
-              Resource:
-                - !Sub '${MediaBucket.Arn}/*'
-              Condition:
-                'Null':
-                  's3:if-none-match': true
-                Bool:
-                  's3:ObjectCreationOperation': 'true'
-                StringNotEquals:
-                  'aws:PrincipalServiceName': 'dynamodb.amazonaws.com'
 
     # IAM policy to allow secondary deployments to read SSM parameters
     # This is attached to the CrossAccountAccessRole to enable parameter reads
