@@ -1,16 +1,19 @@
 # Serverless Framework configuration for SLTT secondary infrastructure
 # This stack contains API functions and references shared infrastructure
 # resources (DynamoDB, S3, CloudFront) from the shared infra account.
-service: sltt-secondary-infra
+service: sltt-${self:custom.slttStackVersion}-secondary-infra
 
 custom:
+  # SLTT infrastructure version used for resource naming and parameter prefixes
+  slttStackVersion: v1
+
   # Shared infrastructure stage (fixed to prd by default)
   sharedInfraStage: ${opt:sharedInfraStage, 'prd'}
   # Shared infra account (source of SSM params)
   sharedInfraAccountId: ${opt:sharedInfraAccountId, '379334555674'}
 
   # SSM parameter prefix for shared infrastructure values
-  sharedInfraSsmPrefix: /sltt/infra/${self:custom.sharedInfraStage}
+  sharedInfraSsmPrefix: /sltt/${self:custom.slttStackVersion}/${self:custom.sharedInfraStage}
   sharedInfraArnPath: arn:aws:ssm:${self:provider.region}:${self:custom.sharedInfraAccountId}:parameter${self:custom.sharedInfraSsmPrefix}
 
   # Shared infrastructure values from SSM (can be cross-account via SSM resource policy)
@@ -52,7 +55,7 @@ provider:
     AUTH_SES_FROM_EMAIL: ${ssm:/sltt/auth/${self:provider.stage}/ses-from-email, 'no-reply@sltt-bible.net'}
     DYNAMODB_REGION: ${self:custom.sharedInfraRegion}
     SHARED_INFRA_ASSUME_ROLE_ARN: ${ssm:${self:custom.sharedInfraArnPath}/cross-account-role-arn}
-    ASSUME_ROLE_SESSION_NAME: sltt-secondary-infra-${self:provider.stage}
+    ASSUME_ROLE_SESSION_NAME: sltt-v1-secondary-infra-${self:provider.stage}
     MEDIA_BUCKET: ${self:custom.mediaBucket}
     MEDIA_CLOUDFRONT_DOMAIN: ${self:custom.mediaCloudFrontDomain}
     MEDIA_CLOUDFRONT_KEY_PAIR_ID: ${self:custom.mediaCloudFrontKeyPairId}
@@ -149,13 +152,13 @@ resources:
     AuthApiWebAcl:
       Type: AWS::WAFv2::WebACL
       Properties:
-        Name: sltt-secondary-infra-${self:provider.stage}-auth-api
+        Name: sltt-v1-secondary-infra-${self:provider.stage}-auth-api
         Scope: REGIONAL
         DefaultAction:
           Allow: {}
         VisibilityConfig:
           CloudWatchMetricsEnabled: true
-          MetricName: sltt-secondary-infra-${self:provider.stage}-auth-api
+          MetricName: sltt-v1-secondary-infra-${self:provider.stage}-auth-api
           SampledRequestsEnabled: true
         Rules:
           - Name: auth-api-rate-limit-100-per-5-min

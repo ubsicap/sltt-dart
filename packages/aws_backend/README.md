@@ -222,13 +222,13 @@ node packages\aws_backend\scripts\grant_shared_infra_access.js <target-account-i
 Example:
 
 ```bash
-node packages\aws_backend\scripts\grant_shared_infra_access.js 123456789012 sltt-secondary-infra-dev-role prd sltt-dart-prd us-east-1
+node packages\aws_backend\scripts\grant_shared_infra_access.js 123456789012 sltt-v1-secondary-infra-dev-role prd sltt-dart-prd us-east-1
 ```
 
 or from package.json (pass args after `--`):
 
 ```bash
-npm run shared-infra:grant-access -- 123456789012 sltt-secondary-infra-dev-role prd sltt-dart-prd us-east-1
+npm run shared-infra:grant-access -- 123456789012 sltt-v1-secondary-infra-dev-role prd sltt-dart-prd us-east-1
 ```
 
 Option B: mirror SSM into the target account (simpler, no cross-account read)

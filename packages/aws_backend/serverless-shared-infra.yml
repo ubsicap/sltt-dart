@@ -287,11 +287,11 @@ resources:
                 ArnLike:
                   'aws:PrincipalArn':
                     # Direct role ARN from same account
-                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole'
+                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole'
                     # Assumed-role ARN from same account
-                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole/*'
+                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole/*'
                     # Cross-account: secondary account (sltt-epyle dev/tst)
-                    - 'arn:aws:sts::662482841188:assumed-role/sltt-secondary-infra-*-us-east-1-lambdaRole/*'
+                    - 'arn:aws:sts::662482841188:assumed-role/sltt-v1-secondary-infra-*-us-east-1-lambdaRole/*'
             - Sid: AllowSecondaryWrite
               Effect: Allow
               Principal:
@@ -304,11 +304,11 @@ resources:
                 ArnLike:
                   'aws:PrincipalArn':
                     # Direct role ARN from same account
-                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole'
+                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole'
                     # Assumed-role ARN from same account
-                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole/*'
+                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole/*'
                     # Cross-account: secondary account (sltt-epyle dev/tst)
-                    - 'arn:aws:sts::662482841188:assumed-role/sltt-secondary-infra-*-us-east-1-lambdaRole/*'
+                    - 'arn:aws:sts::662482841188:assumed-role/sltt-v1-secondary-infra-*-us-east-1-lambdaRole/*'
                 StringEquals:
                   's3:if-none-match': '*'
             - Sid: AllowSecondaryListBucket
@@ -323,11 +323,11 @@ resources:
                 ArnLike:
                   'aws:PrincipalArn':
                     # Direct role ARN from same account
-                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole'
+                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole'
                     # Assumed-role ARN from same account
-                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-secondary-infra-*-${AWS::Region}-lambdaRole/*'
+                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole/*'
                     # Cross-account: secondary account (sltt-epyle dev/tst)
-                    - 'arn:aws:sts::662482841188:assumed-role/sltt-secondary-infra-*-us-east-1-lambdaRole/*'
+                    - 'arn:aws:sts::662482841188:assumed-role/sltt-v1-secondary-infra-*-us-east-1-lambdaRole/*'
 
             # Allow DynamoDB service to export table to S3
             - Sid: AllowDynamoDBExport

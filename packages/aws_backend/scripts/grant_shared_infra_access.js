@@ -10,7 +10,7 @@ function usage() {
     'Usage: grant_shared_infra_access.js <target-account-id> <target-role-name> [shared-infra-stage] [aws-profile] [aws-region]',
   );
   console.error(
-    'Example: grant_shared_infra_access.js 123456789012 sltt-secondary-infra-dev-role prd sltt-dart-prd us-east-1',
+    'Example: grant_shared_infra_access.js 123456789012 sltt-v1-secondary-infra-dev-role prd sltt-dart-prd us-east-1',
   );
 }
 

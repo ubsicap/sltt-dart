@@ -54,6 +54,7 @@ function main() {
   const targetAccount = String(args['target-account'] || '662482841188');
   const stage = String(args['stage'] || 'prd');
   const region = String(args['region'] || 'us-east-1');
+  const stackVersion = String(args['stack-version'] || 'v1');
 
   // Get shared account ID
   const sharedAccount = runAwsArgs([
@@ -72,10 +73,10 @@ function main() {
   console.log(`Setting SSM parameter resource policies for cross-account access:`);
   console.log(`  Shared account: ${sharedAccount} (profile=${sharedProfile})`);
   console.log(`  Target account: ${targetAccount}`);
-  console.log(`  Stage: ${stage}, Region: ${region}\n`);
+  console.log(`  Stage: ${stage}, Region: ${region}, Stack version: ${stackVersion}\n`);
 
   // List of SSM parameters to grant access to
-  const ssmPrefix = `/sltt/infra/${stage}`;
+  const ssmPrefix = `/sltt/${stackVersion}/${stage}`;
   const authPrefix = `/sltt/auth/${stage}`;
   const parametersToGrant = [
     `${ssmPrefix}/dynamodb/table-name`,

@@ -114,6 +114,7 @@ function main() {
   const sharedInfraStage = args['shared-infra-stage'] || 'prd';
   const awsProfile = args['aws-profile'] || 'sltt-dart-prd';
   const awsRegion = args['aws-region'] || 'us-east-1';
+  const stackVersion = args['stack-version'] || 'v1';
   const authOnly =
     args['auth-only'] === true ||
     String(args['auth-only'] || '').toLowerCase() === 'true';
@@ -128,8 +129,8 @@ function main() {
   const authJwtSecret = args['auth-jwt-secret'];
   const verificationCodeSecret = args['verification-code-secret'];
 
-  const stackName = `sltt-v1-shared-infra-${sharedInfraStage}`;
-  const ssmPrefix = `/sltt/infra/${sharedInfraStage}`;
+  const stackName = `sltt-${stackVersion}-shared-infra-${sharedInfraStage}`;
+  const ssmPrefix = `/sltt/${stackVersion}/${sharedInfraStage}`;
   const authPrefix = `/sltt/auth/${authStage}`;
 
   if (!authOnly) {
