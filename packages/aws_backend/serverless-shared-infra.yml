@@ -635,13 +635,13 @@ resources:
     SsmParametersUsedBySecondary:
       Description: SSM parameters that secondary deployments will reference (ensure cross-account access is granted)
       Value: |
-        /sltt/infra/prd/dynamodb/table-name
-        /sltt/infra/prd/dynamodb/table-arn
-        /sltt/infra/prd/auth/table-name
-        /sltt/infra/prd/auth/table-arn
-        /sltt/infra/prd/s3/bucket-name
-        /sltt/infra/prd/s3/bucket-arn
-        /sltt/infra/prd/cloudfront/domain
-        /sltt/infra/prd/cloudfront/keypair-id
-        /sltt/infra/prd/cloudfront/private-key
-        /sltt/infra/prd/region
+        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/dynamodb/table-name
+        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/dynamodb/table-arn
+        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/auth/table-name
+        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/auth/table-arn
+        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/s3/bucket-name
+        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/s3/bucket-arn
+        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/cloudfront/domain
+        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/cloudfront/keypair-id
+        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/cloudfront/private-key
+        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/region
