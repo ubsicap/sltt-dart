@@ -255,15 +255,31 @@ class MediaUploadService {
       if (entity is File) {
         // Skip sidecar files that persist upload IDs between restarts.
         if (entity.path.endsWith('.uploadId')) continue;
-        _pendingBytes += await entity.length();
-        files.add(entity);
+        try {
+          if (!await entity.exists()) continue;
+          _pendingBytes += await entity.length();
+          files.add(entity);
+        } on FileSystemException catch (error) {
+          // Ignore files that disappear while scanning.
+          if (error.osError?.errorCode == 2) continue;
+          rethrow;
+        }
+      }
+    }
+
+    files.removeWhere((file) => !file.existsSync());
+    DateTime modifiedOrDefault(File file) {
+      try {
+        return file.statSync().modified;
+      } on FileSystemException {
+        return DateTime.fromMillisecondsSinceEpoch(0);
       }
     }
 
     files.sort((a, b) {
-      final aStat = a.statSync();
-      final bStat = b.statSync();
-      return aStat.modified.compareTo(bStat.modified);
+      final aStat = modifiedOrDefault(a);
+      final bStat = modifiedOrDefault(b);
+      return aStat.compareTo(bStat);
     });
 
     final ordered = <File>[];
