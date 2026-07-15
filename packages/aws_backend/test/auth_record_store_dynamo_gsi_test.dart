@@ -134,11 +134,12 @@ void main() {
         putItemPayload?['Item'] as Map<String, dynamic>? ??
             const <String, dynamic>{},
       );
-      expect(item['gsi1pk'], equals({'S': 'principal'}));
+      expect(item['gsi1pk'], equals({'S': 'PRINCIPAL'}));
       expect(
         item['gsi1sk'],
         equals({
-          'S': 'STATUS#active#KIND#username_password#ADHOC#1#USER#user_123',
+          'S':
+              '@STATUS#active#@KIND#username_password#@ADHOC#1#@USERID#user_123',
         }),
       );
 
@@ -150,7 +151,7 @@ void main() {
       () async {
         final queriedPrefixes = <String>[];
         final expectedHitPrefix =
-            'STATUS#active#KIND#username_password#ADHOC#1#USER#';
+            '@STATUS#active#@KIND#username_password#@ADHOC#1#';
         final adhocPrincipal = _usernamePrincipal(
           userId: 'adhoc-user-1',
           accountStatus: AuthAccountStatus.active,
@@ -176,8 +177,8 @@ void main() {
             if (prefix == expectedHitPrefix) {
               final itemJson = <String, dynamic>{
                 'itemType': 'principal',
-                'gsi1pk': 'principal',
-                'gsi1sk': '$expectedHitPrefix${adhocPrincipal.userId}',
+                'gsi1pk': 'PRINCIPAL',
+                'gsi1sk': '$expectedHitPrefix@USERID#${adhocPrincipal.userId}',
                 ...adhocPrincipal.toJson(),
               };
               return _DynamoReply(
@@ -213,10 +214,10 @@ void main() {
         expect(
           queriedPrefixes,
           containsAll(<String>[
-            'STATUS#pending_verification#KIND#email_password#ADHOC#1#USER#',
-            'STATUS#pending_verification#KIND#username_password#ADHOC#1#USER#',
-            'STATUS#active#KIND#email_password#ADHOC#1#USER#',
-            'STATUS#active#KIND#username_password#ADHOC#1#USER#',
+            '@STATUS#pending_verification#@KIND#email_password#@ADHOC#1#',
+            '@STATUS#pending_verification#@KIND#username_password#@ADHOC#1#',
+            '@STATUS#active#@KIND#email_password#@ADHOC#1#',
+            '@STATUS#active#@KIND#username_password#@ADHOC#1#',
           ]),
         );
 

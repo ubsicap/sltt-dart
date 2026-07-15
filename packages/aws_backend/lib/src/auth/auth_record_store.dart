@@ -4,6 +4,7 @@ import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
 import 'package:http/http.dart' as http;
 
+import 'auth_key_codec.dart';
 import 'auth_models.dart';
 
 /// Auth table key access map.
@@ -24,7 +25,7 @@ import 'auth_models.dart';
 ///     operation: PutItem/GetItem in putPrincipal and getPrincipalByUserId
 ///     key_fields: [pk, sk]
 ///     keys:
-///       pk: USER#user_123
+///       pk: USER#@USERID#user_123
 ///       sk: PRINCIPAL
 ///
 /// email_lookup:
@@ -32,7 +33,7 @@ import 'auth_models.dart';
 ///     operation: PutItem/GetItem in putEmailLookup and getPrincipalByEmail
 ///     key_fields: [pk, sk]
 ///     keys:
-///       pk: IDENTIFIER#EMAIL#person@example.com
+///       pk: IDENTIFIER#EMAIL#@NORMALIZEDEMAIL#person%40example.com
 ///       sk: LOOKUP
 ///
 /// username_lookup:
@@ -40,7 +41,7 @@ import 'auth_models.dart';
 ///     operation: PutItem/GetItem in putUsernameLookup and getPrincipalByUsername
 ///     key_fields: [pk, sk]
 ///     keys:
-///       pk: IDENTIFIER#USERNAME#local.user
+///       pk: IDENTIFIER#USERNAME#@NORMALIZEDUSERNAME#local.user
 ///       sk: LOOKUP
 ///
 /// email_challenge:
@@ -49,17 +50,17 @@ import 'auth_models.dart';
 ///     key_fields: [pk, sk]
 ///     notes: TTL is driven by ttlEpochSeconds on the item payload.
 ///     keys:
-///       pk: USER#user_123
+///       pk: USER#@USERID#user_123
 ///       sk: CHALLENGE#EMAIL
 ///
 /// session:
 ///   write_read:
 ///     operation: PutItem/GetItem/Query in putSession, getSessionById, revokeAllSessionsForUser
 ///     key_fields: [pk, sk]
-///     notes: Query uses pk = USER#user_123 and begins_with(sk, SESSION#).
+///     notes: Query uses pk = USER#@USERID#user_123 and begins_with(sk, SESSION#).
 ///     keys:
-///       pk: USER#user_123
-///       sk: SESSION#sess_abc
+///       pk: USER#@USERID#user_123
+///       sk: SESSION#@SESSIONID#sess_abc
 ///
 /// session_token_lookup:
 ///   write_read:
@@ -67,7 +68,7 @@ import 'auth_models.dart';
 ///     key_fields: [pk, sk]
 ///     notes: TTL is mirrored from the backing session item.
 ///     keys:
-///       pk: SESSIONTOKEN#sha256_refresh_token
+///       pk: SESSIONTOKEN#@REFRESHTOKENHASH#sha256_refresh_token
 ///       sk: LOOKUP
 ///
 /// adhoc_listing:
@@ -75,8 +76,8 @@ import 'auth_models.dart';
 ///     operation: PutItem in putPrincipal, Query in listAdHocPrincipals
 ///     key_fields: [gsi1pk, gsi1sk]
 ///     keys:
-///       gsi1pk: principal
-///       gsi1sk: STATUS#active#KIND#username_password#ADHOC#1#USER#user_123
+///       gsi1pk: PRINCIPAL
+///       gsi1sk: @STATUS#active#@KIND#username_password#@ADHOC#1#@USERID#user_123
 
 abstract class AuthRecordStore {
   Future<void> initialize();
@@ -730,30 +731,34 @@ class DynamoAuthRecordStore implements AuthRecordStore {
     return attr;
   }
 
-  String _userPk(String userId) => 'USER#$userId';
-  String _principalSk() => 'PRINCIPAL';
-  String _lookupSk() => 'LOOKUP';
+  String _userPk(String userId) => buildAuthUserPk(userId);
+  String _principalSk() => buildAuthPrincipalSk();
+  String _lookupSk() => buildAuthLookupSk();
   String _emailLookupPk(String normalizedEmail) =>
-      'IDENTIFIER#EMAIL#$normalizedEmail';
+      buildAuthEmailLookupPk(normalizedEmail);
   String _usernameLookupPk(String normalizedUsername) =>
-      'IDENTIFIER#USERNAME#$normalizedUsername';
-  String _emailChallengeSk() => 'CHALLENGE#EMAIL';
-  String _sessionSk(String sessionId) => 'SESSION#$sessionId';
-  String _sessionTokenPk(String tokenHash) => 'SESSIONTOKEN#$tokenHash';
+      buildAuthUsernameLookupPk(normalizedUsername);
+  String _emailChallengeSk() => buildAuthEmailChallengeSk();
+  String _sessionSk(String sessionId) => buildAuthSessionSk(sessionId);
+  String _sessionTokenPk(String tokenHash) =>
+      buildAuthSessionTokenPk(tokenHash);
   static const String _principalListingIndexName = 'GSI1';
   static const List<AuthAccountStatus> _nonDeletedStatuses =
       <AuthAccountStatus>[
         AuthAccountStatus.pendingVerification,
         AuthAccountStatus.active,
       ];
-  String _principalListingGsiPk() => 'principal';
+  String _principalListingGsiPk() => buildAuthPrincipalListingGsiPk();
   String _principalListingGsiSkPrefix({
     required AuthAccountStatus accountStatus,
     required AuthIdentityKind identityKind,
     required bool isAdHoc,
   }) {
-    final adHocBit = isAdHoc ? '1' : '0';
-    return 'STATUS#${accountStatus.value}#KIND#${identityKind.value}#ADHOC#$adHocBit#USER#';
+    return buildAuthPrincipalListingGsiSkPrefix(
+      accountStatus: accountStatus,
+      identityKind: identityKind,
+      isAdHoc: isAdHoc,
+    );
   }
 
   String _principalListingGsiSk({
@@ -762,11 +767,11 @@ class DynamoAuthRecordStore implements AuthRecordStore {
     required bool isAdHoc,
     required String userId,
   }) {
-    final prefix = _principalListingGsiSkPrefix(
+    return buildAuthPrincipalListingGsiSk(
       accountStatus: accountStatus,
       identityKind: identityKind,
       isAdHoc: isAdHoc,
+      userId: userId,
     );
-    return '$prefix$userId';
   }
 }
