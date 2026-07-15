@@ -206,35 +206,62 @@ class DynamoExportClassifier {
 
   Map<String, String> _parseFields(String compositeKey) {
     final fields = <String, String>{};
-    for (final segment in compositeKey.split('#')) {
-      String fieldName;
-      String fieldValue;
-      final separator = segment.indexOf('_');
+    final tokens = compositeKey.split('#');
+    var index = 0;
 
-      /// Handle fields that end with an underscore
-      /// e.g. changeAt_orig_ + _{timestamp}
-      final int separator2 = segment.indexOf('__');
-      if (separator <= 0 || separator == segment.length - 1) {
+    while (index < tokens.length) {
+      final token = tokens[index++];
+      if (token.isEmpty) {
         continue;
       }
-      final int resolvedSeparator =
-          (separator2 > 0 && separator2 < segment.length - 1)
-          ? separator2 + 1
-          : separator;
-      fieldName = segment.substring(0, resolvedSeparator);
-      fieldValue = segment.substring(resolvedSeparator + 1);
-      switch (fieldName) {
-        case 'domainType':
-        case 'domainId':
-        case 'entityType':
-        case 'entityId':
-        case 'parentId':
-        case 'parentProp':
-        case 'rank':
-        case 'changeAt_orig_':
-          fields[fieldName] = fieldValue;
+
+      if (!token.startsWith('@')) {
+        continue;
+      }
+
+      final rawFieldName = token.substring(1);
+      if (rawFieldName.isEmpty || index >= tokens.length) {
+        continue;
+      }
+
+      final rawValue = tokens[index++];
+      final normalizedName = _normalizeFieldName(rawFieldName);
+      if (normalizedName != null) {
+        fields[normalizedName] = _decodeKeyValue(rawValue);
       }
     }
+
     return fields;
+  }
+
+  String? _normalizeFieldName(String rawFieldName) {
+    switch (rawFieldName) {
+      case 'DOMAINTYPE':
+        return 'domainType';
+      case 'DOMAINID':
+        return 'domainId';
+      case 'ENTITYTYPE':
+        return 'entityType';
+      case 'ENTITYID':
+        return 'entityId';
+      case 'PARENTID':
+        return 'parentId';
+      case 'PARENTPROP':
+        return 'parentProp';
+      case 'RANK':
+        return 'rank';
+      case 'CHANGEAT_ORIG':
+        return 'changeAt_orig_';
+      default:
+        return null;
+    }
+  }
+
+  /// NOTE: duplicated from packages/aws_backend/lib/src/storage/value_codec.dart
+  String _decodeKeyValue(String value) {
+    return value
+        .replaceAll('%25', '%')
+        .replaceAll('%23', '#')
+        .replaceAll('%40', '@');
   }
 }

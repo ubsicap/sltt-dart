@@ -7,8 +7,8 @@ void main() {
   group('DynamoExportClassifier', () {
     test('routes change log items to change_log_entries table', () {
       final result = classifier.classifyCompositeKeys(
-        pk: r'$sltt#change#domainType_project#domainId_abc123#entityType_portion#entityId_entity1',
-        sk: r'$changes#change#cid_1234567890',
+        pk: r'$sltt#change#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#portion#@ENTITYID#entity1',
+        sk: r'$changes#change#@CID#1234567890',
       );
 
       expect(result.family, DynamoExportItemFamily.changeLog);
@@ -25,11 +25,11 @@ void main() {
 
     test('routes entity state items dynamically by entityType', () {
       final result = classifier.classifyCompositeKeys(
-        pk: r'$sltt#state#domainType_project#domainId_abc123#entityType_note',
-        sk: r'$states#state#entityId_entity1',
+        pk: r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#note',
+        sk: r'$states#state#@ENTITYID#entity1',
         gsi2pk:
-            r'$sltt#state#domainType_project#domainId_abc123#entityType_note#parentId_parent1',
-        gsi2sk: 'parentProp_tasks#changeAt_orig__2023-01-01T00:00:00Z',
+            r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#note#@PARENTID#parent1',
+        gsi2sk: r'@PARENTPROP#tasks#@CHANGEAT_ORIG#2023-01-01T00:00:00Z',
       );
 
       expect(result.family, DynamoExportItemFamily.entityState);
@@ -40,13 +40,13 @@ void main() {
       expect(result.changeAtOrig, '2023-01-01T00:00:00Z');
     });
 
-    test('routes entity state items dynamically by entityType - old rank sk', () {
+    test('routes entity state items dynamically by entityType - rank sk', () {
       final result = classifier.classifyCompositeKeys(
-        pk: r'$sltt#state#domainType_project#domainId_abc123#entityType_note',
-        sk: r'$states#state#entityId_entity1',
+        pk: r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#note',
+        sk: r'$states#state#@ENTITYID#entity1',
         gsi2pk:
-            r'$sltt#state#domainType_project#domainId_abc123#entityType_note#parentId_parent1',
-        gsi2sk: 'parentProp_tasks#rank_001',
+            r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#note#@PARENTID#parent1',
+        gsi2sk: r'@PARENTPROP#tasks#@RANK#001',
       );
 
       expect(result.family, DynamoExportItemFamily.entityState);
@@ -59,8 +59,8 @@ void main() {
 
     test('new entity_state entityTypes do not require explicit allowlists', () {
       final result = classifier.classifyCompositeKeys(
-        pk: r'$sltt#state#domainType_project#domainId_abc123#entityType_glossary_entry',
-        sk: r'$states#state#entityId_entity1',
+        pk: r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#glossary_entry',
+        sk: r'$states#state#@ENTITYID#entity1',
       );
 
       expect(result.family, DynamoExportItemFamily.entityState);
@@ -72,20 +72,20 @@ void main() {
     test('classifier coverage canary covers current documented key families', () {
       final samples = [
         classifier.classifyCompositeKeys(
-          pk: r'$sltt#change#domainType_project#domainId_abc123#entityType_portion#entityId_entity1',
-          sk: r'$changes#change#cid_1234567890',
+          pk: r'$sltt#change#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#portion#@ENTITYID#entity1',
+          sk: r'$changes#change#@CID#1234567890',
         ),
         classifier.classifyCompositeKeys(
-          pk: r'$sltt#state#domainType_project#domainId_abc123#entityType_portion',
-          sk: r'$states#state#entityId_entity1',
+          pk: r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#portion',
+          sk: r'$states#state#@ENTITYID#entity1',
         ),
         classifier.classifyCompositeKeys(
-          pk: r'$sltt#etsc#domainType_project#domainId_abc123',
-          sk: r'$etsc#etsc#entityType_portion',
+          pk: r'$sltt#etsc#@DOMAINTYPE#project#@DOMAINID#abc123',
+          sk: r'$etsc#etsc#@ENTITYTYPE#portion',
         ),
         classifier.classifyCompositeKeys(
-          pk: r'$sltt#etss#domainType_project#domainId_abc123',
-          sk: r'$etss#etss#entityType_portion',
+          pk: r'$sltt#etss#@DOMAINTYPE#project#@DOMAINID#abc123',
+          sk: r'$etss#etss#@ENTITYTYPE#portion',
         ),
         classifier.classifyCompositeKeys(
           pk: r'$sltt#seq#domainType_project#domainId_abc123',
@@ -134,8 +134,8 @@ void main() {
 
     test('missing entityType in entity_state keys triggers fallback', () {
       final result = classifier.classifyCompositeKeys(
-        pk: r'$sltt#state#domainType_project#domainId_abc123',
-        sk: r'$states#state#entityId_entity1',
+        pk: r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#abc123',
+        sk: r'$states#state#@ENTITYID#entity1',
       );
 
       expect(result.family, DynamoExportItemFamily.entityState);
@@ -146,11 +146,11 @@ void main() {
     group('gsi3 cross-domain', () {
       test('routes cross-domain entity state items via gsi3', () {
         final result = classifier.classifyCompositeKeys(
-          pk: r'$sltt#state#domainType_project#domainId_abc123#entityType_project',
-          sk: r'$states#state#entityId_abc123',
-          gsi3pk: r'$sltt#crossDomain#domainType_project',
+          pk: r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#project',
+          sk: r'$states#state#@ENTITYID#abc123',
+          gsi3pk: r'$sltt#crossDomain#@DOMAINTYPE#project',
           gsi3sk:
-              r'states#entityType_project#entityId_abc123#domainId_abc123#changeAt_orig__2023-01-01T00:00:00Z',
+              r'states#@ENTITYTYPE#project#@ENTITYID#abc123#@DOMAINID#abc123#@CHANGEAT_ORIG#2023-01-01T00:00:00Z',
         );
 
         expect(result.family, DynamoExportItemFamily.entityState);
@@ -161,11 +161,11 @@ void main() {
 
       test('routes membership cross-domain entity state via gsi3', () {
         final result = classifier.classifyCompositeKeys(
-          pk: r'$sltt#state#domainType_project#domainId_proj1#entityType_membership',
-          sk: r'$states#state#entityId_user1',
-          gsi3pk: r'$sltt#crossDomain#domainType_membership',
+          pk: r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#proj1#@ENTITYTYPE#membership',
+          sk: r'$states#state#@ENTITYID#user1',
+          gsi3pk: r'$sltt#crossDomain#@DOMAINTYPE#membership',
           gsi3sk:
-              r'states#entityType_member#entityId_user1#domainId_proj1#changeAt_orig__2023-01-01T00:00:00Z',
+              r'states#@ENTITYTYPE#member#@ENTITYID#user1#@DOMAINID#proj1#@CHANGEAT_ORIG#2023-01-01T00:00:00Z',
         );
 
         expect(result.family, DynamoExportItemFamily.entityState);
@@ -178,10 +178,10 @@ void main() {
 
       test('handles gsi3sk prefix-only form without entityId or changeAt', () {
         final result = classifier.classifyCompositeKeys(
-          pk: r'$sltt#state#domainType_project#domainId_abc123#entityType_project',
-          sk: r'$states#state#entityId_abc123',
-          gsi3pk: r'$sltt#crossDomain#domainType_project',
-          gsi3sk: r'states#entityType_project',
+          pk: r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#project',
+          sk: r'$states#state#@ENTITYID#abc123',
+          gsi3pk: r'$sltt#crossDomain#@DOMAINTYPE#project',
+          gsi3sk: r'states#@ENTITYTYPE#project',
         );
 
         expect(result.family, DynamoExportItemFamily.entityState);
@@ -193,11 +193,11 @@ void main() {
       test('classifyDecodedItem passes gsi3 fields through to classification', () {
         final result = classifier.classifyDecodedItem({
           'pk':
-              r'$sltt#state#domainType_project#domainId_abc123#entityType_project',
-          'sk': r'$states#state#entityId_abc123',
-          'gsi3pk': r'$sltt#crossDomain#domainType_project',
+              r'$sltt#state#@DOMAINTYPE#project#@DOMAINID#abc123#@ENTITYTYPE#project',
+          'sk': r'$states#state#@ENTITYID#abc123',
+          'gsi3pk': r'$sltt#crossDomain#@DOMAINTYPE#project',
           'gsi3sk':
-              r'states#entityType_project#entityId_abc123#domainId_abc123#changeAt_orig__2023-01-01T00:00:00Z',
+              r'states#@ENTITYTYPE#project#@ENTITYID#abc123#@DOMAINID#abc123#@CHANGEAT_ORIG#2023-01-01T00:00:00Z',
         });
 
         expect(result.changeAtOrig, '2023-01-01T00:00:00Z');
