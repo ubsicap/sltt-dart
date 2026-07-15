@@ -149,56 +149,6 @@ functions:
 
 resources:
   Resources:
-    AuthApiWebAcl:
-      Type: AWS::WAFv2::WebACL
-      Properties:
-        Name: sltt-v1-secondary-infra-${self:provider.stage}-auth-api
-        Scope: REGIONAL
-        DefaultAction:
-          Allow: {}
-        VisibilityConfig:
-          CloudWatchMetricsEnabled: true
-          MetricName: sltt-v1-secondary-infra-${self:provider.stage}-auth-api
-          SampledRequestsEnabled: true
-        Rules:
-          - Name: auth-api-rate-limit-100-per-5-min
-            Priority: 0
-            Action:
-              Block: {}
-            Statement:
-              RateBasedStatement:
-                AggregateKeyType: IP
-                Limit: 100
-                ScopeDownStatement:
-                  ByteMatchStatement:
-                    FieldToMatch:
-                      UriPath: {}
-                    PositionalConstraint: STARTS_WITH
-                    SearchString: /api/auth/
-                    TextTransformations:
-                      - Priority: 0
-                        Type: NONE
-            VisibilityConfig:
-              CloudWatchMetricsEnabled: true
-              MetricName: auth-api-rate-limit-100-per-5-min
-              SampledRequestsEnabled: true
-
-    AuthApiWebAclAssociation:
-      Type: AWS::WAFv2::WebACLAssociation
-      Properties:
-        ResourceArn:
-          Fn::Join:
-            - ''
-            - - 'arn:aws:apigateway:'
-              - Ref: AWS::Region
-              - '::/restapis/'
-              - Ref: ApiGatewayRestApi
-              - '/stages/'
-              - ${self:provider.stage}
-        WebACLArn:
-          Fn::GetAtt:
-            - AuthApiWebAcl
-            - Arn
 
 # Package configuration
 package:
