@@ -128,7 +128,7 @@ function main() {
   const authJwtSecret = args['auth-jwt-secret'];
   const verificationCodeSecret = args['verification-code-secret'];
 
-  const stackName = `sltt-shared-infra-${sharedInfraStage}`;
+  const stackName = `sltt-v1-shared-infra-${sharedInfraStage}`;
   const ssmPrefix = `/sltt/infra/${sharedInfraStage}`;
   const authPrefix = `/sltt/auth/${authStage}`;
 

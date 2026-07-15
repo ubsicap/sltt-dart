@@ -18,9 +18,9 @@ void main() {
         serverName: 'TestServer',
         storage: storage,
         healthEnvironmentOverrides: {
-          'DYNAMODB_TABLE': 'sltt-shared-infra-changes-states',
+          'DYNAMODB_TABLE': 'sltt-v1-shared-infra-changes-states',
           'DYNAMODB_TABLE_ARN':
-              'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-shared-infra-changes-states',
+              'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-v1-shared-infra-changes-states',
           'MEDIA_BUCKET': 'bucket-a',
         },
       );
@@ -116,7 +116,7 @@ void main() {
         expect(
           request['TableArn'],
           equals(
-            'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-shared-infra-changes-states',
+            'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-v1-shared-infra-changes-states',
           ),
         );
         expect(request['S3Bucket'], equals('bucket-a'));
@@ -128,7 +128,7 @@ void main() {
           equals([
             {
               'TableArn':
-                  'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-shared-infra-changes-states',
+                  'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-v1-shared-infra-changes-states',
               'MaxResults': 20,
             },
           ]),

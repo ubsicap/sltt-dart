@@ -1,9 +1,12 @@
 # Serverless Framework configuration for SLTT shared infrastructure
 # This stack contains DynamoDB, S3, and CloudFront resources that are shared
 # across multiple API deployments (potentially in different AWS accounts)
-service: sltt-shared-infra
+service: sltt-${self:custom.slttStackVersion}-shared-infra
 
 custom:
+  # SLTT infrastructure version used for resource naming and parameter prefixes
+  slttStackVersion: v1
+
   # Fixed stage name - this infrastructure is shared across all API stages
   infraStage: prd
 
@@ -16,7 +19,7 @@ custom:
   mediaCloudFrontPublicKey: ${ssm:/sltt/media/cloudfront/${self:custom.infraStage}/MEDIA_CLOUDFRONT_PUBLIC_KEY}
 
   # SSM parameter prefix for exporting infrastructure values
-  ssmPrefix: /sltt/infra/${self:custom.infraStage}
+  ssmPrefix: /sltt/${self:custom.slttStackVersion}/${self:custom.infraStage}
 
 provider:
   name: aws

@@ -77,7 +77,7 @@ function main() {
     process.exit(1);
   }
 
-  const stackName = `sltt-shared-infra-${sharedInfraStage}`;
+  const stackName = `sltt-v1-shared-infra-${sharedInfraStage}`;
   console.log(
     `Granting cross-account access to shared infra for account '${targetAccountId}', role '${targetRoleName}', stage '${sharedInfraStage}', profile '${awsProfile}', region '${awsRegion}'.`,
   );
@@ -131,7 +131,7 @@ function main() {
     }
   }
 
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sltt-shared-infra-'));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sltt-v1-shared-infra-'));
   const ssmPolicyTemplatePath = path.join(tempDir, 'ssm_resource_policy.json');
   const dynamoPolicyPath = path.join(tempDir, 'dynamodb_resource_policy.json');
   const s3PolicyPath = path.join(tempDir, 's3_bucket_policy.json');

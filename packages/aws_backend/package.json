@@ -59,7 +59,7 @@
     "info:dev": "npm run info:secondary:dev",
     "info:tst": "npm run info:secondary:tst",
     "info:prod": "npm run info:secondary:prod",
-    "cloudfront-url:shared": "aws cloudformation describe-stacks --stack-name sltt-shared-infra-prd --query \"Stacks[0].Outputs[?OutputKey=='MediaCloudFrontDomainName'].OutputValue\" --output text --profile sltt-dart-prd",
+    "cloudfront-url:shared": "aws cloudformation describe-stacks --stack-name sltt-v1-shared-infra-prd --query \"Stacks[0].Outputs[?OutputKey=='MediaCloudFrontDomainName'].OutputValue\" --output text --profile sltt-dart-prd",
     "generate:verification-code-secret:random-hex-64": "openssl rand -hex 64",
     "cloudfront:generate-rsa-private-key": "openssl genpkey -algorithm RSA -out ../../../private_key.pem -pkeyopt rsa_keygen_bits:2048",
     "cloudfront:generate-rsa-public-key": "openssl rsa -pubout -in ../../../private_key.pem -out ../../../public_key.pem",
