@@ -28,6 +28,14 @@ custom:
   mediaCloudFrontPrivateKey: ${ssm:${self:custom.sharedInfraArnPath}/cloudfront/private-key}
   sharedInfraRegion: ${ssm:${self:custom.sharedInfraArnPath}/region}
 
+  # Table backing websocket connections + their domain/entity subscriptions
+  websocketConnectionsTable: sltt-${self:custom.slttStackVersion}-ws-connections-${self:provider.stage}
+
+  # Fan-out topic: publishers (like the api function) don't need to know who's
+  # listening. Websocket notify is one subscriber today; a future mobile push
+  # notifier subscribes to the same topic without touching the publisher.
+  domainChangeTopicName: sltt-${self:custom.slttStackVersion}-domain-change-${self:provider.stage}
+
 provider:
   name: aws
   runtime: provided.al2  # Custom runtime for Dart compiled binary
@@ -37,6 +45,10 @@ provider:
   # Lambda function configuration
   timeout: 29
   memorySize: 512
+
+  # Route incoming websocket messages by their "action" field,
+  # e.g. {"action": "subscribe", "domainType": "...", "domainId": "...", "entityType": "..."}
+  websocketsApiRouteSelectionExpression: $request.body.action
 
   # Environment variables
   environment:
@@ -61,6 +73,20 @@ provider:
     MEDIA_CLOUDFRONT_KEY_PAIR_ID: ${self:custom.mediaCloudFrontKeyPairId}
     MEDIA_CLOUDFRONT_PRIVATE_KEY: ${self:custom.mediaCloudFrontPrivateKey}
     SLTT_LOG_LEVEL: INFO
+    WEBSOCKET_CONNECTIONS_TABLE: ${self:custom.websocketConnectionsTable}
+    WEBSOCKET_CONNECTIONS_TABLE_ARN: !GetAtt WebsocketConnectionsTable.Arn
+    # wsNotify (SNS subscriber) uses this to call the API Gateway Management API
+    # and push to open connections; api itself only publishes to SNS below.
+    WEBSOCKET_API_ENDPOINT:
+      Fn::Join:
+        - ''
+        - - 'https://'
+          - !Ref WebsocketsApi
+          - '.execute-api.'
+          - ${self:provider.region}
+          - '.amazonaws.com/'
+          - ${self:provider.stage}
+    DOMAIN_CHANGE_TOPIC_ARN: !Ref DomainChangeTopic
 
   # IAM permissions for shared DynamoDB + S3 resources
   iamRoleStatements:
@@ -132,9 +158,41 @@ provider:
         - sts:AssumeRole
       Resource:
         - ${ssm:${self:custom.sharedInfraArnPath}/cross-account-role-arn}
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:Query
+        - dynamodb:BatchWriteItem
+      Resource:
+        - !GetAtt WebsocketConnectionsTable.Arn
+        - !Join ['', [!GetAtt WebsocketConnectionsTable.Arn, '/index/*']]
+    - Effect: Allow
+      # Lets any function push messages to, or detect stale, open websocket connections
+      Action:
+        - execute-api:ManageConnections
+      Resource:
+        - !Join
+          - ''
+          - - 'arn:aws:execute-api:'
+            - ${self:provider.region}
+            - ':'
+            - !Ref AWS::AccountId
+            - ':'
+            - !Ref WebsocketsApi
+            - '/*'
+    - Effect: Allow
+      Action:
+        - sns:Publish
+      Resource:
+        - !Ref DomainChangeTopic
 
 functions:
-  # Main API handler for SLTT changes
+  # Main API handler for SLTT changes. On any mutation, publishes a
+  # {domainType, domainId, entityType, ...} event to DomainChangeTopic —
+  # it does not talk to websocket connections directly.
   api:
     handler: bootstrap  # Lambda custom runtime expects 'bootstrap' executable
     events:
@@ -147,8 +205,136 @@ functions:
           method: ANY
           cors: true
 
+  # Validates the bearer token on the websocket handshake itself.
+  # The desktop client (not a browser) can set a real Authorization
+  # header on the WS upgrade request, so we reuse normal JWT validation
+  # here instead of smuggling the token into a query string.
+  wsAuthorizer:
+    handler: bootstrap
+
+  # Fires once per new websocket connection. Records connectionId + userId
+  # (from the authorizer context) in the connections table.
+  wsConnect:
+    handler: bootstrap
+    events:
+      - websocket:
+          route: $connect
+          authorizer:
+            name: wsAuthorizer
+            identitySource:
+              - route.request.header.Authorization
+
+  # Fires when a connection closes. Deletes the connection record and
+  # any subscription records for it.
+  wsDisconnect:
+    handler: bootstrap
+    events:
+      - websocket:
+          route: $disconnect
+
+  # Client sends {"action":"subscribe","domainType":...,"domainId":...,"entityType":...}
+  # (entityType optional). Writes a subscription record for this connection.
+  wsSubscribe:
+    handler: bootstrap
+    events:
+      - websocket:
+          route: subscribe
+
+  # Client sends {"action":"unsubscribe", ...same shape...} to remove a subscription.
+  wsUnsubscribe:
+    handler: bootstrap
+    events:
+      - websocket:
+          route: unsubscribe
+
+  # Catch-all for any other message shape (e.g. client-side ping/keepalive).
+  wsDefault:
+    handler: bootstrap
+    events:
+      - websocket:
+          route: $default
+
+  # Subscribed to DomainChangeTopic. On each published change event, queries
+  # WebsocketConnectionsTable's GSI for subscribers matching the event's
+  # domainType+domainId, filters by entityType (exact match or "*"), and
+  # pushes to each via the API Gateway Management API. Deletes any connection
+  # that comes back GoneException (410) as stale.
+  wsNotify:
+    handler: bootstrap
+    events:
+      - sns:
+          arn: !Ref DomainChangeTopic
+          topicName: ${self:custom.domainChangeTopicName}
+
 resources:
   Resources:
+    # Single-table design. Keys use "#" as a field separator and "@FIELD" to
+    # label each value, so a row's meaning is readable straight off its key:
+    #   PK connectionId, SK "con"
+    #     -> connection metadata (userId, connectedAt)
+    #   PK connectionId, SK "sub#@DOMAINTYPE#<domainType>#@DOMAINID#<domainId>#@ENTITYTYPE#<entityType|*>"
+    #     -> one subscription ("*" for entityType means "all entity types on this domain")
+    #   GSI1PK "sub#@DOMAINTYPE#<domainType>#@DOMAINID#<domainId>" (entityType omitted)
+    #     -> lets a broadcaster fetch every connection subscribed to a given
+    #        domainType+domainId in one query, then split matches by exact
+    #        entityType vs "*" in code.
+    WebsocketConnectionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.websocketConnectionsTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+          - AttributeName: gsi1pk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: gsi1-domain-subscriptions
+            KeySchema:
+              - AttributeName: gsi1pk
+                KeyType: HASH
+              - AttributeName: connectionId
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
+
+    # Fan-out point for domain-change events. api publishes here; wsNotify
+    # subscribes today, a future mobile push notifier subscribes alongside it.
+    # Publish with MessageAttributes domainType/domainId/entityType so future
+    # subscribers can use SNS subscription filter policies to only receive
+    # the event types they care about, instead of every subscriber getting
+    # every message and filtering in code.
+    DomainChangeTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:custom.domainChangeTopicName}
+
+  Outputs:
+    HttpApiUrl:
+      Description: Base URL for the REST API
+      Value: !Sub 'https://${ApiGatewayRestApi}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}'
+
+    WebsocketApiUrl:
+      Description: wss:// URL the desktop client connects to
+      Value:
+        Fn::Join:
+          - ''
+          - - 'wss://'
+            - !Ref WebsocketsApi
+            - '.execute-api.'
+            - ${self:provider.region}
+            - '.amazonaws.com/'
+            - ${self:provider.stage}
 
 # Package configuration
 package:
