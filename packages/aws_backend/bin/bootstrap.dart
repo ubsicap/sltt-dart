@@ -21,6 +21,7 @@ Future<void> main() async {
 
   // Lambda runtime loop
   while (true) {
+    String? requestId;
     try {
       // Get next event from Lambda Runtime API
       final nextEventResponse = await HttpClient()
@@ -35,7 +36,7 @@ Future<void> main() async {
       }
 
       // Extract request ID from headers
-      final requestId = nextEventResponse.headers.value(
+      requestId = nextEventResponse.headers.value(
         'lambda-runtime-aws-request-id',
       );
       if (requestId == null) {
@@ -49,7 +50,8 @@ Future<void> main() async {
 
       print('Processing event with request ID: $requestId');
 
-      // Call our Lambda handler
+      // Call our Lambda handler. Anything thrown in here is caught below,
+      // where we now have requestId in scope to report it properly.
       final result = await lambda.handler(event);
 
       // Send response back to Lambda Runtime API
@@ -75,19 +77,38 @@ Future<void> main() async {
       print('Error in Lambda runtime loop: $error');
       print('Stack trace: $stackTrace');
 
-      // Try to send error response to Lambda Runtime API if we have a request ID
-      try {
-        final errorResponse = {
-          'errorMessage': error.toString(),
-          'errorType': error.runtimeType.toString(),
-          'stackTrace': stackTrace.toString().split('\n'),
-        };
+      // Without this, a thrown error means the Runtime API never gets a
+      // response for this invocation, so Lambda just waits out the full
+      // function timeout and reports a platform-level timeout instead of
+      // the actual error - which is what "Endpoint request timed out"
+      // on the websocket client turned out to be.
+      if (requestId != null) {
+        try {
+          final errorResponse = {
+            'errorMessage': error.toString(),
+            'errorType': error.runtimeType.toString(),
+            'stackTrace': stackTrace.toString().split('\n'),
+          };
 
-        // Note: In a real error scenario, we'd need the actual request ID
-        // For now, we'll just log and continue
-        print('Error response: ${jsonEncode(errorResponse)}');
-      } catch (e) {
-        print('Failed to send error response: $e');
+          await HttpClient()
+              .postUrl(
+                Uri.parse(
+                  'http://$runtimeApi/2018-06-01/runtime/invocation/$requestId/error',
+                ),
+              )
+              .then((request) {
+                request.headers.contentType = ContentType.json;
+                request.write(jsonEncode(errorResponse));
+                return request.close();
+              });
+        } catch (e) {
+          print('Failed to send error response: $e');
+        }
+      } else {
+        // We failed before even getting a request ID (e.g. the initial
+        // GET to /next itself failed) - nothing to report to, just log
+        // and loop again.
+        print('No request ID available to report error against.');
       }
     }
   }
