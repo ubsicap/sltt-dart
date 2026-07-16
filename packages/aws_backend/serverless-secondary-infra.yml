@@ -211,11 +211,15 @@ functions:
   # here instead of smuggling the token into a query string.
   wsAuthorizer:
     handler: bootstrap
+    environment:
+      LAMBDA_ENTRYPOINT: wsAuthorizer
 
   # Fires once per new websocket connection. Records connectionId + userId
   # (from the authorizer context) in the connections table.
   wsConnect:
     handler: bootstrap
+    environment:
+      LAMBDA_ENTRYPOINT: wsConnect
     events:
       - websocket:
           route: $connect
@@ -228,6 +232,8 @@ functions:
   # any subscription records for it.
   wsDisconnect:
     handler: bootstrap
+    environment:
+      LAMBDA_ENTRYPOINT: wsDisconnect
     events:
       - websocket:
           route: $disconnect
@@ -236,6 +242,8 @@ functions:
   # (entityType optional). Writes a subscription record for this connection.
   wsSubscribe:
     handler: bootstrap
+    environment:
+      LAMBDA_ENTRYPOINT: wsSubscribe
     events:
       - websocket:
           route: subscribe
@@ -243,6 +251,8 @@ functions:
   # Client sends {"action":"unsubscribe", ...same shape...} to remove a subscription.
   wsUnsubscribe:
     handler: bootstrap
+    environment:
+      LAMBDA_ENTRYPOINT: wsUnsubscribe
     events:
       - websocket:
           route: unsubscribe
@@ -250,6 +260,8 @@ functions:
   # Catch-all for any other message shape (e.g. client-side ping/keepalive).
   wsDefault:
     handler: bootstrap
+    environment:
+      LAMBDA_ENTRYPOINT: wsDefault
     events:
       - websocket:
           route: $default
@@ -261,6 +273,8 @@ functions:
   # that comes back GoneException (410) as stale.
   wsNotify:
     handler: bootstrap
+    environment:
+      LAMBDA_ENTRYPOINT: wsNotify
     events:
       - sns:
           arn: !Ref DomainChangeTopic
