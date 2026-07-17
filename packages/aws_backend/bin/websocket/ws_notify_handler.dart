@@ -52,6 +52,36 @@ List<List<WsNotifyRecord>> groupAndSortDomainChangeRecords(
       .toList(growable: false);
 }
 
+List<WsNotifyRecord> collapseDomainChangeRecordsToLatestPerEntityType(
+  List<WsNotifyRecord> records,
+) {
+  final latestByEntityType = <String?, WsNotifyRecord>{};
+  final sorted = List.of(records)
+    ..sort((a, b) {
+      final aEntity = a.entityType ?? '';
+      final bEntity = b.entityType ?? '';
+      final entityComparison = aEntity.compareTo(bEntity);
+      return entityComparison != 0
+          ? entityComparison
+          : a.index.compareTo(b.index);
+    });
+
+  for (final record in sorted) {
+    latestByEntityType[record.entityType] = record;
+  }
+
+  final latestRecords = latestByEntityType.values.toList(growable: false);
+  latestRecords.sort((a, b) {
+    final aEntity = a.entityType ?? '';
+    final bEntity = b.entityType ?? '';
+    final entityComparison = aEntity.compareTo(bEntity);
+    return entityComparison != 0
+        ? entityComparison
+        : a.index.compareTo(b.index);
+  });
+  return latestRecords;
+}
+
 Map<String, dynamic> buildDomainChangeNotificationPayload({
   required String domainType,
   required String domainId,
@@ -140,6 +170,9 @@ Future<Map<String, dynamic>> wsNotifyHandler(
   final sortedGroups = groupAndSortDomainChangeRecords(parsedRecords);
 
   for (final group in sortedGroups) {
+    final recordsToSend = collapseDomainChangeRecordsToLatestPerEntityType(
+      group,
+    );
     final domainType = group.first.domainType;
     final domainId = group.first.domainId;
 
@@ -161,7 +194,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
       }
     }
 
-    for (final record in group) {
+    for (final record in recordsToSend) {
       final alreadyNotified = <String>{};
 
       for (final connectionId in wildcardConnections) {
