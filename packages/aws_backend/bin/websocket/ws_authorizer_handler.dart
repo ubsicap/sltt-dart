@@ -12,13 +12,11 @@ Future<Map<String, dynamic>> wsAuthorizerHandler(
 }) async {
   final headers = (event['headers'] as Map?)?.cast<String, dynamic>() ?? {};
   final authHeader =
-      headers['Authorization'] as String? ?? headers['authorization'] as String?;
+      headers['Authorization'] as String? ??
+      headers['authorization'] as String?;
 
   if (authHeader == null || authHeader.trim().isEmpty) {
-    // Throwing here (rather than returning a Deny policy) makes API Gateway
-    // return 401 on the handshake, matching how the REST API rejects a
-    // missing Authorization header.
-    throw Exception('Unauthorized');
+    return _denyPolicy(event);
   }
 
   try {
@@ -26,7 +24,7 @@ Future<Map<String, dynamic>> wsAuthorizerHandler(
     return _allowPolicy(event, userId: session.userId);
   } on AuthException catch (e) {
     SlttLogger.logger.warning('wsAuthorizer rejected token: ${e.message}');
-    throw Exception('Unauthorized');
+    return _denyPolicy(event);
   }
 }
 
@@ -48,5 +46,21 @@ Map<String, dynamic> _allowPolicy(
     },
     // Surfaced to wsConnect via event['requestContext']['authorizer']['userId']
     'context': {'userId': userId},
+  };
+}
+
+Map<String, dynamic> _denyPolicy(Map<String, dynamic> event) {
+  return {
+    'principalId': 'unauthorized',
+    'policyDocument': {
+      'Version': '2012-10-17',
+      'Statement': [
+        {
+          'Action': 'execute-api:Invoke',
+          'Effect': 'Deny',
+          'Resource': event['methodArn'],
+        },
+      ],
+    },
   };
 }
