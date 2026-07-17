@@ -169,9 +169,27 @@ Future<Map<String, dynamic>> _handleWsAuthorizer(
 Future<Map<String, dynamic>> _handleWsConnect(
   Map<String, dynamic> event,
 ) async {
+  final requestContext = (event['requestContext'] as Map?)
+      ?.cast<String, dynamic>();
+  final connectionId = requestContext?['connectionId'] as String?;
+  SlttLogger.logger.info(
+    '[Lambda] _handleWsConnect entry connectionId=$connectionId',
+  );
+
   final connections = await _createConnectionsRepository();
   try {
     return await wsConnectHandler(event, connections: connections);
+  } catch (e, stackTrace) {
+    SlttLogger.logger.severe(
+      '[Lambda] _handleWsConnect failed connectionId=$connectionId',
+      e,
+      stackTrace,
+    );
+    return _internalServerErrorResponse(
+      handler: 'wsConnect',
+      connectionId: connectionId,
+      error: e,
+    );
   } finally {
     await connections.close();
   }
@@ -180,9 +198,27 @@ Future<Map<String, dynamic>> _handleWsConnect(
 Future<Map<String, dynamic>> _handleWsDisconnect(
   Map<String, dynamic> event,
 ) async {
+  final requestContext = (event['requestContext'] as Map?)
+      ?.cast<String, dynamic>();
+  final connectionId = requestContext?['connectionId'] as String?;
+  SlttLogger.logger.info(
+    '[Lambda] _handleWsDisconnect entry connectionId=$connectionId',
+  );
+
   final connections = await _createConnectionsRepository();
   try {
     return await wsDisconnectHandler(event, connections: connections);
+  } catch (e, stackTrace) {
+    SlttLogger.logger.severe(
+      '[Lambda] _handleWsDisconnect failed connectionId=$connectionId',
+      e,
+      stackTrace,
+    );
+    return _internalServerErrorResponse(
+      handler: 'wsDisconnect',
+      connectionId: connectionId,
+      error: e,
+    );
   } finally {
     await connections.close();
   }
@@ -191,9 +227,6 @@ Future<Map<String, dynamic>> _handleWsDisconnect(
 Future<Map<String, dynamic>> _handleWsSubscribe(
   Map<String, dynamic> event,
 ) async {
-  final connections = await _createConnectionsRepository();
-  final management = await _createManagementClient(connections);
-
   final requestContext = (event['requestContext'] as Map?)
       ?.cast<String, dynamic>();
   final connectionId = requestContext?['connectionId'] as String?;
@@ -202,11 +235,25 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
     '[Lambda] _handleWsSubscribe entry connectionId=$connectionId routeKey=$routeKey',
   );
 
+  final connections = await _createConnectionsRepository();
+  final management = await _createManagementClient(connections);
   try {
     return await wsSubscribeHandler(
       event,
       connections: connections,
       management: management,
+    );
+  } catch (e, stackTrace) {
+    SlttLogger.logger.severe(
+      '[Lambda] _handleWsSubscribe failed connectionId=$connectionId routeKey=$routeKey',
+      e,
+      stackTrace,
+    );
+    return _internalServerErrorResponse(
+      handler: 'wsSubscribe',
+      connectionId: connectionId,
+      routeKey: routeKey,
+      error: e,
     );
   } finally {
     await management.close();
@@ -217,6 +264,14 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
 Future<Map<String, dynamic>> _handleWsUnsubscribe(
   Map<String, dynamic> event,
 ) async {
+  final requestContext = (event['requestContext'] as Map?)
+      ?.cast<String, dynamic>();
+  final connectionId = requestContext?['connectionId'] as String?;
+  final routeKey = requestContext?['routeKey'] as String?;
+  SlttLogger.logger.info(
+    '[Lambda] _handleWsUnsubscribe entry connectionId=$connectionId routeKey=$routeKey',
+  );
+
   final connections = await _createConnectionsRepository();
   final management = await _createManagementClient(connections);
   try {
@@ -224,6 +279,18 @@ Future<Map<String, dynamic>> _handleWsUnsubscribe(
       event,
       connections: connections,
       management: management,
+    );
+  } catch (e, stackTrace) {
+    SlttLogger.logger.severe(
+      '[Lambda] _handleWsUnsubscribe failed connectionId=$connectionId routeKey=$routeKey',
+      e,
+      stackTrace,
+    );
+    return _internalServerErrorResponse(
+      handler: 'wsUnsubscribe',
+      connectionId: connectionId,
+      routeKey: routeKey,
+      error: e,
     );
   } finally {
     await management.close();
@@ -234,10 +301,30 @@ Future<Map<String, dynamic>> _handleWsUnsubscribe(
 Future<Map<String, dynamic>> _handleWsDefault(
   Map<String, dynamic> event,
 ) async {
+  final requestContext = (event['requestContext'] as Map?)
+      ?.cast<String, dynamic>();
+  final connectionId = requestContext?['connectionId'] as String?;
+  final routeKey = requestContext?['routeKey'] as String?;
+  SlttLogger.logger.info(
+    '[Lambda] _handleWsDefault entry connectionId=$connectionId routeKey=$routeKey',
+  );
+
   final connections = await _createConnectionsRepository();
   final management = await _createManagementClient(connections);
   try {
     return await wsDefaultHandler(event, management: management);
+  } catch (e, stackTrace) {
+    SlttLogger.logger.severe(
+      '[Lambda] _handleWsDefault failed connectionId=$connectionId routeKey=$routeKey',
+      e,
+      stackTrace,
+    );
+    return _internalServerErrorResponse(
+      handler: 'wsDefault',
+      connectionId: connectionId,
+      routeKey: routeKey,
+      error: e,
+    );
   } finally {
     await management.close();
     await connections.close();
@@ -245,6 +332,14 @@ Future<Map<String, dynamic>> _handleWsDefault(
 }
 
 Future<Map<String, dynamic>> _handleWsNotify(Map<String, dynamic> event) async {
+  final requestContext = (event['requestContext'] as Map?)
+      ?.cast<String, dynamic>();
+  final connectionId = requestContext?['connectionId'] as String?;
+  final routeKey = requestContext?['routeKey'] as String?;
+  SlttLogger.logger.info(
+    '[Lambda] _handleWsNotify entry connectionId=$connectionId routeKey=$routeKey',
+  );
+
   final connections = await _createConnectionsRepository();
   final management = await _createManagementClient(connections);
   try {
@@ -252,6 +347,18 @@ Future<Map<String, dynamic>> _handleWsNotify(Map<String, dynamic> event) async {
       event,
       connections: connections,
       management: management,
+    );
+  } catch (e, stackTrace) {
+    SlttLogger.logger.severe(
+      '[Lambda] _handleWsNotify failed connectionId=$connectionId routeKey=$routeKey',
+      e,
+      stackTrace,
+    );
+    return _internalServerErrorResponse(
+      handler: 'wsNotify',
+      connectionId: connectionId,
+      routeKey: routeKey,
+      error: e,
     );
   } finally {
     await management.close();
@@ -301,6 +408,29 @@ String _requireEnv(String key) {
     throw StateError('$key environment variable is required');
   }
   return value;
+}
+
+Map<String, dynamic> _internalServerErrorResponse({
+  required String handler,
+  String? connectionId,
+  String? routeKey,
+  Object? error,
+}) {
+  final body = <String, dynamic>{
+    'error': 'Internal server error',
+    'handler': handler,
+    if (connectionId != null) 'connectionId': connectionId,
+    if (routeKey != null) 'routeKey': routeKey,
+  };
+  if (Platform.environment['SLTT_DEBUG'] == 'true') {
+    body['detail'] = error?.toString();
+  }
+
+  return {
+    'statusCode': 500,
+    'headers': {'Content-Type': 'application/json'},
+    'body': jsonEncode(body),
+  };
 }
 
 AwsMediaStorage _createMediaStorageFromEnv({
