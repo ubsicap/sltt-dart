@@ -122,6 +122,7 @@ void main() {
           {
             'Sns': {
               'Message': jsonEncode({
+                'notifyType': 'domainChange',
                 'domainType': 'project',
                 'domainId': 'proj-2',
                 'entityType': 'note',
@@ -132,6 +133,7 @@ void main() {
           {
             'Sns': {
               'Message': jsonEncode({
+                'notifyType': 'domainChange',
                 'domainType': 'project',
                 'domainId': 'proj-1',
                 'entityType': 'task',
@@ -191,6 +193,7 @@ void main() {
             {
               'Sns': {
                 'Message': jsonEncode({
+                  'notifyType': 'domainChange',
                   'domainType': 'project',
                   'domainId': 'proj-1',
                   'data': {'name': 'domain-update'},
@@ -237,6 +240,7 @@ void main() {
             {
               'Sns': {
                 'Message': jsonEncode({
+                  'notifyType': 'domainChange',
                   'domainType': 'project',
                   'domainId': 'proj-1',
                   'entityType': 'task',
@@ -257,5 +261,42 @@ void main() {
         expect(management.sentMessages[0]['connectionId'], 'conn-both');
       },
     );
+
+    test('ignores unsupported notifyType values', () async {
+      final connections = _FakeConnectionsRepository();
+      final management = _FakeManagementClient(connections: connections);
+
+      connections.subscriptionsByDomain['project|proj-1'] = [
+        const WebsocketSubscriptionMatch(
+          connectionId: 'conn-wildcard',
+          entityType: '*',
+        ),
+      ];
+
+      final event = {
+        'Records': [
+          {
+            'Sns': {
+              'Message': jsonEncode({
+                'notifyType': 'unknownType',
+                'domainType': 'project',
+                'domainId': 'proj-1',
+                'entityType': 'task',
+                'data': {'name': 'task-updated'},
+              }),
+            },
+          },
+        ],
+      };
+
+      await wsNotifyHandler(
+        event,
+        connections: connections,
+        management: management,
+      );
+
+      expect(connections.queries, isEmpty);
+      expect(management.sentMessages, isEmpty);
+    });
   });
 }
