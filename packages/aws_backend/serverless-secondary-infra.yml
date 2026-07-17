@@ -53,6 +53,7 @@ provider:
   # Environment variables
   environment:
     STAGE: ${self:provider.stage}
+    SLTT_DEBUG: ${env:SLTT_DEBUG, 'true'}
     GIT_SHORT_CHANGESET: ${env:GIT_SHORT_CHANGESET, ''}
     GIT_DIRTY_FLAG: ${env:GIT_DIRTY_FLAG, ''}
     DYNAMODB_TABLE: ${self:custom.dynamoDbTable}

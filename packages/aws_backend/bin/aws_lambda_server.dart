@@ -190,6 +190,7 @@ Future<Map<String, dynamic>> _handleWsConnect(
       handler: 'wsConnect',
       connectionId: connectionId,
       error: e,
+      stackTrace: stackTrace,
       management: management,
     );
   } finally {
@@ -222,6 +223,7 @@ Future<Map<String, dynamic>> _handleWsDisconnect(
       handler: 'wsDisconnect',
       connectionId: connectionId,
       error: e,
+      stackTrace: stackTrace,
       management: management,
     );
   } finally {
@@ -260,6 +262,7 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
       connectionId: connectionId,
       routeKey: routeKey,
       error: e,
+      stackTrace: stackTrace,
       management: management,
     );
   } finally {
@@ -298,6 +301,7 @@ Future<Map<String, dynamic>> _handleWsUnsubscribe(
       connectionId: connectionId,
       routeKey: routeKey,
       error: e,
+      stackTrace: stackTrace,
       management: management,
     );
   } finally {
@@ -332,6 +336,7 @@ Future<Map<String, dynamic>> _handleWsDefault(
       connectionId: connectionId,
       routeKey: routeKey,
       error: e,
+      stackTrace: stackTrace,
       management: management,
     );
   } finally {
@@ -368,6 +373,7 @@ Future<Map<String, dynamic>> _handleWsNotify(Map<String, dynamic> event) async {
       connectionId: connectionId,
       routeKey: routeKey,
       error: e,
+      stackTrace: stackTrace,
       management: management,
     );
   } finally {
@@ -439,6 +445,7 @@ Future<Map<String, dynamic>> _internalServerErrorResponse({
   String? connectionId,
   String? routeKey,
   Object? error,
+  StackTrace? stackTrace,
   WebsocketManagementClient? management,
 }) async {
   if (management != null && connectionId != null) {
@@ -447,10 +454,10 @@ Future<Map<String, dynamic>> _internalServerErrorResponse({
       'handler': handler,
       if (routeKey != null) 'routeKey': routeKey,
       'timestamp': DateTime.now().toIso8601String(),
-      if (Platform.environment['SLTT_DEBUG'] == 'true')
-        'detail': error?.toString(),
-      if (Platform.environment['SLTT_DEBUG'] != 'true')
-        'message': 'Internal server error',
+      'message': 'Internal server error',
+      if (error != null) 'error': error.toString(),
+      if (Platform.environment['SLTT_DEBUG'] == 'true' && stackTrace != null)
+        'stack': stackTrace.toString(),
     };
     try {
       await management.send(connectionId, websocketBody);
