@@ -209,23 +209,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
         alreadyNotified.add(connectionId);
       }
 
-      if (record.entityType == null) {
-        for (final connectionIds in exactConnections.values) {
-          for (final connectionId in connectionIds) {
-            if (!alreadyNotified.add(connectionId)) {
-              continue;
-            }
-
-            await _sendDomainChangeNotification(
-              management: management,
-              connectionId: connectionId,
-              domainType: domainType,
-              domainId: domainId,
-              data: record.data,
-            );
-          }
-        }
-      } else {
+      if (record.entityType != null) {
         final exactMatchConnections =
             exactConnections[record.entityType!] ?? const <String>{};
         for (final connectionId in exactMatchConnections) {

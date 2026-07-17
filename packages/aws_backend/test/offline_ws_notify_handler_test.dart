@@ -258,7 +258,7 @@ void main() {
     });
 
     test(
-      'handles entityType null by delivering to wildcard and all exact subscribers',
+      'handles entityType null by delivering only to wildcard subscribers',
       () async {
         final connections = _FakeConnectionsRepository();
         final management = _FakeManagementClient(connections: connections);
@@ -308,9 +308,9 @@ void main() {
         expect(connections.queries, hasLength(1));
         expect(
           management.sentMessages.map((e) => e['connectionId']),
-          containsAll(['conn-wildcard', 'conn-task', 'conn-note']),
+          equals(['conn-wildcard']),
         );
-        expect(management.sentMessages.length, 3);
+        expect(management.sentMessages.length, 1);
       },
     );
 
@@ -497,19 +497,27 @@ void main() {
       final noteMessages = management.sentMessages
           .where((msg) => msg['connectionId'] == 'conn-note')
           .toList();
-      expect(noteMessages, hasLength(2));
+      expect(noteMessages, hasLength(1));
       expect(
         noteMessages.map((msg) => msg['payload']['data']['name']),
-        containsAll(['domain-latest', 'note-latest']),
+        containsAll(['note-latest']),
+      );
+      expect(
+        noteMessages.map((msg) => msg['payload']['data']['name']),
+        isNot(contains('domain-latest')),
       );
 
       final taskMessages = management.sentMessages
           .where((msg) => msg['connectionId'] == 'conn-task')
           .toList();
-      expect(taskMessages, hasLength(2));
+      expect(taskMessages, hasLength(1));
       expect(
         taskMessages.map((msg) => msg['payload']['data']['name']),
-        containsAll(['domain-latest', 'task-only']),
+        containsAll(['task-only']),
+      );
+      expect(
+        taskMessages.map((msg) => msg['payload']['data']['name']),
+        isNot(contains('domain-latest')),
       );
     });
 
