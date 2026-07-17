@@ -9,24 +9,6 @@ import 'websocket_management_client.dart';
 
 const _kNotifyTypeDomainChange = 'domainChange';
 
-class _WsNotifyRecord {
-  const _WsNotifyRecord({
-    required this.domainType,
-    required this.domainId,
-    required this.notifyType,
-    required this.entityType,
-    required this.data,
-    required this.index,
-  });
-
-  final String domainType;
-  final String domainId;
-  final String notifyType;
-  final String? entityType;
-  final dynamic data;
-  final int index;
-}
-
 /// SNS subscriber for DomainChangeTopic. Each SNS record's Message is the
 /// JSON change event AwsRestApiServer publishes on a mutation, shaped like
 /// {"notifyType":"domainChange", "domainType":..., "domainId":...,
@@ -159,13 +141,14 @@ Future<Map<String, dynamic>> wsNotifyHandler(
       final alreadyNotified = <String>{};
 
       for (final connectionId in wildcardConnections) {
-        await management.send(connectionId, {
-          'action': 'change',
-          'domainType': domainType,
-          'domainId': domainId,
-          if (record.entityType != null) 'entityType': record.entityType,
-          'data': record.data.toJson(),
-        });
+        await _sendDomainChangeNotification(
+          management: management,
+          connectionId: connectionId,
+          domainType: domainType,
+          domainId: domainId,
+          entityType: record.entityType,
+          data: record.data,
+        );
         alreadyNotified.add(connectionId);
       }
 
@@ -176,12 +159,13 @@ Future<Map<String, dynamic>> wsNotifyHandler(
               continue;
             }
 
-            await management.send(connectionId, {
-              'action': 'change',
-              'domainType': domainType,
-              'domainId': domainId,
-              'data': record.data.toJson(),
-            });
+            await _sendDomainChangeNotification(
+              management: management,
+              connectionId: connectionId,
+              domainType: domainType,
+              domainId: domainId,
+              data: record.data,
+            );
           }
         }
       } else {
@@ -192,17 +176,54 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             continue;
           }
 
-          await management.send(connectionId, {
-            'action': 'change',
-            'domainType': domainType,
-            'domainId': domainId,
-            'entityType': record.entityType,
-            'data': record.data.toJson(),
-          });
+          await _sendDomainChangeNotification(
+            management: management,
+            connectionId: connectionId,
+            domainType: domainType,
+            domainId: domainId,
+            entityType: record.entityType,
+            data: record.data,
+          );
         }
       }
     }
   }
 
   return {'statusCode': 200};
+}
+
+class _WsNotifyRecord {
+  const _WsNotifyRecord({
+    required this.domainType,
+    required this.domainId,
+    required this.notifyType,
+    required this.entityType,
+    required this.data,
+    required this.index,
+  });
+
+  final String domainType;
+  final String domainId;
+  final String notifyType;
+  final String? entityType;
+  final dynamic data;
+  final int index;
+}
+
+Future<void> _sendDomainChangeNotification({
+  required WebsocketManagementClient management,
+  required String connectionId,
+  required String domainType,
+  required String domainId,
+  required DomainChangeData data,
+  String? entityType,
+}) async {
+  await management.send(connectionId, {
+    'action': 'change',
+    'notifyType': _kNotifyTypeDomainChange,
+    'domainType': domainType,
+    'domainId': domainId,
+    if (entityType != null) 'entityType': entityType,
+    'data': data.toJson(),
+  });
 }
