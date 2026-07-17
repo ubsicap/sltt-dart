@@ -9,6 +9,16 @@ import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 import 'websocket_keys.dart';
 
+class WebsocketSubscriptionMatch {
+  const WebsocketSubscriptionMatch({
+    required this.connectionId,
+    required this.entityType,
+  });
+
+  final String connectionId;
+  final String entityType;
+}
+
 class WebsocketConnectionsRepository {
   WebsocketConnectionsRepository({
     required String tableName,
@@ -146,12 +156,11 @@ class WebsocketConnectionsRepository {
     });
   }
 
-  /// Returns every connectionId subscribed to domainType+domainId, whether
-  /// via an exact entityType match or a "*" (all entity types) subscription.
-  Future<List<String>> findSubscribers({
+  /// Returns every connection subscribed to domainType+domainId, including
+  /// the entityType each subscription selected.
+  Future<List<WebsocketSubscriptionMatch>> findSubscribersByDomain({
     required String domainType,
     required String domainId,
-    String? entityType,
   }) async {
     final result = await _dynamoRequest('Query', {
       'TableName': _tableName,
@@ -164,7 +173,7 @@ class WebsocketConnectionsRepository {
       },
     });
 
-    final matches = <String>{};
+    final matches = <WebsocketSubscriptionMatch>[];
     final items =
         (result['Items'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
         const [];
@@ -177,13 +186,37 @@ class WebsocketConnectionsRepository {
       final subscribedEntityType = WebsocketKeys.entityTypeFromSubscriptionSk(
         sk,
       );
-      final isMatch =
-          subscribedEntityType == WebsocketKeys.wildcardEntityType ||
-          entityType == null ||
-          subscribedEntityType == entityType;
-      if (isMatch) matches.add(connectionId);
+      matches.add(
+        WebsocketSubscriptionMatch(
+          connectionId: connectionId,
+          entityType: subscribedEntityType,
+        ),
+      );
     }
-    return matches.toList();
+    return matches;
+  }
+
+  /// Returns every connectionId subscribed to domainType+domainId, whether
+  /// via an exact entityType match or a "*" (all entity types) subscription.
+  Future<List<String>> findSubscribers({
+    required String domainType,
+    required String domainId,
+    String? entityType,
+  }) async {
+    final matches = await findSubscribersByDomain(
+      domainType: domainType,
+      domainId: domainId,
+    );
+
+    final connectionIds = <String>{};
+    for (final match in matches) {
+      final isMatch =
+          match.entityType == WebsocketKeys.wildcardEntityType ||
+          entityType == null ||
+          match.entityType == entityType;
+      if (isMatch) connectionIds.add(match.connectionId);
+    }
+    return connectionIds.toList();
   }
 
   Future<void> close() async {
