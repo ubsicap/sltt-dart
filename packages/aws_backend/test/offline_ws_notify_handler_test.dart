@@ -8,6 +8,101 @@ import '../bin/websocket/websocket_management_client.dart';
 import '../bin/websocket/ws_notify_handler.dart';
 
 void main() {
+  group('wsNotifyHandler helpers', () {
+    test(
+      'groupAndSortDomainChangeRecords sorts domain groups by latest record index ascending',
+      () {
+        final records = [
+          WsNotifyRecord(
+            domainType: 'project',
+            domainId: 'proj-1',
+            notifyType: 'domainChange',
+            entityType: 'task',
+            data: DomainChangeData(
+              name: 'task-update',
+              lastDomainSeq: 1,
+              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
+            ),
+            index: 1,
+          ),
+          WsNotifyRecord(
+            domainType: 'project',
+            domainId: 'proj-1',
+            notifyType: 'domainChange',
+            entityType: 'task',
+            data: DomainChangeData(
+              name: 'task-later',
+              lastDomainSeq: 2,
+              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:01.000Z'),
+            ),
+            index: 3,
+          ),
+          WsNotifyRecord(
+            domainType: 'project',
+            domainId: 'proj-2',
+            notifyType: 'domainChange',
+            entityType: 'note',
+            data: DomainChangeData(
+              name: 'note-update',
+              lastDomainSeq: 1,
+              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
+            ),
+            index: 2,
+          ),
+          WsNotifyRecord(
+            domainType: 'project',
+            domainId: 'proj-2',
+            notifyType: 'domainChange',
+            entityType: 'note',
+            data: DomainChangeData(
+              name: 'note-later',
+              lastDomainSeq: 2,
+              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:01.000Z'),
+            ),
+            index: 5,
+          ),
+        ];
+
+        final sortedGroups = groupAndSortDomainChangeRecords(records);
+
+        expect(sortedGroups, hasLength(2));
+        expect(sortedGroups[0].first.domainId, 'proj-1');
+        expect(sortedGroups[0].last.index, 3);
+        expect(sortedGroups[1].first.domainId, 'proj-2');
+        expect(sortedGroups[1].last.index, 5);
+      },
+    );
+
+    test(
+      'buildDomainChangeNotificationPayload includes required fields and optional entityType',
+      () {
+        final payload = buildDomainChangeNotificationPayload(
+          domainType: 'project',
+          domainId: 'proj-1',
+          data: DomainChangeData(
+            name: 'domain-update',
+            lastDomainSeq: 1,
+            lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
+          ),
+          entityType: 'task',
+        );
+
+        expect(payload, {
+          'action': 'change',
+          'notifyType': 'domainChange',
+          'domainType': 'project',
+          'domainId': 'proj-1',
+          'entityType': 'task',
+          'data': {
+            'name': 'domain-update',
+            'lastDomainSeq': 1,
+            'lastDomainChangeAt': '2026-07-17T00:00:00.000Z',
+          },
+        });
+      },
+    );
+  });
+
   group('wsNotifyHandler', () {
     test('groups records by domain and sorts by earliest group', () async {
       final connections = _FakeConnectionsRepository();

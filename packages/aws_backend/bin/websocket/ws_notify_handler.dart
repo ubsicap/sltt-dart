@@ -18,13 +18,63 @@ const _kNotifyTypeDomainChange = 'domainChange';
 /// subscriptions (some subscribed to a specific entityType, some to "*"),
 /// so this handler does its own per-connection entityType filtering rather
 /// than relying solely on SNS message attributes / subscription filters.
+List<List<WsNotifyRecord>> groupAndSortDomainChangeRecords(
+  List<WsNotifyRecord> records,
+) {
+  final groupedRecords = <String, List<WsNotifyRecord>>{};
+  final groupLatestIndex = <String, int>{};
+
+  for (final record in records) {
+    final key = '${record.domainType}|${record.domainId}';
+    groupedRecords.putIfAbsent(key, () => []).add(record);
+    groupLatestIndex[key] =
+        groupLatestIndex[key] == null || record.index > groupLatestIndex[key]!
+        ? record.index
+        : groupLatestIndex[key]!;
+  }
+
+  final sortedGroupKeys = groupedRecords.keys.toList()
+    ..sort((a, b) => groupLatestIndex[a]!.compareTo(groupLatestIndex[b]!));
+
+  return sortedGroupKeys
+      .map((groupKey) {
+        final group = groupedRecords[groupKey]!;
+        group.sort((a, b) {
+          final aEntity = a.entityType ?? '';
+          final bEntity = b.entityType ?? '';
+          final entityComparison = aEntity.compareTo(bEntity);
+          return entityComparison != 0
+              ? entityComparison
+              : a.index.compareTo(b.index);
+        });
+        return group;
+      })
+      .toList(growable: false);
+}
+
+Map<String, dynamic> buildDomainChangeNotificationPayload({
+  required String domainType,
+  required String domainId,
+  required DomainChangeData data,
+  String? entityType,
+}) {
+  return {
+    'action': 'change',
+    'notifyType': _kNotifyTypeDomainChange,
+    'domainType': domainType,
+    'domainId': domainId,
+    if (entityType != null) 'entityType': entityType,
+    'data': data.toJson(),
+  };
+}
+
 Future<Map<String, dynamic>> wsNotifyHandler(
   Map<String, dynamic> event, {
   required WebsocketConnectionsRepository connections,
   required WebsocketManagementClient management,
 }) async {
   final records = (event['Records'] as List?) ?? const [];
-  final parsedRecords = <_WsNotifyRecord>[];
+  final parsedRecords = <WsNotifyRecord>[];
 
   for (var index = 0; index < records.length; index++) {
     final record = records[index] as Map;
@@ -72,7 +122,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     }
 
     parsedRecords.add(
-      _WsNotifyRecord(
+      WsNotifyRecord(
         domainType: domainType,
         domainId: domainId,
         notifyType: notifyType!,
@@ -87,35 +137,9 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     return {'statusCode': 200};
   }
 
-  final groupedRecords = <String, List<_WsNotifyRecord>>{};
-  final groupEarliestIndex = <String, int>{};
+  final sortedGroups = groupAndSortDomainChangeRecords(parsedRecords);
 
-  for (final record in parsedRecords) {
-    final key = '${record.domainType}|${record.domainId}';
-    groupedRecords.putIfAbsent(key, () => []).add(record);
-    groupEarliestIndex[key] =
-        groupEarliestIndex[key] == null ||
-            record.index < groupEarliestIndex[key]!
-        ? record.index
-        : groupEarliestIndex[key]!;
-  }
-
-  final sortedGroupKeys = groupedRecords.keys.toList()
-    ..sort((a, b) {
-      return groupEarliestIndex[a]!.compareTo(groupEarliestIndex[b]!);
-    });
-
-  for (final groupKey in sortedGroupKeys) {
-    final group = groupedRecords[groupKey]!;
-    group.sort((a, b) {
-      final aEntity = a.entityType ?? '';
-      final bEntity = b.entityType ?? '';
-      final entityComparison = aEntity.compareTo(bEntity);
-      return entityComparison != 0
-          ? entityComparison
-          : a.index.compareTo(b.index);
-    });
-
+  for (final group in sortedGroups) {
     final domainType = group.first.domainType;
     final domainId = group.first.domainId;
 
@@ -192,8 +216,8 @@ Future<Map<String, dynamic>> wsNotifyHandler(
   return {'statusCode': 200};
 }
 
-class _WsNotifyRecord {
-  const _WsNotifyRecord({
+class WsNotifyRecord {
+  const WsNotifyRecord({
     required this.domainType,
     required this.domainId,
     required this.notifyType,
@@ -218,12 +242,13 @@ Future<void> _sendDomainChangeNotification({
   required DomainChangeData data,
   String? entityType,
 }) async {
-  await management.send(connectionId, {
-    'action': 'change',
-    'notifyType': _kNotifyTypeDomainChange,
-    'domainType': domainType,
-    'domainId': domainId,
-    if (entityType != null) 'entityType': entityType,
-    'data': data.toJson(),
-  });
+  await management.send(
+    connectionId,
+    buildDomainChangeNotificationPayload(
+      domainType: domainType,
+      domainId: domainId,
+      data: data,
+      entityType: entityType,
+    ),
+  );
 }
