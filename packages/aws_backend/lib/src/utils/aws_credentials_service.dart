@@ -23,29 +23,54 @@ class AwsCredentialsService {
   /// Get current or cached credentials, refreshing if expired.
   ///
   /// If [SHARED_INFRA_ASSUME_ROLE_ARN] environment variable is set,
-  /// performs STS AssumeRole and returns temporary credentials.
-  /// Otherwise returns credentials from AWS environment variables.
+  /// performs STS AssumeRole and returns temporary credentials, cached
+  /// until close to expiration (to avoid an STS round-trip per request).
   ///
-  /// Cached credentials are automatically refreshed if within 5 minutes of expiration.
+  /// FIXED: 7/17/2026: See Claude https://claude.ai/share/b8dc5340-56d8-427c-8e93-8a467ef7dc6e
+  ///
+  /// Otherwise, returns credentials read directly from the AWS environment
+  /// variables *on every call*. Those are NOT long-lived IAM user keys in
+  /// a Lambda context - they're the execution role's temporary STS
+  /// credentials, which AWS rotates in place roughly hourly without any
+  /// signal exposed to this process other than the env vars themselves
+  /// simply changing. Caching them (as this used to do, treating them as
+  /// "never expiring") meant a warm container would keep signing requests
+  /// with a stale, already-rotated session indefinitely - which surfaces
+  /// as a 403 "signature does not match" from API Gateway/etc, not a
+  /// cleaner expired-token error, since the cached triplet is internally
+  /// consistent, just no longer valid. Re-reading env vars is a pure
+  /// in-memory operation, so there's no cost to doing it every time.
   Future<AWSCredentials> getOrCreateCredentials() async {
+    final assumeRoleArn = Platform.environment['SHARED_INFRA_ASSUME_ROLE_ARN'];
+    final usingAssumeRole = assumeRoleArn?.isNotEmpty == true;
+
+    if (!usingAssumeRole) {
+      return _getEnvironmentCredentials();
+    }
+
     if (_isCached() && _isNotExpired()) {
       return _cached!;
     }
-    return _refreshCredentials();
+    return _refreshCredentials(assumeRoleArn: assumeRoleArn!);
   }
 
   /// Force refresh of credentials (useful for testing or explicit refresh).
-  Future<AWSCredentials> refreshCredentials() => _refreshCredentials();
-
-  Future<AWSCredentials> _refreshCredentials() async {
+  /// Only meaningful for the assume-role path; environment credentials are
+  /// always read fresh and never cached.
+  Future<AWSCredentials> refreshCredentials() async {
     final assumeRoleArn = Platform.environment['SHARED_INFRA_ASSUME_ROLE_ARN'];
     if (assumeRoleArn?.isNotEmpty == true) {
-      _cached = await _assumeRole(roleArn: assumeRoleArn!);
-      _expiresAt = _parseExpiration();
-    } else {
-      _cached = _getEnvironmentCredentials();
-      _expiresAt = null; // environment credentials don't expire
+      return _refreshCredentials(assumeRoleArn: assumeRoleArn!);
     }
+    return _getEnvironmentCredentials();
+  }
+
+  Future<AWSCredentials> _refreshCredentials({
+    required String assumeRoleArn,
+  }) async {
+    final result = await _assumeRole(roleArn: assumeRoleArn);
+    _cached = result.credentials;
+    _expiresAt = result.expiration;
     return _cached!;
   }
 
@@ -73,8 +98,11 @@ class AwsCredentialsService {
     return AWSCredentials(accessKey, secretKey, sessionToken);
   }
 
-  /// Assume a cross-account role and return temporary credentials
-  Future<AWSCredentials> _assumeRole({required String roleArn}) async {
+  /// Assume a cross-account role and return temporary credentials together
+  /// with their actual STS-reported expiration.
+  Future<({AWSCredentials credentials, DateTime? expiration})> _assumeRole({
+    required String roleArn,
+  }) async {
     final accessKey = Platform.environment['AWS_ACCESS_KEY_ID'];
     final secretKey = Platform.environment['AWS_SECRET_ACCESS_KEY'];
     final sessionToken = Platform.environment['AWS_SESSION_TOKEN'];
@@ -164,6 +192,9 @@ class AwsCredentialsService {
       final sessionTokenMatch = RegExp(
         r'<SessionToken>([^<]+)</SessionToken>',
       ).firstMatch(responseBody);
+      final expirationMatch = RegExp(
+        r'<Expiration>([^<]+)</Expiration>',
+      ).firstMatch(responseBody);
 
       if (accessKeyIdMatch == null ||
           secretAccessKeyMatch == null ||
@@ -174,21 +205,33 @@ class AwsCredentialsService {
         );
       }
 
-      return AWSCredentials(
-        accessKeyIdMatch.group(1)!,
-        secretAccessKeyMatch.group(1)!,
-        sessionTokenMatch.group(1)!,
+      // Prefer the expiration STS actually returns; only fall back to
+      // guessing DurationSeconds if the field is somehow missing/unparseable,
+      // and log loudly if so - a wrong guess here silently recreates the
+      // same class of bug this fix is for.
+      DateTime? expiration;
+      if (expirationMatch != null) {
+        expiration = DateTime.tryParse(expirationMatch.group(1)!);
+      }
+      if (expiration == null) {
+        print(
+          '[AwsCredentialsService] WARNING: could not parse <Expiration> '
+          'from STS AssumeRole response; falling back to an assumed '
+          '1-hour expiry from now. Response body: $responseBody',
+        );
+        expiration = DateTime.now().toUtc().add(const Duration(hours: 1));
+      }
+
+      return (
+        credentials: AWSCredentials(
+          accessKeyIdMatch.group(1)!,
+          secretAccessKeyMatch.group(1)!,
+          sessionTokenMatch.group(1)!,
+        ),
+        expiration: expiration,
       );
     } finally {
       client.close();
     }
-  }
-
-  /// Extract expiration time from cached AssumeRole response (if available).
-  /// Returns null if expiration cannot be determined.
-  DateTime? _parseExpiration() {
-    // In a real implementation, you'd parse the Expiration field from the STS response
-    // For now, assume 1 hour (3600 seconds) as specified in DurationSeconds above
-    return DateTime.now().add(const Duration(hours: 1));
   }
 }
