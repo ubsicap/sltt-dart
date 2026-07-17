@@ -249,11 +249,12 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
       e,
       stackTrace,
     );
-    return _internalServerErrorResponse(
+    return await _internalServerErrorResponse(
       handler: 'wsSubscribe',
       connectionId: connectionId,
       routeKey: routeKey,
       error: e,
+      management: management,
     );
   } finally {
     await management.close();
@@ -286,11 +287,12 @@ Future<Map<String, dynamic>> _handleWsUnsubscribe(
       e,
       stackTrace,
     );
-    return _internalServerErrorResponse(
+    return await _internalServerErrorResponse(
       handler: 'wsUnsubscribe',
       connectionId: connectionId,
       routeKey: routeKey,
       error: e,
+      management: management,
     );
   } finally {
     await management.close();
@@ -319,11 +321,12 @@ Future<Map<String, dynamic>> _handleWsDefault(
       e,
       stackTrace,
     );
-    return _internalServerErrorResponse(
+    return await _internalServerErrorResponse(
       handler: 'wsDefault',
       connectionId: connectionId,
       routeKey: routeKey,
       error: e,
+      management: management,
     );
   } finally {
     await management.close();
@@ -354,11 +357,12 @@ Future<Map<String, dynamic>> _handleWsNotify(Map<String, dynamic> event) async {
       e,
       stackTrace,
     );
-    return _internalServerErrorResponse(
+    return await _internalServerErrorResponse(
       handler: 'wsNotify',
       connectionId: connectionId,
       routeKey: routeKey,
       error: e,
+      management: management,
     );
   } finally {
     await management.close();
@@ -424,12 +428,35 @@ String _requireEnv(String key) {
   return value;
 }
 
-Map<String, dynamic> _internalServerErrorResponse({
+Future<Map<String, dynamic>> _internalServerErrorResponse({
   required String handler,
   String? connectionId,
   String? routeKey,
   Object? error,
-}) {
+  WebsocketManagementClient? management,
+}) async {
+  if (management != null && connectionId != null) {
+    final websocketBody = <String, dynamic>{
+      'action': 'serverError',
+      'handler': handler,
+      if (routeKey != null) 'routeKey': routeKey,
+      'timestamp': DateTime.now().toIso8601String(),
+      if (Platform.environment['SLTT_DEBUG'] == 'true')
+        'detail': error?.toString(),
+      if (Platform.environment['SLTT_DEBUG'] != 'true')
+        'message': 'Internal server error',
+    };
+    try {
+      await management.send(connectionId, websocketBody);
+    } catch (sendError, sendStack) {
+      SlttLogger.logger.warning(
+        '[Lambda] failed to send websocket error feedback connectionId=$connectionId handler=$handler routeKey=$routeKey',
+        sendError,
+        sendStack,
+      );
+    }
+  }
+
   final body = <String, dynamic>{
     'error': 'Internal server error',
     'handler': handler,
