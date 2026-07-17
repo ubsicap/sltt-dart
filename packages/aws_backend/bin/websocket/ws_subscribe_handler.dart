@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:sltt_core/sltt_core.dart' show SlttLogger;
+
 import 'websocket_connections_repository.dart';
 import 'websocket_management_client.dart';
 
@@ -14,7 +16,12 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
   final requestContext = (event['requestContext'] as Map)
       .cast<String, dynamic>();
   final connectionId = requestContext['connectionId'] as String;
-  final body = jsonDecode(event['body'] as String? ?? '{}') as Map<String, dynamic>;
+  final body =
+      jsonDecode(event['body'] as String? ?? '{}') as Map<String, dynamic>;
+
+  SlttLogger.logger.info(
+    'wsSubscribe: entry connectionId=$connectionId body=$body',
+  );
 
   final domainType = body['domainType'] as String?;
   final domainId = body['domainId'] as String?;
@@ -24,6 +31,9 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       domainType.isEmpty ||
       domainId == null ||
       domainId.isEmpty) {
+    SlttLogger.logger.warning(
+      'wsSubscribe: invalid request connectionId=$connectionId domainType=$domainType domainId=$domainId',
+    );
     await management.send(connectionId, {
       'action': 'subscribe',
       'status': 'error',
@@ -32,20 +42,33 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
     return {'statusCode': 400};
   }
 
-  await connections.putSubscription(
-    connectionId: connectionId,
-    domainType: domainType,
-    domainId: domainId,
-    entityType: entityType,
-  );
+  try {
+    await connections.putSubscription(
+      connectionId: connectionId,
+      domainType: domainType,
+      domainId: domainId,
+      entityType: entityType,
+    );
 
-  await management.send(connectionId, {
-    'action': 'subscribe',
-    'status': 'ok',
-    'domainType': domainType,
-    'domainId': domainId,
-    'entityType': entityType,
-  });
+    await management.send(connectionId, {
+      'action': 'subscribe',
+      'status': 'ok',
+      'domainType': domainType,
+      'domainId': domainId,
+      'entityType': entityType,
+    });
 
-  return {'statusCode': 200};
+    SlttLogger.logger.info(
+      'wsSubscribe: saved subscription connectionId=$connectionId domainType=$domainType domainId=$domainId entityType=${entityType ?? '*'}',
+    );
+
+    return {'statusCode': 200};
+  } catch (e, stackTrace) {
+    SlttLogger.logger.severe(
+      'wsSubscribe: failed connectionId=$connectionId body=$body',
+      e,
+      stackTrace,
+    );
+    rethrow;
+  }
 }

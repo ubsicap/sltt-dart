@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
 import 'package:http/http.dart' as http;
+import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 import 'websocket_keys.dart';
 
@@ -236,6 +237,17 @@ class WebsocketConnectionsRepository {
 
     final streamed = await _httpClient.send(request);
     final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      SlttLogger.logger.severe(
+        'WebsocketConnectionsRepository: DynamoDB $operation failed',
+        Exception('status=${response.statusCode} body=${response.body}'),
+      );
+      throw StateError(
+        'DynamoDB $operation failed with status ${response.statusCode}',
+      );
+    }
+
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 

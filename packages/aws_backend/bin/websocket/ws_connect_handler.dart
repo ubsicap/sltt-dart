@@ -13,6 +13,8 @@ Future<Map<String, dynamic>> wsConnectHandler(
       ?.cast<String, dynamic>();
   final userId = authorizerContext?['userId'] as String?;
 
+  SlttLogger.logger.info('wsConnect: entry connectionId=$connectionId');
+
   if (userId == null) {
     // Shouldn't happen if wsAuthorizer is wired in serverless.yml, but fail
     // closed rather than recording an unattributed connection.
@@ -23,5 +25,8 @@ Future<Map<String, dynamic>> wsConnectHandler(
   }
 
   await connections.putConnection(connectionId: connectionId, userId: userId);
+  SlttLogger.logger.info(
+    'wsConnect: saved connection $connectionId userId=$userId',
+  );
   return {'statusCode': 200};
 }
