@@ -367,7 +367,7 @@ Future<Map<String, dynamic>> _handleWsNotify(Map<String, dynamic> event) async {
 }
 
 Future<WebsocketConnectionsRepository> _createConnectionsRepository() async {
-  final credentials = await AwsCredentialsService().getOrCreateCredentials();
+  final credentials = _getExecutionRoleCredentials();
   final tableName = _requireEnv('WEBSOCKET_CONNECTIONS_TABLE');
   final region = _region();
   return WebsocketConnectionsRepository(
@@ -378,10 +378,24 @@ Future<WebsocketConnectionsRepository> _createConnectionsRepository() async {
   );
 }
 
+AWSCredentials _getExecutionRoleCredentials() {
+  final accessKey = Platform.environment['AWS_ACCESS_KEY_ID'];
+  final secretKey = Platform.environment['AWS_SECRET_ACCESS_KEY'];
+  final sessionToken = Platform.environment['AWS_SESSION_TOKEN'];
+
+  if (accessKey == null || secretKey == null) {
+    throw StateError(
+      'AWS execution role credentials are not available in the environment',
+    );
+  }
+
+  return AWSCredentials(accessKey, secretKey, sessionToken);
+}
+
 Future<WebsocketManagementClient> _createManagementClient(
   WebsocketConnectionsRepository connections,
 ) async {
-  final credentials = await AwsCredentialsService().getOrCreateCredentials();
+  final credentials = _getExecutionRoleCredentials();
   final endpointUrl = _requireEnv('WEBSOCKET_API_ENDPOINT');
   final region = _region();
 
