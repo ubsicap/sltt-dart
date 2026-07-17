@@ -177,6 +177,7 @@ Future<Map<String, dynamic>> _handleWsConnect(
   );
 
   final connections = await _createConnectionsRepository();
+  final management = await _createManagementClient(connections);
   try {
     return await wsConnectHandler(event, connections: connections);
   } catch (e, stackTrace) {
@@ -185,12 +186,14 @@ Future<Map<String, dynamic>> _handleWsConnect(
       e,
       stackTrace,
     );
-    return _internalServerErrorResponse(
+    return await _internalServerErrorResponse(
       handler: 'wsConnect',
       connectionId: connectionId,
       error: e,
+      management: management,
     );
   } finally {
+    await management.close();
     await connections.close();
   }
 }
@@ -206,6 +209,7 @@ Future<Map<String, dynamic>> _handleWsDisconnect(
   );
 
   final connections = await _createConnectionsRepository();
+  final management = await _createManagementClient(connections);
   try {
     return await wsDisconnectHandler(event, connections: connections);
   } catch (e, stackTrace) {
@@ -214,12 +218,14 @@ Future<Map<String, dynamic>> _handleWsDisconnect(
       e,
       stackTrace,
     );
-    return _internalServerErrorResponse(
+    return await _internalServerErrorResponse(
       handler: 'wsDisconnect',
       connectionId: connectionId,
       error: e,
+      management: management,
     );
   } finally {
+    await management.close();
     await connections.close();
   }
 }
