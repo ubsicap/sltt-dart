@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
+import 'domain_change_data.dart';
 import 'websocket_connections_repository.dart';
 import 'websocket_keys.dart';
 import 'websocket_management_client.dart';
@@ -68,13 +69,33 @@ Future<Map<String, dynamic>> wsNotifyHandler(
       continue;
     }
 
+    final rawData = message['data'] as Map<String, dynamic>?;
+    if (rawData == null) {
+      SlttLogger.logger.warning(
+        'wsNotify: domainChange message missing data payload: $message',
+      );
+      continue;
+    }
+
+    DomainChangeData data;
+    try {
+      data = DomainChangeData.fromJson(rawData);
+    } catch (error, stackTrace) {
+      SlttLogger.logger.warning(
+        'wsNotify: invalid domainChange data payload: $rawData',
+        error,
+        stackTrace,
+      );
+      continue;
+    }
+
     parsedRecords.add(
       _WsNotifyRecord(
         domainType: domainType,
         domainId: domainId,
         notifyType: notifyType!,
         entityType: entityType,
-        data: message['data'],
+        data: data,
         index: index,
       ),
     );
@@ -143,7 +164,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
           'domainType': domainType,
           'domainId': domainId,
           if (record.entityType != null) 'entityType': record.entityType,
-          'data': record.data,
+          'data': record.data.toJson(),
         });
         alreadyNotified.add(connectionId);
       }
@@ -159,7 +180,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
               'action': 'change',
               'domainType': domainType,
               'domainId': domainId,
-              'data': record.data,
+              'data': record.data.toJson(),
             });
           }
         }
@@ -176,7 +197,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             'domainType': domainType,
             'domainId': domainId,
             'entityType': record.entityType,
-            'data': record.data,
+            'data': record.data.toJson(),
           });
         }
       }
