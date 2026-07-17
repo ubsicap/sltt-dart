@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
 import 'package:http/http.dart' as http;
+import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 import 'aws_credentials_exception.dart';
 
@@ -44,9 +45,17 @@ class AwsCredentialsService {
     final assumeRoleArn = Platform.environment['SHARED_INFRA_ASSUME_ROLE_ARN'];
     final usingAssumeRole = assumeRoleArn?.isNotEmpty == true;
 
+    SlttLogger.logger.info(
+      '[AwsCredentialsService] getOrCreateCredentials usingAssumeRole=$usingAssumeRole',
+    );
+
     if (!usingAssumeRole) {
       return _getEnvironmentCredentials();
     }
+
+    SlttLogger.logger.info(
+      '[AwsCredentialsService] cached=${_isCached()} isNotExpired=${_isNotExpired()}',
+    );
 
     if (_isCached() && _isNotExpired()) {
       return _cached!;
@@ -95,6 +104,10 @@ class AwsCredentialsService {
       );
     }
 
+    SlttLogger.logger.info(
+      '[AwsCredentialsService] environment credentials loaded accessKeyId=$accessKey sessionTokenPresent=${sessionToken != null}',
+    );
+
     return AWSCredentials(accessKey, secretKey, sessionToken);
   }
 
@@ -131,6 +144,10 @@ class AwsCredentialsService {
       final externalId =
           Platform.environment['ASSUME_ROLE_EXTERNAL_ID'] ??
           'sltt-cross-account-access';
+
+      SlttLogger.logger.info(
+        '[AwsCredentialsService] assuming role="$roleArn" region="$region" sessionName="$sessionName" externalId="$externalId" sessionTokenPresent=${sessionToken != null}',
+      );
 
       // Build STS AssumeRole request
       final uri = Uri.parse('https://sts.$region.amazonaws.com/');

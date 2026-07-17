@@ -193,6 +193,15 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
 ) async {
   final connections = await _createConnectionsRepository();
   final management = await _createManagementClient(connections);
+
+  final requestContext = (event['requestContext'] as Map?)
+      ?.cast<String, dynamic>();
+  final connectionId = requestContext?['connectionId'] as String?;
+  final routeKey = requestContext?['routeKey'] as String?;
+  SlttLogger.logger.info(
+    '[Lambda] _handleWsSubscribe entry connectionId=$connectionId routeKey=$routeKey',
+  );
+
   try {
     return await wsSubscribeHandler(
       event,
@@ -235,9 +244,7 @@ Future<Map<String, dynamic>> _handleWsDefault(
   }
 }
 
-Future<Map<String, dynamic>> _handleWsNotify(
-  Map<String, dynamic> event,
-) async {
+Future<Map<String, dynamic>> _handleWsNotify(Map<String, dynamic> event) async {
   final connections = await _createConnectionsRepository();
   final management = await _createManagementClient(connections);
   try {
@@ -270,6 +277,11 @@ Future<WebsocketManagementClient> _createManagementClient(
   final credentials = await AwsCredentialsService().getOrCreateCredentials();
   final endpointUrl = _requireEnv('WEBSOCKET_API_ENDPOINT');
   final region = _region();
+
+  SlttLogger.logger.info(
+    '[Lambda] creating WebsocketManagementClient endpoint=$endpointUrl region=$region sessionTokenPresent=${credentials.sessionToken != null}',
+  );
+
   return WebsocketManagementClient(
     endpointUrl: endpointUrl,
     region: region,
