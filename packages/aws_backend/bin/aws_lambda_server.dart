@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:aws_backend/aws_backend.dart';
-import 'package:aws_common/aws_common.dart' show AWSCredentials;
+import 'package:aws_common/aws_common.dart'
+    show AWSCredentials, AWSCredentialsProvider;
 import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 import 'websocket/websocket_connections_repository.dart';
@@ -235,9 +236,7 @@ Future<Map<String, dynamic>> _handleWsDefault(
   }
 }
 
-Future<Map<String, dynamic>> _handleWsNotify(
-  Map<String, dynamic> event,
-) async {
+Future<Map<String, dynamic>> _handleWsNotify(Map<String, dynamic> event) async {
   final connections = await _createConnectionsRepository();
   final management = await _createManagementClient(connections);
   try {
@@ -273,7 +272,7 @@ Future<WebsocketManagementClient> _createManagementClient(
   return WebsocketManagementClient(
     endpointUrl: endpointUrl,
     region: region,
-    credentials: credentials,
+    credentialsProvider: AWSCredentialsProvider(credentials),
     connections: connections,
   );
 }
