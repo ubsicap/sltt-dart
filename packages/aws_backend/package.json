@@ -50,6 +50,7 @@
     "logs:auth-events:dev": "aws logs tail /aws/lambda/sltt-v1-secondary-infra-dev-api --since 1h --profile sltt-dart-dev --region us-east-1 --format short --filter-pattern AuthEvent",
     "logs:auth-events:tst": "aws logs tail /aws/lambda/sltt-v1-secondary-infra-tst-api --since 1h --profile sltt-dart-dev --region us-east-1 --format short --filter-pattern AuthEvent",
     "logs:auth-events:prod": "aws logs tail /aws/lambda/sltt-v1-secondary-infra-prod-api --since 1h --profile sltt-dart-prd --region us-east-1 --format short --filter-pattern AuthEvent",
+    "logs:wss:sltt-dart-dev": "aws logs tail /aws/lambda/sltt-v1-secondary-infra-dev-wsSubscribe --since 1h --profile sltt-dart-dev --region us-east-1 --format short",
     "logs:dev": "npm run logs:secondary:dev",
     "logs:tst": "npm run logs:secondary:tst",
     "logs:prod": "npm run logs:secondary:prod",
