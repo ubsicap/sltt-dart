@@ -1,13 +1,16 @@
 import 'dart:convert';
 
+import 'package:aws_backend/src/websocket/domain_change_payload.dart'
+    show
+        DomainChangeData,
+        WsNotifyRecord,
+        buildDomainChangeNotificationPayload,
+        kNotifyTypeDomainChange;
 import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
-import 'domain_change_data.dart';
 import 'websocket_connections_repository.dart';
 import 'websocket_keys.dart';
 import 'websocket_management_client.dart';
-
-const _kNotifyTypeDomainChange = 'domainChange';
 
 /// SNS subscriber for DomainChangeTopic. Each SNS record's Message is the
 /// JSON change event AwsRestApiServer publishes on a mutation, shaped like
@@ -82,22 +85,6 @@ List<WsNotifyRecord> collapseDomainChangeRecordsToLatestPerEntityType(
   return latestRecords;
 }
 
-Map<String, dynamic> buildDomainChangeNotificationPayload({
-  required String domainType,
-  required String domainId,
-  required DomainChangeData data,
-  String? entityType,
-}) {
-  return {
-    'action': 'change',
-    'notifyType': _kNotifyTypeDomainChange,
-    'domainType': domainType,
-    'domainId': domainId,
-    if (entityType != null) 'entityType': entityType,
-    'data': data.toJson(),
-  };
-}
-
 Future<Map<String, dynamic>> wsNotifyHandler(
   Map<String, dynamic> event, {
   required WebsocketConnectionsRepository connections,
@@ -124,9 +111,9 @@ Future<Map<String, dynamic>> wsNotifyHandler(
       continue;
     }
 
-    if (notifyType != _kNotifyTypeDomainChange) {
+    if (notifyType != kNotifyTypeDomainChange) {
       SlttLogger.logger.warning(
-        'wsNotify: unsupported notifyType "$notifyType"; only "$_kNotifyTypeDomainChange" is supported: $message',
+        'wsNotify: unsupported notifyType "$notifyType"; only "$kNotifyTypeDomainChange" is supported: $message',
       );
       continue;
     }
@@ -256,24 +243,6 @@ Future<Map<String, dynamic>> wsNotifyHandler(
   }
 
   return {'statusCode': 200};
-}
-
-class WsNotifyRecord {
-  const WsNotifyRecord({
-    required this.domainType,
-    required this.domainId,
-    required this.notifyType,
-    required this.entityType,
-    required this.data,
-    required this.index,
-  });
-
-  final String domainType;
-  final String domainId;
-  final String notifyType;
-  final String? entityType;
-  final dynamic data;
-  final int index;
 }
 
 Future<void> _sendDomainChangeNotification({

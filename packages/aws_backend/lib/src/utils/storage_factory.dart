@@ -26,6 +26,7 @@ class StorageFactory {
       useLocalDynamoDB: useLocalDynamoDB,
       credentials: credentials,
       credentialsResolver: credentialsResolver,
+      domainChangeTopicArn: Platform.environment['DOMAIN_CHANGE_TOPIC_ARN'],
     );
   }
 }

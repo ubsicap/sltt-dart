@@ -10,6 +10,12 @@ import '../models/dynamo_change_log_entry.dart';
 import '../models/dynamo_entity_state_serialization_registry.dart';
 import '../models/dynamo_entity_type_sync_state.dart';
 import '../models/dynamo_storage_state.dart';
+import '../websocket/domain_change_payload.dart'
+    show
+        DomainChangeData,
+        WsNotifyRecord,
+        buildDomainChangeNotificationPayload,
+        kNotifyTypeDomainChange;
 import 'key_codec.dart';
 
 /// Cached storageId at module (isolate) level so it survives across Lambda warm
@@ -173,6 +179,7 @@ class DynamoDBStorageService extends BaseStorageService {
     required this.credentials,
     Future<AWSCredentials> Function()? credentialsResolver,
     http.Client? httpClient,
+    this.domainChangeTopicArn,
   }) : _credentialsResolver = credentialsResolver,
        _httpClient = httpClient ?? http.Client();
 
@@ -182,6 +189,7 @@ class DynamoDBStorageService extends BaseStorageService {
   final String? localEndpoint;
   final AWSCredentials credentials;
   final Future<AWSCredentials> Function()? _credentialsResolver;
+  final String? domainChangeTopicArn;
 
   final http.Client _httpClient;
 
@@ -424,6 +432,20 @@ class DynamoDBStorageService extends BaseStorageService {
         domainType: domainType,
         syncStates: syncStatesToUpsert,
       );
+    }
+
+    if (_shouldPublishDomainChangeEvents && outChanges.isNotEmpty) {
+      final latestByEntityType = <String, DynamoChangeLogEntry>{};
+      for (final change in outChanges) {
+        if (change is! DynamoChangeLogEntry) continue;
+        final current = latestByEntityType[change.entityType];
+        if (current == null || change.seq > current.seq) {
+          latestByEntityType[change.entityType] = change;
+        }
+      }
+      final latestChanges = latestByEntityType.values.toList()
+        ..sort((a, b) => a.seq.compareTo(b.seq));
+      await _publishDomainChangeEvents(latestChanges);
     }
 
     return (newChangeLogEntries: outChanges, newEntityStates: outStates);
@@ -2308,6 +2330,141 @@ class DynamoDBStorageService extends BaseStorageService {
 
     final streamed = await _httpClient.send(request);
     return http.Response.fromStream(streamed);
+  }
+
+  bool get _shouldPublishDomainChangeEvents =>
+      domainChangeTopicArn != null && domainChangeTopicArn!.isNotEmpty;
+
+  Future<void> _publishDomainChangeEvents(
+    List<DynamoChangeLogEntry> latestChanges,
+  ) async {
+    if (!_shouldPublishDomainChangeEvents) return;
+
+    for (final change in latestChanges) {
+      final data = _domainChangeDataFromChange(change);
+      final record = WsNotifyRecord(
+        domainType: change.domainType,
+        domainId: change.domainId,
+        notifyType: kNotifyTypeDomainChange,
+        entityType: change.entityType,
+        data: data,
+        index: change.seq,
+      );
+
+      final message = jsonEncode(
+        buildDomainChangeNotificationPayload(
+          domainType: record.domainType,
+          domainId: record.domainId,
+          entityType: record.entityType,
+          data: data,
+        ),
+      );
+
+      final messageAttributes = <String, String>{
+        'domainType': record.domainType,
+        'domainId': record.domainId,
+      };
+      if (record.entityType != null) {
+        messageAttributes['entityType'] = record.entityType!;
+      }
+
+      try {
+        await _publishSnsMessage(
+          topicArn: domainChangeTopicArn!,
+          message: message,
+          messageAttributes: messageAttributes,
+        );
+      } catch (error, stackTrace) {
+        SlttLogger.logger.warning(
+          '[DynamoDBStorageService] failed to publish domain change event',
+          error,
+          stackTrace,
+        );
+      }
+    }
+  }
+
+  DomainChangeData _domainChangeDataFromChange(DynamoChangeLogEntry change) {
+    late final Map<String, dynamic> changeData;
+    try {
+      changeData = change.getData();
+    } catch (_) {
+      changeData = <String, dynamic>{};
+    }
+
+    return DomainChangeData(
+      name: changeData['name'] as String? ?? change.entityId,
+      lastDomainSeq: change.seq,
+      lastDomainChangeAt: change.changeAt.toUtc(),
+    );
+  }
+
+  Future<void> _publishSnsMessage({
+    required String topicArn,
+    required String message,
+    required Map<String, String> messageAttributes,
+  }) async {
+    final uri = Uri.parse('https://sns.$region.amazonaws.com/');
+    final bodyEntries = <String, String>{
+      'Action': 'Publish',
+      'TopicArn': topicArn,
+      'Message': message,
+      'Version': '2010-03-31',
+    };
+
+    var attributeIndex = 1;
+    for (final entry in messageAttributes.entries) {
+      bodyEntries['MessageAttributes.entry.$attributeIndex.Name'] = entry.key;
+      bodyEntries['MessageAttributes.entry.$attributeIndex.Value.DataType'] =
+          'String';
+      bodyEntries['MessageAttributes.entry.$attributeIndex.Value.StringValue'] =
+          entry.value;
+      attributeIndex += 1;
+    }
+
+    final body = bodyEntries.entries
+        .map(
+          (entry) =>
+              '${Uri.encodeQueryComponent(entry.key)}=${Uri.encodeQueryComponent(entry.value)}',
+        )
+        .join('&');
+    final encodedBody = utf8.encode(body);
+
+    final signingCredentials =
+        await (_credentialsResolver?.call() ??
+            Future<AWSCredentials>.value(credentials));
+    final signer = AWSSigV4Signer(
+      credentialsProvider: AWSCredentialsProvider(signingCredentials),
+    );
+
+    final signedRequest = await signer.sign(
+      AWSHttpRequest(
+        method: AWSHttpMethod.post,
+        uri: uri,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'host': uri.host,
+        },
+        body: encodedBody,
+      ),
+      credentialScope: AWSCredentialScope(
+        region: region,
+        service: AWSService.sns,
+      ),
+    );
+
+    final request = http.Request('POST', signedRequest.uri)
+      ..headers.addAll(signedRequest.headers)
+      ..bodyBytes = encodedBody;
+
+    final streamed = await _httpClient.send(request);
+    final response = await http.Response.fromStream(streamed);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError(
+        'SNS publish failed (${response.statusCode}): ${response.body}',
+      );
+    }
   }
 
   Future<void> createTableIfNotExists() async {

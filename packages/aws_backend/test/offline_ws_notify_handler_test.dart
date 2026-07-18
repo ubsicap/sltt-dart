@@ -1,8 +1,13 @@
 import 'dart:convert';
 
+import 'package:aws_backend/src/websocket/domain_change_payload.dart'
+    show
+        DomainChangeData,
+        WsNotifyRecord,
+        kNotifyTypeDomainChange,
+        buildDomainChangeNotificationPayload;
 import 'package:test/test.dart';
 
-import '../bin/websocket/domain_change_data.dart';
 import '../bin/websocket/websocket_connections_repository.dart';
 import '../bin/websocket/websocket_management_client.dart';
 import '../bin/websocket/ws_notify_handler.dart';
@@ -16,7 +21,7 @@ void main() {
           WsNotifyRecord(
             domainType: 'project',
             domainId: 'proj-1',
-            notifyType: 'domainChange',
+            notifyType: kNotifyTypeDomainChange,
             entityType: 'task',
             data: DomainChangeData(
               name: 'task-update',
@@ -28,7 +33,7 @@ void main() {
           WsNotifyRecord(
             domainType: 'project',
             domainId: 'proj-1',
-            notifyType: 'domainChange',
+            notifyType: kNotifyTypeDomainChange,
             entityType: 'task',
             data: DomainChangeData(
               name: 'task-later',
@@ -40,7 +45,7 @@ void main() {
           WsNotifyRecord(
             domainType: 'project',
             domainId: 'proj-2',
-            notifyType: 'domainChange',
+            notifyType: kNotifyTypeDomainChange,
             entityType: 'note',
             data: DomainChangeData(
               name: 'note-update',
@@ -52,7 +57,7 @@ void main() {
           WsNotifyRecord(
             domainType: 'project',
             domainId: 'proj-2',
-            notifyType: 'domainChange',
+            notifyType: kNotifyTypeDomainChange,
             entityType: 'note',
             data: DomainChangeData(
               name: 'note-later',
@@ -80,7 +85,7 @@ void main() {
           WsNotifyRecord(
             domainType: 'project',
             domainId: 'proj-1',
-            notifyType: 'domainChange',
+            notifyType: kNotifyTypeDomainChange,
             entityType: null,
             data: DomainChangeData(
               name: 'domain-update-1',
@@ -92,7 +97,7 @@ void main() {
           WsNotifyRecord(
             domainType: 'project',
             domainId: 'proj-1',
-            notifyType: 'domainChange',
+            notifyType: kNotifyTypeDomainChange,
             entityType: null,
             data: DomainChangeData(
               name: 'domain-update-2',
@@ -104,7 +109,7 @@ void main() {
           WsNotifyRecord(
             domainType: 'project',
             domainId: 'proj-1',
-            notifyType: 'domainChange',
+            notifyType: kNotifyTypeDomainChange,
             entityType: 'task',
             data: DomainChangeData(
               name: 'task-update-1',
@@ -116,7 +121,7 @@ void main() {
           WsNotifyRecord(
             domainType: 'project',
             domainId: 'proj-1',
-            notifyType: 'domainChange',
+            notifyType: kNotifyTypeDomainChange,
             entityType: 'task',
             data: DomainChangeData(
               name: 'task-update-2',
@@ -155,7 +160,7 @@ void main() {
 
         expect(payload, {
           'action': 'change',
-          'notifyType': 'domainChange',
+          'notifyType': kNotifyTypeDomainChange,
           'domainType': 'project',
           'domainId': 'proj-1',
           'entityType': 'task',
@@ -200,7 +205,7 @@ void main() {
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': 'domainChange',
+                'notifyType': kNotifyTypeDomainChange,
                 'domainType': 'project',
                 'domainId': 'proj-2',
                 'entityType': 'note',
@@ -217,7 +222,7 @@ void main() {
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': 'domainChange',
+                'notifyType': kNotifyTypeDomainChange,
                 'domainType': 'project',
                 'domainId': 'proj-1',
                 'entityType': 'task',
@@ -283,7 +288,7 @@ void main() {
             {
               'Sns': {
                 'Message': jsonEncode({
-                  'notifyType': 'domainChange',
+                  'notifyType': kNotifyTypeDomainChange,
                   'domainType': 'project',
                   'domainId': 'proj-1',
                   'data': DomainChangeData(
@@ -336,7 +341,7 @@ void main() {
             {
               'Sns': {
                 'Message': jsonEncode({
-                  'notifyType': 'domainChange',
+                  'notifyType': kNotifyTypeDomainChange,
                   'domainType': 'project',
                   'domainId': 'proj-1',
                   'entityType': 'task',
@@ -390,7 +395,7 @@ void main() {
             {
               'Sns': {
                 'Message': jsonEncode({
-                  'notifyType': 'domainChange',
+                  'notifyType': kNotifyTypeDomainChange,
                   'domainType': 'project',
                   'domainId': 'proj-1',
                   'entityType': 'task',
@@ -407,7 +412,7 @@ void main() {
             {
               'Sns': {
                 'Message': jsonEncode({
-                  'notifyType': 'domainChange',
+                  'notifyType': kNotifyTypeDomainChange,
                   'domainType': 'project',
                   'domainId': 'proj-1',
                   'entityType': 'note',
@@ -468,7 +473,7 @@ void main() {
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': 'domainChange',
+                'notifyType': kNotifyTypeDomainChange,
                 'domainType': 'project',
                 'domainId': 'proj-1',
                 'data': DomainChangeData(
@@ -484,7 +489,7 @@ void main() {
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': 'domainChange',
+                'notifyType': kNotifyTypeDomainChange,
                 'domainType': 'project',
                 'domainId': 'proj-1',
                 'entityType': 'note',
@@ -501,7 +506,7 @@ void main() {
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': 'domainChange',
+                'notifyType': kNotifyTypeDomainChange,
                 'domainType': 'project',
                 'domainId': 'proj-1',
                 'entityType': 'task',
@@ -518,7 +523,7 @@ void main() {
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': 'domainChange',
+                'notifyType': kNotifyTypeDomainChange,
                 'domainType': 'project',
                 'domainId': 'proj-1',
                 'entityType': 'note',
@@ -535,7 +540,7 @@ void main() {
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': 'domainChange',
+                'notifyType': kNotifyTypeDomainChange,
                 'domainType': 'project',
                 'domainId': 'proj-1',
                 'data': DomainChangeData(
