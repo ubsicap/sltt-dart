@@ -183,16 +183,24 @@ Future<Map<String, dynamic>> wsNotifyHandler(
 
     final wildcardConnections = <String>{};
     final exactConnections = <String, Set<String>>{};
+    final lastRecordConnections = <String>{};
 
     for (final subscription in subscriberMatches) {
       if (subscription.entityType == WebsocketKeys.wildcardEntityType) {
         wildcardConnections.add(subscription.connectionId);
+      } else if (subscription.entityType ==
+          WebsocketKeys.lastRecordEntityType) {
+        lastRecordConnections.add(subscription.connectionId);
       } else {
         exactConnections
             .putIfAbsent(subscription.entityType, () => <String>{})
             .add(subscription.connectionId);
       }
     }
+
+    final latestGroupRecord = group.reduce((value, record) {
+      return record.index > value.index ? record : value;
+    });
 
     for (final record in recordsToSend) {
       final alreadyNotified = <String>{};
@@ -213,6 +221,23 @@ Future<Map<String, dynamic>> wsNotifyHandler(
         final exactMatchConnections =
             exactConnections[record.entityType!] ?? const <String>{};
         for (final connectionId in exactMatchConnections) {
+          if (!alreadyNotified.add(connectionId)) {
+            continue;
+          }
+
+          await _sendDomainChangeNotification(
+            management: management,
+            connectionId: connectionId,
+            domainType: domainType,
+            domainId: domainId,
+            entityType: record.entityType,
+            data: record.data,
+          );
+        }
+      }
+
+      if (record.index == latestGroupRecord.index) {
+        for (final connectionId in lastRecordConnections) {
           if (!alreadyNotified.add(connectionId)) {
             continue;
           }

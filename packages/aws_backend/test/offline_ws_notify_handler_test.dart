@@ -364,6 +364,86 @@ void main() {
       },
     );
 
+    test(
+      'delivers the latest group record to last-record subscribers',
+      () async {
+        final connections = _FakeConnectionsRepository();
+        final management = _FakeManagementClient(connections: connections);
+
+        connections.subscriptionsByDomain['project|proj-1'] = [
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-wildcard',
+            entityType: '*',
+          ),
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-task',
+            entityType: 'task',
+          ),
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-last-record',
+            entityType: r'$',
+          ),
+        ];
+
+        final event = {
+          'Records': [
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  'notifyType': 'domainChange',
+                  'domainType': 'project',
+                  'domainId': 'proj-1',
+                  'entityType': 'task',
+                  'data': DomainChangeData(
+                    name: 'task-update',
+                    lastDomainSeq: 1,
+                    lastDomainChangeAt: DateTime.parse(
+                      '2026-07-17T00:00:00.000Z',
+                    ),
+                  ).toJson(),
+                }),
+              },
+            },
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  'notifyType': 'domainChange',
+                  'domainType': 'project',
+                  'domainId': 'proj-1',
+                  'entityType': 'note',
+                  'data': DomainChangeData(
+                    name: 'note-update',
+                    lastDomainSeq: 2,
+                    lastDomainChangeAt: DateTime.parse(
+                      '2026-07-17T00:00:01.000Z',
+                    ),
+                  ).toJson(),
+                }),
+              },
+            },
+          ],
+        };
+
+        await wsNotifyHandler(
+          event,
+          connections: connections,
+          management: management,
+        );
+
+        expect(management.sentMessages, hasLength(4));
+        expect(
+          management.sentMessages.map((msg) => msg['connectionId']),
+          containsAll(['conn-wildcard', 'conn-task', 'conn-last-record']),
+        );
+
+        final lastRecordMessages = management.sentMessages
+            .where((msg) => msg['connectionId'] == 'conn-last-record')
+            .toList();
+        expect(lastRecordMessages, hasLength(1));
+        expect(lastRecordMessages[0]['payload']['data']['name'], 'note-update');
+      },
+    );
+
     test('sends only the latest domainChange data per entityType', () async {
       final connections = _FakeConnectionsRepository();
       final management = _FakeManagementClient(connections: connections);

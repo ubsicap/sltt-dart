@@ -8,14 +8,18 @@
 ///     -> connection metadata (see WebsocketConnectionsRepository.putConnection)
 ///   PK connectionId, SK "sub#@DOMAINTYPE#<domainType>#@DOMAINID#<domainId>#@ENTITYTYPE#<entityType|*>"
 ///     -> one subscription ("*" means "all entity types on this domain")
+///   PK connectionId, SK "sub#@DOMAINTYPE#<domainType>#@DOMAINID#<domainId>#@ENTITYTYPE#<latest-record-sentinel>"
+///     -> one subscription for the latest record in the domain group
 ///   GSI1PK "sub#@DOMAINTYPE#<domainType>#@DOMAINID#<domainId>" (entityType omitted)
 ///     -> lets wsNotify fetch every connection subscribed to a domain in one
-///        query, then split matches by exact entityType vs "*" in code.
+///        query, then split matches by exact entityType vs "*" vs latest-record
+///        sentinel in code.
 class WebsocketKeys {
   WebsocketKeys._();
 
   static const String connectionSk = 'con';
   static const String wildcardEntityType = '*';
+  static const String lastRecordEntityType = r'$';
 
   static String subscriptionSk({
     required String domainType,
