@@ -11,7 +11,8 @@ class StorageFactory {
   static DynamoDBStorageService createStorage({
     required AWSCredentials credentials,
     bool useLocalDynamoDB = false,
-    Future<AWSCredentials> Function()? credentialsResolver,
+    Future<AWSCredentials> Function([bool? useAssumeRole])?
+        credentialsResolver,
   }) {
     final tableName =
         Platform.environment['DYNAMODB_TABLE'] ?? 'sltt-changes-dev';

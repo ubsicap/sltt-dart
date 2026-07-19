@@ -23,27 +23,20 @@ class AwsCredentialsService {
 
   /// Get current or cached credentials, refreshing if expired.
   ///
-  /// If [SHARED_INFRA_ASSUME_ROLE_ARN] environment variable is set,
-  /// performs STS AssumeRole and returns temporary credentials, cached
-  /// until close to expiration (to avoid an STS round-trip per request).
+  /// If [useAssumeRole] is true, performs STS AssumeRole and caches temporary
+  /// credentials until close to expiration.
   ///
-  /// FIXED: 7/17/2026: See Claude https://claude.ai/share/b8dc5340-56d8-427c-8e93-8a467ef7dc6e
+  /// If [useAssumeRole] is false, returns credentials from the current AWS
+  /// environment variables every call.
   ///
-  /// Otherwise, returns credentials read directly from the AWS environment
-  /// variables *on every call*. Those are NOT long-lived IAM user keys in
-  /// a Lambda context - they're the execution role's temporary STS
-  /// credentials, which AWS rotates in place roughly hourly without any
-  /// signal exposed to this process other than the env vars themselves
-  /// simply changing. Caching them (as this used to do, treating them as
-  /// "never expiring") meant a warm container would keep signing requests
-  /// with a stale, already-rotated session indefinitely - which surfaces
-  /// as a 403 "signature does not match" from API Gateway/etc, not a
-  /// cleaner expired-token error, since the cached triplet is internally
-  /// consistent, just no longer valid. Re-reading env vars is a pure
-  /// in-memory operation, so there's no cost to doing it every time.
-  Future<AWSCredentials> getOrCreateCredentials() async {
+  /// If [useAssumeRole] is null, this preserves current behavior: assume-role
+  /// when [SHARED_INFRA_ASSUME_ROLE_ARN] is configured, otherwise use local
+  /// environment credentials.
+  Future<AWSCredentials> getOrCreateCredentials({bool? useAssumeRole}) async {
     final assumeRoleArn = Platform.environment['SHARED_INFRA_ASSUME_ROLE_ARN'];
-    final usingAssumeRole = assumeRoleArn?.isNotEmpty == true;
+    final usingAssumeRole =
+        useAssumeRole == true ||
+        (useAssumeRole == null && assumeRoleArn?.isNotEmpty == true);
 
     SlttLogger.logger.info(
       '[AwsCredentialsService] getOrCreateCredentials usingAssumeRole=$usingAssumeRole',
@@ -51,6 +44,12 @@ class AwsCredentialsService {
 
     if (!usingAssumeRole) {
       return _getEnvironmentCredentials();
+    }
+
+    if (assumeRoleArn?.isNotEmpty != true) {
+      throw AwsCredentialsException(
+        'SHARED_INFRA_ASSUME_ROLE_ARN is not configured but assume-role credentials were requested',
+      );
     }
 
     SlttLogger.logger.info(
@@ -64,14 +63,26 @@ class AwsCredentialsService {
   }
 
   /// Force refresh of credentials (useful for testing or explicit refresh).
-  /// Only meaningful for the assume-role path; environment credentials are
-  /// always read fresh and never cached.
-  Future<AWSCredentials> refreshCredentials() async {
+  ///
+  /// If [useAssumeRole] is false, refreshes local environment credentials.
+  /// If [useAssumeRole] is true, refreshes cross-account assume-role credentials.
+  /// If [useAssumeRole] is null, infers the path from
+  /// [SHARED_INFRA_ASSUME_ROLE_ARN].
+  Future<AWSCredentials> refreshCredentials({bool? useAssumeRole}) async {
     final assumeRoleArn = Platform.environment['SHARED_INFRA_ASSUME_ROLE_ARN'];
-    if (assumeRoleArn?.isNotEmpty == true) {
-      return _refreshCredentials(assumeRoleArn: assumeRoleArn!);
+    final usingAssumeRole =
+        useAssumeRole == true ||
+        (useAssumeRole == null && assumeRoleArn?.isNotEmpty == true);
+
+    if (!usingAssumeRole) {
+      return _getEnvironmentCredentials();
     }
-    return _getEnvironmentCredentials();
+    if (assumeRoleArn?.isNotEmpty != true) {
+      throw AwsCredentialsException(
+        'SHARED_INFRA_ASSUME_ROLE_ARN is not configured but assume-role credentials were requested',
+      );
+    }
+    return _refreshCredentials(assumeRoleArn: assumeRoleArn!);
   }
 
   Future<AWSCredentials> _refreshCredentials({

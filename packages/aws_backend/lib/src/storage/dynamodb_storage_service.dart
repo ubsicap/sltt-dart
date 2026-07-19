@@ -177,7 +177,7 @@ class DynamoDBStorageService extends BaseStorageService {
     this.useLocalDynamoDB = false,
     this.localEndpoint,
     required this.credentials,
-    Future<AWSCredentials> Function()? credentialsResolver,
+    Future<AWSCredentials> Function([bool? useAssumeRole])? credentialsResolver,
     http.Client? httpClient,
     this.domainChangeTopicArn,
   }) : _credentialsResolver = credentialsResolver,
@@ -188,7 +188,8 @@ class DynamoDBStorageService extends BaseStorageService {
   final bool useLocalDynamoDB;
   final String? localEndpoint;
   final AWSCredentials credentials;
-  final Future<AWSCredentials> Function()? _credentialsResolver;
+  final Future<AWSCredentials> Function([bool? useAssumeRole])?
+  _credentialsResolver;
   final String? domainChangeTopicArn;
 
   final http.Client _httpClient;
@@ -2431,7 +2432,7 @@ class DynamoDBStorageService extends BaseStorageService {
     final encodedBody = utf8.encode(body);
 
     final signingCredentials =
-        await (_credentialsResolver?.call() ??
+        await (_credentialsResolver?.call(false) ??
             Future<AWSCredentials>.value(credentials));
     final signer = AWSSigV4Signer(
       credentialsProvider: AWSCredentialsProvider(signingCredentials),

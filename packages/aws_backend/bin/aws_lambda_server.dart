@@ -67,12 +67,18 @@ Future<Map<String, dynamic>> _handleApi(Map<String, dynamic> event) async {
     );
 
     stage = Stopwatch()..start();
-    storage = StorageFactory.createStorage(credentials: credentials);
+    storage = StorageFactory.createStorage(
+      credentials: credentials,
+      credentialsResolver: ([useAssumeRole]) => AwsCredentialsService()
+          .getOrCreateCredentials(useAssumeRole: useAssumeRole),
+    );
     mediaStorage = _createMediaStorageFromEnv(credentials: credentials);
     authService = BackendAuthServiceFactory.createFromEnvironment(
       credentials: credentials,
       appStorage: storage,
       environment: Platform.environment,
+      credentialsResolver: ([useAssumeRole]) => AwsCredentialsService()
+          .getOrCreateCredentials(useAssumeRole: useAssumeRole),
     );
     SlttLogger.logger.info(
       '[LambdaTiming] stage=createServices elapsedMs=${stage.elapsedMilliseconds} request="$requestSummary" authEnabled=${authService != null}',
