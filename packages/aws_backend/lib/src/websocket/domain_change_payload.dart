@@ -60,6 +60,7 @@ Map<String, dynamic> buildDomainChangeNotificationPayload({
   required String domainId,
   required DomainChangeData data,
   String? entityType,
+  String? subscriptionKey,
 }) {
   return {
     'action': 'change',
@@ -67,6 +68,7 @@ Map<String, dynamic> buildDomainChangeNotificationPayload({
     'domainType': domainType,
     'domainId': domainId,
     if (entityType != null) 'entityType': entityType,
+    if (subscriptionKey != null) 'subscriptionKey': subscriptionKey,
     'data': data.toJson(),
   };
 }

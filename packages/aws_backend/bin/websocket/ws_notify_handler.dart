@@ -192,6 +192,12 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     for (final record in recordsToSend) {
       final alreadyNotified = <String>{};
 
+      final wildcardSubscriptionKey = WebsocketKeys.subscriptionSk(
+        domainType: domainType,
+        domainId: domainId,
+        entityType: WebsocketKeys.wildcardEntityType,
+      );
+
       for (final connectionId in wildcardConnections) {
         await _sendDomainChangeNotification(
           management: management,
@@ -199,6 +205,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
           domainType: domainType,
           domainId: domainId,
           entityType: record.entityType,
+          subscriptionKey: wildcardSubscriptionKey,
           data: record.data,
         );
         alreadyNotified.add(connectionId);
@@ -207,6 +214,11 @@ Future<Map<String, dynamic>> wsNotifyHandler(
       if (record.entityType != null) {
         final exactMatchConnections =
             exactConnections[record.entityType!] ?? const <String>{};
+        final exactSubscriptionKey = WebsocketKeys.subscriptionSk(
+          domainType: domainType,
+          domainId: domainId,
+          entityType: record.entityType!,
+        );
         for (final connectionId in exactMatchConnections) {
           if (!alreadyNotified.add(connectionId)) {
             continue;
@@ -218,12 +230,19 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             domainType: domainType,
             domainId: domainId,
             entityType: record.entityType,
+            subscriptionKey: exactSubscriptionKey,
             data: record.data,
           );
         }
       }
 
       if (record.index == latestGroupRecord.index) {
+        final lastRecordSubscriptionKey = WebsocketKeys.subscriptionSk(
+          domainType: domainType,
+          domainId: domainId,
+          entityType: WebsocketKeys.lastRecordEntityType,
+        );
+
         for (final connectionId in lastRecordConnections) {
           if (!alreadyNotified.add(connectionId)) {
             continue;
@@ -235,6 +254,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             domainType: domainType,
             domainId: domainId,
             entityType: record.entityType,
+            subscriptionKey: lastRecordSubscriptionKey,
             data: record.data,
           );
         }
@@ -252,6 +272,7 @@ Future<void> _sendDomainChangeNotification({
   required String domainId,
   required DomainChangeData data,
   String? entityType,
+  String? subscriptionKey,
 }) async {
   await management.send(
     connectionId,
@@ -260,6 +281,7 @@ Future<void> _sendDomainChangeNotification({
       domainId: domainId,
       data: data,
       entityType: entityType,
+      subscriptionKey: subscriptionKey,
     ),
   );
 }

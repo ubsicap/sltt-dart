@@ -9,8 +9,10 @@ import 'package:aws_backend/src/websocket/domain_change_payload.dart'
 import 'package:test/test.dart';
 
 import '../bin/websocket/websocket_connections_repository.dart';
+import '../bin/websocket/websocket_keys.dart';
 import '../bin/websocket/websocket_management_client.dart';
 import '../bin/websocket/ws_notify_handler.dart';
+import '../bin/websocket/ws_subscribe_handler.dart';
 
 void main() {
   group('wsNotifyHandler helpers', () {
@@ -164,6 +166,11 @@ void main() {
           'domainType': 'project',
           'domainId': 'proj-1',
           'entityType': 'task',
+          'subscriptionKey': WebsocketKeys.subscriptionSk(
+            domainType: 'project',
+            domainId: 'proj-1',
+            entityType: 'task',
+          ),
           'data': {
             'name': 'domain-update',
             'lastDomainSeq': 1,
@@ -257,9 +264,41 @@ void main() {
 
       expect(management.sentMessages, hasLength(4));
       expect(management.sentMessages[0]['connectionId'], 'conn-wildcard-2');
+      expect(
+        management.sentMessages[0]['payload']['subscriptionKey'],
+        WebsocketKeys.subscriptionSk(
+          domainType: 'project',
+          domainId: 'proj-2',
+          entityType: WebsocketKeys.wildcardEntityType,
+        ),
+      );
       expect(management.sentMessages[1]['connectionId'], 'conn-note-1');
+      expect(
+        management.sentMessages[1]['payload']['subscriptionKey'],
+        WebsocketKeys.subscriptionSk(
+          domainType: 'project',
+          domainId: 'proj-2',
+          entityType: 'note',
+        ),
+      );
       expect(management.sentMessages[2]['connectionId'], 'conn-wildcard-1');
+      expect(
+        management.sentMessages[2]['payload']['subscriptionKey'],
+        WebsocketKeys.subscriptionSk(
+          domainType: 'project',
+          domainId: 'proj-1',
+          entityType: WebsocketKeys.wildcardEntityType,
+        ),
+      );
       expect(management.sentMessages[3]['connectionId'], 'conn-task-1');
+      expect(
+        management.sentMessages[3]['payload']['subscriptionKey'],
+        WebsocketKeys.subscriptionSk(
+          domainType: 'project',
+          domainId: 'proj-1',
+          entityType: 'task',
+        ),
+      );
     });
 
     test(
@@ -366,6 +405,14 @@ void main() {
 
         expect(management.sentMessages, hasLength(1));
         expect(management.sentMessages[0]['connectionId'], 'conn-both');
+        expect(
+          management.sentMessages[0]['payload']['subscriptionKey'],
+          WebsocketKeys.subscriptionSk(
+            domainType: 'project',
+            domainId: 'proj-1',
+            entityType: WebsocketKeys.wildcardEntityType,
+          ),
+        );
       },
     );
 
@@ -446,6 +493,14 @@ void main() {
             .toList();
         expect(lastRecordMessages, hasLength(1));
         expect(lastRecordMessages[0]['payload']['data']['name'], 'note-update');
+        expect(
+          lastRecordMessages[0]['payload']['subscriptionKey'],
+          WebsocketKeys.subscriptionSk(
+            domainType: 'project',
+            domainId: 'proj-1',
+            entityType: WebsocketKeys.lastRecordEntityType,
+          ),
+        );
       },
     );
 
@@ -643,6 +698,44 @@ void main() {
       expect(management.sentMessages, isEmpty);
     });
   });
+
+  group('wsSubscribeHandler', () {
+    test('ack includes subscriptionKey for wildcard subscriptions', () async {
+      final connections = _FakeConnectionsRepository();
+      final management = _FakeManagementClient(connections: connections);
+
+      final event = {
+        'requestContext': {'connectionId': 'conn-sub-1'},
+        'body': jsonEncode({'domainType': 'project', 'domainId': 'proj-1'}),
+      };
+
+      await wsSubscribeHandler(
+        event,
+        connections: connections,
+        management: management,
+      );
+
+      expect(connections.subscriptions, hasLength(1));
+      expect(connections.subscriptions[0], {
+        'connectionId': 'conn-sub-1',
+        'domainType': 'project',
+        'domainId': 'proj-1',
+        'entityType': null,
+      });
+      expect(management.sentMessages, hasLength(1));
+      expect(management.sentMessages[0]['payload'], {
+        'action': 'subscribe',
+        'status': 'ok',
+        'domainType': 'project',
+        'domainId': 'proj-1',
+        'subscriptionKey': WebsocketKeys.subscriptionSk(
+          domainType: 'project',
+          domainId: 'proj-1',
+          entityType: WebsocketKeys.wildcardEntityType,
+        ),
+      });
+    });
+  });
 }
 
 class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
@@ -656,6 +749,7 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
   final List<Map<String, dynamic>> queries = [];
   final Map<String, List<WebsocketSubscriptionMatch>> subscriptionsByDomain =
       {};
+  final List<Map<String, dynamic>> subscriptions = [];
 
   @override
   Future<List<WebsocketSubscriptionMatch>> findSubscribersByDomain({
@@ -707,8 +801,13 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
     required String domainType,
     required String domainId,
     String? entityType,
-  }) {
-    throw UnimplementedError();
+  }) async {
+    subscriptions.add({
+      'connectionId': connectionId,
+      'domainType': domainType,
+      'domainId': domainId,
+      'entityType': entityType,
+    });
   }
 }
 

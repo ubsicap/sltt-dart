@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
 import 'websocket_connections_repository.dart';
+import 'websocket_keys.dart';
 import 'websocket_management_client.dart';
 
 /// Handles {"action":"subscribe","domainType":...,"domainId":...,"entityType":...}
@@ -43,6 +44,13 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
   }
 
   try {
+    final resolvedEntityType = WebsocketKeys.resolveEntityType(entityType);
+    final subscriptionKey = WebsocketKeys.subscriptionSk(
+      domainType: domainType,
+      domainId: domainId,
+      entityType: resolvedEntityType,
+    );
+
     await connections.putSubscription(
       connectionId: connectionId,
       domainType: domainType,
@@ -55,7 +63,8 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       'status': 'ok',
       'domainType': domainType,
       'domainId': domainId,
-      'entityType': entityType,
+      if (entityType != null) 'entityType': entityType,
+      'subscriptionKey': subscriptionKey,
     });
 
     SlttLogger.logger.info(
