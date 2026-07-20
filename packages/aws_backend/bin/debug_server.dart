@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:aws_backend/aws_backend.dart';
+import 'package:aws_backend/src/utils/media_environment.dart';
+import 'package:aws_common/aws_common.dart' show AWSCredentials;
 import 'package:sltt_core/sltt_core.dart';
 
 /// Debugger entrypoint for AWS backend that sets up environment variables
@@ -82,19 +84,22 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
   try {
     final credentialsService = AwsCredentialsService();
 
+    Future<AWSCredentials> resolveCredentials([bool? useAssumeRole]) {
+      return credentialsService.getOrCreateCredentials(
+        useAssumeRole: useAssumeRole,
+      );
+    }
+
     // Get credentials first - may throw AwsCredentialsException
     final credentials = await credentialsService.getOrCreateCredentials();
     storage = StorageFactory.createStorage(
       credentials: credentials,
       useLocalDynamoDB: useLocalDynamoDB,
-      credentialsResolver: credentialsService.getOrCreateCredentials,
+      credentialsResolver: resolveCredentials,
     );
 
     final mediaBucket = Platform.environment['MEDIA_BUCKET'];
-    final mediaRegion =
-        Platform.environment['AWS_REGION'] ??
-        Platform.environment['AWS_DEFAULT_REGION'] ??
-        'us-east-1';
+    final mediaRegion = getMediaBucketRegion(Platform.environment);
     final cloudFrontDomain = Platform.environment['MEDIA_CLOUDFRONT_DOMAIN'];
     final cloudFrontKeyPairId =
         Platform.environment['MEDIA_CLOUDFRONT_KEY_PAIR_ID'];
@@ -131,6 +136,9 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
     print('   USE_CLOUD_STORAGE: $useCloudStorage');
     print('   useLocalDynamoDB: ${storage.useLocalDynamoDB}');
     print('   MEDIA_BUCKET: $mediaBucket');
+    print(
+      '   MEDIA_BUCKET_REGION: ${Platform.environment['MEDIA_BUCKET_REGION'] ?? '(unset)'}',
+    );
     print('   CLOUDFRONT_DOMAIN: $cloudFrontDomain');
     print('   CLOUDFRONT_KEY_PAIR_ID: $cloudFrontKeyPairId');
     print('   AUTH_TABLE: $authTable');
@@ -166,7 +174,7 @@ Note: For automatic credential setup, use the run_debug_server.sh script instead
       credentials: credentials,
       appStorage: storage,
       environment: Platform.environment,
-      credentialsResolver: credentialsService.getOrCreateCredentials,
+      credentialsResolver: resolveCredentials,
     );
     await authService?.initialize();
     if (authService == null) {

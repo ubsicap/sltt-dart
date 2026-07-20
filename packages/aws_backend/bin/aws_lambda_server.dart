@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:aws_backend/aws_backend.dart';
+import 'package:aws_backend/src/utils/media_environment.dart';
 import 'package:aws_common/aws_common.dart' show AWSCredentials;
 import 'package:sltt_core/sltt_core.dart' show SlttLogger;
 
@@ -67,18 +68,22 @@ Future<Map<String, dynamic>> _handleApi(Map<String, dynamic> event) async {
     );
 
     stage = Stopwatch()..start();
+    Future<AWSCredentials> resolveLambdaCredentials([bool? useAssumeRole]) {
+      return AwsCredentialsService().getOrCreateCredentials(
+        useAssumeRole: useAssumeRole,
+      );
+    }
+
     storage = StorageFactory.createStorage(
       credentials: credentials,
-      credentialsResolver: ([useAssumeRole]) => AwsCredentialsService()
-          .getOrCreateCredentials(useAssumeRole: useAssumeRole),
+      credentialsResolver: resolveLambdaCredentials,
     );
     mediaStorage = _createMediaStorageFromEnv(credentials: credentials);
     authService = BackendAuthServiceFactory.createFromEnvironment(
       credentials: credentials,
       appStorage: storage,
       environment: Platform.environment,
-      credentialsResolver: ([useAssumeRole]) => AwsCredentialsService()
-          .getOrCreateCredentials(useAssumeRole: useAssumeRole),
+      credentialsResolver: resolveLambdaCredentials,
     );
     SlttLogger.logger.info(
       '[LambdaTiming] stage=createServices elapsedMs=${stage.elapsedMilliseconds} request="$requestSummary" authEnabled=${authService != null}',
@@ -501,7 +506,7 @@ AwsMediaStorage _createMediaStorageFromEnv({
     throw StateError('MEDIA_BUCKET environment variable is required');
   }
 
-  final region = _region();
+  final region = getMediaBucketRegion(Platform.environment);
 
   final cloudFrontDomain =
       Platform.environment['MEDIA_CLOUDFRONT_DOMAIN'] ??
