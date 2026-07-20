@@ -100,7 +100,7 @@ resources:
           - Key: Stage
             Value: ${self:provider.stage}
           - Key: Purpose
-            Value: SLTT change log data (per-account/stage)
+            Value: SLTT change log data - per-account/stage
 
     AuthTable:
       Type: AWS::DynamoDB::Table
@@ -141,7 +141,7 @@ resources:
           - Key: Stage
             Value: ${self:provider.stage}
           - Key: Purpose
-            Value: SLTT authentication state (per-account/stage)
+            Value: SLTT authentication state - per-account/stage
 
     # SSM Parameters - LOCAL to this account. secondary-infra in the same
     # account/stage reads these directly, no cross-account role or resource
