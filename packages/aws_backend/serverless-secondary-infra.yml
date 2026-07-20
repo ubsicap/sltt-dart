@@ -1,32 +1,43 @@
 # Serverless Framework configuration for SLTT secondary infrastructure
-# This stack contains API functions and references shared infrastructure
-# resources (DynamoDB, S3, CloudFront) from the shared infra account.
+# This stack contains API functions and references:
+#   - DynamoDB tables from serverless-data-infra.yml, deployed in THIS SAME
+#     account/stage - read via local SSM, plain same-account IAM, no
+#     AssumeRole.
+#   - S3/CloudFront from serverless-shared-infra.yml, pinned to the prod
+#     account - read via cross-account SSM parameter reads, and S3 objects
+#     are written directly with this stack's own Lambda execution role
+#     (the shared bucket policy trusts that role's ARN pattern). No
+#     AssumeRole here either.
+#   - SES, configured and verified LOCALLY in this account. Email is never
+#     sent cross-account; dev/test environments read verification codes etc.
+#     from this account's own CloudWatch Logs instead of real delivery.
 service: sltt-${self:custom.slttStackVersion}-secondary-infra
 
 custom:
   # SLTT infrastructure version used for resource naming and parameter prefixes
-  slttStackVersion: v1
+  slttStackVersion: v2
 
-  # Shared infrastructure stage (fixed to prd by default)
-  sharedInfraStage: ${opt:sharedInfraStage, 'prd'}
-  # Shared infra account (source of SSM params)
-  sharedInfraAccountId: ${opt:sharedInfraAccountId, '379334555674'}
+  # --- Media (shared-infra) lookup: cross-account, fixed to prod -----------
+  mediaInfraStage: ${opt:mediaInfraStage, 'prd'}
+  mediaInfraAccountId: ${opt:mediaInfraAccountId, '379334555674'}
+  mediaInfraSsmPrefix: /sltt/${self:custom.slttStackVersion}/${self:custom.mediaInfraStage}
+  mediaInfraArnPath: arn:aws:ssm:${self:provider.region}:${self:custom.mediaInfraAccountId}:parameter${self:custom.mediaInfraSsmPrefix}
 
-  # SSM parameter prefix for shared infrastructure values
-  sharedInfraSsmPrefix: /sltt/${self:custom.slttStackVersion}/${self:custom.sharedInfraStage}
-  sharedInfraArnPath: arn:aws:ssm:${self:provider.region}:${self:custom.sharedInfraAccountId}:parameter${self:custom.sharedInfraSsmPrefix}
+  mediaBucket: ${ssm:${self:custom.mediaInfraArnPath}/s3/bucket-name}
+  mediaBucketArn: ${ssm:${self:custom.mediaInfraArnPath}/s3/bucket-arn}
+  mediaCloudFrontDomain: ${ssm:${self:custom.mediaInfraArnPath}/cloudfront/domain}
+  mediaCloudFrontKeyPairId: ${ssm:${self:custom.mediaInfraArnPath}/cloudfront/keypair-id}
+  mediaCloudFrontPrivateKey: ${ssm:${self:custom.mediaInfraArnPath}/cloudfront/private-key}
+  mediaInfraRegion: ${ssm:${self:custom.mediaInfraArnPath}/region}
 
-  # Shared infrastructure values from SSM (can be cross-account via SSM resource policy)
-  dynamoDbTable: ${ssm:${self:custom.sharedInfraArnPath}/dynamodb/table-name}
-  dynamoDbTableArn: ${ssm:${self:custom.sharedInfraArnPath}/dynamodb/table-arn}
-  authTable: ${ssm:${self:custom.sharedInfraArnPath}/auth/table-name}
-  authTableArn: ${ssm:${self:custom.sharedInfraArnPath}/auth/table-arn}
-  mediaBucket: ${ssm:${self:custom.sharedInfraArnPath}/s3/bucket-name}
-  mediaBucketArn: ${ssm:${self:custom.sharedInfraArnPath}/s3/bucket-arn}
-  mediaCloudFrontDomain: ${ssm:${self:custom.sharedInfraArnPath}/cloudfront/domain}
-  mediaCloudFrontKeyPairId: ${ssm:${self:custom.sharedInfraArnPath}/cloudfront/keypair-id}
-  mediaCloudFrontPrivateKey: ${ssm:${self:custom.sharedInfraArnPath}/cloudfront/private-key}
-  sharedInfraRegion: ${ssm:${self:custom.sharedInfraArnPath}/region}
+  # --- Data (data-infra) lookup: LOCAL, same account/stage as this stack ---
+  # No account id needed - this is a same-account SSM read.
+  dataInfraSsmPrefix: /sltt/${self:custom.slttStackVersion}/${self:provider.stage}
+
+  dynamoDbTable: ${ssm:${self:custom.dataInfraSsmPrefix}/dynamodb/table-name}
+  dynamoDbTableArn: ${ssm:${self:custom.dataInfraSsmPrefix}/dynamodb/table-arn}
+  authTable: ${ssm:${self:custom.dataInfraSsmPrefix}/auth/table-name}
+  authTableArn: ${ssm:${self:custom.dataInfraSsmPrefix}/auth/table-arn}
 
   # Table backing websocket connections + their domain/entity subscriptions
   websocketConnectionsTable: sltt-${self:custom.slttStackVersion}-ws-connections-${self:provider.stage}
@@ -66,10 +77,13 @@ provider:
     AUTH_REFRESH_TOKEN_TTL_DAYS: ${ssm:/sltt/auth/${self:provider.stage}/refresh-token-ttl-days, '30'}
     AUTH_EMAIL_MODE: ${ssm:/sltt/auth/${self:provider.stage}/email-mode, 'ses'}
     AUTH_SES_FROM_EMAIL: ${ssm:/sltt/auth/${self:provider.stage}/ses-from-email, 'no-reply@sltt-bible.net'}
-    DYNAMODB_REGION: ${self:custom.sharedInfraRegion}
-    SHARED_INFRA_ASSUME_ROLE_ARN: ${ssm:${self:custom.sharedInfraArnPath}/cross-account-role-arn}
-    ASSUME_ROLE_SESSION_NAME: sltt-v1-secondary-infra-${self:provider.stage}
+    # DynamoDB is now LOCAL - same region as this stack's own deployment.
+    DYNAMODB_REGION: ${self:provider.region}
+    # S3/CloudFront live in the shared media account, which may not be the
+    # same region as this stack. Kept distinct from DYNAMODB_REGION/the
+    # Lambda's own execution region on purpose - do not collapse these.
     MEDIA_BUCKET: ${self:custom.mediaBucket}
+    MEDIA_BUCKET_REGION: ${self:custom.mediaInfraRegion}
     MEDIA_CLOUDFRONT_DOMAIN: ${self:custom.mediaCloudFrontDomain}
     MEDIA_CLOUDFRONT_KEY_PAIR_ID: ${self:custom.mediaCloudFrontKeyPairId}
     MEDIA_CLOUDFRONT_PRIVATE_KEY: ${self:custom.mediaCloudFrontPrivateKey}
@@ -89,7 +103,10 @@ provider:
           - ${self:provider.stage}
     DOMAIN_CHANGE_TOPIC_ARN: !Ref DomainChangeTopic
 
-  # IAM permissions for shared DynamoDB + S3 resources
+  # IAM permissions. NOTE: no sts:AssumeRole statement anywhere in this stack.
+  # DynamoDB tables are same-account (plain resource ARNs below). S3 access
+  # to the cross-account media bucket is granted by that bucket's own policy
+  # trusting this role's ARN pattern directly - nothing to assume here either.
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -117,20 +134,6 @@ provider:
         - ${self:custom.authTableArn}
     - Effect: Allow
       Action:
-        - dynamodb:ExportTableToPointInTime
-      Resource:
-        - ${self:custom.dynamoDbTableArn}
-    - Effect: Allow
-      Action:
-        - dynamodb:DescribeExport
-      Resource:
-        - arn:aws:dynamodb:${self:provider.region}:${self:custom.sharedInfraAccountId}:table/${self:custom.dynamoDbTable}/export/*
-    - Effect: Allow
-      Action:
-        - dynamodb:ListExports
-      Resource: '*'
-    - Effect: Allow
-      Action:
         - s3:AbortMultipartUpload
         - s3:CreateMultipartUpload
         - s3:GetObject
@@ -144,6 +147,9 @@ provider:
         - ${self:custom.mediaBucketArn}
         - ${self:custom.mediaBucketArn}/*
     - Effect: Allow
+      # SES is local to this account - Resource '*' scopes to identities
+      # verified in THIS account only, which is the point (see custom.
+      # mediaInfraStage comment above: email is never sent cross-account).
       Action:
         - ses:SendEmail
       Resource: '*'
@@ -152,13 +158,9 @@ provider:
         - ssm:GetParameter
         - ssm:GetParameters
       Resource:
-        - ${self:custom.sharedInfraArnPath}/*
+        # Local data-infra + auth secrets (same account)
+        - arn:aws:ssm:${self:provider.region}:*:parameter${self:custom.dataInfraSsmPrefix}/*
         - arn:aws:ssm:${self:provider.region}:*:parameter/sltt/auth/${self:provider.stage}/*
-    - Effect: Allow
-      Action:
-        - sts:AssumeRole
-      Resource:
-        - ${ssm:${self:custom.sharedInfraArnPath}/cross-account-role-arn}
     - Effect: Allow
       Action:
         - dynamodb:GetItem

@@ -1,18 +1,22 @@
 # Serverless Framework configuration for SLTT shared infrastructure
-# This stack contains DynamoDB, S3, and CloudFront resources that are shared
-# across multiple API deployments (potentially in different AWS accounts)
+# This stack contains ONLY resources that must be a single, cross-account
+# source of truth pinned to the production account:
+#   - S3 media bucket (Object Lock + if-match semantics require one bucket)
+#   - CloudFront distribution/policies/keys fronting that bucket
+#
+# DynamoDB tables live in serverless-data-infra.yml (deployed per account/stage).
+# SES is deployed and verified locally per account (see serverless-secondary-infra.yml) -
+# this stack has no SES resources and secondary accounts never send cross-account email.
 service: sltt-${self:custom.slttStackVersion}-shared-infra
 
 custom:
   # SLTT infrastructure version used for resource naming and parameter prefixes
-  slttStackVersion: v1
+  slttStackVersion: v2
 
   # Fixed stage name - this infrastructure is shared across all API stages
   infraStage: prd
 
   # Resource naming without stage suffix since there's only one infrastructure
-  dynamoDbTable: ${self:service}-changes-states
-  authTable: ${self:service}-auth
   mediaBucket: ${self:service}-media-worm-${aws:accountId}
 
   # CloudFront public key from SSM (setup required before deployment)
@@ -31,108 +35,6 @@ provider:
 
 resources:
   Resources:
-    # DynamoDB table for change log entries - shared across all API deployments
-    ChangesTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:custom.dynamoDbTable}
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: pk
-            AttributeType: S
-          - AttributeName: sk
-            AttributeType: S
-          - AttributeName: gsi1pk
-            AttributeType: S
-          - AttributeName: gsi1sk
-            AttributeType: S
-          - AttributeName: gsi2pk
-            AttributeType: S
-          - AttributeName: gsi2sk
-            AttributeType: S
-          - AttributeName: gsi3pk
-            AttributeType: S
-          - AttributeName: gsi3sk
-            AttributeType: S
-        KeySchema:
-          - AttributeName: pk
-            KeyType: HASH
-          - AttributeName: sk
-            KeyType: RANGE
-        GlobalSecondaryIndexes:
-          - IndexName: GSI1
-            KeySchema:
-              - AttributeName: gsi1pk
-                KeyType: HASH
-              - AttributeName: gsi1sk
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-          - IndexName: GSI2
-            KeySchema:
-              - AttributeName: gsi2pk
-                KeyType: HASH
-              - AttributeName: gsi2sk
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-          - IndexName: GSI3
-            KeySchema:
-              - AttributeName: gsi3pk
-                KeyType: HASH
-              - AttributeName: gsi3sk
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-        StreamSpecification:
-          StreamViewType: NEW_AND_OLD_IMAGES
-        PointInTimeRecoverySpecification:
-          PointInTimeRecoveryEnabled: true
-        Tags:
-          - Key: Service
-            Value: ${self:service}
-          - Key: Purpose
-            Value: Shared infrastructure for SLTT API deployments
-
-    AuthTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:custom.authTable}
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: pk
-            AttributeType: S
-          - AttributeName: sk
-            AttributeType: S
-          - AttributeName: gsi1pk
-            AttributeType: S
-          - AttributeName: gsi1sk
-            AttributeType: S
-        KeySchema:
-          - AttributeName: pk
-            KeyType: HASH
-          - AttributeName: sk
-            KeyType: RANGE
-        GlobalSecondaryIndexes:
-          - IndexName: GSI1
-            KeySchema:
-              - AttributeName: gsi1pk
-                KeyType: HASH
-              - AttributeName: gsi1sk
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-        TimeToLiveSpecification:
-          AttributeName: ttlEpochSeconds
-          Enabled: true
-        PointInTimeRecoverySpecification:
-          PointInTimeRecoveryEnabled: true
-        Tags:
-          - Key: Service
-            Value: ${self:service}
-          - Key: Purpose
-            Value: Shared authentication state for SLTT API deployments
-
     # S3 bucket for media storage with WORM (Write Once Read Many) capabilities
     MediaBucket:
       Type: AWS::S3::Bucket
@@ -146,6 +48,14 @@ resources:
         ObjectLockEnabled: true
         AccelerateConfiguration:
           AccelerationStatus: Enabled
+        # Cross-account writers (secondary accounts) never send ACLs and rely
+        # entirely on the bucket policy below for access, so the bucket - not
+        # the writing account - should own every object. Also required for
+        # the if-match/object-lock guarantees to apply consistently regardless
+        # of which account's Lambda wrote the object.
+        OwnershipControls:
+          Rules:
+            - ObjectOwnership: BucketOwnerEnforced
         LifecycleConfiguration:
           Rules:
             - Id: AbortIncompleteMultipartUploads
@@ -255,7 +165,11 @@ resources:
           Items:
             - !Ref MediaCloudFrontPublicKey
 
-    # S3 bucket policy to allow CloudFront and secondary access
+    # S3 bucket policy. This is the ONLY thing that grants secondary accounts
+    # access - they call S3 directly with their own Lambda execution role
+    # credentials; there is no cross-account role to assume. If you add a new
+    # secondary account/environment, add its role ARN pattern here and
+    # redeploy this stack.
     MediaBucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
@@ -274,7 +188,8 @@ resources:
               Condition:
                 StringEquals:
                   aws:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${MediaCloudFrontDistribution}
-            # Allow secondary deployments to read/write objects
+            # Allow secondary deployments to read/write objects directly with
+            # their own Lambda execution role - no AssumeRole involved.
             - Sid: AllowSecondaryRead
               Effect: Allow
               Principal:
@@ -287,11 +202,11 @@ resources:
                 ArnLike:
                   'aws:PrincipalArn':
                     # Direct role ARN from same account
-                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole'
+                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-v2-secondary-infra-*-${AWS::Region}-lambdaRole'
                     # Assumed-role ARN from same account
-                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole/*'
+                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-v2-secondary-infra-*-${AWS::Region}-lambdaRole/*'
                     # Cross-account: secondary account (sltt-epyle dev/tst)
-                    - 'arn:aws:sts::662482841188:assumed-role/sltt-v1-secondary-infra-*-us-east-1-lambdaRole/*'
+                    - 'arn:aws:sts::662482841188:assumed-role/sltt-v2-secondary-infra-*-us-east-1-lambdaRole/*'
             - Sid: AllowSecondaryWrite
               Effect: Allow
               Principal:
@@ -303,12 +218,9 @@ resources:
               Condition:
                 ArnLike:
                   'aws:PrincipalArn':
-                    # Direct role ARN from same account
-                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole'
-                    # Assumed-role ARN from same account
-                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole/*'
-                    # Cross-account: secondary account (sltt-epyle dev/tst)
-                    - 'arn:aws:sts::662482841188:assumed-role/sltt-v1-secondary-infra-*-us-east-1-lambdaRole/*'
+                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-v2-secondary-infra-*-${AWS::Region}-lambdaRole'
+                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-v2-secondary-infra-*-${AWS::Region}-lambdaRole/*'
+                    - 'arn:aws:sts::662482841188:assumed-role/sltt-v2-secondary-infra-*-us-east-1-lambdaRole/*'
                 StringEquals:
                   's3:if-none-match': '*'
             - Sid: AllowSecondaryListBucket
@@ -322,14 +234,12 @@ resources:
               Condition:
                 ArnLike:
                   'aws:PrincipalArn':
-                    # Direct role ARN from same account
-                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole'
-                    # Assumed-role ARN from same account
-                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-v1-secondary-infra-*-${AWS::Region}-lambdaRole/*'
-                    # Cross-account: secondary account (sltt-epyle dev/tst)
-                    - 'arn:aws:sts::662482841188:assumed-role/sltt-v1-secondary-infra-*-us-east-1-lambdaRole/*'
-
-            # Allow DynamoDB service to export table to S3
+                    - !Sub 'arn:aws:iam::${AWS::AccountId}:role/sltt-v2-secondary-infra-*-${AWS::Region}-lambdaRole'
+                    - !Sub 'arn:aws:sts::${AWS::AccountId}:assumed-role/sltt-v2-secondary-infra-*-${AWS::Region}-lambdaRole/*'
+                    - 'arn:aws:sts::662482841188:assumed-role/sltt-v2-secondary-infra-*-us-east-1-lambdaRole/*'
+            # Allow DynamoDB service to export table snapshots to S3, in case
+            # the data-infra export/import workflow copies snapshots through
+            # this bucket instead of a per-account one.
             - Sid: AllowDynamoDBExport
               Effect: Allow
               Principal:
@@ -342,61 +252,10 @@ resources:
                 - arn:aws:s3:::${self:custom.mediaBucket}
                 - arn:aws:s3:::${self:custom.mediaBucket}/*
 
-    # IAM policy to allow secondary deployments to read SSM parameters
-    # This is attached to the CrossAccountAccessRole to enable parameter reads
-    SsmParameterAccessPolicy:
-      Type: AWS::IAM::Policy
-      Properties:
-        PolicyName: ${self:service}-ssm-parameter-access
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - ssm:GetParameter
-                - ssm:GetParameters
-              Resource:
-                - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${self:custom.ssmPrefix}/*'
-        Roles:
-          - !Ref CrossAccountAccessRole
-
-    # SSM Parameters to store infrastructure values for cross-account access
-    DynamoDbTableNameParameter:
-      Type: AWS::SSM::Parameter
-      Properties:
-        Name: ${self:custom.ssmPrefix}/dynamodb/table-name
-        Type: String
-        Tier: Advanced
-        Value: !Ref ChangesTable
-        Description: DynamoDB table name for SLTT changes
-
-    DynamoDbTableArnParameter:
-      Type: AWS::SSM::Parameter
-      Properties:
-        Name: ${self:custom.ssmPrefix}/dynamodb/table-arn
-        Type: String
-        Tier: Advanced
-        Value: !GetAtt ChangesTable.Arn
-        Description: DynamoDB table ARN for SLTT changes
-
-    AuthTableNameParameter:
-      Type: AWS::SSM::Parameter
-      Properties:
-        Name: ${self:custom.ssmPrefix}/auth/table-name
-        Type: String
-        Tier: Advanced
-        Value: !Ref AuthTable
-        Description: DynamoDB table name for SLTT auth state
-
-    AuthTableArnParameter:
-      Type: AWS::SSM::Parameter
-      Properties:
-        Name: ${self:custom.ssmPrefix}/auth/table-arn
-        Type: String
-        Tier: Advanced
-        Value: !GetAtt AuthTable.Arn
-        Description: DynamoDB table ARN for SLTT auth state
-
+    # SSM Parameters to expose infrastructure values for cross-account reads.
+    # These parameters must have a resource policy granting secondary accounts
+    # GetParameter/GetParameters access (see npm run setup:ssm-parameters) -
+    # that mechanism is unrelated to IAM roles and is unchanged by this split.
     MediaBucketNameParameter:
       Type: AWS::SSM::Parameter
       Properties:
@@ -449,7 +308,7 @@ resources:
         Type: String
         Tier: Advanced
         Value: ${self:provider.region}
-        Description: AWS region where infrastructure is deployed
+        Description: AWS region where shared media infrastructure is deployed
 
     InfraAccountIdParameter:
       Type: AWS::SSM::Parameter
@@ -458,139 +317,9 @@ resources:
         Type: String
         Tier: Advanced
         Value: !Ref AWS::AccountId
-        Description: AWS account ID where infrastructure is deployed
-
-    # IAM role for cross-account access (secondary accounts can assume this)
-    CrossAccountAccessRole:
-      Type: AWS::IAM::Role
-      Properties:
-        RoleName: ${self:service}-cross-account-access
-        AssumeRolePolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            # Allow same account to assume with ExternalId
-            - Effect: Allow
-              Principal:
-                AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
-              Action: sts:AssumeRole
-              Condition:
-                StringEquals:
-                  'sts:ExternalId': 'sltt-cross-account-access'
-            # Allow target account (662482841188) to assume with ExternalId
-            - Effect: Allow
-              Principal:
-                AWS: 'arn:aws:iam::662482841188:root'
-              Action: sts:AssumeRole
-              Condition:
-                StringEquals:
-                  'sts:ExternalId': 'sltt-cross-account-access'
-        Policies:
-          - PolicyName: DynamoDBAccess
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - dynamodb:GetItem
-                    - dynamodb:PutItem
-                    - dynamodb:UpdateItem
-                    - dynamodb:DeleteItem
-                    - dynamodb:Query
-                    - dynamodb:Scan
-                    - dynamodb:BatchGetItem
-                    - dynamodb:BatchWriteItem
-                    - dynamodb:DescribeTable
-                  Resource:
-                    - !GetAtt ChangesTable.Arn
-                    - !Sub '${ChangesTable.Arn}/index/*'
-                - Effect: Allow
-                  Action:
-                    - dynamodb:GetItem
-                    - dynamodb:PutItem
-                    - dynamodb:UpdateItem
-                    - dynamodb:DeleteItem
-                    - dynamodb:Query
-                    - dynamodb:Scan
-                  Resource:
-                    - !GetAtt AuthTable.Arn
-                    - !Sub '${AuthTable.Arn}/index/*'
-                - Effect: Allow
-                  Action:
-                    - dynamodb:ExportTableToPointInTime
-                  Resource:
-                    - !GetAtt ChangesTable.Arn
-                - Effect: Allow
-                  Action:
-                    - dynamodb:DescribeExport
-                  Resource:
-                    - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ChangesTable}/export/*'
-                - Effect: Allow
-                  Action:
-                    - dynamodb:ListExports
-                  Resource: '*'
-          - PolicyName: S3Access
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - s3:AbortMultipartUpload
-                    - s3:CreateMultipartUpload
-                    - s3:GetObject
-                    - s3:HeadObject
-                    - s3:ListBucket
-                    - s3:ListBucketMultipartUploads
-                    - s3:ListMultipartUploadParts
-                    - s3:PutObject
-                    - s3:UploadPart
-                  Resource:
-                    - !GetAtt MediaBucket.Arn
-                    - !Sub '${MediaBucket.Arn}/*'
-          - PolicyName: SESAccess
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - ses:SendEmail
-                  Resource: '*'
-
-    # Store cross-account role ARN in SSM for secondary stacks to reference
-    SsmCrossAccountRoleArn:
-      Type: AWS::SSM::Parameter
-      Properties:
-        Name: ${self:custom.ssmPrefix}/cross-account-role-arn
-        Type: String
-        Tier: Advanced
-        Value: !GetAtt CrossAccountAccessRole.Arn
-        Description: ARN of role that secondary accounts can assume for cross-account access
+        Description: AWS account ID where shared media infrastructure is deployed
 
   Outputs:
-    # Export infrastructure values
-    DynamoDbTableName:
-      Description: DynamoDB table name
-      Value: !Ref ChangesTable
-      Export:
-        Name: ${self:service}-dynamodb-table-name
-
-    DynamoDbTableArn:
-      Description: DynamoDB table ARN
-      Value: !GetAtt ChangesTable.Arn
-      Export:
-        Name: ${self:service}-dynamodb-table-arn
-
-    AuthTableName:
-      Description: Auth table name
-      Value: !Ref AuthTable
-      Export:
-        Name: ${self:service}-auth-table-name
-
-    AuthTableArn:
-      Description: Auth table ARN
-      Value: !GetAtt AuthTable.Arn
-      Export:
-        Name: ${self:service}-auth-table-arn
-
     MediaBucketName:
       Description: S3 media bucket name
       Value: !Ref MediaBucket
@@ -621,27 +350,17 @@ resources:
       Export:
         Name: ${self:service}-cloudfront-keypair-id
 
-    CrossAccountAccessRoleArn:
-      Description: ARN of IAM role for cross-account access
-      Value: !GetAtt CrossAccountAccessRole.Arn
-      Export:
-        Name: ${self:service}-cross-account-role-arn
-
     # Post-deployment instructions
     SsmParametersSetupCommand:
-      Description: Run this command after deployment to set SSM parameters needed by secondary deployments
+      Description: Run this command after deployment to grant secondary accounts read access to the SSM parameters below
       Value: npm run setup:ssm-parameters
 
     SsmParametersUsedBySecondary:
-      Description: SSM parameters that secondary deployments will reference (ensure cross-account access is granted)
+      Description: SSM parameters that secondary deployments read cross-account (S3/CloudFront only - DynamoDB values now come from each account's own data-infra stack)
       Value: |
-        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/dynamodb/table-name
-        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/dynamodb/table-arn
-        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/auth/table-name
-        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/auth/table-arn
-        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/s3/bucket-name
-        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/s3/bucket-arn
-        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/cloudfront/domain
-        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/cloudfront/keypair-id
-        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/cloudfront/private-key
-        /sltt/${self:custom.slttStackVersion}/infra/${self:custom.infraStage}/region
+        /sltt/${self:custom.slttStackVersion}/${self:custom.infraStage}/s3/bucket-name
+        /sltt/${self:custom.slttStackVersion}/${self:custom.infraStage}/s3/bucket-arn
+        /sltt/${self:custom.slttStackVersion}/${self:custom.infraStage}/cloudfront/domain
+        /sltt/${self:custom.slttStackVersion}/${self:custom.infraStage}/cloudfront/keypair-id
+        /sltt/${self:custom.slttStackVersion}/${self:custom.infraStage}/cloudfront/private-key
+        /sltt/${self:custom.slttStackVersion}/${self:custom.infraStage}/region
