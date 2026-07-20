@@ -61,7 +61,7 @@ function main() {
   const region = String(args['region'] || 'us-east-1');
 
   const resourceArn = `arn:aws:ssm:${region}:${sharedAccount}:parameter/sltt/infra/${stage}/*`;
-  const crossAccountRoleArn = `arn:aws:iam::${sharedAccount}:role/sltt-v1-shared-infra-cross-account-access`;
+  const crossAccountRoleArn = `arn:aws:iam::${sharedAccount}:role/sltt-v2-shared-infra-cross-account-access`;
 
   const basePolicy = {
     Version: '2012-10-17',
