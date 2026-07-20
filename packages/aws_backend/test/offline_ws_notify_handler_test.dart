@@ -700,13 +700,71 @@ void main() {
   });
 
   group('wsSubscribeHandler', () {
-    test('ack includes subscriptionKey for wildcard subscriptions', () async {
+    test('rejects missing entityType', () async {
       final connections = _FakeConnectionsRepository();
       final management = _FakeManagementClient(connections: connections);
 
       final event = {
         'requestContext': {'connectionId': 'conn-sub-1'},
         'body': jsonEncode({'domainType': 'project', 'domainId': 'proj-1'}),
+      };
+
+      final response = await wsSubscribeHandler(
+        event,
+        connections: connections,
+        management: management,
+      );
+
+      expect(response['statusCode'], 400);
+      expect(management.sentMessages, hasLength(1));
+      expect(management.sentMessages[0]['payload']['status'], 'error');
+      expect(
+        management.sentMessages[0]['payload']['error'] as String,
+        contains('entityType'),
+      );
+      expect(connections.subscriptions, isEmpty);
+    });
+
+    test('rejects invalid entityType values', () async {
+      final connections = _FakeConnectionsRepository();
+      final management = _FakeManagementClient(connections: connections);
+
+      final event = {
+        'requestContext': {'connectionId': 'conn-sub-2'},
+        'body': jsonEncode({
+          'domainType': 'project',
+          'domainId': 'proj-1',
+          'entityType': 'Task-1',
+        }),
+      };
+
+      final response = await wsSubscribeHandler(
+        event,
+        connections: connections,
+        management: management,
+      );
+
+      expect(response['statusCode'], 400);
+      expect(management.sentMessages, hasLength(1));
+      expect(management.sentMessages[0]['payload']['status'], 'error');
+      expect(
+        management.sentMessages[0]['payload']['error'] as String,
+        contains(r'match /^[a-z_]+$/'),
+      );
+      expect(connections.subscriptions, isEmpty);
+    });
+
+    test('accepts wildcard entityType', () async {
+      final connections = _FakeConnectionsRepository();
+      final management = _FakeManagementClient(connections: connections);
+
+      final event = {
+        'requestContext': {'connectionId': 'conn-sub-3'},
+        'body': jsonEncode({
+          'domainType': 'project',
+          'domainId': 'proj-1',
+          'entityType': '*',
+        }),
       };
 
       await wsSubscribeHandler(
@@ -716,22 +774,87 @@ void main() {
       );
 
       expect(connections.subscriptions, hasLength(1));
-      expect(connections.subscriptions[0], {
-        'connectionId': 'conn-sub-1',
-        'domainType': 'project',
-        'domainId': 'proj-1',
-        'entityType': null,
-      });
-      expect(management.sentMessages, hasLength(1));
+      expect(connections.subscriptions[0]['entityType'], '*');
       expect(management.sentMessages[0]['payload'], {
         'action': 'subscribe',
         'status': 'ok',
         'domainType': 'project',
         'domainId': 'proj-1',
+        'entityType': '*',
         'subscriptionKey': WebsocketKeys.subscriptionSk(
           domainType: 'project',
           domainId: 'proj-1',
           entityType: WebsocketKeys.wildcardEntityType,
+        ),
+      });
+    });
+
+    test('accepts last-record entityType', () async {
+      final connections = _FakeConnectionsRepository();
+      final management = _FakeManagementClient(connections: connections);
+
+      final event = {
+        'requestContext': {'connectionId': 'conn-sub-4'},
+        'body': jsonEncode({
+          'domainType': 'project',
+          'domainId': 'proj-1',
+          'entityType': r'$',
+        }),
+      };
+
+      await wsSubscribeHandler(
+        event,
+        connections: connections,
+        management: management,
+      );
+
+      expect(connections.subscriptions, hasLength(1));
+      expect(connections.subscriptions[0]['entityType'], r'$');
+      expect(management.sentMessages[0]['payload'], {
+        'action': 'subscribe',
+        'status': 'ok',
+        'domainType': 'project',
+        'domainId': 'proj-1',
+        'entityType': r'$',
+        'subscriptionKey': WebsocketKeys.subscriptionSk(
+          domainType: 'project',
+          domainId: 'proj-1',
+          entityType: WebsocketKeys.lastRecordEntityType,
+        ),
+      });
+    });
+
+    test('accepts standard entityType values', () async {
+      final connections = _FakeConnectionsRepository();
+      final management = _FakeManagementClient(connections: connections);
+
+      final event = {
+        'requestContext': {'connectionId': 'conn-sub-5'},
+        'body': jsonEncode({
+          'domainType': 'project',
+          'domainId': 'proj-1',
+          'entityType': 'task',
+        }),
+      };
+
+      await wsSubscribeHandler(
+        event,
+        connections: connections,
+        management: management,
+      );
+
+      expect(connections.subscriptions, hasLength(1));
+      expect(connections.subscriptions[0]['entityType'], 'task');
+      expect(management.sentMessages[0]['payload'], {
+        'action': 'subscribe',
+        'status': 'ok',
+        'domainType': 'project',
+        'domainId': 'proj-1',
+        'entityType': 'task',
+        'subscriptionKey': WebsocketKeys.subscriptionSk(
+          domainType: 'project',
+          domainId: 'proj-1',
+          entityType: 'task',
         ),
       });
     });
