@@ -93,5 +93,38 @@ void main() {
         throwsA(isA<AwsMediaStorageConcurrentUploadConflictException>()),
       );
     });
+
+    test('createMultipartUpload sends If-None-Match header', () async {
+      late http.Request receivedRequest;
+      final client = MockClient((request) async {
+        receivedRequest = request;
+        return http.Response(
+          '''<?xml version="1.0" encoding="UTF-8"?>
+<InitiateMultipartUploadResult>
+  <Bucket>$bucketName</Bucket>
+  <Key>test-key</Key>
+  <UploadId>upload-1</UploadId>
+</InitiateMultipartUploadResult>''',
+          200,
+          headers: {'content-type': 'application/xml'},
+        );
+      });
+
+      final storage = AwsMediaStorage(
+        bucketName: bucketName,
+        region: region,
+        credentials: const AWSCredentials('AKIA', 'SECRET'),
+        httpClient: client,
+      );
+
+      final response = await storage.createMultipartUpload(
+        remoteFileKey: 'test-key',
+      );
+
+      expect(receivedRequest.headers['if-none-match'], equals('*'));
+      expect(response.uploadId, equals('upload-1'));
+      expect(response.bucket, equals(bucketName));
+      expect(response.remoteFileKey, equals('test-key'));
+    });
   });
 }

@@ -360,7 +360,7 @@ class AwsMediaStorage extends BaseMediaStorage {
     final request = AWSHttpRequest(
       method: AWSHttpMethod.post,
       uri: _objectUri(key, {'uploads': ''}),
-      headers: {'host': _endpointHost()},
+      headers: {'host': _endpointHost(), 'if-none-match': '*'},
     );
 
     final response = await _sendSigned(request);
