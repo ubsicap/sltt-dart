@@ -147,7 +147,11 @@ function main() {
     ]);
   } else if (principalType === 'role') {
     if (!roleExists(principalName)) {
-      console.warn(`Skipping role ${principalName}: role does not exist in target account (profile=${targetProfile}).`);
+      console.warn(
+        `Skipping role ${principalName}: role does not exist in target account (profile=${targetProfile}). ` +
+        'This usually means the dev secondary stack has not been deployed yet. ' +
+        'Run `npm run deploy:sltt-dart-dev:secondary:dev` and then re-run this command.',
+      );
       return;
     }
 
