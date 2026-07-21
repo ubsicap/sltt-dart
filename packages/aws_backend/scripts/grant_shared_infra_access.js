@@ -82,10 +82,6 @@ function main() {
     `Granting cross-account access to shared infra for account '${targetAccountId}', role '${targetRoleName}', stage '${sharedInfraStage}', profile '${awsProfile}', region '${awsRegion}'.`,
   );
 
-  const tableArn = runAws(
-    `cloudformation describe-stacks --stack-name ${stackName} --query "Stacks[0].Outputs[?OutputKey=='DynamoDbTableArn'].OutputValue" --output text`,
-    { profile: awsProfile, region: awsRegion },
-  );
   const bucketName = runAws(
     `cloudformation describe-stacks --stack-name ${stackName} --query "Stacks[0].Outputs[?OutputKey=='MediaBucketName'].OutputValue" --output text`,
     { profile: awsProfile, region: awsRegion },
@@ -103,9 +99,6 @@ function main() {
     { profile: awsProfile, region: awsRegion },
   );
 
-  if (!tableArn) {
-    throw new Error(`Unable to resolve DynamoDB table ARN from stack ${stackName}.`);
-  }
   if (!bucketName) {
     throw new Error(`Unable to resolve S3 bucket name from stack ${stackName}.`);
   }
@@ -133,7 +126,6 @@ function main() {
 
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sltt-v2-shared-infra-'));
   const ssmPolicyTemplatePath = path.join(tempDir, 'ssm_resource_policy.json');
-  const dynamoPolicyPath = path.join(tempDir, 'dynamodb_resource_policy.json');
   const s3PolicyPath = path.join(tempDir, 's3_bucket_policy.json');
 
   writeJson(ssmPolicyTemplatePath, {
@@ -149,32 +141,6 @@ function main() {
           'ssm:GetParametersByPath',
         ],
         Resource: '*',
-      },
-    ],
-  });
-
-  writeJson(dynamoPolicyPath, {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Sid: 'AllowCrossAccountApiAccess',
-        Effect: 'Allow',
-        Principal: { AWS: targetAccountRootArn },
-        Action: [
-          'dynamodb:GetItem',
-          'dynamodb:PutItem',
-          'dynamodb:UpdateItem',
-          'dynamodb:DeleteItem',
-          'dynamodb:Query',
-          'dynamodb:Scan',
-          'dynamodb:BatchGetItem',
-          'dynamodb:BatchWriteItem',
-          'dynamodb:DescribeTable',
-        ],
-        Resource: [tableArn, `${tableArn}/index/*`],
-        Condition: {
-          ArnLike: { 'aws:PrincipalArn': [targetRoleArn, assumedRoleArnPattern] },
-        },
       },
     ],
   });
@@ -266,11 +232,6 @@ function main() {
   });
 
   writeJson(s3PolicyPath, existingS3Policy);
-
-  runAws(
-    `dynamodb put-resource-policy --resource-arn ${tableArn} --policy ${toFileUri(dynamoPolicyPath)}`,
-    { profile: awsProfile, region: awsRegion },
-  );
 
   runAws(
     `s3api put-bucket-policy --bucket ${bucketName} --policy ${toFileUri(s3PolicyPath)}`,
