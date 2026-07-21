@@ -72,7 +72,6 @@
                 "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
                 "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",
                 "MEDIA_CLOUDFRONT_PRIVATE_KEY": "${input:mediaCloudFrontPrivateKey}",
-                "SHARED_INFRA_ASSUME_ROLE_ARN": "arn:aws:iam::379334555674:role/sltt-v2-shared-infra-cross-account-access",
                 "STAGE": "dev",
                 "USE_CLOUD_STORAGE": "true",
                 "LOCAL_DEBUGGER": "true",
@@ -106,7 +105,6 @@
                 "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
                 "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",
                 "MEDIA_CLOUDFRONT_PRIVATE_KEY": "${input:mediaCloudFrontPrivateKey}",
-                "SHARED_INFRA_ASSUME_ROLE_ARN": "arn:aws:iam::379334555674:role/sltt-v2-shared-infra-cross-account-access",
                 "STAGE": "dev",
                 "USE_CLOUD_STORAGE": "true",
                 "LOCAL_DEBUGGER": "true"
@@ -145,7 +143,6 @@
                 "MEDIA_CLOUDFRONT_DOMAIN": "${input:mediaCloudFrontDomain}",
                 "MEDIA_CLOUDFRONT_KEY_PAIR_ID": "${input:mediaCloudFrontKeyPairId}",
                 "MEDIA_CLOUDFRONT_PRIVATE_KEY": "${input:mediaCloudFrontPrivateKey}",
-                "SHARED_INFRA_ASSUME_ROLE_ARN": "arn:aws:iam::379334555674:role/sltt-v2-shared-infra-cross-account-access",
                 "STAGE": "tst",
                 "USE_CLOUD_STORAGE": "true",
                 "LOCAL_DEBUGGER": "true"
