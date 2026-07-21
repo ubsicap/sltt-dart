@@ -134,6 +134,17 @@ provider:
         - ${self:custom.authTableArn}
     - Effect: Allow
       Action:
+        - dynamodb:ExportTableToPointInTime
+      Resource:
+        - ${self:custom.dynamoDbTableArn}
+        - ${self:custom.authTableArn}
+    - Effect: Allow
+      Action:
+        - dynamodb:ListExports
+        - dynamodb:DescribeExport
+      Resource: '*'
+    - Effect: Allow
+      Action:
         - s3:AbortMultipartUpload
         - s3:CreateMultipartUpload
         - s3:GetObject

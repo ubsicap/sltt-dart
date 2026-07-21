@@ -493,9 +493,18 @@ class AwsRestApiServer extends BaseRestApiServer {
     },
     {
       'method': 'POST',
-      'path': '/api/admin/storage/export/create',
+      'path': '/api/admin/storage/{storageType}/export/create',
       'description':
-          'Start a DynamoDB ExportTableToPointInTime job using server-managed table and S3 destination defaults. The server always uses DYNAMODB_TABLE/DYNAMODB_TABLE_ARN for the table, MEDIA_BUCKET for the bucket, dynamodb-exports/diag for the S3 prefix, and a generated ClientToken for idempotency. Before creating a new export, the server checks recent exports and rejects a request when another export of the same type is already in progress.',
+          'Start a DynamoDB ExportTableToPointInTime job for the requested storage type. The server uses DYNAMODB_TABLE/DYNAMODB_TABLE_ARN for data exports and AUTH_TABLE/AUTH_TABLE_ARN for auth exports. MEDIA_BUCKET is used for the bucket, with a generated ClientToken for idempotency. Before creating a new export, the server checks recent exports and rejects a request when another export of the same type is already in progress.',
+      'parameters': [
+        {
+          'name': 'storageType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'Storage type to export. Supported values: data, auth.',
+        },
+      ],
       'requestBody': {
         'type': 'object',
         'required': ['ExportFormat'],
@@ -534,7 +543,8 @@ class AwsRestApiServer extends BaseRestApiServer {
           },
         },
         'serverDefaults': {
-          'table': 'DYNAMODB_TABLE / DYNAMODB_TABLE_ARN',
+          'table':
+              'DYNAMODB_TABLE / DYNAMODB_TABLE_ARN / AUTH_TABLE / AUTH_TABLE_ARN',
           'bucket': 'MEDIA_BUCKET',
           'prefix': _defaultExportS3Prefix,
           'clientToken': 'server-generated',
@@ -559,14 +569,22 @@ class AwsRestApiServer extends BaseRestApiServer {
     },
     {
       'method': 'GET',
-      'path': '/api/admin/storage/export/list',
+      'path': '/api/admin/storage/{storageType}/export/list',
       'description': 'List DynamoDB export jobs via AWS ListExports.',
       'parameters': [
+        {
+          'name': 'storageType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'Storage type to list exports for. Supported values: data, auth.',
+        },
         {
           'name': 'TableArn',
           'type': 'string',
           'required': false,
-          'description': 'Optional DynamoDB table ARN to filter exports.',
+          'description':
+              'Optional DynamoDB table ARN to filter exports. If omitted, the table ARN is inferred from storageType.',
         },
         {
           'name': 'MaxResults',
@@ -596,10 +614,17 @@ class AwsRestApiServer extends BaseRestApiServer {
     },
     {
       'method': 'GET',
-      'path': '/api/admin/storage/export/list-files',
+      'path': '/api/admin/storage/{storageType}/export/list-files',
       'description':
           'List exported files under an S3 prefix or by export ARN and return presigned GET URLs for each object.',
       'parameters': [
+        {
+          'name': 'storageType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'Storage type for the export files. Supported values: data, auth.',
+        },
         {
           'name': 'prefix',
           'type': 'string',
@@ -1015,9 +1040,18 @@ class AwsRestApiServer extends BaseRestApiServer {
       _handleAdminDeleteAdHocUser,
     );
     // Admin export endpoints: start export, list exports, and list exported files
-    router.post('/api/admin/storage/export/create', _handleExportCreate);
-    router.get('/api/admin/storage/export/list', _handleExportList);
-    router.get('/api/admin/storage/export/list-files', _handleExportListFiles);
+    router.post(
+      '/api/admin/storage/<storageType>/export/create',
+      _handleExportCreate,
+    );
+    router.get(
+      '/api/admin/storage/<storageType>/export/list',
+      _handleExportList,
+    );
+    router.get(
+      '/api/admin/storage/<storageType>/export/list-files',
+      _handleExportListFiles,
+    );
 
     router.get(
       '/api/cross-domain/<domainType>/states/<entityType>/<entityId>',
@@ -2058,11 +2092,14 @@ class AwsRestApiServer extends BaseRestApiServer {
 
   Future<Response> _handleExportCreate(Request request) async {
     try {
+      final storageType = _normalizeExportStorageType(
+        request.params['storageType'],
+      );
       final body = await request.readAsString();
       final payload = body.isNotEmpty
           ? jsonDecode(body) as Map<String, dynamic>
           : <String, dynamic>{};
-      final exportRequest = _buildExportCreatePayload(payload);
+      final exportRequest = _buildExportCreatePayload(payload, storageType);
       final dynamo = storage as DynamoDBStorageService;
       final conflict = await _findInProgressExportConflict(
         dynamo,
@@ -2095,6 +2132,9 @@ class AwsRestApiServer extends BaseRestApiServer {
 
   Future<Response> _handleExportList(Request request) async {
     try {
+      final storageType = _normalizeExportStorageType(
+        request.params['storageType'],
+      );
       final params = <String, dynamic>{};
       var includeDetails = false;
       // Use query parameters as-is for simplicity (convert common numeric values)
@@ -2107,6 +2147,11 @@ class AwsRestApiServer extends BaseRestApiServer {
         final numVal = int.tryParse(v);
         params[k] = numVal ?? v;
       });
+      if (!params.containsKey('TableArn')) {
+        params['TableArn'] = _resolveConfiguredExportTableArnForType(
+          storageType,
+        );
+      }
       final dynamo = storage as DynamoDBStorageService;
       final result = await dynamo.listExports(params);
       final responseBody = includeDetails
@@ -2127,6 +2172,7 @@ class AwsRestApiServer extends BaseRestApiServer {
 
   Future<Response> _handleExportListFiles(Request request) async {
     try {
+      _normalizeExportStorageType(request.params['storageType']);
       var prefix = request.url.queryParameters['prefix']?.trim() ?? '';
       final exportArn = request.url.queryParameters['exportArn']?.trim() ?? '';
       final maxKeys = int.tryParse(
@@ -2244,13 +2290,14 @@ class AwsRestApiServer extends BaseRestApiServer {
 
   Map<String, dynamic> _buildExportCreatePayload(
     Map<String, dynamic> clientPayload,
+    String storageType,
   ) {
     final exportFormat = (clientPayload['ExportFormat'] as String?)?.trim();
     if (exportFormat == null || exportFormat.isEmpty) {
       throw StateError('ExportFormat is required');
     }
 
-    final tableArn = _resolveConfiguredExportTableArn();
+    final tableArn = _resolveConfiguredExportTableArnForType(storageType);
     final bucket = _requireHealthEnvironmentValue('MEDIA_BUCKET');
     final clientToken = _buildExportClientToken(clientPayload);
 
@@ -2261,6 +2308,46 @@ class AwsRestApiServer extends BaseRestApiServer {
       'S3Prefix': _defaultExportS3Prefix,
       'ClientToken': clientToken,
     };
+  }
+
+  String _resolveConfiguredExportTableArnForType(String storageType) {
+    if (storageType == 'auth') {
+      final explicitArn = (healthEnvironment['AUTH_TABLE_ARN'] ?? '').trim();
+      if (explicitArn.isNotEmpty) {
+        return explicitArn;
+      }
+      final configuredTable = _requireHealthEnvironmentValue('AUTH_TABLE');
+      if (configuredTable.startsWith('arn:aws:dynamodb:')) {
+        return configuredTable;
+      }
+      throw StateError(
+        'AUTH_TABLE_ARN environment variable is required when AUTH_TABLE is not already a table ARN',
+      );
+    }
+
+    final explicitArn = (healthEnvironment['DYNAMODB_TABLE_ARN'] ?? '').trim();
+    if (explicitArn.isNotEmpty) {
+      return explicitArn;
+    }
+
+    final configuredTable = _requireHealthEnvironmentValue('DYNAMODB_TABLE');
+    if (configuredTable.startsWith('arn:aws:dynamodb:')) {
+      return configuredTable;
+    }
+
+    throw StateError(
+      'DYNAMODB_TABLE_ARN environment variable is required when DYNAMODB_TABLE is not already a table ARN',
+    );
+  }
+
+  String _normalizeExportStorageType(String? storageType) {
+    final normalized = (storageType ?? '').trim().toLowerCase();
+    if (normalized == 'data' || normalized == 'auth') {
+      return normalized;
+    }
+    throw StateError(
+      'Invalid storageType "$storageType". Supported values are "data" and "auth".',
+    );
   }
 
   String _buildExportClientToken(Map<String, dynamic> clientPayload) {

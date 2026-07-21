@@ -21,6 +21,9 @@ void main() {
           'DYNAMODB_TABLE': 'sltt-v2-shared-infra-changes-states',
           'DYNAMODB_TABLE_ARN':
               'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-v2-shared-infra-changes-states',
+          'AUTH_TABLE': 'sltt-v2-shared-infra-auth',
+          'AUTH_TABLE_ARN':
+              'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-v2-shared-infra-auth',
           'MEDIA_BUCKET': 'bucket-a',
         },
       );
@@ -89,11 +92,11 @@ void main() {
     });
 
     test(
-      'POST /api/admin/storage/export/create injects table and bucket defaults',
+      'POST /api/admin/storage/data/export/create injects table and bucket defaults',
       () async {
         final response = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',
-          'path': '/api/admin/storage/export/create',
+          'path': '/api/admin/storage/data/export/create',
           'headers': <String, String>{'Content-Type': 'application/json'},
           'body': jsonEncode({
             'ExportFormat': 'DYNAMODB_JSON',
@@ -137,7 +140,32 @@ void main() {
     );
 
     test(
-      'POST /api/admin/storage/export/create blocks second full export in progress',
+      'POST /api/admin/storage/auth/export/create injects auth table defaults',
+      () async {
+        final response = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/admin/storage/auth/export/create',
+          'headers': <String, String>{'Content-Type': 'application/json'},
+          'body': jsonEncode({'ExportFormat': 'DYNAMODB_JSON'}),
+        }, router);
+
+        expect(response['statusCode'], equals(200));
+        expect(storage.startExportRequests, hasLength(1));
+
+        final request = storage.startExportRequests.single;
+        expect(
+          request['TableArn'],
+          equals(
+            'arn:aws:dynamodb:us-east-1:123456789012:table/sltt-v2-shared-infra-auth',
+          ),
+        );
+        expect(request['S3Bucket'], equals('bucket-a'));
+        expect(request['S3Prefix'], equals('dynamodb-exports/diag'));
+      },
+    );
+
+    test(
+      'POST /api/admin/storage/data/export/create blocks second full export in progress',
       () async {
         storage.listExportsResponse = {
           'ExportSummaries': [
@@ -152,7 +180,7 @@ void main() {
 
         final response = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',
-          'path': '/api/admin/storage/export/create',
+          'path': '/api/admin/storage/data/export/create',
           'headers': <String, String>{'Content-Type': 'application/json'},
           'body': jsonEncode({'ExportFormat': 'DYNAMODB_JSON'}),
         }, router);
@@ -167,7 +195,7 @@ void main() {
     );
 
     test(
-      'POST /api/admin/storage/export/create blocks second incremental export in progress',
+      'POST /api/admin/storage/data/export/create blocks second incremental export in progress',
       () async {
         storage.listExportsResponse = {
           'ExportSummaries': [
@@ -182,7 +210,7 @@ void main() {
 
         final response = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',
-          'path': '/api/admin/storage/export/create',
+          'path': '/api/admin/storage/data/export/create',
           'headers': <String, String>{'Content-Type': 'application/json'},
           'body': jsonEncode({
             'ExportFormat': 'DYNAMODB_JSON',
@@ -203,7 +231,7 @@ void main() {
     );
 
     test(
-      'POST /api/admin/storage/export/create allows incremental while full export is in progress',
+      'POST /api/admin/storage/data/export/create allows incremental while full export is in progress',
       () async {
         storage.listExportsResponse = {
           'ExportSummaries': [
@@ -218,7 +246,7 @@ void main() {
 
         final response = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',
-          'path': '/api/admin/storage/export/create',
+          'path': '/api/admin/storage/data/export/create',
           'headers': <String, String>{'Content-Type': 'application/json'},
           'body': jsonEncode({
             'ExportFormat': 'DYNAMODB_JSON',
@@ -236,11 +264,11 @@ void main() {
     );
 
     test(
-      'POST /api/admin/storage/export/create returns 500 when ExportFormat is missing',
+      'POST /api/admin/storage/data/export/create returns 500 when ExportFormat is missing',
       () async {
         final response = await server.handleApiGatewayEvent({
           'httpMethod': 'POST',
-          'path': '/api/admin/storage/export/create',
+          'path': '/api/admin/storage/data/export/create',
           'headers': <String, String>{'Content-Type': 'application/json'},
           'body': jsonEncode({'ExportType': 'FULL_EXPORT'}),
         }, router);
@@ -253,7 +281,7 @@ void main() {
     );
 
     test(
-      'GET /api/admin/storage/export/list includeDetails enriches summaries',
+      'GET /api/admin/storage/data/export/list includeDetails enriches summaries',
       () async {
         storage.listExportsResponse = {
           'ExportSummaries': [
@@ -280,7 +308,7 @@ void main() {
 
         final response = await server.handleApiGatewayEvent({
           'httpMethod': 'GET',
-          'path': '/api/admin/storage/export/list',
+          'path': '/api/admin/storage/data/export/list',
           'queryStringParameters': {'includeDetails': 'true'},
           'headers': <String, String>{},
         }, router);
@@ -299,7 +327,7 @@ void main() {
     );
 
     test(
-      'GET /api/admin/storage/export/list-files resolves exportArn to manifest prefix',
+      'GET /api/admin/storage/data/export/list-files resolves exportArn to manifest prefix',
       () async {
         final media = FakeAwsMediaStorage()
           ..listResponse = {
@@ -328,7 +356,7 @@ void main() {
 
         final response = await server.handleApiGatewayEvent({
           'httpMethod': 'GET',
-          'path': '/api/admin/storage/export/list-files',
+          'path': '/api/admin/storage/data/export/list-files',
           'queryStringParameters': {
             'exportArn':
                 'arn:aws:dynamodb:us-east-1:123456789012:table/test/export/exp-1',
