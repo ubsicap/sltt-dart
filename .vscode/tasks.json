@@ -344,7 +344,7 @@
                 "--aws-profile",
                 "sltt-dart-prd",
                 "--stage",
-                "prod",
+                "prd",
                 "--port",
                 "8080"
             ],

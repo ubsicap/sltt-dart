@@ -1,15 +1,15 @@
 # Serverless Framework configuration for SLTT data infrastructure.
 #
-# Unlike shared-infra (S3/CloudFront, pinned to one prod account) this stack
+# Unlike shared-infra (S3/CloudFront, pinned to one prd account) this stack
 # is meant to be deployed INDEPENDENTLY into every account that needs it:
-#   sls deploy --stage prd   (in the prod account - source of truth)
+#   sls deploy --stage prd   (in the prd account - source of truth)
 #   sls deploy --stage dev   (in a dev account - isolated copy)
 #   sls deploy --stage tst   (in a test account - isolated copy)
 #
 # Each deployment gets its own tables. There is no cross-account access here
 # by design: moving data between accounts is a deliberate, manual
 # export -> download -> import step (see dynamodb:ExportTableToPointInTime /
-# ImportTable), not a live cross-account read path. This keeps prod data safe
+# ImportTable), not a live cross-account read path. This keeps prd data safe
 # from anything a dev/test deployment does, and lets secondary-infra's Lambda
 # role reach these tables with plain same-account IAM - no AssumeRole.
 service: sltt-${self:custom.slttStackVersion}-data-infra
@@ -216,7 +216,7 @@ resources:
         /sltt/${self:custom.slttStackVersion}/${self:provider.stage}/auth/table-arn
 
     DataMigrationNote:
-      Description: How to move data between accounts (e.g. prod -> dev)
+      Description: How to move data between accounts (e.g. prd -> dev)
       Value: |
         1. In the source account: aws dynamodb export-table-to-point-in-time
            (or a full scan) targeting ChangesTable/AuthTable.
@@ -225,4 +225,4 @@ resources:
         3. In the destination account: import into that account's own
            ChangesTable/AuthTable via ImportTable or a scripted batch-write.
         This is a deliberate manual/scripted step, not a live cross-account
-        connection, so a dev/test deployment can never read or write prod data.
+        connection, so a dev/test deployment can never read or write prd data.

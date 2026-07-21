@@ -72,7 +72,7 @@ final storage = DynamoDBStorageService(
 
 // For AWS production
 final storage = DynamoDBStorageService(
-  tableName: 'sltt-changes-prod',
+  tableName: 'sltt-changes-prd',
   projectId: 'my-project-123',
   region: 'us-east-1',
   useLocalDynamoDB: false,
@@ -133,10 +133,10 @@ Deploy separate Lambda functions for different projects:
 
 ```bash
 # Deploy for Project A
-serverless deploy --stage prod --project project-a-123
+serverless deploy --stage prd --project project-a-123
 
 # Deploy for Project B
-serverless deploy --stage prod --project project-b-456
+serverless deploy --stage prd --project project-b-456
 ```
 
 Or use a single Lambda that handles multiple projects based on request context.
@@ -251,8 +251,8 @@ npm run deploy:sltt-dart-dev:secondary:dev
 # Deploy to tst stage using sltt-dart-dev profile
 npm run deploy:sltt-dart-dev:secondary:tst
 
-# Deploy to prod stage using sltt-dart-prd profile
-npm run deploy:sltt-dart-prd:secondary:prod
+# Deploy to prd stage using sltt-dart-prd profile
+npm run deploy:sltt-dart-prd:secondary:prd
 ```
 
 If you maintain separate dev/tst CloudFront keys for testing, set them in SSM
@@ -286,7 +286,7 @@ npm run deploy:secondary:dev
 
 ### Environment Variables
 
-- `DYNAMODB_TABLE`: DynamoDB table name (e.g., 'sltt-changes-prod')
+- `DYNAMODB_TABLE`: DynamoDB table name (e.g., 'sltt-changes-prd')
 - `DYNAMODB_REGION`: AWS region (e.g., 'us-east-1')
 - `USE_LOCAL_DYNAMODB`: Set to 'true' for local DynamoDB (development only)
 
@@ -327,7 +327,7 @@ instead of creating or rotating secrets.
 The service uses a project-based multi-tenant DynamoDB schema:
 
 ### Main Table Schema
-- **Table Name**: Configurable (e.g., `sltt-changes-prod`)
+- **Table Name**: Configurable (e.g., `sltt-changes-prd`)
 - **Partition Key**: `pk` (String) - Project ID (e.g., 'project-123')
 - **Sort Key**: `seq` (Number) - Auto-incremented sequence number per project
 - **Attributes**:
@@ -455,11 +455,11 @@ When your deployed Lambda returns errors, use these commands to investigate:
 ```bash
 # Get recent CloudWatch logs (last 1 hour)
 npm run logs:dev     # For dev stage
-npm run logs:prod    # For prod stage
+npm run logs:prd    # For prd stage
 
 # Get deployment info (URLs, function names)
 npm run info:dev     # For dev stage
-npm run info:prod    # For prod stage
+npm run info:prd    # For prd stage
 
 # Manual CloudWatch access (if npm scripts don't work)
 npx serverless logs --function api --stage dev --aws-profile sltt-dart-dev --startTime 1h

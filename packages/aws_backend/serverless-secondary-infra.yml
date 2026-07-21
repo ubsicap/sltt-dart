@@ -3,7 +3,7 @@
 #   - DynamoDB tables from serverless-data-infra.yml, deployed in THIS SAME
 #     account/stage - read via local SSM, plain same-account IAM, no
 #     AssumeRole.
-#   - S3/CloudFront from serverless-shared-infra.yml, pinned to the prod
+#   - S3/CloudFront from serverless-shared-infra.yml, pinned to the prd
 #     account - read via cross-account SSM parameter reads, and S3 objects
 #     are written directly with this stack's own Lambda execution role
 #     (the shared bucket policy trusts that role's ARN pattern). No
@@ -17,7 +17,7 @@ custom:
   # SLTT infrastructure version used for resource naming and parameter prefixes
   slttStackVersion: v2
 
-  # --- Media (shared-infra) lookup: cross-account, fixed to prod -----------
+  # --- Media (shared-infra) lookup: cross-account, fixed to prd -----------
   mediaInfraStage: ${opt:mediaInfraStage, 'prd'}
   mediaInfraAccountId: ${opt:mediaInfraAccountId, '379334555674'}
   mediaInfraSsmPrefix: /sltt/${self:custom.slttStackVersion}/${self:custom.mediaInfraStage}
