@@ -14,8 +14,8 @@ import '../websocket/domain_change_payload.dart'
     show
         DomainChangeData,
         WsNotifyRecord,
-        buildDomainChangeNotificationPayload,
-        kNotifyTypeDomainChange;
+        kNotifyTypeDomainChange,
+        buildWsNotifyRecordMessage;
 import 'key_codec.dart';
 
 /// Cached storageId at module (isolate) level so it survives across Lambda warm
@@ -2353,7 +2353,7 @@ class DynamoDBStorageService extends BaseStorageService {
       );
 
       final message = jsonEncode(
-        buildDomainChangeNotificationPayload(
+        buildWsNotifyRecordMessage(
           domainType: record.domainType,
           domainId: record.domainId,
           entityType: record.entityType,
@@ -2365,9 +2365,7 @@ class DynamoDBStorageService extends BaseStorageService {
         'domainType': record.domainType,
         'domainId': record.domainId,
       };
-      if (record.entityType != null) {
-        messageAttributes['entityType'] = record.entityType!;
-      }
+      messageAttributes['entityType'] = record.entityType;
 
       try {
         await _publishSnsMessage(

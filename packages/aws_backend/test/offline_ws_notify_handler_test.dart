@@ -5,7 +5,8 @@ import 'package:aws_backend/src/websocket/domain_change_payload.dart'
         DomainChangeData,
         WsNotifyRecord,
         kNotifyTypeDomainChange,
-        buildDomainChangeNotificationPayload;
+        buildDomainChangeNotificationPayload,
+        buildWsNotifyRecordMessage;
 import 'package:test/test.dart';
 
 import '../bin/websocket/websocket_connections_repository.dart';
@@ -88,7 +89,7 @@ void main() {
             domainType: 'project',
             domainId: 'proj-1',
             notifyType: kNotifyTypeDomainChange,
-            entityType: null,
+            entityType: WebsocketKeys.wildcardEntityType,
             data: DomainChangeData(
               name: 'domain-update-1',
               lastDomainSeq: 1,
@@ -100,7 +101,7 @@ void main() {
             domainType: 'project',
             domainId: 'proj-1',
             notifyType: kNotifyTypeDomainChange,
-            entityType: null,
+            entityType: WebsocketKeys.wildcardEntityType,
             data: DomainChangeData(
               name: 'domain-update-2',
               lastDomainSeq: 2,
@@ -139,46 +140,48 @@ void main() {
         );
 
         expect(latestRecords, hasLength(2));
-        expect(latestRecords[0].entityType, isNull);
+        expect(latestRecords[0].entityType, WebsocketKeys.wildcardEntityType);
         expect(latestRecords[0].data.name, 'domain-update-2');
         expect(latestRecords[1].entityType, 'task');
         expect(latestRecords[1].data.name, 'task-update-2');
       },
     );
 
-    test(
-      'buildDomainChangeNotificationPayload includes required fields and optional entityType',
-      () {
-        final payload = buildDomainChangeNotificationPayload(
+    test('buildDomainChangeNotificationPayload includes required fields', () {
+      final payload = buildDomainChangeNotificationPayload(
+        domainType: 'project',
+        domainId: 'proj-1',
+        data: DomainChangeData(
+          name: 'domain-update',
+          lastDomainSeq: 1,
+          lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
+        ),
+        subscriptionKey: WebsocketKeys.subscriptionSk(
           domainType: 'project',
           domainId: 'proj-1',
-          data: DomainChangeData(
-            name: 'domain-update',
-            lastDomainSeq: 1,
-            lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
-          ),
           entityType: 'task',
-        );
+        ),
+        entityType: 'task',
+      );
 
-        expect(payload, {
-          'action': 'change',
-          'notifyType': kNotifyTypeDomainChange,
-          'domainType': 'project',
-          'domainId': 'proj-1',
-          'entityType': 'task',
-          'subscriptionKey': WebsocketKeys.subscriptionSk(
-            domainType: 'project',
-            domainId: 'proj-1',
-            entityType: 'task',
-          ),
-          'data': {
-            'name': 'domain-update',
-            'lastDomainSeq': 1,
-            'lastDomainChangeAt': '2026-07-17T00:00:00.000Z',
-          },
-        });
-      },
-    );
+      expect(payload, {
+        'action': 'change',
+        'notifyType': kNotifyTypeDomainChange,
+        'domainType': 'project',
+        'domainId': 'proj-1',
+        'entityType': 'task',
+        'subscriptionKey': WebsocketKeys.subscriptionSk(
+          domainType: 'project',
+          domainId: 'proj-1',
+          entityType: 'task',
+        ),
+        'data': {
+          'name': 'domain-update',
+          'lastDomainSeq': 1,
+          'lastDomainChangeAt': '2026-07-17T00:00:00.000Z',
+        },
+      });
+    });
   });
 
   group('wsNotifyHandler', () {
@@ -189,7 +192,7 @@ void main() {
       connections.subscriptionsByDomain['project|proj-1'] = [
         const WebsocketSubscriptionMatch(
           connectionId: 'conn-wildcard-1',
-          entityType: '*',
+          entityType: WebsocketKeys.wildcardEntityType,
         ),
         const WebsocketSubscriptionMatch(
           connectionId: 'conn-task-1',
@@ -199,7 +202,7 @@ void main() {
       connections.subscriptionsByDomain['project|proj-2'] = [
         const WebsocketSubscriptionMatch(
           connectionId: 'conn-wildcard-2',
-          entityType: '*',
+          entityType: WebsocketKeys.wildcardEntityType,
         ),
         const WebsocketSubscriptionMatch(
           connectionId: 'conn-note-1',
@@ -302,7 +305,7 @@ void main() {
     });
 
     test(
-      'handles entityType null by delivering only to wildcard subscribers',
+      'handles entityType wildcard by delivering only to wildcard subscribers',
       () async {
         final connections = _FakeConnectionsRepository();
         final management = _FakeManagementClient(connections: connections);
@@ -310,7 +313,7 @@ void main() {
         connections.subscriptionsByDomain['project|proj-1'] = [
           const WebsocketSubscriptionMatch(
             connectionId: 'conn-wildcard',
-            entityType: '*',
+            entityType: WebsocketKeys.wildcardEntityType,
           ),
           const WebsocketSubscriptionMatch(
             connectionId: 'conn-task',
@@ -326,18 +329,20 @@ void main() {
           'Records': [
             {
               'Sns': {
-                'Message': jsonEncode({
-                  'notifyType': kNotifyTypeDomainChange,
-                  'domainType': 'project',
-                  'domainId': 'proj-1',
-                  'data': DomainChangeData(
-                    name: 'domain-update',
-                    lastDomainSeq: 1,
-                    lastDomainChangeAt: DateTime.parse(
-                      '2026-07-17T00:00:00.000Z',
+                'Message': jsonEncode(
+                  buildWsNotifyRecordMessage(
+                    domainType: 'project',
+                    domainId: 'proj-1',
+                    entityType: WebsocketKeys.wildcardEntityType,
+                    data: DomainChangeData(
+                      name: 'domain-update',
+                      lastDomainSeq: 1,
+                      lastDomainChangeAt: DateTime.parse(
+                        '2026-07-17T00:00:00.000Z',
+                      ),
                     ),
-                  ).toJson(),
-                }),
+                  ),
+                ),
               },
             },
           ],
@@ -367,7 +372,7 @@ void main() {
         connections.subscriptionsByDomain['project|proj-1'] = [
           const WebsocketSubscriptionMatch(
             connectionId: 'conn-both',
-            entityType: '*',
+            entityType: WebsocketKeys.wildcardEntityType,
           ),
           const WebsocketSubscriptionMatch(
             connectionId: 'conn-both',
@@ -425,7 +430,7 @@ void main() {
         connections.subscriptionsByDomain['project|proj-1'] = [
           const WebsocketSubscriptionMatch(
             connectionId: 'conn-wildcard',
-            entityType: '*',
+            entityType: WebsocketKeys.wildcardEntityType,
           ),
           const WebsocketSubscriptionMatch(
             connectionId: 'conn-task',
@@ -433,7 +438,7 @@ void main() {
           ),
           const WebsocketSubscriptionMatch(
             connectionId: 'conn-last-record',
-            entityType: r'$',
+            entityType: WebsocketKeys.lastRecordEntityType,
           ),
         ];
 
@@ -511,7 +516,7 @@ void main() {
       connections.subscriptionsByDomain['project|proj-1'] = [
         const WebsocketSubscriptionMatch(
           connectionId: 'conn-wildcard',
-          entityType: '*',
+          entityType: WebsocketKeys.wildcardEntityType,
         ),
         const WebsocketSubscriptionMatch(
           connectionId: 'conn-note',
@@ -528,83 +533,90 @@ void main() {
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': kNotifyTypeDomainChange,
-                'domainType': 'project',
-                'domainId': 'proj-1',
-                'data': DomainChangeData(
-                  name: 'domain-old',
-                  lastDomainSeq: 1,
-                  lastDomainChangeAt: DateTime.parse(
-                    '2026-07-17T00:00:00.000Z',
+                ...buildWsNotifyRecordMessage(
+                  domainType: 'project',
+                  domainId: 'proj-1',
+                  data: DomainChangeData(
+                    name: 'domain-old',
+                    lastDomainSeq: 1,
+                    lastDomainChangeAt: DateTime.parse(
+                      '2026-07-17T00:00:00.000Z',
+                    ),
                   ),
-                ).toJson(),
+                  entityType: WebsocketKeys.lastRecordEntityType,
+                ),
               }),
             },
           },
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': kNotifyTypeDomainChange,
-                'domainType': 'project',
-                'domainId': 'proj-1',
-                'entityType': 'note',
-                'data': DomainChangeData(
-                  name: 'note-old',
-                  lastDomainSeq: 1,
-                  lastDomainChangeAt: DateTime.parse(
-                    '2026-07-17T00:00:00.000Z',
+                ...buildWsNotifyRecordMessage(
+                  domainType: 'project',
+                  domainId: 'proj-1',
+                  data: DomainChangeData(
+                    name: 'note-old',
+                    lastDomainSeq: 1,
+                    lastDomainChangeAt: DateTime.parse(
+                      '2026-07-17T00:00:00.000Z',
+                    ),
                   ),
-                ).toJson(),
+                  entityType: 'note',
+                ),
               }),
             },
           },
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': kNotifyTypeDomainChange,
-                'domainType': 'project',
-                'domainId': 'proj-1',
-                'entityType': 'task',
-                'data': DomainChangeData(
-                  name: 'task-only',
-                  lastDomainSeq: 1,
-                  lastDomainChangeAt: DateTime.parse(
-                    '2026-07-17T00:00:00.000Z',
+                ...buildWsNotifyRecordMessage(
+                  domainType: 'project',
+                  domainId: 'proj-1',
+                  data: DomainChangeData(
+                    name: 'task-only',
+                    lastDomainSeq: 1,
+                    lastDomainChangeAt: DateTime.parse(
+                      '2026-07-17T00:00:00.000Z',
+                    ),
                   ),
-                ).toJson(),
+                  entityType: 'task',
+                ),
               }),
             },
           },
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': kNotifyTypeDomainChange,
-                'domainType': 'project',
-                'domainId': 'proj-1',
-                'entityType': 'note',
-                'data': DomainChangeData(
-                  name: 'note-latest',
-                  lastDomainSeq: 2,
-                  lastDomainChangeAt: DateTime.parse(
-                    '2026-07-17T00:00:01.000Z',
+                ...buildWsNotifyRecordMessage(
+                  domainType: 'project',
+                  domainId: 'proj-1',
+                  data: DomainChangeData(
+                    name: 'note-latest',
+                    lastDomainSeq: 2,
+                    lastDomainChangeAt: DateTime.parse(
+                      '2026-07-17T00:00:01.000Z',
+                    ),
                   ),
-                ).toJson(),
+                  entityType: 'note',
+                ),
               }),
             },
           },
           {
             'Sns': {
               'Message': jsonEncode({
-                'notifyType': kNotifyTypeDomainChange,
-                'domainType': 'project',
-                'domainId': 'proj-1',
-                'data': DomainChangeData(
-                  name: 'domain-latest',
-                  lastDomainSeq: 2,
-                  lastDomainChangeAt: DateTime.parse(
-                    '2026-07-17T00:00:01.000Z',
+                ...buildWsNotifyRecordMessage(
+                  domainType: 'project',
+                  domainId: 'proj-1',
+                  data: DomainChangeData(
+                    name: 'domain-latest',
+                    lastDomainSeq: 2,
+                    lastDomainChangeAt: DateTime.parse(
+                      '2026-07-17T00:00:01.000Z',
+                    ),
                   ),
-                ).toJson(),
+                  entityType: 'domain',
+                ),
               }),
             },
           },
@@ -668,7 +680,7 @@ void main() {
       connections.subscriptionsByDomain['project|proj-1'] = [
         const WebsocketSubscriptionMatch(
           connectionId: 'conn-wildcard',
-          entityType: '*',
+          entityType: WebsocketKeys.wildcardEntityType,
         ),
       ];
 
@@ -763,7 +775,7 @@ void main() {
         'body': jsonEncode({
           'domainType': 'project',
           'domainId': 'proj-1',
-          'entityType': '*',
+          'entityType': WebsocketKeys.wildcardEntityType,
         }),
       };
 
@@ -774,13 +786,16 @@ void main() {
       );
 
       expect(connections.subscriptions, hasLength(1));
-      expect(connections.subscriptions[0]['entityType'], '*');
+      expect(
+        connections.subscriptions[0]['entityType'],
+        WebsocketKeys.wildcardEntityType,
+      );
       expect(management.sentMessages[0]['payload'], {
         'action': 'subscribe',
         'status': 'ok',
         'domainType': 'project',
         'domainId': 'proj-1',
-        'entityType': '*',
+        'entityType': WebsocketKeys.wildcardEntityType,
         'subscriptionKey': WebsocketKeys.subscriptionSk(
           domainType: 'project',
           domainId: 'proj-1',
@@ -798,7 +813,7 @@ void main() {
         'body': jsonEncode({
           'domainType': 'project',
           'domainId': 'proj-1',
-          'entityType': r'$',
+          'entityType': WebsocketKeys.lastRecordEntityType,
         }),
       };
 
@@ -809,13 +824,16 @@ void main() {
       );
 
       expect(connections.subscriptions, hasLength(1));
-      expect(connections.subscriptions[0]['entityType'], r'$');
+      expect(
+        connections.subscriptions[0]['entityType'],
+        WebsocketKeys.lastRecordEntityType,
+      );
       expect(management.sentMessages[0]['payload'], {
         'action': 'subscribe',
         'status': 'ok',
         'domainType': 'project',
         'domainId': 'proj-1',
-        'entityType': r'$',
+        'entityType': WebsocketKeys.lastRecordEntityType,
         'subscriptionKey': WebsocketKeys.subscriptionSk(
           domainType: 'project',
           domainId: 'proj-1',
