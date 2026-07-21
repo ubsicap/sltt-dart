@@ -277,6 +277,7 @@ class DynamoDBStorageService extends BaseStorageService {
           'pk': {'S': _storageStatePrimaryKey()},
           'sk': {'S': _storageStateSortKey()},
         },
+        'ConsistentRead': true,
       });
 
       if (getResponse.statusCode != 200) {
@@ -312,14 +313,50 @@ class DynamoDBStorageService extends BaseStorageService {
           'sk': {'S': _storageStateSortKey()},
           ..._encodeJson(newState.toJson()),
         },
+        'ConditionExpression':
+            'attribute_not_exists(pk) AND attribute_not_exists(sk)',
       });
 
-      if (putResponse.statusCode != 200) {
-        throw Exception('Failed to persist storage state: ${putResponse.body}');
+      if (putResponse.statusCode == 200) {
+        _cachedStorageId = newState.storageId;
+        return _cachedStorageId!;
       }
 
-      _cachedStorageId = newState.storageId;
-      return _cachedStorageId!;
+      final putBody =
+          jsonDecode(utf8.decode(putResponse.bodyBytes))
+              as Map<String, dynamic>;
+      final putErrorType = putBody['__type'] as String?;
+      if (putErrorType != null &&
+          putErrorType.contains('ConditionalCheckFailedException')) {
+        final retryResponse = await _dynamoRequest('GetItem', {
+          'TableName': tableName,
+          'Key': {
+            'pk': {'S': _storageStatePrimaryKey()},
+            'sk': {'S': _storageStateSortKey()},
+          },
+          'ConsistentRead': true,
+        });
+
+        if (retryResponse.statusCode != 200) {
+          throw Exception(
+            'Failed to read storage state after concurrent put: ${retryResponse.body}',
+          );
+        }
+
+        final retryBody =
+            jsonDecode(utf8.decode(retryResponse.bodyBytes))
+                as Map<String, dynamic>;
+        final retryItem = retryBody['Item'] as Map<String, dynamic>?;
+        if (retryItem != null) {
+          final existing = DynamoStorageState.fromJson(_decodeItem(retryItem));
+          if (existing.storageId.isNotEmpty) {
+            _cachedStorageId = existing.storageId;
+            return _cachedStorageId!;
+          }
+        }
+      }
+
+      throw Exception('Failed to persist storage state: ${putResponse.body}');
     } catch (e) {
       // Fallback for degraded environments; cache for warm invocation reuse.
       SlttLogger.logger.warning(
