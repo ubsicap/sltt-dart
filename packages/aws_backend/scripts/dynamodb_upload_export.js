@@ -6,6 +6,7 @@ const os = require('os');
 const zlib = require('zlib');
 const readline = require('readline');
 const { spawnSync } = require('child_process');
+const { pathToFileURL } = require('url');
 
 const STORAGE_TYPES = ['auth', 'data'];
 const DEFAULT_INPUT_ROOT = 'sltt-exports';
@@ -94,6 +95,20 @@ function getTableName(args) {
     return args.tableArn.split(':').pop();
   }
   return null;
+}
+
+function matchesStorageType(name, storageType) {
+  return new RegExp(`(^|-)${storageType}($|-)`, 'i').test(name);
+}
+
+function matchesExportType(name, exportType) {
+  if (exportType === 'full') {
+    return name.includes('-full');
+  }
+  if (exportType === 'incremental') {
+    return name.includes('-incremental');
+  }
+  return false;
 }
 
 async function findLatestStorageRoot(inputRoot, storageType, exportType) {
@@ -255,7 +270,42 @@ function createBatchWriteJson(tableName, items) {
   };
 }
 
-async function flushBatch(tableName, batch, profile, region, batchIndex) {
+function validateDynamoTableArgs(tableName, region, profile) {
+  const args = [
+    'dynamodb',
+    'describe-table',
+    '--table-name',
+    tableName,
+    '--region',
+    region,
+  ];
+  if (profile) {
+    args.push('--profile', profile);
+  }
+  return args;
+}
+
+function checkTargetTableExists(tableName, region, profile) {
+  const args = validateDynamoTableArgs(tableName, region, profile);
+  try {
+    runAwsCli(args);
+  } catch (err) {
+    throw new Error(
+      `Target DynamoDB table validation failed for ${tableName}: ${err.message}`
+    );
+  }
+}
+
+function getRequestItemsFileUri(filePath) {
+  const resolved = path.resolve(filePath);
+  const fileUrl = pathToFileURL(resolved).href;
+  if (fileUrl.startsWith('file:///') && /^[A-Za-z]:/.test(fileUrl.slice(8))) {
+    return `file://${fileUrl.slice(8)}`;
+  }
+  return fileUrl;
+}
+
+async function flushBatch(tableName, batch, profile, region, batchIndex, batchStart, batchEnd, totalItems, totalBatches) {
   if (batch.length === 0) {
     return;
   }
@@ -264,12 +314,34 @@ async function flushBatch(tableName, batch, profile, region, batchIndex) {
   await fsPromises.writeFile(tempFile, JSON.stringify(request), 'utf8');
 
   try {
-    console.log(`Uploading batch ${batchIndex} (${batch.length} items)...`);
-    const args = ['dynamodb', 'batch-write-item', '--request-items', `file://${tempFile}`, '--region', region];
+    console.log(
+      `Uploading batch ${batchIndex}/${totalBatches} ` +
+      `(items ${batchStart}-${batchEnd}, ${batch.length} items, ${batchEnd}/${totalItems} total)...`
+    );
+    const requestItemsUri = getRequestItemsFileUri(tempFile);
+    // console.log(`Temp request file: ${tempFile}`);
+    // console.log(`Request file URI: ${requestItemsUri}`);
+    const args = [
+      'dynamodb',
+      'batch-write-item',
+      '--request-items',
+      requestItemsUri,
+      '--region',
+      region,
+    ];
     if (profile) {
       args.push('--profile', profile);
     }
-    const output = runAwsCli(args);
+
+    let output;
+    try {
+      output = runAwsCli(args);
+    } catch (err) {
+      throw new Error(
+        `AWS CLI batch-write-item failed for batch ${batchIndex}/${totalBatches}: ${err.message}`
+      );
+    }
+
     let response = {};
     if (output) {
       try {
@@ -291,7 +363,14 @@ async function flushBatch(tableName, batch, profile, region, batchIndex) {
       await sleep(5000);
       const retryRequest = createBatchWriteJson(tableName, retryItems.map((item) => item.PutRequest.Item));
       await fsPromises.writeFile(tempFile, JSON.stringify(retryRequest), 'utf8');
-      const retryOutput = runAwsCli(args);
+      let retryOutput;
+      try {
+        retryOutput = runAwsCli(args);
+      } catch (err) {
+        throw new Error(
+          `AWS CLI batch-write-item retry failed for batch ${batchIndex}/${totalBatches}: ${err.message}`
+        );
+      }
       if (retryOutput) {
         try {
           response = JSON.parse(retryOutput);
@@ -359,8 +438,31 @@ async function main() {
     : await findLatestStorageRoot(inputRoot, args.storageType, args.exportType);
   console.log(`Resolved export root: ${storageRoot}`);
 
+  const storageRootName = path.basename(storageRoot);
+  if (!matchesStorageType(tableName, args.storageType)) {
+    throw new Error(
+      `Target table name ${tableName} does not match --storage-type ${args.storageType}. ` +
+      `Expected a name containing '${args.storageType}'.`
+    );
+  }
+  if (!matchesStorageType(storageRootName, args.storageType)) {
+    throw new Error(
+      `Export folder ${storageRootName} does not match --storage-type ${args.storageType}. ` +
+      `Expected a folder name containing '${args.storageType}'.`
+    );
+  }
+  if (!matchesExportType(storageRootName, args.exportType)) {
+    throw new Error(
+      `Export folder ${storageRootName} does not match --export-type ${args.exportType}. ` +
+      `Expected a folder name containing '-${args.exportType}'.`
+    );
+  }
+
   const dataDir = await findLatestExportDataDir(storageRoot);
   console.log(`Resolved data directory: ${dataDir}`);
+
+  checkTargetTableExists(tableName, args.region, awsProfile);
+  console.log(`Target DynamoDB table ${tableName} exists in region ${args.region}.`);
 
   const dataFiles = await collectJsonExportPaths(dataDir);
   if (dataFiles.length === 0) {
@@ -368,26 +470,62 @@ async function main() {
   }
   console.log(`Found ${dataFiles.length} export data file(s)`);
 
+  const itemCount = await iterateExportItems(dataFiles, async () => {});
+  if (itemCount === 0) {
+    console.log(`No export items found to upload for ${tableName}.`);
+    return;
+  }
+
+  const totalBatches = Math.max(1, Math.ceil(itemCount / MAX_BATCH_SIZE));
+  console.log(`Found ${itemCount} items; uploading ${totalBatches} batch(es) of up to ${MAX_BATCH_SIZE} items each.`);
+
   let batch = [];
-  let totalItems = 0;
+  let uploadedItems = 0;
+  let flushedItems = 0;
   let batchIndex = 1;
 
   async function onItem(item) {
     batch.push(item);
-    totalItems += 1;
+    uploadedItems += 1;
     if (batch.length >= MAX_BATCH_SIZE) {
-      await flushBatch(tableName, batch, awsProfile, args.region, batchIndex);
-      batch = [];
+      const chunk = batch.splice(0, MAX_BATCH_SIZE);
+      const batchStart = flushedItems + 1;
+      const batchEnd = flushedItems + chunk.length;
+      await flushBatch(
+        tableName,
+        chunk,
+        awsProfile,
+        args.region,
+        batchIndex,
+        batchStart,
+        batchEnd,
+        itemCount,
+        totalBatches
+      );
+      flushedItems += chunk.length;
       batchIndex += 1;
     }
   }
 
-  const itemCount = await iterateExportItems(dataFiles, onItem);
+  await iterateExportItems(dataFiles, onItem);
   if (batch.length > 0) {
-    await flushBatch(tableName, batch, awsProfile, args.region, batchIndex);
+    const batchStart = flushedItems + 1;
+    const batchEnd = flushedItems + batch.length;
+    await flushBatch(
+      tableName,
+      batch,
+      awsProfile,
+      args.region,
+      batchIndex,
+      batchStart,
+      batchEnd,
+      itemCount,
+      totalBatches
+    );
+    flushedItems += batch.length;
   }
 
-  console.log(`Uploaded ${itemCount} items to ${tableName} using ${batchIndex} batch(es).`);
+  console.log(`Uploaded ${uploadedItems}/${itemCount} items to ${tableName} using ${batchIndex} batch(es).`);
 }
 
 main().catch((error) => {
