@@ -1675,7 +1675,9 @@ class ApiChangesNetworkTestSuite {
             .map((item) => parseStoredAt(item as Map<String, dynamic>))
             .toList()
           ..sort();
-    final betweenBatches = firstBatchStoredAts.last;
+    final betweenBatches = firstBatchStoredAts.last.add(
+      const Duration(microseconds: 1),
+    );
 
     // Create second batch of 3 tasks
     for (int i = 4; i <= 6; i++) {
@@ -1804,7 +1806,9 @@ class ApiChangesNetworkTestSuite {
             .map((item) => parseStoredAt(item as Map<String, dynamic>))
             .toList()
           ..sort();
-    final betweenBatches = firstBatchStoredAts.last;
+    final betweenBatches = firstBatchStoredAts.last.add(
+      const Duration(microseconds: 1),
+    );
 
     // Create second batch of 3 tasks
     for (int i = 4; i <= 6; i++) {
