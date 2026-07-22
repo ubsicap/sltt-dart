@@ -61,6 +61,7 @@ isar_db/
 **/*.exe         # Windows executables
 *.dmg         # macOS disk images
 packages/aws_backend/node_modules/.bin/components
+packages/aws_backend/sltt-exports
 
 # Node.js related
 **/node_modules/**
