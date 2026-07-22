@@ -132,6 +132,7 @@ provider:
         - dynamodb:Scan
       Resource:
         - ${self:custom.authTableArn}
+        - ${self:custom.authTableArn}/index/*
     - Effect: Allow
       Action:
         - dynamodb:ExportTableToPointInTime
