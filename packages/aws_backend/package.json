@@ -61,6 +61,7 @@
     "logs:prd": "npm run logs:secondary:prd",
     "info:secondary:dev": "npx serverless info --config serverless-secondary-infra.yml --stage dev --aws-profile sltt-dart-dev",
     "info:secondary:tst": "npx serverless info --config serverless-secondary-infra.yml --stage tst --aws-profile sltt-dart-dev",
+    "info:secondary:sltt-dart-prd:prd": "npx serverless info --config serverless-secondary-infra.yml --stage prd --aws-profile sltt-dart-prd",
     "info:secondary:sltt-dart-prd:dev": "npx serverless info --config serverless-secondary-infra.yml --stage dev --aws-profile sltt-dart-prd",
     "info:dev": "npm run info:secondary:dev",
     "info:tst": "npm run info:secondary:tst",

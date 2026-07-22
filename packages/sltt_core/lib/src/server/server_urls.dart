@@ -5,3 +5,9 @@
 // generator script or set SLTT_REST_API_ID to regenerate this file.
 const String kCloudDevUrl =
     'https://t0e0o97xn5.execute-api.us-east-1.amazonaws.com/prd';
+
+const String kCloudPrdApiUrl =
+    'https://t0e0o97xn5.execute-api.us-east-1.amazonaws.com/prd';
+
+const String kCloudPrdWssUrl =
+    'wss://6d4q1rfwza.execute-api.us-east-1.amazonaws.com/prd';
