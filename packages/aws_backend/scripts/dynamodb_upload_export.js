@@ -19,6 +19,7 @@ function parseArgs() {
     tableArn: null,
     awsProfile: process.env.AWS_PROFILE || null,
     inputRoot: process.env.INPUT_DIR || DEFAULT_INPUT_ROOT,
+    exportId: null,
     region: process.env.AWS_REGION || DEFAULT_REGION,
     exportType: 'full',
     help: false,
@@ -46,6 +47,10 @@ function parseArgs() {
       args.inputRoot = process.argv[++i];
     } else if (arg.startsWith('--input-dir=')) {
       args.inputRoot = arg.split('=')[1];
+    } else if (arg === '--export-id') {
+      args.exportId = process.argv[++i];
+    } else if (arg.startsWith('--export-id=')) {
+      args.exportId = arg.split('=')[1];
     } else if (arg === '--export-type') {
       args.exportType = process.argv[++i]?.toLowerCase();
     } else if (arg.startsWith('--export-type=')) {
@@ -74,6 +79,7 @@ function printUsage() {
   console.log('  --table-arn=<arn>            Target DynamoDB table ARN (extracts name)');
   console.log('  --aws-profile=<profile>      AWS CLI profile to use');
   console.log('  --input-dir=<path>           Export root directory (default: sltt-exports)');
+  console.log('  --export-id=<id>             Specific export directory name under input root');
   console.log('  --region=<region>            AWS region (default: us-east-1)');
   console.log('  --help, -h                   Show this help');
   console.log();
@@ -112,6 +118,41 @@ async function findLatestStorageRoot(inputRoot, storageType, exportType) {
 
   candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
   return candidates[0].path;
+}
+
+async function resolveStorageRootByExportId(inputRoot, exportId, storageType, exportType) {
+  const root = path.resolve(inputRoot);
+  if (path.isAbsolute(exportId)) {
+    if (await exists(exportId)) {
+      return exportId;
+    }
+    throw new Error(`Export directory not found: ${exportId}`);
+  }
+
+  const directPath = path.join(root, exportId);
+  if (await exists(directPath)) {
+    return directPath;
+  }
+
+  const entries = await fsPromises.readdir(root, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name === exportId) {
+      return path.join(root, entry.name);
+    }
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (!entry.name.endsWith(`-${storageType}`)) continue;
+    if (exportType === 'incremental' && !entry.name.includes(`-${exportType}`)) continue;
+    if (exportType === 'full' && !entry.name.includes('-full')) continue;
+    if (entry.name.includes(exportId)) {
+      return path.join(root, entry.name);
+    }
+  }
+
+  throw new Error(`No export directory found for export-id=${exportId} under ${root}`);
 }
 
 async function findLatestExportDataDir(storageRoot) {
@@ -210,9 +251,7 @@ function runAwsCli(args) {
 
 function createBatchWriteJson(tableName, items) {
   return {
-    RequestItems: {
-      [tableName]: items.map((item) => ({ PutRequest: { Item: item } })),
-    },
+    [tableName]: items.map((item) => ({ PutRequest: { Item: item } })),
   };
 }
 
@@ -250,7 +289,7 @@ async function flushBatch(tableName, batch, profile, region, batchIndex) {
       const retryItems = unprocessed[tableName] || [];
       console.log(`Retrying ${retryItems.length} unprocessed items (attempt ${retryCount})...`);
       await sleep(5000);
-      const retryRequest = { RequestItems: { [tableName]: retryItems } };
+      const retryRequest = createBatchWriteJson(tableName, retryItems.map((item) => item.PutRequest.Item));
       await fsPromises.writeFile(tempFile, JSON.stringify(retryRequest), 'utf8');
       const retryOutput = runAwsCli(args);
       if (retryOutput) {
@@ -305,6 +344,9 @@ async function main() {
   const inputRoot = path.resolve(args.inputRoot);
 
   console.log(`Using input root: ${inputRoot}`);
+  if (args.exportId) {
+    console.log(`Using export id: ${args.exportId}`);
+  }
   console.log(`Storage type: ${args.storageType}`);
   console.log(`DynamoDB table: ${tableName}`);
   if (awsProfile) {
@@ -312,8 +354,10 @@ async function main() {
   }
   console.log(`AWS region: ${args.region}`);
 
-  const storageRoot = await findLatestStorageRoot(inputRoot, args.storageType, args.exportType);
-  console.log(`Resolved latest export root: ${storageRoot}`);
+  const storageRoot = args.exportId
+    ? await resolveStorageRootByExportId(inputRoot, args.exportId, args.storageType, args.exportType)
+    : await findLatestStorageRoot(inputRoot, args.storageType, args.exportType);
+  console.log(`Resolved export root: ${storageRoot}`);
 
   const dataDir = await findLatestExportDataDir(storageRoot);
   console.log(`Resolved data directory: ${dataDir}`);

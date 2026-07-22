@@ -103,6 +103,44 @@ final server = AwsRestApiServer(
 await server.start(port: 8080);
 ```
 
+## Export and Upload Utilities
+
+The package includes helper scripts for downloading DynamoDB exports and uploading export files.
+
+### Download export files via API
+
+This command requests an export from the API and downloads the resulting files locally.
+
+```bash
+cd packages/aws_backend
+npm run dynamodb:export-api-download -- --token <your-token> [--output-dir ./sltt-exports] [--export-type full|incremental] [--export-id <existing-export-dir>]
+```
+
+- `--token` is required unless you set `AUTH_TOKEN`, `ACCESS_TOKEN`, or `BEARER_TOKEN`.
+- `--output-dir` controls the local output folder root.
+- `--export-type` defaults to `full`.
+- `--export-id` can reference an existing export directory for incremental export timestamps.
+
+### Upload export files
+
+Use this script to upload a previously downloaded export directory back into AWS storage via the upload helper.
+
+```bash
+cd packages/aws_backend
+npm run dynamodb:upload-export -- --storage-type <auth|data> --table-name <tableName> --input-dir <path>
+```
+
+Or, specify an export folder directly via `--export-id`:
+
+```bash
+cd packages/aws_backend
+npm run dynamodb:upload-export -- --storage-type <auth|data> --table-name <tableName> --export-id <export-folder-name>
+```
+
+- `--input-dir` points at the export root directory (default: `sltt-exports`).
+- `--export-id` selects a specific export folder under the input root.
+- The script reads the export layout and uploads AWSDynamoDB export items into the target DynamoDB table.
+
 ## Project Management
 
 ### Multiple Projects in One Table
