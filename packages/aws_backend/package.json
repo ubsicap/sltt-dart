@@ -85,6 +85,7 @@
     "s3:download-export": "node scripts/s3_export_ops.js download",
     "dynamodb:json-to-parquet": "python scripts/dynamodb_json_to_parquet.py --input ./diag-export/AWSDynamoDB --output ./diag-export/",
     "dynamodb:export-api-download": "node scripts/dynamodb_export_download.js",
+    "dynamodb:upload-export": "node scripts/dynamodb_upload_export.js",
     "roundtrip_test": "python scripts/roundtrip_test.py"
   },
   "keywords": [],
