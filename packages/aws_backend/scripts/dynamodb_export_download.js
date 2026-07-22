@@ -8,7 +8,7 @@ const { URL } = require('url');
 const DEFAULT_BASE_URL =
   'https://t0e0o97xn5.execute-api.us-east-1.amazonaws.com/prd';
 const STORAGE_TYPES = ['auth', 'data'];
-const DEFAULT_WAIT_SECONDS = 1;
+const DEFAULT_WAIT_SECONDS = 2;
 
 function parseArgs() {
   const args = {
@@ -168,10 +168,37 @@ async function fetchExportData(baseUrl, storageType, token) {
   return await jsonRequest('POST', url, body, token);
 }
 
+async function fetchExportStatus(baseUrl, storageType, token) {
+  const query = 'includeDetails=true&MaxResults=5';
+  const url = `${baseUrl.replace(/\/$/, '')}/api/admin/storage/${storageType}/export/list?${query}`;
+  return await jsonRequest('GET', url, null, token);
+}
+
 async function fetchListFiles(baseUrl, storageType, exportArn, token) {
   const query = `exportArn=${encodeURIComponent(exportArn)}`;
   const url = `${baseUrl.replace(/\/$/, '')}/api/admin/storage/${storageType}/export/list-files?${query}`;
   return await jsonRequest('GET', url, null, token);
+}
+
+function findExportSummary(response, exportArn) {
+  const summaries = Array.isArray(response.ExportSummaries)
+    ? response.ExportSummaries
+    : [];
+  return summaries.find((summary) => {
+    if (!summary || typeof summary !== 'object') {
+      return false;
+    }
+    if (summary.ExportArn === exportArn) {
+      return true;
+    }
+    if (
+      summary.ExportDescription &&
+      summary.ExportDescription.ExportArn === exportArn
+    ) {
+      return true;
+    }
+    return false;
+  });
 }
 
 function getExportArn(response) {
@@ -214,18 +241,25 @@ function sanitizeItemKey(key) {
   return key.replace(/^\/+/, '');
 }
 
-async function waitForItems(baseUrl, storageType, exportArn, token, waitSeconds) {
-  process.stdout.write(`Waiting for ${storageType} export files`);
+async function waitForExportCompletion(baseUrl, storageType, exportArn, token, waitSeconds) {
+  process.stdout.write(`Waiting for ${storageType} export completion`);
   while (true) {
     try {
-      const response = await fetchListFiles(baseUrl, storageType, exportArn, token);
-      const items = Array.isArray(response.items) ? response.items : [];
-      if (items.length > 0) {
+      const response = await fetchExportStatus(baseUrl, storageType, token);
+      const summary = findExportSummary(response, exportArn);
+      const status = summary && summary.ExportStatus;
+      if (status === 'COMPLETED') {
         process.stdout.write('\n');
-        return response;
+        return summary;
+      }
+      if (status === 'FAILED' || status === 'CANCELLED' || status === 'EXPIRED') {
+        process.stdout.write('\n');
+        throw new Error(
+          `Export ${exportArn} ended with terminal status: ${status}`,
+        );
       }
     } catch (error) {
-      process.stdout.write(`\nError while listing files: ${error.message}\n`);
+      process.stdout.write(`\nError while polling export status: ${error.message}\n`);
       throw error;
     }
 
@@ -244,10 +278,10 @@ async function run() {
     printUsageAndExit(1);
   }
 
-  const exportResults = [];
+  const pendingExports = [];
 
   for (const storageType of STORAGE_TYPES) {
-    console.log(`\n=== Starting export for ${storageType} storage ===`);
+    console.log(`\n=== Creating export for ${storageType} storage ===`);
     const exportResponse = await fetchExportData(baseUrl, storageType, token);
     const exportArn = getExportArn(exportResponse);
     if (!exportArn) {
@@ -258,6 +292,7 @@ async function run() {
 
     const startTime = getStartTime(exportResponse) || new Date().toISOString();
     const startTimeIso = normalizeFolderName(new Date(startTime).toISOString());
+    const humanStartTime = new Date(startTime).toLocaleString();
     const outputDir = path.join(outputRoot, `${startTimeIso}-${storageType}`);
     mkdirRecursive(outputDir);
 
@@ -265,8 +300,23 @@ async function run() {
     fs.writeFileSync(metadataFile, JSON.stringify(exportResponse, null, 2), 'utf8');
     console.log(`Saved export metadata to ${metadataFile}`);
     console.log(`ExportArn: ${exportArn}`);
+    console.log(`Creation time: ${humanStartTime}`);
 
-    const listResponse = await waitForItems(
+    pendingExports.push({
+      storageType,
+      exportArn,
+      outputDir,
+      startTime,
+      humanStartTime,
+    });
+  }
+
+  const exportResults = [];
+
+  for (const pending of pendingExports) {
+    const { storageType, exportArn, outputDir } = pending;
+    console.log(`\n=== Waiting for ${storageType} export completion ===`);
+    await waitForExportCompletion(
       baseUrl,
       storageType,
       exportArn,
@@ -274,9 +324,13 @@ async function run() {
       waitSeconds,
     );
 
+    const listResponse = await fetchListFiles(baseUrl, storageType, exportArn, token);
     const items = Array.isArray(listResponse.items) ? listResponse.items : [];
     if (items.length === 0) {
-      console.log(`No files found for ${storageType} export after polling.`);
+      console.log(
+        `No files found for ${storageType} export after completion polling.`,
+      );
+      exportResults.push({ storageType, exportArn, outputDir, downloadedItems: 0 });
       continue;
     }
 
