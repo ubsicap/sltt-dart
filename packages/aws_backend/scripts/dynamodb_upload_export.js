@@ -20,6 +20,7 @@ function parseArgs() {
     awsProfile: process.env.AWS_PROFILE || null,
     inputRoot: process.env.INPUT_DIR || DEFAULT_INPUT_ROOT,
     region: process.env.AWS_REGION || DEFAULT_REGION,
+    exportType: 'full',
     help: false,
   };
 
@@ -45,6 +46,10 @@ function parseArgs() {
       args.inputRoot = process.argv[++i];
     } else if (arg.startsWith('--input-dir=')) {
       args.inputRoot = arg.split('=')[1];
+    } else if (arg === '--export-type') {
+      args.exportType = process.argv[++i]?.toLowerCase();
+    } else if (arg.startsWith('--export-type=')) {
+      args.exportType = arg.split('=')[1]?.toLowerCase();
     } else if (arg === '--region') {
       args.region = process.argv[++i];
     } else if (arg.startsWith('--region=')) {
@@ -64,6 +69,7 @@ function printUsage() {
   console.log('Usage: node scripts/dynamodb_upload_export.js --storage-type <auth|data> --table-name <tableName> [options]');
   console.log('Options:');
   console.log('  --storage-type=<auth|data>   Choose the export type to load');
+  console.log('  --export-type=<full|incremental>  Choose the export kind for directory filtering');
   console.log('  --table-name=<name>          Target DynamoDB table name');
   console.log('  --table-arn=<arn>            Target DynamoDB table ARN (extracts name)');
   console.log('  --aws-profile=<profile>      AWS CLI profile to use');
@@ -84,7 +90,7 @@ function getTableName(args) {
   return null;
 }
 
-async function findLatestStorageRoot(inputRoot, storageType) {
+async function findLatestStorageRoot(inputRoot, storageType, exportType) {
   const root = path.resolve(inputRoot);
   const entries = await fsPromises.readdir(root, { withFileTypes: true });
   const candidates = [];
@@ -92,13 +98,16 @@ async function findLatestStorageRoot(inputRoot, storageType) {
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     if (!entry.name.endsWith(`-${storageType}`)) continue;
+    if (exportType === 'incremental' && !entry.name.includes(`-${exportType}`)) continue;
+    if (exportType === 'full' && !entry.name.includes('-full')) continue;
     const candidatePath = path.join(root, entry.name);
     const stat = await fsPromises.stat(candidatePath);
     candidates.push({ path: candidatePath, mtimeMs: stat.mtimeMs });
   }
 
   if (candidates.length === 0) {
-    throw new Error(`No export directories found for storage-type=${storageType} under ${root}`);
+    const filter = exportType === 'incremental' ? ` and export type ${exportType}` : '';
+    throw new Error(`No export directories found for storage-type=${storageType}${filter} under ${root}`);
   }
 
   candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
@@ -279,6 +288,12 @@ async function main() {
     process.exit(1);
   }
 
+  if (!['full', 'incremental'].includes(args.exportType)) {
+    console.error('Invalid --export-type; expected full or incremental');
+    printUsage();
+    process.exit(1);
+  }
+
   const tableName = getTableName(args);
   if (!tableName) {
     console.error('Missing --table-name or --table-arn');
@@ -297,7 +312,7 @@ async function main() {
   }
   console.log(`AWS region: ${args.region}`);
 
-  const storageRoot = await findLatestStorageRoot(inputRoot, args.storageType);
+  const storageRoot = await findLatestStorageRoot(inputRoot, args.storageType, args.exportType);
   console.log(`Resolved latest export root: ${storageRoot}`);
 
   const dataDir = await findLatestExportDataDir(storageRoot);

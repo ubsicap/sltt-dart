@@ -20,6 +20,9 @@ function parseArgs() {
       null,
     outputRoot: process.env.OUTPUT_DIR || 'sltt-exports',
     waitSeconds: DEFAULT_WAIT_SECONDS,
+    exportType: 'full',
+    incrementalFrom: null,
+    incrementalTo: null,
   };
 
   for (let i = 2; i < process.argv.length; i += 1) {
@@ -44,6 +47,21 @@ function parseArgs() {
       i += 1;
     } else if (arg.startsWith('--wait-seconds=')) {
       args.waitSeconds = parseInt(arg.split('=')[1], 10) || DEFAULT_WAIT_SECONDS;
+      } else if (arg === '--export-type') {
+      args.exportType = process.argv[i + 1]?.toLowerCase();
+      i += 1;
+    } else if (arg.startsWith('--export-type=')) {
+      args.exportType = arg.split('=')[1]?.toLowerCase();
+    } else if (arg === '--incremental-from') {
+      args.incrementalFrom = process.argv[i + 1];
+      i += 1;
+    } else if (arg.startsWith('--incremental-from=')) {
+      args.incrementalFrom = arg.split('=')[1];
+    } else if (arg === '--incremental-to') {
+      args.incrementalTo = process.argv[i + 1];
+      i += 1;
+    } else if (arg.startsWith('--incremental-to=')) {
+      args.incrementalTo = arg.split('=')[1];
     } else if (arg === '--help' || arg === '-h') {
       printUsageAndExit(0);
     }
@@ -59,6 +77,9 @@ function printUsageAndExit(code) {
   console.log('  --token=<token>         Bearer token for admin API calls');
   console.log('  --output-dir=<path>     Output directory root (default: sltt-exports)');
   console.log('  --wait-seconds=<secs>   Poll interval in seconds (default: 10)');
+  console.log('  --export-type=<full|incremental>  Export type to request');
+  console.log('  --incremental-from=<ts> ExportFromTime for incremental export (ISO8601)');
+  console.log('  --incremental-to=<ts>   ExportToTime for incremental export (ISO8601)');
   console.log('  --help, -h              Show this help text');
   console.log();
   console.log('Environment variables: CLOUD_BASE_URL, AUTH_TOKEN, ACCESS_TOKEN, BEARER_TOKEN');
@@ -159,12 +180,24 @@ function normalizeFolderName(value) {
   return value.replace(/[:\.]/g, '-').replace(/[^a-zA-Z0-9_\-]/g, '_');
 }
 
-async function fetchExportData(baseUrl, storageType, token) {
+async function fetchExportData(baseUrl, storageType, token, exportType, incrementalFrom, incrementalTo) {
   const url = `${baseUrl.replace(/\/$/, '')}/api/admin/storage/${storageType}/export/create`;
   const body = {
     ExportFormat: 'DYNAMODB_JSON',
-    ExportType: 'FULL_EXPORT',
+    ExportType: exportType,
   };
+  if (exportType === 'incremental') {
+    body.ExportType = 'INCREMENTAL_EXPORT';
+    body.IncrementalExportSpecification = {};
+    if (incrementalFrom) {
+      body.IncrementalExportSpecification.ExportFromTime = incrementalFrom;
+    }
+    if (incrementalTo) {
+      body.IncrementalExportSpecification.ExportToTime = incrementalTo;
+    }
+  } else {
+    body.ExportType = 'FULL_EXPORT';
+  }
   return await jsonRequest('POST', url, body, token);
 }
 
@@ -269,7 +302,15 @@ async function waitForExportCompletion(baseUrl, storageType, exportArn, token, w
 }
 
 async function run() {
-  const { baseUrl, token, outputRoot, waitSeconds } = parseArgs();
+  const {
+    baseUrl,
+    token,
+    outputRoot,
+    waitSeconds,
+    exportType,
+    incrementalFrom,
+    incrementalTo,
+  } = parseArgs();
 
   if (!token) {
     console.error(
@@ -278,11 +319,27 @@ async function run() {
     printUsageAndExit(1);
   }
 
+  if (!['full', 'incremental'].includes(exportType)) {
+    console.error('Invalid --export-type; expected full or incremental');
+    printUsageAndExit(1);
+  }
+
+  if (exportType === 'incremental' && !incrementalFrom && !incrementalTo) {
+    console.warn('Incremental export requested without --incremental-from or --incremental-to; requesting latest incremental export.');
+  }
+
   const pendingExports = [];
 
   for (const storageType of STORAGE_TYPES) {
     console.log(`\n=== Creating export for ${storageType} storage ===`);
-    const exportResponse = await fetchExportData(baseUrl, storageType, token);
+    const exportResponse = await fetchExportData(
+      baseUrl,
+      storageType,
+      token,
+      exportType,
+      incrementalFrom,
+      incrementalTo,
+    );
     const exportArn = getExportArn(exportResponse);
     if (!exportArn) {
       throw new Error(
@@ -293,7 +350,17 @@ async function run() {
     const startTime = getStartTime(exportResponse) || new Date().toISOString();
     const startTimeIso = normalizeFolderName(new Date(startTime).toISOString());
     const humanStartTime = new Date(startTime).toLocaleString();
-    const outputDir = path.join(outputRoot, `${startTimeIso}-${storageType}`);
+    const exportTypeLabel = args.exportType === 'incremental' ? 'incremental' : 'full';
+    const suffixParts = [storageType, exportTypeLabel];
+    if (args.exportType === 'incremental') {
+      const rangePart = [];
+      if (args.incrementalFrom) rangePart.push(`from-${normalizeFolderName(args.incrementalFrom)}`);
+      if (args.incrementalTo) rangePart.push(`to-${normalizeFolderName(args.incrementalTo)}`);
+      if (rangePart.length > 0) {
+        suffixParts.push(rangePart.join('-'));
+      }
+    }
+    const outputDir = path.join(outputRoot, `${startTimeIso}-${suffixParts.join('-')}`);
     mkdirRecursive(outputDir);
 
     const metadataFile = path.join(outputDir, 'export-response.json');
