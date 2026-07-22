@@ -85,7 +85,8 @@
     "s3:download-export": "node scripts/s3_export_ops.js download",
     "dynamodb:json-to-parquet": "python scripts/dynamodb_json_to_parquet.py --input ./diag-export/AWSDynamoDB --output ./diag-export/",
     "dynamodb:export-api-download": "node scripts/dynamodb_export_download.js --token todo",
-    "dynamodb:upload-export": "node scripts/dynamodb_upload_export.js",
+    "dynamodb:upload-export:auth:dev": "node scripts/dynamodb_upload_export.js --aws-profile sltt-dart-dev --storage-type auth --table-name sltt-v2-data-infra-dev-auth",
+    "dynamodb:upload-export:data:dev": "node scripts/dynamodb_upload_export.js --aws-profile sltt-dart-dev --storage-type data --table-name sltt-v2-data-infra-dev-data",
     "roundtrip_test": "python scripts/roundtrip_test.py"
   },
   "keywords": [],
