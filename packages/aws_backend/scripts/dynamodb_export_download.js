@@ -187,6 +187,14 @@ function normalizeFolderName(value) {
   return value.replace(/[:\.]/g, '-').replace(/[^a-zA-Z0-9_\-]/g, '_');
 }
 
+function getMinimalExportIdBase(exportId) {
+  if (typeof exportId !== 'string') {
+    return exportId;
+  }
+  const match = exportId.match(/^(.*?-(?:auth|data)-(?:full|incremental))(?:-.*)?$/);
+  return match ? match[1] : exportId;
+}
+
 function toEpochSeconds(value) {
   if (typeof value === 'number') {
     return value;
@@ -303,12 +311,12 @@ function getStartTime(response) {
   }
 
   if (typeof raw === 'number') {
-    return new Date(Math.round(raw * 1000)).toISOString();
+    return new Date(raw * 1000).toISOString();
   }
   if (typeof raw === 'string') {
     const numeric = Number(raw);
     if (!Number.isNaN(numeric)) {
-      return new Date(Math.round(numeric * 1000)).toISOString();
+      return new Date(numeric * 1000).toISOString();
     }
     return raw;
   }
@@ -426,7 +434,7 @@ async function run() {
         suffixParts.push(rangePart.join('-'));
       }
       if (args.exportId) {
-        suffixParts.push(`base-${normalizeFolderName(args.exportId)}`);
+        suffixParts.push(`base-${normalizeFolderName(getMinimalExportIdBase(args.exportId))}`);
       }
     }
     const outputDir = path.join(args.outputRoot, `${startTimeIso}-${suffixParts.join('-')}`);
