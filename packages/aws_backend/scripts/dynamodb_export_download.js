@@ -333,21 +333,30 @@ async function waitForExportCompletion(baseUrl, storageType, exportArn, token, w
 
 async function run() {
   const args = parseArgs();
+  const {
+    baseUrl,
+    token,
+    outputRoot,
+    waitSeconds,
+    exportType,
+    incrementalFrom,
+    incrementalTo,
+  } = args;
 
-  if (!args.token) {
+  if (!token) {
     console.error(
       'Missing bearer token. Set AUTH_TOKEN, ACCESS_TOKEN, BEARER_TOKEN, or pass --token.',
     );
     printUsageAndExit(1);
   }
 
-  if (!['full', 'incremental'].includes(args.exportType)) {
+  if (!['full', 'incremental'].includes(exportType)) {
     console.error('Invalid --export-type; expected full or incremental');
     printUsageAndExit(1);
   }
 
-  if (args.exportType === 'incremental' && !args.incrementalFrom && !args.incrementalTo && args.exportId) {
-    const exportDir = await resolveExportDirByExportId(args.outputRoot, args.exportId);
+  if (exportType === 'incremental' && !incrementalFrom && !incrementalTo && args.exportId) {
+    const exportDir = await resolveExportDirByExportId(outputRoot, args.exportId);
     console.log(`Resolved export-id ${args.exportId} to directory ${exportDir}`);
     const metadataFile = path.join(exportDir, 'export-response.json');
     const metadataRaw = await fs.promises.readFile(metadataFile, 'utf8');
@@ -362,7 +371,7 @@ async function run() {
     }
   }
 
-  if (args.exportType === 'incremental' && !args.incrementalFrom && !args.incrementalTo) {
+  if (exportType === 'incremental' && !incrementalFrom && !incrementalTo) {
     console.warn('Incremental export requested without --incremental-from or --incremental-to; requesting latest incremental export.');
   }
 
