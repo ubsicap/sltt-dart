@@ -21,6 +21,7 @@ function parseArgs() {
     outputRoot: process.env.OUTPUT_DIR || 'sltt-exports',
     waitSeconds: DEFAULT_WAIT_SECONDS,
     exportType: 'full',
+    exportId: null,
     incrementalFrom: null,
     incrementalTo: null,
   };
@@ -47,11 +48,16 @@ function parseArgs() {
       i += 1;
     } else if (arg.startsWith('--wait-seconds=')) {
       args.waitSeconds = parseInt(arg.split('=')[1], 10) || DEFAULT_WAIT_SECONDS;
-      } else if (arg === '--export-type') {
+    } else if (arg === '--export-type') {
       args.exportType = process.argv[i + 1]?.toLowerCase();
       i += 1;
     } else if (arg.startsWith('--export-type=')) {
       args.exportType = arg.split('=')[1]?.toLowerCase();
+    } else if (arg === '--export-id') {
+      args.exportId = process.argv[i + 1];
+      i += 1;
+    } else if (arg.startsWith('--export-id=')) {
+      args.exportId = arg.split('=')[1];
     } else if (arg === '--incremental-from') {
       args.incrementalFrom = process.argv[i + 1];
       i += 1;
@@ -78,6 +84,7 @@ function printUsageAndExit(code) {
   console.log('  --output-dir=<path>     Output directory root (default: sltt-exports)');
   console.log('  --wait-seconds=<secs>   Poll interval in seconds (default: 10)');
   console.log('  --export-type=<full|incremental>  Export type to request');
+  console.log('  --export-id=<id>        Use an existing export directory to infer incremental start time');
   console.log('  --incremental-from=<ts> ExportFromTime for incremental export (ISO8601)');
   console.log('  --incremental-to=<ts>   ExportToTime for incremental export (ISO8601)');
   console.log('  --help, -h              Show this help text');
@@ -178,6 +185,29 @@ function sleep(ms) {
 
 function normalizeFolderName(value) {
   return value.replace(/[:\.]/g, '-').replace(/[^a-zA-Z0-9_\-]/g, '_');
+}
+
+async function resolveExportDirByExportId(outputRoot, exportId) {
+  const root = path.resolve(outputRoot);
+  const entries = await fs.promises.readdir(root, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const metadataPath = path.join(root, entry.name, 'export-response.json');
+    try {
+      const raw = await fs.promises.readFile(metadataPath, 'utf8');
+      const payload = JSON.parse(raw);
+      const arn =
+        payload?.ExportDescription?.ExportArn ?? payload?.ExportArn ?? null;
+      if (typeof arn === 'string' && arn.includes(`/export/${exportId}`)) {
+        return path.join(root, entry.name);
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error(`No export directory found for export-id=${exportId} under ${outputRoot}`);
 }
 
 async function fetchExportData(baseUrl, storageType, token, exportType, incrementalFrom, incrementalTo) {
@@ -302,29 +332,37 @@ async function waitForExportCompletion(baseUrl, storageType, exportArn, token, w
 }
 
 async function run() {
-  const {
-    baseUrl,
-    token,
-    outputRoot,
-    waitSeconds,
-    exportType,
-    incrementalFrom,
-    incrementalTo,
-  } = parseArgs();
+  const args = parseArgs();
 
-  if (!token) {
+  if (!args.token) {
     console.error(
       'Missing bearer token. Set AUTH_TOKEN, ACCESS_TOKEN, BEARER_TOKEN, or pass --token.',
     );
     printUsageAndExit(1);
   }
 
-  if (!['full', 'incremental'].includes(exportType)) {
+  if (!['full', 'incremental'].includes(args.exportType)) {
     console.error('Invalid --export-type; expected full or incremental');
     printUsageAndExit(1);
   }
 
-  if (exportType === 'incremental' && !incrementalFrom && !incrementalTo) {
+  if (args.exportType === 'incremental' && !args.incrementalFrom && !args.incrementalTo && args.exportId) {
+    const exportDir = await resolveExportDirByExportId(args.outputRoot, args.exportId);
+    console.log(`Resolved export-id ${args.exportId} to directory ${exportDir}`);
+    const metadataFile = path.join(exportDir, 'export-response.json');
+    const metadataRaw = await fs.promises.readFile(metadataFile, 'utf8');
+    const metadata = JSON.parse(metadataRaw);
+    const startTime = metadata?.ExportDescription?.StartTime ?? metadata?.ExportDescription?.ExportTime;
+    if (startTime) {
+      const startIso = typeof startTime === 'number'
+        ? new Date(Math.round(startTime * 1000)).toISOString()
+        : new Date(startTime).toISOString();
+      args.incrementalFrom = startIso;
+      console.log(`Computed incremental-from=${args.incrementalFrom} from export-id metadata`);
+    }
+  }
+
+  if (args.exportType === 'incremental' && !args.incrementalFrom && !args.incrementalTo) {
     console.warn('Incremental export requested without --incremental-from or --incremental-to; requesting latest incremental export.');
   }
 
@@ -359,8 +397,11 @@ async function run() {
       if (rangePart.length > 0) {
         suffixParts.push(rangePart.join('-'));
       }
+      if (args.exportId) {
+        suffixParts.push(`base-${normalizeFolderName(args.exportId)}`);
+      }
     }
-    const outputDir = path.join(outputRoot, `${startTimeIso}-${suffixParts.join('-')}`);
+    const outputDir = path.join(args.outputRoot, `${startTimeIso}-${suffixParts.join('-')}`);
     mkdirRecursive(outputDir);
 
     const metadataFile = path.join(outputDir, 'export-response.json');
