@@ -187,20 +187,35 @@ function normalizeFolderName(value) {
   return value.replace(/[:\.]/g, '-').replace(/[^a-zA-Z0-9_\-]/g, '_');
 }
 
+function toEpochSeconds(value) {
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return value;
+  }
+  return new Date(value).getTime() / 1000;
+}
+
 async function resolveExportDirByExportId(outputRoot, exportId) {
   const root = path.resolve(outputRoot);
   const entries = await fs.promises.readdir(root, { withFileTypes: true });
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
+    if (entry.name === exportId) {
+      return path.join(root, entry.name);
+    }
+
     const metadataPath = path.join(root, entry.name, 'export-response.json');
     try {
       const raw = await fs.promises.readFile(metadataPath, 'utf8');
       const payload = JSON.parse(raw);
-      const arn =
-        payload?.ExportDescription?.ExportArn ?? payload?.ExportArn ?? null;
-      if (typeof arn === 'string' && arn.includes(`/export/${exportId}`)) {
-        return path.join(root, entry.name);
+      const arn = payload?.ExportDescription?.ExportArn ?? payload?.ExportArn ?? null;
+      if (typeof arn === 'string') {
+        if (arn === exportId || arn.endsWith(exportId) || arn.includes(`/export/${exportId}`)) {
+          return path.join(root, entry.name);
+        }
       }
     } catch {
       continue;
@@ -220,10 +235,10 @@ async function fetchExportData(baseUrl, storageType, token, exportType, incremen
     body.ExportType = 'INCREMENTAL_EXPORT';
     body.IncrementalExportSpecification = {};
     if (incrementalFrom) {
-      body.IncrementalExportSpecification.ExportFromTime = incrementalFrom;
+      body.IncrementalExportSpecification.ExportFromTime = toEpochSeconds(incrementalFrom);
     }
     if (incrementalTo) {
-      body.IncrementalExportSpecification.ExportToTime = incrementalTo;
+      body.IncrementalExportSpecification.ExportToTime = toEpochSeconds(incrementalTo);
     }
   } else {
     body.ExportType = 'FULL_EXPORT';
@@ -339,9 +354,9 @@ async function run() {
     outputRoot,
     waitSeconds,
     exportType,
-    incrementalFrom,
-    incrementalTo,
   } = args;
+  let incrementalFrom = args.incrementalFrom;
+  let incrementalTo = args.incrementalTo;
 
   if (!token) {
     console.error(
@@ -355,7 +370,7 @@ async function run() {
     printUsageAndExit(1);
   }
 
-  if (exportType === 'incremental' && !incrementalFrom && !incrementalTo && args.exportId) {
+  if (exportType === 'incremental' && args.exportId) {
     const exportDir = await resolveExportDirByExportId(outputRoot, args.exportId);
     console.log(`Resolved export-id ${args.exportId} to directory ${exportDir}`);
     const metadataFile = path.join(exportDir, 'export-response.json');
@@ -366,8 +381,12 @@ async function run() {
       const startIso = typeof startTime === 'number'
         ? new Date(Math.round(startTime * 1000)).toISOString()
         : new Date(startTime).toISOString();
-      args.incrementalFrom = startIso;
-      console.log(`Computed incremental-from=${args.incrementalFrom} from export-id metadata`);
+      incrementalFrom = startIso;
+      console.log(`Computed incremental-from=${incrementalFrom} from export-id metadata`);
+    }
+    if (!incrementalTo) {
+      incrementalTo = new Date().toISOString();
+      console.log(`Defaulted incremental-to=${incrementalTo} to current time`);
     }
   }
 

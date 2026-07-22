@@ -522,18 +522,28 @@ class AwsRestApiServer extends BaseRestApiServer {
                 'Optional export mode. Use FULL_EXPORT or INCREMENTAL_EXPORT. AWS defaults to FULL_EXPORT when omitted.',
           },
           'ExportTime': {
-            'type': 'string',
-            'format': 'ISO8601',
+            'type': 'number',
+            'format': 'epoch-seconds',
             'description':
-                'Optional point-in-time timestamp for a full export.',
+                'Optional point-in-time timestamp for a full export, as Unix epoch seconds (fractional seconds allowed). This matches the Timestamp shape DynamoDB\'s ExportTableToPointInTime API expects; convert from ISO-8601 on the client before sending.',
           },
           'IncrementalExportSpecification': {
             'type': 'object',
             'description':
                 'Required for incremental exports. Supply the incremental time window and optional view type.',
             'properties': {
-              'ExportFromTime': {'type': 'string', 'format': 'ISO8601'},
-              'ExportToTime': {'type': 'string', 'format': 'ISO8601'},
+              'ExportFromTime': {
+                'type': 'number',
+                'format': 'epoch-seconds',
+                'description':
+                    'Unix epoch seconds (fractional seconds allowed).',
+              },
+              'ExportToTime': {
+                'type': 'number',
+                'format': 'epoch-seconds',
+                'description':
+                    'Unix epoch seconds (fractional seconds allowed).',
+              },
               'ExportViewType': {
                 'type': 'string',
                 'description':
@@ -555,8 +565,8 @@ class AwsRestApiServer extends BaseRestApiServer {
             'ExportFormat': 'DYNAMODB_JSON',
             'ExportType': 'INCREMENTAL_EXPORT',
             'IncrementalExportSpecification': {
-              'ExportFromTime': '2026-04-04T00:00:00Z',
-              'ExportToTime': '2026-04-04T01:00:00Z',
+              'ExportFromTime': 1775606400,
+              'ExportToTime': 1775610000,
             },
           },
         ],
@@ -2301,13 +2311,53 @@ class AwsRestApiServer extends BaseRestApiServer {
     final bucket = _requireHealthEnvironmentValue('MEDIA_BUCKET');
     final clientToken = _buildExportClientToken(clientPayload);
 
+    final normalizedPayload = _normalizeExportPayloadTimestamps(clientPayload);
+
     return {
-      ...clientPayload,
+      ...normalizedPayload,
       'TableArn': tableArn,
       'S3Bucket': bucket,
       'S3Prefix': _defaultExportS3Prefix,
       'ClientToken': clientToken,
     };
+  }
+
+  /// DynamoDB's ExportTableToPointInTime API expects `ExportTime`,
+  /// `ExportFromTime`, and `ExportToTime` to be sent as the AWS JSON
+  /// protocol's `Timestamp` shape, i.e. a numeric epoch-seconds value
+  /// (fractional seconds allowed) — not an ISO-8601 string. The client
+  /// sends ISO-8601 strings (e.g. "2026-07-22T12:42:05Z"), so convert
+  /// them here before forwarding to DynamoDB, otherwise the service
+  /// rejects the request with:
+  /// `SerializationException: STRING_VALUE cannot be converted to Date`.
+  Map<String, dynamic> _normalizeExportPayloadTimestamps(
+    Map<String, dynamic> payload,
+  ) {
+    final normalized = Map<String, dynamic>.from(payload);
+
+    final exportTime = normalized['ExportTime'];
+    if (exportTime is String && exportTime.isNotEmpty) {
+      normalized['ExportTime'] = _epochSecondsFromIso8601(exportTime);
+    }
+
+    final incrementalSpec = normalized['IncrementalExportSpecification'];
+    if (incrementalSpec is Map) {
+      final normalizedSpec = Map<String, dynamic>.from(incrementalSpec);
+      for (final key in const ['ExportFromTime', 'ExportToTime']) {
+        final value = normalizedSpec[key];
+        if (value is String && value.isNotEmpty) {
+          normalizedSpec[key] = _epochSecondsFromIso8601(value);
+        }
+      }
+      normalized['IncrementalExportSpecification'] = normalizedSpec;
+    }
+
+    return normalized;
+  }
+
+  num _epochSecondsFromIso8601(String value) {
+    final parsed = DateTime.parse(value);
+    return parsed.microsecondsSinceEpoch / 1000000;
   }
 
   String _resolveConfiguredExportTableArnForType(String storageType) {
