@@ -48,7 +48,7 @@ class WsNotifyRecord {
   final String domainType;
   final String domainId;
   final String notifyType;
-  final String? entityType;
+  final String entityType;
   final dynamic data;
   final int index;
 }
@@ -59,16 +59,32 @@ Map<String, dynamic> buildDomainChangeNotificationPayload({
   required String domainType,
   required String domainId,
   required DomainChangeData data,
-  String? entityType,
-  String? subscriptionKey,
+  required String entityType,
+  required String subscriptionKey,
+}) {
+  return {
+    ...buildWsNotifyRecordMessage(
+      domainType: domainType,
+      domainId: domainId,
+      data: data,
+      entityType: entityType,
+    ),
+    'subscriptionKey': subscriptionKey,
+  };
+}
+
+Map<String, dynamic> buildWsNotifyRecordMessage({
+  required String domainType,
+  required String domainId,
+  required DomainChangeData data,
+  required String entityType,
 }) {
   return {
     'action': 'change',
     'notifyType': kNotifyTypeDomainChange,
     'domainType': domainType,
     'domainId': domainId,
-    if (entityType != null) 'entityType': entityType,
-    if (subscriptionKey != null) 'subscriptionKey': subscriptionKey,
+    'entityType': entityType,
     'data': data.toJson(),
   };
 }

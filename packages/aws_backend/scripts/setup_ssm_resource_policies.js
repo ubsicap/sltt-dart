@@ -75,29 +75,44 @@ function main() {
   console.log(`  Target account: ${targetAccount}`);
   console.log(`  Stage: ${stage}, Region: ${region}, Stack version: ${stackVersion}\n`);
 
-  // List of SSM parameters to grant access to
+  // List of SSM parameters to grant access to.
+  // In v2, only shared media/CloudFront metadata is living in shared infra.
   const ssmPrefix = `/sltt/${stackVersion}/${stage}`;
   const authPrefix = `/sltt/auth/${stage}`;
-  const parametersToGrant = [
-    `${ssmPrefix}/dynamodb/table-name`,
-    `${ssmPrefix}/dynamodb/table-arn`,
-    `${ssmPrefix}/auth/table-name`,
-    `${ssmPrefix}/auth/table-arn`,
-    `${ssmPrefix}/s3/bucket-name`,
-    `${ssmPrefix}/s3/bucket-arn`,
-    `${ssmPrefix}/cloudfront/domain`,
-    `${ssmPrefix}/cloudfront/keypair-id`,
-    `${ssmPrefix}/cloudfront/private-key`,
-    `${ssmPrefix}/cross-account-role-arn`,
-    `${ssmPrefix}/account-id`,
-    `${ssmPrefix}/region`,
-    `${authPrefix}/jwt-secret`,
-    `${authPrefix}/verification-code-secret`,
-    `${authPrefix}/access-token-ttl-minutes`,
-    `${authPrefix}/refresh-token-ttl-days`,
-    `${authPrefix}/email-mode`,
-    `${authPrefix}/ses-from-email`,
-  ];
+  const parametersToGrant = [];
+
+  if (stackVersion === 'v1') {
+    parametersToGrant.push(
+      `${ssmPrefix}/dynamodb/table-name`,
+      `${ssmPrefix}/dynamodb/table-arn`,
+      `${ssmPrefix}/auth/table-name`,
+      `${ssmPrefix}/auth/table-arn`,
+      `${ssmPrefix}/s3/bucket-name`,
+      `${ssmPrefix}/s3/bucket-arn`,
+      `${ssmPrefix}/cloudfront/domain`,
+      `${ssmPrefix}/cloudfront/keypair-id`,
+      `${ssmPrefix}/cloudfront/private-key`,
+      `${ssmPrefix}/cross-account-role-arn`,
+      `${ssmPrefix}/account-id`,
+      `${ssmPrefix}/region`,
+      `${authPrefix}/jwt-secret`,
+      `${authPrefix}/verification-code-secret`,
+      `${authPrefix}/access-token-ttl-minutes`,
+      `${authPrefix}/refresh-token-ttl-days`,
+      `${authPrefix}/email-mode`,
+      `${authPrefix}/ses-from-email`,
+    );
+  } else {
+    parametersToGrant.push(
+      `${ssmPrefix}/s3/bucket-name`,
+      `${ssmPrefix}/s3/bucket-arn`,
+      `${ssmPrefix}/cloudfront/domain`,
+      `${ssmPrefix}/cloudfront/keypair-id`,
+      `${ssmPrefix}/cloudfront/private-key`,
+      `${ssmPrefix}/account-id`,
+      `${ssmPrefix}/region`,
+    );
+  }
 
   parametersToGrant.forEach((paramName) => {
     const paramArn = `arn:aws:ssm:${region}:${sharedAccount}:parameter${paramName}`;

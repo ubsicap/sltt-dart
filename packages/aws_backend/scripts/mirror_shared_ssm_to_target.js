@@ -86,7 +86,7 @@ function main() {
   const stage = String(args['stage'] || 'prd');
   const region = String(args['region'] || 'us-east-1');
 
-  const stackName = `sltt-v1-shared-infra-${stage}`;
+  const stackName = `sltt-v2-shared-infra-${stage}`;
   const ssmPrefix = `/sltt/infra/${stage}`;
   const authPrefix = `/sltt/auth/${stage}`;
 

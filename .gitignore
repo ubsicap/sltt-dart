@@ -79,3 +79,4 @@ vendor/pub-cache/
 vendor/pub-cache/**
 !vendor/pub-cache/README.md
 !vendor/pub-cache/scripts/
+packages/aws_backend/sltt-exports/

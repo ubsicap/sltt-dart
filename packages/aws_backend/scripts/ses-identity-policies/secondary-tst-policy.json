@@ -5,7 +5,7 @@
       "Sid": "AllowSecondaryInfraTstLambdaSend",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::379334555674:role/sltt-v1-shared-infra-cross-account-access"
+        "AWS": "arn:aws:iam::379334555674:role/sltt-v2-shared-infra-cross-account-access"
       },
       "Action": [
         "ses:SendEmail",

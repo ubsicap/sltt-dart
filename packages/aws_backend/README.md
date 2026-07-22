@@ -72,7 +72,7 @@ final storage = DynamoDBStorageService(
 
 // For AWS production
 final storage = DynamoDBStorageService(
-  tableName: 'sltt-changes-prod',
+  tableName: 'sltt-changes-prd',
   projectId: 'my-project-123',
   region: 'us-east-1',
   useLocalDynamoDB: false,
@@ -102,6 +102,44 @@ final server = AwsRestApiServer(
 
 await server.start(port: 8080);
 ```
+
+## Export and Upload Utilities
+
+The package includes helper scripts for downloading DynamoDB exports and uploading export files.
+
+### Download export files via API
+
+This command requests an export from the API and downloads the resulting files locally.
+
+```bash
+cd packages/aws_backend
+npm run dynamodb:export-api-download -- --token <your-token> [--output-dir ./sltt-exports] [--export-type full|incremental] [--export-id <existing-export-dir>]
+```
+
+- `--token` is required unless you set `AUTH_TOKEN`, `ACCESS_TOKEN`, or `BEARER_TOKEN`.
+- `--output-dir` controls the local output folder root.
+- `--export-type` defaults to `full`.
+- `--export-id` can reference an existing export directory for incremental export timestamps.
+
+### Upload export files
+
+Use this script to upload a previously downloaded export directory back into AWS storage via the upload helper.
+
+```bash
+cd packages/aws_backend
+npm run dynamodb:upload-export -- --storage-type <auth|data> --table-name <tableName> --input-dir <path>
+```
+
+Or, specify an export folder directly via `--export-id`:
+
+```bash
+cd packages/aws_backend
+npm run dynamodb:upload-export -- --storage-type <auth|data> --table-name <tableName> --export-id <export-folder-name>
+```
+
+- `--input-dir` points at the export root directory (default: `sltt-exports`).
+- `--export-id` selects a specific export folder under the input root.
+- The script reads the export layout and uploads AWSDynamoDB export items into the target DynamoDB table.
 
 ## Project Management
 
@@ -133,10 +171,10 @@ Deploy separate Lambda functions for different projects:
 
 ```bash
 # Deploy for Project A
-serverless deploy --stage prod --project project-a-123
+serverless deploy --stage prd --project project-a-123
 
 # Deploy for Project B
-serverless deploy --stage prod --project project-b-456
+serverless deploy --stage prd --project project-b-456
 ```
 
 Or use a single Lambda that handles multiple projects based on request context.
@@ -222,13 +260,13 @@ node packages\aws_backend\scripts\grant_shared_infra_access.js <target-account-i
 Example:
 
 ```bash
-node packages\aws_backend\scripts\grant_shared_infra_access.js 123456789012 sltt-v1-secondary-infra-dev-role prd sltt-dart-prd us-east-1
+node packages\aws_backend\scripts\grant_shared_infra_access.js 123456789012 sltt-v2-secondary-infra-dev-role prd sltt-dart-prd us-east-1
 ```
 
 or from package.json (pass args after `--`):
 
 ```bash
-npm run shared-infra:grant-access -- 123456789012 sltt-v1-secondary-infra-dev-role prd sltt-dart-prd us-east-1
+npm run shared-infra:grant-access -- 123456789012 sltt-v2-secondary-infra-dev-role prd sltt-dart-prd us-east-1
 ```
 
 Option B: mirror SSM into the target account (simpler, no cross-account read)
@@ -251,8 +289,8 @@ npm run deploy:sltt-dart-dev:secondary:dev
 # Deploy to tst stage using sltt-dart-dev profile
 npm run deploy:sltt-dart-dev:secondary:tst
 
-# Deploy to prod stage using sltt-dart-prd profile
-npm run deploy:sltt-dart-prd:secondary:prod
+# Deploy to prd stage using sltt-dart-prd profile
+npm run deploy:sltt-dart-prd:secondary:prd
 ```
 
 If you maintain separate dev/tst CloudFront keys for testing, set them in SSM
@@ -286,7 +324,7 @@ npm run deploy:secondary:dev
 
 ### Environment Variables
 
-- `DYNAMODB_TABLE`: DynamoDB table name (e.g., 'sltt-changes-prod')
+- `DYNAMODB_TABLE`: DynamoDB table name (e.g., 'sltt-changes-prd')
 - `DYNAMODB_REGION`: AWS region (e.g., 'us-east-1')
 - `USE_LOCAL_DYNAMODB`: Set to 'true' for local DynamoDB (development only)
 
@@ -327,7 +365,7 @@ instead of creating or rotating secrets.
 The service uses a project-based multi-tenant DynamoDB schema:
 
 ### Main Table Schema
-- **Table Name**: Configurable (e.g., `sltt-changes-prod`)
+- **Table Name**: Configurable (e.g., `sltt-changes-prd`)
 - **Partition Key**: `pk` (String) - Project ID (e.g., 'project-123')
 - **Sort Key**: `seq` (Number) - Auto-incremented sequence number per project
 - **Attributes**:
@@ -455,11 +493,11 @@ When your deployed Lambda returns errors, use these commands to investigate:
 ```bash
 # Get recent CloudWatch logs (last 1 hour)
 npm run logs:dev     # For dev stage
-npm run logs:prod    # For prod stage
+npm run logs:prd    # For prd stage
 
 # Get deployment info (URLs, function names)
 npm run info:dev     # For dev stage
-npm run info:prod    # For prod stage
+npm run info:prd    # For prd stage
 
 # Manual CloudWatch access (if npm scripts don't work)
 npx serverless logs --function api --stage dev --aws-profile sltt-dart-dev --startTime 1h

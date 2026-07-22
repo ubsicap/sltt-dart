@@ -1,0 +1,228 @@
+# Serverless Framework configuration for SLTT data infrastructure.
+#
+# Unlike shared-infra (S3/CloudFront, pinned to one prd account) this stack
+# is meant to be deployed INDEPENDENTLY into every account that needs it:
+#   sls deploy --stage prd   (in the prd account - source of truth)
+#   sls deploy --stage dev   (in a dev account - isolated copy)
+#   sls deploy --stage tst   (in a test account - isolated copy)
+#
+# Each deployment gets its own tables. There is no cross-account access here
+# by design: moving data between accounts is a deliberate, manual
+# export -> download -> import step (see dynamodb:ExportTableToPointInTime /
+# ImportTable), not a live cross-account read path. This keeps prd data safe
+# from anything a dev/test deployment does, and lets secondary-infra's Lambda
+# role reach these tables with plain same-account IAM - no AssumeRole.
+service: sltt-${self:custom.slttStackVersion}-data-infra
+
+custom:
+  # SLTT infrastructure version used for resource naming and parameter prefixes
+  slttStackVersion: v2
+
+  # Resource naming includes stage since this stack is deployed once per
+  # account/stage (unlike the old singleton shared-infra tables)
+  dynamoDbTable: ${self:service}-${self:provider.stage}-changes-states
+  authTable: ${self:service}-${self:provider.stage}-auth
+
+  # SSM parameter prefix - read LOCALLY (same account) by secondary-infra,
+  # no cross-account SSM resource policy needed for these values.
+  ssmPrefix: /sltt/${self:custom.slttStackVersion}/${self:provider.stage}
+
+provider:
+  name: aws
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+
+  # No Lambda functions in this stack, but provider section is required
+  runtime: provided.al2
+
+resources:
+  Resources:
+    # DynamoDB table for change log entries
+    ChangesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.dynamoDbTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+          - AttributeName: gsi1pk
+            AttributeType: S
+          - AttributeName: gsi1sk
+            AttributeType: S
+          - AttributeName: gsi2pk
+            AttributeType: S
+          - AttributeName: gsi2sk
+            AttributeType: S
+          - AttributeName: gsi3pk
+            AttributeType: S
+          - AttributeName: gsi3sk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - AttributeName: gsi1pk
+                KeyType: HASH
+              - AttributeName: gsi1sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GSI2
+            KeySchema:
+              - AttributeName: gsi2pk
+                KeyType: HASH
+              - AttributeName: gsi2sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GSI3
+            KeySchema:
+              - AttributeName: gsi3pk
+                KeyType: HASH
+              - AttributeName: gsi3sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+        Tags:
+          - Key: Service
+            Value: ${self:service}
+          - Key: Stage
+            Value: ${self:provider.stage}
+          - Key: Purpose
+            Value: SLTT change log data - per-account/stage
+
+    AuthTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.authTable}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+          - AttributeName: gsi1pk
+            AttributeType: S
+          - AttributeName: gsi1sk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - AttributeName: gsi1pk
+                KeyType: HASH
+              - AttributeName: gsi1sk
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: ttlEpochSeconds
+          Enabled: true
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+        Tags:
+          - Key: Service
+            Value: ${self:service}
+          - Key: Stage
+            Value: ${self:provider.stage}
+          - Key: Purpose
+            Value: SLTT authentication state - per-account/stage
+
+    # SSM Parameters - LOCAL to this account. secondary-infra in the same
+    # account/stage reads these directly, no cross-account role or resource
+    # policy involved.
+    DynamoDbTableNameParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/dynamodb/table-name
+        Type: String
+        Tier: Advanced
+        Value: !Ref ChangesTable
+        Description: DynamoDB table name for SLTT changes (this account/stage)
+
+    DynamoDbTableArnParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/dynamodb/table-arn
+        Type: String
+        Tier: Advanced
+        Value: !GetAtt ChangesTable.Arn
+        Description: DynamoDB table ARN for SLTT changes (this account/stage)
+
+    AuthTableNameParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/auth/table-name
+        Type: String
+        Tier: Advanced
+        Value: !Ref AuthTable
+        Description: DynamoDB table name for SLTT auth state (this account/stage)
+
+    AuthTableArnParameter:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ${self:custom.ssmPrefix}/auth/table-arn
+        Type: String
+        Tier: Advanced
+        Value: !GetAtt AuthTable.Arn
+        Description: DynamoDB table ARN for SLTT auth state (this account/stage)
+
+  Outputs:
+    DynamoDbTableName:
+      Description: DynamoDB table name
+      Value: !Ref ChangesTable
+      Export:
+        Name: ${self:service}-${self:provider.stage}-dynamodb-table-name
+
+    DynamoDbTableArn:
+      Description: DynamoDB table ARN
+      Value: !GetAtt ChangesTable.Arn
+      Export:
+        Name: ${self:service}-${self:provider.stage}-dynamodb-table-arn
+
+    AuthTableName:
+      Description: Auth table name
+      Value: !Ref AuthTable
+      Export:
+        Name: ${self:service}-${self:provider.stage}-auth-table-name
+
+    AuthTableArn:
+      Description: Auth table ARN
+      Value: !GetAtt AuthTable.Arn
+      Export:
+        Name: ${self:service}-${self:provider.stage}-auth-table-arn
+
+    SsmParametersUsedBySecondary:
+      Description: SSM parameters that secondary-infra reads LOCALLY (same account/stage, no cross-account access)
+      Value: |
+        /sltt/${self:custom.slttStackVersion}/${self:provider.stage}/dynamodb/table-name
+        /sltt/${self:custom.slttStackVersion}/${self:provider.stage}/dynamodb/table-arn
+        /sltt/${self:custom.slttStackVersion}/${self:provider.stage}/auth/table-name
+        /sltt/${self:custom.slttStackVersion}/${self:provider.stage}/auth/table-arn
+
+    DataMigrationNote:
+      Description: How to move data between accounts (e.g. prd -> dev)
+      Value: |
+        1. In the source account: aws dynamodb export-table-to-point-in-time
+           (or a full scan) targeting ChangesTable/AuthTable.
+        2. Download/copy the export to the destination account (S3 cross-copy
+           or local download+upload).
+        3. In the destination account: import into that account's own
+           ChangesTable/AuthTable via ImportTable or a scripted batch-write.
+        This is a deliberate manual/scripted step, not a live cross-account
+        connection, so a dev/test deployment can never read or write prd data.

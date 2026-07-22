@@ -59,9 +59,12 @@ function main() {
   const sharedAccount = String(args['shared-account'] || '379334555674');
   const stage = String(args['stage'] || 'prd');
   const region = String(args['region'] || 'us-east-1');
+  const stackVersion = String(args['stack-version'] || 'v2');
 
-  const resourceArn = `arn:aws:ssm:${region}:${sharedAccount}:parameter/sltt/infra/${stage}/*`;
-  const crossAccountRoleArn = `arn:aws:iam::${sharedAccount}:role/sltt-v1-shared-infra-cross-account-access`;
+  const ssmPrefix = stackVersion === 'v1'
+    ? `/sltt/infra/${stage}`
+    : `/sltt/${stackVersion}/${stage}`;
+  const resourceArn = `arn:aws:ssm:${region}:${sharedAccount}:parameter${ssmPrefix}/*`;
 
   const basePolicy = {
     Version: '2012-10-17',
@@ -71,16 +74,6 @@ function main() {
         Action: ['ssm:GetParameter', 'ssm:GetParameters'],
         Resource: resourceArn,
       },
-      {
-        Effect: 'Allow',
-        Action: ['sts:AssumeRole'],
-        Resource: crossAccountRoleArn,
-        Condition: {
-          StringEquals: {
-            'sts:ExternalId': 'sltt-cross-account-access'
-          }
-        }
-      },
     ],
   };
 
@@ -88,9 +81,56 @@ function main() {
   const principalType = principalParts[0];
   const principalName = principalParts[1];
 
+  function roleExists(roleName) {
+    try {
+      runAwsArgs([
+        'iam',
+        'get-role',
+        '--role-name',
+        roleName,
+        '--profile',
+        targetProfile,
+        '--region',
+        region,
+      ]);
+      return true;
+    } catch (error) {
+      if (String(error.message).includes('NoSuchEntity')) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  function userExists(userName) {
+    try {
+      runAwsArgs([
+        'iam',
+        'get-user',
+        '--user-name',
+        userName,
+        '--profile',
+        targetProfile,
+        '--region',
+        region,
+      ]);
+      return true;
+    } catch (error) {
+      if (String(error.message).includes('NoSuchEntity')) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
   console.log(`Granting IAM SSM read to ${principal} on ${resourceArn} (profile=${targetProfile})`);
 
   if (principalType === 'user') {
+    if (!userExists(principalName)) {
+      console.warn(`Skipping user ${principalName}: user does not exist in target account (profile=${targetProfile}).`);
+      return;
+    }
+
     runAwsArgs([
       'iam',
       'put-user-policy',
@@ -106,6 +146,15 @@ function main() {
       region,
     ]);
   } else if (principalType === 'role') {
+    if (!roleExists(principalName)) {
+      console.warn(
+        `Skipping role ${principalName}: role does not exist in target account (profile=${targetProfile}). ` +
+        'This usually means the dev secondary stack has not been deployed yet. ' +
+        'Run `npm run deploy:sltt-dart-dev:secondary:dev` and then re-run this command.',
+      );
+      return;
+    }
+
     runAwsArgs([
       'iam',
       'put-role-policy',

@@ -82,5 +82,115 @@ void main() {
       expect(persisted, isNotNull);
       expect((persisted as TestEntityState).data_nameLocal, 'Persisted Task');
     });
+
+    test(
+      'testResetDomainStorage clears changes and state for test domains',
+      () async {
+        final storage = testInMemoryStorage(
+          storageType: 'local',
+          storageId: 'test-reset-store',
+        );
+        await storage.initialize();
+
+        const domainId = '__test_reset_1';
+        const entityId = 'entity-1';
+        const cid = 'cid-test-reset-1';
+
+        final change = TestChangeLogEntry(
+          cid: cid,
+          entityId: entityId,
+          entityType: 'task',
+          domainId: domainId,
+          domainType: 'project',
+          changeAt: DateTime.parse('2023-01-01T00:00:00Z'),
+          storageId: 'local',
+          changeBy: 'tester',
+          dataJson: '{}',
+          operation: 'create',
+          stateChanged: true,
+          operationInfoJson: '{}',
+          unknownJson: '{}',
+        );
+
+        final state = TestEntityState(
+          entityId: entityId,
+          data_nameLocal: 'Stateful Task',
+          entityType: 'task',
+          domainType: 'project',
+          unknownJson: '{}',
+          change_domainId: domainId,
+          change_domainId_orig_: domainId,
+          change_changeAt: DateTime.parse('2023-01-01T00:00:00Z'),
+          change_storedAt: DateTime.parse('2023-01-01T00:00:00Z'),
+          change_storedAt_orig_: DateTime.parse('2023-01-01T00:00:00Z'),
+          change_changeAt_orig_: DateTime.parse('2023-01-01T00:00:00Z'),
+          change_cid: cid,
+          change_cid_orig_: cid,
+          change_changeBy: 'tester',
+          change_changeBy_orig_: 'tester',
+          data_parentId: 'root',
+          data_parentId_changeAt_: DateTime.parse('2023-01-01T00:00:00Z'),
+          data_parentId_cid_: cid,
+          data_parentId_changeBy_: 'tester',
+          data_parentProp: 'pList',
+          data_parentProp_changeAt_: DateTime.parse('2023-01-01T00:00:00Z'),
+          data_parentProp_cid_: cid,
+          data_parentProp_changeBy_: 'tester',
+          data_nameLocal_changeAt_: DateTime.parse('2023-01-01T00:00:00Z'),
+        );
+
+        await storage.testStoreState(entityState: state);
+        await storage.testStoreChangeFromJson(changeJson: change.toJson());
+
+        expect(
+          await storage.getChange(
+            domainType: 'project',
+            domainId: domainId,
+            cid: cid,
+          ),
+          isNotNull,
+          reason: 'Seeded change should exist before reset',
+        );
+        expect(
+          await storage.getEntityState(
+            domainType: 'project',
+            domainId: domainId,
+            entityType: 'task',
+            entityId: entityId,
+          ),
+          isNotNull,
+          reason: 'Seeded state should exist before reset',
+        );
+
+        await storage.testResetDomainStorage(
+          domainType: 'project',
+          domainId: domainId,
+        );
+
+        expect(
+          await storage.getChange(
+            domainType: 'project',
+            domainId: domainId,
+            cid: cid,
+          ),
+          isNull,
+          reason: 'Change should be removed by test reset',
+        );
+        expect(
+          await storage.getEntityState(
+            domainType: 'project',
+            domainId: domainId,
+            entityType: 'task',
+            entityId: entityId,
+          ),
+          isNull,
+          reason: 'Entity state should be removed by test reset',
+        );
+        expect(
+          await storage.getAllDomainIds(domainType: 'project'),
+          isNot(contains(domainId)),
+        );
+      },
+    );
   });
 }

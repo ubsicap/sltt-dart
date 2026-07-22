@@ -9,7 +9,7 @@ const region = process.env.AWS_REGION || 'us-east-1';
 
 const MESSAGES = {
   USAGE: 'Usage: node scripts/s3_export_ops.js <export|status|ls|download|exports>',
-  DEFAULTS: 'DEFAULTS: TABLE_ARN=arn:aws:dynamodb:us-east-1:379334555674:table/sltt-v1-shared-infra-changes-states, S3_BUCKET=sltt-v1-shared-infra-media-worm-379334555674, S3_PREFIX=dynamodb-exports/diag',
+  DEFAULTS: 'DEFAULTS: TABLE_ARN=arn:aws:dynamodb:us-east-1:379334555674:table/sltt-v2-shared-infra-changes-states, S3_BUCKET=sltt-v2-shared-infra-media-worm-379334555674, S3_PREFIX=dynamodb-exports/diag',
   WRITTEN_LAST_EXPORT: 'Wrote ./last_export_arn; you can set EXPORT_ARN from it or re-run other scripts.',
   USING_LAST_EXPORT: 'Using ./last_export_arn',
   ERROR_NO_LAST: 'ERROR: ./last_export_arn not found. Run `node scripts/s3_export_ops.js export` first.',
@@ -47,8 +47,8 @@ try {
     process.exit(0);
   }
   if (action === 'export') {
-    const tableArn = process.env.TABLE_ARN || 'arn:aws:dynamodb:us-east-1:379334555674:table/sltt-v1-shared-infra-changes-states';
-    const bucket = process.env.S3_BUCKET || 'sltt-v1-shared-infra-media-worm-379334555674';
+    const tableArn = process.env.TABLE_ARN || 'arn:aws:dynamodb:us-east-1:379334555674:table/sltt-v2-shared-infra-changes-states';
+    const bucket = process.env.S3_BUCKET || 'sltt-v2-shared-infra-media-worm-379334555674';
     const prefix = process.env.S3_PREFIX || 'dynamodb-exports/diag';
 
     console.log(`Starting export: table=${tableArn} -> s3://${bucket}/${prefix}`);
@@ -75,7 +75,7 @@ try {
     }
     if (!limit || limit < 1) limit = 5;
 
-    const tableArn = process.env.TABLE_ARN || 'arn:aws:dynamodb:us-east-1:379334555674:table/sltt-v1-shared-infra-changes-states';
+    const tableArn = process.env.TABLE_ARN || 'arn:aws:dynamodb:us-east-1:379334555674:table/sltt-v2-shared-infra-changes-states';
     console.log(`Listing last ${limit} exports for table ${tableArn}...`);
 
     try {

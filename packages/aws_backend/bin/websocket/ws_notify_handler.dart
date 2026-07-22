@@ -43,8 +43,8 @@ List<List<WsNotifyRecord>> groupAndSortDomainChangeRecords(
       .map((groupKey) {
         final group = groupedRecords[groupKey]!;
         group.sort((a, b) {
-          final aEntity = a.entityType ?? '';
-          final bEntity = b.entityType ?? '';
+          final aEntity = a.entityType;
+          final bEntity = b.entityType;
           final entityComparison = aEntity.compareTo(bEntity);
           return entityComparison != 0
               ? entityComparison
@@ -61,8 +61,8 @@ List<WsNotifyRecord> collapseDomainChangeRecordsToLatestPerEntityType(
   final latestByEntityType = <String?, WsNotifyRecord>{};
   final sorted = List.of(records)
     ..sort((a, b) {
-      final aEntity = a.entityType ?? '';
-      final bEntity = b.entityType ?? '';
+      final aEntity = a.entityType;
+      final bEntity = b.entityType;
       final entityComparison = aEntity.compareTo(bEntity);
       return entityComparison != 0
           ? entityComparison
@@ -75,8 +75,8 @@ List<WsNotifyRecord> collapseDomainChangeRecordsToLatestPerEntityType(
 
   final latestRecords = latestByEntityType.values.toList(growable: false);
   latestRecords.sort((a, b) {
-    final aEntity = a.entityType ?? '';
-    final bEntity = b.entityType ?? '';
+    final aEntity = a.entityType;
+    final bEntity = b.entityType;
     final entityComparison = aEntity.compareTo(bEntity);
     return entityComparison != 0
         ? entityComparison
@@ -99,17 +99,10 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     final message =
         jsonDecode(sns['Message'] as String) as Map<String, dynamic>;
 
-    final notifyType = message['notifyType'] as String?;
-    final domainType = message['domainType'] as String?;
-    final domainId = message['domainId'] as String?;
-    final entityType = message['entityType'] as String?; // may be absent
-
-    if (domainType == null || domainId == null) {
-      SlttLogger.logger.warning(
-        'wsNotify: change event missing domainType/domainId: $message',
-      );
-      continue;
-    }
+    final notifyType = message['notifyType'] as String;
+    final domainType = message['domainType'] as String;
+    final domainId = message['domainId'] as String;
+    final entityType = message['entityType'] as String;
 
     if (notifyType != kNotifyTypeDomainChange) {
       SlttLogger.logger.warning(
@@ -142,7 +135,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
       WsNotifyRecord(
         domainType: domainType,
         domainId: domainId,
-        notifyType: notifyType!,
+        notifyType: notifyType,
         entityType: entityType,
         data: data,
         index: index,
@@ -192,32 +185,32 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     for (final record in recordsToSend) {
       final alreadyNotified = <String>{};
 
-      final wildcardSubscriptionKey = WebsocketKeys.subscriptionSk(
-        domainType: domainType,
-        domainId: domainId,
-        entityType: WebsocketKeys.wildcardEntityType,
-      );
-
-      for (final connectionId in wildcardConnections) {
-        await _sendDomainChangeNotification(
-          management: management,
-          connectionId: connectionId,
+      if (record.entityType != WebsocketKeys.lastRecordEntityType) {
+        final wildcardSubscriptionKey = WebsocketKeys.subscriptionSk(
           domainType: domainType,
           domainId: domainId,
-          entityType: record.entityType,
-          subscriptionKey: wildcardSubscriptionKey,
-          data: record.data,
+          entityType: WebsocketKeys.wildcardEntityType,
         );
-        alreadyNotified.add(connectionId);
-      }
 
-      if (record.entityType != null) {
+        for (final connectionId in wildcardConnections) {
+          await _sendDomainChangeNotification(
+            management: management,
+            connectionId: connectionId,
+            domainType: domainType,
+            domainId: domainId,
+            entityType: record.entityType,
+            subscriptionKey: wildcardSubscriptionKey,
+            data: record.data,
+          );
+          alreadyNotified.add(connectionId);
+        }
+
         final exactMatchConnections =
-            exactConnections[record.entityType!] ?? const <String>{};
+            exactConnections[record.entityType] ?? const <String>{};
         final exactSubscriptionKey = WebsocketKeys.subscriptionSk(
           domainType: domainType,
           domainId: domainId,
-          entityType: record.entityType!,
+          entityType: record.entityType,
         );
         for (final connectionId in exactMatchConnections) {
           if (!alreadyNotified.add(connectionId)) {
@@ -271,8 +264,8 @@ Future<void> _sendDomainChangeNotification({
   required String domainType,
   required String domainId,
   required DomainChangeData data,
-  String? entityType,
-  String? subscriptionKey,
+  required String entityType,
+  required String subscriptionKey,
 }) async {
   await management.send(
     connectionId,

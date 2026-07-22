@@ -465,8 +465,30 @@ class InMemoryStorage implements BaseStorageService {
     required String domainType,
     required String domainId,
     bool isAdminReset = false,
-  }) {
-    throw UnimplementedError();
+  }) async {
+    if (!isAdminReset && !domainId.startsWith('__test')) {
+      throw ArgumentError.value(
+        domainId,
+        'domainId',
+        'testResetDomainStorage can only delete test domains. Domain ID must start with "__test" but got: $domainId',
+      );
+    }
+
+    final changes = _changesByDomainType[domainType];
+    if (changes != null) {
+      changes.removeWhere((change) => change.domainId == domainId);
+      if (changes.isEmpty) {
+        _changesByDomainType.remove(domainType);
+      }
+    }
+
+    final states = _statesByDomainType[domainType];
+    if (states != null) {
+      states.removeWhere((key, _) => key.startsWith('$domainId|'));
+      if (states.isEmpty) {
+        _statesByDomainType.remove(domainType);
+      }
+    }
   }
 
   @override
