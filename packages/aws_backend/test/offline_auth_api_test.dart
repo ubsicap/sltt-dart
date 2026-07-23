@@ -663,6 +663,91 @@ void main() {
         );
       });
 
+      test('register special test user bypasses email verification', () async {
+        final registerResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'userId': 'ignored-test-id',
+            'name': 'Test User Alice',
+            'dateOfBirth': '1990-06-15',
+            'email': 'alice@example.com',
+            'password': 'secret123',
+          }),
+        }, router);
+
+        expect(registerResponse['statusCode'], equals(200));
+        final body = responseBody(registerResponse);
+        expect(body['status'], equals('verified'));
+        expect(emailSender.codes.containsKey('alice@example.com'), isFalse);
+
+        final principal = await recordStore.getPrincipalByUserId(
+          '__test_user_alice',
+        );
+        expect(principal, isNotNull);
+        expect(principal?.emailVerified, isTrue);
+        expect(principal?.accountStatus, equals(AuthAccountStatus.active));
+        expect(principal?.displayName, equals('Test User Alice'));
+      });
+
+      test('test user can login and logout successfully', () async {
+        final registerResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/register',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'userId': 'ignored-test-id',
+            'name': 'Test User Bob',
+            'dateOfBirth': '1990-06-15',
+            'email': 'bob@example.com',
+            'password': 'secret123',
+          }),
+        }, router);
+
+        expect(registerResponse['statusCode'], equals(200));
+        final registerBody = responseBody(registerResponse);
+        expect(registerBody['status'], equals('verified'));
+
+        final loginResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/login',
+          'headers': <String, String>{},
+          'body': jsonEncode({
+            'identifier': 'bob@example.com',
+            'password': 'secret123',
+          }),
+        }, router);
+
+        expect(loginResponse['statusCode'], equals(200));
+        final loginBody = responseBody(loginResponse);
+        expect(loginBody['status'], equals('authenticated'));
+        expect(loginBody['accessToken'], isNotEmpty);
+        expect(loginBody['refreshToken'], isNotEmpty);
+
+        final logoutResponse = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/logout',
+          'headers': <String, String>{
+            'authorization': 'Bearer ${loginBody['accessToken']}',
+          },
+          'body': jsonEncode({'refreshToken': loginBody['refreshToken']}),
+        }, router);
+
+        expect(logoutResponse['statusCode'], equals(200));
+        final logoutBody = responseBody(logoutResponse);
+        expect(logoutBody['status'], equals('logged_out'));
+
+        final refreshRetry = await server.handleApiGatewayEvent({
+          'httpMethod': 'POST',
+          'path': '/api/auth/refresh',
+          'headers': <String, String>{},
+          'body': jsonEncode({'refreshToken': loginBody['refreshToken']}),
+        }, router);
+
+        expect(refreshRetry['statusCode'], equals(401));
+      });
+
       test(
         'POST /api/project creates requested project and assigns current user as admin',
         () async {

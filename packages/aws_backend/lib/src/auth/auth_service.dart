@@ -103,11 +103,20 @@ class BackendAuthService {
         );
       }
 
-      final userId = rawUserId.trim();
-      final name = rawName.trim();
-      final dateOfBirth = rawDateOfBirth.trim();
+      final rawNameTrimmed = rawName.trim();
       final email = rawEmail.trim();
       final normalizedEmail = _normalizeEmail(email);
+      final userId = _canonicalTestUserIdIfApplicable(
+        rawUserId.trim(),
+        rawNameTrimmed,
+        normalizedEmail,
+      );
+      final name = rawNameTrimmed;
+      final dateOfBirth = rawDateOfBirth.trim();
+      final isTestUserRegistration = _isSpecialTestUserRegistration(
+        normalizedEmail,
+        name,
+      );
 
       var stage = _startTiming();
       final existing = await _recordStore.getPrincipalByEmail(normalizedEmail);
@@ -223,8 +232,10 @@ class BackendAuthService {
                     passwordHash: passwordHash.hash,
                     passwordSalt: passwordHash.salt,
                     passwordIterations: passwordHash.iterations,
-                    accountStatus: AuthAccountStatus.pendingVerification,
-                    emailVerified: false,
+                    accountStatus: isTestUserRegistration
+                        ? AuthAccountStatus.active
+                        : AuthAccountStatus.pendingVerification,
+                    emailVerified: isTestUserRegistration,
                     isAdHoc: false,
                     displayName: name,
                     dateOfBirth: dateOfBirth,
@@ -236,6 +247,7 @@ class BackendAuthService {
                     registrationOutcome_last_: 'register_new',
                     registrationSourceIp_orig_: sourceIp,
                     registrationSourceIp_last_: sourceIp,
+                    verifiedAt: isTestUserRegistration ? now : null,
                     createdAt: now,
                     updatedAt: now,
                   ))
@@ -247,8 +259,11 @@ class BackendAuthService {
                 passwordHash: passwordHash.hash,
                 passwordSalt: passwordHash.salt,
                 passwordIterations: passwordHash.iterations,
-                accountStatus: AuthAccountStatus.pendingVerification,
-                emailVerified: false,
+                accountStatus: isTestUserRegistration
+                    ? AuthAccountStatus.active
+                    : AuthAccountStatus.pendingVerification,
+                emailVerified: isTestUserRegistration,
+                verifiedAt: isTestUserRegistration ? now : null,
                 registrationAttemptAt_orig_: existingForRegistration == null
                     ? now
                     : null,
@@ -283,6 +298,21 @@ class BackendAuthService {
         stage,
         extra: {'email': normalizedEmail},
       );
+
+      if (_isSpecialTestUserRegistration(normalizedEmail, name)) {
+        await _appStateStore.upsertVerifiedTestUserProfile(
+          principal: principal,
+          changeBy: principal.userId,
+        );
+        _logAuthEvent(
+          'register_test_user_verified',
+          email: normalizedEmail,
+          userId: principal.userId,
+          sourceIp: sourceIp,
+          detail: 'test_user_registration_bypassed_verification',
+        );
+        return const AuthStatusResponse(status: 'verified');
+      }
 
       stage = _startTiming();
       final emailPrincipal = _requireEmailPrincipal(
@@ -1519,6 +1549,29 @@ class BackendAuthService {
   String _normalizeEmail(String email) => email.trim().toLowerCase();
   String _normalizeUsername(String username) =>
       normalizeRegistrationUsername(username);
+
+  bool _isSpecialTestUserRegistration(String normalizedEmail, String name) {
+    return normalizedEmail.endsWith('@example.com') &&
+        name.startsWith('Test User ') &&
+        name.substring('Test User '.length).trim().isNotEmpty;
+  }
+
+  String _canonicalTestUserIdIfApplicable(
+    String requestedUserId,
+    String name,
+    String normalizedEmail,
+  ) {
+    if (!_isSpecialTestUserRegistration(normalizedEmail, name)) {
+      return requestedUserId;
+    }
+
+    final suffix = name.substring('Test User '.length).trim();
+    final normalizedSuffix = normalizeRegistrationUsernamePrefix(suffix);
+    if (normalizedSuffix.isEmpty) {
+      return requestedUserId;
+    }
+    return '__test_user_$normalizedSuffix';
+  }
 
   Map<String, String> _requiredFieldDetails(Map<String, String> fields) {
     final details = <String, String>{};

@@ -22,6 +22,56 @@ class AuthAppStateStore {
     );
   }
 
+  Future<void> upsertVerifiedTestUserProfile({
+    required AuthPrincipal principal,
+    required String changeBy,
+    Iterable<String> projectIdsToAdd = const <String>[],
+    Map<String, String>? projectRoles,
+  }) async {
+    if (!principal.userId.startsWith('__test_')) {
+      throw ArgumentError.value(
+        principal.userId,
+        'principal.userId',
+        'Test user IDs must start with "__test_"',
+      );
+    }
+
+    final invalidProjectIds = projectIdsToAdd
+        .where((projectId) => !projectId.startsWith('__test_'))
+        .toList();
+    if (invalidProjectIds.isNotEmpty) {
+      throw ArgumentError.value(
+        projectIdsToAdd,
+        'projectIdsToAdd',
+        'Test project IDs must start with "__test_"',
+      );
+    }
+
+    final now = DateTime.now().toUtc();
+    final verifiedPrincipal = principal.copyWith(
+      accountStatus: AuthAccountStatus.active,
+      emailVerified: true,
+      verifiedAt: now,
+      updatedAt: now,
+    );
+
+    await _storeProfileChange(
+      principal: verifiedPrincipal,
+      changeBy: changeBy,
+      deleted: false,
+    );
+
+    if (projectIdsToAdd.isNotEmpty) {
+      await applyProjectAssignmentChanges(
+        principal: verifiedPrincipal,
+        projectIdsToAdd: projectIdsToAdd,
+        projectIdsToRemove: const <String>[],
+        projectRoles: projectRoles ?? {},
+        changeBy: changeBy,
+      );
+    }
+  }
+
   Future<void> applyProjectAssignmentChanges({
     required AuthPrincipal principal,
     required Iterable<String> projectIdsToAdd,
