@@ -3093,6 +3093,93 @@ void main() {
         },
       );
 
+      test(
+        'generic membership updates reject test users being added to non-test projects',
+        () async {
+          final adminResponse = await authService.register(
+            RegisterRequest(
+              userId: 'admin-user-generic-5',
+              name: 'Admin User',
+              dateOfBirth: '1980-01-01',
+              email: 'admin.generic5@example.com',
+              password: 'admin-pass',
+            ),
+          );
+          expect(adminResponse.status, equals('pending_verification'));
+          final adminVerify = await authService.verifyEmail(
+            VerifyEmailRequest(
+              email: 'admin.generic5@example.com',
+              code: emailSender.codes['admin.generic5@example.com']!.last,
+            ),
+          );
+          final adminUserId = adminVerify.userId;
+
+          await storage.testStoreState(
+            entityState: DynamoEntityState.fromJson({
+              'entityId': adminUserId,
+              'entityType': kEntityTypeMember,
+              'domainType': kDomainMembership,
+              'unknownJson': '{}',
+              'change_domainId': 'project-1',
+              'change_domainId_orig_': 'project-1',
+              'change_changeAt': DateTime.now().toUtc().toIso8601String(),
+              'change_changeAt_orig_': DateTime.now().toUtc().toIso8601String(),
+              'change_cid': 'admin-member-generic-5',
+              'change_cid_orig_': 'admin-member-generic-5',
+              'change_changeBy': 'seed',
+              'change_changeBy_orig_': 'seed',
+              'change_storedAt': DateTime.now().toUtc().toIso8601String(),
+              'change_storedAt_orig_': DateTime.now().toUtc().toIso8601String(),
+              'data_parentId': kDomainEntityRootParentId,
+              'data_parentId_changeAt_': DateTime.now()
+                  .toUtc()
+                  .toIso8601String(),
+              'data_parentId_cid_': 'admin-member-generic-5',
+              'data_parentId_changeBy_': 'seed',
+              'data_parentProp': kCollectionMembership,
+              'data_parentProp_changeAt_': DateTime.now()
+                  .toUtc()
+                  .toIso8601String(),
+              'data_parentProp_cid_': 'admin-member-generic-5',
+              'data_parentProp_changeBy_': 'seed',
+              'role': 'admin',
+              'userId': adminUserId,
+            }),
+          );
+
+          final testUserRegister = await authService.register(
+            RegisterRequest(
+              userId: 'test-user-membership',
+              name: 'Test User Membership',
+              dateOfBirth: '1999-01-01',
+              email: 'test.membership@example.com',
+              password: 'test-pass',
+            ),
+          );
+          expect(testUserRegister.status, equals('verified'));
+          final testUserId = '__test_user_membership';
+
+          final updateResponse = await server.handleApiGatewayEvent({
+            'httpMethod': 'PUT',
+            'path': '/api/admin/user/$testUserId/memberships',
+            'headers': <String, String>{
+              'authorization': 'Bearer ${adminVerify.tokens.accessToken}',
+            },
+            'body': jsonEncode({
+              'memberAdditions': {'project-1': 'translator'},
+              'memberRemovals': <String>[],
+              'adminPassword': 'admin-pass',
+            }),
+          }, router);
+
+          expect(updateResponse['statusCode'], equals(400));
+          expect(
+            responseBody(updateResponse)['code'],
+            equals('invalid_request'),
+          );
+        },
+      );
+
       test('generic membership updates return 404 for unknown users', () async {
         final adminResponse = await authService.register(
           RegisterRequest(

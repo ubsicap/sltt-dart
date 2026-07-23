@@ -1075,6 +1075,18 @@ class BackendAuthService {
       }
       validatedMemberAdditions[entry.key] = memberType.name;
     }
+
+    if (userId.startsWith('__test_')) {
+      final invalidProjectIds = validatedMemberAdditions.keys
+          .where((projectId) => !projectId.startsWith('__test_'))
+          .toList();
+      if (invalidProjectIds.isNotEmpty) {
+        throw AuthException(
+          'Unable to complete this action',
+          code: 'invalid_request',
+        );
+      }
+    }
     final memberRemovals = request.memberRemovals
         .map((projectId) => projectId.trim())
         .where((projectId) => projectId.isNotEmpty)
