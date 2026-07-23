@@ -25,6 +25,8 @@ class SyncManager {
   // API endpoints - defaults to AWS dev cloud, can be overridden for testing
   String _cloudStorageUrl =
       Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl;
+  String _cloudWssUrl =
+      Platform.environment['CLOUD_WSS_URL'] ?? kCloudPrdWssUrl;
 
   bool _initialized = false;
 
@@ -34,10 +36,16 @@ class SyncManager {
   StreamSubscription<EntityStateFetchEvent>? _singleEntityStateSubscription;
   StreamSubscription<EntityStateFetchEvent>? _collectionEntityStateSubscription;
   bool _autoOutsyncEnabled = false;
+  bool _autoDownsyncEnabled = false;
+  final Set<String> _subscribedDomainChangeKeys = <String>{};
+  final Map<String, int> _remoteLastDomainSeqByDomain = {};
+  String? _authToken;
 
   // Public getters for testing
   bool get autoOutsyncEnabled => _autoOutsyncEnabled;
+  bool get autoDownsyncEnabled => _autoDownsyncEnabled;
   StreamSubscription<void>? get changeLogSubscription => _changeLogSubscription;
+  Set<String> get subscribedDomainChangeKeys => _subscribedDomainChangeKeys;
   EntityStatePaginationService? _entityStatePaginationService;
   Stream<EntityStateFetchEvent> get singleEntityStateEvents =>
       entityStatePaginationService.singleEntityEvents;
@@ -80,6 +88,14 @@ class SyncManager {
     _entityStatePaginationService?.updateBaseUrl(cloudUrl);
     SlttLogger.logger.info(
       '[SyncManager] Cloud URL configured to: $_cloudStorageUrl',
+    );
+  }
+
+  /// Configure the cloud websocket URL used for remote domain-change subscriptions.
+  void configureCloudWssUrl(String cloudWssUrl) {
+    _cloudWssUrl = cloudWssUrl;
+    SlttLogger.logger.info(
+      '[SyncManager] Cloud WSS URL configured to: $_cloudWssUrl',
     );
   }
 
@@ -229,6 +245,131 @@ class SyncManager {
     _changeLogSubscription = null;
 
     SlttLogger.logger.info('[SyncManager] Auto-sync disabled');
+  }
+
+  /// Enable automatic downsync from cloud when remote domain changes arrive.
+  ///
+  /// This is gated by incoming websocket/domain-change events and local cursor
+  /// bookkeeping inside the sync isolate.
+  void enableAutoDownsync() {
+    if (_autoDownsyncEnabled) {
+      SlttLogger.logger.info('[SyncManager] Auto-downsync already enabled');
+      return;
+    }
+
+    _autoDownsyncEnabled = true;
+    SlttLogger.logger.info('[SyncManager] Auto-downsync enabled');
+    _ensureActiveDomainChangeSubscriptions();
+  }
+
+  /// Disable automatic downsync.
+  void disableAutoDownsync() {
+    if (!_autoDownsyncEnabled) return;
+
+    _autoDownsyncEnabled = false;
+    SlttLogger.logger.info('[SyncManager] Auto-downsync disabled');
+  }
+
+  /// Subscribe to remote domain change notifications for the given domain.
+  void subscribeToDomainChanges({
+    required String domainType,
+    required String domainId,
+  }) {
+    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+    if (_subscribedDomainChangeKeys.add(key)) {
+      SlttLogger.logger.info(
+        '[SyncManager] Subscribed to domain changes: $key',
+      );
+      _trySendDomainChangeSubscription(
+        domainType: domainType,
+        domainId: domainId,
+      );
+    }
+  }
+
+  /// Unsubscribe from remote domain change notifications for the given domain.
+  void unsubscribeFromDomainChanges({
+    required String domainType,
+    required String domainId,
+  }) {
+    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+    if (_subscribedDomainChangeKeys.remove(key)) {
+      SlttLogger.logger.info(
+        '[SyncManager] Unsubscribed from domain changes: $key',
+      );
+      _remoteLastDomainSeqByDomain.remove(key);
+      _trySendDomainChangeUnsubscription(
+        domainType: domainType,
+        domainId: domainId,
+      );
+    }
+  }
+
+  void _ensureActiveDomainChangeSubscriptions() {
+    if (!_autoDownsyncEnabled || _subscribedDomainChangeKeys.isEmpty) {
+      return;
+    }
+
+    SlttLogger.logger.info(
+      '[SyncManager] Auto-downsync enabled for '
+      '${_subscribedDomainChangeKeys.length} domain(s); '
+      'remote-domain subscription management should be active.',
+    );
+  }
+
+  /// Update the token used by background websocket subscriptions.
+  ///
+  /// Token refresh remains in the main isolate; the sync isolate only stores
+  /// the most recent access token for outbound websocket auth headers.
+  void updateAuthToken(String token) {
+    _authToken = token;
+    SlttLogger.logger.info('[SyncManager] Auth token updated in sync isolate');
+  }
+
+  String _domainChangeKey({
+    required String domainType,
+    required String domainId,
+  }) {
+    return '$domainType/$domainId';
+  }
+
+  void _trySendDomainChangeSubscription({
+    required String domainType,
+    required String domainId,
+  }) {
+    if (!_autoDownsyncEnabled) {
+      SlttLogger.logger.info(
+        '[SyncManager] Auto-downsync disabled; delaying subscription for '
+        '$domainType/$domainId',
+      );
+      return;
+    }
+
+    // Stub: send subscribe message via websocket if connected.
+    SlttLogger.logger.info(
+      '[SyncManager] Would send domain change subscribe for '
+      '$domainType/$domainId',
+    );
+  }
+
+  void _trySendDomainChangeUnsubscription({
+    required String domainType,
+    required String domainId,
+  }) {
+    if (!_autoDownsyncEnabled) {
+      SlttLogger.logger.info(
+        '[SyncManager] Auto-downsync disabled; sending unsubscription for '
+        '$domainType/$domainId',
+      );
+      // Even when auto-downsync is disabled, we should still unregister the
+      // subscription if a websocket exists.
+    }
+
+    // Stub: send unsubscribe message via websocket if connected.
+    SlttLogger.logger.info(
+      '[SyncManager] Would send domain change unsubscribe for '
+      '$domainType/$domainId',
+    );
   }
 
   /// Called when change log entries are modified
