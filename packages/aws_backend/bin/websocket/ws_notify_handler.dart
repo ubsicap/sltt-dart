@@ -1,12 +1,8 @@
 import 'dart:convert';
 
 import 'package:aws_backend/src/websocket/domain_change_payload.dart'
-    show
-        DomainChangeData,
-        WsNotifyRecord,
-        buildDomainChangeNotificationPayload,
-        kNotifyTypeDomainChange;
-import 'package:sltt_core/sltt_core.dart' show SlttLogger;
+    show DomainChangeData, WsNotifyRecord, buildDomainChangeNotificationPayload;
+import 'package:sltt_core/sltt_core.dart' show SlttLogger, WebsocketConstants;
 
 import 'websocket_connections_repository.dart';
 import 'websocket_keys.dart';
@@ -104,9 +100,9 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     final domainId = message['domainId'] as String;
     final entityType = message['entityType'] as String;
 
-    if (notifyType != kNotifyTypeDomainChange) {
+    if (notifyType != WebsocketConstants.notifyTypeDomainChange) {
       SlttLogger.logger.warning(
-        'wsNotify: unsupported notifyType "$notifyType"; only "$kNotifyTypeDomainChange" is supported: $message',
+        'wsNotify: unsupported notifyType "$notifyType"; only "${WebsocketConstants.notifyTypeDomainChange}" is supported: $message',
       );
       continue;
     }

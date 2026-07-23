@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:sltt_core/sltt_core.dart' show SlttLogger;
+import 'package:sltt_core/sltt_core.dart' show SlttLogger, WebsocketConstants;
 
 import 'websocket_connections_repository.dart';
 import 'websocket_keys.dart';
@@ -47,7 +47,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       'wsSubscribe: invalid request connectionId=$connectionId domainType=$domainType domainId=$domainId',
     );
     await management.send(connectionId, {
-      'action': 'subscribe',
+      'action': WebsocketConstants.actionSubscribe,
       'status': 'error',
       'error':
           r'domainType, domainId, and entityType are required. entityType must be "*", "$", or match /^[a-z_]+$/',
@@ -71,7 +71,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
     );
 
     await management.send(connectionId, {
-      'action': 'subscribe',
+      'action': WebsocketConstants.actionSubscribe,
       'status': 'ok',
       'domainType': domainType,
       'domainId': domainId,

@@ -40,6 +40,11 @@ class SyncManager {
   final Set<String> _subscribedDomainChangeKeys = <String>{};
   final Map<String, int> _remoteLastDomainSeqByDomain = {};
   String? _authToken;
+  WebSocket? _webSocket;
+  bool _isWebSocketConnecting = false;
+  int _webSocketReconnectAttempts = 0;
+  Timer? _webSocketReconnectTimer;
+  bool _downsyncInFlight = false;
 
   // Public getters for testing
   bool get autoOutsyncEnabled => _autoOutsyncEnabled;
@@ -260,6 +265,7 @@ class SyncManager {
     _autoDownsyncEnabled = true;
     SlttLogger.logger.info('[SyncManager] Auto-downsync enabled');
     _ensureActiveDomainChangeSubscriptions();
+    _ensureWebSocketConnected();
   }
 
   /// Disable automatic downsync.
@@ -268,6 +274,7 @@ class SyncManager {
 
     _autoDownsyncEnabled = false;
     SlttLogger.logger.info('[SyncManager] Auto-downsync disabled');
+    _disconnectWebSocket();
   }
 
   /// Subscribe to remote domain change notifications for the given domain.
@@ -345,11 +352,24 @@ class SyncManager {
       return;
     }
 
-    // Stub: send subscribe message via websocket if connected.
+    if (_isWebSocketOpen) {
+      _sendWebSocketMessage({
+        'action': WebsocketConstants.actionSubscribe,
+        'domainType': domainType,
+        'domainId': domainId,
+        'entityType': WebsocketConstants.lastRecordEntityType,
+      });
+      SlttLogger.logger.info(
+        '[SyncManager] Sent websocket subscribe for $domainType/$domainId',
+      );
+      return;
+    }
+
     SlttLogger.logger.info(
-      '[SyncManager] Would send domain change subscribe for '
+      '[SyncManager] Websocket not connected; queuing subscribe for '
       '$domainType/$domainId',
     );
+    _ensureWebSocketConnected();
   }
 
   void _trySendDomainChangeUnsubscription({
@@ -365,11 +385,223 @@ class SyncManager {
       // subscription if a websocket exists.
     }
 
-    // Stub: send unsubscribe message via websocket if connected.
+    if (_isWebSocketOpen) {
+      _sendWebSocketMessage({
+        'action': WebsocketConstants.actionUnsubscribe,
+        'domainType': domainType,
+        'domainId': domainId,
+        'entityType': WebsocketConstants.lastRecordEntityType,
+      });
+      SlttLogger.logger.info(
+        '[SyncManager] Sent websocket unsubscribe for $domainType/$domainId',
+      );
+      return;
+    }
+
     SlttLogger.logger.info(
-      '[SyncManager] Would send domain change unsubscribe for '
+      '[SyncManager] Websocket not connected; queued unsubscribe for '
       '$domainType/$domainId',
     );
+  }
+
+  bool get _isWebSocketOpen =>
+      _webSocket != null && _webSocket!.readyState == WebSocket.open;
+
+  void _ensureWebSocketConnected() {
+    if (!_autoDownsyncEnabled || _isWebSocketOpen) {
+      return;
+    }
+    if (_isWebSocketConnecting) {
+      return;
+    }
+    unawaited(_connectWebSocket());
+  }
+
+  Future<void> _connectWebSocket() async {
+    _isWebSocketConnecting = true;
+    try {
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (_authToken?.isNotEmpty == true) {
+        headers['Authorization'] = 'Bearer $_authToken';
+      }
+      SlttLogger.logger.info(
+        '[SyncManager] Connecting websocket to: $_cloudWssUrl',
+      );
+      _webSocket = await WebSocket.connect(_cloudWssUrl, headers: headers);
+      _webSocket?.pingInterval = const Duration(seconds: 20);
+      _webSocketReconnectAttempts = 0;
+      _webSocket?.listen(
+        _handleWebSocketMessage,
+        onDone: _onWebSocketDone,
+        onError: _onWebSocketError,
+        cancelOnError: true,
+      );
+      SlttLogger.logger.info('[SyncManager] Websocket connected');
+      _sendPendingDomainChangeSubscriptions();
+    } catch (e, stackTrace) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Websocket connect failed: $e',
+        e,
+        stackTrace,
+      );
+      _scheduleWebSocketReconnect();
+    } finally {
+      _isWebSocketConnecting = false;
+    }
+  }
+
+  void _scheduleWebSocketReconnect() {
+    _webSocketReconnectTimer?.cancel();
+    _webSocketReconnectAttempts += 1;
+    final delaySeconds = _webSocketReconnectAttempts > 6
+        ? 30
+        : 2 << (_webSocketReconnectAttempts - 1);
+    _webSocketReconnectTimer = Timer(Duration(seconds: delaySeconds), () {
+      if (_autoDownsyncEnabled) {
+        unawaited(_connectWebSocket());
+      }
+    });
+    SlttLogger.logger.info(
+      '[SyncManager] Scheduled websocket reconnect in $delaySeconds seconds',
+    );
+  }
+
+  Future<void> _disconnectWebSocket() async {
+    _webSocketReconnectTimer?.cancel();
+    _webSocketReconnectTimer = null;
+    try {
+      await _webSocket?.close(WebSocketStatus.normalClosure, 'client_shutdown');
+    } catch (_) {
+      // ignore
+    }
+    _webSocket = null;
+  }
+
+  void _onWebSocketDone() {
+    SlttLogger.logger.info('[SyncManager] Websocket connection closed');
+    _webSocket = null;
+    if (_autoDownsyncEnabled) {
+      _scheduleWebSocketReconnect();
+    }
+  }
+
+  void _onWebSocketError(dynamic error, StackTrace stackTrace) {
+    SlttLogger.logger.warning(
+      '[SyncManager] Websocket error: $error',
+      error,
+      stackTrace,
+    );
+    _webSocket = null;
+    if (_autoDownsyncEnabled) {
+      _scheduleWebSocketReconnect();
+    }
+  }
+
+  void _sendWebSocketMessage(Map<String, dynamic> message) {
+    if (!_isWebSocketOpen) {
+      SlttLogger.logger.info(
+        '[SyncManager] Cannot send websocket message, socket not open',
+      );
+      return;
+    }
+    _webSocket?.add(jsonEncode(message));
+  }
+
+  void _sendPendingDomainChangeSubscriptions() {
+    for (final key in _subscribedDomainChangeKeys) {
+      final parts = key.split('/');
+      if (parts.length != 2) continue;
+      _sendWebSocketMessage({
+        'action': WebsocketConstants.actionSubscribe,
+        'domainType': parts[0],
+        'domainId': parts[1],
+        'entityType': WebsocketConstants.lastRecordEntityType,
+      });
+    }
+  }
+
+  void _handleWebSocketMessage(dynamic rawMessage) {
+    try {
+      final message = rawMessage is String
+          ? jsonDecode(rawMessage) as Map<String, dynamic>
+          : rawMessage as Map<String, dynamic>;
+      final action = message['action'] as String?;
+      if (action != WebsocketConstants.actionChange) {
+        return;
+      }
+      final notifyType = message['notifyType'] as String?;
+      if (notifyType != WebsocketConstants.notifyTypeDomainChange) {
+        return;
+      }
+      final domainType = message['domainType'] as String?;
+      final domainId = message['domainId'] as String?;
+      final data = message['data'] as Map<String, dynamic>?;
+      if (domainType == null || domainId == null || data == null) {
+        return;
+      }
+      final lastDomainSeq = data['lastDomainSeq'] is int
+          ? data['lastDomainSeq'] as int
+          : int.tryParse(data['lastDomainSeq']?.toString() ?? '') ?? 0;
+      if (lastDomainSeq <= 0) {
+        return;
+      }
+      final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+      final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
+      if (lastDomainSeq <= previousSeq) {
+        return;
+      }
+      _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
+      if (!_autoDownsyncEnabled || !_subscribedDomainChangeKeys.contains(key)) {
+        return;
+      }
+      unawaited(_handleDomainChange(domainType, domainId, lastDomainSeq));
+    } catch (error, stackTrace) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Failed to process websocket message: $error',
+        error,
+        stackTrace,
+      );
+    }
+  }
+
+  Future<void> _handleDomainChange(
+    String domainType,
+    String domainId,
+    int lastDomainSeq,
+  ) async {
+    if (_downsyncInFlight) {
+      SlttLogger.logger.info(
+        '[SyncManager] Downsync already in flight; skipping domain change for '
+        '$domainType/$domainId',
+      );
+      return;
+    }
+
+    final syncState = await _localStorage.getCursorSyncState(domainId);
+    final localSeq = syncState?.seq ?? 0;
+    if (lastDomainSeq <= localSeq) {
+      SlttLogger.logger.info(
+        '[SyncManager] Local seq already up to date for $domainType/$domainId: '
+        'local=$localSeq remote=$lastDomainSeq',
+      );
+      return;
+    }
+
+    _downsyncInFlight = true;
+    try {
+      SlttLogger.logger.info(
+        '[SyncManager] Downsyncing $domainType/$domainId due to websocket change event',
+      );
+      await downsyncFromCloud(domainIds: [domainId], domainType: domainType);
+    } catch (error, stackTrace) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Domain change downsync failed for $domainType/$domainId: $error',
+        error,
+        stackTrace,
+      );
+    } finally {
+      _downsyncInFlight = false;
+    }
   }
 
   /// Called when change log entries are modified

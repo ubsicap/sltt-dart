@@ -1,3 +1,5 @@
+import 'package:sltt_core/sltt_core.dart' show WebsocketConstants;
+
 class DomainChangeData {
   DomainChangeData({
     required this.name,
@@ -53,7 +55,7 @@ class WsNotifyRecord {
   final int index;
 }
 
-const kNotifyTypeDomainChange = 'domainChange';
+const kNotifyTypeDomainChange = WebsocketConstants.notifyTypeDomainChange;
 
 Map<String, dynamic> buildDomainChangeNotificationPayload({
   required String domainType,
@@ -80,7 +82,7 @@ Map<String, dynamic> buildWsNotifyRecordMessage({
   required String entityType,
 }) {
   return {
-    'action': 'change',
+    'action': WebsocketConstants.actionChange,
     'notifyType': kNotifyTypeDomainChange,
     'domainType': domainType,
     'domainId': domainId,

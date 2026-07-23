@@ -14,12 +14,18 @@
 ///     -> lets wsNotify fetch every connection subscribed to a domain in one
 ///        query, then split matches by exact entityType vs "*" vs latest-record
 ///        sentinel in code.
+library;
+
+import 'package:sltt_core/sltt_core.dart' show WebsocketConstants;
+
 class WebsocketKeys {
   WebsocketKeys._();
 
   static const String connectionSk = 'con';
-  static const String wildcardEntityType = '*';
-  static const String lastRecordEntityType = r'$';
+  static const String wildcardEntityType =
+      WebsocketConstants.wildcardEntityType;
+  static const String lastRecordEntityType =
+      WebsocketConstants.lastRecordEntityType;
 
   static String subscriptionSk({
     required String domainType,

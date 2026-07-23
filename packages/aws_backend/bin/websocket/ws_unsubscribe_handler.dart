@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:sltt_core/sltt_core.dart' show WebsocketConstants;
+
 import 'websocket_connections_repository.dart';
 import 'websocket_management_client.dart';
 
@@ -14,7 +16,8 @@ Future<Map<String, dynamic>> wsUnsubscribeHandler(
   final requestContext = (event['requestContext'] as Map)
       .cast<String, dynamic>();
   final connectionId = requestContext['connectionId'] as String;
-  final body = jsonDecode(event['body'] as String? ?? '{}') as Map<String, dynamic>;
+  final body =
+      jsonDecode(event['body'] as String? ?? '{}') as Map<String, dynamic>;
 
   final domainType = body['domainType'] as String?;
   final domainId = body['domainId'] as String?;
@@ -25,7 +28,7 @@ Future<Map<String, dynamic>> wsUnsubscribeHandler(
       domainId == null ||
       domainId.isEmpty) {
     await management.send(connectionId, {
-      'action': 'unsubscribe',
+      'action': WebsocketConstants.actionUnsubscribe,
       'status': 'error',
       'error': 'domainType and domainId are required',
     });
@@ -40,7 +43,7 @@ Future<Map<String, dynamic>> wsUnsubscribeHandler(
   );
 
   await management.send(connectionId, {
-    'action': 'unsubscribe',
+    'action': WebsocketConstants.actionUnsubscribe,
     'status': 'ok',
     'domainType': domainType,
     'domainId': domainId,
