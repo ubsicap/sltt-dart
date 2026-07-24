@@ -11,6 +11,7 @@ import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 import 'entity_state_pagination_service.dart';
 import 'entity_state_pagination_service_config.dart';
 import 'isar_storage_service.dart';
+import 'sync_manager_websocket_client.dart';
 
 class SyncManager {
   static SyncManager? _instance;
@@ -41,7 +42,7 @@ class SyncManager {
   final Map<String, int> _remoteLastDomainSeqByDomain = {};
   final Map<String, DateTime> _remoteLastDomainChangeAtByDomain = {};
   String? _authToken;
-  WebSocket? _webSocket;
+  SyncManagerWebSocketClient? _webSocketClient;
   bool _isWebSocketConnecting = false;
   int _webSocketReconnectAttempts = 0;
   Timer? _webSocketReconnectTimer;
@@ -100,6 +101,7 @@ class SyncManager {
   /// Configure the cloud websocket URL used for remote domain-change subscriptions.
   void configureCloudWssUrl(String cloudWssUrl) {
     _cloudWssUrl = cloudWssUrl;
+    _webSocketClient?.updateCloudWssUrl(cloudWssUrl);
     SlttLogger.logger.info(
       '[SyncManager] Cloud WSS URL configured to: $_cloudWssUrl',
     );
@@ -332,8 +334,12 @@ class SyncManager {
   /// Token refresh remains in the main isolate; the sync isolate only stores
   /// the most recent access token for outbound websocket auth headers.
   void updateAuthToken(String token) {
+    final hadToken = _hasWebSocketAuth;
     _authToken = token;
     SlttLogger.logger.info('[SyncManager] Auth token updated in sync isolate');
+    if (!hadToken && _hasWebSocketAuth) {
+      _ensureWebSocketConnected();
+    }
   }
 
   String _domainChangeKey({
@@ -348,12 +354,7 @@ class SyncManager {
     required String domainId,
   }) {
     if (_isWebSocketOpen) {
-      _sendWebSocketMessage({
-        'action': WebsocketConstants.actionSubscribe,
-        'domainType': domainType,
-        'domainId': domainId,
-        'entityType': WebsocketConstants.lastRecordEntityType,
-      });
+      _webSocketClient?.subscribe(domainType, domainId);
       SlttLogger.logger.info(
         '[SyncManager] Sent websocket subscribe for $domainType/$domainId',
       );
@@ -372,12 +373,7 @@ class SyncManager {
     required String domainId,
   }) {
     if (_isWebSocketOpen) {
-      _sendWebSocketMessage({
-        'action': WebsocketConstants.actionUnsubscribe,
-        'domainType': domainType,
-        'domainId': domainId,
-        'entityType': WebsocketConstants.lastRecordEntityType,
-      });
+      _webSocketClient?.unsubscribe(domainType, domainId);
       SlttLogger.logger.info(
         '[SyncManager] Sent websocket unsubscribe for $domainType/$domainId',
       );
@@ -393,8 +389,9 @@ class SyncManager {
     }
   }
 
-  bool get _isWebSocketOpen =>
-      _webSocket != null && _webSocket!.readyState == WebSocket.open;
+  bool get _isWebSocketOpen => _webSocketClient?.isOpen == true;
+
+  bool get _hasWebSocketAuth => _authToken?.isNotEmpty == true;
 
   void _ensureWebSocketConnected() {
     if (_isWebSocketOpen || _isWebSocketConnecting) {
@@ -403,28 +400,38 @@ class SyncManager {
     if (!_autoDownsyncEnabled && _subscribedDomainChangeKeys.isEmpty) {
       return;
     }
+    if (!_hasWebSocketAuth) {
+      SlttLogger.logger.info(
+        '[SyncManager] Websocket connect deferred until auth token is available',
+      );
+      return;
+    }
+    _webSocketReconnectTimer?.cancel();
+    _webSocketReconnectTimer = null;
     unawaited(_connectWebSocket());
   }
 
   Future<void> _connectWebSocket() async {
     _isWebSocketConnecting = true;
     try {
-      final headers = <String, String>{'Content-Type': 'application/json'};
-      if (_authToken?.isNotEmpty == true) {
-        headers['Authorization'] = 'Bearer $_authToken';
-      }
-      SlttLogger.logger.info(
-        '[SyncManager] Connecting websocket to: $_cloudWssUrl',
-      );
-      _webSocket = await WebSocket.connect(_cloudWssUrl, headers: headers);
-      _webSocket?.pingInterval = const Duration(seconds: 20);
-      _webSocketReconnectAttempts = 0;
-      _webSocket?.listen(
-        _handleWebSocketMessage,
+      _webSocketClient ??= SyncManagerWebSocketClient(
+        cloudWssUrl: _cloudWssUrl,
+        authToken: _authToken,
+        onMessage: _handleWebSocketMessage,
         onDone: _onWebSocketDone,
         onError: _onWebSocketError,
-        cancelOnError: true,
       );
+      if (_webSocketClient!.authToken != _authToken) {
+        _webSocketClient!.updateAuthToken(_authToken ?? '');
+      }
+      final authTokenInfo = _authToken?.isNotEmpty == true
+          ? 'present len=${_authToken!.length}'
+          : 'absent';
+      SlttLogger.logger.info(
+        '[SyncManager] Connecting websocket to: $_cloudWssUrl auth=$authTokenInfo',
+      );
+      await _webSocketClient!.connect();
+      _webSocketReconnectAttempts = 0;
       SlttLogger.logger.info('[SyncManager] Websocket connected');
       _sendPendingDomainChangeSubscriptions();
     } catch (e, stackTrace) {
@@ -461,17 +468,13 @@ class SyncManager {
   Future<void> _disconnectWebSocket() async {
     _webSocketReconnectTimer?.cancel();
     _webSocketReconnectTimer = null;
-    try {
-      await _webSocket?.close(WebSocketStatus.normalClosure, 'client_shutdown');
-    } catch (_) {
-      // ignore
-    }
-    _webSocket = null;
+    await _webSocketClient?.disconnect();
+    _webSocketClient = null;
   }
 
   void _onWebSocketDone() {
     SlttLogger.logger.info('[SyncManager] Websocket connection closed');
-    _webSocket = null;
+    _webSocketClient = null;
     if (_autoDownsyncEnabled || _subscribedDomainChangeKeys.isNotEmpty) {
       _scheduleWebSocketReconnect();
     }
@@ -483,20 +486,10 @@ class SyncManager {
       error,
       stackTrace,
     );
-    _webSocket = null;
+    _webSocketClient = null;
     if (_autoDownsyncEnabled || _subscribedDomainChangeKeys.isNotEmpty) {
       _scheduleWebSocketReconnect();
     }
-  }
-
-  void _sendWebSocketMessage(Map<String, dynamic> message) {
-    if (!_isWebSocketOpen) {
-      SlttLogger.logger.info(
-        '[SyncManager] Cannot send websocket message, socket not open',
-      );
-      return;
-    }
-    _webSocket?.add(jsonEncode(message));
   }
 
   void _sendPendingDomainChangeSubscriptions() {
@@ -518,12 +511,7 @@ class SyncManager {
         );
         continue;
       }
-      _sendWebSocketMessage({
-        'action': WebsocketConstants.actionSubscribe,
-        'domainType': parts[0],
-        'domainId': parts[1],
-        'entityType': WebsocketConstants.lastRecordEntityType,
-      });
+      _webSocketClient?.subscribe(parts[0], parts[1]);
       SlttLogger.logger.info(
         '[SyncManager] Sent queued websocket subscribe for ${parts[0]}/${parts[1]}',
       );
