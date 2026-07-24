@@ -269,6 +269,7 @@ class SyncManager {
     SlttLogger.logger.info('[SyncManager] Auto-downsync enabled');
     _ensureActiveDomainChangeSubscriptions();
     _ensureWebSocketConnected();
+    unawaited(_processPendingSubscribedDomainChanges());
   }
 
   /// Disable automatic downsync.
@@ -327,6 +328,37 @@ class SyncManager {
       '${_subscribedDomainChangeKeys.length} domain(s); '
       'remote-domain subscription management should be active.',
     );
+  }
+
+  Future<void> _processPendingSubscribedDomainChanges() async {
+    if (!_autoDownsyncEnabled || _subscribedDomainChangeKeys.isEmpty) {
+      return;
+    }
+
+    for (final key in _subscribedDomainChangeKeys) {
+      if (!_autoDownsyncEnabled) {
+        return;
+      }
+
+      final parts = key.split('/');
+      if (parts.length != 2) {
+        continue;
+      }
+      final domainType = parts[0];
+      final domainId = parts[1];
+      final lastDomainSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
+      if (lastDomainSeq <= 0) {
+        continue;
+      }
+
+      final syncState = await _localStorage.getCursorSyncState(domainId);
+      final localSeq = syncState?.seq ?? 0;
+      if (lastDomainSeq <= localSeq) {
+        continue;
+      }
+
+      await _handleDomainChange(domainType, domainId, lastDomainSeq);
+    }
   }
 
   /// Update the token used by background websocket subscriptions.
@@ -574,6 +606,13 @@ class SyncManager {
           domainType: domainType,
           domainId: domainId,
         );
+        if (!_subscribedDomainChangeKeys.contains(key)) {
+          SlttLogger.logger.info(
+            '[SyncManager] Ignoring subscribe ack for $domainType/$domainId because the key is not actively subscribed.',
+          );
+          return;
+        }
+
         final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
         if (lastDomainSeq <= previousSeq) {
           return;
@@ -582,10 +621,9 @@ class SyncManager {
         if (lastDomainChangeAt != null) {
           _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
         }
-        if (!_autoDownsyncEnabled ||
-            !_subscribedDomainChangeKeys.contains(key)) {
+        if (!_autoDownsyncEnabled) {
           SlttLogger.logger.info(
-            '[SyncManager] Ignoring subscribe ack for $domainType/$domainId because auto-downsync is disabled or the key is not actively subscribed.',
+            '[SyncManager] Subscribe ack for $domainType/$domainId stored remote status; auto-downsync is disabled, so download is deferred until enabled.',
           );
           return;
         }
@@ -621,6 +659,9 @@ class SyncManager {
       }
 
       final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+      if (!_subscribedDomainChangeKeys.contains(key)) {
+        return;
+      }
       final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
       if (lastDomainSeq <= previousSeq) {
         return;
@@ -629,7 +670,7 @@ class SyncManager {
       if (lastDomainChangeAt != null) {
         _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
       }
-      if (!_autoDownsyncEnabled || !_subscribedDomainChangeKeys.contains(key)) {
+      if (!_autoDownsyncEnabled) {
         return;
       }
       unawaited(_handleDomainChange(domainType, domainId, lastDomainSeq));
