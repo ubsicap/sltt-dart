@@ -500,15 +500,33 @@ class SyncManager {
   }
 
   void _sendPendingDomainChangeSubscriptions() {
+    if (_subscribedDomainChangeKeys.isEmpty) {
+      SlttLogger.logger.info(
+        '[SyncManager] No pending websocket domain subscriptions to flush',
+      );
+      return;
+    }
+    SlttLogger.logger.info(
+      '[SyncManager] Flushing ${_subscribedDomainChangeKeys.length} pending websocket domain subscriptions: '
+      '${_subscribedDomainChangeKeys.join(', ')}',
+    );
     for (final key in _subscribedDomainChangeKeys) {
       final parts = key.split('/');
-      if (parts.length != 2) continue;
+      if (parts.length != 2) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Ignoring malformed pending domain subscription key: $key',
+        );
+        continue;
+      }
       _sendWebSocketMessage({
         'action': WebsocketConstants.actionSubscribe,
         'domainType': parts[0],
         'domainId': parts[1],
         'entityType': WebsocketConstants.lastRecordEntityType,
       });
+      SlttLogger.logger.info(
+        '[SyncManager] Sent queued websocket subscribe for ${parts[0]}/${parts[1]}',
+      );
     }
   }
 
@@ -521,20 +539,29 @@ class SyncManager {
       if (action == WebsocketConstants.actionSubscribe) {
         final status = message['status'] as String?;
         if (status != 'ok') {
+          SlttLogger.logger.warning(
+            '[SyncManager] Websocket subscribe ack failed: status=$status, message=$message',
+          );
           return;
         }
         final domainType = message['domainType'] as String?;
         final domainId = message['domainId'] as String?;
+        if (domainType == null || domainId == null) {
+          SlttLogger.logger.warning(
+            '[SyncManager] Websocket subscribe ack missing required fields: $message',
+          );
+          return;
+        }
         final data = message['data'] as Map<String, dynamic>?;
-        if (domainType == null || domainId == null || data == null) {
+        if (data == null) {
+          SlttLogger.logger.info(
+            '[SyncManager] Websocket subscribe ack for $domainType/$domainId received without status data; waiting for change events.',
+          );
           return;
         }
         final lastDomainSeq = data['lastDomainSeq'] is int
             ? data['lastDomainSeq'] as int
             : int.tryParse(data['lastDomainSeq']?.toString() ?? '') ?? 0;
-        if (lastDomainSeq <= 0) {
-          return;
-        }
         final lastDomainChangeAtRaw = data['lastDomainChangeAt'];
         DateTime? lastDomainChangeAt;
         if (lastDomainChangeAtRaw is String) {
@@ -543,6 +570,16 @@ class SyncManager {
           )?.toUtc();
         } else if (lastDomainChangeAtRaw is DateTime) {
           lastDomainChangeAt = lastDomainChangeAtRaw.toUtc();
+        }
+        SlttLogger.logger.info(
+          '[SyncManager] Websocket subscribe ack for $domainType/$domainId: '
+          'lastDomainSeq=$lastDomainSeq, lastDomainChangeAt=$lastDomainChangeAt',
+        );
+        if (lastDomainSeq <= 0) {
+          SlttLogger.logger.info(
+            '[SyncManager] Websocket subscribe ack for $domainType/$domainId had no remote seq; no downsync will be triggered until a change event arrives.',
+          );
+          return;
         }
 
         final key = _domainChangeKey(
@@ -559,6 +596,9 @@ class SyncManager {
         }
         if (!_autoDownsyncEnabled ||
             !_subscribedDomainChangeKeys.contains(key)) {
+          SlttLogger.logger.info(
+            '[SyncManager] Ignoring subscribe ack for $domainType/$domainId because auto-downsync is disabled or the key is not actively subscribed.',
+          );
           return;
         }
         unawaited(_handleDomainChange(domainType, domainId, lastDomainSeq));
