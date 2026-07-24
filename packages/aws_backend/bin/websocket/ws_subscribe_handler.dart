@@ -15,6 +15,11 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
   Map<String, dynamic> event, {
   required WebsocketConnectionsRepository connections,
   required WebsocketManagementClient management,
+  Future<Map<String, dynamic>?> Function({
+    required String domainType,
+    required String domainId,
+  })?
+  getDomainChangeStatus,
 }) async {
   final requestContext = (event['requestContext'] as Map)
       .cast<String, dynamic>();
@@ -70,14 +75,34 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       entityType: entityType,
     );
 
-    await management.send(connectionId, {
+    Map<String, dynamic>? statusData;
+    if (getDomainChangeStatus != null) {
+      try {
+        statusData = await getDomainChangeStatus(
+          domainType: domainType,
+          domainId: domainId,
+        );
+      } catch (error, stackTrace) {
+        SlttLogger.logger.warning(
+          'wsSubscribe: failed to fetch initial domain status '
+          'for $domainType/$domainId',
+          error,
+          stackTrace,
+        );
+      }
+    }
+
+    final payload = {
       'action': WebsocketConstants.actionSubscribe,
       'status': 'ok',
       'domainType': domainType,
       'domainId': domainId,
       'entityType': entityType,
       'subscriptionKey': subscriptionKey,
-    });
+      if (statusData != null) 'data': statusData,
+    };
+
+    await management.send(connectionId, payload);
 
     SlttLogger.logger.info(
       'wsSubscribe: saved subscription connectionId=$connectionId domainType=$domainType domainId=$domainId entityType=$entityType',

@@ -256,11 +256,27 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
 
   final connections = await _createConnectionsRepository();
   final management = await _createManagementClient(connections);
+  final storage = StorageFactory.createStorage(
+    credentials: _getExecutionRoleCredentials(),
+  );
   try {
+    await storage.initialize();
+
     return await wsSubscribeHandler(
       event,
       connections: connections,
       management: management,
+      getDomainChangeStatus:
+          ({required String domainType, required String domainId}) async {
+            final changeStats = await storage.getChangeStats(
+              domainType: domainType,
+              domainId: domainId,
+            );
+            return {
+              'lastDomainSeq': changeStats.totals.latestSeq,
+              'lastDomainChangeAt': changeStats.totals.latestChangeAt,
+            };
+          },
     );
   } catch (e, stackTrace) {
     SlttLogger.logger.severe(
@@ -279,6 +295,7 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
   } finally {
     await management.close();
     await connections.close();
+    await storage.close();
   }
 }
 

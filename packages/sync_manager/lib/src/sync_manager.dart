@@ -39,6 +39,7 @@ class SyncManager {
   bool _autoDownsyncEnabled = false;
   final Set<String> _subscribedDomainChangeKeys = <String>{};
   final Map<String, int> _remoteLastDomainSeqByDomain = {};
+  final Map<String, DateTime> _remoteLastDomainChangeAtByDomain = {};
   String? _authToken;
   WebSocket? _webSocket;
   bool _isWebSocketConnecting = false;
@@ -274,7 +275,9 @@ class SyncManager {
 
     _autoDownsyncEnabled = false;
     SlttLogger.logger.info('[SyncManager] Auto-downsync disabled');
-    _disconnectWebSocket();
+    if (_subscribedDomainChangeKeys.isEmpty) {
+      _disconnectWebSocket();
+    }
   }
 
   /// Subscribe to remote domain change notifications for the given domain.
@@ -344,14 +347,6 @@ class SyncManager {
     required String domainType,
     required String domainId,
   }) {
-    if (!_autoDownsyncEnabled) {
-      SlttLogger.logger.info(
-        '[SyncManager] Auto-downsync disabled; delaying subscription for '
-        '$domainType/$domainId',
-      );
-      return;
-    }
-
     if (_isWebSocketOpen) {
       _sendWebSocketMessage({
         'action': WebsocketConstants.actionSubscribe,
@@ -376,15 +371,6 @@ class SyncManager {
     required String domainType,
     required String domainId,
   }) {
-    if (!_autoDownsyncEnabled) {
-      SlttLogger.logger.info(
-        '[SyncManager] Auto-downsync disabled; sending unsubscription for '
-        '$domainType/$domainId',
-      );
-      // Even when auto-downsync is disabled, we should still unregister the
-      // subscription if a websocket exists.
-    }
-
     if (_isWebSocketOpen) {
       _sendWebSocketMessage({
         'action': WebsocketConstants.actionUnsubscribe,
@@ -395,23 +381,26 @@ class SyncManager {
       SlttLogger.logger.info(
         '[SyncManager] Sent websocket unsubscribe for $domainType/$domainId',
       );
-      return;
+    } else {
+      SlttLogger.logger.info(
+        '[SyncManager] Websocket not connected; queued unsubscribe for '
+        '$domainType/$domainId',
+      );
     }
 
-    SlttLogger.logger.info(
-      '[SyncManager] Websocket not connected; queued unsubscribe for '
-      '$domainType/$domainId',
-    );
+    if (_subscribedDomainChangeKeys.isEmpty) {
+      _disconnectWebSocket();
+    }
   }
 
   bool get _isWebSocketOpen =>
       _webSocket != null && _webSocket!.readyState == WebSocket.open;
 
   void _ensureWebSocketConnected() {
-    if (!_autoDownsyncEnabled || _isWebSocketOpen) {
+    if (_isWebSocketOpen || _isWebSocketConnecting) {
       return;
     }
-    if (_isWebSocketConnecting) {
+    if (!_autoDownsyncEnabled && _subscribedDomainChangeKeys.isEmpty) {
       return;
     }
     unawaited(_connectWebSocket());
@@ -451,13 +440,16 @@ class SyncManager {
   }
 
   void _scheduleWebSocketReconnect() {
+    if (!_autoDownsyncEnabled && _subscribedDomainChangeKeys.isEmpty) {
+      return;
+    }
     _webSocketReconnectTimer?.cancel();
     _webSocketReconnectAttempts += 1;
     final delaySeconds = _webSocketReconnectAttempts > 6
         ? 30
         : 2 << (_webSocketReconnectAttempts - 1);
     _webSocketReconnectTimer = Timer(Duration(seconds: delaySeconds), () {
-      if (_autoDownsyncEnabled) {
+      if (_autoDownsyncEnabled || _subscribedDomainChangeKeys.isNotEmpty) {
         unawaited(_connectWebSocket());
       }
     });
@@ -480,7 +472,7 @@ class SyncManager {
   void _onWebSocketDone() {
     SlttLogger.logger.info('[SyncManager] Websocket connection closed');
     _webSocket = null;
-    if (_autoDownsyncEnabled) {
+    if (_autoDownsyncEnabled || _subscribedDomainChangeKeys.isNotEmpty) {
       _scheduleWebSocketReconnect();
     }
   }
@@ -492,7 +484,7 @@ class SyncManager {
       stackTrace,
     );
     _webSocket = null;
-    if (_autoDownsyncEnabled) {
+    if (_autoDownsyncEnabled || _subscribedDomainChangeKeys.isNotEmpty) {
       _scheduleWebSocketReconnect();
     }
   }
@@ -526,6 +518,53 @@ class SyncManager {
           ? jsonDecode(rawMessage) as Map<String, dynamic>
           : rawMessage as Map<String, dynamic>;
       final action = message['action'] as String?;
+      if (action == WebsocketConstants.actionSubscribe) {
+        final status = message['status'] as String?;
+        if (status != 'ok') {
+          return;
+        }
+        final domainType = message['domainType'] as String?;
+        final domainId = message['domainId'] as String?;
+        final data = message['data'] as Map<String, dynamic>?;
+        if (domainType == null || domainId == null || data == null) {
+          return;
+        }
+        final lastDomainSeq = data['lastDomainSeq'] is int
+            ? data['lastDomainSeq'] as int
+            : int.tryParse(data['lastDomainSeq']?.toString() ?? '') ?? 0;
+        if (lastDomainSeq <= 0) {
+          return;
+        }
+        final lastDomainChangeAtRaw = data['lastDomainChangeAt'];
+        DateTime? lastDomainChangeAt;
+        if (lastDomainChangeAtRaw is String) {
+          lastDomainChangeAt = DateTime.tryParse(
+            lastDomainChangeAtRaw,
+          )?.toUtc();
+        } else if (lastDomainChangeAtRaw is DateTime) {
+          lastDomainChangeAt = lastDomainChangeAtRaw.toUtc();
+        }
+
+        final key = _domainChangeKey(
+          domainType: domainType,
+          domainId: domainId,
+        );
+        final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
+        if (lastDomainSeq <= previousSeq) {
+          return;
+        }
+        _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
+        if (lastDomainChangeAt != null) {
+          _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
+        }
+        if (!_autoDownsyncEnabled ||
+            !_subscribedDomainChangeKeys.contains(key)) {
+          return;
+        }
+        unawaited(_handleDomainChange(domainType, domainId, lastDomainSeq));
+        return;
+      }
+
       if (action != WebsocketConstants.actionChange) {
         return;
       }
@@ -545,12 +584,23 @@ class SyncManager {
       if (lastDomainSeq <= 0) {
         return;
       }
+      final lastDomainChangeAtRaw = data['lastDomainChangeAt'];
+      DateTime? lastDomainChangeAt;
+      if (lastDomainChangeAtRaw is String) {
+        lastDomainChangeAt = DateTime.tryParse(lastDomainChangeAtRaw)?.toUtc();
+      } else if (lastDomainChangeAtRaw is DateTime) {
+        lastDomainChangeAt = lastDomainChangeAtRaw.toUtc();
+      }
+
       final key = _domainChangeKey(domainType: domainType, domainId: domainId);
       final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
       if (lastDomainSeq <= previousSeq) {
         return;
       }
       _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
+      if (lastDomainChangeAt != null) {
+        _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
+      }
       if (!_autoDownsyncEnabled || !_subscribedDomainChangeKeys.contains(key)) {
         return;
       }
@@ -1155,6 +1205,7 @@ class SyncManager {
   Future<SyncStatus> getSyncStatus(
     String domainId, {
     String domainType = 'project',
+    bool skipCloudStats = false,
   }) async {
     try {
       final localChangeStats = await _localStorage.getChangeStats(
@@ -1169,32 +1220,36 @@ class SyncManager {
 
       final localCursorState = await _localStorage.getCursorSyncState(domainId);
 
-      // Try to get cloud storage stats
       EntityTypeSummary? cloudChangeStats;
       EntityTypeStats? cloudStateStats;
-      try {
-        final collection = getCollectionByDomain(domainType) ?? 'projects';
-        final response = await _dio.get(
-          '$_cloudStorageUrl/api/stats/$collection/$domainId',
-        );
-        if (response.statusCode == 200) {
-          final stats = response.data as Map<String, dynamic>;
-          final ps = DomainStatsResponse.fromJson(stats);
-          cloudStateStats = ps.entityTypeStats;
-          cloudChangeStats = ps.changeStats;
+      if (!skipCloudStats) {
+        try {
+          final collection = getCollectionByDomain(domainType) ?? 'projects';
+          final response = await _dio.get(
+            '$_cloudStorageUrl/api/stats/$collection/$domainId',
+          );
+          if (response.statusCode == 200) {
+            final stats = response.data as Map<String, dynamic>;
+            final ps = DomainStatsResponse.fromJson(stats);
+            cloudStateStats = ps.entityTypeStats;
+            cloudChangeStats = ps.changeStats;
+          }
+        } catch (e) {
+          SlttLogger.logger.warning(
+            '[SyncManager] Could not fetch cloud storage stats: $e',
+          );
         }
-      } catch (e) {
-        SlttLogger.logger.warning(
-          '[SyncManager] Could not fetch cloud storage stats: $e',
-        );
       }
 
+      final key = _domainChangeKey(domainType: domainType, domainId: domainId);
       return SyncStatus(
         localChangeStats: localChangeStats,
         localStateStats: localStateStats,
         localCursorState: localCursorState,
         cloudChangeStats: cloudChangeStats,
         cloudStateStats: cloudStateStats,
+        remoteLastDomainSeq: _remoteLastDomainSeqByDomain[key],
+        remoteLastDomainChangeAt: _remoteLastDomainChangeAtByDomain[key],
       );
     } catch (e) {
       SlttLogger.logger.severe('[SyncManager] Failed to get sync status: $e');
@@ -1204,6 +1259,8 @@ class SyncManager {
         localCursorState: null,
         cloudChangeStats: null,
         cloudStateStats: null,
+        remoteLastDomainSeq: null,
+        remoteLastDomainChangeAt: null,
       );
     }
   }
@@ -1771,6 +1828,8 @@ class SyncStatus {
   final CursorSyncState? localCursorState;
   final EntityTypeSummary? cloudChangeStats;
   final EntityTypeStats? cloudStateStats;
+  final int? remoteLastDomainSeq;
+  final DateTime? remoteLastDomainChangeAt;
 
   SyncStatus({
     required this.localChangeStats,
@@ -1778,24 +1837,42 @@ class SyncStatus {
     required this.localCursorState,
     required this.cloudChangeStats,
     required this.cloudStateStats,
+    required this.remoteLastDomainSeq,
+    required this.remoteLastDomainChangeAt,
   });
 
   factory SyncStatus.fromJson(Map<String, dynamic> json) => SyncStatus(
     localChangeStats: json['localChangeStats'] != null
-        ? EntityTypeStats.fromJson(json['localChangeStats'])
+        ? EntityTypeStats.fromJson(
+            Map<String, dynamic>.from(json['localChangeStats']),
+          )
         : null,
     localStateStats: json['localStateStats'] != null
-        ? EntityTypeStats.fromJson(json['localStateStats'])
+        ? EntityTypeStats.fromJson(
+            Map<String, dynamic>.from(json['localStateStats']),
+          )
         : null,
     localCursorState: json['localCursorState'] != null
-        ? CursorSyncState.fromJson(json['localCursorState'])
+        ? CursorSyncState.fromJson(
+            Map<String, dynamic>.from(json['localCursorState']),
+          )
         : null,
     cloudChangeStats: json['cloudChangeStats'] != null
-        ? EntityTypeSummary.fromJson(json['cloudChangeStats'])
+        ? EntityTypeSummary.fromJson(
+            Map<String, dynamic>.from(json['cloudChangeStats']),
+          )
         : null,
     cloudStateStats: json['cloudStateStats'] != null
-        ? EntityTypeStats.fromJson(json['cloudStateStats'])
+        ? EntityTypeStats.fromJson(
+            Map<String, dynamic>.from(json['cloudStateStats']),
+          )
         : null,
+    remoteLastDomainSeq: json['remoteLastDomainSeq'] is int
+        ? json['remoteLastDomainSeq'] as int
+        : int.tryParse(json['remoteLastDomainSeq']?.toString() ?? ''),
+    remoteLastDomainChangeAt: json['remoteLastDomainChangeAt'] == null
+        ? null
+        : DateTime.parse(json['remoteLastDomainChangeAt'] as String).toUtc(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -1804,5 +1881,9 @@ class SyncStatus {
     'localCursorState': localCursorState?.toJson(),
     'cloudChangeStats': cloudChangeStats?.toJson(),
     'cloudStateStats': cloudStateStats?.toJson(),
+    'remoteLastDomainSeq': remoteLastDomainSeq,
+    'remoteLastDomainChangeAt': remoteLastDomainChangeAt
+        ?.toUtc()
+        .toIso8601String(),
   };
 }
