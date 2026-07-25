@@ -206,6 +206,7 @@ Map<String, dynamic> _$ProjectsResponseToJson(ProjectsResponse instance) =>
 DomainStatsResponse _$DomainStatsResponseFromJson(Map<String, dynamic> json) =>
     DomainStatsResponse(
       domainId: json['domainId'] as String,
+      domainType: json['domainType'] as String,
       changeStats: json['changeStats'] == null
           ? null
           : EntityTypeSummary.fromJson(
@@ -224,6 +225,7 @@ Map<String, dynamic> _$DomainStatsResponseToJson(
   DomainStatsResponse instance,
 ) => <String, dynamic>{
   'domainId': instance.domainId,
+  'domainType': instance.domainType,
   'changeStats': instance.changeStats?.toJson(),
   'entityTypeStats': instance.entityTypeStats?.toJson(),
   'timestamp': instance.timestamp,

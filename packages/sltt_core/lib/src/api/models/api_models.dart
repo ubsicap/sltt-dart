@@ -215,6 +215,7 @@ class ProjectsResponse {
 @JsonSerializable(explicitToJson: true)
 class DomainStatsResponse {
   final String domainId;
+  final String domainType;
   final EntityTypeSummary? changeStats;
   final EntityTypeStats? entityTypeStats;
   final String? timestamp;
@@ -222,6 +223,7 @@ class DomainStatsResponse {
 
   DomainStatsResponse({
     required this.domainId,
+    required this.domainType,
     this.changeStats,
     this.entityTypeStats,
     this.timestamp,
