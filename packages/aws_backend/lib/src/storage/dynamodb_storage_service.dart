@@ -11,11 +11,7 @@ import '../models/dynamo_entity_state_serialization_registry.dart';
 import '../models/dynamo_entity_type_sync_state.dart';
 import '../models/dynamo_storage_state.dart';
 import '../websocket/domain_change_payload.dart'
-    show
-        DomainChangeData,
-        WsNotifyRecord,
-        kNotifyTypeDomainChange,
-        buildWsNotifyRecordMessage;
+    show WsNotifyRecord, kNotifyTypeDomainChange, buildWsNotifyRecordMessage;
 import 'key_codec.dart';
 
 /// Cached storageId at module (isolate) level so it survives across Lambda warm
@@ -137,6 +133,13 @@ String? _cachedStorageId;
 ///     keys:
 ///       pk: $sltt#seq#domainType_project#domainId_abc123
 ///       sk: $seq#counter
+
+/// domain_change_publish:
+///   publish:
+///     operation: _publishDomainChangeEvents
+///     payload_notes: websocket/SNS domain-change notifications publish the full
+///       serialized change entry in `change` (including `dataJson`, `seq`, and
+///       `changeAt`) rather than a derived summary payload.
 
 /// storage_state:
 ///   write_read:
@@ -2379,13 +2382,12 @@ class DynamoDBStorageService extends BaseStorageService {
     if (!_shouldPublishDomainChangeEvents) return;
 
     for (final change in latestChanges) {
-      final data = _domainChangeDataFromChange(change);
       final record = WsNotifyRecord(
+        notifyType: kNotifyTypeDomainChange,
         domainType: change.domainType,
         domainId: change.domainId,
-        notifyType: kNotifyTypeDomainChange,
         entityType: change.entityType,
-        data: data,
+        change: change.toJson(),
         index: change.seq,
       );
 
@@ -2394,7 +2396,7 @@ class DynamoDBStorageService extends BaseStorageService {
           domainType: record.domainType,
           domainId: record.domainId,
           entityType: record.entityType,
-          data: data,
+          change: record.change,
         ),
       );
 
@@ -2418,21 +2420,6 @@ class DynamoDBStorageService extends BaseStorageService {
         );
       }
     }
-  }
-
-  DomainChangeData _domainChangeDataFromChange(DynamoChangeLogEntry change) {
-    late final Map<String, dynamic> changeData;
-    try {
-      changeData = change.getData();
-    } catch (_) {
-      changeData = <String, dynamic>{};
-    }
-
-    return DomainChangeData(
-      name: changeData['name'] as String? ?? change.entityId,
-      lastDomainSeq: change.seq,
-      lastDomainChangeAt: change.changeAt.toUtc(),
-    );
   }
 
   Future<void> _publishSnsMessage({

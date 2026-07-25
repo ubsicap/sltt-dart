@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:aws_backend/src/websocket/domain_change_payload.dart'
-    show DomainChangeData, WsNotifyRecord, buildDomainChangeNotificationPayload;
+    show WsNotifyRecord, buildDomainChangeNotificationPayload;
 import 'package:sltt_core/sltt_core.dart' show SlttLogger, WebsocketConstants;
 
 import 'websocket_connections_repository.dart';
@@ -11,7 +11,7 @@ import 'websocket_management_client.dart';
 /// SNS subscriber for DomainChangeTopic. Each SNS record's Message is the
 /// JSON change event AwsRestApiServer publishes on a mutation, shaped like
 /// {"notifyType":"domainChange", "domainType":..., "domainId":...,
-///  "entityType":..., "data": {...}}.
+///  "entityType":..., "change": {...}}.
 ///
 /// One message here can match many connections with different
 /// subscriptions (some subscribed to a specific entityType, some to "*"),
@@ -107,25 +107,15 @@ Future<Map<String, dynamic>> wsNotifyHandler(
       continue;
     }
 
-    final rawData = message['data'] as Map<String, dynamic>?;
-    if (rawData == null) {
+    final rawChange = message['change'];
+    if (rawChange is! Map) {
       SlttLogger.logger.warning(
-        'wsNotify: domainChange message missing data payload: $message',
+        'wsNotify: domainChange message missing change payload: $message',
       );
       continue;
     }
 
-    DomainChangeData data;
-    try {
-      data = DomainChangeData.fromJson(rawData);
-    } catch (error, stackTrace) {
-      SlttLogger.logger.warning(
-        'wsNotify: invalid domainChange data payload: $rawData',
-        error,
-        stackTrace,
-      );
-      continue;
-    }
+    final change = Map<String, dynamic>.from(rawChange);
 
     parsedRecords.add(
       WsNotifyRecord(
@@ -133,7 +123,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
         domainId: domainId,
         notifyType: notifyType,
         entityType: entityType,
-        data: data,
+        change: change,
         index: index,
       ),
     );
@@ -196,7 +186,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             domainId: domainId,
             entityType: record.entityType,
             subscriptionKey: wildcardSubscriptionKey,
-            data: record.data,
+            change: record.change,
           );
           alreadyNotified.add(connectionId);
         }
@@ -220,7 +210,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             domainId: domainId,
             entityType: record.entityType,
             subscriptionKey: exactSubscriptionKey,
-            data: record.data,
+            change: record.change,
           );
         }
       }
@@ -244,7 +234,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             domainId: domainId,
             entityType: record.entityType,
             subscriptionKey: lastRecordSubscriptionKey,
-            data: record.data,
+            change: record.change,
           );
         }
       }
@@ -259,7 +249,7 @@ Future<void> _sendDomainChangeNotification({
   required String connectionId,
   required String domainType,
   required String domainId,
-  required DomainChangeData data,
+  required Map<String, dynamic> change,
   required String entityType,
   required String subscriptionKey,
 }) async {
@@ -268,7 +258,7 @@ Future<void> _sendDomainChangeNotification({
     buildDomainChangeNotificationPayload(
       domainType: domainType,
       domainId: domainId,
-      data: data,
+      change: change,
       entityType: entityType,
       subscriptionKey: subscriptionKey,
     ),

@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:aws_backend/src/websocket/domain_change_payload.dart'
     show
-        DomainChangeData,
         WsNotifyRecord,
         kNotifyTypeDomainChange,
         buildDomainChangeNotificationPayload,
@@ -26,11 +25,7 @@ void main() {
             domainId: 'proj-1',
             notifyType: kNotifyTypeDomainChange,
             entityType: 'task',
-            data: DomainChangeData(
-              name: 'task-update',
-              lastDomainSeq: 1,
-              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
-            ),
+            change: _change(name: 'task-update', seq: 1),
             index: 1,
           ),
           WsNotifyRecord(
@@ -38,10 +33,10 @@ void main() {
             domainId: 'proj-1',
             notifyType: kNotifyTypeDomainChange,
             entityType: 'task',
-            data: DomainChangeData(
+            change: _change(
               name: 'task-later',
-              lastDomainSeq: 2,
-              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:01.000Z'),
+              seq: 2,
+              changeAt: '2026-07-17T00:00:01.000Z',
             ),
             index: 3,
           ),
@@ -50,11 +45,7 @@ void main() {
             domainId: 'proj-2',
             notifyType: kNotifyTypeDomainChange,
             entityType: 'note',
-            data: DomainChangeData(
-              name: 'note-update',
-              lastDomainSeq: 1,
-              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
-            ),
+            change: _change(name: 'note-update', seq: 1),
             index: 2,
           ),
           WsNotifyRecord(
@@ -62,10 +53,10 @@ void main() {
             domainId: 'proj-2',
             notifyType: kNotifyTypeDomainChange,
             entityType: 'note',
-            data: DomainChangeData(
+            change: _change(
               name: 'note-later',
-              lastDomainSeq: 2,
-              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:01.000Z'),
+              seq: 2,
+              changeAt: '2026-07-17T00:00:01.000Z',
             ),
             index: 5,
           ),
@@ -90,11 +81,7 @@ void main() {
             domainId: 'proj-1',
             notifyType: kNotifyTypeDomainChange,
             entityType: WebsocketKeys.wildcardEntityType,
-            data: DomainChangeData(
-              name: 'domain-update-1',
-              lastDomainSeq: 1,
-              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
-            ),
+            change: _change(name: 'domain-update-1', seq: 1),
             index: 1,
           ),
           WsNotifyRecord(
@@ -102,10 +89,10 @@ void main() {
             domainId: 'proj-1',
             notifyType: kNotifyTypeDomainChange,
             entityType: WebsocketKeys.wildcardEntityType,
-            data: DomainChangeData(
+            change: _change(
               name: 'domain-update-2',
-              lastDomainSeq: 2,
-              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:01.000Z'),
+              seq: 2,
+              changeAt: '2026-07-17T00:00:01.000Z',
             ),
             index: 3,
           ),
@@ -114,11 +101,7 @@ void main() {
             domainId: 'proj-1',
             notifyType: kNotifyTypeDomainChange,
             entityType: 'task',
-            data: DomainChangeData(
-              name: 'task-update-1',
-              lastDomainSeq: 1,
-              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
-            ),
+            change: _change(name: 'task-update-1', seq: 1),
             index: 2,
           ),
           WsNotifyRecord(
@@ -126,10 +109,10 @@ void main() {
             domainId: 'proj-1',
             notifyType: kNotifyTypeDomainChange,
             entityType: 'task',
-            data: DomainChangeData(
+            change: _change(
               name: 'task-update-2',
-              lastDomainSeq: 2,
-              lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:01.000Z'),
+              seq: 2,
+              changeAt: '2026-07-17T00:00:01.000Z',
             ),
             index: 4,
           ),
@@ -141,9 +124,9 @@ void main() {
 
         expect(latestRecords, hasLength(2));
         expect(latestRecords[0].entityType, WebsocketKeys.wildcardEntityType);
-        expect(latestRecords[0].data.name, 'domain-update-2');
+        expect(_changeName(latestRecords[0].change), 'domain-update-2');
         expect(latestRecords[1].entityType, 'task');
-        expect(latestRecords[1].data.name, 'task-update-2');
+        expect(_changeName(latestRecords[1].change), 'task-update-2');
       },
     );
 
@@ -151,11 +134,7 @@ void main() {
       final payload = buildDomainChangeNotificationPayload(
         domainType: 'project',
         domainId: 'proj-1',
-        data: DomainChangeData(
-          name: 'domain-update',
-          lastDomainSeq: 1,
-          lastDomainChangeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
-        ),
+        change: _change(name: 'domain-update', seq: 1),
         subscriptionKey: WebsocketKeys.subscriptionSk(
           domainType: 'project',
           domainId: 'proj-1',
@@ -175,11 +154,7 @@ void main() {
           domainId: 'proj-1',
           entityType: 'task',
         ),
-        'data': {
-          'name': 'domain-update',
-          'lastDomainSeq': 1,
-          'lastDomainChangeAt': '2026-07-17T00:00:00.000Z',
-        },
+        'change': _change(name: 'domain-update', seq: 1),
       });
     });
   });
@@ -219,13 +194,7 @@ void main() {
                 'domainType': 'project',
                 'domainId': 'proj-2',
                 'entityType': 'note',
-                'data': DomainChangeData(
-                  name: 'note-updated',
-                  lastDomainSeq: 2,
-                  lastDomainChangeAt: DateTime.parse(
-                    '2026-07-17T00:00:00.000Z',
-                  ),
-                ).toJson(),
+                'change': _change(name: 'note-updated', seq: 2),
               }),
             },
           },
@@ -236,13 +205,7 @@ void main() {
                 'domainType': 'project',
                 'domainId': 'proj-1',
                 'entityType': 'task',
-                'data': DomainChangeData(
-                  name: 'task-updated',
-                  lastDomainSeq: 1,
-                  lastDomainChangeAt: DateTime.parse(
-                    '2026-07-17T00:00:00.000Z',
-                  ),
-                ).toJson(),
+                'change': _change(name: 'task-updated', seq: 1),
               }),
             },
           },
@@ -334,13 +297,7 @@ void main() {
                     domainType: 'project',
                     domainId: 'proj-1',
                     entityType: WebsocketKeys.wildcardEntityType,
-                    data: DomainChangeData(
-                      name: 'domain-update',
-                      lastDomainSeq: 1,
-                      lastDomainChangeAt: DateTime.parse(
-                        '2026-07-17T00:00:00.000Z',
-                      ),
-                    ),
+                    change: _change(name: 'domain-update', seq: 1),
                   ),
                 ),
               },
@@ -389,13 +346,7 @@ void main() {
                   'domainType': 'project',
                   'domainId': 'proj-1',
                   'entityType': 'task',
-                  'data': DomainChangeData(
-                    name: 'task-updated',
-                    lastDomainSeq: 1,
-                    lastDomainChangeAt: DateTime.parse(
-                      '2026-07-17T00:00:00.000Z',
-                    ),
-                  ).toJson(),
+                  'change': _change(name: 'task-updated', seq: 1),
                 }),
               },
             },
@@ -451,13 +402,7 @@ void main() {
                   'domainType': 'project',
                   'domainId': 'proj-1',
                   'entityType': 'task',
-                  'data': DomainChangeData(
-                    name: 'task-update',
-                    lastDomainSeq: 1,
-                    lastDomainChangeAt: DateTime.parse(
-                      '2026-07-17T00:00:00.000Z',
-                    ),
-                  ).toJson(),
+                  'change': _change(name: 'task-update', seq: 1),
                 }),
               },
             },
@@ -468,13 +413,11 @@ void main() {
                   'domainType': 'project',
                   'domainId': 'proj-1',
                   'entityType': 'note',
-                  'data': DomainChangeData(
+                  'change': _change(
                     name: 'note-update',
-                    lastDomainSeq: 2,
-                    lastDomainChangeAt: DateTime.parse(
-                      '2026-07-17T00:00:01.000Z',
-                    ),
-                  ).toJson(),
+                    seq: 2,
+                    changeAt: '2026-07-17T00:00:01.000Z',
+                  ),
                 }),
               },
             },
@@ -497,7 +440,10 @@ void main() {
             .where((msg) => msg['connectionId'] == 'conn-last-record')
             .toList();
         expect(lastRecordMessages, hasLength(1));
-        expect(lastRecordMessages[0]['payload']['data']['name'], 'note-update');
+        expect(
+          _changeName(lastRecordMessages[0]['payload']['change'] as Map),
+          'note-update',
+        );
         expect(
           lastRecordMessages[0]['payload']['subscriptionKey'],
           WebsocketKeys.subscriptionSk(
@@ -536,13 +482,7 @@ void main() {
                 ...buildWsNotifyRecordMessage(
                   domainType: 'project',
                   domainId: 'proj-1',
-                  data: DomainChangeData(
-                    name: 'domain-old',
-                    lastDomainSeq: 1,
-                    lastDomainChangeAt: DateTime.parse(
-                      '2026-07-17T00:00:00.000Z',
-                    ),
-                  ),
+                  change: _change(name: 'domain-old', seq: 1),
                   entityType: WebsocketKeys.lastRecordEntityType,
                 ),
               }),
@@ -554,13 +494,7 @@ void main() {
                 ...buildWsNotifyRecordMessage(
                   domainType: 'project',
                   domainId: 'proj-1',
-                  data: DomainChangeData(
-                    name: 'note-old',
-                    lastDomainSeq: 1,
-                    lastDomainChangeAt: DateTime.parse(
-                      '2026-07-17T00:00:00.000Z',
-                    ),
-                  ),
+                  change: _change(name: 'note-old', seq: 1),
                   entityType: 'note',
                 ),
               }),
@@ -572,13 +506,7 @@ void main() {
                 ...buildWsNotifyRecordMessage(
                   domainType: 'project',
                   domainId: 'proj-1',
-                  data: DomainChangeData(
-                    name: 'task-only',
-                    lastDomainSeq: 1,
-                    lastDomainChangeAt: DateTime.parse(
-                      '2026-07-17T00:00:00.000Z',
-                    ),
-                  ),
+                  change: _change(name: 'task-only', seq: 1),
                   entityType: 'task',
                 ),
               }),
@@ -590,12 +518,10 @@ void main() {
                 ...buildWsNotifyRecordMessage(
                   domainType: 'project',
                   domainId: 'proj-1',
-                  data: DomainChangeData(
+                  change: _change(
                     name: 'note-latest',
-                    lastDomainSeq: 2,
-                    lastDomainChangeAt: DateTime.parse(
-                      '2026-07-17T00:00:01.000Z',
-                    ),
+                    seq: 2,
+                    changeAt: '2026-07-17T00:00:01.000Z',
                   ),
                   entityType: 'note',
                 ),
@@ -608,12 +534,10 @@ void main() {
                 ...buildWsNotifyRecordMessage(
                   domainType: 'project',
                   domainId: 'proj-1',
-                  data: DomainChangeData(
+                  change: _change(
                     name: 'domain-latest',
-                    lastDomainSeq: 2,
-                    lastDomainChangeAt: DateTime.parse(
-                      '2026-07-17T00:00:01.000Z',
-                    ),
+                    seq: 2,
+                    changeAt: '2026-07-17T00:00:01.000Z',
                   ),
                   entityType: 'domain',
                 ),
@@ -634,15 +558,21 @@ void main() {
           .toList();
       expect(wildcardMessages.length, 3);
       expect(
-        wildcardMessages.map((msg) => msg['payload']['data']['name']),
+        wildcardMessages.map(
+          (msg) => _payloadChangeName(msg['payload'] as Map),
+        ),
         containsAll(['domain-latest', 'note-latest', 'task-only']),
       );
       expect(
-        wildcardMessages.map((msg) => msg['payload']['data']['name']),
+        wildcardMessages.map(
+          (msg) => _payloadChangeName(msg['payload'] as Map),
+        ),
         isNot(contains('domain-old')),
       );
       expect(
-        wildcardMessages.map((msg) => msg['payload']['data']['name']),
+        wildcardMessages.map(
+          (msg) => _payloadChangeName(msg['payload'] as Map),
+        ),
         isNot(contains('note-old')),
       );
 
@@ -651,11 +581,11 @@ void main() {
           .toList();
       expect(noteMessages, hasLength(1));
       expect(
-        noteMessages.map((msg) => msg['payload']['data']['name']),
+        noteMessages.map((msg) => _payloadChangeName(msg['payload'] as Map)),
         containsAll(['note-latest']),
       );
       expect(
-        noteMessages.map((msg) => msg['payload']['data']['name']),
+        noteMessages.map((msg) => _payloadChangeName(msg['payload'] as Map)),
         isNot(contains('domain-latest')),
       );
 
@@ -664,11 +594,11 @@ void main() {
           .toList();
       expect(taskMessages, hasLength(1));
       expect(
-        taskMessages.map((msg) => msg['payload']['data']['name']),
+        taskMessages.map((msg) => _payloadChangeName(msg['payload'] as Map)),
         containsAll(['task-only']),
       );
       expect(
-        taskMessages.map((msg) => msg['payload']['data']['name']),
+        taskMessages.map((msg) => _payloadChangeName(msg['payload'] as Map)),
         isNot(contains('domain-latest')),
       );
     });
@@ -693,7 +623,7 @@ void main() {
                 'domainType': 'project',
                 'domainId': 'proj-1',
                 'entityType': 'task',
-                'data': {'name': 'task-updated'},
+                'change': _change(name: 'task-updated', seq: 1),
               }),
             },
           },
@@ -877,6 +807,42 @@ void main() {
       });
     });
   });
+}
+
+Map<String, dynamic> _change({
+  required String name,
+  required int seq,
+  String changeAt = '2026-07-17T00:00:00.000Z',
+}) {
+  return {
+    'seq': seq,
+    'cid': 'cid-$seq',
+    'changeAt': changeAt,
+    'dataJson': jsonEncode({'name': name}),
+  };
+}
+
+String _changeName(Map change) {
+  final json = change['dataJson']?.toString();
+  if (json == null || json.isEmpty) {
+    return '';
+  }
+
+  final decoded = jsonDecode(json);
+  if (decoded is! Map) {
+    return '';
+  }
+
+  return decoded['name']?.toString() ?? '';
+}
+
+String _payloadChangeName(Map payload) {
+  final change = payload['change'];
+  if (change is! Map) {
+    return '';
+  }
+
+  return _changeName(change);
 }
 
 class _FakeConnectionsRepository implements WebsocketConnectionsRepository {

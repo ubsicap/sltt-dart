@@ -640,17 +640,18 @@ class SyncManager {
       }
       final domainType = message['domainType'] as String?;
       final domainId = message['domainId'] as String?;
-      final data = message['data'] as Map<String, dynamic>?;
-      if (domainType == null || domainId == null || data == null) {
+      final rawChange = message['change'];
+      if (domainType == null || domainId == null || rawChange is! Map) {
         return;
       }
-      final lastDomainSeq = data['lastDomainSeq'] is int
-          ? data['lastDomainSeq'] as int
-          : int.tryParse(data['lastDomainSeq']?.toString() ?? '') ?? 0;
+      final change = Map<String, dynamic>.from(rawChange);
+      final lastDomainSeq = change['seq'] is int
+          ? change['seq'] as int
+          : int.tryParse(change['seq']?.toString() ?? '') ?? 0;
       if (lastDomainSeq <= 0) {
         return;
       }
-      final lastDomainChangeAtRaw = data['lastDomainChangeAt'];
+      final lastDomainChangeAtRaw = change['changeAt'];
       DateTime? lastDomainChangeAt;
       if (lastDomainChangeAtRaw is String) {
         lastDomainChangeAt = DateTime.tryParse(lastDomainChangeAtRaw)?.toUtc();
