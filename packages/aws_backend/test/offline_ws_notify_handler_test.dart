@@ -670,7 +670,11 @@ void main() {
 
       final event = {
         'requestContext': {'connectionId': 'conn-sub-1'},
-        'body': jsonEncode({'domainType': 'project', 'domainId': 'proj-1'}),
+        'body': jsonEncode({
+          'domainType': 'project',
+          'domainId': 'proj-1',
+          'notifyType': kNotifyTypeDomainChange,
+        }),
       };
 
       final response = await wsSubscribeHandler(
@@ -698,6 +702,7 @@ void main() {
         'body': jsonEncode({
           'domainType': 'project',
           'domainId': 'proj-1',
+          'notifyType': kNotifyTypeDomainChange,
           'entityType': 'Task-1',
         }),
       };
@@ -727,6 +732,7 @@ void main() {
         'body': jsonEncode({
           'domainType': 'project',
           'domainId': 'proj-1',
+          'notifyType': kNotifyTypeDomainChange,
           'entityType': WebsocketKeys.wildcardEntityType,
         }),
       };
@@ -745,6 +751,7 @@ void main() {
       expect(management.sentMessages[0]['payload'], {
         'action': 'subscribe',
         'status': 'ok',
+        'notifyType': kNotifyTypeDomainChange,
         'domainType': 'project',
         'domainId': 'proj-1',
         'entityType': WebsocketKeys.wildcardEntityType,
@@ -766,6 +773,7 @@ void main() {
         'body': jsonEncode({
           'domainType': 'project',
           'domainId': 'proj-1',
+          'notifyType': kNotifyTypeDomainChange,
           'entityType': WebsocketKeys.lastRecordEntityType,
         }),
       };
@@ -784,6 +792,7 @@ void main() {
       expect(management.sentMessages[0]['payload'], {
         'action': 'subscribe',
         'status': 'ok',
+        'notifyType': kNotifyTypeDomainChange,
         'domainType': 'project',
         'domainId': 'proj-1',
         'entityType': WebsocketKeys.lastRecordEntityType,
@@ -805,6 +814,7 @@ void main() {
         'body': jsonEncode({
           'domainType': 'project',
           'domainId': 'proj-1',
+          'notifyType': kNotifyTypeDomainChange,
           'entityType': 'task',
         }),
       };
@@ -820,6 +830,7 @@ void main() {
       expect(management.sentMessages[0]['payload'], {
         'action': 'subscribe',
         'status': 'ok',
+        'notifyType': kNotifyTypeDomainChange,
         'domainType': 'project',
         'domainId': 'proj-1',
         'entityType': 'task',
@@ -833,6 +844,59 @@ void main() {
     });
 
     test(
+      'includes notifyType and stats for domainChange subscribe ack',
+      () async {
+        final connections = _FakeConnectionsRepository();
+        final management = _FakeManagementClient(connections: connections);
+
+        final event = {
+          'requestContext': {'connectionId': 'conn-sub-7'},
+          'body': jsonEncode({
+            'domainType': 'project',
+            'domainId': 'proj-1',
+            'notifyType': kNotifyTypeDomainChange,
+            'entityType': 'task',
+          }),
+        };
+
+        final statusData = {
+          'lastDomainSeq': 7,
+          'lastDomainChangeAt': '2026-07-25T17:44:46.634808Z',
+        };
+
+        await wsSubscribeHandler(
+          event,
+          connections: connections,
+          management: management,
+          getDomainChangeStatus:
+              ({
+                required String domainType,
+                required String domainId,
+                required String entityType,
+              }) async {
+                return statusData;
+              },
+        );
+
+        expect(management.sentMessages[0]['payload'], {
+          'action': 'subscribe',
+          'status': 'ok',
+          'notifyType': kNotifyTypeDomainChange,
+          'domainType': 'project',
+          'domainId': 'proj-1',
+          'entityType': 'task',
+          'subscriptionKey': WebsocketKeys.subscriptionSk(
+            domainType: 'project',
+            domainId: 'proj-1',
+            entityType: 'task',
+            notifyType: kNotifyTypeDomainChange,
+          ),
+          'stats': statusData,
+        });
+      },
+    );
+
+    test(
       'accepts domainStats entityType and stores wildcard subscription',
       () async {
         final connections = _FakeConnectionsRepository();
@@ -843,7 +907,8 @@ void main() {
           'body': jsonEncode({
             'domainType': 'project',
             'domainId': 'proj-1',
-            'entityType': WebsocketConstants.notifyTypeDomainStats,
+            'notifyType': kNotifyTypeDomainStats,
+            'entityType': WebsocketKeys.wildcardEntityType,
           }),
         };
 
@@ -865,9 +930,10 @@ void main() {
         expect(management.sentMessages[0]['payload'], {
           'action': 'subscribe',
           'status': 'ok',
+          'notifyType': kNotifyTypeDomainStats,
           'domainType': 'project',
           'domainId': 'proj-1',
-          'entityType': WebsocketConstants.notifyTypeDomainStats,
+          'entityType': WebsocketKeys.wildcardEntityType,
           'subscriptionKey': WebsocketKeys.subscriptionSk(
             domainType: 'project',
             domainId: 'proj-1',

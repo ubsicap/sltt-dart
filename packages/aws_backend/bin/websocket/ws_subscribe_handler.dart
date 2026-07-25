@@ -6,11 +6,13 @@ import 'websocket_connections_repository.dart';
 import 'websocket_keys.dart';
 import 'websocket_management_client.dart';
 
-/// Handles {"action":"subscribe","domainType":...,"domainId":...,"entityType":...}
-/// entityType is required. Valid values are:
+/// Handles {"action":"subscribe","domainType":...,"domainId":...,"entityType":...,"notifyType":...}
+/// notifyType is required and must be either "domainChange" or "domainStats".
+/// entityType is required for domainChange subscriptions and must be:
 ///   - "*" (wildcard for all entity types)
 ///   - "$" (latest-record sentinel)
 ///   - any value matching /^[a-z_]+$/
+/// For domainStats subscriptions, entityType must be "*".
 Future<Map<String, dynamic>> wsSubscribeHandler(
   Map<String, dynamic> event, {
   required WebsocketConnectionsRepository connections,
@@ -35,42 +37,46 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
   final domainType = body['domainType'] as String?;
   final domainId = body['domainId'] as String?;
   final entityType = body['entityType'] as String?;
+  final notifyType = body['notifyType'] as String?;
 
   bool isValidEntityType(String entityType) {
     return entityType == WebsocketKeys.wildcardEntityType ||
         entityType == WebsocketKeys.lastRecordEntityType ||
-        entityType == WebsocketConstants.notifyTypeDomainStats ||
         RegExp(r'^[a-z_]+$').hasMatch(entityType);
   }
+
+  final isStatsSubscription =
+      notifyType == WebsocketConstants.notifyTypeDomainStats;
+  final isChangeSubscription =
+      notifyType == WebsocketConstants.notifyTypeDomainChange;
 
   if (domainType == null ||
       domainType.isEmpty ||
       domainId == null ||
       domainId.isEmpty ||
+      notifyType == null ||
+      notifyType.isEmpty ||
+      !(isChangeSubscription || isStatsSubscription) ||
       entityType == null ||
       entityType.isEmpty ||
-      !isValidEntityType(entityType)) {
+      (isChangeSubscription && !isValidEntityType(entityType)) ||
+      (isStatsSubscription && entityType != WebsocketKeys.wildcardEntityType)) {
     SlttLogger.logger.warning(
-      'wsSubscribe: invalid request connectionId=$connectionId domainType=$domainType domainId=$domainId',
+      'wsSubscribe: invalid request connectionId=$connectionId domainType=$domainType domainId=$domainId notifyType=$notifyType entityType=$entityType',
     );
     await management.send(connectionId, {
       'action': WebsocketConstants.actionSubscribe,
       'status': 'error',
       'error':
-          r'domainType, domainId, and entityType are required. entityType must be "*", "$", or match /^[a-z_]+$/',
+          r'domainType, domainId, notifyType, and entityType are required. notifyType must be "domainChange" or "domainStats". entityType must be "*", "$", or match /^[a-z_]+$/ for domainChange, and "*" for domainStats.',
     });
     return {'statusCode': 400};
   }
 
   try {
-    final isStatsSubscription =
-        entityType == WebsocketConstants.notifyTypeDomainStats;
     final resolvedEntityType = isStatsSubscription
         ? WebsocketKeys.wildcardEntityType
         : WebsocketKeys.resolveEntityType(entityType);
-    final notifyType = isStatsSubscription
-        ? WebsocketConstants.notifyTypeDomainStats
-        : WebsocketConstants.notifyTypeDomainChange;
     final subscriptionKey = WebsocketKeys.subscriptionSk(
       domainType: domainType,
       domainId: domainId,
@@ -107,15 +113,12 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
     final payload = {
       'action': WebsocketConstants.actionSubscribe,
       'status': 'ok',
+      'notifyType': notifyType,
       'domainType': domainType,
       'domainId': domainId,
       'entityType': entityType,
       'subscriptionKey': subscriptionKey,
-      if (statusData != null)
-        if (entityType == WebsocketConstants.notifyTypeDomainStats)
-          'stats': statusData
-        else
-          'data': statusData,
+      if (statusData != null) 'stats': statusData,
     };
 
     await management.send(connectionId, payload);

@@ -72,7 +72,11 @@ void main() {
       await client.connect();
       expect(client.isOpen, isTrue);
 
-      client.subscribe('user', userId);
+      client.subscribe(
+        'user',
+        userId,
+        notifyType: WebsocketConstants.notifyTypeDomainChange,
+      );
       await Future.delayed(const Duration(seconds: 3));
 
       expect(
@@ -84,7 +88,11 @@ void main() {
         ),
       );
 
-      client.unsubscribe('user', userId);
+      client.unsubscribe(
+        'user',
+        userId,
+        notifyType: WebsocketConstants.notifyTypeDomainChange,
+      );
       await Future.delayed(const Duration(seconds: 3));
 
       expect(

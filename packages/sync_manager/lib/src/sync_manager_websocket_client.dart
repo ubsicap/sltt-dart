@@ -91,10 +91,12 @@ class SyncManagerWebSocketClient {
   void subscribe(
     String domainType,
     String domainId, {
+    required String notifyType,
     String entityType = WebsocketConstants.lastRecordEntityType,
   }) {
     send({
       'action': WebsocketConstants.actionSubscribe,
+      'notifyType': notifyType,
       'domainType': domainType,
       'domainId': domainId,
       'entityType': entityType,
@@ -104,10 +106,12 @@ class SyncManagerWebSocketClient {
   void unsubscribe(
     String domainType,
     String domainId, {
+    required String notifyType,
     String entityType = WebsocketConstants.lastRecordEntityType,
   }) {
     send({
       'action': WebsocketConstants.actionUnsubscribe,
+      'notifyType': notifyType,
       'domainType': domainType,
       'domainId': domainId,
       'entityType': entityType,

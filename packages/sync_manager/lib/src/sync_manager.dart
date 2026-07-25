@@ -386,7 +386,11 @@ class SyncManager {
     required String domainId,
   }) {
     if (_isWebSocketOpen) {
-      _webSocketClient?.subscribe(domainType, domainId);
+      _webSocketClient?.subscribe(
+        domainType,
+        domainId,
+        notifyType: WebsocketConstants.notifyTypeDomainChange,
+      );
       SlttLogger.logger.info(
         '[SyncManager] Sent websocket subscribe for $domainType/$domainId',
       );
@@ -405,7 +409,11 @@ class SyncManager {
     required String domainId,
   }) {
     if (_isWebSocketOpen) {
-      _webSocketClient?.unsubscribe(domainType, domainId);
+      _webSocketClient?.unsubscribe(
+        domainType,
+        domainId,
+        notifyType: WebsocketConstants.notifyTypeDomainChange,
+      );
       SlttLogger.logger.info(
         '[SyncManager] Sent websocket unsubscribe for $domainType/$domainId',
       );
@@ -543,7 +551,11 @@ class SyncManager {
         );
         continue;
       }
-      _webSocketClient?.subscribe(parts[0], parts[1]);
+      _webSocketClient?.subscribe(
+        parts[0],
+        parts[1],
+        notifyType: WebsocketConstants.notifyTypeDomainChange,
+      );
       SlttLogger.logger.info(
         '[SyncManager] Sent queued websocket subscribe for ${parts[0]}/${parts[1]}',
       );
