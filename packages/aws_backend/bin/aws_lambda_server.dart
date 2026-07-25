@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:aws_backend/aws_backend.dart';
 import 'package:aws_backend/src/utils/media_environment.dart';
 import 'package:aws_common/aws_common.dart' show AWSCredentials;
-import 'package:sltt_core/sltt_core.dart' show SlttLogger;
+import 'package:sltt_core/sltt_core.dart'
+    show SlttLogger, getCollectionByEntity;
 
 import 'websocket/websocket_connections_repository.dart';
 import 'websocket/websocket_management_client.dart';
@@ -267,14 +268,31 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
       connections: connections,
       management: management,
       getDomainChangeStatus:
-          ({required String domainType, required String domainId}) async {
+          ({
+            required String domainType,
+            required String domainId,
+            required String entityType,
+          }) async {
             final changeStats = await storage.getChangeStats(
               domainType: domainType,
               domainId: domainId,
             );
+            final entityTypeStats = await storage.getStateStats(
+              domainType: domainType,
+              domainId: domainId,
+            );
             return {
-              'lastDomainSeq': changeStats.totals.latestSeq,
-              'lastDomainChangeAt': changeStats.totals.latestChangeAt,
+              'domainId': domainId,
+              '${domainType}Id': domainId,
+              'changeStats': changeStats.totals.toJson(),
+              'entityTypeStats': entityTypeStats.toJson(),
+              'entityTypeCollections': entityTypeStats.entityTypes.keys
+                  .fold<Map<String, String>>({}, (acc, type) {
+                    acc[type] = getCollectionByEntity(type) ?? 'unknown';
+                    return acc;
+                  }),
+              'timestamp': DateTime.now().toUtc().toIso8601String(),
+              'storageType': storage.getStorageType(),
             };
           },
     );

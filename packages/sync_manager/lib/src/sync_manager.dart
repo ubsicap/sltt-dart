@@ -572,7 +572,9 @@ class SyncManager {
           );
           return;
         }
-        final data = message['data'] as Map<String, dynamic>?;
+        final data =
+            (message['stats'] as Map<String, dynamic>?) ??
+            (message['data'] as Map<String, dynamic>?);
         if (data == null) {
           SlttLogger.logger.info(
             '[SyncManager] Websocket subscribe ack for $domainType/$domainId received without status data; waiting for change events.',

@@ -1,7 +1,10 @@
 import 'dart:convert';
 
 import 'package:aws_backend/src/websocket/domain_change_payload.dart'
-    show WsNotifyRecord, buildDomainChangeNotificationPayload;
+    show
+        WsNotifyRecord,
+        buildDomainChangeNotificationPayload,
+        buildDomainStatsNotificationPayload;
 import 'package:sltt_core/sltt_core.dart' show SlttLogger, WebsocketConstants;
 
 import 'websocket_connections_repository.dart';
@@ -63,33 +66,73 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     final domainId = message['domainId'] as String;
     final entityType = message['entityType'] as String;
 
-    if (notifyType != WebsocketConstants.notifyTypeDomainChange) {
-      SlttLogger.logger.warning(
-        'wsNotify: unsupported notifyType "$notifyType"; only "${WebsocketConstants.notifyTypeDomainChange}" is supported: $message',
+    if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
+      final rawChange = message['change'];
+      if (rawChange is! Map) {
+        SlttLogger.logger.warning(
+          'wsNotify: domainChange message missing change payload: $message',
+        );
+        continue;
+      }
+
+      final change = Map<String, dynamic>.from(rawChange);
+
+      parsedRecords.add(
+        WsNotifyRecord(
+          domainType: domainType,
+          domainId: domainId,
+          notifyType: notifyType,
+          entityType: entityType,
+          change: change,
+          index: index,
+        ),
       );
       continue;
     }
 
-    final rawChange = message['change'];
-    if (rawChange is! Map) {
-      SlttLogger.logger.warning(
-        'wsNotify: domainChange message missing change payload: $message',
-      );
-      continue;
-    }
+    if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
+      final rawStats = message['stats'];
+      if (rawStats is! Map) {
+        SlttLogger.logger.warning(
+          'wsNotify: domainStats message missing stats payload: $message',
+        );
+        continue;
+      }
 
-    final change = Map<String, dynamic>.from(rawChange);
-
-    parsedRecords.add(
-      WsNotifyRecord(
+      final stats = Map<String, dynamic>.from(rawStats);
+      final subscriberMatches = await connections.findSubscribersByDomain(
         domainType: domainType,
         domainId: domainId,
-        notifyType: notifyType,
-        entityType: entityType,
-        change: change,
-        index: index,
-      ),
+        notifyType: WebsocketConstants.notifyTypeDomainStats,
+      );
+
+      for (final subscription in subscriberMatches) {
+        if (subscription.notifyType !=
+            WebsocketConstants.notifyTypeDomainStats) {
+          continue;
+        }
+
+        await _sendDomainStatsNotification(
+          management: management,
+          connectionId: subscription.connectionId,
+          domainType: domainType,
+          domainId: domainId,
+          stats: stats,
+          subscriptionKey: WebsocketKeys.subscriptionSk(
+            domainType: domainType,
+            domainId: domainId,
+            entityType: WebsocketKeys.wildcardEntityType,
+            notifyType: WebsocketConstants.notifyTypeDomainStats,
+          ),
+        );
+      }
+      continue;
+    }
+
+    SlttLogger.logger.warning(
+      'wsNotify: unsupported notifyType "$notifyType"; only "${WebsocketConstants.notifyTypeDomainChange}" and "${WebsocketConstants.notifyTypeDomainStats}" are supported: $message',
     );
+    continue;
   }
 
   if (parsedRecords.isEmpty) {
@@ -105,6 +148,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     final subscriberMatches = await connections.findSubscribersByDomain(
       domainType: domainType,
       domainId: domainId,
+      notifyType: WebsocketConstants.notifyTypeDomainChange,
     );
 
     final wildcardConnections = <String>{};
@@ -112,6 +156,10 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     final lastRecordConnections = <String>{};
 
     for (final subscription in subscriberMatches) {
+      if (subscription.notifyType !=
+          WebsocketConstants.notifyTypeDomainChange) {
+        continue;
+      }
       if (subscription.entityType == WebsocketKeys.wildcardEntityType) {
         wildcardConnections.add(subscription.connectionId);
       } else if (subscription.entityType ==
@@ -136,6 +184,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
           domainType: domainType,
           domainId: domainId,
           entityType: WebsocketKeys.wildcardEntityType,
+          notifyType: WebsocketConstants.notifyTypeDomainChange,
         );
 
         for (final connectionId in wildcardConnections) {
@@ -157,6 +206,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
           domainType: domainType,
           domainId: domainId,
           entityType: record.entityType,
+          notifyType: WebsocketConstants.notifyTypeDomainChange,
         );
         for (final connectionId in exactMatchConnections) {
           if (!alreadyNotified.add(connectionId)) {
@@ -180,6 +230,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
           domainType: domainType,
           domainId: domainId,
           entityType: WebsocketKeys.lastRecordEntityType,
+          notifyType: WebsocketConstants.notifyTypeDomainChange,
         );
 
         for (final connectionId in lastRecordConnections) {
@@ -220,6 +271,25 @@ Future<void> _sendDomainChangeNotification({
       domainId: domainId,
       change: change,
       entityType: entityType,
+      subscriptionKey: subscriptionKey,
+    ),
+  );
+}
+
+Future<void> _sendDomainStatsNotification({
+  required WebsocketManagementClient management,
+  required String connectionId,
+  required String domainType,
+  required String domainId,
+  required Map<String, dynamic> stats,
+  required String subscriptionKey,
+}) async {
+  await management.send(
+    connectionId,
+    buildDomainStatsNotificationPayload(
+      domainType: domainType,
+      domainId: domainId,
+      stats: stats,
       subscriptionKey: subscriptionKey,
     ),
   );

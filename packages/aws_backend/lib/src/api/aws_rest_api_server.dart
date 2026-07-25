@@ -2462,22 +2462,6 @@ class AwsRestApiServer extends BaseRestApiServer {
     return normalized;
   }
 
-  String _resolveConfiguredExportTableArn() {
-    final explicitArn = (healthEnvironment['DYNAMODB_TABLE_ARN'] ?? '').trim();
-    if (explicitArn.isNotEmpty) {
-      return explicitArn;
-    }
-
-    final configuredTable = _requireHealthEnvironmentValue('DYNAMODB_TABLE');
-    if (configuredTable.startsWith('arn:aws:dynamodb:')) {
-      return configuredTable;
-    }
-
-    throw StateError(
-      'DYNAMODB_TABLE_ARN environment variable is required when DYNAMODB_TABLE is not already a table ARN',
-    );
-  }
-
   String _requireHealthEnvironmentValue(String key) {
     final value = (healthEnvironment[key] ?? '').trim();
     if (value.isEmpty) {

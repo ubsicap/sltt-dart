@@ -19,6 +19,7 @@ class WsNotifyRecord {
 }
 
 const kNotifyTypeDomainChange = WebsocketConstants.notifyTypeDomainChange;
+const kNotifyTypeDomainStats = WebsocketConstants.notifyTypeDomainStats;
 
 Map<String, dynamic> buildDomainChangeNotificationPayload({
   required String domainType,
@@ -38,6 +39,22 @@ Map<String, dynamic> buildDomainChangeNotificationPayload({
   };
 }
 
+Map<String, dynamic> buildDomainStatsNotificationPayload({
+  required String domainType,
+  required String domainId,
+  required Map<String, dynamic> stats,
+  required String subscriptionKey,
+}) {
+  return {
+    ...buildWsNotifyStatsMessage(
+      domainType: domainType,
+      domainId: domainId,
+      stats: stats,
+    ),
+    'subscriptionKey': subscriptionKey,
+  };
+}
+
 Map<String, dynamic> buildWsNotifyRecordMessage({
   required String domainType,
   required String domainId,
@@ -51,5 +68,20 @@ Map<String, dynamic> buildWsNotifyRecordMessage({
     'domainId': domainId,
     'entityType': entityType,
     'change': change,
+  };
+}
+
+Map<String, dynamic> buildWsNotifyStatsMessage({
+  required String domainType,
+  required String domainId,
+  required Map<String, dynamic> stats,
+}) {
+  return {
+    'action': WebsocketConstants.actionChange,
+    'notifyType': kNotifyTypeDomainStats,
+    'domainType': domainType,
+    'domainId': domainId,
+    'entityType': kNotifyTypeDomainStats,
+    'stats': stats,
   };
 }

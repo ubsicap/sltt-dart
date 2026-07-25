@@ -31,21 +31,46 @@ class WebsocketKeys {
     required String domainType,
     required String domainId,
     required String entityType,
+    required String notifyType,
   }) =>
-      'sub#@DOMAINTYPE#$domainType#@DOMAINID#$domainId#@ENTITYTYPE#$entityType';
+      'sub#@DOMAINTYPE#$domainType#@DOMAINID#$domainId#@ENTITYTYPE#$entityType#@NOTIFYTYPE#$notifyType';
 
   static String domainGsiPk({
     required String domainType,
     required String domainId,
   }) => 'sub#@DOMAINTYPE#$domainType#@DOMAINID#$domainId';
 
+  static String domainGsiSk({
+    required String notifyType,
+    required String entityType,
+  }) => 'sub#@NOTIFYTYPE#$notifyType#@ENTITYTYPE#$entityType';
+
+  static String notifyTypePrefix({required String notifyType}) =>
+      'sub#@NOTIFYTYPE#$notifyType';
+
   /// Extracts the entityType label from a subscription SK, e.g.
-  /// "sub#@DOMAINTYPE#project#@DOMAINID#proj_1#@ENTITYTYPE#task" -> "task"
+  /// "sub#@DOMAINTYPE#project#@DOMAINID#proj_1#@ENTITYTYPE#task#@NOTIFYTYPE#domainChange" -> "task"
   static String entityTypeFromSubscriptionSk(String sk) {
     const marker = '#@ENTITYTYPE#';
     final index = sk.indexOf(marker);
     if (index == -1) {
       throw ArgumentError('Not a subscription sk: $sk');
+    }
+    final entityType = sk.substring(index + marker.length);
+    final notifyMarker = '#@NOTIFYTYPE#';
+    final notifyIndex = entityType.indexOf(notifyMarker);
+    if (notifyIndex != -1) {
+      return entityType.substring(0, notifyIndex);
+    }
+    return entityType;
+  }
+
+  /// Extracts the notifyType label from a subscription SK.
+  static String notifyTypeFromSubscriptionSk(String sk) {
+    const marker = '#@NOTIFYTYPE#';
+    final index = sk.indexOf(marker);
+    if (index == -1) {
+      throw ArgumentError('Subscription sk missing notifyType: $sk');
     }
     return sk.substring(index + marker.length);
   }

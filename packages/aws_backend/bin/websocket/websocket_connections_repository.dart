@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
 import 'package:http/http.dart' as http;
-import 'package:sltt_core/sltt_core.dart' show SlttLogger;
+import 'package:sltt_core/sltt_core.dart' show SlttLogger, WebsocketConstants;
 
 import 'websocket_keys.dart';
 
@@ -13,10 +13,12 @@ class WebsocketSubscriptionMatch {
   const WebsocketSubscriptionMatch({
     required this.connectionId,
     required this.entityType,
+    required this.notifyType,
   });
 
   final String connectionId;
   final String entityType;
+  final String notifyType;
 }
 
 class WebsocketConnectionsRepository {
@@ -80,8 +82,14 @@ class WebsocketConnectionsRepository {
     required String domainType,
     required String domainId,
     String? entityType,
+    required String notifyType,
   }) async {
-    final resolvedEntityType = WebsocketKeys.resolveEntityType(entityType);
+    final isStatsSubscription =
+        notifyType == WebsocketConstants.notifyTypeDomainStats;
+    final resolvedEntityType = isStatsSubscription
+        ? WebsocketKeys.wildcardEntityType
+        : WebsocketKeys.resolveEntityType(entityType);
+
     await _dynamoRequest('PutItem', {
       'TableName': _tableName,
       'Item': {
@@ -91,14 +99,22 @@ class WebsocketConnectionsRepository {
             domainType: domainType,
             domainId: domainId,
             entityType: resolvedEntityType,
+            notifyType: notifyType,
           ),
         ),
         'gsi1pk': _attributeValueS(
           WebsocketKeys.domainGsiPk(domainType: domainType, domainId: domainId),
         ),
+        'gsi1sk': _attributeValueS(
+          WebsocketKeys.domainGsiSk(
+            notifyType: notifyType,
+            entityType: resolvedEntityType,
+          ),
+        ),
         'domainType': _attributeValueS(domainType),
         'domainId': _attributeValueS(domainId),
         'entityType': _attributeValueS(resolvedEntityType),
+        'notifyType': _attributeValueS(notifyType),
         'expiresAt': _attributeValueN(_expiresAtValue()),
       },
     });
@@ -109,8 +125,14 @@ class WebsocketConnectionsRepository {
     required String domainType,
     required String domainId,
     String? entityType,
+    required String notifyType,
   }) async {
-    final resolvedEntityType = WebsocketKeys.resolveEntityType(entityType);
+    final isStatsSubscription =
+        notifyType == WebsocketConstants.notifyTypeDomainStats;
+    final resolvedEntityType = isStatsSubscription
+        ? WebsocketKeys.wildcardEntityType
+        : WebsocketKeys.resolveEntityType(entityType);
+
     await _dynamoRequest('DeleteItem', {
       'TableName': _tableName,
       'Key': {
@@ -120,6 +142,7 @@ class WebsocketConnectionsRepository {
             domainType: domainType,
             domainId: domainId,
             entityType: resolvedEntityType,
+            notifyType: notifyType,
           ),
         ),
       },
@@ -161,8 +184,9 @@ class WebsocketConnectionsRepository {
   Future<List<WebsocketSubscriptionMatch>> findSubscribersByDomain({
     required String domainType,
     required String domainId,
+    String? notifyType,
   }) async {
-    final result = await _dynamoRequest('Query', {
+    final payload = <String, dynamic>{
       'TableName': _tableName,
       'IndexName': _gsiName,
       'KeyConditionExpression': 'gsi1pk = :pk',
@@ -171,7 +195,17 @@ class WebsocketConnectionsRepository {
           WebsocketKeys.domainGsiPk(domainType: domainType, domainId: domainId),
         ),
       },
-    });
+    };
+    if (notifyType != null) {
+      payload['KeyConditionExpression'] =
+          'gsi1pk = :pk AND begins_with(gsi1sk, :notifyTypePrefix)';
+      payload['ExpressionAttributeValues'][':notifyTypePrefix'] =
+          _attributeValueS(
+            WebsocketKeys.notifyTypePrefix(notifyType: notifyType),
+          );
+    }
+
+    final result = await _dynamoRequest('Query', payload);
 
     final matches = <WebsocketSubscriptionMatch>[];
     final items =
@@ -186,10 +220,17 @@ class WebsocketConnectionsRepository {
       final subscribedEntityType = WebsocketKeys.entityTypeFromSubscriptionSk(
         sk,
       );
+      final notifyType = WebsocketKeys.notifyTypeFromSubscriptionSk(sk);
+      if (notifyType != WebsocketConstants.notifyTypeDomainChange &&
+          notifyType != WebsocketConstants.notifyTypeDomainStats) {
+        continue;
+      }
+
       matches.add(
         WebsocketSubscriptionMatch(
           connectionId: connectionId,
           entityType: subscribedEntityType,
+          notifyType: notifyType,
         ),
       );
     }

@@ -35,11 +35,16 @@ Future<Map<String, dynamic>> wsUnsubscribeHandler(
     return {'statusCode': 400};
   }
 
+  final notifyType = entityType == WebsocketConstants.notifyTypeDomainStats
+      ? WebsocketConstants.notifyTypeDomainStats
+      : WebsocketConstants.notifyTypeDomainChange;
+
   await connections.deleteSubscription(
     connectionId: connectionId,
     domainType: domainType,
     domainId: domainId,
     entityType: entityType,
+    notifyType: notifyType,
   );
 
   await management.send(connectionId, {

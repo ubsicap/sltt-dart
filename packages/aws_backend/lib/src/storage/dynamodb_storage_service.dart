@@ -11,7 +11,11 @@ import '../models/dynamo_entity_state_serialization_registry.dart';
 import '../models/dynamo_entity_type_sync_state.dart';
 import '../models/dynamo_storage_state.dart';
 import '../websocket/domain_change_payload.dart'
-    show WsNotifyRecord, kNotifyTypeDomainChange, buildWsNotifyRecordMessage;
+    show
+        WsNotifyRecord,
+        kNotifyTypeDomainChange,
+        buildWsNotifyRecordMessage,
+        buildWsNotifyStatsMessage;
 import 'key_codec.dart';
 
 /// Cached storageId at module (isolate) level so it survives across Lambda warm
@@ -2381,45 +2385,169 @@ class DynamoDBStorageService extends BaseStorageService {
   ) async {
     if (!_shouldPublishDomainChangeEvents) return;
 
+    final groupedLatestChanges = <String, List<DynamoChangeLogEntry>>{};
     for (final change in latestChanges) {
-      final record = WsNotifyRecord(
-        notifyType: kNotifyTypeDomainChange,
-        domainType: change.domainType,
-        domainId: change.domainId,
-        entityType: change.entityType,
-        change: change.toJson(),
-        index: change.seq,
-      );
+      final key = '${change.domainType}|${change.domainId}';
+      groupedLatestChanges.putIfAbsent(key, () => []).add(change);
+    }
 
-      final message = jsonEncode(
-        buildWsNotifyRecordMessage(
-          domainType: record.domainType,
-          domainId: record.domainId,
-          entityType: record.entityType,
-          change: record.change,
+    for (final group in groupedLatestChanges.values) {
+      group.sort((a, b) => a.seq.compareTo(b.seq));
+      final latestStats = _buildStatsSummaryFromChanges(group);
+      final statsMessage = jsonEncode(
+        buildWsNotifyStatsMessage(
+          domainType: group.first.domainType,
+          domainId: group.first.domainId,
+          stats: latestStats,
         ),
       );
 
-      final messageAttributes = <String, String>{
-        'domainType': record.domainType,
-        'domainId': record.domainId,
+      final statsAttributes = <String, String>{
+        'domainType': group.first.domainType,
+        'domainId': group.first.domainId,
       };
-      messageAttributes['entityType'] = record.entityType;
 
       try {
         await _publishSnsMessage(
           topicArn: domainChangeTopicArn!,
-          message: message,
-          messageAttributes: messageAttributes,
+          message: statsMessage,
+          messageAttributes: statsAttributes,
         );
       } catch (error, stackTrace) {
         SlttLogger.logger.warning(
-          '[DynamoDBStorageService] failed to publish domain change event',
+          '[DynamoDBStorageService] failed to publish domain stats event',
           error,
           stackTrace,
         );
       }
+
+      for (final change in group) {
+        final record = WsNotifyRecord(
+          notifyType: kNotifyTypeDomainChange,
+          domainType: change.domainType,
+          domainId: change.domainId,
+          entityType: change.entityType,
+          change: change.toJson(),
+          index: change.seq,
+        );
+
+        final message = jsonEncode(
+          buildWsNotifyRecordMessage(
+            domainType: record.domainType,
+            domainId: record.domainId,
+            entityType: record.entityType,
+            change: record.change,
+          ),
+        );
+
+        final messageAttributes = <String, String>{
+          'domainType': record.domainType,
+          'domainId': record.domainId,
+        };
+        messageAttributes['entityType'] = record.entityType;
+
+        try {
+          await _publishSnsMessage(
+            topicArn: domainChangeTopicArn!,
+            message: message,
+            messageAttributes: messageAttributes,
+          );
+        } catch (error, stackTrace) {
+          SlttLogger.logger.warning(
+            '[DynamoDBStorageService] failed to publish domain change event',
+            error,
+            stackTrace,
+          );
+        }
+      }
     }
+  }
+
+  Map<String, dynamic> _buildStatsSummaryFromChanges(
+    List<DynamoChangeLogEntry> changes,
+  ) {
+    final entityTypeStats = <String, Map<String, dynamic>>{};
+    var totalCreates = 0;
+    var totalUpdates = 0;
+    var totalDeletes = 0;
+    var latestChangeAt = DateTime.fromMillisecondsSinceEpoch(0).toUtc();
+    var latestSeq = -1;
+
+    for (final change in changes) {
+      final type = change.entityType;
+      final entry = entityTypeStats.putIfAbsent(
+        type,
+        () => {
+          'creates': 0,
+          'updates': 0,
+          'deletes': 0,
+          'total': 0,
+          'latestChangeAt': '1970-01-01T00:00:00.000Z',
+          'latestSeq': -1,
+        },
+      );
+
+      switch (change.operation) {
+        case 'create':
+          entry['creates'] = (entry['creates'] as int) + 1;
+          totalCreates++;
+          break;
+        case 'update':
+          entry['updates'] = (entry['updates'] as int) + 1;
+          totalUpdates++;
+          break;
+        case 'delete':
+          entry['deletes'] = (entry['deletes'] as int) + 1;
+          totalDeletes++;
+          break;
+        default:
+      }
+
+      entry['total'] =
+          (entry['creates'] as int) +
+          (entry['updates'] as int) +
+          (entry['deletes'] as int);
+
+      final changeAt = change.changeAt.toUtc();
+      final currentLatest = DateTime.tryParse(
+        entry['latestChangeAt'] as String,
+      )?.toUtc();
+      if (currentLatest == null || changeAt.isAfter(currentLatest)) {
+        entry['latestChangeAt'] = changeAt.toIso8601String();
+      }
+      if ((entry['latestSeq'] as int) < change.seq) {
+        entry['latestSeq'] = change.seq;
+      }
+
+      if (changeAt.isAfter(latestChangeAt)) {
+        latestChangeAt = changeAt;
+      }
+      if (change.seq > latestSeq) {
+        latestSeq = change.seq;
+      }
+    }
+
+    return {
+      'changeStats': {
+        'creates': totalCreates,
+        'updates': totalUpdates,
+        'deletes': totalDeletes,
+        'total': changes.length,
+        'latestChangeAt': latestChangeAt.toIso8601String(),
+        'latestSeq': latestSeq,
+      },
+      'entityTypeStats': {
+        'entityTypes': entityTypeStats,
+        'totals': {
+          'creates': totalCreates,
+          'updates': totalUpdates,
+          'deletes': totalDeletes,
+          'total': changes.length,
+          'latestChangeAt': latestChangeAt.toIso8601String(),
+          'latestSeq': latestSeq,
+        },
+      },
+    };
   }
 
   Future<void> _publishSnsMessage({

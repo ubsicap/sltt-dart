@@ -18,6 +18,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
   Future<Map<String, dynamic>?> Function({
     required String domainType,
     required String domainId,
+    required String entityType,
   })?
   getDomainChangeStatus,
 }) async {
@@ -38,6 +39,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
   bool isValidEntityType(String entityType) {
     return entityType == WebsocketKeys.wildcardEntityType ||
         entityType == WebsocketKeys.lastRecordEntityType ||
+        entityType == WebsocketConstants.notifyTypeDomainStats ||
         RegExp(r'^[a-z_]+$').hasMatch(entityType);
   }
 
@@ -61,11 +63,19 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
   }
 
   try {
-    final resolvedEntityType = WebsocketKeys.resolveEntityType(entityType);
+    final isStatsSubscription =
+        entityType == WebsocketConstants.notifyTypeDomainStats;
+    final resolvedEntityType = isStatsSubscription
+        ? WebsocketKeys.wildcardEntityType
+        : WebsocketKeys.resolveEntityType(entityType);
+    final notifyType = isStatsSubscription
+        ? WebsocketConstants.notifyTypeDomainStats
+        : WebsocketConstants.notifyTypeDomainChange;
     final subscriptionKey = WebsocketKeys.subscriptionSk(
       domainType: domainType,
       domainId: domainId,
       entityType: resolvedEntityType,
+      notifyType: notifyType,
     );
 
     await connections.putSubscription(
@@ -73,6 +83,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       domainType: domainType,
       domainId: domainId,
       entityType: entityType,
+      notifyType: notifyType,
     );
 
     Map<String, dynamic>? statusData;
@@ -81,6 +92,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
         statusData = await getDomainChangeStatus(
           domainType: domainType,
           domainId: domainId,
+          entityType: entityType,
         );
       } catch (error, stackTrace) {
         SlttLogger.logger.warning(
@@ -99,7 +111,11 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       'domainId': domainId,
       'entityType': entityType,
       'subscriptionKey': subscriptionKey,
-      if (statusData != null) 'data': statusData,
+      if (statusData != null)
+        if (entityType == WebsocketConstants.notifyTypeDomainStats)
+          'stats': statusData
+        else
+          'data': statusData,
     };
 
     await management.send(connectionId, payload);
