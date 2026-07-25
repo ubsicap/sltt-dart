@@ -40,14 +40,6 @@ class WebsocketKeys {
     required String domainId,
   }) => 'sub#@DOMAINTYPE#$domainType#@DOMAINID#$domainId';
 
-  static String domainGsiSk({
-    required String notifyType,
-    required String entityType,
-  }) => 'sub#@NOTIFYTYPE#$notifyType#@ENTITYTYPE#$entityType';
-
-  static String notifyTypePrefix({required String notifyType}) =>
-      'sub#@NOTIFYTYPE#$notifyType';
-
   /// Extracts the entityType label from a subscription SK, e.g.
   /// "sub#@DOMAINTYPE#project#@DOMAINID#proj_1#@ENTITYTYPE#task#@NOTIFYTYPE#domainChange" -> "task"
   static String entityTypeFromSubscriptionSk(String sk) {

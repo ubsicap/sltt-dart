@@ -105,12 +105,6 @@ class WebsocketConnectionsRepository {
         'gsi1pk': _attributeValueS(
           WebsocketKeys.domainGsiPk(domainType: domainType, domainId: domainId),
         ),
-        'gsi1sk': _attributeValueS(
-          WebsocketKeys.domainGsiSk(
-            notifyType: notifyType,
-            entityType: resolvedEntityType,
-          ),
-        ),
         'domainType': _attributeValueS(domainType),
         'domainId': _attributeValueS(domainId),
         'entityType': _attributeValueS(resolvedEntityType),
@@ -197,12 +191,10 @@ class WebsocketConnectionsRepository {
       },
     };
     if (notifyType != null) {
-      payload['KeyConditionExpression'] =
-          'gsi1pk = :pk AND begins_with(gsi1sk, :notifyTypePrefix)';
-      payload['ExpressionAttributeValues'][':notifyTypePrefix'] =
-          _attributeValueS(
-            WebsocketKeys.notifyTypePrefix(notifyType: notifyType),
-          );
+      payload['FilterExpression'] = 'notifyType = :notifyType';
+      payload['ExpressionAttributeValues'][':notifyType'] = _attributeValueS(
+        notifyType,
+      );
     }
 
     final result = await _dynamoRequest('Query', payload);

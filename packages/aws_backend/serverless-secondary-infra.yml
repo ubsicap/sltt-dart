@@ -319,8 +319,6 @@ resources:
             AttributeType: S
           - AttributeName: gsi1pk
             AttributeType: S
-          - AttributeName: gsi1sk
-            AttributeType: S
         KeySchema:
           - AttributeName: connectionId
             KeyType: HASH
@@ -331,7 +329,7 @@ resources:
             KeySchema:
               - AttributeName: gsi1pk
                 KeyType: HASH
-              - AttributeName: gsi1sk
+              - AttributeName: connectionId
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
