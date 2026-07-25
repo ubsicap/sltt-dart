@@ -38,47 +38,10 @@ List<List<WsNotifyRecord>> groupAndSortDomainChangeRecords(
   return sortedGroupKeys
       .map((groupKey) {
         final group = groupedRecords[groupKey]!;
-        group.sort((a, b) {
-          final aEntity = a.entityType;
-          final bEntity = b.entityType;
-          final entityComparison = aEntity.compareTo(bEntity);
-          return entityComparison != 0
-              ? entityComparison
-              : a.index.compareTo(b.index);
-        });
+        group.sort((a, b) => a.index.compareTo(b.index));
         return group;
       })
       .toList(growable: false);
-}
-
-List<WsNotifyRecord> collapseDomainChangeRecordsToLatestPerEntityType(
-  List<WsNotifyRecord> records,
-) {
-  final latestByEntityType = <String?, WsNotifyRecord>{};
-  final sorted = List.of(records)
-    ..sort((a, b) {
-      final aEntity = a.entityType;
-      final bEntity = b.entityType;
-      final entityComparison = aEntity.compareTo(bEntity);
-      return entityComparison != 0
-          ? entityComparison
-          : a.index.compareTo(b.index);
-    });
-
-  for (final record in sorted) {
-    latestByEntityType[record.entityType] = record;
-  }
-
-  final latestRecords = latestByEntityType.values.toList(growable: false);
-  latestRecords.sort((a, b) {
-    final aEntity = a.entityType;
-    final bEntity = b.entityType;
-    final entityComparison = aEntity.compareTo(bEntity);
-    return entityComparison != 0
-        ? entityComparison
-        : a.index.compareTo(b.index);
-  });
-  return latestRecords;
 }
 
 Future<Map<String, dynamic>> wsNotifyHandler(
@@ -136,9 +99,6 @@ Future<Map<String, dynamic>> wsNotifyHandler(
   final sortedGroups = groupAndSortDomainChangeRecords(parsedRecords);
 
   for (final group in sortedGroups) {
-    final recordsToSend = collapseDomainChangeRecordsToLatestPerEntityType(
-      group,
-    );
     final domainType = group.first.domainType;
     final domainId = group.first.domainId;
 
@@ -168,7 +128,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
       return record.index > value.index ? record : value;
     });
 
-    for (final record in recordsToSend) {
+    for (final record in group) {
       final alreadyNotified = <String>{};
 
       if (record.entityType != WebsocketKeys.lastRecordEntityType) {

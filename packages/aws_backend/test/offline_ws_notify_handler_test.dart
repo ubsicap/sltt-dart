@@ -72,64 +72,6 @@ void main() {
       },
     );
 
-    test(
-      'collapseDomainChangeRecordsToLatestPerEntityType keeps only the latest record for each entityType',
-      () {
-        final group = [
-          WsNotifyRecord(
-            domainType: 'project',
-            domainId: 'proj-1',
-            notifyType: kNotifyTypeDomainChange,
-            entityType: WebsocketKeys.wildcardEntityType,
-            change: _change(name: 'domain-update-1', seq: 1),
-            index: 1,
-          ),
-          WsNotifyRecord(
-            domainType: 'project',
-            domainId: 'proj-1',
-            notifyType: kNotifyTypeDomainChange,
-            entityType: WebsocketKeys.wildcardEntityType,
-            change: _change(
-              name: 'domain-update-2',
-              seq: 2,
-              changeAt: '2026-07-17T00:00:01.000Z',
-            ),
-            index: 3,
-          ),
-          WsNotifyRecord(
-            domainType: 'project',
-            domainId: 'proj-1',
-            notifyType: kNotifyTypeDomainChange,
-            entityType: 'task',
-            change: _change(name: 'task-update-1', seq: 1),
-            index: 2,
-          ),
-          WsNotifyRecord(
-            domainType: 'project',
-            domainId: 'proj-1',
-            notifyType: kNotifyTypeDomainChange,
-            entityType: 'task',
-            change: _change(
-              name: 'task-update-2',
-              seq: 2,
-              changeAt: '2026-07-17T00:00:01.000Z',
-            ),
-            index: 4,
-          ),
-        ];
-
-        final latestRecords = collapseDomainChangeRecordsToLatestPerEntityType(
-          group,
-        );
-
-        expect(latestRecords, hasLength(2));
-        expect(latestRecords[0].entityType, WebsocketKeys.wildcardEntityType);
-        expect(_changeName(latestRecords[0].change), 'domain-update-2');
-        expect(latestRecords[1].entityType, 'task');
-        expect(_changeName(latestRecords[1].change), 'task-update-2');
-      },
-    );
-
     test('buildDomainChangeNotificationPayload includes required fields', () {
       final payload = buildDomainChangeNotificationPayload(
         domainType: 'project',
@@ -455,153 +397,136 @@ void main() {
       },
     );
 
-    test('sends only the latest domainChange data per entityType', () async {
-      final connections = _FakeConnectionsRepository();
-      final management = _FakeManagementClient(connections: connections);
+    test(
+      'sends every domainChange record to wildcard and exact matches',
+      () async {
+        final connections = _FakeConnectionsRepository();
+        final management = _FakeManagementClient(connections: connections);
 
-      connections.subscriptionsByDomain['project|proj-1'] = [
-        const WebsocketSubscriptionMatch(
-          connectionId: 'conn-wildcard',
-          entityType: WebsocketKeys.wildcardEntityType,
-        ),
-        const WebsocketSubscriptionMatch(
-          connectionId: 'conn-note',
-          entityType: 'note',
-        ),
-        const WebsocketSubscriptionMatch(
-          connectionId: 'conn-task',
-          entityType: 'task',
-        ),
-      ];
+        connections.subscriptionsByDomain['project|proj-1'] = [
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-wildcard',
+            entityType: WebsocketKeys.wildcardEntityType,
+          ),
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-note',
+            entityType: 'note',
+          ),
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-task',
+            entityType: 'task',
+          ),
+        ];
 
-      final event = {
-        'Records': [
-          {
-            'Sns': {
-              'Message': jsonEncode({
-                ...buildWsNotifyRecordMessage(
-                  domainType: 'project',
-                  domainId: 'proj-1',
-                  change: _change(name: 'domain-old', seq: 1),
-                  entityType: WebsocketKeys.lastRecordEntityType,
-                ),
-              }),
-            },
-          },
-          {
-            'Sns': {
-              'Message': jsonEncode({
-                ...buildWsNotifyRecordMessage(
-                  domainType: 'project',
-                  domainId: 'proj-1',
-                  change: _change(name: 'note-old', seq: 1),
-                  entityType: 'note',
-                ),
-              }),
-            },
-          },
-          {
-            'Sns': {
-              'Message': jsonEncode({
-                ...buildWsNotifyRecordMessage(
-                  domainType: 'project',
-                  domainId: 'proj-1',
-                  change: _change(name: 'task-only', seq: 1),
-                  entityType: 'task',
-                ),
-              }),
-            },
-          },
-          {
-            'Sns': {
-              'Message': jsonEncode({
-                ...buildWsNotifyRecordMessage(
-                  domainType: 'project',
-                  domainId: 'proj-1',
-                  change: _change(
-                    name: 'note-latest',
-                    seq: 2,
-                    changeAt: '2026-07-17T00:00:01.000Z',
+        final event = {
+          'Records': [
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  ...buildWsNotifyRecordMessage(
+                    domainType: 'project',
+                    domainId: 'proj-1',
+                    change: _change(name: 'domain-old', seq: 1),
+                    entityType: WebsocketKeys.lastRecordEntityType,
                   ),
-                  entityType: 'note',
-                ),
-              }),
+                }),
+              },
             },
-          },
-          {
-            'Sns': {
-              'Message': jsonEncode({
-                ...buildWsNotifyRecordMessage(
-                  domainType: 'project',
-                  domainId: 'proj-1',
-                  change: _change(
-                    name: 'domain-latest',
-                    seq: 2,
-                    changeAt: '2026-07-17T00:00:01.000Z',
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  ...buildWsNotifyRecordMessage(
+                    domainType: 'project',
+                    domainId: 'proj-1',
+                    change: _change(name: 'note-old', seq: 1),
+                    entityType: 'note',
                   ),
-                  entityType: 'domain',
-                ),
-              }),
+                }),
+              },
             },
-          },
-        ],
-      };
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  ...buildWsNotifyRecordMessage(
+                    domainType: 'project',
+                    domainId: 'proj-1',
+                    change: _change(name: 'task-only', seq: 1),
+                    entityType: 'task',
+                  ),
+                }),
+              },
+            },
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  ...buildWsNotifyRecordMessage(
+                    domainType: 'project',
+                    domainId: 'proj-1',
+                    change: _change(
+                      name: 'note-latest',
+                      seq: 2,
+                      changeAt: '2026-07-17T00:00:01.000Z',
+                    ),
+                    entityType: 'note',
+                  ),
+                }),
+              },
+            },
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  ...buildWsNotifyRecordMessage(
+                    domainType: 'project',
+                    domainId: 'proj-1',
+                    change: _change(
+                      name: 'domain-latest',
+                      seq: 2,
+                      changeAt: '2026-07-17T00:00:01.000Z',
+                    ),
+                    entityType: 'domain',
+                  ),
+                }),
+              },
+            },
+          ],
+        };
 
-      await wsNotifyHandler(
-        event,
-        connections: connections,
-        management: management,
-      );
+        await wsNotifyHandler(
+          event,
+          connections: connections,
+          management: management,
+        );
 
-      final wildcardMessages = management.sentMessages
-          .where((msg) => msg['connectionId'] == 'conn-wildcard')
-          .toList();
-      expect(wildcardMessages.length, 3);
-      expect(
-        wildcardMessages.map(
-          (msg) => _payloadChangeName(msg['payload'] as Map),
-        ),
-        containsAll(['domain-latest', 'note-latest', 'task-only']),
-      );
-      expect(
-        wildcardMessages.map(
-          (msg) => _payloadChangeName(msg['payload'] as Map),
-        ),
-        isNot(contains('domain-old')),
-      );
-      expect(
-        wildcardMessages.map(
-          (msg) => _payloadChangeName(msg['payload'] as Map),
-        ),
-        isNot(contains('note-old')),
-      );
+        final wildcardMessages = management.sentMessages
+            .where((msg) => msg['connectionId'] == 'conn-wildcard')
+            .toList();
+        expect(wildcardMessages, hasLength(4));
+        expect(
+          wildcardMessages.map(
+            (msg) => _payloadChangeName(msg['payload'] as Map),
+          ),
+          equals(['note-old', 'task-only', 'note-latest', 'domain-latest']),
+        );
 
-      final noteMessages = management.sentMessages
-          .where((msg) => msg['connectionId'] == 'conn-note')
-          .toList();
-      expect(noteMessages, hasLength(1));
-      expect(
-        noteMessages.map((msg) => _payloadChangeName(msg['payload'] as Map)),
-        containsAll(['note-latest']),
-      );
-      expect(
-        noteMessages.map((msg) => _payloadChangeName(msg['payload'] as Map)),
-        isNot(contains('domain-latest')),
-      );
+        final noteMessages = management.sentMessages
+            .where((msg) => msg['connectionId'] == 'conn-note')
+            .toList();
+        expect(noteMessages, hasLength(2));
+        expect(
+          noteMessages.map((msg) => _payloadChangeName(msg['payload'] as Map)),
+          equals(['note-old', 'note-latest']),
+        );
 
-      final taskMessages = management.sentMessages
-          .where((msg) => msg['connectionId'] == 'conn-task')
-          .toList();
-      expect(taskMessages, hasLength(1));
-      expect(
-        taskMessages.map((msg) => _payloadChangeName(msg['payload'] as Map)),
-        containsAll(['task-only']),
-      );
-      expect(
-        taskMessages.map((msg) => _payloadChangeName(msg['payload'] as Map)),
-        isNot(contains('domain-latest')),
-      );
-    });
+        final taskMessages = management.sentMessages
+            .where((msg) => msg['connectionId'] == 'conn-task')
+            .toList();
+        expect(taskMessages, hasLength(1));
+        expect(
+          taskMessages.map((msg) => _payloadChangeName(msg['payload'] as Map)),
+          equals(['task-only']),
+        );
+      },
+    );
 
     test('ignores unsupported notifyType values', () async {
       final connections = _FakeConnectionsRepository();
