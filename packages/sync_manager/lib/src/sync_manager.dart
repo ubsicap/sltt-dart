@@ -290,75 +290,78 @@ class SyncManager {
     }
   }
 
-  /// Subscribe to remote domain change notifications for the given domain.
+  /// Subscribe to remote domain notifications for the given domain.
   void subscribeToDomain({
+    required String notifyType,
     required String domainType,
     required String domainId,
   }) {
     final key = _domainChangeKey(domainType: domainType, domainId: domainId);
-    if (_subscribedDomainChangeKeys.add(key)) {
-      SlttLogger.logger.info(
-        '[SyncManager] Subscribed to domain changes: $key',
-      );
-      _trySendDomainChangeSubscription(
-        domainType: domainType,
-        domainId: domainId,
-      );
+    if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
+      if (_subscribedDomainStatsKeys.add(key)) {
+        SlttLogger.logger.info(
+          '[SyncManager] Subscribed to domain stats: $key',
+        );
+        _trySendDomainStatsSubscription(
+          domainType: domainType,
+          domainId: domainId,
+        );
+      }
+      return;
     }
+
+    if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
+      if (_subscribedDomainChangeKeys.add(key)) {
+        SlttLogger.logger.info(
+          '[SyncManager] Subscribed to domain changes: $key',
+        );
+        _trySendDomainChangeSubscription(
+          domainType: domainType,
+          domainId: domainId,
+        );
+      }
+      return;
+    }
+
+    SlttLogger.logger.warning(
+      '[SyncManager] Unsupported notifyType for subscribeToDomain: $notifyType',
+    );
   }
 
-  /// Unsubscribe from remote domain change notifications for the given domain.
-  void unsubscribeFromDomainChanges({
+  /// Unsubscribe from remote domain notifications for the given domain.
+  void unsubscribeFromDomain({
+    required String notifyType,
     required String domainType,
     required String domainId,
   }) {
     final key = _domainChangeKey(domainType: domainType, domainId: domainId);
-    if (_subscribedDomainChangeKeys.remove(key)) {
-      SlttLogger.logger.info(
-        '[SyncManager] Unsubscribed from domain changes: $key',
-      );
-      _remoteLastDomainSeqByDomain.remove(key);
-      _trySendDomainChangeUnsubscription(
-        domainType: domainType,
-        domainId: domainId,
+    if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
+      if (_subscribedDomainStatsKeys.remove(key)) {
+        SlttLogger.logger.info(
+          '[SyncManager] Unsubscribed from domain stats: $key',
+        );
+        _trySendDomainStatsUnsubscription(
+          domainType: domainType,
+          domainId: domainId,
+        );
+      }
+    } else if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
+      if (_subscribedDomainChangeKeys.remove(key)) {
+        SlttLogger.logger.info(
+          '[SyncManager] Unsubscribed from domain changes: $key',
+        );
+        _remoteLastDomainSeqByDomain.remove(key);
+        _trySendDomainChangeUnsubscription(
+          domainType: domainType,
+          domainId: domainId,
+        );
+      }
+    } else {
+      SlttLogger.logger.warning(
+        '[SyncManager] Unsupported notifyType for unsubscribeFromDomain: $notifyType',
       );
     }
-    if (_subscribedDomainChangeKeys.isEmpty &&
-        _subscribedDomainStatsKeys.isEmpty) {
-      _disconnectWebSocket();
-    }
-  }
 
-  /// Subscribe to remote domain stats notifications for the given domain.
-  void subscribeToDomainStats({
-    required String domainType,
-    required String domainId,
-  }) {
-    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
-    if (_subscribedDomainStatsKeys.add(key)) {
-      SlttLogger.logger.info('[SyncManager] Subscribed to domain stats: $key');
-      _trySendDomainStatsSubscription(
-        domainType: domainType,
-        domainId: domainId,
-      );
-    }
-  }
-
-  /// Unsubscribe from remote domain stats notifications for the given domain.
-  void unsubscribeFromDomainStats({
-    required String domainType,
-    required String domainId,
-  }) {
-    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
-    if (_subscribedDomainStatsKeys.remove(key)) {
-      SlttLogger.logger.info(
-        '[SyncManager] Unsubscribed from domain stats: $key',
-      );
-      _trySendDomainStatsUnsubscription(
-        domainType: domainType,
-        domainId: domainId,
-      );
-    }
     if (_subscribedDomainChangeKeys.isEmpty &&
         _subscribedDomainStatsKeys.isEmpty) {
       _disconnectWebSocket();
@@ -456,14 +459,16 @@ class SyncManager {
     required String domainId,
   }) {
     if (_isWebSocketOpen) {
-      _webSocketClient?.subscribe(
-        domainType,
-        domainId,
-        notifyType: WebsocketConstants.notifyTypeDomainStats,
-        entityType: WebsocketConstants.wildcardEntityType,
-      );
+      final payload = {
+        'action': WebsocketConstants.actionSubscribe,
+        'notifyType': WebsocketConstants.notifyTypeDomainStats,
+        'domainType': domainType,
+        'domainId': domainId,
+        'entityType': WebsocketConstants.wildcardEntityType,
+      };
+      _webSocketClient?.send(payload);
       SlttLogger.logger.info(
-        '[SyncManager] Sent websocket stats subscribe for $domainType/$domainId',
+        '[SyncManager] Sent websocket stats subscribe for $domainType/$domainId payload=$payload',
       );
       return;
     }
@@ -635,15 +640,18 @@ class SyncManager {
   }
 
   void _sendPendingDomainChangeSubscriptions() {
-    if (_subscribedDomainChangeKeys.isEmpty) {
+    if (_subscribedDomainChangeKeys.isEmpty &&
+        _subscribedDomainStatsKeys.isEmpty) {
       SlttLogger.logger.info(
         '[SyncManager] No pending websocket domain subscriptions to flush',
       );
       return;
     }
+    final totalPending =
+        _subscribedDomainChangeKeys.length + _subscribedDomainStatsKeys.length;
     SlttLogger.logger.info(
-      '[SyncManager] Flushing ${_subscribedDomainChangeKeys.length} pending websocket domain subscriptions: '
-      '${_subscribedDomainChangeKeys.join(', ')}',
+      '[SyncManager] Flushing $totalPending pending websocket domain subscriptions: '
+      '${_subscribedDomainChangeKeys.join(', ')}${_subscribedDomainChangeKeys.isNotEmpty && _subscribedDomainStatsKeys.isNotEmpty ? ', ' : ''}${_subscribedDomainStatsKeys.join(', ')}',
     );
     for (final key in _subscribedDomainChangeKeys) {
       final parts = key.split('/');
@@ -690,6 +698,9 @@ class SyncManager {
       final action = message['action'] as String?;
       if (action == WebsocketConstants.actionSubscribe) {
         final status = message['status'] as String?;
+        SlttLogger.logger.info(
+          '[SyncManager] Received websocket subscribe ack message=$message',
+        );
         if (status != 'ok') {
           SlttLogger.logger.warning(
             '[SyncManager] Websocket subscribe ack failed: status=$status, message=$message',
@@ -714,18 +725,9 @@ class SyncManager {
           );
           return;
         }
-        final lastDomainSeq = data['lastDomainSeq'] is int
-            ? data['lastDomainSeq'] as int
-            : int.tryParse(data['lastDomainSeq']?.toString() ?? '') ?? 0;
-        final lastDomainChangeAtRaw = data['lastDomainChangeAt'];
-        DateTime? lastDomainChangeAt;
-        if (lastDomainChangeAtRaw is String) {
-          lastDomainChangeAt = DateTime.tryParse(
-            lastDomainChangeAtRaw,
-          )?.toUtc();
-        } else if (lastDomainChangeAtRaw is DateTime) {
-          lastDomainChangeAt = lastDomainChangeAtRaw.toUtc();
-        }
+        final lastDomainSeq = parseRemoteLastDomainSeqFromStatusPayload(data);
+        final lastDomainChangeAt =
+            parseRemoteLastDomainChangeAtFromStatusPayload(data);
         SlttLogger.logger.info(
           '[SyncManager] Websocket subscribe ack for $domainType/$domainId ($notifyType): '
           'lastDomainSeq=$lastDomainSeq, lastDomainChangeAt=$lastDomainChangeAt',
@@ -804,18 +806,9 @@ class SyncManager {
           return;
         }
         final stats = Map<String, dynamic>.from(rawStats);
-        final lastDomainSeq = stats['lastDomainSeq'] is int
-            ? stats['lastDomainSeq'] as int
-            : int.tryParse(stats['lastDomainSeq']?.toString() ?? '') ?? 0;
-        final lastDomainChangeAtRaw = stats['lastDomainChangeAt'];
-        DateTime? lastDomainChangeAt;
-        if (lastDomainChangeAtRaw is String) {
-          lastDomainChangeAt = DateTime.tryParse(
-            lastDomainChangeAtRaw,
-          )?.toUtc();
-        } else if (lastDomainChangeAtRaw is DateTime) {
-          lastDomainChangeAt = lastDomainChangeAtRaw.toUtc();
-        }
+        final lastDomainSeq = parseRemoteLastDomainSeqFromStatusPayload(stats);
+        final lastDomainChangeAt =
+            parseRemoteLastDomainChangeAtFromStatusPayload(stats);
 
         final key = _domainChangeKey(
           domainType: domainType,
@@ -2160,4 +2153,76 @@ class SyncStatus {
         ?.toUtc()
         .toIso8601String(),
   };
+}
+
+int parseRemoteLastDomainSeqFromStatusPayload(Map<String, dynamic> data) {
+  int? parseInt(Object? raw) {
+    if (raw is int) return raw;
+    if (raw is String) return int.tryParse(raw);
+    return null;
+  }
+
+  final lastDomainSeq =
+      parseInt(data['lastDomainSeq']) ?? parseInt(data['latestSeq']);
+  if (lastDomainSeq != null && lastDomainSeq > 0) {
+    return lastDomainSeq;
+  }
+
+  for (final statsKey in const ['changeStats', 'entityTypeStats']) {
+    final stats = data[statsKey];
+    if (stats is Map<String, dynamic>) {
+      final candidate = parseInt(stats['latestSeq']);
+      if (candidate != null && candidate > 0) {
+        return candidate;
+      }
+      final totals = stats['totals'];
+      if (totals is Map<String, dynamic>) {
+        final nested = parseInt(totals['latestSeq']);
+        if (nested != null && nested > 0) {
+          return nested;
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
+DateTime? parseRemoteLastDomainChangeAtFromStatusPayload(
+  Map<String, dynamic> data,
+) {
+  DateTime? parseDate(Object? raw) {
+    if (raw is DateTime) return raw.toUtc();
+    if (raw is String) {
+      return DateTime.tryParse(raw)?.toUtc();
+    }
+    return null;
+  }
+
+  final keys = <Object?>[data['lastDomainChangeAt'], data['timestamp']];
+  for (final raw in keys) {
+    final parsed = parseDate(raw);
+    if (parsed != null) {
+      return parsed;
+    }
+  }
+
+  for (final statsKey in const ['changeStats', 'entityTypeStats']) {
+    final stats = data[statsKey];
+    if (stats is Map<String, dynamic>) {
+      final parsed = parseDate(stats['latestChangeAt']);
+      if (parsed != null) {
+        return parsed;
+      }
+      final totals = stats['totals'];
+      if (totals is Map<String, dynamic>) {
+        final nested = parseDate(totals['latestChangeAt']);
+        if (nested != null) {
+          return nested;
+        }
+      }
+    }
+  }
+
+  return null;
 }
