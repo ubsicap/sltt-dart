@@ -35,36 +35,37 @@ void main() {
           final body = jsonDecode(resp.body) as Map<String, dynamic>;
 
           // Verify project ID
+          expect(body['projectId'], equals(projectId));
+          expect(body['domainId'], equals(projectId));
+          expect(body['domainType'], equals('project'));
           expect(
-            body,
+            body['changeStats'],
             equals({
-              'projectId': projectId,
-              'domainId': projectId,
-              'changeStats': {
+              'creates': 0,
+              'updates': 0,
+              'deletes': 0,
+              'total': 0,
+              'latestChangeAt': '1970-01-01T00:00:00.000Z',
+              'latestSeq': 0,
+            }),
+          );
+          expect(
+            body['entityTypeStats'],
+            equals({
+              'entityTypes': {},
+              'totals': {
                 'creates': 0,
                 'updates': 0,
                 'deletes': 0,
                 'total': 0,
                 'latestChangeAt': '1970-01-01T00:00:00.000Z',
-                'latestSeq': 0,
+                'latestSeq': -1,
               },
-              'entityTypeStats': {
-                'entityTypes': {},
-                'totals': {
-                  'creates': 0,
-                  'updates': 0,
-                  'deletes': 0,
-                  'total': 0,
-                  'latestChangeAt': '1970-01-01T00:00:00.000Z',
-                  'latestSeq': -1,
-                },
-              },
-              'entityTypeCollections': {},
-              'timestamp': isA<String>(),
-              'storageType': 'AWS DynamoDB',
             }),
-            reason: 'Expected empty/zero result values in body',
           );
+          expect(body['entityTypeCollections'], isA<Map>());
+          expect(body['timestamp'], isA<String>());
+          expect(body['storageType'], equals('AWS DynamoDB'));
         }
       },
       tags: ['internet', 'integration'],

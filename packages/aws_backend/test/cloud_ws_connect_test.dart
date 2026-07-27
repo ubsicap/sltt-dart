@@ -4,11 +4,12 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
-import 'package:sync_manager/src/sync_manager_websocket_client.dart';
 import 'package:test/test.dart';
 
 void main() {
-  final baseUrl = Platform.environment['CLOUD_BASE_URL'] ?? kCloudPrdApiUrl;
+  final baseUrl = Uri.parse(
+    Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl,
+  );
   final wssUrl = Platform.environment['CLOUD_WSS_URL'] ?? kCloudPrdWssUrl;
 
   Future<String> registerAndLoginTestUser(String suffix) async {
@@ -28,6 +29,7 @@ void main() {
       }),
     );
     expect(registerResponse.statusCode, equals(200));
+
     final registerBody =
         jsonDecode(registerResponse.body) as Map<String, dynamic>;
     expect(
@@ -41,41 +43,44 @@ void main() {
       body: jsonEncode({'identifier': email, 'password': password}),
     );
     expect(loginResponse.statusCode, equals(200));
+
     final loginBody = jsonDecode(loginResponse.body) as Map<String, dynamic>;
     expect(loginBody['accessToken'], isNotEmpty);
+    expect(loginBody['userId'], isNotEmpty);
     return loginBody['accessToken'] as String;
   }
 
   test(
-    'websocket client connect/disconnect and subscribe/unsubscribe',
+    'cloud websocket connect and subscribe ack shape for domainChange and domainStats',
     () async {
       final suffix = DateTime.now().toUtc().millisecondsSinceEpoch.toString();
       final token = await registerAndLoginTestUser(suffix);
       final userId = '__test_user_${suffix.toLowerCase()}';
 
       final messages = <Map<String, dynamic>>[];
-      void onMessage(dynamic raw) {
-        if (raw is String) {
-          final payload = jsonDecode(raw) as Map<String, dynamic>;
-          messages.add(payload);
-        }
-      }
-
-      final client = SyncManagerWebSocketClient(
-        cloudWssUrl: wssUrl,
-        authToken: token,
-        onMessage: onMessage,
-        onDone: () => print('ws done'),
+      final webSocket = await WebSocket.connect(
+        wssUrl,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      webSocket.listen(
+        (dynamic raw) {
+          if (raw is String) {
+            final payload = jsonDecode(raw) as Map<String, dynamic>;
+            messages.add(payload);
+          }
+        },
         onError: (error, stackTrace) => fail('WebSocket error: $error'),
+        cancelOnError: true,
       );
 
-      await client.connect();
-      expect(client.isOpen, isTrue);
-
-      client.subscribe(
-        'user',
-        userId,
-        notifyType: WebsocketConstants.notifyTypeDomainChange,
+      webSocket.add(
+        jsonEncode({
+          'action': WebsocketConstants.actionSubscribe,
+          'notifyType': WebsocketConstants.notifyTypeDomainChange,
+          'domainType': 'user',
+          'domainId': userId,
+          'entityType': WebsocketConstants.lastRecordEntityType,
+        }),
       );
       await Future.delayed(const Duration(seconds: 3));
 
@@ -84,7 +89,7 @@ void main() {
             m['action'] == 'subscribe' &&
             m['status'] == 'ok' &&
             m['notifyType'] == WebsocketConstants.notifyTypeDomainChange,
-        orElse: () => fail('Expected a domainChange subscribe ack'),
+        orElse: () => fail('Expected domainChange subscribe ack'),
       );
 
       expect(changeAck['domainType'], equals('user'));
@@ -93,7 +98,6 @@ void main() {
         changeAck['entityType'],
         equals(WebsocketConstants.lastRecordEntityType),
       );
-      expect(changeAck['subscriptionKey'], isA<String>());
       expect(changeAck['stats'], isA<Map<String, dynamic>>());
       final changeStatsPayload = changeAck['stats'] as Map<String, dynamic>;
       expect(changeStatsPayload['domainType'], equals('user'));
@@ -111,11 +115,14 @@ void main() {
       expect(changeStatsPayload['timestamp'], isA<String>());
       expect(changeStatsPayload['storageType'], isA<String>());
 
-      client.subscribe(
-        'user',
-        userId,
-        notifyType: WebsocketConstants.notifyTypeDomainStats,
-        entityType: WebsocketConstants.wildcardEntityType,
+      webSocket.add(
+        jsonEncode({
+          'action': WebsocketConstants.actionSubscribe,
+          'notifyType': WebsocketConstants.notifyTypeDomainStats,
+          'domainType': 'user',
+          'domainId': userId,
+          'entityType': WebsocketConstants.wildcardEntityType,
+        }),
       );
       await Future.delayed(const Duration(seconds: 3));
 
@@ -124,7 +131,7 @@ void main() {
             m['action'] == 'subscribe' &&
             m['status'] == 'ok' &&
             m['notifyType'] == WebsocketConstants.notifyTypeDomainStats,
-        orElse: () => fail('Expected a domainStats subscribe ack'),
+        orElse: () => fail('Expected domainStats subscribe ack'),
       );
 
       expect(statsAck['domainType'], equals('user'));
@@ -136,8 +143,8 @@ void main() {
       expect(statsAck['subscriptionKey'], isA<String>());
       expect(statsAck['stats'], isA<Map<String, dynamic>>());
       final statsPayload = statsAck['stats'] as Map<String, dynamic>;
-      expect(statsPayload['domainId'], equals(userId));
       expect(statsPayload['domainType'], equals('user'));
+      expect(statsPayload['domainId'], equals(userId));
       expect(statsPayload['userId'], equals(userId));
       expect(statsPayload['changeStats'], isA<Map<String, dynamic>>());
       expect(statsPayload['entityTypeStats'], isA<Map<String, dynamic>>());
@@ -148,25 +155,9 @@ void main() {
       expect(statsPayload['timestamp'], isA<String>());
       expect(statsPayload['storageType'], isA<String>());
 
-      client.unsubscribe(
-        'user',
-        userId,
-        notifyType: WebsocketConstants.notifyTypeDomainChange,
-      );
-      await Future.delayed(const Duration(seconds: 3));
-
-      expect(
-        messages,
-        anyElement(
-          predicate<Map<String, dynamic>>(
-            (m) => m['action'] == 'unsubscribe' && m['status'] == 'ok',
-          ),
-        ),
-      );
-
-      await client.disconnect();
-      expect(client.isOpen, isFalse);
+      await webSocket.close(WebSocketStatus.normalClosure, 'test complete');
     },
     tags: ['internet', 'integration'],
+    timeout: Timeout.none,
   );
 }

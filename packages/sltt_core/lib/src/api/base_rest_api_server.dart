@@ -1813,9 +1813,7 @@ abstract class BaseRestApiServer {
         domainType: domainType,
         changeStats: changeStats.totals,
         entityTypeStats: entityTypeStats,
-        entityTypeCollections: entityTypeCollections.isNotEmpty
-            ? entityTypeCollections
-            : null,
+        entityTypeCollections: entityTypeCollections,
         timestamp: DateTime.now().toUtc().toIso8601String(),
         storageType: storageTypeDescription,
       );
