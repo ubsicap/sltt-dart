@@ -1056,6 +1056,10 @@ abstract class BaseRestApiServer {
                 'type': 'string',
                 'description': 'The domain identifier',
               },
+              'domainType': {
+                'type': 'string',
+                'description': 'The domain type for this stats response',
+              },
               'changeStats': {
                 'type': 'object',
                 'properties': {
@@ -1786,7 +1790,6 @@ abstract class BaseRestApiServer {
       );
 
       // Typed results: use the EntityTypeStats API and serialize to JSON
-      final changeStatsJson = changeStats.totals.toJson();
       final entityTypeStatsJson = entityTypeStats.toJson();
 
       // Inject 'collection' property for each entityType
@@ -1805,17 +1808,20 @@ abstract class BaseRestApiServer {
         });
       }
 
+      final response = DomainStatsResponse(
+        domainId: domainId,
+        domainType: domainType,
+        changeStats: changeStats.totals,
+        entityTypeStats: entityTypeStats,
+        entityTypeCollections: entityTypeCollections.isNotEmpty
+            ? entityTypeCollections
+            : null,
+        timestamp: DateTime.now().toUtc().toIso8601String(),
+        storageType: storageTypeDescription,
+      );
+      final responseJson = response.toJson();
       return Response.ok(
-        jsonEncode({
-          'domainId': domainId,
-          '${domainType}Id': domainId,
-          'changeStats': changeStatsJson,
-          'entityTypeStats': entityTypeStatsJson,
-          // Provide a convenience top-level mapping of entityType -> collection
-          'entityTypeCollections': entityTypeCollections,
-          'timestamp': DateTime.now().toUtc().toIso8601String(),
-          'storageType': storageTypeDescription,
-        }),
+        jsonEncode(responseJson),
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {

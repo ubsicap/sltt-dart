@@ -1,6 +1,12 @@
 import 'dart:convert';
 
-import 'package:sltt_core/sltt_core.dart' show SlttLogger, WebsocketConstants;
+import 'package:sltt_core/sltt_core.dart'
+    show
+        DomainStatsResponse,
+        EntityTypeStats,
+        EntityTypeSummary,
+        SlttLogger,
+        WebsocketConstants;
 
 import 'websocket_connections_repository.dart';
 import 'websocket_keys.dart';
@@ -92,14 +98,52 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       notifyType: notifyType,
     );
 
-    Map<String, dynamic>? statusData;
+    final defaultLatestChangeAt = DateTime.fromMillisecondsSinceEpoch(
+      0,
+    ).toUtc().toIso8601String();
+    Map<String, dynamic> statusData = {
+      'lastDomainSeq': 0,
+      'lastDomainChangeAt': defaultLatestChangeAt,
+    };
+    if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
+      statusData = DomainStatsResponse(
+        domainId: domainId,
+        domainType: domainType,
+        changeStats: EntityTypeSummary(
+          creates: 0,
+          updates: 0,
+          deletes: 0,
+          total: 0,
+          latestChangeAt: defaultLatestChangeAt,
+          latestSeq: -1,
+        ),
+        entityTypeStats: EntityTypeStats(
+          entityTypes: {},
+          totals: EntityTypeSummary(
+            creates: 0,
+            updates: 0,
+            deletes: 0,
+            total: 0,
+            latestChangeAt: defaultLatestChangeAt,
+            latestSeq: -1,
+          ),
+        ),
+        entityTypeCollections: {},
+        timestamp: defaultLatestChangeAt,
+        storageType: 'unknown',
+      ).toJson();
+    }
+
     if (getDomainChangeStatus != null) {
       try {
-        statusData = await getDomainChangeStatus(
+        final fetchedStatusData = await getDomainChangeStatus(
           domainType: domainType,
           domainId: domainId,
           entityType: entityType,
         );
+        if (fetchedStatusData != null) {
+          statusData = fetchedStatusData;
+        }
       } catch (error, stackTrace) {
         SlttLogger.logger.warning(
           'wsSubscribe: failed to fetch initial domain status '
@@ -118,7 +162,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       'domainId': domainId,
       'entityType': entityType,
       'subscriptionKey': subscriptionKey,
-      if (statusData != null) 'stats': statusData,
+      'stats': statusData,
     };
 
     await management.send(connectionId, payload);

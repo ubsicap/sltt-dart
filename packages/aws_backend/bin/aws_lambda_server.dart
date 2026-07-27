@@ -5,7 +5,7 @@ import 'package:aws_backend/aws_backend.dart';
 import 'package:aws_backend/src/utils/media_environment.dart';
 import 'package:aws_common/aws_common.dart' show AWSCredentials;
 import 'package:sltt_core/sltt_core.dart'
-    show SlttLogger, getCollectionByEntity;
+    show SlttLogger, DomainStatsResponse, getCollectionByEntity;
 
 import 'websocket/websocket_connections_repository.dart';
 import 'websocket/websocket_management_client.dart';
@@ -281,19 +281,20 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
               domainType: domainType,
               domainId: domainId,
             );
-            return {
-              'domainId': domainId,
-              '${domainType}Id': domainId,
-              'changeStats': changeStats.totals.toJson(),
-              'entityTypeStats': entityTypeStats.toJson(),
-              'entityTypeCollections': entityTypeStats.entityTypes.keys
+            final response = DomainStatsResponse(
+              domainId: domainId,
+              domainType: domainType,
+              changeStats: changeStats.totals,
+              entityTypeStats: entityTypeStats,
+              entityTypeCollections: entityTypeStats.entityTypes.keys
                   .fold<Map<String, String>>({}, (acc, type) {
                     acc[type] = getCollectionByEntity(type) ?? 'unknown';
                     return acc;
                   }),
-              'timestamp': DateTime.now().toUtc().toIso8601String(),
-              'storageType': storage.getStorageType(),
-            };
+              timestamp: DateTime.now().toUtc().toIso8601String(),
+              storageType: storage.getStorageType(),
+            );
+            return response.toJson();
           },
     );
   } catch (e, stackTrace) {

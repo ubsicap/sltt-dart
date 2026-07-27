@@ -218,6 +218,7 @@ class DomainStatsResponse {
   final String domainType;
   final EntityTypeSummary? changeStats;
   final EntityTypeStats? entityTypeStats;
+  final Map<String, String>? entityTypeCollections;
   final String? timestamp;
   final String? storageType;
 
@@ -226,13 +227,17 @@ class DomainStatsResponse {
     required this.domainType,
     this.changeStats,
     this.entityTypeStats,
+    this.entityTypeCollections,
     this.timestamp,
     this.storageType,
   });
 
   factory DomainStatsResponse.fromJson(Map<String, dynamic> json) =>
       _$DomainStatsResponseFromJson(json);
-  Map<String, dynamic> toJson() => _$DomainStatsResponseToJson(this);
+  Map<String, dynamic> toJson() {
+    final coreJson = _$DomainStatsResponseToJson(this);
+    return {'${domainType}Id': domainId, ...coreJson};
+  }
 }
 
 @JsonSerializable()

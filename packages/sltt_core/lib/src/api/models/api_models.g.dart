@@ -217,6 +217,10 @@ DomainStatsResponse _$DomainStatsResponseFromJson(Map<String, dynamic> json) =>
           : EntityTypeStats.fromJson(
               json['entityTypeStats'] as Map<String, dynamic>,
             ),
+      entityTypeCollections:
+          (json['entityTypeCollections'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, e as String),
+          ),
       timestamp: json['timestamp'] as String?,
       storageType: json['storageType'] as String?,
     );
@@ -228,6 +232,7 @@ Map<String, dynamic> _$DomainStatsResponseToJson(
   'domainType': instance.domainType,
   'changeStats': instance.changeStats?.toJson(),
   'entityTypeStats': instance.entityTypeStats?.toJson(),
+  'entityTypeCollections': instance.entityTypeCollections,
   'timestamp': instance.timestamp,
   'storageType': instance.storageType,
 };

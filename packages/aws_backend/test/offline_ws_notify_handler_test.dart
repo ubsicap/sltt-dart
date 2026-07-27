@@ -8,7 +8,12 @@ import 'package:aws_backend/src/websocket/domain_change_payload.dart'
         buildDomainChangeNotificationPayload,
         buildDomainStatsNotificationPayload,
         buildWsNotifyRecordMessage;
-import 'package:sltt_core/sltt_core.dart' show WebsocketConstants;
+import 'package:sltt_core/sltt_core.dart'
+    show
+        DomainStatsResponse,
+        EntityTypeStats,
+        EntityTypeSummary,
+        WebsocketConstants;
 import 'package:test/test.dart';
 
 import '../bin/websocket/websocket_connections_repository.dart';
@@ -761,6 +766,10 @@ void main() {
           entityType: WebsocketKeys.wildcardEntityType,
           notifyType: kNotifyTypeDomainChange,
         ),
+        'stats': {
+          'lastDomainSeq': 0,
+          'lastDomainChangeAt': '1970-01-01T00:00:00.000Z',
+        },
       });
     });
 
@@ -802,6 +811,10 @@ void main() {
           entityType: WebsocketKeys.lastRecordEntityType,
           notifyType: kNotifyTypeDomainChange,
         ),
+        'stats': {
+          'lastDomainSeq': 0,
+          'lastDomainChangeAt': '1970-01-01T00:00:00.000Z',
+        },
       });
     });
 
@@ -840,6 +853,10 @@ void main() {
           entityType: 'task',
           notifyType: kNotifyTypeDomainChange,
         ),
+        'stats': {
+          'lastDomainSeq': 0,
+          'lastDomainChangeAt': '1970-01-01T00:00:00.000Z',
+        },
       });
     });
 
@@ -940,6 +957,117 @@ void main() {
             entityType: WebsocketKeys.wildcardEntityType,
             notifyType: kNotifyTypeDomainStats,
           ),
+          'stats': {
+            'domainId': 'proj-1',
+            'domainType': 'project',
+            'projectId': 'proj-1',
+            'changeStats': {
+              'creates': 0,
+              'updates': 0,
+              'deletes': 0,
+              'total': 0,
+              'latestChangeAt': '1970-01-01T00:00:00.000Z',
+              'latestSeq': -1,
+            },
+            'entityTypeStats': {
+              'entityTypes': <String, dynamic>{},
+              'totals': {
+                'creates': 0,
+                'updates': 0,
+                'deletes': 0,
+                'total': 0,
+                'latestChangeAt': '1970-01-01T00:00:00.000Z',
+                'latestSeq': -1,
+              },
+            },
+            'entityTypeCollections': <String, String>{},
+            'timestamp': '1970-01-01T00:00:00.000Z',
+            'storageType': 'unknown',
+          },
+        });
+      },
+    );
+
+    test(
+      'includes domainStats response payload for domainStats subscribe ack',
+      () async {
+        final connections = _FakeConnectionsRepository();
+        final management = _FakeManagementClient(connections: connections);
+
+        final event = {
+          'requestContext': {'connectionId': 'conn-sub-8'},
+          'body': jsonEncode({
+            'domainType': 'project',
+            'domainId': 'proj-1',
+            'notifyType': kNotifyTypeDomainStats,
+            'entityType': WebsocketKeys.wildcardEntityType,
+          }),
+        };
+
+        final statusData = DomainStatsResponse(
+          domainId: 'proj-1',
+          domainType: 'project',
+          changeStats: EntityTypeSummary(
+            creates: 1,
+            updates: 0,
+            deletes: 0,
+            total: 1,
+            latestChangeAt: '2026-07-25T17:44:46.634808Z',
+            latestSeq: 1,
+          ),
+          entityTypeStats: EntityTypeStats(
+            entityTypes: {
+              'task': EntityTypeSummary(
+                creates: 1,
+                updates: 0,
+                deletes: 0,
+                total: 1,
+                latestChangeAt: '2026-07-25T17:44:46.634808Z',
+                latestSeq: 1,
+              ),
+            },
+            totals: EntityTypeSummary(
+              creates: 1,
+              updates: 0,
+              deletes: 0,
+              total: 1,
+              latestChangeAt: '2026-07-25T17:44:46.634808Z',
+              latestSeq: 1,
+            ),
+          ),
+          entityTypeCollections: {'task': 'tasks'},
+          timestamp: '2026-07-25T17:44:46.634808Z',
+          storageType: 'cloud',
+        ).toJson();
+
+        await wsSubscribeHandler(
+          event,
+          connections: connections,
+          management: management,
+          getDomainChangeStatus:
+              ({
+                required String domainType,
+                required String domainId,
+                required String entityType,
+              }) async {
+                return statusData;
+              },
+        );
+
+        expect(management.sentMessages[0]['payload'], {
+          'action': 'subscribe',
+          'status': 'ok',
+          'notifyType': kNotifyTypeDomainStats,
+          'domainType': 'project',
+          'domainId': 'proj-1',
+          'entityType': WebsocketKeys.wildcardEntityType,
+          'subscriptionKey': WebsocketKeys.subscriptionSk(
+            domainType: 'project',
+            domainId: 'proj-1',
+            entityType: WebsocketKeys.wildcardEntityType,
+            notifyType: kNotifyTypeDomainStats,
+          ),
+          'stats': statusData,
         });
       },
     );

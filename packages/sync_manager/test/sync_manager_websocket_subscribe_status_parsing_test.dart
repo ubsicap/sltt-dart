@@ -1,58 +1,99 @@
-import 'package:sync_manager/sync_manager.dart';
+import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('SyncManager websocket subscribe status parsing', () {
-    test('parses lastDomainSeq from lastDomainSeq field', () {
-      final payload = {'lastDomainSeq': 5};
-
-      final seq = parseRemoteLastDomainSeqFromStatusPayload(payload);
-
-      expect(seq, equals(5));
-    });
-
-    test('parses lastDomainSeq from latestSeq fallback', () {
-      final payload = {'latestSeq': 8};
-
-      final seq = parseRemoteLastDomainSeqFromStatusPayload(payload);
-
-      expect(seq, equals(8));
-    });
-
-    test('parses lastDomainSeq from changeStats.totals.latestSeq fallback', () {
+    test('domain stats ack payload can be parsed by DomainStatsResponse', () {
       final payload = {
+        'domainId': 'user/2026-0721-171722-672-05qv-nEg9-user',
+        'domainType': 'user',
         'changeStats': {
-          'totals': {'latestSeq': 12},
+          'creates': 1,
+          'updates': 0,
+          'deletes': 0,
+          'total': 1,
+          'latestChangeAt': '2026-07-25T18:10:01.636321Z',
+          'latestSeq': 1,
         },
+        'entityTypeStats': {
+          'entityTypes': {
+            'user_profile': {
+              'creates': 1,
+              'updates': 0,
+              'deletes': 0,
+              'total': 1,
+              'latestChangeAt': '2026-07-25T18:10:01.636321Z',
+              'latestSeq': 1,
+            },
+          },
+          'totals': {
+            'creates': 1,
+            'updates': 0,
+            'deletes': 0,
+            'total': 1,
+            'latestChangeAt': '2026-07-25T18:10:01.636321Z',
+            'latestSeq': 1,
+          },
+        },
+        'timestamp': '2026-07-25T18:10:01.636321Z',
+        'storageType': 'cloud',
       };
 
-      final seq = parseRemoteLastDomainSeqFromStatusPayload(payload);
-
-      expect(seq, equals(12));
+      final parsed = DomainStatsResponse.fromJson(payload);
+      expect(parsed.domainId, equals(payload['domainId']));
+      expect(parsed.domainType, equals(payload['domainType']));
+      expect(parsed.changeStats?.latestSeq, equals(1));
+      expect(parsed.entityTypeStats?.totals.latestSeq, equals(1));
+      expect(parsed.timestamp, equals(payload['timestamp']));
+      expect(parsed.storageType, equals(payload['storageType']));
     });
 
-    test('parses lastDomainChangeAt from lastDomainChangeAt', () {
-      final payload = {'lastDomainChangeAt': '2026-07-25T18:10:01.636321Z'};
+    test('domain stats ack payload can be parsed by DomainStatsResponse', () {
+      final payload = {
+        'domainId': 'user/2026-0721-171722-672-05qv-nEg9-user',
+        'domainType': 'user',
+        'changeStats': {
+          'creates': 1,
+          'updates': 0,
+          'deletes': 0,
+          'total': 1,
+          'latestChangeAt': '2026-07-25T18:10:01.636321Z',
+          'latestSeq': 1,
+        },
+        'entityTypeStats': {
+          'entityTypes': {
+            'user_profile': {
+              'creates': 1,
+              'updates': 0,
+              'deletes': 0,
+              'total': 1,
+              'latestChangeAt': '2026-07-25T18:10:01.636321Z',
+              'latestSeq': 1,
+            },
+          },
+          'totals': {
+            'creates': 1,
+            'updates': 0,
+            'deletes': 0,
+            'total': 1,
+            'latestChangeAt': '2026-07-25T18:10:01.636321Z',
+            'latestSeq': 1,
+          },
+        },
+        'timestamp': '2026-07-25T18:10:01.636321Z',
+        'storageType': 'cloud',
+      };
 
-      final parsed = parseRemoteLastDomainChangeAtFromStatusPayload(payload);
-
-      expect(parsed, isNotNull);
-      expect(
-        parsed!.toUtc().toIso8601String(),
-        equals('2026-07-25T18:10:01.636321Z'),
-      );
+      final parsed = DomainStatsResponse.fromJson(payload);
+      expect(parsed.domainId, equals(payload['domainId']));
+      expect(parsed.domainType, equals(payload['domainType']));
+      expect(parsed.changeStats?.latestSeq, equals(1));
+      expect(parsed.entityTypeStats?.totals.latestSeq, equals(1));
+      expect(parsed.timestamp, equals(payload['timestamp']));
+      expect(parsed.storageType, equals(payload['storageType']));
     });
 
-    test('parses lastDomainChangeAt from timestamp fallback', () {
-      final payload = {'timestamp': '2026-07-25T18:10:01.636321Z'};
-
-      final parsed = parseRemoteLastDomainChangeAtFromStatusPayload(payload);
-
-      expect(parsed, isNotNull);
-      expect(
-        parsed!.toUtc().toIso8601String(),
-        equals('2026-07-25T18:10:01.636321Z'),
-      );
-    });
+    // No legacy parse helper tests remain; websocket ack parsing is now
+    // validated through strict DomainStatsResponse deserialization.
   });
 }

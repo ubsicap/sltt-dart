@@ -716,18 +716,31 @@ class SyncManager {
           );
           return;
         }
-        final data =
-            (message['stats'] as Map<String, dynamic>?) ??
-            (message['data'] as Map<String, dynamic>?);
+        final data = message['stats'] as Map<String, dynamic>?;
         if (data == null) {
           SlttLogger.logger.info(
             '[SyncManager] Websocket subscribe ack for $domainType/$domainId received without status data; waiting for change events.',
           );
           return;
         }
-        final lastDomainSeq = parseRemoteLastDomainSeqFromStatusPayload(data);
-        final lastDomainChangeAt =
-            parseRemoteLastDomainChangeAtFromStatusPayload(data);
+
+        DomainStatsResponse stats;
+        try {
+          stats = DomainStatsResponse.fromJson(data);
+        } catch (error, stackTrace) {
+          SlttLogger.logger.warning(
+            '[SyncManager] Websocket subscribe ack statistics payload failed to parse as DomainStatsResponse: $error',
+          );
+          SlttLogger.logger.fine(() {
+            return '[SyncManager] payload=$data stackTrace=$stackTrace';
+          });
+          return;
+        }
+
+        final lastDomainSeq = _remoteLastDomainSeqFromDomainStats(stats);
+        final lastDomainChangeAt = _remoteLastDomainChangeAtFromDomainStats(
+          stats,
+        );
         SlttLogger.logger.info(
           '[SyncManager] Websocket subscribe ack for $domainType/$domainId ($notifyType): '
           'lastDomainSeq=$lastDomainSeq, lastDomainChangeAt=$lastDomainChangeAt',
@@ -805,10 +818,25 @@ class SyncManager {
         if (domainType == null || domainId == null || rawStats is! Map) {
           return;
         }
-        final stats = Map<String, dynamic>.from(rawStats);
-        final lastDomainSeq = parseRemoteLastDomainSeqFromStatusPayload(stats);
-        final lastDomainChangeAt =
-            parseRemoteLastDomainChangeAtFromStatusPayload(stats);
+
+        final statsMap = Map<String, dynamic>.from(rawStats);
+        DomainStatsResponse stats;
+        try {
+          stats = DomainStatsResponse.fromJson(statsMap);
+        } catch (error, stackTrace) {
+          SlttLogger.logger.warning(
+            '[SyncManager] Websocket domainStats message payload failed to parse as DomainStatsResponse: $error',
+          );
+          SlttLogger.logger.fine(() {
+            return '[SyncManager] payload=$statsMap stackTrace=$stackTrace';
+          });
+          return;
+        }
+
+        final lastDomainSeq = _remoteLastDomainSeqFromDomainStats(stats);
+        final lastDomainChangeAt = _remoteLastDomainChangeAtFromDomainStats(
+          stats,
+        );
 
         final key = _domainChangeKey(
           domainType: domainType,
@@ -828,7 +856,7 @@ class SyncManager {
           'domainType': domainType,
           'domainId': domainId,
           'notifyType': notifyType,
-          'stats': stats,
+          'stats': statsMap,
         });
         return;
       }
@@ -2155,74 +2183,25 @@ class SyncStatus {
   };
 }
 
-int parseRemoteLastDomainSeqFromStatusPayload(Map<String, dynamic> data) {
-  int? parseInt(Object? raw) {
-    if (raw is int) return raw;
-    if (raw is String) return int.tryParse(raw);
-    return null;
+int _remoteLastDomainSeqFromDomainStats(DomainStatsResponse stats) {
+  if (stats.changeStats != null && stats.changeStats!.latestSeq > 0) {
+    return stats.changeStats!.latestSeq;
   }
-
-  final lastDomainSeq =
-      parseInt(data['lastDomainSeq']) ?? parseInt(data['latestSeq']);
-  if (lastDomainSeq != null && lastDomainSeq > 0) {
-    return lastDomainSeq;
+  if (stats.entityTypeStats != null &&
+      stats.entityTypeStats!.totals.latestSeq > 0) {
+    return stats.entityTypeStats!.totals.latestSeq;
   }
-
-  for (final statsKey in const ['changeStats', 'entityTypeStats']) {
-    final stats = data[statsKey];
-    if (stats is Map<String, dynamic>) {
-      final candidate = parseInt(stats['latestSeq']);
-      if (candidate != null && candidate > 0) {
-        return candidate;
-      }
-      final totals = stats['totals'];
-      if (totals is Map<String, dynamic>) {
-        final nested = parseInt(totals['latestSeq']);
-        if (nested != null && nested > 0) {
-          return nested;
-        }
-      }
-    }
-  }
-
   return 0;
 }
 
-DateTime? parseRemoteLastDomainChangeAtFromStatusPayload(
-  Map<String, dynamic> data,
-) {
-  DateTime? parseDate(Object? raw) {
-    if (raw is DateTime) return raw.toUtc();
-    if (raw is String) {
-      return DateTime.tryParse(raw)?.toUtc();
-    }
+DateTime? _remoteLastDomainChangeAtFromDomainStats(DomainStatsResponse stats) {
+  if (stats.timestamp == null) {
     return null;
   }
 
-  final keys = <Object?>[data['lastDomainChangeAt'], data['timestamp']];
-  for (final raw in keys) {
-    final parsed = parseDate(raw);
-    if (parsed != null) {
-      return parsed;
-    }
+  try {
+    return DateTime.parse(stats.timestamp!).toUtc();
+  } catch (_) {
+    return null;
   }
-
-  for (final statsKey in const ['changeStats', 'entityTypeStats']) {
-    final stats = data[statsKey];
-    if (stats is Map<String, dynamic>) {
-      final parsed = parseDate(stats['latestChangeAt']);
-      if (parsed != null) {
-        return parsed;
-      }
-      final totals = stats['totals'];
-      if (totals is Map<String, dynamic>) {
-        final nested = parseDate(totals['latestChangeAt']);
-        if (nested != null) {
-          return nested;
-        }
-      }
-    }
-  }
-
-  return null;
 }
