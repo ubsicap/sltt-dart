@@ -1,4 +1,4 @@
-This helper generates `packages/sltt_core/lib/src/server/server_urls.dart` with a single constant `kCloudDevUrl`.
+This helper generates `packages/sltt_core/lib/src/server/server_urls.dart` with a single constant `kCloudPrdApiUrl`.
 
 Usage
 

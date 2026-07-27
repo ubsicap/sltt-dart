@@ -26,7 +26,7 @@ class SyncManager {
 
   // API endpoints - defaults to AWS dev cloud, can be overridden for testing
   String _cloudStorageUrl =
-      Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl;
+      Platform.environment['CLOUD_BASE_URL'] ?? kCloudPrdApiUrl;
   String _cloudWssUrl =
       Platform.environment['CLOUD_WSS_URL'] ?? kCloudPrdWssUrl;
 
