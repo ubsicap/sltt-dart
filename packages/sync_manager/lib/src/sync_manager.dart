@@ -37,6 +37,9 @@ class SyncManager {
   StreamSubscription<void>? _changeLogSubscription;
   StreamSubscription<EntityStateFetchEvent>? _singleEntityStateSubscription;
   StreamSubscription<EntityStateFetchEvent>? _collectionEntityStateSubscription;
+  StreamSubscription<void>? _entityTypeSyncStateSubscription;
+  Timer? _localStatsDebounceTimer;
+  final Set<String> _pendingLocalStatsDomainKeys = <String>{};
   bool _autoOutsyncEnabled = false;
   bool _autoDownsyncEnabled = false;
   final Set<String> _subscribedDomainChangeKeys = <String>{};
@@ -314,6 +317,7 @@ class SyncManager {
           domainType: domainType,
           domainId: domainId,
         );
+        _ensureLocalStatsWatchSubscription();
       }
       return;
     }
@@ -352,6 +356,9 @@ class SyncManager {
           domainType: domainType,
           domainId: domainId,
         );
+        if (_subscribedDomainStatsKeys.isEmpty) {
+          _disposeLocalStatsWatchSubscription();
+        }
       }
     } else if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
       if (_subscribedDomainChangeKeys.remove(key)) {
@@ -1715,24 +1722,6 @@ class SyncManager {
         storedAt: storedAt,
         latestSeqByEntityType: latestSeqByEntityType,
       );
-
-      final localChangeStats = await _localStorage.getChangeStats(
-        domainType: domainType,
-        domainId: domainId,
-      );
-      final localStateStats = await _localStorage.getStateStats(
-        domainType: domainType,
-        domainId: domainId,
-      );
-      _localDomainStatsEventsController.add(
-        LocalDomainStatsUpdate(
-          domainType: domainType,
-          domainId: domainId,
-          localChangeStats: localChangeStats,
-          localStateStats: localStateStats,
-          observedAt: DateTime.now().toUtc(),
-        ),
-      );
     }
   }
 
@@ -1744,6 +1733,11 @@ class SyncManager {
       _singleEntityStateSubscription = null;
       await _collectionEntityStateSubscription?.cancel();
       _collectionEntityStateSubscription = null;
+      await _entityTypeSyncStateSubscription?.cancel();
+      _entityTypeSyncStateSubscription = null;
+      _localStatsDebounceTimer?.cancel();
+      _localStatsDebounceTimer = null;
+      _pendingLocalStatsDomainKeys.clear();
       await _entityStatePaginationService?.dispose();
       _entityStatePaginationService = null;
 
@@ -1780,6 +1774,90 @@ class SyncManager {
             );
           },
         );
+  }
+
+  void _ensureLocalStatsWatchSubscription() {
+    if (_entityTypeSyncStateSubscription != null) {
+      return;
+    }
+
+    _entityTypeSyncStateSubscription = _localStorage
+        .lazyListenToEntityTypeSyncStateChanges(
+          onChanged: _onEntityTypeSyncStateChanged,
+          fireImmediately: false,
+        );
+    SlttLogger.logger.info(
+      '[SyncManager] Subscribed to local entity type sync state changes',
+    );
+  }
+
+  void _disposeLocalStatsWatchSubscription() {
+    _entityTypeSyncStateSubscription?.cancel();
+    _entityTypeSyncStateSubscription = null;
+    _localStatsDebounceTimer?.cancel();
+    _localStatsDebounceTimer = null;
+    _pendingLocalStatsDomainKeys.clear();
+    SlttLogger.logger.info(
+      '[SyncManager] Disposed local entity type sync state watcher',
+    );
+  }
+
+  void _onEntityTypeSyncStateChanged() {
+    if (_subscribedDomainStatsKeys.isEmpty) {
+      return;
+    }
+
+    _pendingLocalStatsDomainKeys.addAll(_subscribedDomainStatsKeys);
+    _localStatsDebounceTimer?.cancel();
+    _localStatsDebounceTimer = Timer(
+      const Duration(milliseconds: 200),
+      () => unawaited(_emitPendingLocalStatsUpdates()),
+    );
+  }
+
+  Future<void> _emitPendingLocalStatsUpdates() async {
+    _localStatsDebounceTimer = null;
+    if (_pendingLocalStatsDomainKeys.isEmpty) {
+      return;
+    }
+
+    final pendingKeys = List<String>.from(_pendingLocalStatsDomainKeys);
+    _pendingLocalStatsDomainKeys.clear();
+
+    for (final key in pendingKeys) {
+      final parts = key.split('/');
+      if (parts.length != 2) {
+        continue;
+      }
+      final domainType = parts[0];
+      final domainId = parts[1];
+
+      try {
+        final localChangeStats = await _localStorage.getChangeStats(
+          domainType: domainType,
+          domainId: domainId,
+        );
+        final localStateStats = await _localStorage.getStateStats(
+          domainType: domainType,
+          domainId: domainId,
+        );
+        _localDomainStatsEventsController.add(
+          LocalDomainStatsUpdate(
+            domainType: domainType,
+            domainId: domainId,
+            localChangeStats: localChangeStats,
+            localStateStats: localStateStats,
+            observedAt: DateTime.now().toUtc(),
+          ),
+        );
+      } catch (error, stackTrace) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Failed to emit local stats update for $domainType/$domainId: $error',
+          error,
+          stackTrace,
+        );
+      }
+    }
   }
 
   Future<void> _handleFetchedEntityStateEvent(

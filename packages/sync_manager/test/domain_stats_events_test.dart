@@ -106,6 +106,12 @@ void main() {
         final domainId = 'test-domain-2';
         final now = DateTime.now().toUtc();
 
+        syncManager.subscribeToDomain(
+          notifyType: WebsocketConstants.notifyTypeDomainStats,
+          domainType: domainType,
+          domainId: domainId,
+        );
+
         final unknownState = IsarUnknownEntityState(
           entityId: 'entity-1',
           domainType: domainType,

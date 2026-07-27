@@ -1285,6 +1285,45 @@ class IsarStorageService extends BaseStorageService {
     }
   }
 
+  /// Subscribe to entity-type sync state changes for local stats updates.
+  StreamSubscription<void> lazyListenToEntityTypeSyncStateChanges({
+    String? domainType,
+    String? domainId,
+    required void Function() onChanged,
+    bool fireImmediately = true,
+  }) {
+    if (domainType != null && domainId != null) {
+      return _isar.isarEntityTypeSyncStates
+          .where()
+          .filter()
+          .domainTypeEqualTo(domainType)
+          .and()
+          .domainIdEqualTo(domainId)
+          .watchLazy(fireImmediately: fireImmediately)
+          .listen((_) {
+            onChanged();
+          });
+    }
+
+    if (domainType != null) {
+      return _isar.isarEntityTypeSyncStates
+          .where()
+          .filter()
+          .domainTypeEqualTo(domainType)
+          .watchLazy(fireImmediately: fireImmediately)
+          .listen((_) {
+            onChanged();
+          });
+    }
+
+    return _isar.isarEntityTypeSyncStates
+        .where()
+        .watchLazy(fireImmediately: fireImmediately)
+        .listen((_) {
+          onChanged();
+        });
+  }
+
   // Statistics operations
   @override
   Future<EntityTypeStats> getChangeStats({
