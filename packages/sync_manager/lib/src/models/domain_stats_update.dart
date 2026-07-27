@@ -1,5 +1,7 @@
 import 'package:sltt_core/sltt_core.dart';
 
+import 'cursor_sync_state.dart';
+
 class CloudDomainStatsUpdate {
   CloudDomainStatsUpdate({
     required this.domainType,
@@ -40,6 +42,7 @@ class LocalDomainStatsUpdate {
     required this.domainId,
     required this.localChangeStats,
     required this.localStateStats,
+    required this.localCursorState,
     required this.observedAt,
   });
 
@@ -47,6 +50,7 @@ class LocalDomainStatsUpdate {
   final String domainId;
   final EntityTypeStats localChangeStats;
   final EntityTypeStats localStateStats;
+  final CursorSyncState? localCursorState;
   final DateTime observedAt;
 
   factory LocalDomainStatsUpdate.fromJson(Map<String, dynamic> json) {
@@ -59,6 +63,11 @@ class LocalDomainStatsUpdate {
       localStateStats: EntityTypeStats.fromJson(
         Map<String, dynamic>.from(json['localStateStats'] as Map),
       ),
+      localCursorState: json['localCursorState'] != null
+          ? CursorSyncState.fromJson(
+              Map<String, dynamic>.from(json['localCursorState'] as Map),
+            )
+          : null,
       observedAt: DateTime.parse(json['observedAt'] as String).toUtc(),
     );
   }
@@ -69,6 +78,7 @@ class LocalDomainStatsUpdate {
       'domainId': domainId,
       'localChangeStats': localChangeStats.toJson(),
       'localStateStats': localStateStats.toJson(),
+      'localCursorState': localCursorState?.toJson(),
       'observedAt': observedAt.toUtc().toIso8601String(),
     };
   }

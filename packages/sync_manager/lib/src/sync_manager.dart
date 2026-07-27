@@ -1841,12 +1841,16 @@ class SyncManager {
           domainType: domainType,
           domainId: domainId,
         );
+        final localCursorState = await _localStorage.getCursorSyncState(
+          domainId,
+        );
         _localDomainStatsEventsController.add(
           LocalDomainStatsUpdate(
             domainType: domainType,
             domainId: domainId,
             localChangeStats: localChangeStats,
             localStateStats: localStateStats,
+            localCursorState: localCursorState,
             observedAt: DateTime.now().toUtc(),
           ),
         );
