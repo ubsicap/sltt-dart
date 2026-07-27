@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/entity_state_job_queue_counts.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
+import 'package:sync_manager/src/models/domain_stats_update.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 
 import 'entity_state_pagination_service.dart';
@@ -42,8 +43,13 @@ class SyncManager {
   final Set<String> _subscribedDomainStatsKeys = <String>{};
   final Map<String, int> _remoteLastDomainSeqByDomain = {};
   final Map<String, DateTime> _remoteLastDomainChangeAtByDomain = {};
-  final StreamController<Map<String, dynamic>> _domainStatsEventsController =
-      StreamController<Map<String, dynamic>>.broadcast();
+  final Map<String, DomainStatsResponse> _cachedCloudDomainStatsByDomain = {};
+  final StreamController<CloudDomainStatsUpdate>
+  _cloudDomainStatsEventsController =
+      StreamController<CloudDomainStatsUpdate>.broadcast();
+  final StreamController<LocalDomainStatsUpdate>
+  _localDomainStatsEventsController =
+      StreamController<LocalDomainStatsUpdate>.broadcast();
   String? _authToken;
   SyncManagerWebSocketClient? _webSocketClient;
   bool _isWebSocketConnecting = false;
@@ -57,8 +63,10 @@ class SyncManager {
   StreamSubscription<void>? get changeLogSubscription => _changeLogSubscription;
   Set<String> get subscribedDomainChangeKeys => _subscribedDomainChangeKeys;
   Set<String> get subscribedDomainStatsKeys => _subscribedDomainStatsKeys;
-  Stream<Map<String, dynamic>> get domainStatsEvents =>
-      _domainStatsEventsController.stream;
+  Stream<CloudDomainStatsUpdate> get cloudDomainStatsEvents =>
+      _cloudDomainStatsEventsController.stream;
+  Stream<LocalDomainStatsUpdate> get localDomainStatsEvents =>
+      _localDomainStatsEventsController.stream;
   EntityStatePaginationService? _entityStatePaginationService;
   Stream<EntityStateFetchEvent> get singleEntityStateEvents =>
       entityStatePaginationService.singleEntityEvents;
@@ -766,12 +774,21 @@ class SyncManager {
             _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
           }
 
-          _domainStatsEventsController.add({
-            'domainType': domainType,
-            'domainId': domainId,
-            'notifyType': notifyType,
-            'stats': Map<String, dynamic>.from(data),
-          });
+          final mergedStats = _mergeCloudDomainStats(
+            domainType: domainType,
+            domainId: domainId,
+            stats: DomainStatsResponse.fromJson(
+              Map<String, dynamic>.from(data),
+            ),
+          );
+          _cloudDomainStatsEventsController.add(
+            CloudDomainStatsUpdate(
+              domainType: domainType,
+              domainId: domainId,
+              cloudStats: mergedStats,
+              observedAt: DateTime.now().toUtc(),
+            ),
+          );
           return;
         }
 
@@ -852,12 +869,19 @@ class SyncManager {
         if (lastDomainChangeAt != null) {
           _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
         }
-        _domainStatsEventsController.add({
-          'domainType': domainType,
-          'domainId': domainId,
-          'notifyType': notifyType,
-          'stats': statsMap,
-        });
+        final mergedStats = _mergeCloudDomainStats(
+          domainType: domainType,
+          domainId: domainId,
+          stats: stats,
+        );
+        _cloudDomainStatsEventsController.add(
+          CloudDomainStatsUpdate(
+            domainType: domainType,
+            domainId: domainId,
+            cloudStats: mergedStats,
+            observedAt: DateTime.now().toUtc(),
+          ),
+        );
         return;
       }
       if (notifyType != WebsocketConstants.notifyTypeDomainChange) {
@@ -1528,6 +1552,36 @@ class SyncManager {
             final ps = DomainStatsResponse.fromJson(stats);
             cloudStateStats = ps.entityTypeStats;
             cloudChangeStats = ps.changeStats;
+
+            final key = _domainChangeKey(
+              domainType: domainType,
+              domainId: domainId,
+            );
+            final lastDomainSeq = _remoteLastDomainSeqFromDomainStats(ps);
+            final lastDomainChangeAt = _remoteLastDomainChangeAtFromDomainStats(
+              ps,
+            );
+            if (lastDomainSeq > (_remoteLastDomainSeqByDomain[key] ?? 0)) {
+              _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
+            }
+            if (lastDomainChangeAt != null) {
+              _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
+            }
+
+            final comprehensiveStats = _mergeCloudDomainStats(
+              domainType: domainType,
+              domainId: domainId,
+              stats: ps,
+              treatAsFullSnapshot: true,
+            );
+            _cloudDomainStatsEventsController.add(
+              CloudDomainStatsUpdate(
+                domainType: domainType,
+                domainId: domainId,
+                cloudStats: comprehensiveStats,
+                observedAt: DateTime.now().toUtc(),
+              ),
+            );
           }
         } catch (e) {
           SlttLogger.logger.warning(
@@ -1661,6 +1715,24 @@ class SyncManager {
         storedAt: storedAt,
         latestSeqByEntityType: latestSeqByEntityType,
       );
+
+      final localChangeStats = await _localStorage.getChangeStats(
+        domainType: domainType,
+        domainId: domainId,
+      );
+      final localStateStats = await _localStorage.getStateStats(
+        domainType: domainType,
+        domainId: domainId,
+      );
+      _localDomainStatsEventsController.add(
+        LocalDomainStatsUpdate(
+          domainType: domainType,
+          domainId: domainId,
+          localChangeStats: localChangeStats,
+          localStateStats: localStateStats,
+          observedAt: DateTime.now().toUtc(),
+        ),
+      );
     }
   }
 
@@ -1723,6 +1795,65 @@ class SyncManager {
       '[SyncManager] Entity-state progress event '
       '(${event.entityType}/${event.domainType}/${event.domainId}) '
       'items=${event.items.length} hasMore=${event.hasMore} complete=${event.isComplete}',
+    );
+  }
+
+  DomainStatsResponse _mergeCloudDomainStats({
+    required String domainType,
+    required String domainId,
+    required DomainStatsResponse stats,
+    bool treatAsFullSnapshot = false,
+  }) {
+    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+    if (treatAsFullSnapshot) {
+      _cachedCloudDomainStatsByDomain[key] = stats;
+      return stats;
+    }
+
+    final previous = _cachedCloudDomainStatsByDomain[key];
+    if (previous == null) {
+      _cachedCloudDomainStatsByDomain[key] = stats;
+      return stats;
+    }
+
+    final mergedChangeStats = stats.changeStats ?? previous.changeStats;
+    final mergedStateStats = _mergeEntityTypeStats(
+      previous.entityTypeStats,
+      stats.entityTypeStats,
+    );
+    final mergedCollections =
+        stats.entityTypeCollections ?? previous.entityTypeCollections;
+    final mergedTimestamp = stats.timestamp ?? previous.timestamp;
+    final mergedStorageType = stats.storageType ?? previous.storageType;
+
+    final merged = DomainStatsResponse(
+      domainId: domainId,
+      domainType: domainType,
+      changeStats: mergedChangeStats,
+      entityTypeStats: mergedStateStats,
+      entityTypeCollections: mergedCollections,
+      timestamp: mergedTimestamp,
+      storageType: mergedStorageType,
+    );
+
+    _cachedCloudDomainStatsByDomain[key] = merged;
+    return merged;
+  }
+
+  EntityTypeStats? _mergeEntityTypeStats(
+    EntityTypeStats? previous,
+    EntityTypeStats? incoming,
+  ) {
+    if (previous == null) return incoming;
+    if (incoming == null) return previous;
+
+    final mergedEntityTypes = <String, EntityTypeSummary>{}
+      ..addAll(previous.entityTypes);
+    mergedEntityTypes.addAll(incoming.entityTypes);
+
+    return EntityTypeStats(
+      entityTypes: mergedEntityTypes,
+      totals: incoming.totals,
     );
   }
 
