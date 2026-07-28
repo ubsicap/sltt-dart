@@ -211,6 +211,13 @@ class IsarStorageService extends BaseStorageService {
       strict: !backupAndSwitchOnMissingSchemas,
     );
 
+    final resolvedDbPath = File(
+      '${dir.path}/$_databaseName.isar',
+    ).absolute.path;
+    SlttLogger.logger.info(
+      '[$_logPrefix] initialize - resolved database path: $resolvedDbPath',
+    );
+
     // Initialize Isar with all schemas
     _isar = await Isar.open(
       schemas,
@@ -1340,7 +1347,7 @@ class IsarStorageService extends BaseStorageService {
 
     // Debug: log change-log entries found for this domain
     try {
-      SlttLogger.logger.fine(
+      SlttLogger.logger.info(
         '[$_logPrefix] getChangeStats - found ${changes.length} change-log entries for domainId=$domainId domainType=$domainType',
       );
       for (final c in changes) {

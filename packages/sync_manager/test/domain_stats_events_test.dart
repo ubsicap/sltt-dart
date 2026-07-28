@@ -174,5 +174,223 @@ void main() {
         expect(event.localCursorState, isNotNull);
       },
     );
+
+    test(
+      'subscribed localDomainStatsEvent reflects a locally stored change log entry',
+      () async {
+        final domainType = 'project';
+        final domainId = 'test-domain-4';
+        final now = DateTime.now().toUtc();
+
+        final changeData = changePayload(
+          projectId: domainId,
+          entityType: 'project',
+          entityId: 'entity-1',
+          changeAt: now,
+          data: {
+            'nameLocal': 'Test Project',
+            'parentId': 'root',
+            'parentProp': 'pList',
+          },
+          operation: 'create',
+        );
+
+        final storageId = await localStorage.getStorageId();
+        final storedAt = now.toIso8601String();
+        final change = IsarChangeLogEntry.fromJson(changeData);
+        final request = ChangeLogAndStateRequest(
+          changeLogEntry: change,
+          changeUpdates: {
+            'seq': 1,
+            'stateChanged': true,
+            'storageId': storageId,
+            'storedAt': storedAt,
+          },
+          operationCounts: OperationCounts(create: 1),
+          entityState: null,
+          stateUpdates: {
+            'domainType': domainType,
+            'entityId': change.entityId,
+            'entityType': change.entityType,
+            'change_domainId': domainId,
+            'change_changeAt': now.toIso8601String(),
+            'change_cid': change.cid,
+            'change_changeBy': 'tester',
+            'change_storedAt': storedAt,
+            'change_storedAt_orig_': storedAt,
+            'change_domainId_orig_': '',
+            'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
+                .toIso8601String(),
+            'change_cid_orig_': '',
+            'change_changeBy_orig_': '',
+            'data_nameLocal': 'Test Project',
+            'data_parentId': 'root',
+            'data_parentId_changeAt_': now.toIso8601String(),
+            'data_parentId_cid_': change.cid,
+            'data_parentId_changeBy_': 'tester',
+            'data_parentProp': 'pList',
+            'data_parentProp_dataSchemaRev_': 0,
+            'data_parentProp_changeAt_': now.toIso8601String(),
+            'data_parentProp_cid_': change.cid,
+            'data_parentProp_changeBy_': 'tester',
+            'unknownJson': '{}',
+          },
+        );
+
+        await localStorage.updateChangeLogAndStates(
+          domainType: domainType,
+          requests: [request],
+        );
+
+        final eventFuture = syncManager.localDomainStatsEvents.first;
+        syncManager.subscribeToDomain(
+          notifyType: WebsocketConstants.notifyTypeDomainStats,
+          domainType: domainType,
+          domainId: domainId,
+        );
+
+        final event = await eventFuture;
+        expect(event.domainType, equals(domainType));
+        expect(event.domainId, equals(domainId));
+        expect(event.localChangeStats.totals.total, equals(1));
+        expect(event.localStateStats.totals.total, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'lazy subscription after existing local change log entries still emits domain stats',
+      () async {
+        final domainType = 'project';
+        final domainId = 'test-domain-5';
+        final now = DateTime.now().toUtc();
+
+        final changeData = changePayload(
+          projectId: domainId,
+          entityType: 'project',
+          entityId: 'entity-2',
+          changeAt: now,
+          data: {
+            'nameLocal': 'Test Project 2',
+            'parentId': 'root',
+            'parentProp': 'pList',
+          },
+          operation: 'create',
+        );
+
+        final storageId = await localStorage.getStorageId();
+        final storedAt = now.toIso8601String();
+        final change = IsarChangeLogEntry.fromJson(changeData);
+        final request = ChangeLogAndStateRequest(
+          changeLogEntry: change,
+          changeUpdates: {
+            'seq': 1,
+            'stateChanged': true,
+            'storageId': storageId,
+            'storedAt': storedAt,
+          },
+          operationCounts: OperationCounts(create: 1),
+          entityState: null,
+          stateUpdates: {
+            'domainType': domainType,
+            'entityId': change.entityId,
+            'entityType': change.entityType,
+            'change_domainId': domainId,
+            'change_changeAt': now.toIso8601String(),
+            'change_cid': change.cid,
+            'change_changeBy': 'tester',
+            'change_storedAt': storedAt,
+            'change_storedAt_orig_': storedAt,
+            'change_domainId_orig_': '',
+            'change_changeAt_orig_': BaseEntityState.defaultOrigDateTime()
+                .toIso8601String(),
+            'change_cid_orig_': '',
+            'change_changeBy_orig_': '',
+            'data_nameLocal': 'Test Project 2',
+            'data_parentId': 'root',
+            'data_parentId_changeAt_': now.toIso8601String(),
+            'data_parentId_cid_': change.cid,
+            'data_parentId_changeBy_': 'tester',
+            'data_parentProp': 'pList',
+            'data_parentProp_dataSchemaRev_': 0,
+            'data_parentProp_changeAt_': now.toIso8601String(),
+            'data_parentProp_cid_': change.cid,
+            'data_parentProp_changeBy_': 'tester',
+            'unknownJson': '{}',
+          },
+        );
+
+        await localStorage.updateChangeLogAndStates(
+          domainType: domainType,
+          requests: [request],
+        );
+
+        // Subscribe after the local change has already been persisted.
+        final eventFuture = syncManager.localDomainStatsEvents.first;
+        syncManager.subscribeToDomain(
+          notifyType: WebsocketConstants.notifyTypeDomainStats,
+          domainType: domainType,
+          domainId: domainId,
+        );
+
+        final event = await eventFuture;
+        expect(event.domainType, equals(domainType));
+        expect(event.domainId, equals(domainId));
+        expect(event.localChangeStats.totals.total, equals(1));
+        expect(event.localStateStats.totals.total, greaterThanOrEqualTo(1));
+      },
+    );
   });
+}
+
+Map<String, dynamic> changePayload({
+  required String projectId,
+  required String entityType,
+  required String entityId,
+  required DateTime changeAt,
+  String storageId = '',
+  Map<String, dynamic> data = const <String, dynamic>{},
+  String operation = 'update',
+  bool addDefaultParentId = true,
+  int? seq,
+}) {
+  final adjustedData = Map<String, dynamic>.from(data);
+
+  if (operation != 'delete') {
+    final hasParentKey = adjustedData.containsKey('parentId');
+    final parentVal = adjustedData['parentId'];
+    if (addDefaultParentId && (!hasParentKey || parentVal == null)) {
+      adjustedData['parentId'] = 'root';
+    }
+
+    final hasParentProp = adjustedData.containsKey('parentProp');
+    final parentPropVal = adjustedData['parentProp'];
+    if (!hasParentProp || parentPropVal == null) {
+      adjustedData['parentProp'] = 'pList';
+    }
+  }
+
+  if (operation != 'delete' &&
+      entityType == 'task' &&
+      !adjustedData.containsKey('nameLocal')) {
+    adjustedData['nameLocal'] = 'Test $entityId';
+  }
+
+  return {
+    'domainId': projectId,
+    'domainType': 'project',
+    'entityType': entityType,
+    'entityId': entityId,
+    'changeBy': 'tester',
+    'changeAt': changeAt.toIso8601String(),
+    'cid': generateCid(
+      entityType: EntityType.tryFromString(entityType) ?? EntityType.unknown,
+    ),
+    'storageId': storageId,
+    'operation': operation,
+    'operationInfoJson': '{}',
+    'stateChanged': false,
+    'unknownJson': '{}',
+    'dataJson': jsonEncode(adjustedData),
+    if (seq != null) 'seq': seq,
+  };
 }

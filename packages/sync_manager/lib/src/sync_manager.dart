@@ -1817,6 +1817,9 @@ class SyncManager {
   }
 
   void _enqueuePendingLocalStatsDomainKey(String key) {
+    SlttLogger.logger.info(
+      '[SyncManager] Enqueue pending local stats update for domain: $key',
+    );
     _pendingLocalStatsDomainKeys.add(key);
     _localStatsDebounceTimer?.cancel();
     _localStatsDebounceTimer = Timer(
@@ -1853,6 +1856,12 @@ class SyncManager {
         );
         final localCursorState = await _localStorage.getCursorSyncState(
           domainId,
+        );
+        SlttLogger.logger.info(
+          '[SyncManager] Emitting LocalDomainStatsUpdate for $domainType/$domainId: '
+          'localChangeTotal=${localChangeStats.totals.total}, '
+          'localStateTotal=${localStateStats.totals.total}, '
+          'cursorSeq=${localCursorState?.seq ?? -1}',
         );
         _localDomainStatsEventsController.add(
           LocalDomainStatsUpdate(
