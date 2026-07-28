@@ -152,5 +152,27 @@ void main() {
         expect(event.localStateStats.totals.total, greaterThanOrEqualTo(1));
       },
     );
+
+    test(
+      'subscribeToDomain emits localDomainStatsEvents for newly subscribed domain stats',
+      () async {
+        final domainType = 'project';
+        final domainId = 'test-domain-3';
+
+        final eventFuture = syncManager.localDomainStatsEvents.first;
+        syncManager.subscribeToDomain(
+          notifyType: WebsocketConstants.notifyTypeDomainStats,
+          domainType: domainType,
+          domainId: domainId,
+        );
+
+        final event = await eventFuture;
+        expect(event.domainType, equals(domainType));
+        expect(event.domainId, equals(domainId));
+        expect(event.localChangeStats, isNotNull);
+        expect(event.localStateStats, isNotNull);
+        expect(event.localCursorState, isNotNull);
+      },
+    );
   });
 }

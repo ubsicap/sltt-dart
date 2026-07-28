@@ -318,6 +318,7 @@ class SyncManager {
           domainId: domainId,
         );
         _ensureLocalStatsWatchSubscription();
+        _enqueuePendingLocalStatsDomainKey(key);
       }
       return;
     }
@@ -1808,6 +1809,15 @@ class SyncManager {
     }
 
     _pendingLocalStatsDomainKeys.addAll(_subscribedDomainStatsKeys);
+    _localStatsDebounceTimer?.cancel();
+    _localStatsDebounceTimer = Timer(
+      const Duration(milliseconds: 200),
+      () => unawaited(_emitPendingLocalStatsUpdates()),
+    );
+  }
+
+  void _enqueuePendingLocalStatsDomainKey(String key) {
+    _pendingLocalStatsDomainKeys.add(key);
     _localStatsDebounceTimer?.cancel();
     _localStatsDebounceTimer = Timer(
       const Duration(milliseconds: 200),
