@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate' show SendPort, ReceivePort;
 
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
@@ -60,6 +61,7 @@ class SyncManager {
   _localDomainStatsEventsController =
       StreamController<LocalDomainStatsUpdate>.broadcast();
   String? _authToken;
+  SendPort? _hostAuthTokenRequestPort;
   SyncManagerWebSocketClient? _webSocketClient;
   bool _isWebSocketConnecting = false;
   int _webSocketReconnectAttempts = 0;
@@ -443,6 +445,37 @@ class SyncManager {
     }
   }
 
+  void bindHostAuthTokenRequestPort(SendPort? requestPort) {
+    _hostAuthTokenRequestPort = requestPort;
+  }
+
+  Future<void> _refreshWebSocketAuthToken() async {
+    final requestPort = _hostAuthTokenRequestPort;
+    if (requestPort == null) {
+      return;
+    }
+
+    final responsePort = ReceivePort();
+    requestPort.send(['getFreshAuthToken', responsePort.sendPort]);
+    try {
+      final response = await responsePort.first.timeout(
+        const Duration(seconds: 10),
+      );
+      if (response is Map<String, dynamic>) {
+        final token = response['token'] as String?;
+        if (token?.isNotEmpty == true) {
+          _authToken = token!;
+        }
+      } else if (response is String && response.isNotEmpty) {
+        _authToken = response;
+      }
+    } catch (_) {
+      // ignore: avoid_print
+    } finally {
+      responsePort.close();
+    }
+  }
+
   String _domainChangeKey({
     required String domainType,
     required String domainId,
@@ -558,6 +591,9 @@ class SyncManager {
         _subscribedDomainStatsKeys.isEmpty) {
       return;
     }
+    if (!_hasWebSocketAuth && _hostAuthTokenRequestPort != null) {
+      unawaited(_refreshWebSocketAuthToken());
+    }
     if (!_hasWebSocketAuth) {
       SlttLogger.logger.info(
         '[SyncManager] Websocket connect deferred until auth token is available',
@@ -572,6 +608,7 @@ class SyncManager {
   Future<void> _connectWebSocket() async {
     _isWebSocketConnecting = true;
     try {
+      await _refreshWebSocketAuthToken();
       _webSocketClient ??= SyncManagerWebSocketClient(
         cloudWssUrl: _cloudWssUrl,
         authToken: _authToken,
