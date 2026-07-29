@@ -8,6 +8,7 @@ import 'package:sync_manager/src/entity_state_job_queue_counts.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/domain_stats_update.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
+import 'package:sync_manager/src/models/isar_entity_type_sync_state.dart';
 
 import 'entity_state_pagination_service.dart';
 import 'entity_state_pagination_service_config.dart';
@@ -37,9 +38,14 @@ class SyncManager {
   StreamSubscription<void>? _changeLogSubscription;
   StreamSubscription<EntityStateFetchEvent>? _singleEntityStateSubscription;
   StreamSubscription<EntityStateFetchEvent>? _collectionEntityStateSubscription;
-  StreamSubscription<void>? _entityTypeSyncStateSubscription;
-  Timer? _localStatsDebounceTimer;
-  final Set<String> _pendingLocalStatsDomainKeys = <String>{};
+  final Map<String, StreamSubscription<List<IsarChangeLogEntry>>>
+  _localDomainChangeLogSubscriptions = {};
+  final Map<String, StreamSubscription<List<IsarEntityTypeSyncState>>>
+  _localDomainStateSubscriptions = {};
+  final Map<String, StreamSubscription<List<CursorSyncState>>>
+  _localDomainCursorSyncStateSubscriptions = {};
+  final Map<String, Timer> _localDomainStatsDebounceTimers = {};
+  Duration localDomainStatsDebounceDuration = const Duration(milliseconds: 500);
   bool _autoOutsyncEnabled = false;
   bool _autoDownsyncEnabled = false;
   final Set<String> _subscribedDomainChangeKeys = <String>{};
@@ -317,8 +323,7 @@ class SyncManager {
           domainType: domainType,
           domainId: domainId,
         );
-        _ensureLocalStatsWatchSubscription();
-        _enqueuePendingLocalStatsDomainKey(key);
+        _subscribeToLocalDomainStats(domainType, domainId);
       }
       return;
     }
@@ -357,9 +362,7 @@ class SyncManager {
           domainType: domainType,
           domainId: domainId,
         );
-        if (_subscribedDomainStatsKeys.isEmpty) {
-          _disposeLocalStatsWatchSubscription();
-        }
+        _unsubscribeFromLocalDomainStats(domainType, domainId);
       }
     } else if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
       if (_subscribedDomainChangeKeys.remove(key)) {
@@ -1734,11 +1737,26 @@ class SyncManager {
       _singleEntityStateSubscription = null;
       await _collectionEntityStateSubscription?.cancel();
       _collectionEntityStateSubscription = null;
-      await _entityTypeSyncStateSubscription?.cancel();
-      _entityTypeSyncStateSubscription = null;
-      _localStatsDebounceTimer?.cancel();
-      _localStatsDebounceTimer = null;
-      _pendingLocalStatsDomainKeys.clear();
+
+      for (final subscription in _localDomainChangeLogSubscriptions.values) {
+        await subscription.cancel();
+      }
+      for (final subscription in _localDomainStateSubscriptions.values) {
+        await subscription.cancel();
+      }
+      for (final subscription
+          in _localDomainCursorSyncStateSubscriptions.values) {
+        await subscription.cancel();
+      }
+      _localDomainChangeLogSubscriptions.clear();
+      _localDomainStateSubscriptions.clear();
+      _localDomainCursorSyncStateSubscriptions.clear();
+
+      for (final timer in _localDomainStatsDebounceTimers.values) {
+        timer.cancel();
+      }
+      _localDomainStatsDebounceTimers.clear();
+
       await _entityStatePaginationService?.dispose();
       _entityStatePaginationService = null;
 
@@ -1777,110 +1795,135 @@ class SyncManager {
         );
   }
 
-  void _ensureLocalStatsWatchSubscription() {
-    if (_entityTypeSyncStateSubscription != null) {
+  void _subscribeToLocalDomainStats(String domainType, String domainId) {
+    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+    if (_localDomainChangeLogSubscriptions.containsKey(key) ||
+        _localDomainStateSubscriptions.containsKey(key) ||
+        _localDomainCursorSyncStateSubscriptions.containsKey(key)) {
       return;
     }
 
-    _entityTypeSyncStateSubscription = _localStorage
-        .lazyListenToEntityTypeSyncStateChanges(
-          onChanged: _onEntityTypeSyncStateChanged,
-          fireImmediately: false,
-        );
+    final changeLogSub = _localStorage.listenToChangeLogEntryChanges(
+      domainType: domainType,
+      domainId: domainId,
+      fireImmediately: true,
+      onChanged: (entries) {
+        unawaited(_scheduleLocalDomainStatsUpdate(domainType, domainId));
+      },
+    );
+
+    final stateSub = _localStorage.listenToEntityTypeSyncStateChanges(
+      domainType: domainType,
+      domainId: domainId,
+      fireImmediately: true,
+      onChanged: (entries) {
+        unawaited(_scheduleLocalDomainStatsUpdate(domainType, domainId));
+      },
+    );
+
+    final cursorStateSub = _localStorage.listenToCursorSyncStateChanges(
+      domainId: domainId,
+      fireImmediately: true,
+      onChanged: (entries) {
+        unawaited(_scheduleLocalDomainStatsUpdate(domainType, domainId));
+      },
+    );
+
+    _localDomainChangeLogSubscriptions[key] = changeLogSub;
+    _localDomainStateSubscriptions[key] = stateSub;
+    _localDomainCursorSyncStateSubscriptions[key] = cursorStateSub;
     SlttLogger.logger.info(
-      '[SyncManager] Subscribed to local entity type sync state changes',
+      '[SyncManager] Subscribed to local domain stats watchers for $key',
     );
   }
 
-  void _disposeLocalStatsWatchSubscription() {
-    _entityTypeSyncStateSubscription?.cancel();
-    _entityTypeSyncStateSubscription = null;
-    _localStatsDebounceTimer?.cancel();
-    _localStatsDebounceTimer = null;
-    _pendingLocalStatsDomainKeys.clear();
+  void _unsubscribeFromLocalDomainStats(String domainType, String domainId) {
+    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+    _localDomainChangeLogSubscriptions[key]?.cancel();
+    _localDomainStateSubscriptions[key]?.cancel();
+    _localDomainCursorSyncStateSubscriptions[key]?.cancel();
+    _localDomainStatsDebounceTimers[key]?.cancel();
+    _localDomainChangeLogSubscriptions.remove(key);
+    _localDomainStateSubscriptions.remove(key);
+    _localDomainCursorSyncStateSubscriptions.remove(key);
+    _localDomainStatsDebounceTimers.remove(key);
     SlttLogger.logger.info(
-      '[SyncManager] Disposed local entity type sync state watcher',
+      '[SyncManager] Unsubscribed from local domain stats watchers for $key',
     );
   }
 
-  void _onEntityTypeSyncStateChanged() {
-    if (_subscribedDomainStatsKeys.isEmpty) {
-      return;
+  Future<void> _scheduleLocalDomainStatsUpdate(
+    String domainType,
+    String domainId,
+  ) async {
+    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+    _localDomainStatsDebounceTimers[key]?.cancel();
+    _localDomainStatsDebounceTimers[key] = Timer(
+      localDomainStatsDebounceDuration,
+      () => unawaited(_emitLocalDomainStatsUpdate(domainType, domainId)),
+    );
+  }
+
+  Future<void> _emitLocalDomainStatsUpdate(
+    String domainType,
+    String domainId,
+  ) async {
+    try {
+      final update = await _buildLocalDomainStatsUpdate(
+        domainType: domainType,
+        domainId: domainId,
+      );
+      SlttLogger.logger.info(
+        '[SyncManager] Emitting LocalDomainStatsUpdate for $domainType/$domainId: '
+        'localChangeTotal=${update.localChangeStats.totals.total}, '
+        'localStateTotal=${update.localStateStats.totals.total}, '
+        'cursorSeq=${update.localCursorState?.seq ?? -1}',
+      );
+      _localDomainStatsEventsController.add(update);
+    } catch (error, stackTrace) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Failed to emit local stats update for $domainType/$domainId: $error',
+        error,
+        stackTrace,
+      );
     }
-
-    _pendingLocalStatsDomainKeys.addAll(_subscribedDomainStatsKeys);
-    _localStatsDebounceTimer?.cancel();
-    _localStatsDebounceTimer = Timer(
-      const Duration(milliseconds: 200),
-      () => unawaited(_emitPendingLocalStatsUpdates()),
-    );
   }
 
-  void _enqueuePendingLocalStatsDomainKey(String key) {
-    SlttLogger.logger.info(
-      '[SyncManager] Enqueue pending local stats update for domain: $key',
+  Future<LocalDomainStatsUpdate> _buildLocalDomainStatsUpdate({
+    required String domainType,
+    required String domainId,
+  }) async {
+    final localChangeStats = await _localStorage.getChangeStats(
+      domainType: domainType,
+      domainId: domainId,
     );
-    _pendingLocalStatsDomainKeys.add(key);
-    _localStatsDebounceTimer?.cancel();
-    _localStatsDebounceTimer = Timer(
-      const Duration(milliseconds: 200),
-      () => unawaited(_emitPendingLocalStatsUpdates()),
+    final localStateStats = await _localStorage.getStateStats(
+      domainType: domainType,
+      domainId: domainId,
     );
-  }
+    final localCursorState = await _localStorage.getCursorSyncState(domainId);
 
-  Future<void> _emitPendingLocalStatsUpdates() async {
-    _localStatsDebounceTimer = null;
-    if (_pendingLocalStatsDomainKeys.isEmpty) {
-      return;
-    }
-
-    final pendingKeys = List<String>.from(_pendingLocalStatsDomainKeys);
-    _pendingLocalStatsDomainKeys.clear();
-
-    for (final key in pendingKeys) {
-      final parts = key.split('/');
-      if (parts.length != 2) {
-        continue;
-      }
-      final domainType = parts[0];
-      final domainId = parts[1];
-
-      try {
-        final localChangeStats = await _localStorage.getChangeStats(
+    final effectiveCursorState =
+        localCursorState ??
+        CursorSyncState(
           domainType: domainType,
           domainId: domainId,
+          storageId: await _localStorage.getStorageId(),
+          storageType: _localStorage.getStorageType(),
+          cid: '',
+          changeAt: DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
+          seq: 0,
+          storedAt: DateTime.now().toUtc(),
         );
-        final localStateStats = await _localStorage.getStateStats(
-          domainType: domainType,
-          domainId: domainId,
-        );
-        final localCursorState = await _localStorage.getCursorSyncState(
-          domainId,
-        );
-        SlttLogger.logger.info(
-          '[SyncManager] Emitting LocalDomainStatsUpdate for $domainType/$domainId: '
-          'localChangeTotal=${localChangeStats.totals.total}, '
-          'localStateTotal=${localStateStats.totals.total}, '
-          'cursorSeq=${localCursorState?.seq ?? -1}',
-        );
-        _localDomainStatsEventsController.add(
-          LocalDomainStatsUpdate(
-            domainType: domainType,
-            domainId: domainId,
-            localChangeStats: localChangeStats,
-            localStateStats: localStateStats,
-            localCursorState: localCursorState,
-            observedAt: DateTime.now().toUtc(),
-          ),
-        );
-      } catch (error, stackTrace) {
-        SlttLogger.logger.warning(
-          '[SyncManager] Failed to emit local stats update for $domainType/$domainId: $error',
-          error,
-          stackTrace,
-        );
-      }
-    }
+
+    return LocalDomainStatsUpdate(
+      domainType: domainType,
+      domainId: domainId,
+      localChangeStats: localChangeStats,
+      localStateStats: localStateStats,
+      localCursorState: effectiveCursorState,
+      observedAt: DateTime.now().toUtc(),
+    );
   }
 
   Future<void> _handleFetchedEntityStateEvent(

@@ -1331,6 +1331,103 @@ class IsarStorageService extends BaseStorageService {
         });
   }
 
+  StreamSubscription<List<client.IsarChangeLogEntry>>
+  listenToChangeLogEntryChanges({
+    String? domainType,
+    String? domainId,
+    required void Function(List<client.IsarChangeLogEntry> entries) onChanged,
+    bool fireImmediately = true,
+  }) {
+    if (domainType != null && domainId != null) {
+      return _isar.isarChangeLogEntrys
+          .where()
+          .filter()
+          .domainTypeEqualTo(domainType)
+          .and()
+          .domainIdEqualTo(domainId)
+          .watch(fireImmediately: fireImmediately)
+          .listen(onChanged);
+    }
+
+    if (domainType != null) {
+      return _isar.isarChangeLogEntrys
+          .where()
+          .filter()
+          .domainTypeEqualTo(domainType)
+          .watch(fireImmediately: fireImmediately)
+          .listen(onChanged);
+    }
+
+    if (domainId != null) {
+      return _isar.isarChangeLogEntrys
+          .where()
+          .filter()
+          .domainIdEqualTo(domainId)
+          .watch(fireImmediately: fireImmediately)
+          .listen(onChanged);
+    }
+
+    return _isar.isarChangeLogEntrys
+        .where()
+        .watch(fireImmediately: fireImmediately)
+        .listen(onChanged);
+  }
+
+  StreamSubscription<List<IsarEntityTypeSyncState>>
+  listenToEntityTypeSyncStateChanges({
+    String? domainType,
+    String? domainId,
+    required void Function(List<IsarEntityTypeSyncState> entries) onChanged,
+    bool fireImmediately = true,
+  }) {
+    if (domainType != null && domainId != null) {
+      return _isar.isarEntityTypeSyncStates
+          .where()
+          .filter()
+          .domainTypeEqualTo(domainType)
+          .and()
+          .domainIdEqualTo(domainId)
+          .watch(fireImmediately: fireImmediately)
+          .listen(onChanged);
+    }
+
+    if (domainType != null) {
+      return _isar.isarEntityTypeSyncStates
+          .where()
+          .filter()
+          .domainTypeEqualTo(domainType)
+          .watch(fireImmediately: fireImmediately)
+          .listen(onChanged);
+    }
+
+    if (domainId != null) {
+      return _isar.isarEntityTypeSyncStates
+          .where()
+          .filter()
+          .domainIdEqualTo(domainId)
+          .watch(fireImmediately: fireImmediately)
+          .listen(onChanged);
+    }
+
+    return _isar.isarEntityTypeSyncStates
+        .where()
+        .watch(fireImmediately: fireImmediately)
+        .listen(onChanged);
+  }
+
+  StreamSubscription<List<CursorSyncState>> listenToCursorSyncStateChanges({
+    required String domainId,
+    required void Function(List<CursorSyncState> entries) onChanged,
+    bool fireImmediately = true,
+  }) {
+    return _isar
+        .collection<CursorSyncState>()
+        .filter()
+        .domainIdEqualTo(domainId)
+        .watch(fireImmediately: fireImmediately)
+        .listen(onChanged);
+  }
+
   // Statistics operations
   @override
   Future<EntityTypeStats> getChangeStats({
