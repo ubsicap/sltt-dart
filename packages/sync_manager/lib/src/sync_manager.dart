@@ -792,6 +792,12 @@ class SyncManager {
               Map<String, dynamic>.from(data),
             ),
           );
+          SlttLogger.logger.info(
+            '[SyncManager] Emitting CloudDomainStatsUpdate for $domainType/$domainId: '
+            'storageType=${mergedStats.storageType ?? 'unknown'} '
+            'lastSeq=${mergedStats.entityTypeStats?.totals.latestSeq ?? -1} '
+            'totalChanges=${mergedStats.changeStats?.total ?? -1}',
+          );
           _cloudDomainStatsEventsController.add(
             CloudDomainStatsUpdate(
               domainType: domainType,
@@ -1584,6 +1590,12 @@ class SyncManager {
               domainId: domainId,
               stats: ps,
               treatAsFullSnapshot: true,
+            );
+            SlttLogger.logger.info(
+              '[SyncManager] Emitting CloudDomainStatsUpdate for $domainType/$domainId: '
+              'storageType=${comprehensiveStats.storageType ?? 'unknown'} '
+              'lastSeq=${comprehensiveStats.entityTypeStats?.totals.latestSeq ?? -1} '
+              'totalChanges=${comprehensiveStats.changeStats?.total ?? -1}',
             );
             _cloudDomainStatsEventsController.add(
               CloudDomainStatsUpdate(
