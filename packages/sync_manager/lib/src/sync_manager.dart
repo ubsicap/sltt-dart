@@ -310,6 +310,17 @@ class SyncManager {
   }
 
   /// Subscribe to remote domain notifications for the given domain.
+  ///
+  /// For `domainStats`, this method performs two coordinated actions:
+  /// 1. Sends a websocket `subscribe` request for the domain stats stream.
+  /// 2. Starts local Isar stats watchers for the same domain so the app can
+  ///    observe local change/state/cursor updates.
+  ///
+  /// This means the lifecycle for a `domainStats` subscription is:
+  /// - cloud stats: subscribe request -> websocket ack + later updates ->
+  ///   `CloudDomainStatsUpdate`
+  /// - local stats: immediate local snapshot from Isar + debounced updates ->
+  ///   `LocalDomainStatsUpdate`
   void subscribeToDomain({
     required String notifyType,
     required String domainType,
