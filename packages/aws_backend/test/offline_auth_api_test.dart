@@ -785,7 +785,7 @@ void main() {
             'path': '/api/project',
             'headers': <String, String>{'authorization': 'Bearer $accessToken'},
             'body': jsonEncode({
-              'publicId': 'project-creator-id',
+              'name': 'project-creator-id',
               'teamName': 'Creator Team',
               'signLanguage': 'ASL',
             }),
@@ -797,7 +797,7 @@ void main() {
                   as Map<String, dynamic>;
           expect(createBody['projectId'], isNotEmpty);
           expect(createBody['status'], equals('requested'));
-          expect(createBody['publicId'], equals('project-creator-id'));
+          expect(createBody['name'], equals('project-creator-id'));
           expect(createBody['teamName'], equals('Creator Team'));
           expect(createBody['signLanguage'], equals('ASL'));
 
@@ -864,7 +864,7 @@ void main() {
             'path': '/api/project',
             'headers': <String, String>{'authorization': 'Bearer $accessToken'},
             'body': jsonEncode({
-              'publicId': 'project-updater-id',
+              'name': 'project-updater-id',
               'teamName': 'Updater Team',
               'signLanguage': 'BSL',
             }),
@@ -949,7 +949,7 @@ void main() {
             'path': '/api/project',
             'headers': <String, String>{'authorization': 'Bearer $accessToken'},
             'body': jsonEncode({
-              'publicId': 'super-project-id',
+              'name': 'super-project-id',
               'teamName': 'Super Team',
               'signLanguage': 'ASL',
             }),
@@ -965,10 +965,9 @@ void main() {
             'path': '/api/super/admin/project/$projectId',
             'headers': <String, String>{'authorization': 'Bearer $accessToken'},
             'body': jsonEncode({
-              'publicId': 'super-project-id',
+              'name': 'super-project-id',
               'teamName': 'Super Team Updated',
               'teamId': '',
-              'name': '',
               'signLanguage': 'ASL',
               'status': 'approved',
               'deleted': false,
@@ -979,7 +978,7 @@ void main() {
               jsonDecode(superUpdateResponse['body'] as String)
                   as Map<String, dynamic>;
           expect(superUpdateBody['projectId'], equals(projectId));
-          expect(superUpdateBody['publicId'], equals('super-project-id'));
+          expect(superUpdateBody['name'], equals('super-project-id'));
           expect(superUpdateBody['teamName'], equals('Super Team Updated'));
           expect(superUpdateBody['status'], equals('approved'));
           expect(superUpdateBody['deleted'], isFalse);
@@ -1023,7 +1022,7 @@ void main() {
             'path': '/api/project',
             'headers': <String, String>{'authorization': 'Bearer $accessToken'},
             'body': jsonEncode({
-              'publicId': 'deleter-project-id',
+              'name': 'deleter-project-id',
               'teamName': 'Deleter Team',
               'signLanguage': 'ASL',
             }),

@@ -225,9 +225,9 @@ class AwsRestApiServer extends BaseRestApiServer {
       ],
       'requestBody': {
         'type': 'object',
-        'required': ['publicId', 'teamName'],
+        'required': ['name', 'teamName'],
         'properties': {
-          'publicId': {'type': 'string'},
+          'name': {'type': 'string'},
           'teamName': {'type': 'string'},
           'teamId': {'type': 'string'},
           'signLanguage': {'type': 'string'},
@@ -238,7 +238,7 @@ class AwsRestApiServer extends BaseRestApiServer {
         'properties': {
           'projectId': {'type': 'string'},
           'status': {'type': 'string', 'example': 'requested'},
-          'publicId': {'type': 'string'},
+          'name': {'type': 'string'},
           'teamName': {'type': 'string'},
           'teamId': {'type': 'string'},
           'signLanguage': {'type': 'string'},
@@ -264,7 +264,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'requestBody': {
         'type': 'object',
         'properties': {
-          'publicId': {'type': 'string'},
+          'name': {'type': 'string'},
           'teamName': {'type': 'string'},
           'teamId': {'type': 'string'},
           'signLanguage': {'type': 'string'},
@@ -300,7 +300,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       'requestBody': {
         'type': 'object',
         'required': [
-          'publicId',
+          'name',
           'teamName',
           'teamId',
           'name',
@@ -308,10 +308,9 @@ class AwsRestApiServer extends BaseRestApiServer {
           'status',
         ],
         'properties': {
-          'publicId': {'type': 'string'},
+          'name': {'type': 'string'},
           'teamName': {'type': 'string'},
           'teamId': {'type': 'string'},
-          'name': {'type': 'string'},
           'signLanguage': {'type': 'string'},
           'status': {'type': 'string'},
           'deleted': {'type': 'boolean'},
@@ -321,10 +320,9 @@ class AwsRestApiServer extends BaseRestApiServer {
         'type': 'object',
         'properties': {
           'projectId': {'type': 'string'},
-          'publicId': {'type': 'string'},
+          'name': {'type': 'string'},
           'teamName': {'type': 'string'},
           'teamId': {'type': 'string'},
-          'name': {'type': 'string'},
           'signLanguage': {'type': 'string'},
           'status': {'type': 'string'},
           'deleted': {'type': 'boolean'},
@@ -1546,14 +1544,14 @@ class AwsRestApiServer extends BaseRestApiServer {
       final session = _requireAuthenticatedSession(request);
       final body = await _readBodyMap(request);
 
-      final publicId = (body['publicId'] as String?)?.trim() ?? '';
+      final name = (body['name'] as String?)?.trim() ?? '';
       final teamName = (body['teamName'] as String?)?.trim() ?? '';
       final teamId = (body['teamId'] as String?)?.trim();
       final signLanguage = (body['signLanguage'] as String?)?.trim() ?? '';
 
       final details = <String, String>{};
-      if (publicId.isEmpty) {
-        details['publicId'] = 'required';
+      if (name.isEmpty) {
+        details['name'] = 'required';
       }
       if (teamName.isEmpty) {
         details['teamName'] = 'required';
@@ -1573,7 +1571,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       final now = DateTime.now().toUtc();
 
       final projectData = <String, dynamic>{
-        'publicId': publicId,
+        'name': name,
         'teamName': teamName,
         'teamId': teamId,
         'signLanguage': signLanguage,
@@ -1625,7 +1623,7 @@ class AwsRestApiServer extends BaseRestApiServer {
       return _jsonResponse(200, {
         'projectId': projectId,
         'status': 'requested',
-        'publicId': publicId,
+        'name': name,
         'teamName': teamName,
         if (teamId != null && teamId.isNotEmpty) 'teamId': teamId,
         'signLanguage': signLanguage,
@@ -1664,7 +1662,7 @@ class AwsRestApiServer extends BaseRestApiServer {
 
       final body = await _readBodyMap(request);
       final allowedFields = {
-        'publicId',
+        'name',
         'teamName',
         'teamId',
         'signLanguage',
@@ -1684,7 +1682,7 @@ class AwsRestApiServer extends BaseRestApiServer {
           'code': 'invalid_request',
           'details': {
             'message':
-                'At least one updatable field must be provided: publicId, teamName, teamId, signLanguage, status, parentId, parentProp.',
+                'At least one updatable field must be provided: name, teamName, teamId, signLanguage, status, parentId, parentProp.',
           },
         });
       }
@@ -1754,26 +1752,22 @@ class AwsRestApiServer extends BaseRestApiServer {
       }
 
       final body = await _readBodyMap(request);
-      final publicId = (body['publicId'] as String?)?.trim();
+      final name = (body['name'] as String?)?.trim();
       final teamName = (body['teamName'] as String?)?.trim();
       final teamId = (body['teamId'] as String?)?.trim();
-      final name = (body['name'] as String?)?.trim();
       final signLanguage = (body['signLanguage'] as String?)?.trim();
       final status = (body['status'] as String?)?.trim();
       final deletedValue = body['deleted'];
 
       final details = <String, String>{};
-      if (publicId == null) {
-        details['publicId'] = 'required';
+      if (name == null) {
+        details['name'] = 'required';
       }
       if (teamName == null) {
         details['teamName'] = 'required';
       }
       if (teamId == null) {
         details['teamId'] = 'required';
-      }
-      if (name == null) {
-        details['name'] = 'required';
       }
       if (signLanguage == null) {
         details['signLanguage'] = 'required';
@@ -1806,10 +1800,9 @@ class AwsRestApiServer extends BaseRestApiServer {
       }
 
       final projectData = <String, dynamic>{
-        'publicId': publicId,
+        'name': name,
         'teamName': teamName,
         'teamId': teamId,
-        'name': name,
         'signLanguage': signLanguage,
         'status': status,
         if (deletedValue != null) 'deleted': deletedValue,
@@ -1904,10 +1897,9 @@ class AwsRestApiServer extends BaseRestApiServer {
 
       return _jsonResponse(200, {
         'projectId': projectId,
-        'publicId': publicId,
+        'name': name,
         'teamName': teamName,
         'teamId': teamId,
-        'name': name,
         'signLanguage': signLanguage,
         'status': status,
         if (deletedValue != null) 'deleted': deletedValue,
