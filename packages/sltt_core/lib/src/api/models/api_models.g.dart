@@ -223,6 +223,7 @@ DomainStatsResponse _$DomainStatsResponseFromJson(Map<String, dynamic> json) =>
           ),
       timestamp: json['timestamp'] as String?,
       storageType: json['storageType'] as String?,
+      isIncremental: json['isIncremental'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$DomainStatsResponseToJson(
@@ -235,6 +236,7 @@ Map<String, dynamic> _$DomainStatsResponseToJson(
   'entityTypeCollections': instance.entityTypeCollections,
   'timestamp': instance.timestamp,
   'storageType': instance.storageType,
+  'isIncremental': instance.isIncremental,
 };
 
 EntityStatesResponse _$EntityStatesResponseFromJson(

@@ -131,6 +131,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
         entityTypeCollections: {},
         timestamp: defaultLatestChangeAt,
         storageType: 'unknown',
+        isIncremental: false,
       ).toJson();
     }
 
@@ -142,7 +143,10 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
           entityType: entityType,
         );
         if (fetchedStatusData != null) {
-          statusData = fetchedStatusData;
+          statusData = {
+            ...fetchedStatusData,
+            'isIncremental': fetchedStatusData['isIncremental'] ?? false,
+          };
         }
       } catch (error, stackTrace) {
         SlttLogger.logger.warning(

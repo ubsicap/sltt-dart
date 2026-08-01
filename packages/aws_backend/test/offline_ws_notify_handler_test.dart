@@ -626,6 +626,7 @@ void main() {
                   domainId: 'proj-1',
                   stats: {
                     'changeStats': {'total': 3},
+                    'isIncremental': true,
                   },
                   subscriptionKey: '',
                 ),
@@ -657,6 +658,7 @@ void main() {
         'entityType': kNotifyTypeDomainStats,
         'stats': {
           'changeStats': {'total': 3},
+          'isIncremental': true,
         },
         'subscriptionKey': WebsocketKeys.subscriptionSk(
           domainType: 'project',
@@ -983,6 +985,7 @@ void main() {
             'entityTypeCollections': <String, String>{},
             'timestamp': '1970-01-01T00:00:00.000Z',
             'storageType': 'unknown',
+            'isIncremental': false,
           },
         });
       },
@@ -1038,6 +1041,7 @@ void main() {
           entityTypeCollections: {'task': 'tasks'},
           timestamp: '2026-07-25T17:44:46.634808Z',
           storageType: 'cloud',
+          isIncremental: false,
         ).toJson();
 
         await wsSubscribeHandler(

@@ -221,6 +221,7 @@ class DomainStatsResponse {
   final Map<String, String>? entityTypeCollections;
   final String? timestamp;
   final String? storageType;
+  final bool isIncremental;
 
   DomainStatsResponse({
     required this.domainId,
@@ -230,6 +231,7 @@ class DomainStatsResponse {
     this.entityTypeCollections,
     this.timestamp,
     this.storageType,
+    this.isIncremental = false,
   });
 
   factory DomainStatsResponse.fromJson(Map<String, dynamic> json) =>

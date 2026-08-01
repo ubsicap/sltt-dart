@@ -1637,7 +1637,6 @@ class SyncManager {
               domainType: domainType,
               domainId: domainId,
               stats: ps,
-              treatAsFullSnapshot: true,
             );
             SlttLogger.logger.info(
               '[SyncManager] Emitting CloudDomainStatsUpdate for $domainType/$domainId: '
@@ -2006,10 +2005,9 @@ class SyncManager {
     required String domainType,
     required String domainId,
     required DomainStatsResponse stats,
-    bool treatAsFullSnapshot = false,
   }) {
     final key = _domainChangeKey(domainType: domainType, domainId: domainId);
-    if (treatAsFullSnapshot) {
+    if (!stats.isIncremental) {
       _cachedCloudDomainStatsByDomain[key] = stats;
       return stats;
     }

@@ -2393,7 +2393,10 @@ class DynamoDBStorageService extends BaseStorageService {
 
     for (final group in groupedLatestChanges.values) {
       group.sort((a, b) => a.seq.compareTo(b.seq));
-      final latestStats = _buildStatsSummaryFromChanges(group);
+      final latestStats = {
+        ..._buildStatsSummaryFromChanges(group),
+        'isIncremental': true,
+      };
       final statsMessage = jsonEncode(
         buildWsNotifyStatsMessage(
           domainType: group.first.domainType,
