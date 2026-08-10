@@ -906,7 +906,7 @@ class SyncManager {
         try {
           stats = DomainStatsResponse.fromJson(statsMap);
         } catch (error, stackTrace) {
-          SlttLogger.logger.warning(
+          SlttLogger.logger.severe(
             '[SyncManager] Websocket domainStats message payload failed to parse as DomainStatsResponse: $error',
           );
           SlttLogger.logger.fine(() {

@@ -100,6 +100,9 @@ Future<Map<String, dynamic>> wsNotifyHandler(
       }
 
       final stats = Map<String, dynamic>.from(rawStats);
+      stats['domainType'] = stats['domainType'] as String? ?? domainType;
+      stats['domainId'] = stats['domainId'] as String? ?? domainId;
+
       final subscriberMatches = await connections.findSubscribersByDomain(
         domainType: domainType,
         domainId: domainId,

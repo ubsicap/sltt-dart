@@ -657,6 +657,8 @@ void main() {
         'domainId': 'proj-1',
         'entityType': kNotifyTypeDomainStats,
         'stats': {
+          'domainType': 'project',
+          'domainId': 'proj-1',
           'changeStats': {'total': 3},
           'isIncremental': true,
         },
@@ -910,7 +912,11 @@ void main() {
             entityType: 'task',
             notifyType: kNotifyTypeDomainChange,
           ),
-          'stats': statusData,
+          'stats': {
+            'lastDomainSeq': 7,
+            'lastDomainChangeAt': '2026-07-25T17:44:46.634808Z',
+            'isIncremental': false,
+          },
         });
       },
     );
