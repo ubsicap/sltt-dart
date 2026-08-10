@@ -109,6 +109,15 @@ class EntityStatePaginationJobPersistenceStore {
   }
 
   Future<void> close() async {
+    final inProgress = _opening;
+    if (inProgress != null) {
+      try {
+        await inProgress;
+      } catch (_) {
+        // If opening failed, there is no instance to close.
+      }
+    }
+
     final isar = _isar;
     _isar = null;
     final shouldClose = _ownsIsarInstance;
