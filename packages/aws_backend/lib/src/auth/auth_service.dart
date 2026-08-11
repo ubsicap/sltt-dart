@@ -17,6 +17,8 @@ class BackendAuthService {
   static const String _authEventSchema = 'auth_event_v1';
   static const int _maxVerificationEmailsPerWindow = 3;
   static const int _maxVerificationCodeAttemptsPerChallenge = 5;
+  static const String _staticVerificationCode =
+      '654123'; // non-ses AUTH_EMAIL_MODE
 
   BackendAuthService({
     required AuthRecordStore recordStore,
@@ -29,6 +31,7 @@ class BackendAuthService {
     Duration? refreshLifetime,
     Random? random,
     Uuid? uuid,
+    bool useStaticVerificationCode = false,
   }) : _recordStore = recordStore,
        _appStateStore = appStateStore,
        _passwordHashService = passwordHashService,
@@ -39,7 +42,8 @@ class BackendAuthService {
            verificationLifetime ?? const Duration(minutes: 10),
        _refreshLifetime = refreshLifetime ?? const Duration(days: 30),
        _random = random ?? Random.secure(),
-       _uuid = uuid ?? const Uuid();
+       _uuid = uuid ?? const Uuid(),
+       _useStaticVerificationCode = useStaticVerificationCode;
 
   final AuthRecordStore _recordStore;
   final AuthAppStateStore _appStateStore;
@@ -51,6 +55,7 @@ class BackendAuthService {
   final Duration _refreshLifetime;
   final Random _random;
   final Uuid _uuid;
+  final bool _useStaticVerificationCode;
 
   static const int _fastVerificationCodeMode = 0;
 
@@ -1310,7 +1315,9 @@ class BackendAuthService {
     required int resendCount,
   }) async {
     final total = _startTiming();
-    final code = _generateCode();
+    final code = _shouldUseStaticVerificationCode(principal.email)
+        ? _staticVerificationCode
+        : _generateCode();
     final now = DateTime.now().toUtc();
     try {
       var stage = _startTiming();
@@ -1510,6 +1517,14 @@ class BackendAuthService {
   String _generateCode() {
     final value = _random.nextInt(1000000);
     return value.toString().padLeft(6, '0');
+  }
+
+  bool _shouldUseStaticVerificationCode(String email) {
+    // When not using SES for email delivery, use a predictable code for
+    // developer/local testing. The exception below allows developers to
+    // exercise the normal random/code generation flow for an explicit test
+    // email address.
+    return _useStaticVerificationCode && !email.contains('+verify.email');
   }
 
   Future<bool> _verifyChallengeCode({
@@ -1810,6 +1825,7 @@ class BackendAuthServiceFactory {
           ? jwtSecret
           : verificationCodeSecret,
       refreshLifetime: Duration(days: refreshDays ?? 30),
+      useStaticVerificationCode: emailMode != 'ses',
     );
   }
 }

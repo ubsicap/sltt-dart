@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:aws_backend/aws_backend.dart';
 import 'package:aws_backend/src/auth/auth_app_state_store.dart';
@@ -690,6 +691,94 @@ void main() {
         expect(principal?.accountStatus, equals(AuthAccountStatus.active));
         expect(principal?.displayName, equals('Test User Alice'));
       });
+
+      test(
+        'register with non-SES email mode uses static verification code',
+        () async {
+          final staticEmailSender = _CapturingEmailSender();
+          final staticAuthService = BackendAuthService(
+            recordStore: recordStore,
+            appStateStore: AuthAppStateStore(storage: storage),
+            passwordHashService: PasswordHashService(iterations: 1000),
+            tokenService: TokenService(jwtSecret: 'test-secret'),
+            emailSender: staticEmailSender,
+            verificationCodeSecret: 'test-secret',
+            useStaticVerificationCode: true,
+          );
+          await staticAuthService.initialize();
+          final staticServer = AwsRestApiServer(
+            serverName: 'StaticCodeTestServer',
+            storage: storage,
+            authService: staticAuthService,
+          );
+          final staticRouter = staticServer.getRouter();
+
+          final registerResponse = await staticServer.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/register',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'userId': 'static-user',
+              'name': 'Static User',
+              'dateOfBirth': '1990-07-01',
+              'email': 'static@example.com',
+              'password': 'secret123',
+            }),
+          }, staticRouter);
+
+          expect(registerResponse['statusCode'], equals(200));
+          expect(
+            staticEmailSender.codes['static@example.com']?.single,
+            equals('654123'),
+          );
+        },
+      );
+
+      test(
+        'register with +verify.email still generates a normal code',
+        () async {
+          final fixedRandom = _FixedRandom(123456);
+          final generatedEmailSender = _CapturingEmailSender();
+          final generatedAuthService = BackendAuthService(
+            recordStore: recordStore,
+            appStateStore: AuthAppStateStore(storage: storage),
+            passwordHashService: PasswordHashService(iterations: 1000),
+            tokenService: TokenService(jwtSecret: 'test-secret'),
+            emailSender: generatedEmailSender,
+            verificationCodeSecret: 'test-secret',
+            random: fixedRandom,
+            useStaticVerificationCode: true,
+          );
+          await generatedAuthService.initialize();
+          final generatedServer = AwsRestApiServer(
+            serverName: 'GeneratedCodeTestServer',
+            storage: storage,
+            authService: generatedAuthService,
+          );
+          final generatedRouter = generatedServer.getRouter();
+
+          final registerResponse = await generatedServer.handleApiGatewayEvent({
+            'httpMethod': 'POST',
+            'path': '/api/auth/register',
+            'headers': <String, String>{},
+            'body': jsonEncode({
+              'userId': 'verify-user',
+              'name': 'Verify User',
+              'dateOfBirth': '1990-07-01',
+              'email': 'verify+verify.email@example.com',
+              'password': 'secret123',
+            }),
+          }, generatedRouter);
+
+          expect(registerResponse['statusCode'], equals(200));
+          expect(
+            generatedEmailSender
+                .codes['verify+verify.email@example.com']
+                ?.single,
+            equals('123456'),
+          );
+        },
+      );
 
       test('test user can login and logout successfully', () async {
         final registerResponse = await server.handleApiGatewayEvent({
@@ -3262,5 +3351,33 @@ class _CapturingEmailSender implements AuthEmailSender {
     required DateTime expiresAt,
   }) async {
     codes.putIfAbsent(toEmail, () => <String>[]).add(code);
+  }
+}
+
+class _FixedRandom implements Random {
+  _FixedRandom(this.value);
+
+  final int value;
+
+  @override
+  bool nextBool() => value.isOdd;
+
+  @override
+  double nextDouble() => (value % 1000000) / 1000000.0;
+
+  @override
+  int nextInt(int max) => value % max;
+
+  @override
+  int nextUint32() => value;
+
+  @override
+  int nextUint64() => value;
+
+  @override
+  void nextBytes(List<int> bytes) {
+    for (var i = 0; i < bytes.length; i++) {
+      bytes[i] = value % 256;
+    }
   }
 }
