@@ -8,6 +8,8 @@ import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 
+import 'api_help_renderer.dart';
+
 /// Marker exception for API-level conflicts that should return 409.
 abstract class ApiConflictException implements Exception {
   String get message;
@@ -234,6 +236,7 @@ abstract class BaseRestApiServer {
 
     // Standard endpoints (same for all servers)
     router.get('/health', _handleHealth);
+    router.get('/help', _handleApiDocs);
     router.get('/api/help', _handleApiDocs);
     // global stats for debugging and tests only
     router.get(
@@ -1465,8 +1468,17 @@ abstract class BaseRestApiServer {
       'timestamp': DateTime.now().toUtc().toIso8601String(),
     };
 
+    final docsWithGroups = normalizeApiHelpDocs(docs);
+    final format = request.url.queryParameters['format']?.trim().toLowerCase();
+    if (format == 'html') {
+      return Response.ok(
+        renderApiHelpHtml(docsWithGroups),
+        headers: {'Content-Type': 'text/html; charset=utf-8'},
+      );
+    }
+
     return Response.ok(
-      jsonEncode(docs),
+      jsonEncode(docsWithGroups),
       headers: {'Content-Type': 'application/json'},
     );
   }

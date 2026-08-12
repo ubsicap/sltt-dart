@@ -42,7 +42,12 @@ class AwsRestApiServer extends BaseRestApiServer {
   Map<String, String> get healthEnvironment => _healthEnvironment;
 
   @override
-  List<Map<String, dynamic>> get customApiDocEndpoints => [
+  List<Map<String, dynamic>> get customApiDocEndpoints =>
+      _awsCustomApiDocEndpoints
+          .map((endpoint) => {...endpoint, 'group': 'aws'})
+          .toList();
+
+  List<Map<String, dynamic>> get _awsCustomApiDocEndpoints => [
     {
       'method': 'POST',
       'path': '/api/auth/register',

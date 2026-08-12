@@ -52,6 +52,25 @@ void main() {
       expect(body['endpoints'], isNotEmpty);
     });
 
+    test('api/help html format returns text/html body', () async {
+      final response = await server.handleApiGatewayEvent({
+        'httpMethod': 'GET',
+        'path': '/api/help',
+        'queryStringParameters': {'format': 'html'},
+        'headers': <String, String>{},
+      }, router);
+
+      expect(response['statusCode'], equals(200));
+      expect(
+        (response['headers'] as Map<String, dynamic>)['Content-Type'],
+        contains('text/html'),
+      );
+      final body = response['body'] as String;
+      expect(body, contains('<html'));
+      expect(body, contains('AWS-specific API extensions'));
+      expect(body, contains('/api/auth/register'));
+    });
+
     test('api/help includes new project admin endpoints', () async {
       final response = await server.handleApiGatewayEvent({
         'httpMethod': 'GET',
