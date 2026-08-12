@@ -381,13 +381,7 @@ abstract class BaseRestApiServer {
         'storageType': storageTypeDescription,
         'description':
             'SLTT API server with $storageTypeDescription storage - supports field-level change detection and conflict resolution',
-        'features': [
-          'Field-level change detection',
-          'Conflict resolution based on timestamps',
-          'No-op change tracking for optimization',
-          'Automatic sequence number generation',
-          'Multi-project isolation',
-        ],
+        'features': [],
       },
       'endpoints': [
         {
