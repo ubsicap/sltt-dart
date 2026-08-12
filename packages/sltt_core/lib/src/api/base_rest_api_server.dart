@@ -1029,7 +1029,7 @@ abstract class BaseRestApiServer {
         },
         {
           'method': 'GET',
-          'path': '/api/stats/{domainCollection}/{domainId}/',
+          'path': '/api/stats/{domainCollection}/{domainId}',
           'examplePaths': [
             '/api/stats/users/{userId}',
             '/api/stats/projects/{projectId}',
@@ -1400,6 +1400,49 @@ abstract class BaseRestApiServer {
               'required': true,
               'description':
                   'Domain ID to reset (must start with "__test" for safety)',
+            },
+          ],
+          'response': {
+            'type': 'object',
+            'properties': {
+              'message': {'type': 'string', 'description': 'Success message'},
+              'domainId': {
+                'type': 'string',
+                'description': 'The domain ID that was reset',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
+              },
+            },
+          },
+        },
+        {
+          'method': 'DELETE',
+          'path': '/api/admin/storage/reset/{domainCollection}/{domainId}',
+          'description':
+              'Admin endpoint: Reset/delete all storage data for a specific domain. Requires a recent confirm timestamp in the query string.',
+          'parameters': [
+            {
+              'name': 'domainCollection',
+              'type': 'string',
+              'required': true,
+              'description':
+                  'Domain collection type (e.g., "projects", "teams")',
+            },
+            {
+              'name': 'domainId',
+              'type': 'string',
+              'required': true,
+              'description': 'Domain ID to reset',
+            },
+            {
+              'name': 'confirm',
+              'type': 'string',
+              'required': true,
+              'description':
+                  'A recent ISO8601 timestamp used to confirm the reset request. Must be within the past minute.',
             },
           ],
           'response': {

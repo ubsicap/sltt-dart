@@ -1002,6 +1002,104 @@ class AwsRestApiServer extends BaseRestApiServer {
         },
       ],
     },
+    {
+      'method': 'GET',
+      'path': '/api/admin/cross-domain/<domainType>/states/<entityType>',
+      'description':
+          'Query cross-domain entity states for a domain type and entity type with admin privileges.',
+      'security': [
+        {'bearerAuth': []},
+      ],
+      'parameters': [
+        {
+          'name': 'domainType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'The domain type to query (e.g. "project", "membership").',
+        },
+        {
+          'name': 'entityType',
+          'type': 'string',
+          'required': true,
+          'description':
+              'The entity type to query states for (e.g. "project", "member").',
+        },
+        {
+          'name': 'excludeDeleted',
+          'type': 'boolean',
+          'required': false,
+          'description':
+              'Whether to exclude deleted states from the results. Defaults to false.',
+        },
+        {
+          'name': 'includeTestDomains',
+          'type': 'boolean',
+          'required': false,
+          'description':
+              'Whether to include test entities in the results. Defaults to false.',
+        },
+        {
+          'name': 'limit',
+          'type': 'integer',
+          'required': false,
+          'description': 'Maximum number of items to return in a single page.',
+        },
+        {
+          'name': 'cursor',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Opaque pagination cursor returned as "nextCursor" in a previous response.',
+        },
+        {
+          'name': 'fields',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Comma-separated list of attribute names to include in each returned item.',
+        },
+        {
+          'name': 'sortDirection',
+          'type': 'string',
+          'required': false,
+          'description':
+              'Sort order for results. Accepted values: "asc" (default) or "desc".',
+        },
+      ],
+      'responses': [
+        {
+          'status': 200,
+          'description': 'Query succeeded.',
+          'shape': {
+            'items': 'List of decoded entity state objects matching the query.',
+            'nextCursor':
+                'Opaque pagination cursor to pass as "cursor" in the next request. '
+                'Null when no further pages exist.',
+            'count': 'Number of items returned in this page.',
+          },
+        },
+        {
+          'status': 400,
+          'description':
+              'Invalid or missing path parameters, or invalid pagination settings.',
+        },
+        {
+          'status': 401,
+          'description': 'Authorization bearer token is required.',
+        },
+        {
+          'status': 403,
+          'description':
+              'Admin privileges are required to query these cross-domain entity states.',
+        },
+        {
+          'status': 500,
+          'description':
+              'Unexpected server error. Check server logs for details.',
+        },
+      ],
+    },
   ];
 
   /// Get the router for use in debugging or custom server setups
