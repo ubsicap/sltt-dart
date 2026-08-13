@@ -61,7 +61,7 @@ String renderApiHelpHtml(Map<String, dynamic> docs) {
   buffer.writeln(
     '<title>${_htmlEscape(server['name']?.toString() ?? 'API Help')}</title>',
   );
-  buffer.writeln('<style>${_css}</style>');
+  buffer.writeln('<style>$_css</style>');
   buffer.writeln('</head>');
   buffer.writeln('<body><div class="page">');
 
@@ -86,30 +86,36 @@ String renderApiHelpHtml(Map<String, dynamic> docs) {
     }
     buffer.writeln('</ul></details>');
   }
+
+  final domainCollections =
+      (docs['domainCollections'] as List<dynamic>?)
+          ?.cast<Map<String, dynamic>>() ??
+      const [];
+  if (domainCollections.isNotEmpty) {
+    buffer.writeln(_buildDomainCollectionsSection(domainCollections));
+  }
+
+  final projectEntityTypes =
+      (docs['projectEntityTypes'] as List<dynamic>?)
+          ?.map((value) => value.toString())
+          .toList() ??
+      const [];
+  if (projectEntityTypes.isNotEmpty) {
+    buffer.writeln(_buildProjectEntityTypesSection(projectEntityTypes));
+  }
+
   buffer.writeln('</header>');
 
   // ---- Table of contents ---------------------------------------------
   buffer.writeln('<nav class="toc">');
-  buffer.writeln('<h2>Endpoints</h2>');
+  buffer.writeln('<h2>Endpoint groups</h2>');
+  buffer.writeln('<ul class="toc-list">');
   for (final group in groupKeys) {
-    final endpointsForGroup = groupedEndpoints[group]!;
     buffer.writeln(
-      '<h3>${_htmlEscape(_apiHelpGroupLabel(group))}</h3>',
+      '<li><a href="#group-${_slugify(group)}">${_htmlEscape(_apiHelpGroupLabel(group))}</a></li>',
     );
-    buffer.writeln('<ul class="toc-list">');
-    for (final endpoint in endpointsForGroup) {
-      final method = endpoint['method']?.toString() ?? '';
-      final path = endpoint['path']?.toString() ?? '';
-      final anchor = anchorIds[endpoint]!;
-      buffer.writeln(
-        '<li><a href="#$anchor">'
-        '<span class="method ${_methodClass(method)}">${_htmlEscape(method)}</span>'
-        '<code class="path">${_htmlEscape(path)}</code>'
-        '</a></li>',
-      );
-    }
-    buffer.writeln('</ul>');
   }
+  buffer.writeln('</ul>');
   buffer.writeln('</nav>');
 
   // ---- Endpoint sections ----------------------------------------------
@@ -181,6 +187,56 @@ String _methodClass(String method) {
   }
 }
 
+String _buildDomainCollectionsSection(
+  List<Map<String, dynamic>> domainCollections,
+) {
+  final buffer = StringBuffer();
+  buffer.writeln('<section class="domain-collections">');
+  buffer.writeln('<h2>Domain collections</h2>');
+  buffer.writeln(
+    '<p>Each domain collection is associated with the domain type and the entity type(s) used within that collection.</p>',
+  );
+  buffer.writeln(
+    '<table><thead><tr><th>Collection</th><th>Domain type</th><th>Domain entity type</th><th>Root entity type</th></tr></thead><tbody>',
+  );
+
+  for (final collectionInfo in domainCollections) {
+    final collection = collectionInfo['collection']?.toString() ?? '';
+    final domainType = collectionInfo['domainType']?.toString() ?? '';
+    final domainIdEntityType =
+        collectionInfo['domainIdEntityType']?.toString() ?? '';
+    final rootEntityIdEntityType =
+        collectionInfo['rootEntityIdEntityType']?.toString() ?? '';
+
+    buffer.writeln(
+      '<tr><td><code>${_htmlEscape(collection)}</code></td>'
+      '<td>${_htmlEscape(domainType)}</td>'
+      '<td>${_htmlEscape(domainIdEntityType)}</td>'
+      '<td>${_htmlEscape(rootEntityIdEntityType)}</td></tr>',
+    );
+  }
+
+  buffer.writeln('</tbody></table>');
+  buffer.writeln('</section>');
+  return buffer.toString();
+}
+
+String _buildProjectEntityTypesSection(List<String> entityTypes) {
+  final buffer = StringBuffer();
+  buffer.writeln('<section class="project-entity-types">');
+  buffer.writeln('<h2>Project entity types</h2>');
+  buffer.writeln(
+    '<p>The following entity types are supported in the project domain.</p>',
+  );
+  buffer.writeln('<ul>');
+  for (final entityType in entityTypes) {
+    buffer.writeln('<li><code>${_htmlEscape(entityType)}</code></li>');
+  }
+  buffer.writeln('</ul>');
+  buffer.writeln('</section>');
+  return buffer.toString();
+}
+
 String _buildEndpointHtml(Map<String, dynamic> endpoint, String anchorId) {
   final method = endpoint['method']?.toString() ?? '';
   final path = endpoint['path']?.toString() ?? '';
@@ -202,15 +258,14 @@ String _buildEndpointHtml(Map<String, dynamic> endpoint, String anchorId) {
   final requestBody = endpoint['requestBody'];
   final response = endpoint['response'];
   final responsesList =
-      (endpoint['responses'] as List<dynamic>?)
-          ?.cast<Map<String, dynamic>>() ??
+      (endpoint['responses'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
       const [];
   final errorResponses =
       (endpoint['errorResponses'] as List<dynamic>?)
           ?.cast<Map<String, dynamic>>() ??
       const [];
-  final requiresAuth = (endpoint['security'] as List<dynamic>?)?.isNotEmpty ??
-      false;
+  final requiresAuth =
+      (endpoint['security'] as List<dynamic>?)?.isNotEmpty ?? false;
 
   final buffer = StringBuffer();
   buffer.writeln('<details class="endpoint" id="${_htmlEscape(anchorId)}">');
@@ -220,7 +275,9 @@ String _buildEndpointHtml(Map<String, dynamic> endpoint, String anchorId) {
     '<span class="path">${_htmlEscape(path)}</span>',
   );
   if (requiresAuth) {
-    buffer.writeln('<span class="badge badge-auth" title="Requires authentication">🔒 auth</span>');
+    buffer.writeln(
+      '<span class="badge badge-auth" title="Requires authentication">🔒 auth</span>',
+    );
   }
   buffer.writeln('</summary>');
   buffer.writeln('<div class="endpoint-body">');
@@ -344,7 +401,7 @@ dynamic _generateExample(dynamic schema, {int depth = 0}) {
   }
 
   if (schema is! Map) return schema;
-  final map = Map<String, dynamic>.from(schema as Map);
+  final map = Map<String, dynamic>.from(schema);
 
   if (map.containsKey('example')) return map['example'];
 
@@ -359,7 +416,9 @@ dynamic _generateExample(dynamic schema, {int depth = 0}) {
       return _generateObjectExample(map, depth);
     case 'array':
       final items = map['items'];
-      return items != null ? [_generateExample(items, depth: depth + 1)] : <dynamic>[];
+      return items != null
+          ? [_generateExample(items, depth: depth + 1)]
+          : <dynamic>[];
     case 'string':
       return _sampleStringForFormat(format, map['description']?.toString());
     case 'integer':
@@ -371,7 +430,8 @@ dynamic _generateExample(dynamic schema, {int depth = 0}) {
     default:
       // No explicit `type`; fall back to properties if present, else null
       // (rendered as "no example available", raw schema still shown).
-      if (map.containsKey('properties') || map.containsKey('additionalProperties')) {
+      if (map.containsKey('properties') ||
+          map.containsKey('additionalProperties')) {
         return _generateObjectExample(map, depth);
       }
       return null;

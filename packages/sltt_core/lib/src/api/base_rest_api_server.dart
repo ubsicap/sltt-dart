@@ -375,14 +375,32 @@ abstract class BaseRestApiServer {
       },
     };
 
+    final domainCollections = getAllDomainTypes()
+        .map((domainType) {
+          final collection = getCollectionByDomain(domainType);
+          final profile = getDomainTypeProfile(domainType);
+          return {
+            'collection': collection,
+            'domainType': domainType,
+            'domainIdEntityType': profile?.domainIdEntityType.value,
+            'rootEntityIdEntityType': profile?.rootEntityIdEntityType.value,
+          };
+        })
+        .where((entry) => entry['collection'] != null)
+        .cast<Map<String, dynamic>>()
+        .toList();
+
+    final projectEntityTypes = await storage.getSupportedEntityTypes();
+
     final docs = {
       'server': {
         'name': serverName,
         'storageType': storageTypeDescription,
-        'description':
-            'SLTT API server with $storageTypeDescription storage - supports field-level change detection and conflict resolution',
+        'description': 'SLTT API server with $storageTypeDescription storage',
         'features': [],
       },
+      'domainCollections': domainCollections,
+      'projectEntityTypes': projectEntityTypes,
       'endpoints': [
         {
           'method': 'GET',
@@ -425,6 +443,25 @@ abstract class BaseRestApiServer {
                 'description':
                     'List of available API endpoints with documentation',
                 'items': {'type': 'object'},
+              },
+              'domainCollections': {
+                'type': 'array',
+                'description':
+                    'Mappings of domain collections to their supported entity types',
+                'items': {
+                  'type': 'object',
+                  'properties': {
+                    'collection': {'type': 'string'},
+                    'domainType': {'type': 'string'},
+                    'domainIdEntityType': {'type': 'string'},
+                    'rootEntityIdEntityType': {'type': 'string'},
+                  },
+                },
+              },
+              'projectEntityTypes': {
+                'type': 'array',
+                'description': 'List of supported project entity types',
+                'items': {'type': 'string'},
               },
               'timestamp': {
                 'type': 'string',

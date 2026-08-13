@@ -134,6 +134,8 @@ String? getCollectionByDomain(String domainType) {
       return kCollectionUser;
     case kDomainMembership:
       return kCollectionMembership;
+    case kDomainTeam:
+      return kCollectionTeam;
     default:
       return null;
   }
@@ -149,6 +151,8 @@ String? getDomainByCollection(String collectionName) {
       return kDomainUser;
     case kCollectionMembership:
       return kDomainMembership;
+    case kCollectionTeam:
+      return kDomainTeam;
     default:
       return null;
   }
