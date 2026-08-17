@@ -1916,6 +1916,9 @@ class SyncManager {
     String domainId,
   ) async {
     final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+    SlttLogger.logger.info(
+      '[SyncManager] Scheduled local domain stats update for $key',
+    );
     _localDomainStatsDebounceTimers[key]?.cancel();
     _localDomainStatsDebounceTimers[key] = Timer(
       localDomainStatsDebounceDuration,
