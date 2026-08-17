@@ -49,27 +49,29 @@ String buildAuthPrincipalListingGsiPk() {
   return buildKey([KeyLabel('PRINCIPAL')]);
 }
 
+String _adHocBitFromIdentityKind(AuthIdentityKind identityKind) {
+  return identityKind == AuthIdentityKind.usernamePassword ? '1' : '0';
+}
+
 String buildAuthPrincipalListingGsiSkPrefix({
   required AuthAccountStatus accountStatus,
   required AuthIdentityKind identityKind,
-  required bool isAdHoc,
 }) {
   assertSafeSortKeyValue(accountStatus.value);
   assertSafeSortKeyValue(identityKind.value);
-  final adHocBit = isAdHoc ? '1' : '0';
+  final adHocBit = _adHocBitFromIdentityKind(identityKind);
   return '${buildKey([KeyField('STATUS', accountStatus.value), KeyField('KIND', identityKind.value), KeyField('ADHOC', adHocBit)])}#';
 }
 
 String buildAuthPrincipalListingGsiSk({
   required AuthAccountStatus accountStatus,
   required AuthIdentityKind identityKind,
-  required bool isAdHoc,
   required String userId,
 }) {
   assertSafeSortKeyValue(accountStatus.value);
   assertSafeSortKeyValue(identityKind.value);
   assertSafeSortKeyValue(userId);
-  final adHocBit = isAdHoc ? '1' : '0';
+  final adHocBit = _adHocBitFromIdentityKind(identityKind);
   return buildKey([
     KeyField('STATUS', accountStatus.value),
     KeyField('KIND', identityKind.value),

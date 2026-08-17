@@ -105,7 +105,8 @@ class AuthAppStateStore {
             'name': principal.displayName,
             'username': principal.username,
             'email': principal.email,
-            'isAdHoc': principal.isAdHoc,
+            'identityKind': principal.identityKind.value, // replace isAdHoc
+            'isAdHoc': principal.isAdHoc, // deprecated, backwards compatibility
             'emailVerified': principal.emailVerified,
           },
         ),
@@ -122,16 +123,7 @@ class AuthAppStateStore {
           parentId: kDomainEntityRootParentId,
           changeBy: changeBy,
           deleted: true,
-          customFields: {
-            'userId': principal.userId,
-            'role':
-                principal.memberships?[projectId] ?? MemberType.translator.name,
-            'name': principal.displayName,
-            'username': principal.username,
-            'email': principal.email,
-            'isAdHoc': principal.isAdHoc,
-            'emailVerified': principal.emailVerified,
-          },
+          customFields: {}, // deleted set to true
         ),
       );
     }
@@ -165,7 +157,8 @@ class AuthAppStateStore {
             'name': principal.displayName,
             'username': principal.username,
             'email': principal.email,
-            'isAdHoc': principal.isAdHoc,
+            'identityKind': principal.identityKind.value, // replace isAdHoc
+            'isAdHoc': principal.isAdHoc, // deprecated, backwards compatibility
             'emailVerified': principal.emailVerified,
           },
         ),

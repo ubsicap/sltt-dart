@@ -29,7 +29,6 @@ EmailAuthPrincipal _$EmailAuthPrincipalFromJson(Map<String, dynamic> json) =>
           (v) => $enumDecode(_$AuthAccountStatusEnumMap, v),
         ),
         emailVerified: $checkedConvert('emailVerified', (v) => v as bool),
-        isAdHoc: $checkedConvert('isAdHoc', (v) => v as bool),
         displayName: $checkedConvert('displayName', (v) => v as String),
         dateOfBirth: $checkedConvert('dateOfBirth', (v) => v as String?),
         verifiedAt: $checkedConvert(
@@ -97,7 +96,6 @@ Map<String, dynamic> _$EmailAuthPrincipalToJson(EmailAuthPrincipal instance) =>
       'passwordIterations': instance.passwordIterations,
       'accountStatus': _$AuthAccountStatusEnumMap[instance.accountStatus]!,
       'emailVerified': instance.emailVerified,
-      'isAdHoc': instance.isAdHoc,
       'displayName': instance.displayName,
       'dateOfBirth': ?instance.dateOfBirth,
       'verifiedAt': ?_nullableUtcDateTimeToJson(instance.verifiedAt),
@@ -159,7 +157,6 @@ UsernameAuthPrincipal _$UsernameAuthPrincipalFromJson(
       (v) => $enumDecode(_$AuthAccountStatusEnumMap, v),
     ),
     emailVerified: $checkedConvert('emailVerified', (v) => v as bool),
-    isAdHoc: $checkedConvert('isAdHoc', (v) => v as bool),
     displayName: $checkedConvert('displayName', (v) => v as String),
     dateOfBirth: $checkedConvert('dateOfBirth', (v) => v as String?),
     verifiedAt: $checkedConvert(
@@ -228,7 +225,6 @@ Map<String, dynamic> _$UsernameAuthPrincipalToJson(
   'passwordIterations': instance.passwordIterations,
   'accountStatus': _$AuthAccountStatusEnumMap[instance.accountStatus]!,
   'emailVerified': instance.emailVerified,
-  'isAdHoc': instance.isAdHoc,
   'displayName': instance.displayName,
   'dateOfBirth': ?instance.dateOfBirth,
   'verifiedAt': ?_nullableUtcDateTimeToJson(instance.verifiedAt),

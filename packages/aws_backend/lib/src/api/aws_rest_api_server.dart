@@ -1240,7 +1240,8 @@ class AwsRestApiServer extends BaseRestApiServer {
           'entityId',
           'change_domainId',
           'data_role',
-          'data_isAdHoc',
+          'data_identityKind',
+          'data_isAdHoc', // deprecated, but still included for backward compatibility
           'data_name',
           'data_email',
           'data_deleted',

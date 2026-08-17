@@ -70,7 +70,7 @@ Future<Map<String, dynamic>> wsUnsubscribeHandler(
     'notifyType': notifyType,
     'domainType': domainType,
     'domainId': domainId,
-    'entityType': entityType ?? WebsocketKeys.wildcardEntityType,
+    'entityType': entityType,
   });
 
   return {'statusCode': 200};

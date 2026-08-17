@@ -322,7 +322,6 @@ class DynamoAuthRecordStore implements AuthRecordStore {
         'gsi1sk': _principalListingGsiSk(
           accountStatus: principal.accountStatus,
           identityKind: principal.identityKind,
-          isAdHoc: principal.isAdHoc,
           userId: principal.userId,
         ),
         ...principal.toJson(),
@@ -605,7 +604,6 @@ class DynamoAuthRecordStore implements AuthRecordStore {
     final gsi1skPrefix = _principalListingGsiSkPrefix(
       accountStatus: accountStatus,
       identityKind: identityKind,
-      isAdHoc: isAdHoc,
     );
     final response = await _dynamoRequest('Query', {
       'TableName': tableName,
@@ -752,25 +750,21 @@ class DynamoAuthRecordStore implements AuthRecordStore {
   String _principalListingGsiSkPrefix({
     required AuthAccountStatus accountStatus,
     required AuthIdentityKind identityKind,
-    required bool isAdHoc,
   }) {
     return buildAuthPrincipalListingGsiSkPrefix(
       accountStatus: accountStatus,
       identityKind: identityKind,
-      isAdHoc: isAdHoc,
     );
   }
 
   String _principalListingGsiSk({
     required AuthAccountStatus accountStatus,
     required AuthIdentityKind identityKind,
-    required bool isAdHoc,
     required String userId,
   }) {
     return buildAuthPrincipalListingGsiSk(
       accountStatus: accountStatus,
       identityKind: identityKind,
-      isAdHoc: isAdHoc,
       userId: userId,
     );
   }

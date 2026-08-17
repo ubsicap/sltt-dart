@@ -46,7 +46,6 @@ void main() {
       final prefix = buildAuthPrincipalListingGsiSkPrefix(
         accountStatus: AuthAccountStatus.active,
         identityKind: AuthIdentityKind.usernamePassword,
-        isAdHoc: true,
       );
 
       expect(
@@ -57,7 +56,6 @@ void main() {
       final sk = buildAuthPrincipalListingGsiSk(
         accountStatus: AuthAccountStatus.active,
         identityKind: AuthIdentityKind.usernamePassword,
-        isAdHoc: true,
         userId: 'user_123',
       );
       expect(
@@ -80,7 +78,6 @@ void main() {
         () => buildAuthPrincipalListingGsiSk(
           accountStatus: AuthAccountStatus.active,
           identityKind: AuthIdentityKind.usernamePassword,
-          isAdHoc: true,
           userId: 'bad#id',
         ),
         throwsA(isA<FormatException>()),

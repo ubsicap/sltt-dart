@@ -78,7 +78,6 @@ abstract class AuthPrincipal {
     required this.passwordIterations,
     required this.accountStatus,
     required this.emailVerified,
-    required this.isAdHoc,
     required this.displayName,
     required this.dateOfBirth,
     required this.verifiedAt,
@@ -134,8 +133,7 @@ abstract class AuthPrincipal {
   final AuthAccountStatus accountStatus;
   @JsonKey()
   final bool emailVerified;
-  @JsonKey()
-  final bool isAdHoc;
+  bool get isAdHoc => identityKind == AuthIdentityKind.usernamePassword;
   @JsonKey()
   final String displayName;
   @JsonKey()
@@ -199,7 +197,6 @@ abstract class AuthPrincipal {
     int? passwordIterations,
     AuthAccountStatus? accountStatus,
     bool? emailVerified,
-    bool? isAdHoc,
     String? displayName,
     String? dateOfBirth,
     DateTime? verifiedAt,
@@ -232,7 +229,6 @@ class EmailAuthPrincipal extends AuthPrincipal {
     required super.passwordIterations,
     required super.accountStatus,
     required super.emailVerified,
-    required super.isAdHoc,
     required super.displayName,
     super.dateOfBirth,
     super.verifiedAt,
@@ -286,7 +282,6 @@ class EmailAuthPrincipal extends AuthPrincipal {
     int? passwordIterations,
     AuthAccountStatus? accountStatus,
     bool? emailVerified,
-    bool? isAdHoc,
     String? displayName,
     String? dateOfBirth,
     DateTime? verifiedAt,
@@ -320,7 +315,6 @@ class EmailAuthPrincipal extends AuthPrincipal {
       passwordIterations: passwordIterations ?? this.passwordIterations,
       accountStatus: accountStatus ?? this.accountStatus,
       emailVerified: emailVerified ?? this.emailVerified,
-      isAdHoc: isAdHoc ?? this.isAdHoc,
       displayName: displayName ?? this.displayName,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       verifiedAt: verifiedAt ?? this.verifiedAt,
@@ -364,7 +358,6 @@ class UsernameAuthPrincipal extends AuthPrincipal {
     required super.passwordIterations,
     required super.accountStatus,
     required super.emailVerified,
-    required super.isAdHoc,
     required super.displayName,
     super.dateOfBirth,
     super.verifiedAt,
@@ -418,7 +411,6 @@ class UsernameAuthPrincipal extends AuthPrincipal {
     int? passwordIterations,
     AuthAccountStatus? accountStatus,
     bool? emailVerified,
-    bool? isAdHoc,
     String? displayName,
     String? dateOfBirth,
     DateTime? verifiedAt,
@@ -454,7 +446,6 @@ class UsernameAuthPrincipal extends AuthPrincipal {
       passwordIterations: passwordIterations ?? this.passwordIterations,
       accountStatus: accountStatus ?? this.accountStatus,
       emailVerified: emailVerified ?? this.emailVerified,
-      isAdHoc: isAdHoc ?? this.isAdHoc,
       displayName: displayName ?? this.displayName,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       verifiedAt: verifiedAt ?? this.verifiedAt,

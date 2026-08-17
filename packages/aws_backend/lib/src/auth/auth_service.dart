@@ -241,7 +241,6 @@ class BackendAuthService {
                         ? AuthAccountStatus.active
                         : AuthAccountStatus.pendingVerification,
                     emailVerified: isTestUserRegistration,
-                    isAdHoc: false,
                     displayName: name,
                     dateOfBirth: dateOfBirth,
                     assignedProjectIds: const <String>[],
@@ -913,7 +912,6 @@ class BackendAuthService {
       passwordIterations: hash.iterations,
       accountStatus: AuthAccountStatus.active,
       emailVerified: true,
-      isAdHoc: true,
       displayName: name,
       dateOfBirth: request.dateOfBirth?.trim().isEmpty == true
           ? null

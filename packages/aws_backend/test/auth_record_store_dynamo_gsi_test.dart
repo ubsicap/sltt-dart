@@ -125,7 +125,6 @@ void main() {
         userId: 'user_123',
         accountStatus: AuthAccountStatus.active,
         identityKind: AuthIdentityKind.usernamePassword,
-        isAdHoc: true,
       );
 
       await store.putPrincipal(principal);
@@ -156,7 +155,6 @@ void main() {
           userId: 'adhoc-user-1',
           accountStatus: AuthAccountStatus.active,
           identityKind: AuthIdentityKind.usernamePassword,
-          isAdHoc: true,
         );
 
         handler = (operation, payload) async {
@@ -214,9 +212,9 @@ void main() {
         expect(
           queriedPrefixes,
           containsAll(<String>[
-            '@STATUS#pending_verification#@KIND#email_password#@ADHOC#1#',
+            '@STATUS#pending_verification#@KIND#email_password#@ADHOC#0#',
             '@STATUS#pending_verification#@KIND#username_password#@ADHOC#1#',
-            '@STATUS#active#@KIND#email_password#@ADHOC#1#',
+            '@STATUS#active#@KIND#email_password#@ADHOC#0#',
             '@STATUS#active#@KIND#username_password#@ADHOC#1#',
           ]),
         );
@@ -238,7 +236,6 @@ UsernameAuthPrincipal _usernamePrincipal({
   required String userId,
   required AuthAccountStatus accountStatus,
   required AuthIdentityKind identityKind,
-  required bool isAdHoc,
 }) {
   final now = DateTime.utc(2026, 1, 1, 12);
   return UsernameAuthPrincipal(
@@ -251,7 +248,6 @@ UsernameAuthPrincipal _usernamePrincipal({
     passwordIterations: 1000,
     accountStatus: accountStatus,
     emailVerified: true,
-    isAdHoc: isAdHoc,
     displayName: 'Display $userId',
     assignedProjectIds: const <String>['project-a'],
     memberships: const <String, String>{'project-a': 'translator'},

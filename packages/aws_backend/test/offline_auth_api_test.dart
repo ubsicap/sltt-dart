@@ -198,7 +198,7 @@ void main() {
               'data_parentProp_cid_': 'member-1',
               'data_parentProp_changeBy_': 'seed',
               'data_role': 'admin',
-              'data_isAdHoc': false,
+              'data_identityKind': 'email_password',
               'data_name': 'Project User',
               'data_email': 'project-user@example.com',
             }),
@@ -285,7 +285,7 @@ void main() {
               'data_parentProp_cid_': 'self-member',
               'data_parentProp_changeBy_': 'seed',
               'data_role': 'admin',
-              'data_isAdHoc': false,
+              'data_identityKind': 'email_password',
               'data_name': 'Project User',
               'data_email': 'project-user@example.com',
             }),
@@ -381,7 +381,7 @@ void main() {
               'data_parentProp_cid_': 'member-1',
               'data_parentProp_changeBy_': 'seed',
               'data_role': 'admin',
-              'data_isAdHoc': false,
+              'data_identityKind': 'email_password',
               'data_name': 'Team User',
               'data_email': 'team-user@example.com',
             }),
@@ -2013,7 +2013,6 @@ void main() {
               passwordIterations: 1000,
               accountStatus: AuthAccountStatus.active,
               emailVerified: true,
-              isAdHoc: true,
               displayName: 'Adhoc Secondary',
               assignedProjectIds: const <String>['project-2'],
               verificationVersion: 0,
@@ -2337,7 +2336,6 @@ void main() {
               passwordIterations: 1000,
               accountStatus: AuthAccountStatus.pendingVerification,
               emailVerified: false,
-              isAdHoc: false,
               displayName: 'Broken User',
               assignedProjectIds: const <String>[],
               verificationVersion: 0,
@@ -2373,7 +2371,6 @@ void main() {
               passwordIterations: adminHash.iterations,
               accountStatus: AuthAccountStatus.active,
               emailVerified: true,
-              isAdHoc: false,
               displayName: 'Admin User',
               assignedProjectIds: const <String>[],
               verificationVersion: 0,
@@ -2392,7 +2389,6 @@ void main() {
               passwordIterations: 1000,
               accountStatus: AuthAccountStatus.active,
               emailVerified: true,
-              isAdHoc: true,
               displayName: 'Broken Adhoc',
               assignedProjectIds: const <String>['project-1'],
               verificationVersion: 0,
@@ -2461,7 +2457,6 @@ void main() {
               passwordIterations: adminHash.iterations,
               accountStatus: AuthAccountStatus.active,
               emailVerified: true,
-              isAdHoc: false,
               displayName: 'Admin User',
               assignedProjectIds: const <String>[],
               verificationVersion: 0,
@@ -2480,7 +2475,6 @@ void main() {
               passwordIterations: 1000,
               accountStatus: AuthAccountStatus.active,
               emailVerified: true,
-              isAdHoc: true,
               displayName: 'Broken Adhoc',
               assignedProjectIds: const <String>['project-1'],
               verificationVersion: 0,
@@ -3367,17 +3361,4 @@ class _FixedRandom implements Random {
 
   @override
   int nextInt(int max) => value % max;
-
-  @override
-  int nextUint32() => value;
-
-  @override
-  int nextUint64() => value;
-
-  @override
-  void nextBytes(List<int> bytes) {
-    for (var i = 0; i < bytes.length; i++) {
-      bytes[i] = value % 256;
-    }
-  }
 }
