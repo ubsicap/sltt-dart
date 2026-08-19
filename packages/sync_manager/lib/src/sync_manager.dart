@@ -1939,7 +1939,8 @@ class SyncManager {
         '[SyncManager] Emitting LocalDomainStatsUpdate for $domainType/$domainId: '
         'localChangeTotal=${update.localChangeStats.totals.total}, '
         'localStateTotal=${update.localStateStats.totals.total}, '
-        'cursorSeq=${update.localCursorState?.seq ?? -1}',
+        'cursorSeq=${update.localCursorState?.seq ?? -1}, '
+        'hasListeners=${_localDomainStatsEventsController.hasListener}',
       );
       _localDomainStatsEventsController.add(update);
     } catch (error, stackTrace) {
