@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate' show SendPort, ReceivePort;
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:sltt_core/sltt_core.dart';
@@ -22,6 +23,7 @@ class SyncManager {
 
   SyncManager._();
 
+  final String instanceId = _generateInstanceId();
   final Dio _dio = Dio();
   late final IsarStorageService _localStorage;
   bool _ownsLocalStorage = true;
@@ -244,8 +246,14 @@ class SyncManager {
 
     _initialized = true;
     SlttLogger.logger.info(
-      '[SyncManager] Initialized with cloud URL: $_cloudStorageUrl',
+      '[SyncManager] Initialized with instanceId=$instanceId and cloud URL: $_cloudStorageUrl',
     );
+  }
+
+  static String _generateInstanceId() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    return base64Url.encode(bytes);
   }
 
   /// Enable automatic sync when change log entries are modified
