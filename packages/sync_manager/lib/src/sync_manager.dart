@@ -692,6 +692,32 @@ class SyncManager {
     }
   }
 
+  Future<void> _maybeEnqueueAckDrivenEntityStateFetch({
+    required String domainType,
+    required String domainId,
+    required String rootEntityType,
+    required int lastDomainSeq,
+  }) async {
+    final syncState = await _localStorage.getCursorSyncState(domainId);
+    final localSeq = syncState?.seq ?? 0;
+    if (lastDomainSeq <= localSeq) {
+      SlttLogger.logger.info(
+        '[SyncManager] Skipping ack-driven entity state fetch for '
+        '$domainType/$domainId because cloud seq=$lastDomainSeq '
+        'is not ahead of local seq=$localSeq.',
+      );
+      return;
+    }
+
+    final requestKey = enqueueJobFetchEntityState(
+      domainType: domainType,
+      domainId: domainId,
+      entityType: rootEntityType,
+      entityId: domainId,
+    );
+    _trackAckDrivenEntityStateDownloadRequest(requestKey);
+  }
+
   void _scheduleWebSocketReconnect() {
     if (!_autoDownsyncEnabled &&
         _subscribedDomainChangeKeys.isEmpty &&
@@ -898,13 +924,14 @@ class SyncManager {
           final profile = getDomainTypeProfile(domainType);
           if (profile?.hasSharedEntityType == true) {
             final rootEntityType = profile!.rootEntityIdEntityType.value;
-            final requestKey = enqueueJobFetchEntityState(
-              domainType: domainType,
-              domainId: domainId,
-              entityType: rootEntityType,
-              entityId: domainId,
+            unawaited(
+              _maybeEnqueueAckDrivenEntityStateFetch(
+                domainType: domainType,
+                domainId: domainId,
+                rootEntityType: rootEntityType,
+                lastDomainSeq: lastDomainSeq,
+              ),
             );
-            _trackAckDrivenEntityStateDownloadRequest(requestKey);
           }
           return;
         }
