@@ -63,6 +63,10 @@ class SyncManager {
   _localDomainStatsEventsController =
       StreamController<LocalDomainStatsUpdate>.broadcast();
   String? _authToken;
+
+  bool _ackDrivenStateProcessingRestorePending = false;
+  bool _ackDrivenStateProcessingWasEnabled = false;
+  final Set<String> _ackDrivenStateDownloadRequestKeys = <String>{};
   SendPort? _hostAuthTokenRequestPort;
   SyncManagerWebSocketClient? _webSocketClient;
   bool _isWebSocketConnecting = false;
@@ -148,6 +152,34 @@ class SyncManager {
       entityId: entityId,
       parentId: parentId,
     );
+  }
+
+  bool get _entityStatePaginationProcessingEnabled =>
+      _entityStatePaginationService?.isProcessingEnabled ?? false;
+
+  void _trackAckDrivenEntityStateDownloadRequest(String requestKey) {
+    if (_ackDrivenStateDownloadRequestKeys.isEmpty) {
+      _ackDrivenStateProcessingRestorePending = true;
+      _ackDrivenStateProcessingWasEnabled =
+          _entityStatePaginationProcessingEnabled;
+    }
+    _ackDrivenStateDownloadRequestKeys.add(requestKey);
+    if (!_entityStatePaginationProcessingEnabled) {
+      startEntityStatePaginationService();
+    }
+  }
+
+  void _restoreAckDrivenEntityStateProcessingIfNeeded() {
+    if (!_ackDrivenStateProcessingRestorePending) return;
+    if (_ackDrivenStateDownloadRequestKeys.isNotEmpty) return;
+
+    _ackDrivenStateProcessingRestorePending = false;
+
+    final currentlyEnabled =
+        _entityStatePaginationService?.isProcessingEnabled ?? false;
+    if (!_ackDrivenStateProcessingWasEnabled && !currentlyEnabled) {
+      stopEntityStatePaginationService();
+    }
   }
 
   String enqueueJobFetchEntityStateCollection({
@@ -862,6 +894,18 @@ class SyncManager {
               observedAt: DateTime.now().toUtc(),
             ),
           );
+
+          final profile = getDomainTypeProfile(domainType);
+          if (profile?.hasSharedEntityType == true) {
+            final rootEntityType = profile!.rootEntityIdEntityType.value;
+            final requestKey = enqueueJobFetchEntityState(
+              domainType: domainType,
+              domainId: domainId,
+              entityType: rootEntityType,
+              entityId: domainId,
+            );
+            _trackAckDrivenEntityStateDownloadRequest(requestKey);
+          }
           return;
         }
 
@@ -2001,7 +2045,16 @@ class SyncManager {
     EntityStateFetchEvent event,
   ) async {
     if (event.hasError) {
+      if (_ackDrivenStateDownloadRequestKeys.remove(event.requestKey)) {
+        _restoreAckDrivenEntityStateProcessingIfNeeded();
+      }
       return;
+    }
+
+    if (event.isComplete) {
+      if (_ackDrivenStateDownloadRequestKeys.remove(event.requestKey)) {
+        _restoreAckDrivenEntityStateProcessingIfNeeded();
+      }
     }
 
     // Progress-only hook: storage is handled directly by
