@@ -177,7 +177,7 @@ class SyncManager {
 
     final currentlyEnabled =
         _entityStatePaginationService?.isProcessingEnabled ?? false;
-    if (!_ackDrivenStateProcessingWasEnabled && !currentlyEnabled) {
+    if (!_ackDrivenStateProcessingWasEnabled && currentlyEnabled) {
       stopEntityStatePaginationService();
     }
   }
