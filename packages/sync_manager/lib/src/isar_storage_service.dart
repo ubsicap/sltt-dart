@@ -1745,6 +1745,15 @@ class IsarStorageService extends BaseStorageService {
     final isarLck = File('$dirPath/$databaseName.isar-lck');
     final schemaFile = File('$dirPath/$databaseName.isar.schemas');
     final dbDir = Directory('$dirPath/$databaseName');
+    final paginationJobIsarFile = File(
+      '$dirPath/entity_state_pagination_jobs_$databaseName.isar',
+    );
+    final paginationJobLck = File(
+      '$dirPath/entity_state_pagination_jobs_$databaseName.isar-lck',
+    );
+    final paginationJobDbDir = Directory(
+      '$dirPath/entity_state_pagination_jobs_$databaseName',
+    );
 
     String pathBaseName(String path) {
       final segments = Uri.file(
@@ -1845,7 +1854,20 @@ class IsarStorageService extends BaseStorageService {
           final matchesSchemaBackup =
               name.startsWith('$databaseName.isar.schemas.') &&
               name.endsWith('.bak');
-          if (matchesDbBackup || matchesSchemaBackup) {
+          final matchesPaginationJobDbBackup =
+              name.startsWith(
+                'entity_state_pagination_jobs_$databaseName.isar.',
+              ) &&
+              name.endsWith('.bak');
+          final matchesPaginationJobSchemaBackup =
+              name.startsWith(
+                'entity_state_pagination_jobs_$databaseName.isar.schemas.',
+              ) &&
+              name.endsWith('.bak');
+          if (matchesDbBackup ||
+              matchesSchemaBackup ||
+              matchesPaginationJobDbBackup ||
+              matchesPaginationJobSchemaBackup) {
             if (!await tryDeleteOrMoveFile(entity)) return false;
           }
         }
@@ -1860,10 +1882,13 @@ class IsarStorageService extends BaseStorageService {
       final f1 = await tryDeleteOrMoveFile(isarFile);
       final f2 = await tryDeleteOrMoveFile(isarLck);
       final f3 = await tryDeleteOrMoveFile(schemaFile);
+      final f4 = await tryDeleteOrMoveFile(paginationJobIsarFile);
+      final f5 = await tryDeleteOrMoveFile(paginationJobLck);
       final d1 = await tryDeleteOrMoveDir(dbDir);
+      final d2 = await tryDeleteOrMoveDir(paginationJobDbDir);
       final b1 = await tryDeleteOrMoveBackups();
 
-      if (f1 && f2 && f3 && d1 && b1) {
+      if (f1 && f2 && f3 && f4 && f5 && d1 && d2 && b1) {
         completed = true;
         break;
       }
