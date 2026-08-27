@@ -1690,6 +1690,18 @@ class IsarStorageService extends BaseStorageService {
     }
   }
 
+  /// Archive the on-disk Isar files for this initialized database
+  /// into the specified destination directory.
+  Future<bool> archiveDatabaseFilesTo({
+    required String destinationDirPath,
+  }) async {
+    return IsarStorageService.archiveDatabaseFiles(
+      _databaseName,
+      dirPath: _dbDirectory,
+      destinationDirPath: destinationDirPath,
+    );
+  }
+
   /// Static helper that deletes on-disk Isar files for a given database
   /// name. This is useful from tests and tooling where you don't have an
   /// initialized IsarStorageService instance.
