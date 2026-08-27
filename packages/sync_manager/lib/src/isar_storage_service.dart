@@ -1679,7 +1679,10 @@ class IsarStorageService extends BaseStorageService {
 
       // Always remove the on-disk files for this database. Tests and
       // tooling expect deleteDatabase to remove files unconditionally.
-      await IsarStorageService.deleteDatabaseFiles(_databaseName);
+      await IsarStorageService.deleteDatabaseFiles(
+        _databaseName,
+        dirPath: _dbDirectory,
+      );
     } catch (e) {
       SlttLogger.logger.warning(
         '[$_logPrefix] Warning: deleteDatabase failed: $e',
