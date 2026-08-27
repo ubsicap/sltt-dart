@@ -1697,8 +1697,35 @@ class IsarStorageService extends BaseStorageService {
     String databaseName, {
     String dirPath = './isar_db',
   }) async {
-    // Attempt deletion with retry/backoff because on Windows the files may be
-    // transiently locked by another process (or the VM). Try repeatedly for a
+    return _cleanupDatabaseFiles(
+      databaseName,
+      dirPath: dirPath,
+      destinationDirPath: null,
+    );
+  }
+
+  /// Static helper that archives on-disk Isar files for a given database name
+  /// into a destination directory. This is useful when you want to preserve
+  /// the current database and schema files instead of deleting them.
+  static Future<bool> archiveDatabaseFiles(
+    String databaseName, {
+    String dirPath = './isar_db',
+    required String destinationDirPath,
+  }) async {
+    return _cleanupDatabaseFiles(
+      databaseName,
+      dirPath: dirPath,
+      destinationDirPath: destinationDirPath,
+    );
+  }
+
+  static Future<bool> _cleanupDatabaseFiles(
+    String databaseName, {
+    required String dirPath,
+    String? destinationDirPath,
+  }) async {
+    // Attempt deletion/move with retry/backoff because on Windows the files may
+    // be transiently locked by another process (or the VM). Try repeatedly for a
     // short timeout before giving up.
     final timeout = const Duration(seconds: 5);
     final backoff = const Duration(milliseconds: 200);
@@ -1707,15 +1734,51 @@ class IsarStorageService extends BaseStorageService {
     final dir = Directory(dirPath);
     if (!await dir.exists()) return true;
 
+    final destinationDir = destinationDirPath != null
+        ? Directory(destinationDirPath)
+        : null;
+    if (destinationDir != null && !await destinationDir.exists()) {
+      await destinationDir.create(recursive: true);
+    }
+
     final isarFile = File('$dirPath/$databaseName.isar');
     final isarLck = File('$dirPath/$databaseName.isar-lck');
     final schemaFile = File('$dirPath/$databaseName.isar.schemas');
     final dbDir = Directory('$dirPath/$databaseName');
 
-    Future<bool> tryDeleteFile(File f) async {
+    String pathBaseName(String path) {
+      final segments = Uri.file(
+        path,
+      ).pathSegments.where((segment) => segment.isNotEmpty).toList();
+      return segments.isEmpty ? path : segments.last;
+    }
+
+    Future<File> destinationFileFor(File source) async {
+      if (destinationDir == null) {
+        throw StateError('Destination directory not configured');
+      }
+      final destinationFile = File(
+        '${destinationDir.path}${Platform.pathSeparator}${pathBaseName(source.path)}',
+      );
+      if (await destinationFile.exists()) {
+        await destinationFile.delete();
+      }
+      return destinationFile;
+    }
+
+    Future<bool> tryDeleteOrMoveFile(File file) async {
       try {
-        if (await f.exists()) {
-          await f.delete();
+        if (!await file.exists()) return true;
+        if (destinationDir == null) {
+          await file.delete();
+          return true;
+        }
+        final destinationFile = await destinationFileFor(file);
+        try {
+          await file.rename(destinationFile.path);
+        } catch (_) {
+          await file.copy(destinationFile.path);
+          await file.delete();
         }
         return true;
       } catch (e) {
@@ -1723,10 +1786,45 @@ class IsarStorageService extends BaseStorageService {
       }
     }
 
-    Future<bool> tryDeleteDir(Directory d) async {
+    Future<void> copyDirectoryContents(
+      Directory source,
+      Directory destination,
+    ) async {
+      if (!await destination.exists()) {
+        await destination.create(recursive: true);
+      }
+      await for (final entity in source.list(
+        recursive: false,
+        followLinks: false,
+      )) {
+        final name = pathBaseName(entity.path);
+        final targetPath = '${destination.path}${Platform.pathSeparator}$name';
+        if (entity is File) {
+          await entity.copy(targetPath);
+        } else if (entity is Directory) {
+          await copyDirectoryContents(entity, Directory(targetPath));
+        }
+      }
+    }
+
+    Future<bool> tryDeleteOrMoveDir(Directory directory) async {
       try {
-        if (await d.exists()) {
-          await d.delete(recursive: true);
+        if (!await directory.exists()) return true;
+        if (destinationDir == null) {
+          await directory.delete(recursive: true);
+          return true;
+        }
+        final destinationDirectory = Directory(
+          '${destinationDir.path}${Platform.pathSeparator}${pathBaseName(directory.path)}',
+        );
+        if (await destinationDirectory.exists()) {
+          await destinationDirectory.delete(recursive: true);
+        }
+        try {
+          await directory.rename(destinationDirectory.path);
+        } catch (_) {
+          await copyDirectoryContents(directory, destinationDirectory);
+          await directory.delete(recursive: true);
         }
         return true;
       } catch (e) {
@@ -1734,7 +1832,7 @@ class IsarStorageService extends BaseStorageService {
       }
     }
 
-    Future<bool> tryDeleteBackups() async {
+    Future<bool> tryDeleteOrMoveBackups() async {
       try {
         if (!await dir.exists()) return true;
         await for (final entity in dir.list(followLinks: false)) {
@@ -1748,7 +1846,7 @@ class IsarStorageService extends BaseStorageService {
               name.startsWith('$databaseName.isar.schemas.') &&
               name.endsWith('.bak');
           if (matchesDbBackup || matchesSchemaBackup) {
-            await entity.delete();
+            if (!await tryDeleteOrMoveFile(entity)) return false;
           }
         }
         return true;
@@ -1757,35 +1855,40 @@ class IsarStorageService extends BaseStorageService {
       }
     }
 
-    bool removed = false;
+    bool completed = false;
     while (DateTime.now().isBefore(end)) {
-      final f1 = await tryDeleteFile(isarFile);
-      final f2 = await tryDeleteFile(isarLck);
-      final f3 = await tryDeleteFile(schemaFile);
-      final d1 = await tryDeleteDir(dbDir);
-      final b1 = await tryDeleteBackups();
+      final f1 = await tryDeleteOrMoveFile(isarFile);
+      final f2 = await tryDeleteOrMoveFile(isarLck);
+      final f3 = await tryDeleteOrMoveFile(schemaFile);
+      final d1 = await tryDeleteOrMoveDir(dbDir);
+      final b1 = await tryDeleteOrMoveBackups();
 
       if (f1 && f2 && f3 && d1 && b1) {
-        removed = true;
+        completed = true;
         break;
       }
 
-      // Wait a bit and retry
       await Future.delayed(backoff);
     }
 
-    if (!removed) {
+    if (!completed) {
+      final action = destinationDir == null ? 'delete' : 'archive';
       SlttLogger.logger.warning(
-        '[test-utils] Failed to delete Isar files for $databaseName within ${timeout.inSeconds}s; files may be locked by another process',
+        '[test-utils] Failed to $action Isar files for $databaseName within ${timeout.inSeconds}s; files may be locked by another process',
       );
       return false;
-    } else {
+    }
+
+    if (destinationDir == null) {
       SlttLogger.logger.fine(
         '[test-utils] Deleted Isar files for $databaseName',
       );
-      return true;
+    } else {
+      SlttLogger.logger.fine(
+        '[test-utils] Archived Isar files for $databaseName to ${destinationDir.path}',
+      );
     }
-    // Removed unreachable return false (dead code) after refactor.
+    return true;
   }
 
   // Cursor-based pagination and filtering
