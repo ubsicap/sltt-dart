@@ -1795,14 +1795,14 @@ class IsarStorageService extends BaseStorageService {
           return true;
         }
         final destinationFile = await destinationFileFor(file);
-        try {
-          await file.rename(destinationFile.path);
-        } catch (_) {
-          await file.copy(destinationFile.path);
-          await file.delete();
-        }
+        await file.rename(destinationFile.path);
         return true;
-      } catch (e) {
+      } catch (e, st) {
+        SlttLogger.logger.warning(
+          '[test-utils] Failed to move file ${file.path}: $e',
+          e,
+          st,
+        );
         return false;
       }
     }
