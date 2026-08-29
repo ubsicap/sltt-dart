@@ -1798,8 +1798,8 @@ class IsarStorageService extends BaseStorageService {
         await file.rename(destinationFile.path);
         return true;
       } catch (e, st) {
-        SlttLogger.logger.warning(
-          '[test-utils] Failed to move file ${file.path}: $e',
+        SlttLogger.logger.severe(
+          '[IsarStorageService] Failed to move file ${file.path}: $e',
           e,
           st,
         );
