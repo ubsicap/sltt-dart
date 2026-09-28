@@ -58,6 +58,31 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   )
   getAllByChange_domainIdEntityId;
 
+  /// Query every persisted state for a given domain type + entity type across
+  /// all domain IDs.
+  ///
+  /// This is intentionally narrow: only the project-member domain is supported
+  /// today. Other entity types are expected to raise [NotImplementedError] so
+  /// callers do not accidentally rely on broader fallback scanning.
+  final Future<List<T>> Function({
+    required String domainType,
+    required String entityType,
+  })?
+  _findAllByDomainTypeAndEntityType;
+
+  Future<List<T>> findAllByDomainTypeAndEntityType({
+    required String domainType,
+    required String entityType,
+  }) {
+    final fn = _findAllByDomainTypeAndEntityType;
+    if (fn == null) {
+      throw UnimplementedError(
+        'Cross-domain lookup is not implemented for entityType=$entityType',
+      );
+    }
+    return fn(domainType: domainType, entityType: entityType);
+  }
+
   final StreamSubscription<void> Function({
     required String domainType,
     required String domainId,
@@ -83,8 +108,13 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
     required this.findByDomainWithPagination,
     required this.getAllByChange_domainIdEntityId,
     required this.deleteByDomain,
+    Future<List<T>> Function({
+      required String domainType,
+      required String entityType,
+    })?
+    findAllByDomainTypeAndEntityType,
     this.lazyListenToEntityChanges,
-  });
+  }) : _findAllByDomainTypeAndEntityType = findAllByDomainTypeAndEntityType;
 }
 
 /// Registry container that stores entity state storage groups. Each
