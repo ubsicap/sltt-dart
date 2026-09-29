@@ -11,3 +11,6 @@ const String kCloudPrdApiUrl =
 
 const String kCloudPrdWssUrl =
     'wss://6d4q1rfwza.execute-api.us-east-1.amazonaws.com/prd';
+
+const String kCloudDevWssUrl =
+    'wss://6d4q1rfwza.execute-api.us-east-1.amazonaws.com/prd';

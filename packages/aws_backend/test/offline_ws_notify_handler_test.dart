@@ -1081,6 +1081,275 @@ void main() {
         });
       },
     );
+
+    test(
+      'emits both domainChange and newDomainId when a project root is created',
+      () async {
+        final connections = _FakeConnectionsRepository();
+        final management = _FakeManagementClient(connections: connections);
+
+        connections.subscriptionsByDomain['project|proj-1'] = [
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-domain-project',
+            entityType: WebsocketKeys.wildcardEntityType,
+            notifyType: WebsocketConstants.notifyTypeDomainChange,
+          ),
+        ];
+        connections.subscriptionsByRootEntity['project|project'] = [
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-root-project',
+            entityType: 'project',
+            notifyType: WebsocketConstants.newDomainId,
+          ),
+        ];
+
+        final event = {
+          'Records': [
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  'notifyType': WebsocketConstants.notifyTypeDomainChange,
+                  'domainType': 'project',
+                  'domainId': 'proj-1',
+                  'entityType': 'project',
+                  'change': {
+                    'seq': 7,
+                    'cid': 'cid-7',
+                    'changeAt': '2026-07-17T00:00:00.000Z',
+                    'operation': 'create',
+                    'entityId': 'proj-1',
+                    'entityType': 'project',
+                    'domainType': 'project',
+                    'domainId': 'proj-1',
+                    'dataJson': jsonEncode({'name': 'new project'}),
+                  },
+                }),
+              },
+            },
+          ],
+        };
+
+        await wsNotifyHandler(
+          event,
+          connections: connections,
+          management: management,
+        );
+
+        expect(
+          management.sentMessages
+              .map((m) => m['payload']['notifyType'])
+              .toList(),
+          containsAllInOrder([
+            WebsocketConstants.notifyTypeDomainChange,
+            WebsocketConstants.newDomainId,
+          ]),
+        );
+        expect(
+          management.sentMessages.any(
+            (m) =>
+                m['connectionId'] == 'conn-root-project' &&
+                m['payload']['notifyType'] == WebsocketConstants.newDomainId,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'emits both domainChange and addedMe when a membership root is created',
+      () async {
+        final connections = _FakeConnectionsRepository();
+        final management = _FakeManagementClient(connections: connections);
+
+        connections.subscriptionsByDomain['membership|proj-1'] = [
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-domain-membership',
+            entityType: WebsocketKeys.wildcardEntityType,
+            notifyType: WebsocketConstants.notifyTypeDomainChange,
+          ),
+        ];
+        connections.subscriptionsByUserId['user-42'] = [
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-root-user',
+            entityType: 'member',
+            notifyType: WebsocketConstants.notifyTypeAddedMe,
+          ),
+        ];
+
+        final event = {
+          'Records': [
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  'notifyType': WebsocketConstants.notifyTypeDomainChange,
+                  'domainType': 'membership',
+                  'domainId': 'proj-1',
+                  'entityType': 'member',
+                  'change': {
+                    'seq': 9,
+                    'cid': 'cid-9',
+                    'changeAt': '2026-07-17T00:00:00.000Z',
+                    'operation': 'create',
+                    'entityId': 'user-42',
+                    'entityType': 'member',
+                    'domainType': 'membership',
+                    'domainId': 'proj-1',
+                    'dataJson': jsonEncode({}),
+                  },
+                }),
+              },
+            },
+          ],
+        };
+
+        await wsNotifyHandler(
+          event,
+          connections: connections,
+          management: management,
+        );
+
+        expect(
+          management.sentMessages
+              .map((m) => m['payload']['notifyType'])
+              .toList(),
+          containsAllInOrder([
+            WebsocketConstants.notifyTypeDomainChange,
+            WebsocketConstants.notifyTypeAddedMe,
+          ]),
+        );
+        expect(
+          management.sentMessages.any(
+            (m) =>
+                m['connectionId'] == 'conn-root-user' &&
+                m['payload']['notifyType'] ==
+                    WebsocketConstants.notifyTypeAddedMe,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test('accepts addedMe subscriptions with empty states payload', () async {
+      final connections = _FakeConnectionsRepository();
+      final management = _FakeManagementClient(connections: connections);
+
+      final event = {
+        'requestContext': {'connectionId': 'conn-sub-addedme'},
+        'body': jsonEncode({
+          'domainType': 'membership',
+          'domainId': 'proj-1',
+          'notifyType': 'addedMe',
+          'entityType': 'member',
+          'userId': 'user-42',
+        }),
+      };
+
+      final response = await wsSubscribeHandler(
+        event,
+        connections: connections,
+        management: management,
+      );
+
+      expect(response['statusCode'], 200);
+      expect(connections.subscriptions, hasLength(1));
+      expect(connections.subscriptions[0]['notifyType'], 'addedMe');
+      expect(management.sentMessages[0]['payload']['status'], 'ok');
+      expect(management.sentMessages[0]['payload']['notifyType'], 'addedMe');
+      expect(management.sentMessages[0]['payload']['states'], isEmpty);
+    });
+
+    test(
+      'accepts newDomainId subscriptions for project create notifications',
+      () async {
+        final connections = _FakeConnectionsRepository();
+        final management = _FakeManagementClient(connections: connections);
+
+        final event = {
+          'requestContext': {'connectionId': 'conn-sub-new-project'},
+          'body': jsonEncode({
+            'domainType': 'project',
+            'domainId': 'proj-1',
+            'notifyType': 'newDomainId',
+            'entityType': 'project',
+          }),
+        };
+
+        final response = await wsSubscribeHandler(
+          event,
+          connections: connections,
+          management: management,
+        );
+
+        expect(response['statusCode'], 200);
+        expect(connections.subscriptions, hasLength(1));
+        expect(connections.subscriptions[0]['notifyType'], 'newDomainId');
+        expect(
+          management.sentMessages[0]['payload']['notifyType'],
+          'newDomainId',
+        );
+        expect(management.sentMessages[0]['payload']['states'], isEmpty);
+      },
+    );
+
+    test('accepts addedMe subscriptions without a domainId', () async {
+      final connections = _FakeConnectionsRepository();
+      final management = _FakeManagementClient(connections: connections);
+
+      final event = {
+        'requestContext': {'connectionId': 'conn-sub-addedme-no-domain-id'},
+        'body': jsonEncode({
+          'domainType': 'membership',
+          'notifyType': 'addedMe',
+          'entityType': 'member',
+          'userId': 'user-42',
+        }),
+      };
+
+      final response = await wsSubscribeHandler(
+        event,
+        connections: connections,
+        management: management,
+      );
+
+      expect(response['statusCode'], 200);
+      expect(connections.subscriptions, hasLength(1));
+      expect(connections.subscriptions[0]['notifyType'], 'addedMe');
+      expect(connections.subscriptions[0]['domainId'], isEmpty);
+      expect(management.sentMessages[0]['payload']['status'], 'ok');
+      expect(management.sentMessages[0]['payload']['notifyType'], 'addedMe');
+      expect(management.sentMessages[0]['payload']['states'], isEmpty);
+    });
+
+    test('accepts newDomainId subscriptions without a domainId', () async {
+      final connections = _FakeConnectionsRepository();
+      final management = _FakeManagementClient(connections: connections);
+
+      final event = {
+        'requestContext': {'connectionId': 'conn-sub-new-project-no-domain-id'},
+        'body': jsonEncode({
+          'domainType': 'project',
+          'notifyType': 'newDomainId',
+          'entityType': 'project',
+        }),
+      };
+
+      final response = await wsSubscribeHandler(
+        event,
+        connections: connections,
+        management: management,
+      );
+
+      expect(response['statusCode'], 200);
+      expect(connections.subscriptions, hasLength(1));
+      expect(connections.subscriptions[0]['notifyType'], 'newDomainId');
+      expect(connections.subscriptions[0]['domainId'], isEmpty);
+      expect(management.sentMessages[0]['payload']['status'], 'ok');
+      expect(
+        management.sentMessages[0]['payload']['notifyType'],
+        'newDomainId',
+      );
+      expect(management.sentMessages[0]['payload']['states'], isEmpty);
+    });
   });
 }
 
@@ -1131,6 +1400,10 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
   final List<Map<String, dynamic>> queries = [];
   final Map<String, List<WebsocketSubscriptionMatch>> subscriptionsByDomain =
       {};
+  final Map<String, List<WebsocketSubscriptionMatch>> subscriptionsByUserId =
+      {};
+  final Map<String, List<WebsocketSubscriptionMatch>>
+  subscriptionsByRootEntity = {};
   final List<Map<String, dynamic>> subscriptions = [];
 
   @override
@@ -1145,6 +1418,36 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
       'notifyType': notifyType,
     });
     final subscriptions = subscriptionsByDomain['$domainType|$domainId'] ?? [];
+    if (notifyType == null) return subscriptions;
+    return subscriptions
+        .where((s) => s.notifyType == notifyType)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<List<WebsocketSubscriptionMatch>> findSubscribersByUserId({
+    required String userId,
+    String? domainType,
+    String? entityType,
+    String? notifyType,
+  }) async {
+    final subscriptions =
+        subscriptionsByUserId[userId] ?? const <WebsocketSubscriptionMatch>[];
+    if (notifyType == null) return subscriptions;
+    return subscriptions
+        .where((s) => s.notifyType == notifyType)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<List<WebsocketSubscriptionMatch>> findSubscribersByRootEntity({
+    required String domainType,
+    required String entityType,
+    String? notifyType,
+  }) async {
+    final key = '$domainType|$entityType';
+    final subscriptions =
+        subscriptionsByRootEntity[key] ?? const <WebsocketSubscriptionMatch>[];
     if (notifyType == null) return subscriptions;
     return subscriptions
         .where((s) => s.notifyType == notifyType)
@@ -1175,6 +1478,7 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
     required String domainId,
     String? entityType,
     required String notifyType,
+    String? userId,
   }) {
     throw UnimplementedError();
   }
@@ -1194,6 +1498,7 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
     required String domainId,
     String? entityType,
     required String notifyType,
+    String? userId,
   }) async {
     final storedEntityType =
         notifyType == WebsocketConstants.notifyTypeDomainStats
@@ -1206,6 +1511,7 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
       'domainId': domainId,
       'entityType': storedEntityType,
       'notifyType': notifyType,
+      if (userId != null) 'userId': userId,
     });
   }
 }

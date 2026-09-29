@@ -83,28 +83,47 @@ class WebsocketConnectionsRepository {
     required String domainId,
     String? entityType,
     required String notifyType,
+    String? userId,
   }) async {
     final isStatsSubscription =
         notifyType == WebsocketConstants.notifyTypeDomainStats;
+    final isAddedMeSubscription =
+        notifyType == WebsocketConstants.notifyTypeAddedMe;
+    final isNewDomainIdSubscription =
+        notifyType == WebsocketConstants.newDomainId;
     final resolvedEntityType = isStatsSubscription
         ? WebsocketKeys.wildcardEntityType
         : WebsocketKeys.resolveEntityType(entityType);
+
+    final subscriptionSk = isAddedMeSubscription
+        ? WebsocketKeys.addedMeSubscriptionSk(userId: userId ?? '')
+        : isNewDomainIdSubscription
+        ? WebsocketKeys.newDomainIdSubscriptionSk(
+            domainType: domainType,
+            entityType: resolvedEntityType,
+          )
+        : WebsocketKeys.subscriptionSk(
+            domainType: domainType,
+            domainId: domainId,
+            entityType: resolvedEntityType,
+            notifyType: notifyType,
+          );
+
+    final gsi1pk = isAddedMeSubscription
+        ? WebsocketKeys.rootUserGsiPk(userId: userId ?? '')
+        : isNewDomainIdSubscription
+        ? WebsocketKeys.rootEntityGsiPk(
+            domainType: domainType,
+            entityType: resolvedEntityType,
+          )
+        : WebsocketKeys.domainGsiPk(domainType: domainType, domainId: domainId);
 
     await _dynamoRequest('PutItem', {
       'TableName': _tableName,
       'Item': {
         'connectionId': _attributeValueS(connectionId),
-        'sk': _attributeValueS(
-          WebsocketKeys.subscriptionSk(
-            domainType: domainType,
-            domainId: domainId,
-            entityType: resolvedEntityType,
-            notifyType: notifyType,
-          ),
-        ),
-        'gsi1pk': _attributeValueS(
-          WebsocketKeys.domainGsiPk(domainType: domainType, domainId: domainId),
-        ),
+        'sk': _attributeValueS(subscriptionSk),
+        'gsi1pk': _attributeValueS(gsi1pk),
         'domainType': _attributeValueS(domainType),
         'domainId': _attributeValueS(domainId),
         'entityType': _attributeValueS(resolvedEntityType),
@@ -120,25 +139,37 @@ class WebsocketConnectionsRepository {
     required String domainId,
     String? entityType,
     required String notifyType,
+    String? userId,
   }) async {
     final isStatsSubscription =
         notifyType == WebsocketConstants.notifyTypeDomainStats;
+    final isAddedMeSubscription =
+        notifyType == WebsocketConstants.notifyTypeAddedMe;
+    final isNewDomainIdSubscription =
+        notifyType == WebsocketConstants.newDomainId;
     final resolvedEntityType = isStatsSubscription
         ? WebsocketKeys.wildcardEntityType
         : WebsocketKeys.resolveEntityType(entityType);
+
+    final subscriptionSk = isAddedMeSubscription
+        ? WebsocketKeys.addedMeSubscriptionSk(userId: userId ?? '')
+        : isNewDomainIdSubscription
+        ? WebsocketKeys.newDomainIdSubscriptionSk(
+            domainType: domainType,
+            entityType: resolvedEntityType,
+          )
+        : WebsocketKeys.subscriptionSk(
+            domainType: domainType,
+            domainId: domainId,
+            entityType: resolvedEntityType,
+            notifyType: notifyType,
+          );
 
     await _dynamoRequest('DeleteItem', {
       'TableName': _tableName,
       'Key': {
         'connectionId': _attributeValueS(connectionId),
-        'sk': _attributeValueS(
-          WebsocketKeys.subscriptionSk(
-            domainType: domainType,
-            domainId: domainId,
-            entityType: resolvedEntityType,
-            notifyType: notifyType,
-          ),
-        ),
+        'sk': _attributeValueS(subscriptionSk),
       },
     });
   }
@@ -218,6 +249,114 @@ class WebsocketConnectionsRepository {
         continue;
       }
 
+      matches.add(
+        WebsocketSubscriptionMatch(
+          connectionId: connectionId,
+          entityType: subscribedEntityType,
+          notifyType: notifyType,
+        ),
+      );
+    }
+    return matches;
+  }
+
+  /// Returns every connection subscribed to a root-entity user match.
+  Future<List<WebsocketSubscriptionMatch>> findSubscribersByUserId({
+    required String userId,
+    String? domainType,
+    String? entityType,
+    String? notifyType,
+  }) async {
+    final payload = <String, dynamic>{
+      'TableName': _tableName,
+      'IndexName': _gsiName,
+      'KeyConditionExpression': 'gsi1pk = :pk',
+      'ExpressionAttributeValues': {
+        ':pk': _attributeValueS(WebsocketKeys.rootUserGsiPk(userId: userId)),
+      },
+    };
+    if (notifyType != null) {
+      payload['FilterExpression'] = 'notifyType = :notifyType';
+      payload['ExpressionAttributeValues'][':notifyType'] = _attributeValueS(
+        notifyType,
+      );
+    }
+
+    final result = await _dynamoRequest('Query', payload);
+    return _matchesFromQueryResult(
+      result,
+      domainType: domainType,
+      entityType: entityType,
+    );
+  }
+
+  /// Returns every connection subscribed to a root-entity pattern.
+  Future<List<WebsocketSubscriptionMatch>> findSubscribersByRootEntity({
+    required String domainType,
+    required String entityType,
+    String? notifyType,
+  }) async {
+    final payload = <String, dynamic>{
+      'TableName': _tableName,
+      'IndexName': _gsiName,
+      'KeyConditionExpression': 'gsi1pk = :pk',
+      'ExpressionAttributeValues': {
+        ':pk': _attributeValueS(
+          WebsocketKeys.rootEntityGsiPk(
+            domainType: domainType,
+            entityType: entityType,
+          ),
+        ),
+      },
+    };
+    if (notifyType != null) {
+      payload['FilterExpression'] = 'notifyType = :notifyType';
+      payload['ExpressionAttributeValues'][':notifyType'] = _attributeValueS(
+        notifyType,
+      );
+    }
+
+    final result = await _dynamoRequest('Query', payload);
+    return _matchesFromQueryResult(
+      result,
+      domainType: domainType,
+      entityType: entityType,
+    );
+  }
+
+  List<WebsocketSubscriptionMatch> _matchesFromQueryResult(
+    Map<String, dynamic> result, {
+    String? domainType,
+    String? entityType,
+  }) {
+    final matches = <WebsocketSubscriptionMatch>[];
+    final items =
+        (result['Items'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+        const [];
+
+    for (final item in items) {
+      final sk = (item['sk'] as Map<String, dynamic>?)?['S'] as String?;
+      final connectionId =
+          (item['connectionId'] as Map<String, dynamic>?)?['S'] as String?;
+      if (sk == null || connectionId == null) continue;
+
+      final subscribedEntityType = WebsocketKeys.entityTypeFromSubscriptionSk(
+        sk,
+      );
+      final notifyType = WebsocketKeys.notifyTypeFromSubscriptionSk(sk);
+      if (notifyType != WebsocketConstants.notifyTypeAddedMe &&
+          notifyType != WebsocketConstants.newDomainId) {
+        continue;
+      }
+      if (domainType != null &&
+          (item['domainType'] as Map<String, dynamic>?)?['S'] != domainType) {
+        continue;
+      }
+      if (entityType != null &&
+          subscribedEntityType != entityType &&
+          subscribedEntityType != WebsocketKeys.wildcardEntityType) {
+        continue;
+      }
       matches.add(
         WebsocketSubscriptionMatch(
           connectionId: connectionId,

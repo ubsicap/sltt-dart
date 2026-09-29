@@ -10,4 +10,6 @@ class WebsocketConstants {
 
   static const String notifyTypeDomainChange = 'domainChange';
   static const String notifyTypeDomainStats = 'domainStats';
+  static const String notifyTypeAddedMe = 'addedMe';
+  static const String newDomainId = 'newDomainId';
 }

@@ -35,10 +35,27 @@ class WebsocketKeys {
   }) =>
       'sub#@DOMAINTYPE#$domainType#@DOMAINID#$domainId#@ENTITYTYPE#$entityType#@NOTIFYTYPE#$notifyType';
 
+  static String addedMeSubscriptionSk({required String userId}) =>
+      'root#@USERID#$userId#@DOMAINTYPE#membership#@ENTITYTYPE#member#@NOTIFYTYPE#${WebsocketConstants.notifyTypeAddedMe}';
+
+  static String newDomainIdSubscriptionSk({
+    required String domainType,
+    required String entityType,
+  }) =>
+      'root#@DOMAINTYPE#$domainType#@ENTITYTYPE#$entityType#@NOTIFYTYPE#${WebsocketConstants.newDomainId}';
+
   static String domainGsiPk({
     required String domainType,
     required String domainId,
   }) => 'sub#@DOMAINTYPE#$domainType#@DOMAINID#$domainId';
+
+  static String rootUserGsiPk({required String userId}) =>
+      'root#@USERID#$userId';
+
+  static String rootEntityGsiPk({
+    required String domainType,
+    required String entityType,
+  }) => 'root#@DOMAINTYPE#$domainType#@ENTITYTYPE#$entityType';
 
   /// Extracts the entityType label from a subscription SK, e.g.
   /// "sub#@DOMAINTYPE#project#@DOMAINID#proj_1#@ENTITYTYPE#task#@NOTIFYTYPE#domainChange" -> "task"

@@ -5,8 +5,10 @@ import 'package:aws_backend/src/websocket/domain_change_payload.dart'
         WsNotifyRecord,
         buildDomainChangeNotificationPayload,
         buildDomainStatsNotificationPayload;
-import 'package:sltt_core/sltt_core.dart' show SlttLogger, WebsocketConstants;
+import 'package:sltt_core/sltt_core.dart'
+    show SlttLogger, WebsocketConstants, getDomainRootEntityType;
 
+import 'root_entity_subscription_utils.dart';
 import 'websocket_connections_repository.dart';
 import 'websocket_keys.dart';
 import 'websocket_management_client.dart';
@@ -132,8 +134,60 @@ Future<Map<String, dynamic>> wsNotifyHandler(
       continue;
     }
 
+    if (notifyType == WebsocketConstants.notifyTypeAddedMe ||
+        notifyType == WebsocketConstants.newDomainId) {
+      final rootUserId =
+          (message['userId'] as String?) ??
+          (message['entityId'] as String?) ??
+          '';
+      final rootEntityType = (message['entityType'] as String?) ?? entityType;
+      final subscriptionKey = notifyType == WebsocketConstants.notifyTypeAddedMe
+          ? WebsocketKeys.addedMeSubscriptionSk(userId: rootUserId)
+          : WebsocketKeys.newDomainIdSubscriptionSk(
+              domainType: domainType,
+              entityType: rootEntityType,
+            );
+
+      final subscriberMatches =
+          notifyType == WebsocketConstants.notifyTypeAddedMe
+          ? await connections.findSubscribersByUserId(
+              userId: rootUserId,
+              domainType: domainType,
+              entityType: rootEntityType,
+              notifyType: notifyType,
+            )
+          : await connections.findSubscribersByRootEntity(
+              domainType: domainType,
+              entityType: rootEntityType,
+              notifyType: notifyType,
+            );
+
+      for (final subscription in subscriberMatches) {
+        if (subscription.notifyType != notifyType) {
+          continue;
+        }
+        await management.send(subscription.connectionId, {
+          'action': WebsocketConstants.actionChange,
+          'notifyType': notifyType,
+          'domainType': domainType,
+          'domainId': domainId,
+          'entityType': rootEntityType,
+          'subscriptionKey': subscriptionKey,
+          'change':
+              message['change'] ??
+              {
+                'domainType': domainType,
+                'domainId': domainId,
+                'entityId': rootUserId,
+              },
+          'states': const <Map<String, dynamic>>[],
+        });
+      }
+      continue;
+    }
+
     SlttLogger.logger.warning(
-      'wsNotify: unsupported notifyType "$notifyType"; only "${WebsocketConstants.notifyTypeDomainChange}" and "${WebsocketConstants.notifyTypeDomainStats}" are supported: $message',
+      'wsNotify: unsupported notifyType "$notifyType"; only "${WebsocketConstants.notifyTypeDomainChange}", "${WebsocketConstants.notifyTypeDomainStats}", "${WebsocketConstants.notifyTypeAddedMe}", and "${WebsocketConstants.newDomainId}" are supported: $message',
     );
     continue;
   }
@@ -250,6 +304,56 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             subscriptionKey: lastRecordSubscriptionKey,
             change: record.change,
           );
+        }
+      }
+
+      final rootEntityType = getDomainRootEntityType(domainType);
+      if (record.change['operation'] == 'create' &&
+          rootEntityType != null &&
+          record.entityType == rootEntityType) {
+        final notifyType =
+            getRootNotificationTypeForDomain(domainType) ??
+            WebsocketConstants.newDomainId;
+        final rootUserId =
+            (record.change['entityId'] as String?) ??
+            (record.change['userId'] as String?) ??
+            '';
+        final isUserScopedRoot =
+            isDomainTypeWithSeparateDomainIdAndRootEntityType(domainType);
+        final rootSubscriptionKey = isUserScopedRoot
+            ? WebsocketKeys.addedMeSubscriptionSk(userId: rootUserId)
+            : WebsocketKeys.newDomainIdSubscriptionSk(
+                domainType: domainType,
+                entityType: rootEntityType,
+              );
+
+        final rootSubscriberMatches = isUserScopedRoot
+            ? await connections.findSubscribersByUserId(
+                userId: rootUserId,
+                domainType: domainType,
+                entityType: rootEntityType,
+                notifyType: notifyType,
+              )
+            : await connections.findSubscribersByRootEntity(
+                domainType: domainType,
+                entityType: rootEntityType,
+                notifyType: notifyType,
+              );
+
+        for (final subscription in rootSubscriberMatches) {
+          if (subscription.notifyType != notifyType) {
+            continue;
+          }
+          await management.send(subscription.connectionId, {
+            'action': WebsocketConstants.actionChange,
+            'notifyType': notifyType,
+            'domainType': domainType,
+            'domainId': domainId,
+            'entityType': rootEntityType,
+            'subscriptionKey': rootSubscriptionKey,
+            'change': record.change,
+            'states': const <Map<String, dynamic>>[],
+          });
         }
       }
     }
