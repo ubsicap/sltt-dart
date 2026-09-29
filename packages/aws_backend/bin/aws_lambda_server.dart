@@ -296,6 +296,22 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
             );
             return response.toJson();
           },
+      getRootEntityStates: ({
+        required String domainType,
+        String? entityIdPrefix,
+        String? userId,
+        Set<String>? projectionFields,
+      }) async {
+        final result = await storage.getCrossDomainEntityStates(
+          domainType: domainType,
+          entityIdPrefix: entityIdPrefix,
+          projectionExpressionFields: projectionFields,
+          sortDirection: 'asc',
+          excludeDeleted: false,
+          includeTestDomains: false,
+        );
+        return result.items;
+      },
     );
   } catch (e, stackTrace) {
     SlttLogger.logger.severe(

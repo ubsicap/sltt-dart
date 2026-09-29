@@ -1291,6 +1291,113 @@ void main() {
       },
     );
 
+    test(
+      'newDomainId subscribe ack includes existing project states when provided',
+      () async {
+        final connections = _FakeConnectionsRepository();
+        final management = _FakeManagementClient(connections: connections);
+
+        final event = {
+          'requestContext': {'connectionId': 'conn-sub-new-project-states'},
+          'body': jsonEncode({
+            'domainType': 'project',
+            'notifyType': 'newDomainId',
+            'entityType': 'project',
+            'ackFields': ['name', 'change_domainId'],
+          }),
+        };
+
+        final response = await wsSubscribeHandler(
+          event,
+          connections: connections,
+          management: management,
+          getRootEntityStates:
+              ({
+                required String domainType,
+                String? entityIdPrefix,
+                String? userId,
+                Set<String>? projectionFields,
+              }) async {
+                expect(domainType, 'project');
+                expect(entityIdPrefix, isNull);
+                expect(userId, isNull);
+                expect(projectionFields, {'name', 'change_domainId'});
+                return [
+                  {
+                    'entityId': 'proj-1',
+                    'change_domainId': 'proj-1',
+                    'name': 'Alpha',
+                  },
+                  {
+                    'entityId': 'proj-2',
+                    'change_domainId': 'proj-2',
+                    'name': 'Beta',
+                  },
+                ];
+              },
+        );
+
+        expect(response['statusCode'], 200);
+        expect(management.sentMessages[0]['payload']['states'], [
+          {'entityId': 'proj-1', 'change_domainId': 'proj-1', 'name': 'Alpha'},
+          {'entityId': 'proj-2', 'change_domainId': 'proj-2', 'name': 'Beta'},
+        ]);
+      },
+    );
+
+    test(
+      'addedMe subscribe ack includes existing membership states when provided',
+      () async {
+        final connections = _FakeConnectionsRepository();
+        final management = _FakeManagementClient(connections: connections);
+
+        final event = {
+          'requestContext': {'connectionId': 'conn-sub-addedme-states'},
+          'body': jsonEncode({
+            'domainType': 'membership',
+            'notifyType': 'addedMe',
+            'entityType': 'member',
+            'userId': 'user-42',
+            'ackFields': ['data_role', 'change_domainId'],
+          }),
+        };
+
+        final response = await wsSubscribeHandler(
+          event,
+          connections: connections,
+          management: management,
+          getRootEntityStates:
+              ({
+                required String domainType,
+                String? entityIdPrefix,
+                String? userId,
+                Set<String>? projectionFields,
+              }) async {
+                expect(domainType, 'membership');
+                expect(entityIdPrefix, 'user-42');
+                expect(userId, 'user-42');
+                expect(projectionFields, {'data_role', 'change_domainId'});
+                return [
+                  {
+                    'entityId': 'user-42',
+                    'change_domainId': 'proj-5',
+                    'data_role': 'member',
+                  },
+                ];
+              },
+        );
+
+        expect(response['statusCode'], 200);
+        expect(management.sentMessages[0]['payload']['states'], [
+          {
+            'entityId': 'user-42',
+            'change_domainId': 'proj-5',
+            'data_role': 'member',
+          },
+        ]);
+      },
+    );
+
     test('accepts addedMe subscriptions without a domainId', () async {
       final connections = _FakeConnectionsRepository();
       final management = _FakeManagementClient(connections: connections);
