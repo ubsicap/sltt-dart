@@ -1,3 +1,5 @@
+import 'dart:convert' show jsonDecode;
+
 import 'package:json_annotation/json_annotation.dart';
 import 'package:sltt_core/sltt_core.dart';
 
@@ -242,19 +244,64 @@ class DomainStatsResponse {
   }
 }
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class EntityStatesResponse {
-  final List<Map<String, dynamic>> items;
+  final String domainId;
+  final String domainType;
+  final String entityType;
+  final List<dynamic> items;
   final bool hasMore;
-  final String? nextCursor;
+  final String? cursor;
+  final String? timestamp;
 
   EntityStatesResponse({
+    required this.domainId,
+    required this.domainType,
+    required this.entityType,
     required this.items,
     required this.hasMore,
-    this.nextCursor,
+    this.cursor,
+    this.timestamp,
   });
 
   factory EntityStatesResponse.fromJson(Map<String, dynamic> json) =>
       _$EntityStatesResponseFromJson(json);
-  Map<String, dynamic> toJson() => _$EntityStatesResponseToJson(this);
+
+  Map<String, dynamic> toJson() {
+    final coreJson = _$EntityStatesResponseToJson(this);
+    return {'${domainType}Id': domainId, ...coreJson};
+  }
+
+  Map<String, dynamic> toJsonStable() => {
+    ...toJson(),
+    'items': stabilizeEachItemInList(items),
+  };
 }
+
+@JsonSerializable(explicitToJson: true)
+class CrossDomainEntityStatesResponse {
+  final List<dynamic> items;
+  final String? nextCursor;
+  final int count;
+
+  CrossDomainEntityStatesResponse({
+    required this.items,
+    this.nextCursor,
+    required this.count,
+  });
+
+  factory CrossDomainEntityStatesResponse.fromJson(Map<String, dynamic> json) =>
+      _$CrossDomainEntityStatesResponseFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$CrossDomainEntityStatesResponseToJson(this);
+
+  Map<String, dynamic> toJsonStable() => {
+    ...toJson(),
+    'items': stabilizeEachItemInList(items),
+  };
+}
+
+/// Stabilizes each item in the list by converting it to a JSON string and back (e.g. for stable payloads)
+List<dynamic> stabilizeEachItemInList(List<dynamic> items) =>
+    items.map((item) => jsonDecode(stableStringify(item))).toList();

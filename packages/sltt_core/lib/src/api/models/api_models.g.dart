@@ -242,17 +242,39 @@ Map<String, dynamic> _$DomainStatsResponseToJson(
 EntityStatesResponse _$EntityStatesResponseFromJson(
   Map<String, dynamic> json,
 ) => EntityStatesResponse(
-  items: (json['items'] as List<dynamic>)
-      .map((e) => e as Map<String, dynamic>)
-      .toList(),
+  domainId: json['domainId'] as String,
+  domainType: json['domainType'] as String,
+  entityType: json['entityType'] as String,
+  items: json['items'] as List<dynamic>,
   hasMore: json['hasMore'] as bool,
-  nextCursor: json['nextCursor'] as String?,
+  cursor: json['cursor'] as String?,
+  timestamp: json['timestamp'] as String?,
 );
 
 Map<String, dynamic> _$EntityStatesResponseToJson(
   EntityStatesResponse instance,
 ) => <String, dynamic>{
+  'domainId': instance.domainId,
+  'domainType': instance.domainType,
+  'entityType': instance.entityType,
   'items': instance.items,
   'hasMore': instance.hasMore,
+  'cursor': instance.cursor,
+  'timestamp': instance.timestamp,
+};
+
+CrossDomainEntityStatesResponse _$CrossDomainEntityStatesResponseFromJson(
+  Map<String, dynamic> json,
+) => CrossDomainEntityStatesResponse(
+  items: json['items'] as List<dynamic>,
+  nextCursor: json['nextCursor'] as String?,
+  count: (json['count'] as num).toInt(),
+);
+
+Map<String, dynamic> _$CrossDomainEntityStatesResponseToJson(
+  CrossDomainEntityStatesResponse instance,
+) => <String, dynamic>{
+  'items': instance.items,
   'nextCursor': instance.nextCursor,
+  'count': instance.count,
 };

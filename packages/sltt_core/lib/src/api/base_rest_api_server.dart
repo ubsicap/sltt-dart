@@ -2075,16 +2075,18 @@ abstract class BaseRestApiServer {
         storedAfter: storedAfter?.toUtc(),
       );
 
+      final response = EntityStatesResponse(
+        domainId: domainId,
+        domainType: domainType,
+        entityType: decodedEntityType,
+        items: stateData['items'],
+        hasMore: stateData['hasMore'] as bool? ?? false,
+        cursor: stateData['nextCursor'] as String?,
+        timestamp: DateTime.now().toUtc().toIso8601String(),
+      );
+
       return Response.ok(
-        jsonEncode({
-          'domainId': domainId,
-          '${domainType}Id': domainId,
-          'entityType': decodedEntityType,
-          'items': jsonDecode(stableStringify(stateData['items'])),
-          'cursor': stateData['nextCursor'],
-          'hasMore': stateData['hasMore'],
-          'timestamp': DateTime.now().toUtc().toIso8601String(),
-        }),
+        jsonEncode(response.toJsonStable()),
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {

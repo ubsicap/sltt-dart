@@ -1107,6 +1107,16 @@ class AwsRestApiServer extends BaseRestApiServer {
     },
   ];
 
+  Map<String, dynamic> _crossDomainStatesResponseJson({
+    required List<Map<String, dynamic>> items,
+    required String? nextCursor,
+    required int count,
+  }) => CrossDomainEntityStatesResponse(
+    items: items,
+    nextCursor: nextCursor,
+    count: count,
+  ).toJsonStable();
+
   /// Get the router for use in debugging or custom server setups
   Router getRouter() => buildRouter();
 
@@ -1264,7 +1274,13 @@ class AwsRestApiServer extends BaseRestApiServer {
 
       if (projectIds.isEmpty) {
         return Response.ok(
-          jsonEncode({'items': <dynamic>[], 'nextCursor': null, 'count': 0}),
+          jsonEncode(
+            _crossDomainStatesResponseJson(
+              items: const <Map<String, dynamic>>[],
+              nextCursor: null,
+              count: 0,
+            ),
+          ),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -1289,13 +1305,13 @@ class AwsRestApiServer extends BaseRestApiServer {
           .toList();
 
       return Response.ok(
-        jsonEncode({
-          'items': filteredItems
-              .map((item) => jsonDecode(stableStringify(item)))
-              .toList(),
-          'nextCursor': projectResult.nextCursor,
-          'count': filteredItems.length,
-        }),
+        jsonEncode(
+          _crossDomainStatesResponseJson(
+            items: filteredItems,
+            nextCursor: projectResult.nextCursor,
+            count: filteredItems.length,
+          ),
+        ),
         headers: {'Content-Type': 'application/json'},
       );
     } on AuthException catch (e) {
@@ -1359,7 +1375,13 @@ class AwsRestApiServer extends BaseRestApiServer {
 
       if (authorizedTeamIds.isEmpty) {
         return Response.ok(
-          jsonEncode({'items': <dynamic>[], 'nextCursor': null, 'count': 0}),
+          jsonEncode(
+            _crossDomainStatesResponseJson(
+              items: const <Map<String, dynamic>>[],
+              nextCursor: null,
+              count: 0,
+            ),
+          ),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -1386,13 +1408,13 @@ class AwsRestApiServer extends BaseRestApiServer {
       }).toList();
 
       return Response.ok(
-        jsonEncode({
-          'items': filteredItems
-              .map((item) => jsonDecode(stableStringify(item)))
-              .toList(),
-          'nextCursor': teamResult.nextCursor,
-          'count': filteredItems.length,
-        }),
+        jsonEncode(
+          _crossDomainStatesResponseJson(
+            items: filteredItems,
+            nextCursor: teamResult.nextCursor,
+            count: filteredItems.length,
+          ),
+        ),
         headers: {'Content-Type': 'application/json'},
       );
     } on AuthException catch (e) {
@@ -1558,13 +1580,13 @@ class AwsRestApiServer extends BaseRestApiServer {
       );
 
       return Response.ok(
-        jsonEncode({
-          'items': result.items
-              .map((item) => jsonDecode(stableStringify(item)))
-              .toList(), // <-- add this
-          'nextCursor': result.nextCursor,
-          'count': result.items.length,
-        }),
+        jsonEncode(
+          _crossDomainStatesResponseJson(
+            items: result.items,
+            nextCursor: result.nextCursor,
+            count: result.items.length,
+          ),
+        ),
         headers: {'Content-Type': 'application/json'},
       );
     } catch (e, st) {
