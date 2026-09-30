@@ -255,6 +255,25 @@ void main() {
       expect(subscribeAck['domainType'], equals('project'));
       expect(subscribeAck['domainId'], equals(''));
       expect(subscribeAck['entityType'], equals('project'));
+      final newDomainIdStates = subscribeAck['states'];
+      expect(newDomainIdStates, isA<Map<String, dynamic>>());
+      final newDomainIdStatesMap = (newDomainIdStates as Map<String, dynamic>)
+          .cast<String, dynamic>();
+      final newDomainIdItems =
+          newDomainIdStatesMap['items'] as List<dynamic>? ?? const [];
+      expect(newDomainIdStatesMap['nextCursor'], isNull);
+      expect(
+        jsonEncode(newDomainIdStatesMap),
+        jsonEncode(
+          CrossDomainEntityStatesResponse(
+            items: newDomainIdItems,
+            nextCursor: null,
+            count: newDomainIdItems.length,
+          ).toJsonStable(),
+        ),
+        reason:
+            'newDomainId subscription should return a stable cross-domain state envelope',
+      );
 
       final project = await createRequestedProject(
         accessToken: token,
@@ -325,6 +344,25 @@ void main() {
       expect(subscribeAck['domainType'], equals('membership'));
       expect(subscribeAck['domainId'], equals(''));
       expect(subscribeAck['entityType'], equals('member'));
+      final addedMeStates = subscribeAck['states'];
+      expect(addedMeStates, isA<Map<String, dynamic>>());
+      final addedMeStatesMap = (addedMeStates as Map<String, dynamic>)
+          .cast<String, dynamic>();
+      final addedMeItems =
+          addedMeStatesMap['items'] as List<dynamic>? ?? const [];
+      expect(addedMeStatesMap['nextCursor'], isNull);
+      expect(
+        jsonEncode(addedMeStatesMap),
+        jsonEncode(
+          CrossDomainEntityStatesResponse(
+            items: addedMeItems,
+            nextCursor: null,
+            count: addedMeItems.length,
+          ).toJsonStable(),
+        ),
+        reason:
+            'addedMe subscription should return a stable cross-domain state envelope',
+      );
 
       final project = await createRequestedProject(
         accessToken: token,

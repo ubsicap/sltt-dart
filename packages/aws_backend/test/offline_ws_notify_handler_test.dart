@@ -10,6 +10,7 @@ import 'package:aws_backend/src/websocket/domain_change_payload.dart'
         buildWsNotifyRecordMessage;
 import 'package:sltt_core/sltt_core.dart'
     show
+        CrossDomainEntityStatesResponse,
         DomainStatsResponse,
         EntityTypeStats,
         EntityTypeSummary,
@@ -1255,7 +1256,17 @@ void main() {
       expect(connections.subscriptions[0]['notifyType'], 'addedMe');
       expect(management.sentMessages[0]['payload']['status'], 'ok');
       expect(management.sentMessages[0]['payload']['notifyType'], 'addedMe');
-      expect(management.sentMessages[0]['payload']['states'], isEmpty);
+      expect(
+        jsonEncode(management.sentMessages[0]['payload']['states']),
+        jsonEncode(
+          CrossDomainEntityStatesResponse(
+            items: const [],
+            count: 0,
+          ).toJsonStable(),
+        ),
+        reason:
+            'addedMe ack should use the stable cross-domain states envelope',
+      );
     });
 
     test(
@@ -1287,7 +1298,17 @@ void main() {
           management.sentMessages[0]['payload']['notifyType'],
           'newDomainId',
         );
-        expect(management.sentMessages[0]['payload']['states'], isEmpty);
+        expect(
+          jsonEncode(management.sentMessages[0]['payload']['states']),
+          jsonEncode(
+            CrossDomainEntityStatesResponse(
+              items: const [],
+              count: 0,
+            ).toJsonStable(),
+          ),
+          reason:
+              'newDomainId ack should use the stable cross-domain states envelope',
+        );
       },
     );
 
@@ -1322,26 +1343,47 @@ void main() {
                 expect(entityIdPrefix, isNull);
                 expect(userId, isNull);
                 expect(projectionFields, {'name', 'change_domainId'});
-                return [
-                  {
-                    'entityId': 'proj-1',
-                    'change_domainId': 'proj-1',
-                    'name': 'Alpha',
-                  },
-                  {
-                    'entityId': 'proj-2',
-                    'change_domainId': 'proj-2',
-                    'name': 'Beta',
-                  },
-                ];
+                return CrossDomainEntityStatesResponse(
+                  items: [
+                    {
+                      'entityId': 'proj-1',
+                      'change_domainId': 'proj-1',
+                      'name': 'Alpha',
+                    },
+                    {
+                      'entityId': 'proj-2',
+                      'change_domainId': 'proj-2',
+                      'name': 'Beta',
+                    },
+                  ],
+                  count: 2,
+                ).toJsonStable();
               },
         );
 
         expect(response['statusCode'], 200);
-        expect(management.sentMessages[0]['payload']['states'], [
-          {'entityId': 'proj-1', 'change_domainId': 'proj-1', 'name': 'Alpha'},
-          {'entityId': 'proj-2', 'change_domainId': 'proj-2', 'name': 'Beta'},
-        ]);
+        expect(
+          jsonEncode(management.sentMessages[0]['payload']['states']),
+          jsonEncode(
+            CrossDomainEntityStatesResponse(
+              items: [
+                {
+                  'entityId': 'proj-1',
+                  'change_domainId': 'proj-1',
+                  'name': 'Alpha',
+                },
+                {
+                  'entityId': 'proj-2',
+                  'change_domainId': 'proj-2',
+                  'name': 'Beta',
+                },
+              ],
+              count: 2,
+            ).toJsonStable(),
+          ),
+          reason:
+              'newDomainId ack should return stable paginated state metadata with ordered item keys',
+        );
       },
     );
 
@@ -1377,24 +1419,37 @@ void main() {
                 expect(entityIdPrefix, 'user-42');
                 expect(userId, 'user-42');
                 expect(projectionFields, {'data_role', 'change_domainId'});
-                return [
-                  {
-                    'entityId': 'user-42',
-                    'change_domainId': 'proj-5',
-                    'data_role': 'member',
-                  },
-                ];
+                return CrossDomainEntityStatesResponse(
+                  items: [
+                    {
+                      'entityId': 'user-42',
+                      'change_domainId': 'proj-5',
+                      'data_role': 'member',
+                    },
+                  ],
+                  count: 1,
+                ).toJsonStable();
               },
         );
 
         expect(response['statusCode'], 200);
-        expect(management.sentMessages[0]['payload']['states'], [
-          {
-            'entityId': 'user-42',
-            'change_domainId': 'proj-5',
-            'data_role': 'member',
-          },
-        ]);
+        expect(
+          jsonEncode(management.sentMessages[0]['payload']['states']),
+          jsonEncode(
+            CrossDomainEntityStatesResponse(
+              items: [
+                {
+                  'entityId': 'user-42',
+                  'change_domainId': 'proj-5',
+                  'data_role': 'member',
+                },
+              ],
+              count: 1,
+            ).toJsonStable(),
+          ),
+          reason:
+              'addedMe ack should return stable paginated state metadata with ordered item keys',
+        );
       },
     );
 
@@ -1424,7 +1479,17 @@ void main() {
       expect(connections.subscriptions[0]['domainId'], isEmpty);
       expect(management.sentMessages[0]['payload']['status'], 'ok');
       expect(management.sentMessages[0]['payload']['notifyType'], 'addedMe');
-      expect(management.sentMessages[0]['payload']['states'], isEmpty);
+      expect(
+        jsonEncode(management.sentMessages[0]['payload']['states']),
+        jsonEncode(
+          CrossDomainEntityStatesResponse(
+            items: const [],
+            count: 0,
+          ).toJsonStable(),
+        ),
+        reason:
+            'addedMe subscription without domainId should still use the stable states envelope',
+      );
     });
 
     test('accepts newDomainId subscriptions without a domainId', () async {
@@ -1455,7 +1520,17 @@ void main() {
         management.sentMessages[0]['payload']['notifyType'],
         'newDomainId',
       );
-      expect(management.sentMessages[0]['payload']['states'], isEmpty);
+      expect(
+        jsonEncode(management.sentMessages[0]['payload']['states']),
+        jsonEncode(
+          CrossDomainEntityStatesResponse(
+            items: const [],
+            count: 0,
+          ).toJsonStable(),
+        ),
+        reason:
+            'newDomainId subscription without domainId should still use the stable states envelope',
+      );
     });
   });
 }

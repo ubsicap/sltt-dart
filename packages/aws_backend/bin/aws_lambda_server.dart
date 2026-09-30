@@ -5,7 +5,11 @@ import 'package:aws_backend/aws_backend.dart';
 import 'package:aws_backend/src/utils/media_environment.dart';
 import 'package:aws_common/aws_common.dart' show AWSCredentials;
 import 'package:sltt_core/sltt_core.dart'
-    show SlttLogger, DomainStatsResponse, getCollectionByEntity;
+    show
+        CrossDomainEntityStatesResponse,
+        DomainStatsResponse,
+        SlttLogger,
+        getCollectionByEntity;
 
 import 'websocket/websocket_connections_repository.dart';
 import 'websocket/websocket_management_client.dart';
@@ -296,22 +300,27 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
             );
             return response.toJson();
           },
-      getRootEntityStates: ({
-        required String domainType,
-        String? entityIdPrefix,
-        String? userId,
-        Set<String>? projectionFields,
-      }) async {
-        final result = await storage.getCrossDomainEntityStates(
-          domainType: domainType,
-          entityIdPrefix: entityIdPrefix,
-          projectionExpressionFields: projectionFields,
-          sortDirection: 'asc',
-          excludeDeleted: false,
-          includeTestDomains: false,
-        );
-        return result.items;
-      },
+      getRootEntityStates:
+          ({
+            required String domainType,
+            String? entityIdPrefix,
+            String? userId,
+            Set<String>? projectionFields,
+          }) async {
+            final result = await storage.getCrossDomainEntityStates(
+              domainType: domainType,
+              entityIdPrefix: entityIdPrefix,
+              projectionExpressionFields: projectionFields,
+              sortDirection: 'asc',
+              excludeDeleted: false,
+              includeTestDomains: false,
+            );
+            return CrossDomainEntityStatesResponse(
+              items: result.items,
+              nextCursor: result.nextCursor,
+              count: result.items.length,
+            ).toJsonStable();
+          },
     );
   } catch (e, stackTrace) {
     SlttLogger.logger.severe(

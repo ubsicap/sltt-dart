@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart'
     show
+        CrossDomainEntityStatesResponse,
         DomainStatsResponse,
         EntityTypeStats,
         EntityTypeSummary,
@@ -31,7 +32,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
     required String entityType,
   })?
   getDomainChangeStatus,
-  Future<List<Map<String, dynamic>>> Function({
+  Future<Map<String, dynamic>> Function({
     required String domainType,
     String? entityIdPrefix,
     String? userId,
@@ -238,7 +239,10 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       'subscriptionKey': subscriptionKey,
     };
     if (isAddedMeSubscription || isNewDomainIdSubscription) {
-      payload['states'] = <Map<String, dynamic>>[];
+      payload['states'] = CrossDomainEntityStatesResponse(
+        items: const [],
+        count: 0,
+      ).toJsonStable();
       if (getRootEntityStates != null) {
         try {
           final states = await getRootEntityStates(
