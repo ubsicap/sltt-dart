@@ -2,11 +2,19 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
 
+import 'helpers/test_utils.dart';
+
 void main() {
+  setUpAll(() {
+    // register DynamoChangeLogEntry factory for api models usage
+    dynamoChangeLogEntryFactoryRegistration;
+  });
+
   final baseUrl = Uri.parse(
     Platform.environment['CLOUD_BASE_URL'] ?? kCloudDevUrl,
   );
@@ -53,28 +61,60 @@ void main() {
     };
   }
 
-  Future<Map<String, dynamic>> createRequestedProject({
-    required String accessToken,
+  Future<Map<String, dynamic>> createTestProjectDomain({
+    required String projectId,
     required String name,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/project'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-      },
-      body: jsonEncode({
-        'name': name,
-        'teamName': 'Test Team',
-        'signLanguage': 'ASL',
-      }),
-    );
-    expect(response.statusCode, equals(200));
+    await resetTestDomainData(baseUrl, projectId);
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    expect(body['projectId'], isNotEmpty);
-    expect(body['status'], equals('requested'));
-    return body;
+    final response = await saveDomainChange(
+      baseUrl,
+      projectId,
+      entityData: ProjectDataFields(
+        parentId: 'root',
+        parentProp: 'projects',
+        nameLocal: name,
+      ),
+      domainType: DomainType.project,
+      entityType: EntityType.project,
+      changeBy: 'cloud-websocket-test',
+    );
+    expect(
+      response.statusCode,
+      anyOf([200, 201]),
+      reason: 'Failed to seed test project $projectId: ${response.body}',
+    );
+
+    return {'projectId': projectId, 'status': 'requested'};
+  }
+
+  Future<Map<String, dynamic>> createTestMembershipDomain({
+    required String projectId,
+    required String userId,
+  }) async {
+    await resetTestDomainData(baseUrl, projectId);
+
+    final response = await saveChanges<BaseDataFields>(
+      baseUrl,
+      domainType: 'membership',
+      domainId: projectId,
+      changesToSave: [
+        SaveChangeRequest(
+          entityType: 'member',
+          entityId: userId,
+          data: BaseDataFields(parentId: 'root', parentProp: 'members'),
+          changeBy: 'cloud-websocket-test',
+        ),
+      ],
+    );
+    expect(
+      response.statusCode,
+      anyOf([200, 201]),
+      reason:
+          'Failed to seed test membership $projectId/$userId: ${response.body}',
+    );
+
+    return {'projectId': projectId, 'userId': userId, 'status': 'seeded'};
   }
 
   Future<Map<String, dynamic>> waitForMessage(
@@ -240,7 +280,9 @@ void main() {
           'action': WebsocketConstants.actionSubscribe,
           'notifyType': WebsocketConstants.newDomainId,
           'domainType': 'project',
+          // 'domainId': '__test_ws_new_domain_id_$suffix',
           'entityType': 'project',
+          'ackIncludeTestDomains': true,
         }),
       );
       await Future.delayed(const Duration(seconds: 2));
@@ -253,7 +295,10 @@ void main() {
         orElse: () => fail('Expected newDomainId subscribe ack'),
       );
       expect(subscribeAck['domainType'], equals('project'));
-      expect(subscribeAck['domainId'], equals(''));
+      expect(
+        subscribeAck['domainId'],
+        equals('__test_ws_new_domain_id_$suffix'),
+      );
       expect(subscribeAck['entityType'], equals('project'));
       final newDomainIdStates = subscribeAck['states'];
       expect(newDomainIdStates, isA<Map<String, dynamic>>());
@@ -275,11 +320,12 @@ void main() {
             'newDomainId subscription should return a stable cross-domain state envelope',
       );
 
-      final project = await createRequestedProject(
-        accessToken: token,
+      final projectId = '__test_ws_new_domain_id_$suffix';
+      final project = await createTestProjectDomain(
+        projectId: projectId,
         name: '__test_ws_new_domain_id_$suffix',
       );
-      final projectId = project['projectId'] as String;
+      final createdProjectId = project['projectId'] as String;
 
       final changeEvent = await waitForMessage(
         messages,
@@ -290,7 +336,7 @@ void main() {
             (message['entityType'] as String?) == 'project',
       );
       expect(changeEvent['domainType'], equals('project'));
-      expect(changeEvent['domainId'], equals(projectId));
+      expect(changeEvent['domainId'], equals(createdProjectId));
       expect(changeEvent['entityType'], equals('project'));
 
       await webSocket.close(WebSocketStatus.normalClosure, 'test complete');
@@ -328,8 +374,10 @@ void main() {
           'action': WebsocketConstants.actionSubscribe,
           'notifyType': WebsocketConstants.notifyTypeAddedMe,
           'domainType': 'membership',
+          'domainId': '__test_ws_added_me_$suffix',
           'entityType': 'member',
           'userId': userId,
+          'ackIncludeTestDomains': true,
         }),
       );
       await Future.delayed(const Duration(seconds: 2));
@@ -342,7 +390,7 @@ void main() {
         orElse: () => fail('Expected addedMe subscribe ack'),
       );
       expect(subscribeAck['domainType'], equals('membership'));
-      expect(subscribeAck['domainId'], equals(''));
+      expect(subscribeAck['domainId'], equals('__test_ws_added_me_$suffix'));
       expect(subscribeAck['entityType'], equals('member'));
       final addedMeStates = subscribeAck['states'];
       expect(addedMeStates, isA<Map<String, dynamic>>());
@@ -364,11 +412,12 @@ void main() {
             'addedMe subscription should return a stable cross-domain state envelope',
       );
 
-      final project = await createRequestedProject(
-        accessToken: token,
-        name: '__test_ws_added_me_$suffix',
+      final projectId = '__test_ws_added_me_$suffix';
+      final project = await createTestMembershipDomain(
+        projectId: projectId,
+        userId: userId,
       );
-      final projectId = project['projectId'] as String;
+      final createdProjectId = project['projectId'] as String;
 
       final changeEvent = await waitForMessage(
         messages,
@@ -379,7 +428,7 @@ void main() {
             (message['entityType'] as String?) == 'member',
       );
       expect(changeEvent['domainType'], equals('membership'));
-      expect(changeEvent['domainId'], equals(projectId));
+      expect(changeEvent['domainId'], equals(createdProjectId));
       expect(changeEvent['entityType'], equals('member'));
       expect(changeEvent['change'], isA<Map<String, dynamic>>());
 
