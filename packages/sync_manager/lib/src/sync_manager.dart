@@ -140,17 +140,28 @@ class SyncManager {
 
   String enqueueJobFetchEntityState({
     required String domainType,
-    required String domainId,
+    String? domainId,
     required String entityType,
     required String entityId,
     String? parentId,
+    bool isCrossDomain = false,
   }) {
+    final effectiveDomainId = isCrossDomain ? '' : (domainId ?? '');
+    if (!isCrossDomain && effectiveDomainId.isEmpty) {
+      throw ArgumentError.value(
+        domainId,
+        'domainId',
+        'domainId is required unless isCrossDomain is true.',
+      );
+    }
+
     return entityStatePaginationService.enqueueJobFetchEntityState(
       domainType: domainType,
-      domainId: domainId,
+      domainId: effectiveDomainId,
       entityType: entityType,
       entityId: entityId,
       parentId: parentId,
+      isCrossDomain: isCrossDomain,
     );
   }
 
@@ -184,19 +195,31 @@ class SyncManager {
 
   String enqueueJobFetchEntityStateCollection({
     required String domainType,
-    required String domainId,
+    String? domainId,
     required String entityType,
     String? parentId,
     int limit = 100,
     String? cursor,
+    String? nextCursor,
+    bool isCrossDomain = false,
   }) {
+    final effectiveDomainId = isCrossDomain ? '' : (domainId ?? '');
+    if (!isCrossDomain && effectiveDomainId.isEmpty) {
+      throw ArgumentError.value(
+        domainId,
+        'domainId',
+        'domainId is required unless isCrossDomain is true.',
+      );
+    }
+
     return entityStatePaginationService.enqueueJobFetchEntityStateCollection(
       domainType: domainType,
-      domainId: domainId,
+      domainId: effectiveDomainId,
       entityType: entityType,
       parentId: parentId,
       limit: limit,
-      cursor: cursor,
+      cursor: cursor ?? nextCursor,
+      isCrossDomain: isCrossDomain,
     );
   }
 

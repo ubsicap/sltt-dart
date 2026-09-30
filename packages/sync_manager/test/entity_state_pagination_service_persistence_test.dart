@@ -421,6 +421,70 @@ void main() {
         );
       },
     );
+
+    test(
+      'cross-domain collection jobs use /api/cross-domain path and accept nextCursor alias',
+      () async {
+        const workspacePrefix =
+            '__test_specific_prefix_cross_domain_next_cursor';
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+
+        final requestedUrls = <String>[];
+        final dio = Dio();
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              requestedUrls.add(options.uri.toString());
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  statusCode: 200,
+                  data: {
+                    'items': [
+                      {'entityId': 'item-1'},
+                    ],
+                    'hasMore': false,
+                    'cursor': null,
+                  },
+                ),
+              );
+            },
+          ),
+        );
+
+        final service = EntityStatePaginationService(
+          baseUrl: 'https://example.invalid',
+          dio: dio,
+          workspacePrefix: workspacePrefix,
+        );
+
+        service.startProcessing();
+        service.enqueueJobFetchEntityStateCollection(
+          domainType: 'project',
+          entityType: 'task',
+          limit: 100,
+          isCrossDomain: true,
+          nextCursor: 'cursor-123',
+        );
+
+        await _waitForStatus(service, expectedStatus: 'completed');
+
+        expect(requestedUrls, isNotEmpty);
+        expect(
+          requestedUrls.single,
+          contains('/api/cross-domain/project/states/task'),
+        );
+        expect(requestedUrls.single, contains('limit=100'));
+        expect(requestedUrls.single, contains('cursor=cursor-123'));
+
+        await service.dispose();
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+      },
+    );
   });
 }
 
