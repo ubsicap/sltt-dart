@@ -316,6 +316,7 @@ AuthSessionRecord _$AuthSessionRecordFromJson(Map<String, dynamic> json) =>
           'revokedAt',
           (v) => _nullableUtcDateTimeFromJson(v),
         ),
+        isTestToken: $checkedConvert('isTestToken', (v) => v as bool? ?? false),
       );
       return val;
     });
@@ -325,6 +326,7 @@ Map<String, dynamic> _$AuthSessionRecordToJson(AuthSessionRecord instance) =>
       'userId': instance.userId,
       'sessionId': instance.sessionId,
       'refreshTokenHash': instance.refreshTokenHash,
+      'isTestToken': instance.isTestToken,
       'createdAt': _requiredUtcDateTimeToJson(instance.createdAt),
       'expiresAt': _requiredUtcDateTimeToJson(instance.expiresAt),
       'revokedAt': ?_nullableUtcDateTimeToJson(instance.revokedAt),
@@ -338,6 +340,7 @@ AuthenticatedSession _$AuthenticatedSessionFromJson(
     sessionId: $checkedConvert('sessionId', (v) => v as String? ?? ''),
     isAdHoc: $checkedConvert('isAdHoc', (v) => v as bool? ?? false),
     emailVerified: $checkedConvert('emailVerified', (v) => v as bool? ?? false),
+    isTestToken: $checkedConvert('isTestToken', (v) => v as bool? ?? false),
   );
   return val;
 });
@@ -349,6 +352,7 @@ Map<String, dynamic> _$AuthenticatedSessionToJson(
   'sessionId': instance.sessionId,
   'isAdHoc': instance.isAdHoc,
   'emailVerified': instance.emailVerified,
+  'isTestToken': instance.isTestToken,
 };
 
 AuthTokenPair _$AuthTokenPairFromJson(Map<String, dynamic> json) =>
@@ -429,6 +433,7 @@ LoginRequest _$LoginRequestFromJson(Map<String, dynamic> json) =>
           readValue: _readLoginIdentifier,
         ),
         password: $checkedConvert('password', (v) => v as String? ?? ''),
+        isTestToken: $checkedConvert('isTestToken', (v) => v as bool? ?? false),
       );
       return val;
     });
@@ -437,6 +442,7 @@ Map<String, dynamic> _$LoginRequestToJson(LoginRequest instance) =>
     <String, dynamic>{
       'identifier': instance.identifier,
       'password': instance.password,
+      'isTestToken': instance.isTestToken,
     };
 
 RefreshRequest _$RefreshRequestFromJson(Map<String, dynamic> json) =>

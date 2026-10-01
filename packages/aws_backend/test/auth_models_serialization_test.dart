@@ -371,6 +371,38 @@ void main() {
       );
     });
 
+    test('LoginRequest preserves isTestToken flag', () {
+      final request = LoginRequest.fromJson({
+        'identifier': 'test@example.com',
+        'password': 'pw',
+        'isTestToken': true,
+      });
+
+      expect(request.isTestToken, isTrue);
+      expect(request.toJson()['isTestToken'], isTrue);
+    });
+
+    test('AuthenticatedSession preserves isTestToken and default false', () {
+      final session = AuthenticatedSession.fromJson({
+        'userId': 'user-1',
+        'sessionId': 'sess-1',
+        'isAdHoc': false,
+        'emailVerified': true,
+        'isTestToken': true,
+      });
+
+      expect(session.isTestToken, isTrue);
+      expect(
+        AuthenticatedSession.fromJson({
+          'userId': 'user-2',
+          'sessionId': 'sess-2',
+          'isAdHoc': false,
+          'emailVerified': true,
+        }).isTestToken,
+        isFalse,
+      );
+    });
+
     test('CreateAdHocUserRequest filters non-string project ids', () {
       final request = CreateAdHocUserRequest.fromJson({
         'userId': 'user-1',

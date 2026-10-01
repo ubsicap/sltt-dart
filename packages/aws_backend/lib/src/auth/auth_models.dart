@@ -558,12 +558,15 @@ class AuthSessionRecord {
     required this.createdAt,
     required this.expiresAt,
     this.revokedAt,
+    this.isTestToken = false,
   });
 
   final String userId;
   final String sessionId;
   @JsonKey(defaultValue: '')
   final String refreshTokenHash;
+  @JsonKey(defaultValue: false)
+  final bool isTestToken;
   @JsonKey(
     fromJson: _requiredUtcDateTimeFromJson,
     toJson: _requiredUtcDateTimeToJson,
@@ -583,7 +586,11 @@ class AuthSessionRecord {
   bool get isRevoked => revokedAt != null;
   int get ttlEpochSeconds => expiresAt.toUtc().millisecondsSinceEpoch ~/ 1000;
 
-  AuthSessionRecord copyWith({DateTime? revokedAt, DateTime? expiresAt}) {
+  AuthSessionRecord copyWith({
+    DateTime? revokedAt,
+    DateTime? expiresAt,
+    bool? isTestToken,
+  }) {
     return AuthSessionRecord(
       userId: userId,
       sessionId: sessionId,
@@ -591,6 +598,7 @@ class AuthSessionRecord {
       createdAt: createdAt,
       expiresAt: expiresAt ?? this.expiresAt,
       revokedAt: revokedAt ?? this.revokedAt,
+      isTestToken: isTestToken ?? this.isTestToken,
     );
   }
 
@@ -610,6 +618,7 @@ class AuthenticatedSession {
     required this.sessionId,
     required this.isAdHoc,
     required this.emailVerified,
+    this.isTestToken = false,
   });
 
   @JsonKey(defaultValue: '')
@@ -620,6 +629,8 @@ class AuthenticatedSession {
   final bool isAdHoc;
   @JsonKey(defaultValue: false)
   final bool emailVerified;
+  @JsonKey(defaultValue: false)
+  final bool isTestToken;
 
   factory AuthenticatedSession.fromJson(Map<String, dynamic> json) =>
       _$AuthenticatedSessionFromJson(json);
@@ -708,12 +719,18 @@ class ResendVerificationCodeRequest {
 
 @JsonSerializable(includeIfNull: false, checked: true)
 class LoginRequest {
-  LoginRequest({required this.identifier, required this.password});
+  LoginRequest({
+    required this.identifier,
+    required this.password,
+    this.isTestToken = false,
+  });
 
   @JsonKey(defaultValue: '', readValue: _readLoginIdentifier)
   final String identifier;
   @JsonKey(defaultValue: '')
   final String password;
+  @JsonKey(defaultValue: false)
+  final bool isTestToken;
 
   factory LoginRequest.fromJson(Map<String, dynamic> json) =>
       _$LoginRequestFromJson(json);

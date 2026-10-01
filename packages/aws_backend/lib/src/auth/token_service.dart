@@ -23,6 +23,7 @@ class TokenService {
     required AuthPrincipal principal,
     required String sessionId,
     DateTime? now,
+    bool isTestToken = false,
   }) {
     final issuedAt = (now ?? DateTime.now()).toUtc();
     final expiresAt = issuedAt.add(_accessTokenLifetime);
@@ -31,6 +32,7 @@ class TokenService {
       'sid': sessionId,
       'adhoc': principal.isAdHoc,
       'verified': principal.emailVerified,
+      'itest': isTestToken,
       'kind': principal.identityKind.value,
       'iat': issuedAt.millisecondsSinceEpoch ~/ 1000,
       'exp': expiresAt.millisecondsSinceEpoch ~/ 1000,
@@ -58,6 +60,10 @@ class TokenService {
         sessionId: payload['sid'] as String? ?? '',
         isAdHoc: payload['adhoc'] as bool? ?? false,
         emailVerified: payload['verified'] as bool? ?? false,
+        isTestToken:
+            payload['itest'] as bool? ??
+            payload['isTestToken'] as bool? ??
+            false,
       );
     } catch (_) {
       throw AuthException(

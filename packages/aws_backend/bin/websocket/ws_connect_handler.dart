@@ -12,8 +12,11 @@ Future<Map<String, dynamic>> wsConnectHandler(
   final authorizerContext = (requestContext['authorizer'] as Map?)
       ?.cast<String, dynamic>();
   final userId = authorizerContext?['userId'] as String?;
+  final isTestToken = _coerceBool(authorizerContext?['isTestToken']);
 
-  SlttLogger.logger.info('wsConnect: entry connectionId=$connectionId');
+  SlttLogger.logger.info(
+    'wsConnect: entry connectionId=$connectionId isTestToken=$isTestToken',
+  );
 
   if (userId == null) {
     // Shouldn't happen if wsAuthorizer is wired in serverless.yml, but fail
@@ -24,9 +27,19 @@ Future<Map<String, dynamic>> wsConnectHandler(
     return {'statusCode': 500};
   }
 
-  await connections.putConnection(connectionId: connectionId, userId: userId);
+  await connections.putConnection(
+    connectionId: connectionId,
+    userId: userId,
+    isTestToken: isTestToken,
+  );
   SlttLogger.logger.info(
-    'wsConnect: saved connection $connectionId userId=$userId',
+    'wsConnect: saved connection $connectionId userId=$userId isTestToken=$isTestToken',
   );
   return {'statusCode': 200};
+}
+
+bool _coerceBool(Object? value) {
+  if (value is bool) return value;
+  if (value is String) return value.toLowerCase() == 'true';
+  return false;
 }

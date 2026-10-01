@@ -14,11 +14,13 @@ class WebsocketSubscriptionMatch {
     required this.connectionId,
     required this.entityType,
     required this.notifyType,
+    this.isTestToken = false,
   });
 
   final String connectionId;
   final String entityType;
   final String notifyType;
+  final bool isTestToken;
 }
 
 class WebsocketConnectionsRepository {
@@ -59,9 +61,34 @@ class WebsocketConnectionsRepository {
   static String _expiresAtValue() =>
       '${DateTime.now().toUtc().add(_rowTtl).millisecondsSinceEpoch ~/ 1000}';
 
+  Future<({String connectionId, String userId, bool isTestToken})?>
+  getConnection(String connectionId) async {
+    final result = await _dynamoRequest('GetItem', {
+      'TableName': _tableName,
+      'Key': {
+        'connectionId': _attributeValueS(connectionId),
+        'sk': _attributeValueS(WebsocketKeys.connectionSk),
+      },
+    });
+    final item = result['Item'] as Map<String, dynamic>?;
+    if (item == null) return null;
+    final userId =
+        (item['userId'] as Map<String, dynamic>?)?['S'] as String? ?? '';
+    final isTestToken = _attributeValueBool(
+      item['isTestToken'] as Map<String, dynamic>?,
+      fallback: false,
+    );
+    return (
+      connectionId: connectionId,
+      userId: userId,
+      isTestToken: isTestToken,
+    );
+  }
+
   Future<void> putConnection({
     required String connectionId,
     required String userId,
+    bool isTestToken = false,
   }) async {
     await _dynamoRequest('PutItem', {
       'TableName': _tableName,
@@ -69,6 +96,7 @@ class WebsocketConnectionsRepository {
         'connectionId': _attributeValueS(connectionId),
         'sk': _attributeValueS(WebsocketKeys.connectionSk),
         'userId': _attributeValueS(userId),
+        'isTestToken': _attributeValueS(isTestToken ? 'true' : 'false'),
         'connectedAt': _attributeValueS(
           DateTime.now().toUtc().toIso8601String(),
         ),
@@ -84,6 +112,7 @@ class WebsocketConnectionsRepository {
     String? entityType,
     required String notifyType,
     String? userId,
+    bool isTestToken = false,
   }) async {
     final isStatsSubscription =
         notifyType == WebsocketConstants.notifyTypeDomainStats;
@@ -128,6 +157,7 @@ class WebsocketConnectionsRepository {
         'domainId': _attributeValueS(domainId),
         'entityType': _attributeValueS(resolvedEntityType),
         'notifyType': _attributeValueS(notifyType),
+        'isTestToken': _attributeValueS(isTestToken ? 'true' : 'false'),
         'expiresAt': _attributeValueN(_expiresAtValue()),
       },
     });
@@ -254,6 +284,10 @@ class WebsocketConnectionsRepository {
           connectionId: connectionId,
           entityType: subscribedEntityType,
           notifyType: notifyType,
+          isTestToken: _attributeValueBool(
+            item['isTestToken'] as Map<String, dynamic>?,
+            fallback: false,
+          ),
         ),
       );
     }
@@ -362,6 +396,10 @@ class WebsocketConnectionsRepository {
           connectionId: connectionId,
           entityType: subscribedEntityType,
           notifyType: notifyType,
+          isTestToken: _attributeValueBool(
+            item['isTestToken'] as Map<String, dynamic>?,
+            fallback: false,
+          ),
         ),
       );
     }
@@ -459,4 +497,17 @@ class WebsocketConnectionsRepository {
   static Map<String, dynamic> _attributeValueS(String value) => {'S': value};
 
   static Map<String, dynamic> _attributeValueN(String value) => {'N': value};
+
+  static bool _attributeValueBool(
+    Map<String, dynamic>? value, {
+    required bool fallback,
+  }) {
+    if (value == null) return fallback;
+    final stringValue =
+        (value['S'] as String?) ??
+        (value['BOOL'] == true ? 'true' : null) ??
+        (value['BOOL'] == false ? 'false' : null);
+    if (stringValue == null) return fallback;
+    return stringValue.toLowerCase() == 'true';
+  }
 }

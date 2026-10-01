@@ -1666,11 +1666,18 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
   }
 
   @override
+  Future<({String connectionId, String userId, bool isTestToken})?>
+  getConnection(String connectionId) async {
+    return null;
+  }
+
+  @override
   Future<void> putConnection({
     required String connectionId,
     required String userId,
+    bool isTestToken = false,
   }) {
-    throw UnimplementedError();
+    return Future.value();
   }
 
   @override
@@ -1681,6 +1688,7 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
     String? entityType,
     required String notifyType,
     String? userId,
+    bool isTestToken = false,
   }) async {
     final storedEntityType =
         notifyType == WebsocketConstants.notifyTypeDomainStats

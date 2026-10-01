@@ -160,6 +160,9 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
             notifyType: notifyType,
           );
 
+    final connection = await connections.getConnection(connectionId);
+    final isTestToken = connection?.isTestToken ?? false;
+
     await connections.putSubscription(
       connectionId: connectionId,
       domainType: domainType,
@@ -167,6 +170,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       entityType: entityType,
       notifyType: notifyType,
       userId: userId,
+      isTestToken: isTestToken,
     );
 
     final defaultLatestChangeAt = DateTime.fromMillisecondsSinceEpoch(

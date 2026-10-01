@@ -149,6 +149,7 @@ class AwsRestApiServer extends BaseRestApiServer {
         'properties': {
           'identifier': {'type': 'string'},
           'password': {'type': 'string'},
+          'isTestToken': {'type': 'boolean', 'default': false},
         },
       },
       'response': {

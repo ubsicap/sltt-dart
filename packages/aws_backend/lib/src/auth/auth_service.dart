@@ -684,7 +684,16 @@ class BackendAuthService {
       }
 
       stage = _startTiming();
-      final tokens = await _issueSessionTokens(principal);
+      final isTestToken =
+          request.isTestToken ||
+          _isSpecialTestUserRegistration(
+            principal.normalizedEmail,
+            principal.displayName,
+          );
+      final tokens = await _issueSessionTokens(
+        principal,
+        isTestToken: isTestToken,
+      );
       _logTiming(
         'login.issueSessionTokens',
         stage,
@@ -774,7 +783,11 @@ class BackendAuthService {
       );
 
       stage = _startTiming();
-      final tokenPair = await _issueSessionTokens(principal, now: now);
+      final tokenPair = await _issueSessionTokens(
+        principal,
+        now: now,
+        isTestToken: session.isTestToken,
+      );
       _logTiming(
         'refresh.issueSessionTokens',
         stage,
@@ -1272,6 +1285,7 @@ class BackendAuthService {
   Future<AuthTokenPair> _issueSessionTokens(
     AuthPrincipal principal, {
     DateTime? now,
+    bool isTestToken = false,
   }) async {
     final total = _startTiming();
     final issuedAt = (now ?? DateTime.now()).toUtc();
@@ -1282,6 +1296,7 @@ class BackendAuthService {
         principal: principal,
         sessionId: sessionId,
         now: issuedAt,
+        isTestToken: isTestToken,
       );
       _logTiming(
         'session.issueTokens',
@@ -1297,6 +1312,7 @@ class BackendAuthService {
         ),
         createdAt: issuedAt,
         expiresAt: issuedAt.add(_refreshLifetime),
+        isTestToken: isTestToken,
       );
 
       stage = _startTiming();
@@ -1575,10 +1591,12 @@ class BackendAuthService {
   String _normalizeUsername(String username) =>
       normalizeRegistrationUsername(username);
 
-  bool _isSpecialTestUserRegistration(String normalizedEmail, String name) {
-    return normalizedEmail.endsWith('@example.com') &&
-        name.startsWith('Test User ') &&
-        name.substring('Test User '.length).trim().isNotEmpty;
+  bool _isSpecialTestUserRegistration(String? normalizedEmail, String? name) {
+    final email = (normalizedEmail ?? '').trim().toLowerCase();
+    final displayName = name ?? '';
+    return email.endsWith('@example.com') &&
+        displayName.startsWith('Test User ') &&
+        displayName.substring('Test User '.length).trim().isNotEmpty;
   }
 
   String _canonicalTestUserIdIfApplicable(

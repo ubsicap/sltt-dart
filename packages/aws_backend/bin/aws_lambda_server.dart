@@ -182,6 +182,12 @@ Future<Map<String, dynamic>> _handleWsAuthorizer(
   }
 }
 
+bool _coerceBool(Object? value) {
+  if (value is bool) return value;
+  if (value is String) return value.toLowerCase() == 'true';
+  return false;
+}
+
 Future<Map<String, dynamic>> _handleWsConnect(
   Map<String, dynamic> event,
 ) async {
@@ -266,6 +272,9 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
   );
   try {
     await storage.initialize();
+    final authorizerContext = (requestContext?['authorizer'] as Map?)
+        ?.cast<String, dynamic>();
+    final isTestToken = _coerceBool(authorizerContext?['isTestToken']);
 
     return await wsSubscribeHandler(
       event,
@@ -313,7 +322,7 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
               projectionExpressionFields: projectionFields,
               sortDirection: 'asc',
               excludeDeleted: false,
-              includeTestDomains: false,
+              includeTestDomains: isTestToken,
             );
             return CrossDomainEntityStatesResponse(
               items: result.items,

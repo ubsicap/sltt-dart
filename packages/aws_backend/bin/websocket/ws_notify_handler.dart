@@ -49,6 +49,14 @@ List<List<WsNotifyRecord>> groupAndSortDomainChangeRecords(
       .toList(growable: false);
 }
 
+bool _shouldNotifyForTestScope({
+  required bool isTestToken,
+  required String domainId,
+}) {
+  final isTestDomainId = domainId.startsWith('__test_ws_');
+  return isTestToken ? isTestDomainId : !isTestDomainId;
+}
+
 Future<Map<String, dynamic>> wsNotifyHandler(
   Map<String, dynamic> event, {
   required WebsocketConnectionsRepository connections,
@@ -116,6 +124,12 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             WebsocketConstants.notifyTypeDomainStats) {
           continue;
         }
+        if (!_shouldNotifyForTestScope(
+          isTestToken: subscription.isTestToken,
+          domainId: domainId,
+        )) {
+          continue;
+        }
 
         await _sendDomainStatsNotification(
           management: management,
@@ -164,6 +178,12 @@ Future<Map<String, dynamic>> wsNotifyHandler(
 
       for (final subscription in subscriberMatches) {
         if (subscription.notifyType != notifyType) {
+          continue;
+        }
+        if (!_shouldNotifyForTestScope(
+          isTestToken: subscription.isTestToken,
+          domainId: domainId,
+        )) {
           continue;
         }
         await management.send(subscription.connectionId, {
@@ -215,6 +235,12 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     for (final subscription in subscriberMatches) {
       if (subscription.notifyType !=
           WebsocketConstants.notifyTypeDomainChange) {
+        continue;
+      }
+      if (!_shouldNotifyForTestScope(
+        isTestToken: subscription.isTestToken,
+        domainId: domainId,
+      )) {
         continue;
       }
       if (subscription.entityType == WebsocketKeys.wildcardEntityType) {
@@ -342,6 +368,12 @@ Future<Map<String, dynamic>> wsNotifyHandler(
 
         for (final subscription in rootSubscriberMatches) {
           if (subscription.notifyType != notifyType) {
+            continue;
+          }
+          if (!_shouldNotifyForTestScope(
+            isTestToken: subscription.isTestToken,
+            domainId: domainId,
+          )) {
             continue;
           }
           await management.send(subscription.connectionId, {

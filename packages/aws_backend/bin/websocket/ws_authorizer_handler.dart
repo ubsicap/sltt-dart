@@ -21,7 +21,11 @@ Future<Map<String, dynamic>> wsAuthorizerHandler(
 
   try {
     final session = authService.authenticateBearerToken(authHeader);
-    return _allowPolicy(event, userId: session.userId);
+    return _allowPolicy(
+      event,
+      userId: session.userId,
+      isTestToken: session.isTestToken,
+    );
   } on AuthException catch (e) {
     SlttLogger.logger.warning('wsAuthorizer rejected token: ${e.message}');
     return _denyPolicy(event);
@@ -31,6 +35,7 @@ Future<Map<String, dynamic>> wsAuthorizerHandler(
 Map<String, dynamic> _allowPolicy(
   Map<String, dynamic> event, {
   required String userId,
+  bool isTestToken = false,
 }) {
   return {
     'principalId': userId,
@@ -44,8 +49,7 @@ Map<String, dynamic> _allowPolicy(
         },
       ],
     },
-    // Surfaced to wsConnect via event['requestContext']['authorizer']['userId']
-    'context': {'userId': userId},
+    'context': {'userId': userId, 'isTestToken': isTestToken},
   };
 }
 

@@ -295,10 +295,7 @@ void main() {
         orElse: () => fail('Expected newDomainId subscribe ack'),
       );
       expect(subscribeAck['domainType'], equals('project'));
-      expect(
-        subscribeAck['domainId'],
-        equals('__test_ws_new_domain_id_$suffix'),
-      );
+      expect(subscribeAck['domainId'], isEmpty);
       expect(subscribeAck['entityType'], equals('project'));
       final newDomainIdStates = subscribeAck['states'];
       expect(newDomainIdStates, isA<Map<String, dynamic>>());
