@@ -1100,7 +1100,7 @@ void main() {
           const WebsocketSubscriptionMatch(
             connectionId: 'conn-root-project',
             entityType: 'project',
-            notifyType: WebsocketConstants.newDomainId,
+            notifyType: WebsocketConstants.notifyTypeNewDomainId,
           ),
         ];
 
@@ -1142,14 +1142,15 @@ void main() {
               .toList(),
           containsAllInOrder([
             WebsocketConstants.notifyTypeDomainChange,
-            WebsocketConstants.newDomainId,
+            WebsocketConstants.notifyTypeNewDomainId,
           ]),
         );
         expect(
           management.sentMessages.any(
             (m) =>
                 m['connectionId'] == 'conn-root-project' &&
-                m['payload']['notifyType'] == WebsocketConstants.newDomainId,
+                m['payload']['notifyType'] ==
+                    WebsocketConstants.notifyTypeNewDomainId,
           ),
           isTrue,
         );

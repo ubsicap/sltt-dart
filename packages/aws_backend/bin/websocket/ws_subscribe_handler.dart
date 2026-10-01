@@ -90,7 +90,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
   final isAddedMeSubscription =
       notifyType == WebsocketConstants.notifyTypeAddedMe;
   final isNewDomainIdSubscription =
-      notifyType == WebsocketConstants.newDomainId;
+      notifyType == WebsocketConstants.notifyTypeNewDomainId;
   final isRootEntitySubscription =
       isAddedMeSubscription || isNewDomainIdSubscription;
   final isDomainScopedSubscription =
@@ -110,7 +110,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
               isValidRootEntitySubscriptionRequest(
                 domainType: domainType,
                 entityType: entityType,
-                notifyType: WebsocketConstants.newDomainId,
+                notifyType: WebsocketConstants.notifyTypeNewDomainId,
               )));
 
   if (domainType == null ||

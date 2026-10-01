@@ -119,7 +119,7 @@ class WebsocketConnectionsRepository {
     final isAddedMeSubscription =
         notifyType == WebsocketConstants.notifyTypeAddedMe;
     final isNewDomainIdSubscription =
-        notifyType == WebsocketConstants.newDomainId;
+        notifyType == WebsocketConstants.notifyTypeNewDomainId;
     final resolvedEntityType = isStatsSubscription
         ? WebsocketKeys.wildcardEntityType
         : WebsocketKeys.resolveEntityType(entityType);
@@ -176,7 +176,7 @@ class WebsocketConnectionsRepository {
     final isAddedMeSubscription =
         notifyType == WebsocketConstants.notifyTypeAddedMe;
     final isNewDomainIdSubscription =
-        notifyType == WebsocketConstants.newDomainId;
+        notifyType == WebsocketConstants.notifyTypeNewDomainId;
     final resolvedEntityType = isStatsSubscription
         ? WebsocketKeys.wildcardEntityType
         : WebsocketKeys.resolveEntityType(entityType);
@@ -379,7 +379,7 @@ class WebsocketConnectionsRepository {
       );
       final notifyType = WebsocketKeys.notifyTypeFromSubscriptionSk(sk);
       if (notifyType != WebsocketConstants.notifyTypeAddedMe &&
-          notifyType != WebsocketConstants.newDomainId) {
+          notifyType != WebsocketConstants.notifyTypeNewDomainId) {
         continue;
       }
       if (domainType != null &&

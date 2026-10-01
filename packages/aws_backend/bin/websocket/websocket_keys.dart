@@ -42,7 +42,7 @@ class WebsocketKeys {
     required String domainType,
     required String entityType,
   }) =>
-      'root#@DOMAINTYPE#$domainType#@ENTITYTYPE#$entityType#@NOTIFYTYPE#${WebsocketConstants.newDomainId}';
+      'root#@DOMAINTYPE#$domainType#@ENTITYTYPE#$entityType#@NOTIFYTYPE#${WebsocketConstants.notifyTypeNewDomainId}';
 
   static String domainGsiPk({
     required String domainType,

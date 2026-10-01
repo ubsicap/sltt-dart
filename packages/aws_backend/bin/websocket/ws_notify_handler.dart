@@ -149,7 +149,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     }
 
     if (notifyType == WebsocketConstants.notifyTypeAddedMe ||
-        notifyType == WebsocketConstants.newDomainId) {
+        notifyType == WebsocketConstants.notifyTypeNewDomainId) {
       final rootUserId =
           (message['userId'] as String?) ??
           (message['entityId'] as String?) ??
@@ -207,7 +207,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     }
 
     SlttLogger.logger.warning(
-      'wsNotify: unsupported notifyType "$notifyType"; only "${WebsocketConstants.notifyTypeDomainChange}", "${WebsocketConstants.notifyTypeDomainStats}", "${WebsocketConstants.notifyTypeAddedMe}", and "${WebsocketConstants.newDomainId}" are supported: $message',
+      'wsNotify: unsupported notifyType "$notifyType"; only "${WebsocketConstants.notifyTypeDomainChange}", "${WebsocketConstants.notifyTypeDomainStats}", "${WebsocketConstants.notifyTypeAddedMe}", and "${WebsocketConstants.notifyTypeNewDomainId}" are supported: $message',
     );
     continue;
   }
@@ -339,7 +339,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
           record.entityType == rootEntityType) {
         final notifyType =
             getRootNotificationTypeForDomain(domainType) ??
-            WebsocketConstants.newDomainId;
+            WebsocketConstants.notifyTypeNewDomainId;
         final rootUserId =
             (record.change['entityId'] as String?) ??
             (record.change['userId'] as String?) ??

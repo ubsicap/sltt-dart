@@ -57,7 +57,7 @@ void main() {
         await client.connect();
         client.subscribe(
           'project',
-          notifyType: WebsocketConstants.newDomainId,
+          notifyType: WebsocketConstants.notifyTypeNewDomainId,
           entityType: 'project',
         );
 
@@ -66,7 +66,10 @@ void main() {
         );
 
         expect(payload['domainType'], equals('project'));
-        expect(payload['notifyType'], equals(WebsocketConstants.newDomainId));
+        expect(
+          payload['notifyType'],
+          equals(WebsocketConstants.notifyTypeNewDomainId),
+        );
         expect(payload['entityType'], equals('project'));
         expect(payload.containsKey('domainId'), isTrue);
         expect(payload['domainId'], isEmpty);
@@ -136,7 +139,7 @@ void main() {
 
         await syncManager.processCrossDomainSubscriptionAck(
           domainType: 'project',
-          notifyType: WebsocketConstants.newDomainId,
+          notifyType: WebsocketConstants.notifyTypeNewDomainId,
           states: {
             'items': [state.toJson()],
             'nextCursor': 'cursor-123',

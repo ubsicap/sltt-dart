@@ -432,7 +432,7 @@ class SyncManager {
   }) {
     final normalizedNotifyType = notifyType.trim();
     if (normalizedNotifyType != WebsocketConstants.notifyTypeAddedMe &&
-        normalizedNotifyType != WebsocketConstants.newDomainId) {
+        normalizedNotifyType != WebsocketConstants.notifyTypeNewDomainId) {
       SlttLogger.logger.warning(
         '[SyncManager] Unsupported notifyType for subscribeToDomainType: $notifyType',
       );
@@ -520,7 +520,7 @@ class SyncManager {
   }) {
     final normalizedNotifyType = notifyType.trim();
     if (normalizedNotifyType != WebsocketConstants.notifyTypeAddedMe &&
-        normalizedNotifyType != WebsocketConstants.newDomainId) {
+        normalizedNotifyType != WebsocketConstants.notifyTypeNewDomainId) {
       SlttLogger.logger.warning(
         '[SyncManager] Unsupported notifyType for unsubscribeFromDomainType: $notifyType',
       );
@@ -1117,7 +1117,7 @@ class SyncManager {
     }
 
     if (notifyType == WebsocketConstants.notifyTypeAddedMe ||
-        notifyType == WebsocketConstants.newDomainId) {
+        notifyType == WebsocketConstants.notifyTypeNewDomainId) {
       SlttLogger.logger.info(
         '[SyncManager] Persisted ${items.length} cross-domain state(s) for $notifyType $domainType userId=${userId ?? ''}',
       );
@@ -1151,7 +1151,7 @@ class SyncManager {
           return;
         }
         if (notifyType == WebsocketConstants.notifyTypeAddedMe ||
-            notifyType == WebsocketConstants.newDomainId) {
+            notifyType == WebsocketConstants.notifyTypeNewDomainId) {
           final statesData = message['states'] as Map<String, dynamic>?;
           if (statesData != null) {
             final key = _domainTypeSubscriptionKey(

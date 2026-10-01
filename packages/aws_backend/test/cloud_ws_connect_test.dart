@@ -278,7 +278,7 @@ void main() {
       webSocket.add(
         jsonEncode({
           'action': WebsocketConstants.actionSubscribe,
-          'notifyType': WebsocketConstants.newDomainId,
+          'notifyType': WebsocketConstants.notifyTypeNewDomainId,
           'domainType': 'project',
           // 'domainId': '__test_ws_new_domain_id_$suffix',
           'entityType': 'project',
@@ -291,7 +291,7 @@ void main() {
         (m) =>
             m['action'] == 'subscribe' &&
             m['status'] == 'ok' &&
-            m['notifyType'] == WebsocketConstants.newDomainId,
+            m['notifyType'] == WebsocketConstants.notifyTypeNewDomainId,
         orElse: () => fail('Expected newDomainId subscribe ack'),
       );
       expect(subscribeAck['domainType'], equals('project'));
@@ -327,7 +327,7 @@ void main() {
       final changeEvent = await waitForMessage(
         messages,
         action: WebsocketConstants.actionChange,
-        notifyType: WebsocketConstants.newDomainId,
+        notifyType: WebsocketConstants.notifyTypeNewDomainId,
         predicate: (message) =>
             (message['domainId'] as String?) == projectId &&
             (message['entityType'] as String?) == 'project',

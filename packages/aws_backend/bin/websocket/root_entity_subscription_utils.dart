@@ -12,7 +12,7 @@ String? getRootNotificationTypeForDomain(String domainType) {
 
   return profile.hasSeparateDomainIdEntityType
       ? WebsocketConstants.notifyTypeAddedMe
-      : WebsocketConstants.newDomainId;
+      : WebsocketConstants.notifyTypeNewDomainId;
 }
 
 bool isValidRootEntitySubscriptionRequest({
@@ -34,7 +34,7 @@ bool isValidRootEntitySubscriptionRequest({
         userId.isNotEmpty;
   }
 
-  if (notifyType == WebsocketConstants.newDomainId) {
+  if (notifyType == WebsocketConstants.notifyTypeNewDomainId) {
     return !isSeparateDomainIdType && entityType == rootEntityType;
   }
 
