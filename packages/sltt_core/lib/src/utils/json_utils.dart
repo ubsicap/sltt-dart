@@ -26,6 +26,33 @@ String stableStringify(dynamic value) {
   return jsonEncode(stable);
 }
 
+/// Decode the payload portion of a JWT without depending on a specific auth lib.
+/// Returns null when the token is malformed or not a JSON object.
+Map<String, dynamic>? decodeJwtPayload(String token) {
+  if (token.trim().isEmpty) {
+    return null;
+  }
+
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) {
+      return null;
+    }
+    final payloadSegment = base64Url.normalize(parts[1]);
+    final payloadJson = utf8.decode(base64Url.decode(payloadSegment));
+    final payload = jsonDecode(payloadJson);
+    if (payload is Map<String, dynamic>) {
+      return payload;
+    }
+    if (payload is Map) {
+      return payload.map((key, value) => MapEntry(key.toString(), value));
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 /// Compute a stable state data hash from an arbitrary state-like map.
 ///
 /// Internally, this keeps `data_` fields including metadata

@@ -428,7 +428,6 @@ class SyncManager {
   void subscribeToDomainType({
     required String notifyType,
     required String domainType,
-    String? userId,
     String? entityType,
   }) {
     final normalizedNotifyType = notifyType.trim();
@@ -440,10 +439,14 @@ class SyncManager {
       return;
     }
 
+    final resolvedUserId =
+        normalizedNotifyType == WebsocketConstants.notifyTypeAddedMe
+        ? _resolveCurrentUserIdFromAuthToken()
+        : null;
     if (normalizedNotifyType == WebsocketConstants.notifyTypeAddedMe &&
-        (userId == null || userId.trim().isEmpty)) {
+        (resolvedUserId == null || resolvedUserId.trim().isEmpty)) {
       SlttLogger.logger.warning(
-        '[SyncManager] addedMe subscriptions require a non-empty userId.',
+        '[SyncManager] addedMe subscriptions require a JWT subject in the auth token.',
       );
       return;
     }
@@ -455,7 +458,7 @@ class SyncManager {
     final key = _domainTypeSubscriptionKey(
       domainType: domainType,
       notifyType: normalizedNotifyType,
-      userId: userId,
+      userId: resolvedUserId,
     );
     if (_subscribedDomainTypeKeys.add(key)) {
       SlttLogger.logger.info('[SyncManager] Subscribed to domain type: $key');
@@ -463,7 +466,7 @@ class SyncManager {
         domainType: domainType,
         notifyType: normalizedNotifyType,
         entityType: effectiveEntityType,
-        userId: userId,
+        userId: resolvedUserId,
       );
     }
   }
@@ -513,7 +516,6 @@ class SyncManager {
   void unsubscribeFromDomainType({
     required String notifyType,
     required String domainType,
-    String? userId,
     String? entityType,
   }) {
     final normalizedNotifyType = notifyType.trim();
@@ -525,10 +527,14 @@ class SyncManager {
       return;
     }
 
+    final resolvedUserId =
+        normalizedNotifyType == WebsocketConstants.notifyTypeAddedMe
+        ? _resolveCurrentUserIdFromAuthToken()
+        : null;
     final key = _domainTypeSubscriptionKey(
       domainType: domainType,
       notifyType: normalizedNotifyType,
-      userId: userId,
+      userId: resolvedUserId,
     );
     if (_subscribedDomainTypeKeys.remove(key)) {
       SlttLogger.logger.info(
@@ -541,7 +547,7 @@ class SyncManager {
             entityType ??
             getDomainRootEntityType(domainType) ??
             WebsocketConstants.lastRecordEntityType,
-        userId: userId,
+        userId: resolvedUserId,
       );
     }
 
@@ -637,6 +643,15 @@ class SyncManager {
     } finally {
       responsePort.close();
     }
+  }
+
+  String? _resolveCurrentUserIdFromAuthToken() {
+    final payload = decodeJwtPayload(_authToken ?? '');
+    if (payload == null) {
+      return null;
+    }
+    final userId = payload['sub'];
+    return userId is String && userId.trim().isNotEmpty ? userId : null;
   }
 
   String _domainChangeKey({
