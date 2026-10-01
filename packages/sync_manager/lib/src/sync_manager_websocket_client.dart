@@ -89,32 +89,38 @@ class SyncManagerWebSocketClient {
   }
 
   void subscribe(
-    String domainType,
-    String domainId, {
+    String domainType, {
+    String domainId = '',
     required String notifyType,
     String entityType = WebsocketConstants.lastRecordEntityType,
+    String? userId,
   }) {
-    send({
+    final payload = <String, dynamic>{
       'action': WebsocketConstants.actionSubscribe,
       'notifyType': notifyType,
       'domainType': domainType,
       'domainId': domainId,
       'entityType': entityType,
-    });
+      if (userId != null && userId.isNotEmpty) 'userId': userId,
+    };
+    send(payload);
   }
 
   void unsubscribe(
-    String domainType,
-    String domainId, {
+    String domainType, {
+    String domainId = '',
     required String notifyType,
     String entityType = WebsocketConstants.lastRecordEntityType,
+    String? userId,
   }) {
-    send({
+    final payload = <String, dynamic>{
       'action': WebsocketConstants.actionUnsubscribe,
       'notifyType': notifyType,
       'domainType': domainType,
       'domainId': domainId,
       'entityType': entityType,
-    });
+      if (userId != null && userId.isNotEmpty) 'userId': userId,
+    };
+    send(payload);
   }
 }

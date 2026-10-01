@@ -74,7 +74,7 @@ void main() {
 
       client.subscribe(
         'user',
-        userId,
+        domainId: userId,
         notifyType: WebsocketConstants.notifyTypeDomainChange,
       );
       await Future.delayed(const Duration(seconds: 3));
@@ -113,7 +113,7 @@ void main() {
 
       client.subscribe(
         'user',
-        userId,
+        domainId: userId,
         notifyType: WebsocketConstants.notifyTypeDomainStats,
         entityType: WebsocketConstants.wildcardEntityType,
       );
@@ -150,7 +150,7 @@ void main() {
 
       client.unsubscribe(
         'user',
-        userId,
+        domainId: userId,
         notifyType: WebsocketConstants.notifyTypeDomainChange,
       );
       await Future.delayed(const Duration(seconds: 3));
