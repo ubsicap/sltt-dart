@@ -1240,7 +1240,7 @@ void main() {
         'body': jsonEncode({
           'domainType': 'membership',
           'domainId': 'proj-1',
-          'notifyType': 'addedMe',
+          'notifyType': WebsocketConstants.notifyTypeAddedMe,
           'entityType': 'member',
           'userId': 'user-42',
         }),
@@ -1254,9 +1254,15 @@ void main() {
 
       expect(response['statusCode'], 200);
       expect(connections.subscriptions, hasLength(1));
-      expect(connections.subscriptions[0]['notifyType'], 'addedMe');
+      expect(
+        connections.subscriptions[0]['notifyType'],
+        WebsocketConstants.notifyTypeAddedMe,
+      );
       expect(management.sentMessages[0]['payload']['status'], 'ok');
-      expect(management.sentMessages[0]['payload']['notifyType'], 'addedMe');
+      expect(
+        management.sentMessages[0]['payload']['notifyType'],
+        WebsocketConstants.notifyTypeAddedMe,
+      );
       expect(
         jsonEncode(management.sentMessages[0]['payload']['states']),
         jsonEncode(
@@ -1281,7 +1287,7 @@ void main() {
           'body': jsonEncode({
             'domainType': 'project',
             'domainId': 'proj-1',
-            'notifyType': 'newDomainId',
+            'notifyType': WebsocketConstants.notifyTypeNewDomainId,
             'entityType': 'project',
           }),
         };
@@ -1294,10 +1300,13 @@ void main() {
 
         expect(response['statusCode'], 200);
         expect(connections.subscriptions, hasLength(1));
-        expect(connections.subscriptions[0]['notifyType'], 'newDomainId');
+        expect(
+          connections.subscriptions[0]['notifyType'],
+          WebsocketConstants.notifyTypeNewDomainId,
+        );
         expect(
           management.sentMessages[0]['payload']['notifyType'],
-          'newDomainId',
+          WebsocketConstants.notifyTypeNewDomainId,
         );
         expect(
           jsonEncode(management.sentMessages[0]['payload']['states']),
@@ -1323,7 +1332,7 @@ void main() {
           'requestContext': {'connectionId': 'conn-sub-new-project-states'},
           'body': jsonEncode({
             'domainType': 'project',
-            'notifyType': 'newDomainId',
+            'notifyType': WebsocketConstants.notifyTypeNewDomainId,
             'entityType': 'project',
             'ackFields': ['name', 'change_domainId'],
           }),
@@ -1398,7 +1407,7 @@ void main() {
           'requestContext': {'connectionId': 'conn-sub-addedme-states'},
           'body': jsonEncode({
             'domainType': 'membership',
-            'notifyType': 'addedMe',
+            'notifyType': WebsocketConstants.notifyTypeAddedMe,
             'entityType': 'member',
             'userId': 'user-42',
             'ackFields': ['data_role', 'change_domainId'],
@@ -1462,7 +1471,7 @@ void main() {
         'requestContext': {'connectionId': 'conn-sub-addedme-no-domain-id'},
         'body': jsonEncode({
           'domainType': 'membership',
-          'notifyType': 'addedMe',
+          'notifyType': WebsocketConstants.notifyTypeAddedMe,
           'entityType': 'member',
           'userId': 'user-42',
         }),
@@ -1476,10 +1485,16 @@ void main() {
 
       expect(response['statusCode'], 200);
       expect(connections.subscriptions, hasLength(1));
-      expect(connections.subscriptions[0]['notifyType'], 'addedMe');
+      expect(
+        connections.subscriptions[0]['notifyType'],
+        WebsocketConstants.notifyTypeAddedMe,
+      );
       expect(connections.subscriptions[0]['domainId'], isEmpty);
       expect(management.sentMessages[0]['payload']['status'], 'ok');
-      expect(management.sentMessages[0]['payload']['notifyType'], 'addedMe');
+      expect(
+        management.sentMessages[0]['payload']['notifyType'],
+        WebsocketConstants.notifyTypeAddedMe,
+      );
       expect(
         jsonEncode(management.sentMessages[0]['payload']['states']),
         jsonEncode(
@@ -1501,7 +1516,7 @@ void main() {
         'requestContext': {'connectionId': 'conn-sub-new-project-no-domain-id'},
         'body': jsonEncode({
           'domainType': 'project',
-          'notifyType': 'newDomainId',
+          'notifyType': WebsocketConstants.notifyTypeNewDomainId,
           'entityType': 'project',
         }),
       };
@@ -1514,12 +1529,15 @@ void main() {
 
       expect(response['statusCode'], 200);
       expect(connections.subscriptions, hasLength(1));
-      expect(connections.subscriptions[0]['notifyType'], 'newDomainId');
+      expect(
+        connections.subscriptions[0]['notifyType'],
+        WebsocketConstants.notifyTypeNewDomainId,
+      );
       expect(connections.subscriptions[0]['domainId'], isEmpty);
       expect(management.sentMessages[0]['payload']['status'], 'ok');
       expect(
         management.sentMessages[0]['payload']['notifyType'],
-        'newDomainId',
+        WebsocketConstants.notifyTypeNewDomainId,
       );
       expect(
         jsonEncode(management.sentMessages[0]['payload']['states']),
