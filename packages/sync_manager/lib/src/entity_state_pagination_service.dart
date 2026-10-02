@@ -450,27 +450,16 @@ class EntityStatePaginationService {
 
   String enqueueJobFetchEntityState({
     required String domainType,
-    String? domainId,
+    required String domainId,
     required String entityType,
     required String entityId,
     String? parentId,
-    bool isCrossDomain = false,
   }) {
-    final effectiveDomainId = isCrossDomain ? '' : (domainId ?? '');
-    if (!isCrossDomain && effectiveDomainId.isEmpty) {
-      throw ArgumentError.value(
-        domainId,
-        'domainId',
-        'domainId is required unless isCrossDomain is true.',
-      );
-    }
-
     final scopeKey = _scopeKey(
       domainType: domainType,
-      domainId: effectiveDomainId,
+      domainId: domainId,
       entityType: entityType,
       parentId: parentId,
-      isCrossDomain: isCrossDomain,
     );
 
     final activeCollectionForScope = _activeJobs.values.any(
@@ -483,11 +472,10 @@ class EntityStatePaginationService {
     final existingSingleActive =
         _activeJobs[_singleJobKey(
           domainType: domainType,
-          domainId: effectiveDomainId,
+          domainId: domainId,
           entityType: entityType,
           entityId: entityId,
           parentId: parentId,
-          isCrossDomain: isCrossDomain,
         )];
     if (existingSingleActive != null) {
       _ignoredDuplicateSingleRequestDuringActiveCount++;
@@ -495,16 +483,12 @@ class EntityStatePaginationService {
     }
 
     final existingSingleInQueueIndex = _queueLifo.indexWhere((job) {
-      final matchesDomainScope =
+      return !job.isCollection &&
           job.domainType == domainType &&
+          job.domainId == domainId &&
           job.entityType == entityType &&
           job.parentId == parentId &&
-          job.entityId == entityId &&
-          ((job.isCrossDomain && isCrossDomain) ||
-              (!job.isCrossDomain &&
-                  !isCrossDomain &&
-                  job.domainId == effectiveDomainId));
-      return !job.isCollection && matchesDomainScope;
+          job.entityId == entityId;
     });
     if (existingSingleInQueueIndex != -1) {
       final queued = _queueLifo.removeAt(existingSingleInQueueIndex);
@@ -527,11 +511,10 @@ class EntityStatePaginationService {
 
     final requestKey = _singleJobKey(
       domainType: domainType,
-      domainId: effectiveDomainId,
+      domainId: domainId,
       entityType: entityType,
       entityId: entityId,
       parentId: parentId,
-      isCrossDomain: isCrossDomain,
     );
     bucket.requestsByEntityId[entityId] = _PendingSingleRequest(
       requestKey: requestKey,
@@ -542,10 +525,9 @@ class EntityStatePaginationService {
     bucket.timer = Timer(singleRequestDebounce, () {
       _flushSingleEntityBucket(
         domainType: domainType,
-        domainId: effectiveDomainId,
+        domainId: domainId,
         entityType: entityType,
         parentId: parentId,
-        isCrossDomain: isCrossDomain,
       );
     });
 

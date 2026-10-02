@@ -142,28 +142,17 @@ class SyncManager {
 
   String enqueueJobFetchEntityState({
     required String domainType,
-    String? domainId,
+    required String domainId,
     required String entityType,
     required String entityId,
     String? parentId,
-    bool isCrossDomain = false,
   }) {
-    final effectiveDomainId = isCrossDomain ? '' : (domainId ?? '');
-    if (!isCrossDomain && effectiveDomainId.isEmpty) {
-      throw ArgumentError.value(
-        domainId,
-        'domainId',
-        'domainId is required unless isCrossDomain is true.',
-      );
-    }
-
     return entityStatePaginationService.enqueueJobFetchEntityState(
       domainType: domainType,
-      domainId: effectiveDomainId,
+      domainId: domainId,
       entityType: entityType,
       entityId: entityId,
       parentId: parentId,
-      isCrossDomain: isCrossDomain,
     );
   }
 
