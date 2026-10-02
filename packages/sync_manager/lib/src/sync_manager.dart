@@ -1113,6 +1113,371 @@ class SyncManager {
     }
   }
 
+  bool _isRootDomainTypeNotification(String? notifyType) {
+    return notifyType == WebsocketConstants.notifyTypeAddedMe ||
+        notifyType == WebsocketConstants.notifyTypeNewDomainId;
+  }
+
+  Future<void> handleWebSocketSubscribeAckMessage(
+    Map<String, dynamic> message,
+  ) async {
+    final status = message['status'] as String?;
+    SlttLogger.logger.info(
+      '[SyncManager] Received websocket subscribe ack message=$message',
+    );
+    if (status != 'ok') {
+      SlttLogger.logger.warning(
+        '[SyncManager] Websocket subscribe ack failed: status=$status, message=$message',
+      );
+      return;
+    }
+
+    final domainType = message['domainType'] as String?;
+    final domainId = message['domainId'] as String?;
+    final notifyType = message['notifyType'] as String?;
+    if (domainType == null || notifyType == null) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Websocket subscribe ack missing required fields: $message',
+      );
+      return;
+    }
+
+    if (_isRootDomainTypeNotification(notifyType)) {
+      await handleWebSocketRootDomainTypeAckMessage(message);
+      return;
+    }
+
+    if (domainId == null) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Websocket subscribe ack missing domainId for $domainType/$notifyType: $message',
+      );
+      return;
+    }
+
+    final data = message['stats'] as Map<String, dynamic>?;
+    if (data == null) {
+      SlttLogger.logger.info(
+        '[SyncManager] Websocket subscribe ack for $domainType/$domainId received without status data; waiting for change events.',
+      );
+      return;
+    }
+
+    DomainStatsResponse stats;
+    try {
+      stats = DomainStatsResponse.fromJson(data);
+    } catch (error, stackTrace) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Websocket subscribe ack statistics payload failed to parse as DomainStatsResponse: $error',
+      );
+      SlttLogger.logger.fine(() {
+        return '[SyncManager] payload=$data stackTrace=$stackTrace';
+      });
+      return;
+    }
+
+    final lastDomainSeq = _remoteLastDomainSeqFromDomainStats(stats);
+    final lastDomainChangeAt = _remoteLastDomainChangeAtFromDomainStats(stats);
+    SlttLogger.logger.info(
+      '[SyncManager] Websocket subscribe ack for $domainType/$domainId ($notifyType): '
+      'lastDomainSeq=$lastDomainSeq, lastDomainChangeAt=$lastDomainChangeAt',
+    );
+
+    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+    if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
+      if (!_subscribedDomainStatsKeys.contains(key)) {
+        SlttLogger.logger.info(
+          '[SyncManager] Ignoring stats subscribe ack for $domainType/$domainId because the key is not actively subscribed.',
+        );
+        return;
+      }
+
+      final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
+      if (lastDomainSeq > previousSeq) {
+        _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
+      }
+      if (lastDomainChangeAt != null) {
+        _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
+      }
+
+      final mergedStats = _mergeCloudDomainStats(
+        domainType: domainType,
+        domainId: domainId,
+        stats: DomainStatsResponse.fromJson(Map<String, dynamic>.from(data)),
+      );
+      SlttLogger.logger.info(
+        '[SyncManager] Emitting CloudDomainStatsUpdate for $domainType/$domainId: '
+        'storageType=${mergedStats.storageType ?? 'unknown'} '
+        'lastSeq=${mergedStats.entityTypeStats?.totals.latestSeq ?? -1} '
+        'totalChanges=${mergedStats.changeStats?.total ?? -1}',
+      );
+      _cloudDomainStatsEventsController.add(
+        CloudDomainStatsUpdate(
+          domainType: domainType,
+          domainId: domainId,
+          cloudStats: mergedStats,
+          observedAt: DateTime.now().toUtc(),
+        ),
+      );
+
+      final profile = getDomainTypeProfile(domainType);
+      if (profile?.hasSharedEntityType == true) {
+        final rootEntityType = profile!.rootEntityIdEntityType.value;
+        unawaited(
+          _maybeEnqueueAckDrivenEntityStateFetch(
+            domainType: domainType,
+            domainId: domainId,
+            rootEntityType: rootEntityType,
+            lastDomainSeq: lastDomainSeq,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!_subscribedDomainChangeKeys.contains(key)) {
+      SlttLogger.logger.info(
+        '[SyncManager] Ignoring subscribe ack for $domainType/$domainId because the key is not actively subscribed.',
+      );
+      return;
+    }
+
+    if (lastDomainSeq <= 0) {
+      SlttLogger.logger.info(
+        '[SyncManager] Websocket subscribe ack for $domainType/$domainId had no remote seq; no downsync will be triggered until a change event arrives.',
+      );
+      return;
+    }
+
+    final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
+    if (lastDomainSeq <= previousSeq) {
+      return;
+    }
+    _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
+    if (lastDomainChangeAt != null) {
+      _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
+    }
+    if (!_autoDownsyncEnabled) {
+      SlttLogger.logger.info(
+        '[SyncManager] Subscribe ack for $domainType/$domainId stored remote status; auto-downsync is disabled, so download is deferred until enabled.',
+      );
+      return;
+    }
+    unawaited(_handleDomainChange(domainType, domainId, lastDomainSeq));
+  }
+
+  Future<void> handleWebSocketRootDomainTypeAckMessage(
+    Map<String, dynamic> message,
+  ) async {
+    final domainType = message['domainType'] as String?;
+    final notifyType = message['notifyType'] as String?;
+    if (domainType == null ||
+        notifyType == null ||
+        !_isRootDomainTypeNotification(notifyType)) {
+      return;
+    }
+
+    final statesData = message['states'] as Map<String, dynamic>?;
+    if (statesData == null) {
+      SlttLogger.logger.info(
+        '[SyncManager] Websocket root subscription ack for $domainType/$notifyType had no states payload; no cross-domain storage will occur.',
+      );
+      return;
+    }
+
+    final key = _domainTypeSubscriptionKey(
+      domainType: domainType,
+      notifyType: notifyType,
+      userId: message['userId'] as String?,
+    );
+    if (!_subscribedDomainTypeKeys.contains(key)) {
+      SlttLogger.logger.info(
+        '[SyncManager] Ignoring root subscribe ack for $domainType/$notifyType because the key is not actively subscribed.',
+      );
+      return;
+    }
+
+    await processCrossDomainSubscriptionAck(
+      domainType: domainType,
+      notifyType: notifyType,
+      states: statesData,
+      userId: message['userId'] as String?,
+      entityType: message['entityType'] as String?,
+    );
+  }
+
+  void handleWebSocketDomainStatsChangeMessage(Map<String, dynamic> message) {
+    final notifyType = message['notifyType'] as String?;
+    if (notifyType != WebsocketConstants.notifyTypeDomainStats) {
+      return;
+    }
+
+    final domainType = message['domainType'] as String?;
+    final domainId = message['domainId'] as String?;
+    final rawStats = message['stats'];
+    if (domainType == null || domainId == null || rawStats is! Map) {
+      return;
+    }
+
+    final statsMap = Map<String, dynamic>.from(rawStats);
+    DomainStatsResponse stats;
+    try {
+      stats = DomainStatsResponse.fromJson(statsMap);
+    } catch (error, stackTrace) {
+      SlttLogger.logger.severe(
+        '[SyncManager] Websocket domainStats message payload failed to parse as DomainStatsResponse: $error',
+      );
+      SlttLogger.logger.fine(() {
+        return '[SyncManager] payload=$statsMap stackTrace=$stackTrace';
+      });
+      return;
+    }
+
+    final lastDomainSeq = _remoteLastDomainSeqFromDomainStats(stats);
+    final lastDomainChangeAt = _remoteLastDomainChangeAtFromDomainStats(stats);
+
+    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+    if (!_subscribedDomainStatsKeys.contains(key)) {
+      return;
+    }
+
+    final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
+    if (lastDomainSeq > previousSeq) {
+      _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
+    }
+    if (lastDomainChangeAt != null) {
+      _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
+    }
+
+    final mergedStats = _mergeCloudDomainStats(
+      domainType: domainType,
+      domainId: domainId,
+      stats: stats,
+    );
+    _cloudDomainStatsEventsController.add(
+      CloudDomainStatsUpdate(
+        domainType: domainType,
+        domainId: domainId,
+        cloudStats: mergedStats,
+        observedAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
+  void handleWebSocketDomainChangeMessage(Map<String, dynamic> message) {
+    final notifyType = message['notifyType'] as String?;
+    if (notifyType != WebsocketConstants.notifyTypeDomainChange) {
+      return;
+    }
+
+    final domainType = message['domainType'] as String?;
+    final domainId = message['domainId'] as String?;
+    final rawChange = message['change'];
+    if (domainType == null || domainId == null || rawChange is! Map) {
+      return;
+    }
+
+    final change = Map<String, dynamic>.from(rawChange);
+    final lastDomainSeq = change['seq'] is int
+        ? change['seq'] as int
+        : int.tryParse(change['seq']?.toString() ?? '') ?? 0;
+    if (lastDomainSeq <= 0) {
+      return;
+    }
+
+    final lastDomainChangeAtRaw = change['changeAt'];
+    DateTime? lastDomainChangeAt;
+    if (lastDomainChangeAtRaw is String) {
+      lastDomainChangeAt = DateTime.tryParse(lastDomainChangeAtRaw)?.toUtc();
+    } else if (lastDomainChangeAtRaw is DateTime) {
+      lastDomainChangeAt = lastDomainChangeAtRaw.toUtc();
+    }
+
+    final key = _domainChangeKey(domainType: domainType, domainId: domainId);
+    if (!_subscribedDomainChangeKeys.contains(key)) {
+      return;
+    }
+
+    final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
+    if (lastDomainSeq <= previousSeq) {
+      return;
+    }
+    _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
+    if (lastDomainChangeAt != null) {
+      _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
+    }
+    if (!_autoDownsyncEnabled) {
+      return;
+    }
+    unawaited(_handleDomainChange(domainType, domainId, lastDomainSeq));
+  }
+
+  Future<void> handleWebSocketRootDomainTypeChangeMessage(
+    Map<String, dynamic> message,
+  ) async {
+    final notifyType = message['notifyType'] as String?;
+    if (!_isRootDomainTypeNotification(notifyType)) {
+      return;
+    }
+
+    final domainType = message['domainType'] as String?;
+    if (domainType == null) {
+      return;
+    }
+
+    final statesData = message['states'] as Map<String, dynamic>?;
+    if (statesData == null) {
+      SlttLogger.logger.info(
+        '[SyncManager] Websocket root change for $domainType/$notifyType had no states payload; no cross-domain storage will occur.',
+      );
+      return;
+    }
+
+    final key = _domainTypeSubscriptionKey(
+      domainType: domainType,
+      notifyType: notifyType!,
+      userId: message['userId'] as String?,
+    );
+    if (!_subscribedDomainTypeKeys.contains(key)) {
+      SlttLogger.logger.info(
+        '[SyncManager] Ignoring root change for $domainType/$notifyType because the key is not actively subscribed.',
+      );
+      return;
+    }
+
+    await processCrossDomainSubscriptionAck(
+      domainType: domainType,
+      notifyType: notifyType,
+      states: statesData,
+      userId: message['userId'] as String?,
+      entityType: message['entityType'] as String?,
+    );
+  }
+
+  void _handleWebSocketActionChangeMessage(Map<String, dynamic> message) {
+    final notifyType = message['notifyType'] as String?;
+    if (_isRootDomainTypeNotification(notifyType)) {
+      unawaited(handleWebSocketRootDomainTypeChangeMessage(message));
+      return;
+    }
+
+    if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
+      handleWebSocketDomainStatsChangeMessage(message);
+      return;
+    }
+
+    if (notifyType != WebsocketConstants.notifyTypeDomainChange) {
+      return;
+    }
+
+    handleWebSocketDomainChangeMessage(message);
+  }
+
+  Future<void> _handleWebSocketActionSubscribeMessage(
+    Map<String, dynamic> message,
+  ) async {
+    await handleWebSocketSubscribeAckMessage(message);
+  }
+
   void _handleWebSocketMessage(dynamic rawMessage) {
     try {
       final message = rawMessage is String
@@ -1120,281 +1485,12 @@ class SyncManager {
           : rawMessage as Map<String, dynamic>;
       final action = message['action'] as String?;
       if (action == WebsocketConstants.actionSubscribe) {
-        final status = message['status'] as String?;
-        SlttLogger.logger.info(
-          '[SyncManager] Received websocket subscribe ack message=$message',
-        );
-        if (status != 'ok') {
-          SlttLogger.logger.warning(
-            '[SyncManager] Websocket subscribe ack failed: status=$status, message=$message',
-          );
-          return;
-        }
-        final domainType = message['domainType'] as String?;
-        final domainId = message['domainId'] as String?;
-        final notifyType = message['notifyType'] as String?;
-        if (domainType == null || notifyType == null) {
-          SlttLogger.logger.warning(
-            '[SyncManager] Websocket subscribe ack missing required fields: $message',
-          );
-          return;
-        }
-        if (notifyType == WebsocketConstants.notifyTypeAddedMe ||
-            notifyType == WebsocketConstants.notifyTypeNewDomainId) {
-          final statesData = message['states'] as Map<String, dynamic>?;
-          if (statesData != null) {
-            final key = _domainTypeSubscriptionKey(
-              domainType: domainType,
-              notifyType: notifyType,
-              userId: message['userId'] as String?,
-            );
-            if (!_subscribedDomainTypeKeys.contains(key)) {
-              SlttLogger.logger.info(
-                '[SyncManager] Ignoring root subscribe ack for $domainType/$notifyType because the key is not actively subscribed.',
-              );
-              return;
-            }
-            unawaited(
-              processCrossDomainSubscriptionAck(
-                domainType: domainType,
-                notifyType: notifyType,
-                states: statesData,
-                userId: message['userId'] as String?,
-                entityType: message['entityType'] as String?,
-              ),
-            );
-            return;
-          }
-          SlttLogger.logger.info(
-            '[SyncManager] Websocket root subscription ack for $domainType/$notifyType had no states payload; no cross-domain storage will occur.',
-          );
-          return;
-        }
-        if (domainId == null) {
-          SlttLogger.logger.warning(
-            '[SyncManager] Websocket subscribe ack missing domainId for $domainType/$notifyType: $message',
-          );
-          return;
-        }
-        final data = message['stats'] as Map<String, dynamic>?;
-        if (data == null) {
-          SlttLogger.logger.info(
-            '[SyncManager] Websocket subscribe ack for $domainType/$domainId received without status data; waiting for change events.',
-          );
-          return;
-        }
-
-        DomainStatsResponse stats;
-        try {
-          stats = DomainStatsResponse.fromJson(data);
-        } catch (error, stackTrace) {
-          SlttLogger.logger.warning(
-            '[SyncManager] Websocket subscribe ack statistics payload failed to parse as DomainStatsResponse: $error',
-          );
-          SlttLogger.logger.fine(() {
-            return '[SyncManager] payload=$data stackTrace=$stackTrace';
-          });
-          return;
-        }
-
-        final lastDomainSeq = _remoteLastDomainSeqFromDomainStats(stats);
-        final lastDomainChangeAt = _remoteLastDomainChangeAtFromDomainStats(
-          stats,
-        );
-        SlttLogger.logger.info(
-          '[SyncManager] Websocket subscribe ack for $domainType/$domainId ($notifyType): '
-          'lastDomainSeq=$lastDomainSeq, lastDomainChangeAt=$lastDomainChangeAt',
-        );
-
-        final key = _domainChangeKey(
-          domainType: domainType,
-          domainId: domainId,
-        );
-        if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
-          if (!_subscribedDomainStatsKeys.contains(key)) {
-            SlttLogger.logger.info(
-              '[SyncManager] Ignoring stats subscribe ack for $domainType/$domainId because the key is not actively subscribed.',
-            );
-            return;
-          }
-
-          final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
-          if (lastDomainSeq > previousSeq) {
-            _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
-          }
-          if (lastDomainChangeAt != null) {
-            _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
-          }
-
-          final mergedStats = _mergeCloudDomainStats(
-            domainType: domainType,
-            domainId: domainId,
-            stats: DomainStatsResponse.fromJson(
-              Map<String, dynamic>.from(data),
-            ),
-          );
-          SlttLogger.logger.info(
-            '[SyncManager] Emitting CloudDomainStatsUpdate for $domainType/$domainId: '
-            'storageType=${mergedStats.storageType ?? 'unknown'} '
-            'lastSeq=${mergedStats.entityTypeStats?.totals.latestSeq ?? -1} '
-            'totalChanges=${mergedStats.changeStats?.total ?? -1}',
-          );
-          _cloudDomainStatsEventsController.add(
-            CloudDomainStatsUpdate(
-              domainType: domainType,
-              domainId: domainId,
-              cloudStats: mergedStats,
-              observedAt: DateTime.now().toUtc(),
-            ),
-          );
-
-          final profile = getDomainTypeProfile(domainType);
-          if (profile?.hasSharedEntityType == true) {
-            final rootEntityType = profile!.rootEntityIdEntityType.value;
-            unawaited(
-              _maybeEnqueueAckDrivenEntityStateFetch(
-                domainType: domainType,
-                domainId: domainId,
-                rootEntityType: rootEntityType,
-                lastDomainSeq: lastDomainSeq,
-              ),
-            );
-          }
-          return;
-        }
-
-        if (!_subscribedDomainChangeKeys.contains(key)) {
-          SlttLogger.logger.info(
-            '[SyncManager] Ignoring subscribe ack for $domainType/$domainId because the key is not actively subscribed.',
-          );
-          return;
-        }
-
-        if (lastDomainSeq <= 0) {
-          SlttLogger.logger.info(
-            '[SyncManager] Websocket subscribe ack for $domainType/$domainId had no remote seq; no downsync will be triggered until a change event arrives.',
-          );
-          return;
-        }
-
-        final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
-        if (lastDomainSeq <= previousSeq) {
-          return;
-        }
-        _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
-        if (lastDomainChangeAt != null) {
-          _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
-        }
-        if (!_autoDownsyncEnabled) {
-          SlttLogger.logger.info(
-            '[SyncManager] Subscribe ack for $domainType/$domainId stored remote status; auto-downsync is disabled, so download is deferred until enabled.',
-          );
-          return;
-        }
-        unawaited(_handleDomainChange(domainType, domainId, lastDomainSeq));
+        unawaited(_handleWebSocketActionSubscribeMessage(message));
         return;
       }
-
-      if (action != WebsocketConstants.actionChange) {
-        return;
+      if (action == WebsocketConstants.actionChange) {
+        _handleWebSocketActionChangeMessage(message);
       }
-      final notifyType = message['notifyType'] as String?;
-      if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
-        final domainType = message['domainType'] as String?;
-        final domainId = message['domainId'] as String?;
-        final rawStats = message['stats'];
-        if (domainType == null || domainId == null || rawStats is! Map) {
-          return;
-        }
-
-        final statsMap = Map<String, dynamic>.from(rawStats);
-        DomainStatsResponse stats;
-        try {
-          stats = DomainStatsResponse.fromJson(statsMap);
-        } catch (error, stackTrace) {
-          SlttLogger.logger.severe(
-            '[SyncManager] Websocket domainStats message payload failed to parse as DomainStatsResponse: $error',
-          );
-          SlttLogger.logger.fine(() {
-            return '[SyncManager] payload=$statsMap stackTrace=$stackTrace';
-          });
-          return;
-        }
-
-        final lastDomainSeq = _remoteLastDomainSeqFromDomainStats(stats);
-        final lastDomainChangeAt = _remoteLastDomainChangeAtFromDomainStats(
-          stats,
-        );
-
-        final key = _domainChangeKey(
-          domainType: domainType,
-          domainId: domainId,
-        );
-        if (!_subscribedDomainStatsKeys.contains(key)) {
-          return;
-        }
-        final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
-        if (lastDomainSeq > previousSeq) {
-          _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
-        }
-        if (lastDomainChangeAt != null) {
-          _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
-        }
-        final mergedStats = _mergeCloudDomainStats(
-          domainType: domainType,
-          domainId: domainId,
-          stats: stats,
-        );
-        _cloudDomainStatsEventsController.add(
-          CloudDomainStatsUpdate(
-            domainType: domainType,
-            domainId: domainId,
-            cloudStats: mergedStats,
-            observedAt: DateTime.now().toUtc(),
-          ),
-        );
-        return;
-      }
-      if (notifyType != WebsocketConstants.notifyTypeDomainChange) {
-        return;
-      }
-      final domainType = message['domainType'] as String?;
-      final domainId = message['domainId'] as String?;
-      final rawChange = message['change'];
-      if (domainType == null || domainId == null || rawChange is! Map) {
-        return;
-      }
-      final change = Map<String, dynamic>.from(rawChange);
-      final lastDomainSeq = change['seq'] is int
-          ? change['seq'] as int
-          : int.tryParse(change['seq']?.toString() ?? '') ?? 0;
-      if (lastDomainSeq <= 0) {
-        return;
-      }
-      final lastDomainChangeAtRaw = change['changeAt'];
-      DateTime? lastDomainChangeAt;
-      if (lastDomainChangeAtRaw is String) {
-        lastDomainChangeAt = DateTime.tryParse(lastDomainChangeAtRaw)?.toUtc();
-      } else if (lastDomainChangeAtRaw is DateTime) {
-        lastDomainChangeAt = lastDomainChangeAtRaw.toUtc();
-      }
-
-      final key = _domainChangeKey(domainType: domainType, domainId: domainId);
-      if (!_subscribedDomainChangeKeys.contains(key)) {
-        return;
-      }
-      final previousSeq = _remoteLastDomainSeqByDomain[key] ?? 0;
-      if (lastDomainSeq <= previousSeq) {
-        return;
-      }
-      _remoteLastDomainSeqByDomain[key] = lastDomainSeq;
-      if (lastDomainChangeAt != null) {
-        _remoteLastDomainChangeAtByDomain[key] = lastDomainChangeAt;
-      }
-      if (!_autoDownsyncEnabled) {
-        return;
-      }
-      unawaited(_handleDomainChange(domainType, domainId, lastDomainSeq));
     } catch (error, stackTrace) {
       SlttLogger.logger.warning(
         '[SyncManager] Failed to process websocket message: $error',
