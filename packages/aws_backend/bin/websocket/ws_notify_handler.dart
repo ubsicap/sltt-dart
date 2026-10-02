@@ -200,7 +200,6 @@ Future<Map<String, dynamic>> wsNotifyHandler(
                 'domainId': domainId,
                 'entityId': rootUserId,
               },
-          'states': const <Map<String, dynamic>>[],
         });
       }
       continue;
@@ -384,7 +383,6 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             'entityType': rootEntityType,
             'subscriptionKey': rootSubscriptionKey,
             'change': record.change,
-            'states': const <Map<String, dynamic>>[],
           });
         }
       }

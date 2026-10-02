@@ -297,24 +297,11 @@ void main() {
       expect(subscribeAck['domainType'], equals('project'));
       expect(subscribeAck['domainId'], isEmpty);
       expect(subscribeAck['entityType'], equals('project'));
-      final newDomainIdStates = subscribeAck['states'];
-      expect(newDomainIdStates, isA<Map<String, dynamic>>());
-      final newDomainIdStatesMap = (newDomainIdStates as Map<String, dynamic>)
-          .cast<String, dynamic>();
-      final newDomainIdItems =
-          newDomainIdStatesMap['items'] as List<dynamic>? ?? const [];
-      expect(newDomainIdStatesMap['nextCursor'], isNull);
       expect(
-        jsonEncode(newDomainIdStatesMap),
-        jsonEncode(
-          CrossDomainEntityStatesResponse(
-            items: newDomainIdItems,
-            nextCursor: null,
-            count: newDomainIdItems.length,
-          ).toJsonStable(),
-        ),
+        subscribeAck.containsKey('states'),
+        isFalse,
         reason:
-            'newDomainId subscription should return a stable cross-domain state envelope',
+            'newDomainId ack should omit root states because the ack is size-limited',
       );
 
       final projectId = '__test_ws_new_domain_id_$suffix';
@@ -389,24 +376,11 @@ void main() {
       expect(subscribeAck['domainType'], equals('membership'));
       expect(subscribeAck['domainId'], equals('__test_ws_added_me_$suffix'));
       expect(subscribeAck['entityType'], equals('member'));
-      final addedMeStates = subscribeAck['states'];
-      expect(addedMeStates, isA<Map<String, dynamic>>());
-      final addedMeStatesMap = (addedMeStates as Map<String, dynamic>)
-          .cast<String, dynamic>();
-      final addedMeItems =
-          addedMeStatesMap['items'] as List<dynamic>? ?? const [];
-      expect(addedMeStatesMap['nextCursor'], isNull);
       expect(
-        jsonEncode(addedMeStatesMap),
-        jsonEncode(
-          CrossDomainEntityStatesResponse(
-            items: addedMeItems,
-            nextCursor: null,
-            count: addedMeItems.length,
-          ).toJsonStable(),
-        ),
+        subscribeAck.containsKey('states'),
+        isFalse,
         reason:
-            'addedMe subscription should return a stable cross-domain state envelope',
+            'addedMe ack should omit root states because the ack is size-limited',
       );
 
       final projectId = '__test_ws_added_me_$suffix';

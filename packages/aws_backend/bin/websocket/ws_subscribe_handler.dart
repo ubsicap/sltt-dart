@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:sltt_core/sltt_core.dart'
     show
-        CrossDomainEntityStatesResponse,
         DomainStatsResponse,
         EntityTypeStats,
         EntityTypeSummary,
@@ -32,13 +31,6 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
     required String entityType,
   })?
   getDomainChangeStatus,
-  Future<Map<String, dynamic>> Function({
-    required String domainType,
-    String? entityIdPrefix,
-    String? userId,
-    Set<String>? projectionFields,
-  })?
-  getRootEntityStates,
 }) async {
   final requestContext = (event['requestContext'] as Map)
       .cast<String, dynamic>();
@@ -55,26 +47,6 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
   final entityType = body['entityType'] as String?;
   final notifyType = body['notifyType'] as String?;
   final userId = body['userId'] as String?;
-  final ackFields = body['ackFields'];
-  final projectionFields = () {
-    if (ackFields == null) {
-      return null;
-    }
-    if (ackFields is String) {
-      return ackFields
-          .split(',')
-          .map((field) => field.trim())
-          .where((field) => field.isNotEmpty)
-          .toSet();
-    }
-    if (ackFields is Iterable) {
-      return ackFields
-          .map((field) => field.toString().trim())
-          .where((field) => field.isNotEmpty)
-          .toSet();
-    }
-    return null;
-  }();
   final effectiveDomainId = domainId ?? '';
 
   bool isValidEntityType(String entityType) {
@@ -242,29 +214,6 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       'entityType': entityType,
       'subscriptionKey': subscriptionKey,
     };
-    if (isAddedMeSubscription || isNewDomainIdSubscription) {
-      payload['states'] = CrossDomainEntityStatesResponse(
-        items: const [],
-        count: 0,
-      ).toJsonStable();
-      if (getRootEntityStates != null) {
-        try {
-          final states = await getRootEntityStates(
-            domainType: domainType,
-            entityIdPrefix: isAddedMeSubscription ? userId ?? '' : null,
-            userId: userId,
-            projectionFields: projectionFields,
-          );
-          payload['states'] = states;
-        } catch (error, stackTrace) {
-          SlttLogger.logger.warning(
-            'wsSubscribe: failed to fetch root entity states for $domainType/$notifyType',
-            error,
-            stackTrace,
-          );
-        }
-      }
-    }
     if (isChangeSubscription || isStatsSubscription) {
       payload['stats'] = statusData;
     }

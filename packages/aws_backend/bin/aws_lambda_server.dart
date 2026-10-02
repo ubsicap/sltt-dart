@@ -5,11 +5,7 @@ import 'package:aws_backend/aws_backend.dart';
 import 'package:aws_backend/src/utils/media_environment.dart';
 import 'package:aws_common/aws_common.dart' show AWSCredentials;
 import 'package:sltt_core/sltt_core.dart'
-    show
-        CrossDomainEntityStatesResponse,
-        DomainStatsResponse,
-        SlttLogger,
-        getCollectionByEntity;
+    show DomainStatsResponse, SlttLogger, getCollectionByEntity;
 
 import 'websocket/websocket_connections_repository.dart';
 import 'websocket/websocket_management_client.dart';
@@ -182,12 +178,6 @@ Future<Map<String, dynamic>> _handleWsAuthorizer(
   }
 }
 
-bool _coerceBool(Object? value) {
-  if (value is bool) return value;
-  if (value is String) return value.toLowerCase() == 'true';
-  return false;
-}
-
 Future<Map<String, dynamic>> _handleWsConnect(
   Map<String, dynamic> event,
 ) async {
@@ -272,9 +262,6 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
   );
   try {
     await storage.initialize();
-    final authorizerContext = (requestContext?['authorizer'] as Map?)
-        ?.cast<String, dynamic>();
-    final isTestToken = _coerceBool(authorizerContext?['isTestToken']);
 
     return await wsSubscribeHandler(
       event,
@@ -308,27 +295,6 @@ Future<Map<String, dynamic>> _handleWsSubscribe(
               storageType: storage.getStorageType(),
             );
             return response.toJson();
-          },
-      getRootEntityStates:
-          ({
-            required String domainType,
-            String? entityIdPrefix,
-            String? userId,
-            Set<String>? projectionFields,
-          }) async {
-            final result = await storage.getCrossDomainEntityStates(
-              domainType: domainType,
-              entityIdPrefix: entityIdPrefix,
-              projectionExpressionFields: projectionFields,
-              sortDirection: 'asc',
-              excludeDeleted: false,
-              includeTestDomains: isTestToken,
-            );
-            return CrossDomainEntityStatesResponse(
-              items: result.items,
-              nextCursor: result.nextCursor,
-              count: result.items.length,
-            ).toJsonStable();
           },
     );
   } catch (e, stackTrace) {

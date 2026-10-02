@@ -10,7 +10,6 @@ import 'package:aws_backend/src/websocket/domain_change_payload.dart'
         buildWsNotifyRecordMessage;
 import 'package:sltt_core/sltt_core.dart'
     show
-        CrossDomainEntityStatesResponse,
         DomainStatsResponse,
         EntityTypeStats,
         EntityTypeSummary,
@@ -1154,6 +1153,18 @@ void main() {
           ),
           isTrue,
         );
+        expect(
+          management.sentMessages.any(
+            (m) =>
+                m['connectionId'] == 'conn-root-project' &&
+                m['payload']['notifyType'] ==
+                    WebsocketConstants.notifyTypeNewDomainId &&
+                m['payload'].containsKey('states') == false,
+          ),
+          isTrue,
+          reason:
+              'newDomainId notifications should omit empty states payloads so they stay under websocket ack size limits',
+        );
       },
     );
 
@@ -1228,10 +1239,22 @@ void main() {
           ),
           isTrue,
         );
+        expect(
+          management.sentMessages.any(
+            (m) =>
+                m['connectionId'] == 'conn-root-user' &&
+                m['payload']['notifyType'] ==
+                    WebsocketConstants.notifyTypeAddedMe &&
+                m['payload'].containsKey('states') == false,
+          ),
+          isTrue,
+          reason:
+              'addedMe notifications should omit empty states payloads so they stay under websocket size limits',
+        );
       },
     );
 
-    test('accepts addedMe subscriptions with empty states payload', () async {
+    test('accepts addedMe subscriptions without a states payload', () async {
       final connections = _FakeConnectionsRepository();
       final management = _FakeManagementClient(connections: connections);
 
@@ -1264,204 +1287,50 @@ void main() {
         WebsocketConstants.notifyTypeAddedMe,
       );
       expect(
-        jsonEncode(management.sentMessages[0]['payload']['states']),
-        jsonEncode(
-          CrossDomainEntityStatesResponse(
-            items: const [],
-            count: 0,
-          ).toJsonStable(),
-        ),
+        management.sentMessages[0]['payload'].containsKey('states'),
+        isFalse,
         reason:
-            'addedMe ack should use the stable cross-domain states envelope',
+            'addedMe ack should not include root states because the ack is size-limited',
       );
     });
 
-    test(
-      'accepts newDomainId subscriptions for project create notifications',
-      () async {
-        final connections = _FakeConnectionsRepository();
-        final management = _FakeManagementClient(connections: connections);
+    test('accepts newDomainId subscriptions without a states payload', () async {
+      final connections = _FakeConnectionsRepository();
+      final management = _FakeManagementClient(connections: connections);
 
-        final event = {
-          'requestContext': {'connectionId': 'conn-sub-new-project'},
-          'body': jsonEncode({
-            'domainType': 'project',
-            'domainId': 'proj-1',
-            'notifyType': WebsocketConstants.notifyTypeNewDomainId,
-            'entityType': 'project',
-          }),
-        };
+      final event = {
+        'requestContext': {'connectionId': 'conn-sub-new-project'},
+        'body': jsonEncode({
+          'domainType': 'project',
+          'domainId': 'proj-1',
+          'notifyType': WebsocketConstants.notifyTypeNewDomainId,
+          'entityType': 'project',
+        }),
+      };
 
-        final response = await wsSubscribeHandler(
-          event,
-          connections: connections,
-          management: management,
-        );
+      final response = await wsSubscribeHandler(
+        event,
+        connections: connections,
+        management: management,
+      );
 
-        expect(response['statusCode'], 200);
-        expect(connections.subscriptions, hasLength(1));
-        expect(
-          connections.subscriptions[0]['notifyType'],
-          WebsocketConstants.notifyTypeNewDomainId,
-        );
-        expect(
-          management.sentMessages[0]['payload']['notifyType'],
-          WebsocketConstants.notifyTypeNewDomainId,
-        );
-        expect(
-          jsonEncode(management.sentMessages[0]['payload']['states']),
-          jsonEncode(
-            CrossDomainEntityStatesResponse(
-              items: const [],
-              count: 0,
-            ).toJsonStable(),
-          ),
-          reason:
-              'newDomainId ack should use the stable cross-domain states envelope',
-        );
-      },
-    );
-
-    test(
-      'newDomainId subscribe ack includes existing project states when provided',
-      () async {
-        final connections = _FakeConnectionsRepository();
-        final management = _FakeManagementClient(connections: connections);
-
-        final event = {
-          'requestContext': {'connectionId': 'conn-sub-new-project-states'},
-          'body': jsonEncode({
-            'domainType': 'project',
-            'notifyType': WebsocketConstants.notifyTypeNewDomainId,
-            'entityType': 'project',
-            'ackFields': ['name', 'change_domainId'],
-          }),
-        };
-
-        final response = await wsSubscribeHandler(
-          event,
-          connections: connections,
-          management: management,
-          getRootEntityStates:
-              ({
-                required String domainType,
-                String? entityIdPrefix,
-                String? userId,
-                Set<String>? projectionFields,
-              }) async {
-                expect(domainType, 'project');
-                expect(entityIdPrefix, isNull);
-                expect(userId, isNull);
-                expect(projectionFields, {'name', 'change_domainId'});
-                return CrossDomainEntityStatesResponse(
-                  items: [
-                    {
-                      'entityId': 'proj-1',
-                      'change_domainId': 'proj-1',
-                      'name': 'Alpha',
-                    },
-                    {
-                      'entityId': 'proj-2',
-                      'change_domainId': 'proj-2',
-                      'name': 'Beta',
-                    },
-                  ],
-                  count: 2,
-                ).toJsonStable();
-              },
-        );
-
-        expect(response['statusCode'], 200);
-        expect(
-          jsonEncode(management.sentMessages[0]['payload']['states']),
-          jsonEncode(
-            CrossDomainEntityStatesResponse(
-              items: [
-                {
-                  'entityId': 'proj-1',
-                  'change_domainId': 'proj-1',
-                  'name': 'Alpha',
-                },
-                {
-                  'entityId': 'proj-2',
-                  'change_domainId': 'proj-2',
-                  'name': 'Beta',
-                },
-              ],
-              count: 2,
-            ).toJsonStable(),
-          ),
-          reason:
-              'newDomainId ack should return stable paginated state metadata with ordered item keys',
-        );
-      },
-    );
-
-    test(
-      'addedMe subscribe ack includes existing membership states when provided',
-      () async {
-        final connections = _FakeConnectionsRepository();
-        final management = _FakeManagementClient(connections: connections);
-
-        final event = {
-          'requestContext': {'connectionId': 'conn-sub-addedme-states'},
-          'body': jsonEncode({
-            'domainType': 'membership',
-            'notifyType': WebsocketConstants.notifyTypeAddedMe,
-            'entityType': 'member',
-            'userId': 'user-42',
-            'ackFields': ['data_role', 'change_domainId'],
-          }),
-        };
-
-        final response = await wsSubscribeHandler(
-          event,
-          connections: connections,
-          management: management,
-          getRootEntityStates:
-              ({
-                required String domainType,
-                String? entityIdPrefix,
-                String? userId,
-                Set<String>? projectionFields,
-              }) async {
-                expect(domainType, 'membership');
-                expect(entityIdPrefix, 'user-42');
-                expect(userId, 'user-42');
-                expect(projectionFields, {'data_role', 'change_domainId'});
-                return CrossDomainEntityStatesResponse(
-                  items: [
-                    {
-                      'entityId': 'user-42',
-                      'change_domainId': 'proj-5',
-                      'data_role': 'member',
-                    },
-                  ],
-                  count: 1,
-                ).toJsonStable();
-              },
-        );
-
-        expect(response['statusCode'], 200);
-        expect(
-          jsonEncode(management.sentMessages[0]['payload']['states']),
-          jsonEncode(
-            CrossDomainEntityStatesResponse(
-              items: [
-                {
-                  'entityId': 'user-42',
-                  'change_domainId': 'proj-5',
-                  'data_role': 'member',
-                },
-              ],
-              count: 1,
-            ).toJsonStable(),
-          ),
-          reason:
-              'addedMe ack should return stable paginated state metadata with ordered item keys',
-        );
-      },
-    );
+      expect(response['statusCode'], 200);
+      expect(connections.subscriptions, hasLength(1));
+      expect(
+        connections.subscriptions[0]['notifyType'],
+        WebsocketConstants.notifyTypeNewDomainId,
+      );
+      expect(
+        management.sentMessages[0]['payload']['notifyType'],
+        WebsocketConstants.notifyTypeNewDomainId,
+      );
+      expect(
+        management.sentMessages[0]['payload'].containsKey('states'),
+        isFalse,
+        reason:
+            'newDomainId ack should not include root states because the ack is size-limited',
+      );
+    });
 
     test('accepts addedMe subscriptions without a domainId', () async {
       final connections = _FakeConnectionsRepository();
@@ -1496,15 +1365,10 @@ void main() {
         WebsocketConstants.notifyTypeAddedMe,
       );
       expect(
-        jsonEncode(management.sentMessages[0]['payload']['states']),
-        jsonEncode(
-          CrossDomainEntityStatesResponse(
-            items: const [],
-            count: 0,
-          ).toJsonStable(),
-        ),
+        management.sentMessages[0]['payload'].containsKey('states'),
+        isFalse,
         reason:
-            'addedMe subscription without domainId should still use the stable states envelope',
+            'addedMe subscription without domainId should still omit the states payload',
       );
     });
 
@@ -1540,15 +1404,10 @@ void main() {
         WebsocketConstants.notifyTypeNewDomainId,
       );
       expect(
-        jsonEncode(management.sentMessages[0]['payload']['states']),
-        jsonEncode(
-          CrossDomainEntityStatesResponse(
-            items: const [],
-            count: 0,
-          ).toJsonStable(),
-        ),
+        management.sentMessages[0]['payload'].containsKey('states'),
+        isFalse,
         reason:
-            'newDomainId subscription without domainId should still use the stable states envelope',
+            'newDomainId subscription without domainId should still omit the states payload',
       );
     });
   });
