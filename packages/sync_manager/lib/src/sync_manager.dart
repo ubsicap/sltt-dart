@@ -1028,17 +1028,54 @@ class SyncManager {
     }
   }
 
-  Future<void> processCrossDomainSubscriptionAck({
+  Future<void> processCrossDomainWsMessage({
     required String domainType,
     required String notifyType,
+    required String actionType,
     String? userId,
+    String? domainId,
     String? entityType,
   }) async {
     final nextEntityType =
         (entityType ?? getDomainRootEntityType(domainType) ?? '').trim();
     if (nextEntityType.isEmpty) {
       SlttLogger.logger.warning(
-        '[SyncManager] Ignoring root subscription ack for $domainType/$notifyType because no root entity type could be resolved.',
+        '[SyncManager] Ignoring root websocket $actionType for $domainType/$notifyType because no root entity type could be resolved.',
+      );
+      return;
+    }
+
+    final normalizedDomainId = (domainId ?? '').trim();
+
+    if (actionType == WebsocketConstants.actionChange) {
+      if (normalizedDomainId.isEmpty) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Ignoring root websocket change for $domainType/$notifyType because domainId is missing.',
+        );
+        return;
+      }
+
+      final requestKey = enqueueJobFetchEntityState(
+        domainType: domainType,
+        domainId: normalizedDomainId,
+        entityType: nextEntityType,
+        entityId: normalizedDomainId,
+      );
+      SlttLogger.logger.info(
+        '[SyncManager] Queued root domain change fetch for $notifyType $domainType/$normalizedDomainId entityType=$nextEntityType requestKey=$requestKey',
+      );
+      return;
+    }
+
+    if (normalizedDomainId.isNotEmpty) {
+      final requestKey = enqueueJobFetchEntityState(
+        domainType: domainType,
+        domainId: normalizedDomainId,
+        entityType: nextEntityType,
+        entityId: normalizedDomainId,
+      );
+      SlttLogger.logger.info(
+        '[SyncManager] Queued root subscribe-ack fetch for $notifyType $domainType/$normalizedDomainId entityType=$nextEntityType requestKey=$requestKey',
       );
       return;
     }
@@ -1052,7 +1089,7 @@ class SyncManager {
     if (notifyType == WebsocketConstants.notifyTypeAddedMe ||
         notifyType == WebsocketConstants.notifyTypeNewDomainId) {
       SlttLogger.logger.info(
-        '[SyncManager] Queued initial cross-domain fetch for $notifyType $domainType userId=${userId ?? ''}',
+        '[SyncManager] Queued initial cross-domain subscribe-ack fetch for $notifyType $domainType userId=${userId ?? ''}',
       );
     }
   }
@@ -1232,10 +1269,12 @@ class SyncManager {
       return;
     }
 
-    await processCrossDomainSubscriptionAck(
+    await processCrossDomainWsMessage(
       domainType: domainType,
       notifyType: notifyType,
+      actionType: WebsocketConstants.actionSubscribe,
       userId: message['userId'] as String?,
+      domainId: message['domainId'] as String?,
       entityType: message['entityType'] as String?,
     );
   }
@@ -1356,6 +1395,17 @@ class SyncManager {
 
     final domainType = message['domainType'] as String?;
     if (domainType == null) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Ignoring root change for $domainType/$notifyType because domainType is missing: $message',
+      );
+      return;
+    }
+
+    final domainId = (message['domainId'] as String?)?.trim();
+    if (domainId == null || domainId.isEmpty) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Ignoring root change for $domainType/$notifyType because domainId is missing: $message',
+      );
       return;
     }
 
@@ -1371,10 +1421,12 @@ class SyncManager {
       return;
     }
 
-    await processCrossDomainSubscriptionAck(
+    await processCrossDomainWsMessage(
       domainType: domainType,
       notifyType: notifyType,
+      actionType: WebsocketConstants.actionChange,
       userId: message['userId'] as String?,
+      domainId: domainId,
       entityType: message['entityType'] as String?,
     );
   }

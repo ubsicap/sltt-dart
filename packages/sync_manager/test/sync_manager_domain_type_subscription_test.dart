@@ -80,13 +80,14 @@ void main() {
     );
 
     test(
-      'processCrossDomainSubscriptionAck queues the initial collection fetch without persisting states',
+      'processCrossDomainWsMessage queues the initial collection fetch without persisting states',
       () async {
         syncManager.entityStatePaginationService.stopProcessing();
 
-        await syncManager.processCrossDomainSubscriptionAck(
+        await syncManager.processCrossDomainWsMessage(
           domainType: 'project',
           notifyType: WebsocketConstants.notifyTypeNewDomainId,
+          actionType: WebsocketConstants.actionSubscribe,
           entityType: 'project',
         );
 
@@ -108,6 +109,39 @@ void main() {
           greaterThanOrEqualTo(1),
           reason:
               'Root subscription acks should enqueue the initial cross-domain collection fetch.',
+        );
+      },
+    );
+
+    test(
+      'root notify change messages with domainId enqueue a single root-state fetch',
+      () async {
+        syncManager.entityStatePaginationService.stopProcessing();
+
+        final countsBefore = syncManager
+            .getEntityStatePaginationJobQueueCounts();
+        await syncManager.processCrossDomainWsMessage(
+          domainType: 'project',
+          notifyType: WebsocketConstants.notifyTypeNewDomainId,
+          actionType: WebsocketConstants.actionChange,
+          entityType: 'project',
+          domainId: 'project-root-change-1',
+        );
+
+        final countsAfter = syncManager
+            .getEntityStatePaginationJobQueueCounts();
+
+        expect(
+          countsAfter.queuedSingle,
+          greaterThan(countsBefore.queuedSingle),
+          reason:
+              'root notify change events should enqueue a single root entity fetch when a domainId is present.',
+        );
+        expect(
+          countsAfter.queuedCollection,
+          equals(countsBefore.queuedCollection),
+          reason:
+              'domain-scoped root change events should not fall back to the collection fetch path.',
         );
       },
     );
