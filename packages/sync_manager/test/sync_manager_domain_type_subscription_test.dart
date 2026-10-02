@@ -80,90 +80,34 @@ void main() {
     );
 
     test(
-      'processCrossDomainSubscriptionAck stores states and enqueues the next collection page',
+      'processCrossDomainSubscriptionAck queues the initial collection fetch without persisting states',
       () async {
-        final now = DateTime.now().toUtc();
-        final projectId = 'project-root-subscription-1';
-        final state = IsarProjectState(
-          entityId: projectId,
-          entityType: 'project',
-          domainType: 'project',
-          unknownJson: '{}',
-          change_storedAt: now,
-          change_storedAt_orig_: now,
-          schemaVersion: 1,
-          change_domainId: projectId,
-          change_domainId_orig_: projectId,
-          change_changeAt: now,
-          change_changeAt_orig_: now,
-          change_cid: 'cid-1',
-          change_cid_orig_: 'cid-1',
-          change_cloudAt: now,
-          change_changeBy: 'tester',
-          change_changeBy_orig_: 'tester',
-          data_nameLocal: 'Project Root',
-          data_nameLocal_dataSchemaRev_: 1,
-          data_nameLocal_changeAt_: now,
-          data_nameLocal_cid_: 'cid-name',
-          data_nameLocal_changeBy_: 'tester',
-          data_nameLocal_cloudAt_: now,
-          data_rank: '1',
-          data_rank_dataSchemaRev_: 1,
-          data_rank_changeAt_: now,
-          data_rank_cid_: 'cid-rank',
-          data_rank_changeBy_: 'tester',
-          data_rank_cloudAt_: now,
-          data_deleted: false,
-          data_deleted_dataSchemaRev_: 1,
-          data_deleted_changeAt_: now,
-          data_deleted_cid_: 'cid-deleted',
-          data_deleted_changeBy_: 'tester',
-          data_deleted_cloudAt_: now,
-          data_parentId: 'root',
-          data_parentId_dataSchemaRev_: 1,
-          data_parentId_changeAt_: now,
-          data_parentId_cid_: 'cid-parent',
-          data_parentId_changeBy_: 'tester',
-          data_parentId_cloudAt_: now,
-          data_parentProp: 'pList',
-          data_parentProp_dataSchemaRev_: 1,
-          data_parentProp_changeAt_: now,
-          data_parentProp_cid_: 'cid-parent-prop',
-          data_parentProp_changeBy_: 'tester',
-          data_parentProp_cloudAt_: now,
-          stateDataHash: 'hash-1',
-          stateDataHash_orig_: 'hash-1',
-        );
-
         syncManager.entityStatePaginationService.stopProcessing();
 
         await syncManager.processCrossDomainSubscriptionAck(
           domainType: 'project',
           notifyType: WebsocketConstants.notifyTypeNewDomainId,
-          states: {
-            'items': [state.toJson()],
-            'nextCursor': 'cursor-123',
-            'count': 1,
-          },
+          entityType: 'project',
         );
 
         final persisted = await localStorage.getEntityState(
           domainType: 'project',
-          domainId: projectId,
+          domainId: '',
           entityType: 'project',
-          entityId: projectId,
+          entityId: 'project-root-subscription-1',
         );
 
         expect(
           persisted,
-          isNotNull,
-          reason: 'Cross-domain subscription acks should persist states.',
+          isNull,
+          reason:
+              'Root subscription acks should not persist raw states directly.',
         );
         expect(
           syncManager.getEntityStatePaginationJobQueueCounts().queuedCollection,
           greaterThanOrEqualTo(1),
           reason:
-              'A nextCursor should schedule a follow-up cross-domain collection fetch.',
+              'Root subscription acks should enqueue the initial cross-domain collection fetch.',
         );
       },
     );

@@ -1031,84 +1031,28 @@ class SyncManager {
   Future<void> processCrossDomainSubscriptionAck({
     required String domainType,
     required String notifyType,
-    required Map<String, dynamic> states,
     String? userId,
     String? entityType,
   }) async {
-    final response = CrossDomainEntityStatesResponse.fromJson(
-      Map<String, dynamic>.from(states),
-    );
-    final items = response.items
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item.cast<String, dynamic>()))
-        .toList();
-
-    final grouped =
-        <
-          (String domainType, String domainId, String entityType),
-          List<Map<String, dynamic>>
-        >{};
-
-    for (final item in items) {
-      final itemDomainType = (item['domainType'] ?? domainType).toString();
-      final itemDomainId =
-          (item['change_domainId'] ?? item['domainId'] ?? item['id'] ?? '')
-              .toString();
-      final itemEntityType =
-          (item['entityType'] ??
-                  entityType ??
-                  getDomainRootEntityType(itemDomainType) ??
-                  '')
-              .toString();
-      if (itemDomainId.isEmpty || itemEntityType.isEmpty) {
-        continue;
-      }
-      grouped
-          .putIfAbsent((
-            itemDomainType,
-            itemDomainId,
-            itemEntityType,
-          ), () => <Map<String, dynamic>>[])
-          .add(item);
-    }
-
-    for (final entry in grouped.entries) {
-      final stateMaps = entry.value;
-      final entityTypeForWrite = entry.key.$3;
-      final statesToWrite = stateMaps
-          .map(
-            (item) => _localStorage.createEntityStateFromJson(
-              entityType: entityTypeForWrite,
-              json: item,
-            ),
-          )
-          .toList();
-      if (statesToWrite.isEmpty) {
-        continue;
-      }
-      await _localStorage.batchPutEntityStates(
-        states: statesToWrite,
-        storedAt: DateTime.now().toUtc(),
+    final nextEntityType =
+        (entityType ?? getDomainRootEntityType(domainType) ?? '').trim();
+    if (nextEntityType.isEmpty) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Ignoring root subscription ack for $domainType/$notifyType because no root entity type could be resolved.',
       );
+      return;
     }
 
-    if (response.nextCursor != null && response.nextCursor!.trim().isNotEmpty) {
-      final nextEntityType =
-          (entityType ?? getDomainRootEntityType(domainType) ?? '').trim();
-      if (nextEntityType.isNotEmpty) {
-        enqueueJobFetchEntityStateCollection(
-          domainType: domainType,
-          entityType: nextEntityType,
-          isCrossDomain: true,
-          nextCursor: response.nextCursor,
-        );
-      }
-    }
+    enqueueJobFetchEntityStateCollection(
+      domainType: domainType,
+      entityType: nextEntityType,
+      isCrossDomain: true,
+    );
 
     if (notifyType == WebsocketConstants.notifyTypeAddedMe ||
         notifyType == WebsocketConstants.notifyTypeNewDomainId) {
       SlttLogger.logger.info(
-        '[SyncManager] Persisted ${items.length} cross-domain state(s) for $notifyType $domainType userId=${userId ?? ''}',
+        '[SyncManager] Queued initial cross-domain fetch for $notifyType $domainType userId=${userId ?? ''}',
       );
     }
   }
@@ -1276,14 +1220,6 @@ class SyncManager {
       return;
     }
 
-    final statesData = message['states'] as Map<String, dynamic>?;
-    if (statesData == null) {
-      SlttLogger.logger.info(
-        '[SyncManager] Websocket root subscription ack for $domainType/$notifyType had no states payload; no cross-domain storage will occur.',
-      );
-      return;
-    }
-
     final key = _domainTypeSubscriptionKey(
       domainType: domainType,
       notifyType: notifyType,
@@ -1299,7 +1235,6 @@ class SyncManager {
     await processCrossDomainSubscriptionAck(
       domainType: domainType,
       notifyType: notifyType,
-      states: statesData,
       userId: message['userId'] as String?,
       entityType: message['entityType'] as String?,
     );
@@ -1424,14 +1359,6 @@ class SyncManager {
       return;
     }
 
-    final statesData = message['states'] as Map<String, dynamic>?;
-    if (statesData == null) {
-      SlttLogger.logger.info(
-        '[SyncManager] Websocket root change for $domainType/$notifyType had no states payload; no cross-domain storage will occur.',
-      );
-      return;
-    }
-
     final key = _domainTypeSubscriptionKey(
       domainType: domainType,
       notifyType: notifyType!,
@@ -1447,7 +1374,6 @@ class SyncManager {
     await processCrossDomainSubscriptionAck(
       domainType: domainType,
       notifyType: notifyType,
-      states: statesData,
       userId: message['userId'] as String?,
       entityType: message['entityType'] as String?,
     );
