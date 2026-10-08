@@ -100,6 +100,115 @@ void main() {
     );
 
     test(
+      '[isar] outsync [project domain]: respect domainType when fetching pending changes',
+      () async {
+        final syncManager = SyncManager.instance;
+        final local = LocalStorageService.instance;
+        const projectId = '__test_outsync_project_domain';
+
+        final projectChange =
+            ChangeLogEntryFactoryService.forChangeSave<
+              IsarChangeLogEntry,
+              Id,
+              BaseDataFields
+            >(
+              factory: IsarChangeLogEntry.new,
+              domainType: 'project',
+              domainId: projectId,
+              entityType: 'project',
+              entityId: projectId,
+              changeBy: 'test',
+              changeAt: DateTime.now(),
+              cid: generateCid(entityType: EntityType.project, userId: 'test'),
+              data: BaseDataFields(parentId: 'root', parentProp: 'projects'),
+              operation: 'create',
+            );
+
+        final membershipChange =
+            ChangeLogEntryFactoryService.forChangeSave<
+              IsarChangeLogEntry,
+              Id,
+              BaseDataFields
+            >(
+              factory: IsarChangeLogEntry.new,
+              domainType: 'membership',
+              domainId: projectId,
+              entityType: 'member',
+              entityId: 'test-member',
+              changeBy: 'test',
+              changeAt: DateTime.now(),
+              cid: generateCid(entityType: EntityType.project, userId: 'test'),
+              data: BaseDataFields(parentId: 'root', parentProp: 'members'),
+              operation: 'create',
+            );
+
+        final projectSaveResult = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [projectChange.toJson()],
+          srcStorageType: srcStorageType,
+          srcStorageId: srcStorageId,
+          storage: local,
+          includeChangeUpdates: true,
+          includeStateUpdates: true,
+        );
+        expect(
+          projectSaveResult.isError,
+          isFalse,
+          reason:
+              'Project change should save before testing domain filtering: ${projectSaveResult.errorMessage}',
+        );
+
+        final membershipSaveResult = await ChangeProcessingService.storeChanges(
+          storageMode: 'save',
+          changes: [membershipChange.toJson()],
+          srcStorageType: srcStorageType,
+          srcStorageId: srcStorageId,
+          storage: local,
+          includeChangeUpdates: true,
+          includeStateUpdates: true,
+        );
+        expect(
+          membershipSaveResult.isError,
+          isFalse,
+          reason:
+              'Membership change should save before testing domain filtering: ${membershipSaveResult.errorMessage}',
+        );
+
+        await syncManager.initialize();
+        syncManager.configureCloudUrl(cloudBaseUrl);
+
+        final result = await syncManager.outsyncToCloud(
+          domainIds: [projectId],
+          domainType: 'project',
+        );
+
+        expect(
+          result.success,
+          isTrue,
+          reason:
+              'Project-domain outsync should ignore membership changes: ${result.error}',
+        );
+        expect(
+          result.deletedLocalChanges,
+          equals([projectChange.cid]),
+          reason:
+              'Only project-domain changes should be removed during a project outsync.',
+        );
+
+        final remainingMembershipChanges = await local.getChangesForSync(
+          domainIds: [projectId],
+          domainType: 'membership',
+        );
+        expect(
+          remainingMembershipChanges.map((e) => e.cid),
+          contains(membershipChange.cid),
+          reason:
+              'Membership changes should remain pending when the caller asks for project-domain sync only.',
+        );
+      },
+    );
+
+    test(
       '[isar] downsync [create]: save cloud changes > downsync to local',
       () async {
         await testDownsyncCreate(

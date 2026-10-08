@@ -1959,6 +1959,7 @@ class IsarStorageService extends BaseStorageService {
     int? cursor,
     int? limit,
     List<String>? domainIds,
+    String? domainType,
   }) async {
     var query = _isar.isarChangeLogEntrys.where();
     var results = await query
@@ -1966,6 +1967,12 @@ class IsarStorageService extends BaseStorageService {
         .filter()
         .cloudAtIsNull()
         .findAll();
+
+    if (domainType != null && domainType.trim().isNotEmpty) {
+      results = results
+          .where((entry) => entry.domainType == domainType)
+          .toList();
+    }
 
     if (domainIds != null && domainIds.isNotEmpty) {
       results = results

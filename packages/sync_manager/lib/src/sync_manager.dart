@@ -1626,9 +1626,10 @@ class SyncManager {
     try {
       SlttLogger.logger.info('[SyncManager] Starting outsync to cloud...');
 
-      // Get changes for sync
+      // Get changes for sync, respecting the caller's requested domainType.
       changesToSync = await _localStorage.getChangesForSync(
         domainIds: domainIds,
+        domainType: domainType,
         limit:
             120 /* 10x (average 4Kb per item) batch writes 12 changes + 12 state updates (25 per-batch write limit) */,
       );
