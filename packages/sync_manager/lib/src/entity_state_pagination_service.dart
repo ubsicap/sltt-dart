@@ -168,6 +168,7 @@ class EntityStatePaginationService {
   final List<_EntityStateJob> _queueLifo = [];
   final Map<String, _EntityStateJob> _activeJobs = {};
   final Map<String, _SingleEntityDebounceBucket> _singleDebounceBuckets = {};
+  final List<Future<void>> _pendingStoreOperations = [];
 
   int _mergedSingleBatchCount = 0;
   int _yieldedActiveJobCount = 0;
@@ -248,7 +249,7 @@ class EntityStatePaginationService {
     );
     final store = _jobStore;
     if (store != null) {
-      unawaited(
+      _trackStoreOperation(
         store.ensureOpen().catchError((Object error, StackTrace stackTrace) {
           SlttLogger.logger.warning(
             '[EntityStateQueue] Failed to open persistence store: $error',
@@ -256,12 +257,13 @@ class EntityStatePaginationService {
           SlttLogger.logger.fine(
             '[EntityStateQueue] Persistence open stack trace: $stackTrace',
           );
+          return;
         }),
       );
     }
     if (!_resumeRequested) {
       _resumeRequested = true;
-      unawaited(resumePersistedJobs());
+      _trackStoreOperation(resumePersistedJobs());
     }
     _notifyQueueCountsChanged();
     _processQueue();
@@ -330,8 +332,46 @@ class EntityStatePaginationService {
       bucket.timer?.cancel();
     }
     _singleDebounceBuckets.clear();
-    _activeJobs.clear();
     _queueLifo.clear();
+
+    if (_pendingStoreOperations.isNotEmpty) {
+      try {
+        await Future.wait(
+          _pendingStoreOperations,
+        ).timeout(const Duration(seconds: 10));
+      } on TimeoutException {
+        SlttLogger.logger.warning(
+          '[EntityStateQueue] Timed out waiting for in-flight persistence operations during dispose.',
+        );
+      }
+      _pendingStoreOperations.clear();
+    }
+
+    // Ensure any current worker completion handlers have run before the backing
+    // Isar instance is closed. This prevents shutdown races where the last query
+    // still finalizes as the database is being torn down.
+    if (_activeJobs.isNotEmpty) {
+      final jobCompletionFutures = <Future<void>>[];
+      for (final job in _activeJobs.values) {
+        final completer = _jobCompletionCompleters[job.jobKey];
+        if (completer != null) {
+          jobCompletionFutures.add(completer.future);
+        }
+      }
+      if (jobCompletionFutures.isNotEmpty) {
+        try {
+          await Future.wait(
+            jobCompletionFutures,
+          ).timeout(const Duration(seconds: 10));
+        } on TimeoutException {
+          SlttLogger.logger.warning(
+            '[EntityStateQueue] Timed out waiting for active jobs during dispose.',
+          );
+        }
+      }
+    }
+    _activeJobs.clear();
+    _jobCompletionCompleters.clear();
 
     if (!_singleEntityEventsController.isClosed) {
       _singleEntityEventsController.addError(
@@ -707,6 +747,17 @@ class EntityStatePaginationService {
     _processQueue();
   }
 
+  final Map<String, Completer<void>> _jobCompletionCompleters = {};
+
+  void _trackStoreOperation(Future<void> operation) {
+    _pendingStoreOperations.add(operation);
+    unawaited(
+      operation.whenComplete(() {
+        _pendingStoreOperations.remove(operation);
+      }),
+    );
+  }
+
   void _requestActivePagersToYield() {
     for (final job in _activeJobs.values) {
       if (job.isCollection && job.hasMore) {
@@ -731,12 +782,20 @@ class EntityStatePaginationService {
 
           final nextJob = _queueLifo.removeLast();
           _activeJobs[nextJob.jobKey] = nextJob;
+          final completion = Completer<void>();
+          _jobCompletionCompleters[nextJob.jobKey] = completion;
           await _persistJobActive(nextJob);
           _notifyQueueCountsChanged();
 
           unawaited(
             _runJob(nextJob).whenComplete(() {
               _activeJobs.remove(nextJob.jobKey);
+              final jobCompleter = _jobCompletionCompleters.remove(
+                nextJob.jobKey,
+              );
+              if (jobCompleter != null && !jobCompleter.isCompleted) {
+                jobCompleter.complete();
+              }
               _notifyQueueCountsChanged();
               _requestLimiter.release();
               _processQueue();
@@ -1212,29 +1271,7 @@ class EntityStatePaginationService {
   void _persistQueuedJob(_EntityStateJob job) {
     final store = _jobStore;
     if (store == null) return;
-    unawaited(
-      store.upsertQueuedJob(
-        jobKey: job.jobKey,
-        scopeKey: job.scopeKey,
-        domainType: job.domainType,
-        domainId: job.domainId,
-        entityType: job.entityType,
-        isCollection: job.isCollection,
-        priority: job.priority.name,
-        enqueuedAt: job.enqueuedAt,
-        entityId: job.entityId,
-        parentId: job.parentId,
-        limit: job.limit,
-        cursor: job.cursor,
-        hasMore: job.hasMore,
-      ),
-    );
-  }
-
-  Future<void> _persistJobActive(_EntityStateJob job) async {
-    final store = _jobStore;
-    if (store == null) return;
-    await store.upsertActiveJob(
+    final operation = store.upsertQueuedJob(
       jobKey: job.jobKey,
       scopeKey: job.scopeKey,
       domainType: job.domainType,
@@ -1249,30 +1286,56 @@ class EntityStatePaginationService {
       cursor: job.cursor,
       hasMore: job.hasMore,
     );
+    _trackStoreOperation(operation);
+  }
+
+  Future<void> _persistJobActive(_EntityStateJob job) async {
+    final store = _jobStore;
+    if (store == null) return;
+    final operation = store.upsertActiveJob(
+      jobKey: job.jobKey,
+      scopeKey: job.scopeKey,
+      domainType: job.domainType,
+      domainId: job.domainId,
+      entityType: job.entityType,
+      isCollection: job.isCollection,
+      priority: job.priority.name,
+      enqueuedAt: job.enqueuedAt,
+      entityId: job.entityId,
+      parentId: job.parentId,
+      limit: job.limit,
+      cursor: job.cursor,
+      hasMore: job.hasMore,
+    );
+    _trackStoreOperation(operation);
+    await operation;
   }
 
   void _persistJobCursor(_EntityStateJob job) {
     final store = _jobStore;
     if (store == null) return;
-    unawaited(
-      store.updateCursor(
-        jobKey: job.jobKey,
-        cursor: job.cursor,
-        hasMore: job.hasMore,
-      ),
+    final operation = store.updateCursor(
+      jobKey: job.jobKey,
+      cursor: job.cursor,
+      hasMore: job.hasMore,
     );
+    _trackStoreOperation(operation);
   }
 
   Future<void> _persistJobFetched(String jobKey) async {
     final store = _jobStore;
     if (store == null) return;
-    await store.markFetched(jobKey);
+    final operation = store.markFetched(jobKey);
+    _trackStoreOperation(operation);
+    await operation;
   }
 
   Future<void> _persistJobStored(String jobKey) async {
     final store = _jobStore;
     if (store == null) return;
-    await store.markStored(jobKey);
+    final operation = store.markStored(jobKey);
+    _trackStoreOperation(operation);
+    await operation;
     SlttLogger.logger.info(
       '[EntityStateQueue] Stored fetched entity-state page for job=$jobKey',
     );
@@ -1284,7 +1347,9 @@ class EntityStatePaginationService {
       _notifyQueueCountsChanged();
       return;
     }
-    await store.markCompleted(jobKey);
+    final operation = store.markCompleted(jobKey);
+    _trackStoreOperation(operation);
+    await operation;
     SlttLogger.logger.info(
       '[EntityStateQueue] Completed entity-state job=$jobKey',
     );
@@ -1297,7 +1362,9 @@ class EntityStatePaginationService {
       _notifyQueueCountsChanged();
       return;
     }
-    await store.markFailed(jobKey, errorMessage);
+    final operation = store.markFailed(jobKey, errorMessage);
+    _trackStoreOperation(operation);
+    await operation;
     _notifyQueueCountsChanged();
   }
 
@@ -1310,7 +1377,9 @@ class EntityStatePaginationService {
       _notifyQueueCountsChanged();
       return;
     }
-    await store.markStorageFailed(jobKey, errorMessage);
+    final operation = store.markStorageFailed(jobKey, errorMessage);
+    _trackStoreOperation(operation);
+    await operation;
     SlttLogger.logger.warning(
       '[EntityStateQueue] Storage failed for job=$jobKey: $errorMessage',
     );

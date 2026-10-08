@@ -145,5 +145,22 @@ void main() {
         );
       },
     );
+
+    test(
+      'close waits for queued pagination work before shutting down Isar storage',
+      () async {
+        syncManager.entityStatePaginationService.stopProcessing();
+
+        await syncManager.processCrossDomainWsMessage(
+          domainType: 'project',
+          notifyType: WebsocketConstants.notifyTypeNewDomainId,
+          actionType: WebsocketConstants.actionChange,
+          entityType: 'project',
+          domainId: 'project-root-change-close-1',
+        );
+
+        await syncManager.close();
+      },
+    );
   });
 }
