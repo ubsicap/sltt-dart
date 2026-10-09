@@ -580,7 +580,10 @@ class SyncManager {
         continue;
       }
 
-      final syncState = await _localStorage.getCursorSyncState(domainId);
+      final syncState = await _localStorage.getCursorSyncState(
+        domainId,
+        domainType: domainType,
+      );
       final localSeq = syncState?.seq ?? 0;
       if (lastDomainSeq <= localSeq) {
         continue;
@@ -872,7 +875,10 @@ class SyncManager {
     required String rootEntityType,
     required int lastDomainSeq,
   }) async {
-    final syncState = await _localStorage.getCursorSyncState(domainId);
+    final syncState = await _localStorage.getCursorSyncState(
+      domainId,
+      domainType: domainType,
+    );
     final localSeq = syncState?.seq ?? 0;
     if (lastDomainSeq <= localSeq) {
       SlttLogger.logger.info(
@@ -1491,7 +1497,10 @@ class SyncManager {
       return;
     }
 
-    final syncState = await _localStorage.getCursorSyncState(domainId);
+    final syncState = await _localStorage.getCursorSyncState(
+      domainId,
+      domainType: domainType,
+    );
     final localSeq = syncState?.seq ?? 0;
     if (lastDomainSeq <= localSeq) {
       SlttLogger.logger.info(
@@ -1796,7 +1805,10 @@ class SyncManager {
         );
 
         // Get the last sync state for this specific project
-        final syncState = await _localStorage.getCursorSyncState(domainId);
+        final syncState = await _localStorage.getCursorSyncState(
+          domainId,
+          domainType: domainType,
+        );
         int lastSeq = syncState?.seq ?? 0;
         String cid = syncState?.cid ?? '';
         DateTime changeAt =
@@ -2083,7 +2095,10 @@ class SyncManager {
         domainId: domainId,
       );
 
-      final localCursorState = await _localStorage.getCursorSyncState(domainId);
+      final localCursorState = await _localStorage.getCursorSyncState(
+        domainId,
+        domainType: domainType,
+      );
 
       EntityTypeSummary? cloudChangeStats;
       EntityTypeStats? cloudStateStats;
@@ -2363,6 +2378,7 @@ class SyncManager {
 
     final cursorStateSub = _localStorage.listenToCursorSyncStateChanges(
       domainId: domainId,
+      domainType: domainType,
       fireImmediately: true,
       onChanged: (entries) {
         unawaited(_scheduleLocalDomainStatsUpdate(domainType, domainId));
@@ -2445,7 +2461,10 @@ class SyncManager {
       domainType: domainType,
       domainId: domainId,
     );
-    final localCursorState = await _localStorage.getCursorSyncState(domainId);
+    final localCursorState = await _localStorage.getCursorSyncState(
+      domainId,
+      domainType: domainType,
+    );
 
     final effectiveCursorState =
         localCursorState ??

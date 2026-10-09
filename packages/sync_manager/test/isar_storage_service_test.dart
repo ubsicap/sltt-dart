@@ -2016,7 +2016,10 @@ void main() {
         changeAt: createdChange.changeAt,
       );
 
-      final cursorBefore = await storage.getCursorSyncState(domainId);
+      final cursorBefore = await storage.getCursorSyncState(
+        domainId,
+        domainType: 'project',
+      );
       expect(
         cursorBefore,
         isNotNull,
@@ -2055,7 +2058,10 @@ void main() {
       );
 
       // Verify cursor state removed
-      final cursorAfter = await storage.getCursorSyncState(domainId);
+      final cursorAfter = await storage.getCursorSyncState(
+        domainId,
+        domainType: 'project',
+      );
       expect(
         cursorAfter,
         isNull,
@@ -2081,6 +2087,57 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test(
+      'getCursorSyncState respects domainType when domainId is reused',
+      () async {
+        final baseTime = DateTime.now().toUtc();
+
+        await storage.upsertCursorSyncState(
+          domainType: 'membership',
+          domainId: 'shared-domain',
+          srcStorageType: 'cloud',
+          srcStorageId: 'cloud-1',
+          seq: 11,
+          cid: 'cid-membership',
+          changeAt: baseTime,
+        );
+
+        await storage.upsertCursorSyncState(
+          domainType: 'project',
+          domainId: 'shared-domain',
+          srcStorageType: 'cloud',
+          srcStorageId: 'cloud-2',
+          seq: 22,
+          cid: 'cid-project',
+          changeAt: baseTime.add(const Duration(minutes: 1)),
+        );
+
+        final membershipCursor = await storage.getCursorSyncState(
+          'shared-domain',
+          domainType: 'membership',
+        );
+        final projectCursor = await storage.getCursorSyncState(
+          'shared-domain',
+          domainType: 'project',
+        );
+
+        expect(
+          membershipCursor,
+          isNotNull,
+          reason: 'membership cursor should be found by domainId + domainType',
+        );
+        expect(
+          projectCursor,
+          isNotNull,
+          reason: 'project cursor should be found by domainId + domainType',
+        );
+        expect(membershipCursor!.seq, equals(11));
+        expect(projectCursor!.seq, equals(22));
+        expect(membershipCursor.domainType, equals('membership'));
+        expect(projectCursor.domainType, equals('project'));
+      },
+    );
 
     test('can create and retrieve CursorSyncState directly in Isar', () async {
       final now = DateTime.now();

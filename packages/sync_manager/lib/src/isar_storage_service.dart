@@ -1417,6 +1417,7 @@ class IsarStorageService extends BaseStorageService {
 
   StreamSubscription<List<CursorSyncState>> listenToCursorSyncStateChanges({
     required String domainId,
+    required String domainType,
     required void Function(List<CursorSyncState> entries) onChanged,
     bool fireImmediately = true,
   }) {
@@ -1424,6 +1425,8 @@ class IsarStorageService extends BaseStorageService {
         .collection<CursorSyncState>()
         .filter()
         .domainIdEqualTo(domainId)
+        .and()
+        .domainTypeEqualTo(domainType)
         .watch(fireImmediately: fireImmediately)
         .listen(onChanged);
   }
@@ -2293,13 +2296,20 @@ class IsarStorageService extends BaseStorageService {
     return domainIds.toList()..sort();
   }
 
-  /// Get sync state for a specific domainId
-  Future<CursorSyncState?> getCursorSyncState(String domainId) async {
-    return await _isar
+  /// Get sync state for a specific domainId and domainType.
+  Future<CursorSyncState?> getCursorSyncState(
+    String domainId, {
+    required String domainType,
+  }) async {
+    final matches = await _isar
         .collection<CursorSyncState>()
         .filter()
         .domainIdEqualTo(domainId)
-        .findFirst();
+        .and()
+        .domainTypeEqualTo(domainType)
+        .findAll();
+
+    return matches.isNotEmpty ? matches.first : null;
   }
 
   /// Create or update sync state for a domainId
@@ -2313,7 +2323,7 @@ class IsarStorageService extends BaseStorageService {
     required DateTime changeAt,
   }) async {
     CursorSyncState updatedCursorState;
-    final existing = await getCursorSyncState(domainId);
+    final existing = await getCursorSyncState(domainId, domainType: domainType);
     if (existing != null) {
       /*
           required super.domainId,
@@ -2505,6 +2515,8 @@ class IsarStorageService extends BaseStorageService {
       final cursorStatesToDelete = await _isar.cursorSyncStates
           .filter()
           .domainIdEqualTo(domainId)
+          .and()
+          .domainTypeEqualTo(domainType)
           .findAll();
       final cursorIdsToDelete = cursorStatesToDelete.map((e) => e.id).toList();
       await _isar.cursorSyncStates.deleteAll(cursorIdsToDelete);
@@ -2513,6 +2525,8 @@ class IsarStorageService extends BaseStorageService {
       final entityTypeSyncStatesToDelete = await _isar.isarEntityTypeSyncStates
           .filter()
           .domainIdEqualTo(domainId)
+          .and()
+          .domainTypeEqualTo(domainType)
           .findAll();
       final etsIdsToDelete = entityTypeSyncStatesToDelete
           .map((e) => e.id)
