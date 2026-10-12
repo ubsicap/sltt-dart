@@ -1254,8 +1254,52 @@ void main() {
       },
     );
 
+    test(
+      'ignores any message userId for addedMe and uses the authenticated connection user',
+      () async {
+        final connections = _FakeConnectionsRepository(
+          authenticatedUserId: 'user-actual',
+        );
+        final management = _FakeManagementClient(connections: connections);
+
+        final event = {
+          'requestContext': {'connectionId': 'conn-sub-addedme-mismatch'},
+          'body': jsonEncode({
+            'domainType': 'membership',
+            'domainId': 'proj-1',
+            'notifyType': WebsocketConstants.notifyTypeAddedMe,
+            'entityType': 'member',
+            'userId': 'user-other',
+          }),
+        };
+
+        final response = await wsSubscribeHandler(
+          event,
+          connections: connections,
+          management: management,
+        );
+
+        expect(
+          response['statusCode'],
+          200,
+          reason:
+              'addedMe subscriptions use the authenticated connection user only',
+        );
+        expect(connections.subscriptions, hasLength(1));
+        expect(
+          connections.subscriptions[0]['userId'],
+          'user-actual',
+          reason:
+              'payload userId must be ignored in favor of the authenticated user',
+        );
+        expect(management.sentMessages[0]['payload']['status'], 'ok');
+      },
+    );
+
     test('accepts addedMe subscriptions without a states payload', () async {
-      final connections = _FakeConnectionsRepository();
+      final connections = _FakeConnectionsRepository(
+        authenticatedUserId: 'user-42',
+      );
       final management = _FakeManagementClient(connections: connections);
 
       final event = {
@@ -1265,7 +1309,6 @@ void main() {
           'domainId': 'proj-1',
           'notifyType': WebsocketConstants.notifyTypeAddedMe,
           'entityType': 'member',
-          'userId': 'user-42',
         }),
       };
 
@@ -1333,7 +1376,9 @@ void main() {
     });
 
     test('accepts addedMe subscriptions without a domainId', () async {
-      final connections = _FakeConnectionsRepository();
+      final connections = _FakeConnectionsRepository(
+        authenticatedUserId: 'user-42',
+      );
       final management = _FakeManagementClient(connections: connections);
 
       final event = {
@@ -1342,7 +1387,6 @@ void main() {
           'domainType': 'membership',
           'notifyType': WebsocketConstants.notifyTypeAddedMe,
           'entityType': 'member',
-          'userId': 'user-42',
         }),
       };
 
@@ -1450,7 +1494,9 @@ String _payloadChangeName(Map payload) {
 }
 
 class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
-  _FakeConnectionsRepository();
+  _FakeConnectionsRepository({this.authenticatedUserId});
+
+  final String? authenticatedUserId;
 
   @override
   final bool useLocalDynamoDB = false;
@@ -1546,7 +1592,12 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
   @override
   Future<({String connectionId, String userId, bool isTestToken})?>
   getConnection(String connectionId) async {
-    return null;
+    if (authenticatedUserId == null) return null;
+    return (
+      connectionId: connectionId,
+      userId: authenticatedUserId!,
+      isTestToken: false,
+    );
   }
 
   @override

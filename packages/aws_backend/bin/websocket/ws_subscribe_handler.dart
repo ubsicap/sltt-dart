@@ -46,8 +46,9 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
   final domainId = body['domainId'] as String?;
   final entityType = body['entityType'] as String?;
   final notifyType = body['notifyType'] as String?;
-  final userId = body['userId'] as String?;
   final effectiveDomainId = domainId ?? '';
+  final connection = await connections.getConnection(connectionId);
+  final authenticatedUserId = connection?.userId ?? '';
 
   bool isValidEntityType(String entityType) {
     return entityType == WebsocketKeys.wildcardEntityType ||
@@ -76,7 +77,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
                 domainType: domainType,
                 entityType: entityType,
                 notifyType: WebsocketConstants.notifyTypeAddedMe,
-                userId: userId,
+                userId: authenticatedUserId,
               )) ||
           (isNewDomainIdSubscription &&
               isValidRootEntitySubscriptionRequest(
@@ -118,8 +119,9 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
     final resolvedEntityType = isStatsSubscription
         ? WebsocketKeys.wildcardEntityType
         : WebsocketKeys.resolveEntityType(entityType);
+    final subscriptionUserId = isAddedMeSubscription ? authenticatedUserId : '';
     final subscriptionKey = isAddedMeSubscription
-        ? WebsocketKeys.addedMeSubscriptionSk(userId: userId ?? '')
+        ? WebsocketKeys.addedMeSubscriptionSk(userId: subscriptionUserId)
         : isNewDomainIdSubscription
         ? WebsocketKeys.newDomainIdSubscriptionSk(
             domainType: domainType,
@@ -132,7 +134,6 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
             notifyType: notifyType,
           );
 
-    final connection = await connections.getConnection(connectionId);
     final isTestToken = connection?.isTestToken ?? false;
 
     await connections.putSubscription(
@@ -141,7 +142,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       domainId: effectiveDomainId,
       entityType: entityType,
       notifyType: notifyType,
-      userId: userId,
+      userId: subscriptionUserId,
       isTestToken: isTestToken,
     );
 
