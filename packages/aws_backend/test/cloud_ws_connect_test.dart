@@ -360,7 +360,6 @@ void main() {
           'domainType': 'membership',
           'domainId': '__test_ws_added_me_$suffix',
           'entityType': 'member',
-          'userId': userId,
           'ackIncludeTestDomains': true,
         }),
       );
