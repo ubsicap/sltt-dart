@@ -167,21 +167,33 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     if (notifyType == WebsocketConstants.notifyTypeAddedMe ||
         notifyType == WebsocketConstants.notifyTypeNewDomainId) {
       final rootEntityType = (message['entityType'] as String?) ?? entityType;
-      final isAddedMeEligible =
-          notifyType == WebsocketConstants.notifyTypeAddedMe &&
-          _isAddedMeEligibleRootEntityType(domainType, rootEntityType);
-      if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
-          !isAddedMeEligible) {
-        continue;
-      }
-
       final changeMap =
           (message['change'] as Map<String, dynamic>?) ?? const {};
       final rootUserId = notifyType == WebsocketConstants.notifyTypeAddedMe
           ? (changeMap['entityId'] as String?) ?? ''
           : '';
+
+      final isAddedMeEligible =
+          notifyType == WebsocketConstants.notifyTypeAddedMe &&
+          _isAddedMeEligibleRootEntityType(domainType, rootEntityType);
+
+      SlttLogger.logger.info(
+        'wsNotify: root notification path; notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType isAddedMeEligible=$isAddedMeEligible rootUserId=$rootUserId messageKeys=${message.keys.toList()}',
+      );
+
+      if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
+          !isAddedMeEligible) {
+        SlttLogger.logger.warning(
+          'wsNotify: skipped addedMe publish because rootEntityType=$rootEntityType is not eligible for domainType=$domainType; msg=$message',
+        );
+        continue;
+      }
+
       if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
           rootUserId.isEmpty) {
+        SlttLogger.logger.warning(
+          'wsNotify: skipped addedMe publish because rootUserId was empty; domainType=$domainType domainId=$domainId entityType=$rootEntityType change=$changeMap message=$message',
+        );
         continue;
       }
 
@@ -206,6 +218,10 @@ Future<Map<String, dynamic>> wsNotifyHandler(
               notifyType: notifyType,
             );
 
+      SlttLogger.logger.info(
+        'wsNotify: root notification matched subscribers; notifyType=$notifyType domainType=$domainType domainId=$domainId rootEntityType=$rootEntityType rootUserId=$rootUserId connectionCount=${subscriberMatches.length} subscriptionKey=$subscriptionKey',
+      );
+
       for (final subscription in subscriberMatches) {
         if (subscription.notifyType != notifyType) {
           continue;
@@ -214,8 +230,14 @@ Future<Map<String, dynamic>> wsNotifyHandler(
           isTestToken: subscription.isTestToken,
           domainId: domainId,
         )) {
+          SlttLogger.logger.info(
+            'wsNotify: skipped root notification for connection ${subscription.connectionId} because test scope does not match domainId=$domainId isTestToken=${subscription.isTestToken}',
+          );
           continue;
         }
+        SlttLogger.logger.info(
+          'wsNotify: sending root notification; connectionId=${subscription.connectionId} notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType subscriptionKey=$subscriptionKey',
+        );
         await management.send(subscription.connectionId, {
           'action': WebsocketConstants.actionChange,
           'notifyType': notifyType,
@@ -372,14 +394,25 @@ Future<Map<String, dynamic>> wsNotifyHandler(
         final isAddedMeEligible =
             notifyType == WebsocketConstants.notifyTypeAddedMe &&
             _isAddedMeEligibleRootEntityType(domainType, rootEntityType);
+        final rootUserId = (record.change['entityId'] as String?) ?? '';
+
+        SlttLogger.logger.info(
+          'wsNotify: root create notification check; domainType=$domainType domainId=$domainId entityType=$rootEntityType notifyType=$notifyType isAddedMeEligible=$isAddedMeEligible rootUserId=$rootUserId change=${record.change}',
+        );
+
         if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
             !isAddedMeEligible) {
+          SlttLogger.logger.warning(
+            'wsNotify: skipped root create addedMe publish because rootEntityType=$rootEntityType is not eligible for domainType=$domainType; change=${record.change}',
+          );
           continue;
         }
 
-        final rootUserId = (record.change['entityId'] as String?) ?? '';
         if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
             rootUserId.isEmpty) {
+          SlttLogger.logger.warning(
+            'wsNotify: skipped root create addedMe publish because entityId was empty; domainType=$domainType domainId=$domainId entityType=$rootEntityType change=${record.change}',
+          );
           continue;
         }
         final isUserScopedRoot =
@@ -404,6 +437,10 @@ Future<Map<String, dynamic>> wsNotifyHandler(
                 notifyType: notifyType,
               );
 
+        SlttLogger.logger.info(
+          'wsNotify: root create notification matched subscribers; domainType=$domainType domainId=$domainId entityType=$rootEntityType notifyType=$notifyType rootUserId=$rootUserId connectionCount=${rootSubscriberMatches.length} subscriptionKey=$rootSubscriptionKey',
+        );
+
         for (final subscription in rootSubscriberMatches) {
           if (subscription.notifyType != notifyType) {
             continue;
@@ -412,8 +449,14 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             isTestToken: subscription.isTestToken,
             domainId: domainId,
           )) {
+            SlttLogger.logger.info(
+              'wsNotify: skipped root create notification for connection ${subscription.connectionId} because test scope does not match domainId=$domainId isTestToken=${subscription.isTestToken}',
+            );
             continue;
           }
+          SlttLogger.logger.info(
+            'wsNotify: sending root create notification; connectionId=${subscription.connectionId} notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType subscriptionKey=$rootSubscriptionKey',
+          );
           await management.send(subscription.connectionId, {
             'action': WebsocketConstants.actionChange,
             'notifyType': notifyType,
