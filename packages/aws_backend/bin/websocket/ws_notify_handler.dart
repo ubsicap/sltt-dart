@@ -6,7 +6,12 @@ import 'package:aws_backend/src/websocket/domain_change_payload.dart'
         buildDomainChangeNotificationPayload,
         buildDomainStatsNotificationPayload;
 import 'package:sltt_core/sltt_core.dart'
-    show SlttLogger, WebsocketConstants, getDomainRootEntityType;
+    show
+        EntityType,
+        SlttLogger,
+        WebsocketConstants,
+        getDomainRootEntityType,
+        getDomainTypeProfile;
 
 import 'root_entity_subscription_utils.dart';
 import 'websocket_connections_repository.dart';
@@ -55,6 +60,17 @@ bool _shouldNotifyForTestScope({
 }) {
   final isTestDomainId = domainId.startsWith('__test_ws_');
   return isTestToken ? isTestDomainId : !isTestDomainId;
+}
+
+bool _isAddedMeEligibleRootEntityType(
+  String domainType,
+  String? rootEntityType,
+) {
+  if (rootEntityType == null) return false;
+  final profile = getDomainTypeProfile(domainType);
+  if (profile == null) return false;
+  final rootType = profile.rootEntityIdEntityType;
+  return rootType == EntityType.userProfile || rootType == EntityType.member;
 }
 
 Future<Map<String, dynamic>> wsNotifyHandler(
@@ -150,11 +166,25 @@ Future<Map<String, dynamic>> wsNotifyHandler(
 
     if (notifyType == WebsocketConstants.notifyTypeAddedMe ||
         notifyType == WebsocketConstants.notifyTypeNewDomainId) {
-      final rootUserId =
-          (message['userId'] as String?) ??
-          (message['entityId'] as String?) ??
-          '';
       final rootEntityType = (message['entityType'] as String?) ?? entityType;
+      final isAddedMeEligible =
+          notifyType == WebsocketConstants.notifyTypeAddedMe &&
+          _isAddedMeEligibleRootEntityType(domainType, rootEntityType);
+      if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
+          !isAddedMeEligible) {
+        continue;
+      }
+
+      final changeMap =
+          (message['change'] as Map<String, dynamic>?) ?? const {};
+      final rootUserId = notifyType == WebsocketConstants.notifyTypeAddedMe
+          ? (changeMap['entityId'] as String?) ?? ''
+          : '';
+      if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
+          rootUserId.isEmpty) {
+        continue;
+      }
+
       final subscriptionKey = notifyType == WebsocketConstants.notifyTypeAddedMe
           ? WebsocketKeys.addedMeSubscriptionSk(userId: rootUserId)
           : WebsocketKeys.newDomainIdSubscriptionSk(
@@ -339,10 +369,19 @@ Future<Map<String, dynamic>> wsNotifyHandler(
         final notifyType =
             getRootNotificationTypeForDomain(domainType) ??
             WebsocketConstants.notifyTypeNewDomainId;
-        final rootUserId =
-            (record.change['entityId'] as String?) ??
-            (record.change['userId'] as String?) ??
-            '';
+        final isAddedMeEligible =
+            notifyType == WebsocketConstants.notifyTypeAddedMe &&
+            _isAddedMeEligibleRootEntityType(domainType, rootEntityType);
+        if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
+            !isAddedMeEligible) {
+          continue;
+        }
+
+        final rootUserId = (record.change['entityId'] as String?) ?? '';
+        if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
+            rootUserId.isEmpty) {
+          continue;
+        }
         final isUserScopedRoot =
             isDomainTypeWithSeparateDomainIdAndRootEntityType(domainType);
         final rootSubscriptionKey = isUserScopedRoot

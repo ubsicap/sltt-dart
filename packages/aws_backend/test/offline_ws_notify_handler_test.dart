@@ -1255,6 +1255,125 @@ void main() {
     );
 
     test(
+      'uses change.entityId for addedMe matching when message payload omits userId',
+      () async {
+        final connections = _FakeConnectionsRepository(
+          authenticatedUserId: 'user-42',
+        );
+        final management = _FakeManagementClient(connections: connections);
+
+        connections.subscriptionsByUserId['user-42'] = [
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-root-user',
+            entityType: 'member',
+            notifyType: WebsocketConstants.notifyTypeAddedMe,
+          ),
+        ];
+
+        final event = {
+          'Records': [
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  'notifyType': WebsocketConstants.notifyTypeAddedMe,
+                  'domainType': 'membership',
+                  'domainId': 'proj-1',
+                  'entityType': 'member',
+                  'change': {
+                    'seq': 9,
+                    'cid': 'cid-9',
+                    'changeAt': '2026-07-17T00:00:00.000Z',
+                    'operation': 'create',
+                    'entityId': 'user-42',
+                    'entityType': 'member',
+                    'domainType': 'membership',
+                    'domainId': 'proj-1',
+                    'dataJson': jsonEncode({}),
+                  },
+                }),
+              },
+            },
+          ],
+        };
+
+        await wsNotifyHandler(
+          event,
+          connections: connections,
+          management: management,
+        );
+
+        expect(
+          management.sentMessages.any(
+            (m) =>
+                m['connectionId'] == 'conn-root-user' &&
+                m['payload']['notifyType'] ==
+                    WebsocketConstants.notifyTypeAddedMe,
+          ),
+          isTrue,
+          reason:
+              'addedMe notifications should resolve the user from change.entityId when the top-level payload omits userId',
+        );
+      },
+    );
+
+    test(
+      'skips addedMe notifications when the membership belongs to a different user',
+      () async {
+        final connections = _FakeConnectionsRepository(
+          authenticatedUserId: 'user-42',
+        );
+        final management = _FakeManagementClient(connections: connections);
+
+        connections.subscriptionsByUserId['user-42'] = [
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-root-user',
+            entityType: 'member',
+            notifyType: WebsocketConstants.notifyTypeAddedMe,
+          ),
+        ];
+
+        final event = {
+          'Records': [
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  'notifyType': WebsocketConstants.notifyTypeAddedMe,
+                  'domainType': 'membership',
+                  'domainId': 'proj-1',
+                  'entityType': 'member',
+                  'change': {
+                    'seq': 9,
+                    'cid': 'cid-9',
+                    'changeAt': '2026-07-17T00:00:00.000Z',
+                    'operation': 'create',
+                    'entityId': 'user-other',
+                    'entityType': 'member',
+                    'domainType': 'membership',
+                    'domainId': 'proj-1',
+                    'dataJson': jsonEncode({}),
+                  },
+                }),
+              },
+            },
+          ],
+        };
+
+        await wsNotifyHandler(
+          event,
+          connections: connections,
+          management: management,
+        );
+
+        expect(
+          management.sentMessages,
+          isEmpty,
+          reason:
+              'addedMe notifications should not fire for a membership that belongs to a different user',
+        );
+      },
+    );
+
+    test(
       'ignores any message userId for addedMe and uses the authenticated connection user',
       () async {
         final connections = _FakeConnectionsRepository(

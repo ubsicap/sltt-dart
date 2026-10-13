@@ -358,7 +358,6 @@ void main() {
           'action': WebsocketConstants.actionSubscribe,
           'notifyType': WebsocketConstants.notifyTypeAddedMe,
           'domainType': 'membership',
-          'domainId': '__test_ws_added_me_$suffix',
           'entityType': 'member',
           'ackIncludeTestDomains': true,
         }),
@@ -373,7 +372,7 @@ void main() {
         orElse: () => fail('Expected addedMe subscribe ack'),
       );
       expect(subscribeAck['domainType'], equals('membership'));
-      expect(subscribeAck['domainId'], equals('__test_ws_added_me_$suffix'));
+      expect(subscribeAck['domainId'], equals(''));
       expect(subscribeAck['entityType'], equals('member'));
       expect(
         subscribeAck.containsKey('states'),
