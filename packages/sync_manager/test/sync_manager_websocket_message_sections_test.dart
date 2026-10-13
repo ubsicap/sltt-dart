@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
@@ -23,11 +25,14 @@ void main() {
     });
 
     test(
-      'handleWebSocketSubscribeAckMessage queues a root fetch for a top-level domainId',
+      'handleWebSocketSubscribeAckMessage queues a root fetch using the auth JWT sub when message userId is absent',
       () async {
         const domainType = 'project';
         const userId = 'user-123';
         const projectId = 'project-ack-1';
+        final jwt =
+            'eyJhbGciOiJub25lIn0.${base64Url.encode(utf8.encode('{"sub":"$userId"}'))}.signature';
+        syncManager.updateAuthToken(jwt);
         syncManager.entityStatePaginationService.stopProcessing();
         syncManager.subscribedDomainTypeKeys.add(
           '$domainType|${WebsocketConstants.notifyTypeAddedMe}|$userId',
@@ -39,7 +44,6 @@ void main() {
           'domainType': domainType,
           'domainId': projectId,
           'notifyType': WebsocketConstants.notifyTypeAddedMe,
-          'userId': userId,
           'entityType': 'project',
         };
 
@@ -51,17 +55,20 @@ void main() {
           after.queuedSingle,
           greaterThan(before.queuedSingle),
           reason:
-              'root subscription acks with a top-level domainId should enqueue a single root fetch.',
+              'root subscription acks should resolve the current user from the auth JWT subject instead of a message userId field.',
         );
       },
     );
 
     test(
-      'handleWebSocketRootDomainTypeChangeMessage queues a root fetch using the message domainId',
+      'handleWebSocketRootDomainTypeChangeMessage queues a root fetch using the auth JWT sub when message userId is absent',
       () async {
         const domainType = 'project';
         const userId = 'user-123';
         const projectId = 'project-change-1';
+        final jwt =
+            'eyJhbGciOiJub25lIn0.${base64Url.encode(utf8.encode('{"sub":"$userId"}'))}.signature';
+        syncManager.updateAuthToken(jwt);
         syncManager.entityStatePaginationService.stopProcessing();
         syncManager.subscribedDomainTypeKeys.add(
           '$domainType|${WebsocketConstants.notifyTypeNewDomainId}|$userId',
@@ -72,7 +79,6 @@ void main() {
           'notifyType': WebsocketConstants.notifyTypeNewDomainId,
           'domainType': domainType,
           'domainId': projectId,
-          'userId': userId,
           'entityType': 'project',
         };
 
@@ -84,7 +90,7 @@ void main() {
           after.queuedSingle,
           greaterThan(before.queuedSingle),
           reason:
-              'root domain-type change events should enqueue a single root fetch using the message domainId.',
+              'root domain-type change events should resolve the current user from the auth JWT subject instead of a message userId field.',
         );
       },
     );

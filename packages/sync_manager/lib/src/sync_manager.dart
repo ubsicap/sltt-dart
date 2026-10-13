@@ -1263,10 +1263,11 @@ class SyncManager {
       return;
     }
 
+    final resolvedUserId = _resolveCurrentUserIdFromAuthToken();
     final key = _domainTypeSubscriptionKey(
       domainType: domainType,
       notifyType: notifyType,
-      userId: message['userId'] as String?,
+      userId: resolvedUserId,
     );
     if (!_subscribedDomainTypeKeys.contains(key)) {
       SlttLogger.logger.info(
@@ -1279,7 +1280,7 @@ class SyncManager {
       domainType: domainType,
       notifyType: notifyType,
       actionType: WebsocketConstants.actionSubscribe,
-      userId: message['userId'] as String?,
+      userId: resolvedUserId,
       domainId: message['domainId'] as String?,
       entityType: message['entityType'] as String?,
     );
@@ -1415,10 +1416,11 @@ class SyncManager {
       return;
     }
 
+    final resolvedUserId = _resolveCurrentUserIdFromAuthToken();
     final key = _domainTypeSubscriptionKey(
       domainType: domainType,
       notifyType: notifyType!,
-      userId: message['userId'] as String?,
+      userId: resolvedUserId,
     );
     if (!_subscribedDomainTypeKeys.contains(key)) {
       SlttLogger.logger.info(
@@ -1431,7 +1433,7 @@ class SyncManager {
       domainType: domainType,
       notifyType: notifyType,
       actionType: WebsocketConstants.actionChange,
-      userId: message['userId'] as String?,
+      userId: resolvedUserId,
       domainId: domainId,
       entityType: message['entityType'] as String?,
     );
