@@ -869,10 +869,30 @@ class SyncManager {
     }
   }
 
+  String _resolveEntityId({
+    required String domainType,
+    required String domainId,
+    required String entityType,
+    required String notifyType,
+  }) {
+    final profile = getDomainTypeProfile(domainType);
+    if (profile?.hasSeparateDomainIdEntityType == true) {
+      if (notifyType == WebsocketConstants.notifyTypeAddedMe) {
+        final currentUserId = (_resolveCurrentUserIdFromAuthToken() ?? '')
+            .trim();
+        if (currentUserId.isNotEmpty) {
+          return currentUserId;
+        }
+      }
+    }
+    return domainId;
+  }
+
   Future<void> _maybeEnqueueAckDrivenEntityStateFetch({
     required String domainType,
     required String domainId,
     required String rootEntityType,
+    required String notifyType,
     required int lastDomainSeq,
   }) async {
     final syncState = await _localStorage.getCursorSyncState(
@@ -893,7 +913,12 @@ class SyncManager {
       domainType: domainType,
       domainId: domainId,
       entityType: rootEntityType,
-      entityId: domainId,
+      entityId: _resolveEntityId(
+        domainType: domainType,
+        domainId: domainId,
+        entityType: rootEntityType,
+        notifyType: notifyType,
+      ),
     );
     _trackAckDrivenEntityStateDownloadRequest(requestKey);
   }
@@ -1061,27 +1086,39 @@ class SyncManager {
         return;
       }
 
+      final requestedEntityId = _resolveEntityId(
+        domainType: domainType,
+        domainId: normalizedDomainId,
+        entityType: nextEntityType,
+        notifyType: notifyType,
+      );
       final requestKey = enqueueJobFetchEntityState(
         domainType: domainType,
         domainId: normalizedDomainId,
         entityType: nextEntityType,
-        entityId: normalizedDomainId,
+        entityId: requestedEntityId,
       );
       SlttLogger.logger.info(
-        '[SyncManager] Queued root domain change fetch for $notifyType $domainType/$normalizedDomainId entityType=$nextEntityType requestKey=$requestKey',
+        '[SyncManager] Queued root domain change fetch for $notifyType $domainType/$normalizedDomainId entityType=$nextEntityType entityId=$requestedEntityId requestKey=$requestKey',
       );
       return;
     }
 
     if (normalizedDomainId.isNotEmpty) {
+      final requestedEntityId = _resolveEntityId(
+        domainType: domainType,
+        domainId: normalizedDomainId,
+        entityType: nextEntityType,
+        notifyType: notifyType,
+      );
       final requestKey = enqueueJobFetchEntityState(
         domainType: domainType,
         domainId: normalizedDomainId,
         entityType: nextEntityType,
-        entityId: normalizedDomainId,
+        entityId: requestedEntityId,
       );
       SlttLogger.logger.info(
-        '[SyncManager] Queued root subscribe-ack fetch for $notifyType $domainType/$normalizedDomainId entityType=$nextEntityType requestKey=$requestKey',
+        '[SyncManager] Queued root subscribe-ack fetch for $notifyType $domainType/$normalizedDomainId entityType=$nextEntityType entityId=$requestedEntityId requestKey=$requestKey',
       );
       return;
     }
@@ -1214,6 +1251,7 @@ class SyncManager {
             domainType: domainType,
             domainId: domainId,
             rootEntityType: rootEntityType,
+            notifyType: WebsocketConstants.notifyTypeDomainStats,
             lastDomainSeq: lastDomainSeq,
           ),
         );
@@ -1280,7 +1318,6 @@ class SyncManager {
       domainType: domainType,
       notifyType: notifyType,
       actionType: WebsocketConstants.actionSubscribe,
-      userId: resolvedUserId,
       domainId: message['domainId'] as String?,
       entityType: message['entityType'] as String?,
     );
@@ -1433,7 +1470,6 @@ class SyncManager {
       domainType: domainType,
       notifyType: notifyType,
       actionType: WebsocketConstants.actionChange,
-      userId: resolvedUserId,
       domainId: domainId,
       entityType: message['entityType'] as String?,
     );

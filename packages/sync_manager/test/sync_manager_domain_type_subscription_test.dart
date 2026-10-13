@@ -147,6 +147,56 @@ void main() {
     );
 
     test(
+      'addedMe root notify change messages resolve the current JWT subject without a userId arg',
+      () async {
+        const userId = 'user-42';
+        final jwt =
+            'eyJhbGciOiJub25lIn0.${base64Url.encode(utf8.encode('{"sub":"$userId"}'))}.signature';
+        syncManager.updateAuthToken(jwt);
+
+        final before = syncManager.getEntityStatePaginationJobQueueCounts();
+        await syncManager.processCrossDomainWsMessage(
+          domainType: kDomainMembership,
+          notifyType: WebsocketConstants.notifyTypeAddedMe,
+          actionType: WebsocketConstants.actionChange,
+          entityType: kEntityTypeMember,
+          domainId: 'project-membership-root-1',
+        );
+        final after = syncManager.getEntityStatePaginationJobQueueCounts();
+
+        expect(
+          after.queuedSingle,
+          greaterThan(before.queuedSingle),
+          reason:
+              'AddedMe membership change notifications should enqueue a root member fetch using the JWT subject when no userId param is supplied.',
+        );
+      },
+    );
+
+    test(
+      'membership root notify change messages use the userId as the member fetch target',
+      () async {
+        final before = syncManager.getEntityStatePaginationJobQueueCounts();
+        await syncManager.processCrossDomainWsMessage(
+          domainType: kDomainMembership,
+          notifyType: WebsocketConstants.notifyTypeDomainChange,
+          actionType: WebsocketConstants.actionChange,
+          entityType: kEntityTypeMember,
+          domainId: 'project-membership-root-1',
+          userId: 'user-42',
+        );
+        final after = syncManager.getEntityStatePaginationJobQueueCounts();
+
+        expect(
+          after.queuedSingle,
+          greaterThan(before.queuedSingle),
+          reason:
+              'membership change notifications should enqueue a single fetch for the member userId even when the domainId remains the project id.',
+        );
+      },
+    );
+
+    test(
       'close waits for queued pagination work before shutting down Isar storage',
       () async {
         syncManager.entityStatePaginationService.stopProcessing();
