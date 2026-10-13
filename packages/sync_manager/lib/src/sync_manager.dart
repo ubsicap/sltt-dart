@@ -428,10 +428,7 @@ class SyncManager {
       return;
     }
 
-    final resolvedUserId =
-        normalizedNotifyType == WebsocketConstants.notifyTypeAddedMe
-        ? _resolveCurrentUserIdFromAuthToken()
-        : null;
+    final resolvedUserId = _resolveCurrentUserIdFromAuthToken();
     if (normalizedNotifyType == WebsocketConstants.notifyTypeAddedMe &&
         (resolvedUserId == null || resolvedUserId.trim().isEmpty)) {
       SlttLogger.logger.warning(
@@ -447,7 +444,6 @@ class SyncManager {
     final key = _domainTypeSubscriptionKey(
       domainType: domainType,
       notifyType: normalizedNotifyType,
-      userId: resolvedUserId,
     );
     if (_subscribedDomainTypeKeys.add(key)) {
       SlttLogger.logger.info('[SyncManager] Subscribed to domain type: $key');
@@ -516,14 +512,10 @@ class SyncManager {
       return;
     }
 
-    final resolvedUserId =
-        normalizedNotifyType == WebsocketConstants.notifyTypeAddedMe
-        ? _resolveCurrentUserIdFromAuthToken()
-        : null;
+    final resolvedUserId = _resolveCurrentUserIdFromAuthToken();
     final key = _domainTypeSubscriptionKey(
       domainType: domainType,
       notifyType: normalizedNotifyType,
-      userId: resolvedUserId,
     );
     if (_subscribedDomainTypeKeys.remove(key)) {
       SlttLogger.logger.info(
@@ -653,13 +645,27 @@ class SyncManager {
     return '$domainType/$domainId';
   }
 
+  String? _resolveDomainTypeSubscriptionUserId({required String notifyType}) {
+    final authUserId = _resolveCurrentUserIdFromAuthToken();
+    if (authUserId != null && authUserId.trim().isNotEmpty) {
+      return authUserId.trim();
+    }
+
+    if (notifyType == WebsocketConstants.notifyTypeAddedMe) {
+      return null;
+    }
+
+    return '';
+  }
+
   String _domainTypeSubscriptionKey({
     required String domainType,
     required String notifyType,
-    String? userId,
   }) {
-    final scopeUserId = userId ?? '';
-    return '$domainType|$notifyType|$scopeUserId';
+    final scopeUserId = _resolveDomainTypeSubscriptionUserId(
+      notifyType: notifyType,
+    );
+    return '$domainType|$notifyType|${scopeUserId ?? ''}';
   }
 
   void _trySendDomainChangeSubscription({
@@ -1301,11 +1307,9 @@ class SyncManager {
       return;
     }
 
-    final resolvedUserId = _resolveCurrentUserIdFromAuthToken();
     final key = _domainTypeSubscriptionKey(
       domainType: domainType,
       notifyType: notifyType,
-      userId: resolvedUserId,
     );
     if (!_subscribedDomainTypeKeys.contains(key)) {
       SlttLogger.logger.info(
@@ -1453,11 +1457,9 @@ class SyncManager {
       return;
     }
 
-    final resolvedUserId = _resolveCurrentUserIdFromAuthToken();
     final key = _domainTypeSubscriptionKey(
       domainType: domainType,
       notifyType: notifyType!,
-      userId: resolvedUserId,
     );
     if (!_subscribedDomainTypeKeys.contains(key)) {
       SlttLogger.logger.info(
