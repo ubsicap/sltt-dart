@@ -149,6 +149,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
 
         await _sendDomainStatsNotification(
           management: management,
+          connections: connections,
           connectionId: subscription.connectionId,
           domainType: domainType,
           domainId: domainId,
@@ -238,21 +239,31 @@ Future<Map<String, dynamic>> wsNotifyHandler(
         SlttLogger.logger.info(
           'wsNotify: sending root notification; connectionId=${subscription.connectionId} notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType subscriptionKey=$subscriptionKey',
         );
-        await management.send(subscription.connectionId, {
-          'action': WebsocketConstants.actionChange,
-          'notifyType': notifyType,
-          'domainType': domainType,
-          'domainId': domainId,
-          'entityType': rootEntityType,
-          'subscriptionKey': subscriptionKey,
-          'change':
-              message['change'] ??
-              {
-                'domainType': domainType,
-                'domainId': domainId,
-                'entityId': rootUserId,
-              },
-        });
+        await _sendRootNotification(
+          management: management,
+          connections: connections,
+          connectionId: subscription.connectionId,
+          notifyType: notifyType,
+          domainType: domainType,
+          domainId: domainId,
+          entityType: rootEntityType,
+          subscriptionKey: subscriptionKey,
+          payload: {
+            'action': WebsocketConstants.actionChange,
+            'notifyType': notifyType,
+            'domainType': domainType,
+            'domainId': domainId,
+            'entityType': rootEntityType,
+            'subscriptionKey': subscriptionKey,
+            'change':
+                message['change'] ??
+                {
+                  'domainType': domainType,
+                  'domainId': domainId,
+                  'entityId': rootUserId,
+                },
+          },
+        );
       }
       continue;
     }
@@ -324,6 +335,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
         for (final connectionId in wildcardConnections) {
           await _sendDomainChangeNotification(
             management: management,
+            connections: connections,
             connectionId: connectionId,
             domainType: domainType,
             domainId: domainId,
@@ -349,6 +361,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
 
           await _sendDomainChangeNotification(
             management: management,
+            connections: connections,
             connectionId: connectionId,
             domainType: domainType,
             domainId: domainId,
@@ -374,6 +387,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
 
           await _sendDomainChangeNotification(
             management: management,
+            connections: connections,
             connectionId: connectionId,
             domainType: domainType,
             domainId: domainId,
@@ -457,15 +471,25 @@ Future<Map<String, dynamic>> wsNotifyHandler(
           SlttLogger.logger.info(
             'wsNotify: sending root create notification; connectionId=${subscription.connectionId} notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType subscriptionKey=$rootSubscriptionKey',
           );
-          await management.send(subscription.connectionId, {
-            'action': WebsocketConstants.actionChange,
-            'notifyType': notifyType,
-            'domainType': domainType,
-            'domainId': domainId,
-            'entityType': rootEntityType,
-            'subscriptionKey': rootSubscriptionKey,
-            'change': record.change,
-          });
+          await _sendRootNotification(
+            management: management,
+            connections: connections,
+            connectionId: subscription.connectionId,
+            notifyType: notifyType,
+            domainType: domainType,
+            domainId: domainId,
+            entityType: rootEntityType,
+            subscriptionKey: rootSubscriptionKey,
+            payload: {
+              'action': WebsocketConstants.actionChange,
+              'notifyType': notifyType,
+              'domainType': domainType,
+              'domainId': domainId,
+              'entityType': rootEntityType,
+              'subscriptionKey': rootSubscriptionKey,
+              'change': record.change,
+            },
+          );
         }
       }
     }
@@ -474,8 +498,36 @@ Future<Map<String, dynamic>> wsNotifyHandler(
   return {'statusCode': 200};
 }
 
+Future<void> _sendRootNotification({
+  required WebsocketManagementClient management,
+  required WebsocketConnectionsRepository connections,
+  required String connectionId,
+  required String notifyType,
+  required String domainType,
+  required String domainId,
+  required String entityType,
+  required String subscriptionKey,
+  required Map<String, dynamic> payload,
+}) async {
+  try {
+    await management.send(connectionId, payload);
+  } catch (error) {
+    SlttLogger.logger.warning(
+      'wsNotify: failed to send $notifyType to connectionId=$connectionId domainType=$domainType domainId=$domainId entityType=$entityType subscriptionKey=$subscriptionKey error=$error',
+    );
+    try {
+      await connections.deleteConnectionAndSubscriptions(connectionId);
+    } catch (deleteError) {
+      SlttLogger.logger.warning(
+        'wsNotify: unable to remove stale connection $connectionId after send failure; deleteError=$deleteError',
+      );
+    }
+  }
+}
+
 Future<void> _sendDomainChangeNotification({
   required WebsocketManagementClient management,
+  required WebsocketConnectionsRepository connections,
   required String connectionId,
   required String domainType,
   required String domainId,
@@ -483,9 +535,16 @@ Future<void> _sendDomainChangeNotification({
   required String entityType,
   required String subscriptionKey,
 }) async {
-  await management.send(
-    connectionId,
-    buildDomainChangeNotificationPayload(
+  await _sendRootNotification(
+    management: management,
+    connections: connections,
+    connectionId: connectionId,
+    notifyType: WebsocketConstants.notifyTypeDomainChange,
+    domainType: domainType,
+    domainId: domainId,
+    entityType: entityType,
+    subscriptionKey: subscriptionKey,
+    payload: buildDomainChangeNotificationPayload(
       domainType: domainType,
       domainId: domainId,
       change: change,
@@ -497,15 +556,23 @@ Future<void> _sendDomainChangeNotification({
 
 Future<void> _sendDomainStatsNotification({
   required WebsocketManagementClient management,
+  required WebsocketConnectionsRepository connections,
   required String connectionId,
   required String domainType,
   required String domainId,
   required Map<String, dynamic> stats,
   required String subscriptionKey,
 }) async {
-  await management.send(
-    connectionId,
-    buildDomainStatsNotificationPayload(
+  await _sendRootNotification(
+    management: management,
+    connections: connections,
+    connectionId: connectionId,
+    notifyType: WebsocketConstants.notifyTypeDomainStats,
+    domainType: domainType,
+    domainId: domainId,
+    entityType: WebsocketKeys.wildcardEntityType,
+    subscriptionKey: subscriptionKey,
+    payload: buildDomainStatsNotificationPayload(
       domainType: domainType,
       domainId: domainId,
       stats: stats,

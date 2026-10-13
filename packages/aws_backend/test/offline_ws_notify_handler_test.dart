@@ -1374,6 +1374,73 @@ void main() {
     );
 
     test(
+      'skips stale addedMe connections without aborting remaining subscribers',
+      () async {
+        final connections = _FakeConnectionsRepository(
+          authenticatedUserId: 'user-42',
+        );
+        final management = _FakeManagementClient(
+          connections: connections,
+          throwOnConnectionIds: {'conn-bad'},
+        );
+
+        connections.subscriptionsByUserId['user-42'] = [
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-bad',
+            entityType: 'member',
+            notifyType: WebsocketConstants.notifyTypeAddedMe,
+          ),
+          const WebsocketSubscriptionMatch(
+            connectionId: 'conn-good',
+            entityType: 'member',
+            notifyType: WebsocketConstants.notifyTypeAddedMe,
+          ),
+        ];
+
+        final event = {
+          'Records': [
+            {
+              'Sns': {
+                'Message': jsonEncode({
+                  'notifyType': WebsocketConstants.notifyTypeAddedMe,
+                  'domainType': 'membership',
+                  'domainId': 'proj-1',
+                  'entityType': 'member',
+                  'change': {
+                    'seq': 9,
+                    'cid': 'cid-9',
+                    'changeAt': '2026-07-17T00:00:00.000Z',
+                    'operation': 'create',
+                    'entityId': 'user-42',
+                    'entityType': 'member',
+                    'domainType': 'membership',
+                    'domainId': 'proj-1',
+                    'dataJson': jsonEncode({}),
+                  },
+                }),
+              },
+            },
+          ],
+        };
+
+        await wsNotifyHandler(
+          event,
+          connections: connections,
+          management: management,
+        );
+
+        expect(
+          management.sentMessages.map((m) => m['connectionId']).toList(),
+          contains('conn-good'),
+        );
+        expect(
+          management.sentMessages.map((m) => m['connectionId']).toList(),
+          isNot(contains('conn-bad')),
+        );
+      },
+    );
+
+    test(
       'ignores any message userId for addedMe and uses the authenticated connection user',
       () async {
         final connections = _FakeConnectionsRepository(
@@ -1755,15 +1822,22 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
 }
 
 class _FakeManagementClient implements WebsocketManagementClient {
-  _FakeManagementClient({required this.connections});
+  _FakeManagementClient({
+    required this.connections,
+    this.throwOnConnectionIds = const {},
+  });
 
   @override
   final WebsocketConnectionsRepository connections;
 
+  final Set<String> throwOnConnectionIds;
   final List<Map<String, dynamic>> sentMessages = [];
 
   @override
   Future<void> send(String connectionId, Map<String, dynamic> payload) async {
+    if (throwOnConnectionIds.contains(connectionId)) {
+      throw StateError('410 stale connection: $connectionId');
+    }
     sentMessages.add({'connectionId': connectionId, 'payload': payload});
   }
 
