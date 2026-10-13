@@ -770,6 +770,7 @@ void main() {
           entityType: WebsocketKeys.wildcardEntityType,
           notifyType: kNotifyTypeDomainChange,
         ),
+        'connectionCount': 1,
         'stats': {
           'lastDomainSeq': 0,
           'lastDomainChangeAt': '1970-01-01T00:00:00.000Z',
@@ -815,6 +816,7 @@ void main() {
           entityType: WebsocketKeys.lastRecordEntityType,
           notifyType: kNotifyTypeDomainChange,
         ),
+        'connectionCount': 1,
         'stats': {
           'lastDomainSeq': 0,
           'lastDomainChangeAt': '1970-01-01T00:00:00.000Z',
@@ -857,6 +859,7 @@ void main() {
           entityType: 'task',
           notifyType: kNotifyTypeDomainChange,
         ),
+        'connectionCount': 1,
         'stats': {
           'lastDomainSeq': 0,
           'lastDomainChangeAt': '1970-01-01T00:00:00.000Z',
@@ -912,6 +915,7 @@ void main() {
             entityType: 'task',
             notifyType: kNotifyTypeDomainChange,
           ),
+          'connectionCount': 1,
           'stats': {
             'lastDomainSeq': 7,
             'lastDomainChangeAt': '2026-07-25T17:44:46.634808Z',
@@ -965,6 +969,7 @@ void main() {
             entityType: WebsocketKeys.wildcardEntityType,
             notifyType: kNotifyTypeDomainStats,
           ),
+          'connectionCount': 1,
           'stats': {
             'domainId': 'proj-1',
             'domainType': 'project',
@@ -1077,6 +1082,7 @@ void main() {
             entityType: WebsocketKeys.wildcardEntityType,
             notifyType: kNotifyTypeDomainStats,
           ),
+          'connectionCount': 1,
           'stats': statusData,
         });
       },
@@ -1436,6 +1442,50 @@ void main() {
         expect(
           management.sentMessages.map((m) => m['connectionId']).toList(),
           isNot(contains('conn-bad')),
+        );
+      },
+    );
+
+    test(
+      'subscribe ack includes current connectionCount for addedMe subscriptions',
+      () async {
+        final connections = _FakeConnectionsRepository(
+          authenticatedUserId: 'user-42',
+        );
+        final management = _FakeManagementClient(connections: connections);
+
+        connections.subscriptionsByUserId['user-42'] = [
+          const WebsocketSubscriptionMatch(
+            connectionId: 'existing-conn',
+            entityType: 'member',
+            notifyType: WebsocketConstants.notifyTypeAddedMe,
+          ),
+        ];
+
+        final event = {
+          'requestContext': {'connectionId': 'new-conn'},
+          'body': jsonEncode({
+            'domainType': 'membership',
+            'domainId': '',
+            'notifyType': WebsocketConstants.notifyTypeAddedMe,
+            'entityType': 'member',
+          }),
+        };
+
+        final response = await wsSubscribeHandler(
+          event,
+          connections: connections,
+          management: management,
+        );
+
+        expect(response['statusCode'], equals(200));
+        expect(
+          management.sentMessages.single['payload']['connectionCount'],
+          equals(2),
+        );
+        expect(
+          management.sentMessages.single['payload']['subscriptionKey'],
+          equals(WebsocketKeys.addedMeSubscriptionSk(userId: 'user-42')),
         );
       },
     );

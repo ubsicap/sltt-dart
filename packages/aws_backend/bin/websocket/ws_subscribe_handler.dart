@@ -134,6 +134,28 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
             notifyType: notifyType,
           );
 
+    final currentSubscriberMatches = isAddedMeSubscription
+        ? await connections.findSubscribersByUserId(
+            userId: subscriptionUserId,
+            domainType: domainType,
+            entityType: resolvedEntityType,
+            notifyType: notifyType,
+          )
+        : isNewDomainIdSubscription
+        ? await connections.findSubscribersByRootEntity(
+            domainType: domainType,
+            entityType: resolvedEntityType,
+            notifyType: notifyType,
+          )
+        : await connections.findSubscribersByDomain(
+            domainType: domainType,
+            domainId: effectiveDomainId,
+            notifyType: notifyType,
+          );
+    final currentSubscriberConnectionIds = <String>{
+      for (final match in currentSubscriberMatches) match.connectionId,
+    };
+
     final isTestToken = connection?.isTestToken ?? false;
 
     await connections.putSubscription(
@@ -145,6 +167,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       userId: subscriptionUserId,
       isTestToken: isTestToken,
     );
+    currentSubscriberConnectionIds.add(connectionId);
 
     final defaultLatestChangeAt = DateTime.fromMillisecondsSinceEpoch(
       0,
@@ -214,6 +237,7 @@ Future<Map<String, dynamic>> wsSubscribeHandler(
       'domainId': effectiveDomainId,
       'entityType': entityType,
       'subscriptionKey': subscriptionKey,
+      'connectionCount': currentSubscriberConnectionIds.length,
     };
     if (isChangeSubscription || isStatsSubscription) {
       payload['stats'] = statusData;
