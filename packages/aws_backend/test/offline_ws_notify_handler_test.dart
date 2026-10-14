@@ -8,6 +8,8 @@ import 'package:aws_backend/src/websocket/domain_change_payload.dart'
         buildDomainChangeNotificationPayload,
         buildDomainStatsNotificationPayload,
         buildWsNotifyRecordMessage;
+import 'package:aws_common/aws_common.dart';
+import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart'
     show
         DomainStatsResponse,
@@ -109,6 +111,84 @@ void main() {
         'change': _change(name: 'domain-update', seq: 1),
       });
     });
+  });
+
+  group('websocket connection cleanup', () {
+    test(
+      'deleteConnectionAndSubscriptions chunks deletes and removes connection last',
+      () async {
+        final requestBodies = <String>[];
+        final queryItems = [
+          {
+            'connectionId': {'S': 'cid-123'},
+            'sk': {'S': WebsocketKeys.connectionSk},
+          },
+          ...List.generate(25, (index) {
+            return {
+              'connectionId': {'S': 'cid-123'},
+              'sk': {
+                'S':
+                    'sub#@DOMAINTYPE#project#@DOMAINID#proj-1#@ENTITYTYPE#task#@NOTIFYTYPE#domainChange#$index',
+              },
+            };
+          }),
+        ];
+
+        final client = _RecordingDynamoClient(
+          queryItems: queryItems,
+          onRequest: (body) => requestBodies.add(body),
+        );
+
+        final repo = WebsocketConnectionsRepository(
+          tableName: 'ws-connections',
+          gsiName: 'gsi1',
+          region: 'us-east-1',
+          credentials: const AWSCredentials(
+            'test-access-key',
+            'test-secret-key',
+          ),
+          useLocalDynamoDB: true,
+          localEndpoint: 'http://localhost:8000',
+          httpClient: client,
+        );
+
+        await repo.deleteConnectionAndSubscriptions('cid-123');
+
+        final batchBodies = requestBodies.where(
+          (body) => body.contains('"RequestItems"'),
+        );
+        expect(batchBodies, hasLength(2));
+
+        final batches = batchBodies
+            .map(
+              (body) =>
+                  (jsonDecode(body) as Map<String, dynamic>)['RequestItems'],
+            )
+            .toList();
+
+        final firstBatch = batches.first['ws-connections'] as List<dynamic>;
+        final secondBatch = batches.last['ws-connections'] as List<dynamic>;
+
+        expect(firstBatch, hasLength(25));
+        expect(
+          firstBatch.every(
+            (item) =>
+                (item
+                    as Map<
+                      String,
+                      dynamic
+                    >)['DeleteRequest']['Key']['sk']['S'] !=
+                WebsocketKeys.connectionSk,
+          ),
+          isTrue,
+        );
+        expect(secondBatch, hasLength(1));
+        expect(
+          secondBatch.single['DeleteRequest']['Key']['sk']['S'],
+          WebsocketKeys.connectionSk,
+        );
+      },
+    );
   });
 
   group('wsNotifyHandler', () {
@@ -1868,6 +1948,34 @@ class _FakeConnectionsRepository implements WebsocketConnectionsRepository {
       'notifyType': notifyType,
       if (userId != null) 'userId': userId,
     });
+  }
+}
+
+class _RecordingDynamoClient extends http.BaseClient {
+  _RecordingDynamoClient({
+    required List<Map<String, dynamic>> queryItems,
+    required void Function(String body) onRequest,
+  }) : _queryItems = queryItems,
+       _onRequest = onRequest;
+
+  final List<Map<String, dynamic>> _queryItems;
+  final void Function(String body) _onRequest;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final body = request is http.Request ? request.body : '';
+    _onRequest(body);
+
+    final target = request.headers['X-Amz-Target'] ?? '';
+    final responseBody = target.endsWith('Query')
+        ? jsonEncode({'Items': _queryItems})
+        : jsonEncode({});
+
+    return http.StreamedResponse(
+      Stream.value(utf8.encode(responseBody)),
+      200,
+      headers: {'content-type': 'application/json'},
+    );
   }
 }
 

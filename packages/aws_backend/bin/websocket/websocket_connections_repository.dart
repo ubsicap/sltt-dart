@@ -205,6 +205,12 @@ class WebsocketConnectionsRepository {
   }
 
   /// Deletes the connection's own row plus every subscription row under it.
+  ///
+  /// We intentionally remove subscription rows before the connection row and
+  /// split the deletes into DynamoDB-safe chunks of 25. That keeps retry
+  /// cleanup idempotent: a partial retry can still finish removing the remaining
+  /// subscription rows without leaving them orphaned behind the already-deleted
+  /// connection anchor.
   Future<void> deleteConnectionAndSubscriptions(String connectionId) async {
     final result = await _dynamoRequest('Query', {
       'TableName': _tableName,
@@ -217,21 +223,43 @@ class WebsocketConnectionsRepository {
         const [];
     if (items.isEmpty) return;
 
-    await _dynamoRequest('BatchWriteItem', {
-      'RequestItems': {
-        _tableName: [
-          for (final item in items)
-            {
-              'DeleteRequest': {
-                'Key': {
-                  'connectionId': item['connectionId']!,
-                  'sk': item['sk']!,
-                },
-              },
-            },
-        ],
-      },
+    final deleteRequests = [
+      for (final item in items)
+        {
+          'DeleteRequest': {
+            'Key': {'connectionId': item['connectionId']!, 'sk': item['sk']!},
+          },
+        },
+    ];
+
+    String extractDeleteRequestSk(Map<String, dynamic> request) {
+      final deleteRequest = request['DeleteRequest'] as Map<String, dynamic>?;
+      final key = deleteRequest?['Key'] as Map<String, dynamic>?;
+      final sk = key?['sk'] as Map<String, dynamic>?;
+      return (sk?['S'] as String?) ?? '';
+    }
+
+    deleteRequests.sort((a, b) {
+      final aSk = extractDeleteRequestSk(a);
+      final bSk = extractDeleteRequestSk(b);
+      final aIsConnection = aSk == WebsocketKeys.connectionSk;
+      final bIsConnection = bSk == WebsocketKeys.connectionSk;
+      if (aIsConnection && !bIsConnection) return 1;
+      if (!aIsConnection && bIsConnection) return -1;
+      return aSk.compareTo(bSk);
     });
+
+    const maxBatchWrites = 25;
+    for (
+      var offset = 0;
+      offset < deleteRequests.length;
+      offset += maxBatchWrites
+    ) {
+      final batch = deleteRequests.skip(offset).take(maxBatchWrites).toList();
+      await _dynamoRequest('BatchWriteItem', {
+        'RequestItems': {_tableName: batch},
+      });
+    }
   }
 
   /// Returns every connection subscribed to domainType+domainId, including
