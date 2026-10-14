@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:aws_backend/src/websocket/domain_change_payload.dart'
     show
@@ -54,6 +55,12 @@ List<List<WsNotifyRecord>> groupAndSortDomainChangeRecords(
       .toList(growable: false);
 }
 
+String _makeInvocationRequestId() {
+  final now = DateTime.now().toUtc();
+  final random = Random().nextInt(1 << 30);
+  return '${now.microsecondsSinceEpoch.toRadixString(16)}-$random';
+}
+
 bool _shouldNotifyForTestScope({
   required bool isTestToken,
   required String domainId,
@@ -80,6 +87,11 @@ Future<Map<String, dynamic>> wsNotifyHandler(
 }) async {
   final records = (event['Records'] as List?) ?? const [];
   final parsedRecords = <WsNotifyRecord>[];
+  final requestId = _makeInvocationRequestId();
+
+  SlttLogger.logger.info(
+    'wsNotify: processing SNS batch; requestId=$requestId recordCount=${records.length}',
+  );
 
   for (var index = 0; index < records.length; index++) {
     final record = records[index] as Map;
@@ -93,6 +105,10 @@ Future<Map<String, dynamic>> wsNotifyHandler(
     final entityType = message['entityType'] as String;
 
     if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
+      SlttLogger.logger.info(
+        'wsNotify: batch record; requestId=$requestId recordIndex=$index recordCount=${records.length} notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$entityType change=${message['change']}',
+      );
+
       final rawChange = message['change'];
       if (rawChange is! Map) {
         SlttLogger.logger.warning(
@@ -179,7 +195,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
           _isAddedMeEligibleRootEntityType(domainType, rootEntityType);
 
       SlttLogger.logger.info(
-        'wsNotify: root notification path; notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType isAddedMeEligible=$isAddedMeEligible rootUserId=$rootUserId messageKeys=${message.keys.toList()}',
+        'wsNotify: root notification path; requestId=$requestId batchRecordIndex=$index recordCount=${records.length} notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType isAddedMeEligible=$isAddedMeEligible rootUserId=$rootUserId change=$changeMap messageKeys=${message.keys.toList()}',
       );
 
       if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
@@ -220,7 +236,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             );
 
       SlttLogger.logger.info(
-        'wsNotify: root notification matched subscribers; notifyType=$notifyType domainType=$domainType domainId=$domainId rootEntityType=$rootEntityType rootUserId=$rootUserId connectionCount=${subscriberMatches.length} subscriptionKey=$subscriptionKey',
+        'wsNotify: root notification matched subscribers; requestId=$requestId notifyType=$notifyType domainType=$domainType domainId=$domainId rootEntityType=$rootEntityType rootUserId=$rootUserId connectionCount=${subscriberMatches.length} subscriptionKey=$subscriptionKey',
       );
 
       for (final subscription in subscriberMatches) {
@@ -237,7 +253,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
           continue;
         }
         SlttLogger.logger.info(
-          'wsNotify: sending root notification; connectionId=${subscription.connectionId} notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType subscriptionKey=$subscriptionKey',
+          'wsNotify: sending root notification; requestId=$requestId connectionId=${subscription.connectionId} notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType subscriptionKey=$subscriptionKey',
         );
         await _sendRootNotification(
           management: management,
@@ -452,7 +468,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
               );
 
         SlttLogger.logger.info(
-          'wsNotify: root create notification matched subscribers; domainType=$domainType domainId=$domainId entityType=$rootEntityType notifyType=$notifyType rootUserId=$rootUserId connectionCount=${rootSubscriberMatches.length} subscriptionKey=$rootSubscriptionKey',
+          'wsNotify: root create notification matched subscribers; domainType=$domainType domainId=$domainId entityType=$rootEntityType notifyType=$notifyType rootUserId=$rootUserId connectionCount=${rootSubscriberMatches.length} subscriptionKey=$rootSubscriptionKey change=${record.change}',
         );
 
         for (final subscription in rootSubscriberMatches) {
@@ -469,7 +485,7 @@ Future<Map<String, dynamic>> wsNotifyHandler(
             continue;
           }
           SlttLogger.logger.info(
-            'wsNotify: sending root create notification; connectionId=${subscription.connectionId} notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType subscriptionKey=$rootSubscriptionKey',
+            'wsNotify: sending root create notification; connectionId=${subscription.connectionId} notifyType=$notifyType domainType=$domainType domainId=$domainId entityType=$rootEntityType subscriptionKey=$rootSubscriptionKey change=${record.change}',
           );
           await _sendRootNotification(
             management: management,
