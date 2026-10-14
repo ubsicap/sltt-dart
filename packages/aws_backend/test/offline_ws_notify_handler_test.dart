@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
+import 'package:aws_backend/src/storage/dynamodb_storage_service.dart';
 import 'package:aws_backend/src/websocket/domain_change_payload.dart'
     show
         WsNotifyRecord,
@@ -111,6 +113,73 @@ void main() {
         'change': _change(name: 'domain-update', seq: 1),
       });
     });
+
+    test(
+      'DynamoDBStorageService dedupes same logical change within one SNS batch',
+      () {
+        final storage = DynamoDBStorageService(
+          tableName: 'test-table',
+          credentials: const AWSCredentials(
+            'test-access-key',
+            'test-secret-key',
+          ),
+          domainChangeTopicArn: 'arn:aws:sns:us-east-1:123456789012:test-topic',
+        );
+
+        final duplicateCreate = DynamoChangeLogEntry(
+          cid: 'cid-dup',
+          seq: 7,
+          storageId: 'storage-1',
+          domainType: 'project',
+          domainId: 'proj-1',
+          entityType: 'project',
+          operation: 'create',
+          stateChanged: true,
+          changeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
+          entityId: 'proj-1',
+          dataJson: jsonEncode({'name': 'new project'}),
+          changeBy: 'user-1',
+        );
+
+        final sameLogicalDuplicate = DynamoChangeLogEntry(
+          cid: 'cid-dup',
+          seq: 8,
+          storageId: 'storage-2',
+          domainType: 'project',
+          domainId: 'proj-1',
+          entityType: 'project',
+          operation: 'create',
+          stateChanged: true,
+          changeAt: DateTime.parse('2026-07-17T00:00:01.000Z'),
+          entityId: 'proj-1',
+          dataJson: jsonEncode({'name': 'new project'}),
+          changeBy: 'user-1',
+        );
+
+        final differentLogicalChange = DynamoChangeLogEntry(
+          cid: 'cid-other',
+          seq: 9,
+          storageId: 'storage-3',
+          domainType: 'project',
+          domainId: 'proj-1',
+          entityType: 'project',
+          operation: 'create',
+          stateChanged: true,
+          changeAt: DateTime.parse('2026-07-17T00:00:02.000Z'),
+          entityId: 'proj-2',
+          dataJson: jsonEncode({'name': 'other project'}),
+          changeBy: 'user-2',
+        );
+
+        final deduped = storage.dedupeDomainChangePublishBatch([
+          duplicateCreate,
+          sameLogicalDuplicate,
+          differentLogicalChange,
+        ]);
+
+        expect(deduped, [duplicateCreate, differentLogicalChange]);
+      },
+    );
   });
 
   group('websocket connection cleanup', () {

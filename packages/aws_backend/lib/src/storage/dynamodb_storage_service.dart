@@ -2380,6 +2380,25 @@ class DynamoDBStorageService extends BaseStorageService {
   bool get _shouldPublishDomainChangeEvents =>
       domainChangeTopicArn != null && domainChangeTopicArn!.isNotEmpty;
 
+  /// Deduplicates domain-change records within one publish batch. This guards
+  /// against the same logical change being re-emitted multiple times when the
+  /// same CID is observed in a single processing cycle, while still allowing the
+  /// same CID to appear again in a different batch or a later replay.
+  List<DynamoChangeLogEntry> dedupeDomainChangePublishBatch(
+    List<DynamoChangeLogEntry> changes,
+  ) {
+    final seen = <String>{};
+    final deduped = <DynamoChangeLogEntry>[];
+
+    for (final change in changes) {
+      if (seen.add(change.cid)) {
+        deduped.add(change);
+      }
+    }
+
+    return deduped;
+  }
+
   Future<void> _publishDomainChangeEvents(
     List<DynamoChangeLogEntry> latestChanges,
   ) async {
@@ -2392,22 +2411,29 @@ class DynamoDBStorageService extends BaseStorageService {
     }
 
     for (final group in groupedLatestChanges.values) {
-      group.sort((a, b) => a.seq.compareTo(b.seq));
+      final dedupedGroup = dedupeDomainChangePublishBatch(group);
+      if (dedupedGroup.length != group.length) {
+        SlttLogger.logger.warning(
+          '[DynamoDBStorageService] deduped ${group.length - dedupedGroup.length} duplicate domain-change records before SNS publish for domain=${group.first.domainType}|${group.first.domainId}',
+        );
+      }
+
+      final publishGroup = dedupedGroup..sort((a, b) => a.seq.compareTo(b.seq));
       final latestStats = {
-        ..._buildStatsSummaryFromChanges(group),
+        ..._buildStatsSummaryFromChanges(publishGroup),
         'isIncremental': true,
       };
       final statsMessage = jsonEncode(
         buildWsNotifyStatsMessage(
-          domainType: group.first.domainType,
-          domainId: group.first.domainId,
+          domainType: publishGroup.first.domainType,
+          domainId: publishGroup.first.domainId,
           stats: latestStats,
         ),
       );
 
       final statsAttributes = <String, String>{
-        'domainType': group.first.domainType,
-        'domainId': group.first.domainId,
+        'domainType': publishGroup.first.domainType,
+        'domainId': publishGroup.first.domainId,
       };
 
       try {
@@ -2424,7 +2450,7 @@ class DynamoDBStorageService extends BaseStorageService {
         );
       }
 
-      for (final change in group) {
+      for (final change in publishGroup) {
         final record = WsNotifyRecord(
           notifyType: kNotifyTypeDomainChange,
           domainType: change.domainType,
