@@ -1723,15 +1723,22 @@ abstract class BaseRestApiServer {
 
   /// Create new changes
   Future<Response> _handleCreateChanges(Request request) async {
-    try {
-      final bodyJson = await request.readAsString();
+    final bodyJson = await request.readAsString();
+    final requestDebugContext = _requestDebugContext(request, body: bodyJson);
 
+    try {
       // Parse JSON body
       late final dynamic body;
       try {
         body = jsonDecode(bodyJson);
       } on FormatException catch (e) {
-        return _errorResponse('Invalid JSON format: ${e.message}', 400);
+        return _errorResponse(
+          'Invalid JSON format: ${e.message}',
+          400,
+          null,
+          null,
+          requestDebugContext,
+        );
       }
 
       late final List<Map<String, dynamic>> changes;
@@ -1744,7 +1751,13 @@ abstract class BaseRestApiServer {
       if (body is Map<String, dynamic>) {
         final changesField = body['changes'];
         if (changesField is! List) {
-          return _errorResponse('`changes` must be an array', 400);
+          return _errorResponse(
+            '`changes` must be an array',
+            400,
+            null,
+            null,
+            requestDebugContext,
+          );
         }
         try {
           changes = List<Map<String, dynamic>>.from(changesField);
@@ -1752,6 +1765,9 @@ abstract class BaseRestApiServer {
           return _errorResponse(
             'Invalid change objects in `changes` array',
             400,
+            null,
+            null,
+            requestDebugContext,
           );
         }
 
@@ -1764,28 +1780,52 @@ abstract class BaseRestApiServer {
         return _errorResponse(
           'Request body must be an object with `changes`',
           400,
+          null,
+          null,
+          requestDebugContext,
         );
       }
 
       if (changes.isEmpty) {
-        return _errorResponse('No changes provided', 400);
+        return _errorResponse(
+          'No changes provided',
+          400,
+          null,
+          null,
+          requestDebugContext,
+        );
       }
 
       // Validate srcStorageType/srcStorageId (must be 'local' or 'cloud' and non-empty)
       if (!(srcStorageType == 'local' || srcStorageType == 'cloud')) {
-        return _errorResponse('srcStorageType must be "local" or "cloud"', 400);
+        return _errorResponse(
+          'srcStorageType must be "local" or "cloud"',
+          400,
+          null,
+          null,
+          requestDebugContext,
+        );
       }
 
       if (srcStorageId.isEmpty) {
         return _errorResponse(
           'srcStorageId is required and must be non-empty',
           400,
+          null,
+          null,
+          requestDebugContext,
         );
       }
 
       // Validate storageMode (must be 'save' or 'sync')
       if (!(storageMode == 'save' || storageMode == 'sync')) {
-        return _errorResponse('storageMode must be "save" or "sync"', 400);
+        return _errorResponse(
+          'storageMode must be "save" or "sync"',
+          400,
+          null,
+          null,
+          requestDebugContext,
+        );
       }
 
       // Use the change processing service
@@ -1805,6 +1845,8 @@ abstract class BaseRestApiServer {
           result.errorMessage!,
           result.errorCode!,
           result.stackTrace,
+          null,
+          requestDebugContext,
         );
       }
 
@@ -1817,6 +1859,7 @@ abstract class BaseRestApiServer {
           result.errorCode ?? 500,
           null,
           result.resultsSummary,
+          requestDebugContext,
         );
       }
 
@@ -1829,13 +1872,14 @@ abstract class BaseRestApiServer {
         headers: {'Content-Type': 'application/json'},
       );
     } on ArgumentError catch (e) {
-      return _errorResponse('$e', 400);
+      return _errorResponse('$e', 400, null, null, requestDebugContext);
     } catch (e, stackTrace) {
-      SlttLogger.logger.severe('Error creating changes: $e', e, stackTrace);
       return _errorResponse(
         'Failed to create changes: ${e.toString()}',
         500,
         stackTrace,
+        null,
+        requestDebugContext,
       );
     }
   }
@@ -2640,16 +2684,24 @@ abstract class BaseRestApiServer {
     int statusCode, [
     StackTrace? stackTrace,
     ChangeProcessingSummary? resultsSummary,
+    String? requestDebugContext,
   ]) {
+    final contextSuffix =
+        requestDebugContext == null || requestDebugContext.isEmpty
+        ? ''
+        : ' for $requestDebugContext';
+
     // Log error using the project logger so tests/CI can control verbosity.
     if (statusCode >= 500) {
       SlttLogger.logger.severe(
-        '[$serverName] Error ($statusCode): $message',
+        '[$serverName] Error ($statusCode): $message$contextSuffix',
         null,
         stackTrace,
       );
     } else {
-      SlttLogger.logger.warning('[$serverName] Error ($statusCode): $message');
+      SlttLogger.logger.warning(
+        '[$serverName] Error ($statusCode): $message$contextSuffix',
+      );
     }
 
     final errorBody = <String, dynamic>{
@@ -2671,6 +2723,27 @@ abstract class BaseRestApiServer {
       body: jsonEncode(errorBody),
       headers: {'Content-Type': 'application/json'},
     );
+  }
+
+  String _truncateForLog(String value, {int maxLength = 4000}) {
+    final normalized = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (normalized.length <= maxLength) {
+      return normalized;
+    }
+    return '${normalized.substring(0, maxLength)}...[truncated]';
+  }
+
+  String _requestDebugContext(Request request, {String? body}) {
+    final path = request.url.path.startsWith('/')
+        ? request.url.path
+        : '/${request.url.path}';
+    final query = request.url.queryParameters.isEmpty
+        ? ''
+        : ' query=${jsonEncode(request.url.queryParameters)}';
+    final bodySuffix = body == null || body.trim().isEmpty
+        ? ''
+        : ' body=${_truncateForLog(body)}';
+    return 'method=${request.method} path=$path$query$bodySuffix';
   }
 
   /// Stop the server

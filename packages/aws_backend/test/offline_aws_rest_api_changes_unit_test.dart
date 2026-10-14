@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:aws_backend/aws_backend.dart';
 import 'package:aws_backend/src/models/dynamo_change_log_entry.dart';
+import 'package:logging/logging.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:test/test.dart';
@@ -28,6 +29,51 @@ void main() {
       }, router);
       return response;
     }
+
+    test(
+      'failed /api/changes requests log the request payload for CloudWatch',
+      () async {
+        final logRecords = <LogRecord>[];
+        final subscription = Logger.root.onRecord.listen(logRecords.add);
+        addTearDown(subscription.cancel);
+
+        final payload = jsonEncode({
+          'changes': [
+            {
+              'domainType': 'project',
+              'domainId': '__test1',
+              'entityType': 'project',
+              'entityId': 'project-1',
+              'changeBy': 'tester',
+              'changeAt': DateTime.now().toUtc().toIso8601String(),
+            },
+          ],
+          'srcStorageType': 'local',
+          'srcStorageId': 'test',
+          'storageMode': 'save',
+        });
+
+        final resp = await post(payload);
+        expect(
+          resp['statusCode'],
+          anyOf([400, 500]),
+          reason:
+              'Expected validation or processing to fail, but got response: $resp',
+        );
+
+        final failureLog = logRecords.firstWhere(
+          (record) =>
+              record.message.contains('/api/changes') &&
+              record.message.contains('body=') &&
+              (record.level >= Level.SEVERE || record.level >= Level.WARNING),
+          orElse: () => throw StateError('No /api/changes request log found'),
+        );
+
+        expect(failureLog.message, contains('entityType'));
+        expect(failureLog.message, contains('project-1'));
+        expect(failureLog.message, contains('/api/changes'));
+      },
+    );
 
     test('invalid JSON returns 400', () async {
       final resp = await post('not a json');
