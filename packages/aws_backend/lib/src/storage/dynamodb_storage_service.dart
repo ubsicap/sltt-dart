@@ -424,9 +424,9 @@ class DynamoDBStorageService extends BaseStorageService {
           operationCounts: req.operationCounts,
           forChangeLog: true,
         ));
-      }
 
-      outChanges.add(newChange);
+        outChanges.add(newChange);
+      }
 
       // Process entity state
       late final BaseEntityState newState;
@@ -2380,23 +2380,14 @@ class DynamoDBStorageService extends BaseStorageService {
   bool get _shouldPublishDomainChangeEvents =>
       domainChangeTopicArn != null && domainChangeTopicArn!.isNotEmpty;
 
-  /// Deduplicates domain-change records within one publish batch. This guards
-  /// against the same logical change being re-emitted multiple times when the
-  /// same CID is observed in a single processing cycle, while still allowing the
-  /// same CID to appear again in a different batch or a later replay.
-  List<DynamoChangeLogEntry> dedupeDomainChangePublishBatch(
-    List<DynamoChangeLogEntry> changes,
+  List<DynamoChangeLogEntry> filterPublishableDomainChangesForBatch(
+    List<ChangeLogAndStateRequest> requests,
   ) {
-    final seen = <String>{};
-    final deduped = <DynamoChangeLogEntry>[];
-
-    for (final change in changes) {
-      if (seen.add(change.cid)) {
-        deduped.add(change);
-      }
-    }
-
-    return deduped;
+    return requests
+        .where((request) => !request.skipChangeLogWrite)
+        .map((request) => request.changeLogEntry)
+        .whereType<DynamoChangeLogEntry>()
+        .toList();
   }
 
   Future<void> _publishDomainChangeEvents(
@@ -2411,14 +2402,7 @@ class DynamoDBStorageService extends BaseStorageService {
     }
 
     for (final group in groupedLatestChanges.values) {
-      final dedupedGroup = dedupeDomainChangePublishBatch(group);
-      if (dedupedGroup.length != group.length) {
-        SlttLogger.logger.warning(
-          '[DynamoDBStorageService] deduped ${group.length - dedupedGroup.length} duplicate domain-change records before SNS publish for domain=${group.first.domainType}|${group.first.domainId}',
-        );
-      }
-
-      final publishGroup = dedupedGroup..sort((a, b) => a.seq.compareTo(b.seq));
+      final publishGroup = group..sort((a, b) => a.seq.compareTo(b.seq));
       final latestStats = {
         ..._buildStatsSummaryFromChanges(publishGroup),
         'isIncremental': true,

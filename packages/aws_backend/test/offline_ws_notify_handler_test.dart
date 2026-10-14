@@ -14,9 +14,11 @@ import 'package:aws_common/aws_common.dart';
 import 'package:http/http.dart' as http;
 import 'package:sltt_core/sltt_core.dart'
     show
+        ChangeLogAndStateRequest,
         DomainStatsResponse,
         EntityTypeStats,
         EntityTypeSummary,
+        OperationCounts,
         WebsocketConstants;
 import 'package:test/test.dart';
 
@@ -115,7 +117,7 @@ void main() {
     });
 
     test(
-      'DynamoDBStorageService dedupes same logical change within one SNS batch',
+      'DynamoDBStorageService only publishes entries that were not skipped from the change log',
       () {
         final storage = DynamoDBStorageService(
           tableName: 'test-table',
@@ -126,8 +128,8 @@ void main() {
           domainChangeTopicArn: 'arn:aws:sns:us-east-1:123456789012:test-topic',
         );
 
-        final duplicateCreate = DynamoChangeLogEntry(
-          cid: 'cid-dup',
+        final skippedChange = DynamoChangeLogEntry(
+          cid: 'cid-skip',
           seq: 7,
           storageId: 'storage-1',
           domainType: 'project',
@@ -137,12 +139,12 @@ void main() {
           stateChanged: true,
           changeAt: DateTime.parse('2026-07-17T00:00:00.000Z'),
           entityId: 'proj-1',
-          dataJson: jsonEncode({'name': 'new project'}),
+          dataJson: jsonEncode({'name': 'skipped project'}),
           changeBy: 'user-1',
         );
 
-        final sameLogicalDuplicate = DynamoChangeLogEntry(
-          cid: 'cid-dup',
+        final persistedChange = DynamoChangeLogEntry(
+          cid: 'cid-persisted',
           seq: 8,
           storageId: 'storage-2',
           domainType: 'project',
@@ -152,32 +154,52 @@ void main() {
           stateChanged: true,
           changeAt: DateTime.parse('2026-07-17T00:00:01.000Z'),
           entityId: 'proj-1',
-          dataJson: jsonEncode({'name': 'new project'}),
+          dataJson: jsonEncode({'name': 'persisted project'}),
           changeBy: 'user-1',
         );
 
-        final differentLogicalChange = DynamoChangeLogEntry(
-          cid: 'cid-other',
-          seq: 9,
-          storageId: 'storage-3',
-          domainType: 'project',
-          domainId: 'proj-1',
-          entityType: 'project',
-          operation: 'create',
-          stateChanged: true,
-          changeAt: DateTime.parse('2026-07-17T00:00:02.000Z'),
-          entityId: 'proj-2',
-          dataJson: jsonEncode({'name': 'other project'}),
-          changeBy: 'user-2',
-        );
-
-        final deduped = storage.dedupeDomainChangePublishBatch([
-          duplicateCreate,
-          sameLogicalDuplicate,
-          differentLogicalChange,
+        final publishable = storage.filterPublishableDomainChangesForBatch([
+          ChangeLogAndStateRequest(
+            changeLogEntry: skippedChange,
+            changeUpdates: {},
+            stateUpdates: {},
+            operationCounts: OperationCounts(
+              create: 0,
+              update: 0,
+              delete: 0,
+              noOp: 0,
+              duplicate: 0,
+              clouded: 0,
+              outdated: 0,
+              partialUpdate: 0,
+              error: 0,
+              hold: 0,
+            ),
+            skipChangeLogWrite: true,
+            skipStateWrite: true,
+          ),
+          ChangeLogAndStateRequest(
+            changeLogEntry: persistedChange,
+            changeUpdates: {},
+            stateUpdates: {},
+            operationCounts: OperationCounts(
+              create: 0,
+              update: 0,
+              delete: 0,
+              noOp: 0,
+              partialUpdate: 0,
+              error: 0,
+              hold: 0,
+              duplicate: 0,
+              clouded: 0,
+              outdated: 0,
+            ),
+            skipChangeLogWrite: false,
+            skipStateWrite: true,
+          ),
         ]);
 
-        expect(deduped, [duplicateCreate, differentLogicalChange]);
+        expect(publishable.map((change) => change.cid), ['cid-persisted']);
       },
     );
   });
