@@ -383,6 +383,7 @@ class DynamoDBStorageService extends BaseStorageService {
 
     // Phase 1: Process all requests and prepare items
     final outChanges = <BaseChangeLogEntry>[];
+    final changesToPublish = <DynamoChangeLogEntry>[];
     final outStates = <BaseEntityState?>[];
     final changeItemsToPut = <Map<String, dynamic>>[];
     // the states need to be unique within a batch, keyed by the full state
@@ -416,6 +417,7 @@ class DynamoDBStorageService extends BaseStorageService {
 
         // Prepare change log item for batch put
         changeItemsToPut.add(_buildChangeLogItem(newChange));
+        changesToPublish.add(newChange);
 
         // Queue sync state update for change log
         syncStatesToUpsert.add((
@@ -424,9 +426,8 @@ class DynamoDBStorageService extends BaseStorageService {
           operationCounts: req.operationCounts,
           forChangeLog: true,
         ));
-
-        outChanges.add(newChange);
       }
+      outChanges.add(newChange);
 
       // Process entity state
       late final BaseEntityState newState;
@@ -479,10 +480,9 @@ class DynamoDBStorageService extends BaseStorageService {
       );
     }
 
-    if (_shouldPublishDomainChangeEvents && outChanges.isNotEmpty) {
+    if (_shouldPublishDomainChangeEvents && changesToPublish.isNotEmpty) {
       final latestByEntityType = <String, DynamoChangeLogEntry>{};
-      for (final change in outChanges) {
-        if (change is! DynamoChangeLogEntry) continue;
+      for (final change in changesToPublish) {
         final current = latestByEntityType[change.entityType];
         if (current == null || change.seq > current.seq) {
           latestByEntityType[change.entityType] = change;
