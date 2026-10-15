@@ -1664,6 +1664,51 @@ class SyncManager {
     }
   }
 
+  bool _hasValidCursorSyncMetadata({
+    required String? cid,
+    required DateTime? changeAt,
+  }) {
+    final normalizedCid = (cid ?? '').trim();
+    if (normalizedCid.isEmpty) {
+      return false;
+    }
+    return (changeAt?.millisecondsSinceEpoch ?? 0) > 0;
+  }
+
+  Map<String, dynamic>? _extractLatestValidCursorMetadata(
+    List<Map<String, dynamic>> changes,
+  ) {
+    Map<String, dynamic>? newest;
+    for (final change in changes) {
+      final cid = change['cid']?.toString();
+      final rawChangeAt = change['changeAt'];
+      DateTime? changeAt;
+      if (rawChangeAt is String) {
+        changeAt = DateTime.tryParse(rawChangeAt)?.toUtc();
+      } else if (rawChangeAt is DateTime) {
+        changeAt = rawChangeAt.toUtc();
+      }
+
+      if (!_hasValidCursorSyncMetadata(cid: cid, changeAt: changeAt)) {
+        continue;
+      }
+
+      final seq = change['seq'] is int
+          ? change['seq'] as int
+          : int.tryParse(change['seq']?.toString() ?? '') ?? 0;
+      final current = <String, dynamic>{
+        'cid': cid,
+        'changeAt': changeAt,
+        'seq': seq,
+      };
+      final newestSeq = newest?['seq'] as int? ?? 0;
+      if (newest == null || seq >= newestSeq) {
+        newest = current;
+      }
+    }
+    return newest;
+  }
+
   // Get all projects that have changes to sync
 
   // Outsync changes from outsyncs to cloud storage
@@ -1850,10 +1895,6 @@ class SyncManager {
           domainType: domainType,
         );
         int lastSeq = syncState?.seq ?? 0;
-        String cid = syncState?.cid ?? '';
-        DateTime changeAt =
-            syncState?.changeAt ??
-            DateTime.fromMillisecondsSinceEpoch(0).toUtc();
         SlttLogger.logger.fine('[SyncManager] Starting from seq: $lastSeq');
 
         String? cursor = lastSeq.toString();
@@ -1898,21 +1939,6 @@ class SyncManager {
               SlttLogger.logger.fine(
                 '[SyncManager] No more changes for $domainType $domainId',
               );
-              if (lastSeq < highestSeqForProject) {
-                // Update sync state even if no changes were returned
-                await _localStorage.upsertCursorSyncState(
-                  domainType: domainType,
-                  domainId: domainId,
-                  srcStorageType: srcStorageType,
-                  srcStorageId: srcStorageId,
-                  seq: highestSeqForProject,
-                  cid: cid,
-                  changeAt: changeAt,
-                );
-                SlttLogger.logger.fine(
-                  '[SyncManager] Updated sync state for $domainType $domainId: lastSeq=$highestSeqForProject',
-                );
-              }
               break;
             }
 
@@ -1926,6 +1952,9 @@ class SyncManager {
             final changesStateFalse = incomingChanges
                 .where((change) => change['stateChanged'] != true)
                 .toList();
+            final latestValidCursorMetadata = _extractLatestValidCursorMetadata(
+              incomingChanges,
+            );
             projectCursorChanges['$domainId/$cursor'] = incomingChanges;
             _updateCloudStateDataHashes(
               incomingChanges: incomingChanges,
@@ -1986,20 +2015,31 @@ class SyncManager {
               '[SyncManager] Downloaded ${incomingChanges.length} changes for $domainType $domainId (batch); applied ${changesToApply.length}',
             );
 
-            // Update sync state for this project if we processed any changes
+            // Update sync state for this project when the remote batch provides
+            // authoritative cursor metadata. A default empty cid / epoch changeAt
+            // is treated as invalid and must not advance the checkpoint.
             if (totalChangesForProject > 0) {
-              await _localStorage.upsertCursorSyncState(
-                domainType: domainType,
-                domainId: domainId,
-                srcStorageType: srcStorageType,
-                srcStorageId: srcStorageId,
-                seq: highestSeqForProject,
-                cid: cid,
-                changeAt: changeAt,
-              );
-              SlttLogger.logger.fine(
-                '[SyncManager] Updated sync state for $domainType $domainId: lastSeq=$highestSeqForProject',
-              );
+              if (latestValidCursorMetadata == null) {
+                SlttLogger.logger.warning(
+                  '[SyncManager] Skipping cursor checkpoint for $domainType/$domainId because the remote batch did not contain valid cid/changeAt metadata.',
+                );
+              } else {
+                final cursorCid = latestValidCursorMetadata['cid'] as String;
+                final cursorChangeAt =
+                    latestValidCursorMetadata['changeAt'] as DateTime;
+                await _localStorage.upsertCursorSyncState(
+                  domainType: domainType,
+                  domainId: domainId,
+                  srcStorageType: srcStorageType,
+                  srcStorageId: srcStorageId,
+                  seq: highestSeqForProject,
+                  cid: cursorCid,
+                  changeAt: cursorChangeAt,
+                );
+                SlttLogger.logger.fine(
+                  '[SyncManager] Updated sync state for $domainType $domainId: lastSeq=$highestSeqForProject cid=$cursorCid changeAt=${cursorChangeAt.toUtc().toIso8601String()}',
+                );
+              }
             }
 
             onProgress?.call(

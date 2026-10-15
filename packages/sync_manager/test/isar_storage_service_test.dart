@@ -2089,6 +2089,39 @@ void main() {
     });
 
     test(
+      'upsertCursorSyncState rejects blank cid and epoch changeAt values',
+      () async {
+        final domainId = '__invalid_cursor_sync_state';
+
+        expect(
+          () => storage.upsertCursorSyncState(
+            domainType: 'project',
+            domainId: domainId,
+            srcStorageType: 'cloud',
+            srcStorageId: 'cloud-invalid',
+            seq: 1,
+            cid: '',
+            changeAt: DateTime.fromMillisecondsSinceEpoch(0).toUtc(),
+          ),
+          throwsArgumentError,
+          reason:
+              'Cursor sync state should reject default empty cid / epoch changeAt values before persisting.',
+        );
+
+        final stored = await storage.getCursorSyncState(
+          domainId,
+          domainType: 'project',
+        );
+        expect(
+          stored,
+          isNull,
+          reason:
+              'Blank cid and epoch changeAt should never create a cursor row.',
+        );
+      },
+    );
+
+    test(
       'getCursorSyncState respects domainType when domainId is reused',
       () async {
         final baseTime = DateTime.now().toUtc();

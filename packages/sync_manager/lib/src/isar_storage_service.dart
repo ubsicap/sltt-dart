@@ -2322,6 +2322,16 @@ class IsarStorageService extends BaseStorageService {
     required String cid,
     required DateTime changeAt,
   }) async {
+    final normalizedCid = cid.trim();
+    final isValidCursorMetadata =
+        normalizedCid.isNotEmpty && changeAt.millisecondsSinceEpoch > 0;
+    if (!isValidCursorMetadata) {
+      throw ArgumentError(
+        'CursorSyncState requires a non-empty cid and a non-zero changeAt for '
+        '$domainType/$domainId. Received cid="$cid", changeAt=${changeAt.toUtc().toIso8601String()}',
+      );
+    }
+
     CursorSyncState updatedCursorState;
     final existing = await getCursorSyncState(domainId, domainType: domainType);
     if (existing != null) {
