@@ -906,25 +906,58 @@ class SyncManager {
       domainType: domainType,
     );
     final localSeq = syncState?.seq ?? 0;
-    if (lastDomainSeq <= localSeq) {
+    final hasDefaultCursorMetadata =
+        syncState == null ||
+        syncState.cid.trim().isEmpty ||
+        syncState.changeAt.millisecondsSinceEpoch <= 0;
+
+    final entityId = _resolveEntityId(
+      domainType: domainType,
+      domainId: domainId,
+      entityType: rootEntityType,
+      notifyType: notifyType,
+    );
+    final entityState = await _localStorage.getEntityState(
+      domainType: domainType,
+      domainId: domainId,
+      entityType: rootEntityType,
+      entityId: entityId,
+    );
+    final hasMissingOrStaleEntityState =
+        entityState == null ||
+        (syncState != null &&
+            entityState.change_storedAt.isAfter(syncState.storedAt));
+
+    final shouldEnqueue =
+        hasDefaultCursorMetadata ||
+        hasMissingOrStaleEntityState ||
+        lastDomainSeq > localSeq;
+
+    if (!shouldEnqueue) {
       SlttLogger.logger.info(
         '[SyncManager] Skipping ack-driven entity state fetch for '
         '$domainType/$domainId because cloud seq=$lastDomainSeq '
-        'is not ahead of local seq=$localSeq.',
+        'is not ahead of local seq=$localSeq and the stored cursor/entity state are both valid and current.',
       );
       return;
+    }
+
+    if (hasDefaultCursorMetadata) {
+      SlttLogger.logger.info(
+        '[SyncManager] Ack-driven fetch for $domainType/$domainId is being queued because the local cursor has default cid/changeAt metadata.',
+      );
+    }
+    if (hasMissingOrStaleEntityState) {
+      SlttLogger.logger.info(
+        '[SyncManager] Ack-driven fetch for $domainType/$domainId is being queued because the persisted entity state is missing or newer than the cursor checkpoint.',
+      );
     }
 
     final requestKey = enqueueJobFetchEntityState(
       domainType: domainType,
       domainId: domainId,
       entityType: rootEntityType,
-      entityId: _resolveEntityId(
-        domainType: domainType,
-        domainId: domainId,
-        entityType: rootEntityType,
-        notifyType: notifyType,
-      ),
+      entityId: entityId,
     );
     _trackAckDrivenEntityStateDownloadRequest(requestKey);
   }
