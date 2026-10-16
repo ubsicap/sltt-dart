@@ -1209,6 +1209,8 @@ class SyncManager {
       entityType: nextEntityType,
       entityId: resolvedRootEntityId.isEmpty ? null : resolvedRootEntityId,
       isCrossDomain: true,
+      isSuperUserRequest:
+          notifyType == WebsocketConstants.notifyTypeNewDomainId,
     );
 
     if (notifyType == WebsocketConstants.notifyTypeAddedMe ||

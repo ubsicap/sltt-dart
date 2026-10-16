@@ -917,6 +917,20 @@ void main() {
               'super user collection requests should honor the chosen page size',
         );
 
+        final persistedJobs = await service.debugListPersistedJobs();
+        expect(
+          persistedJobs,
+          anyElement(
+            isA<EntityStatePaginationJobRecord>()
+                .having((job) => job.domainType, 'domainType', 'project')
+                .having((job) => job.entityType, 'entityType', 'project')
+                .having((job) => job.domainId, 'domainId', isEmpty)
+                .having((job) => job.scopeKey, 'scopeKey', contains('super')),
+          ),
+          reason:
+              'super-user cross-domain collection jobs must persist their access scope as super in the queue metadata.',
+        );
+
         await service.dispose();
         await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
           workspacePrefix: workspacePrefix,
