@@ -834,27 +834,32 @@ class EntityStatePaginationService {
     final encodedEntityId = Uri.encodeComponent(job.entityId ?? '');
     final url = _buildSingleEntityUrl(job, encodedEntityId: encodedEntityId);
 
-    final response = await _dio.get(url);
-    final body = (response.data as Map).cast<String, dynamic>();
-    final state = body['state'];
-
+    Response? response;
     final items = <Map<String, dynamic>>[];
-    if (state is Map && state.isNotEmpty) {
-      items.add(Map<String, dynamic>.from(state));
-    } else if (state == null || (state is Map && state.isEmpty)) {
-      SlttLogger.logger.warning(
-        '[EntityStateQueue] Single fetch returned empty state for job=${job.jobKey}; likely bad URL/endpoint. Skipping storeFetchedItems.',
+
+    try {
+      response = await _dio.get(url);
+      final body = (response.data as Map).cast<String, dynamic>();
+      final state = body['state'];
+
+      if (state is Map && state.isNotEmpty) {
+        items.add(Map<String, dynamic>.from(state));
+      } else if (state == null || (state is Map && state.isEmpty)) {
+        SlttLogger.logger.warning(
+          '[EntityStateQueue] Single fetch returned empty state for job=${job.jobKey}; likely bad URL/endpoint. Skipping storeFetchedItems.',
+        );
+      }
+    } finally {
+      _logFetchSummary(
+        requestKind: 'single',
+        url: url,
+        queryParameters: const {},
+        statusCode: response?.statusCode,
+        itemsCount: items.length,
+        hasMore: false,
+        cursor: null,
       );
     }
-    _logFetchSummary(
-      requestKind: 'single',
-      url: url,
-      queryParameters: const {},
-      statusCode: response.statusCode,
-      itemsCount: items.length,
-      hasMore: false,
-      cursor: null,
-    );
 
     final storeFetchedItems = _onStoreFetchedItems;
     if (storeFetchedItems != null && items.isNotEmpty) {
@@ -1028,27 +1033,36 @@ class EntityStatePaginationService {
       query['parentId'] = job.parentId;
     }
 
-    final response = await _dio.get(url, queryParameters: query);
-    final body = (response.data as Map).cast<String, dynamic>();
-    final dynamic itemsRaw = body['items'];
-    final items = itemsRaw is List
-        ? itemsRaw
-              .whereType<Map>()
-              .map((entry) => entry.cast<String, dynamic>())
-              .toList()
-        : <Map<String, dynamic>>[];
+    Response? response;
+    List<Map<String, dynamic>> items = const [];
+    String? nextCursor;
+    bool hasMore = false;
 
-    final nextCursor = body['cursor']?.toString();
-    final hasMore = body['hasMore'] == true;
-    _logFetchSummary(
-      requestKind: 'collection',
-      url: url,
-      queryParameters: query,
-      statusCode: response.statusCode,
-      itemsCount: items.length,
-      hasMore: hasMore,
-      cursor: nextCursor,
-    );
+    try {
+      response = await _dio.get(url, queryParameters: query);
+      final body = (response.data as Map).cast<String, dynamic>();
+      final dynamic itemsRaw = body['items'];
+      items = itemsRaw is List
+          ? itemsRaw
+                .whereType<Map>()
+                .map((entry) => entry.cast<String, dynamic>())
+                .toList()
+          : <Map<String, dynamic>>[];
+
+      nextCursor = body['cursor']?.toString();
+      hasMore = body['hasMore'] == true;
+    } finally {
+      _logFetchSummary(
+        requestKind: 'collection',
+        url: url,
+        queryParameters: query,
+        statusCode: response?.statusCode,
+        itemsCount: items.length,
+        hasMore: hasMore,
+        cursor: nextCursor ?? cursor,
+      );
+    }
+
     return _CollectionPageResponse(
       items: items,
       cursor: nextCursor,

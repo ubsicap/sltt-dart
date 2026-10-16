@@ -441,6 +441,72 @@ void main() {
       );
     });
 
+    test('logs summary even when the Dio request throws', () async {
+      const workspacePrefix = '__test_specific_prefix_log_summary_on_error';
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: workspacePrefix,
+      );
+
+      final messages = <String>[];
+      final subscription = Logger.root.onRecord.listen((record) {
+        if (record.message.contains('fetch summary')) {
+          messages.add(record.message);
+        }
+      });
+
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                error: 'synthetic network failure',
+              ),
+            );
+          },
+        ),
+      );
+
+      final service = EntityStatePaginationService(
+        baseUrl: 'https://example.invalid',
+        dio: dio,
+        workspacePrefix: workspacePrefix,
+      );
+
+      addTearDown(() async {
+        await subscription.cancel();
+      });
+
+      service.startProcessing();
+      service.enqueueJobFetchEntityState(
+        domainType: 'project',
+        domainId: '__test_domain_log_summary_on_error',
+        entityType: 'task',
+        entityId: 'task-1',
+      );
+
+      await _waitForStatus(service, expectedStatus: 'failed');
+
+      final summaryLog = messages.firstWhere(
+        (message) =>
+            message.contains('single fetch summary') &&
+            message.contains('statusCode=unknown'),
+        orElse: () => '',
+      );
+
+      expect(
+        summaryLog,
+        isNotEmpty,
+        reason: 'the failed fetch should still emit a summary log',
+      );
+
+      await service.dispose();
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: workspacePrefix,
+      );
+    });
+
     test('writes transition log entries for job lifecycle', () async {
       const workspacePrefix = '__test_specific_prefix_transition_lifecycle';
       await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
