@@ -793,6 +793,63 @@ void main() {
       },
     );
 
+    test('collection queries omit limit when caller leaves it unset', () async {
+      const workspacePrefix = '__test_specific_prefix_collection_default_limit';
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: workspacePrefix,
+      );
+
+      final requestedUrls = <String>[];
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requestedUrls.add(options.uri.toString());
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+                data: {
+                  'items': [
+                    {'entityId': 'item-1'},
+                  ],
+                  'hasMore': false,
+                  'cursor': null,
+                },
+              ),
+            );
+          },
+        ),
+      );
+
+      final service = EntityStatePaginationService(
+        baseUrl: 'https://example.invalid',
+        dio: dio,
+        workspacePrefix: workspacePrefix,
+      );
+
+      service.startProcessing();
+      service.enqueueJobFetchEntityStateCollection(
+        domainType: 'project',
+        entityType: 'project',
+        isCrossDomain: true,
+      );
+
+      await _waitForStatus(service, expectedStatus: 'completed');
+
+      expect(
+        requestedUrls.single,
+        isNot(contains('limit=')),
+        reason:
+            'default collection requests should omit limit so the server decides the page size',
+      );
+
+      await service.dispose();
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: workspacePrefix,
+      );
+    });
+
     test(
       'cross-domain collection jobs use /api/super/cross-domain path when super user access is requested',
       () async {

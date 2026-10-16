@@ -610,7 +610,7 @@ class EntityStatePaginationService {
     required String entityType,
     String? parentId,
     String? entityId,
-    int limit = 1000,
+    int? limit,
     String? cursor,
     String? nextCursor,
     bool isCrossDomain = false,
@@ -1066,7 +1066,10 @@ class EntityStatePaginationService {
   }) async {
     final url = _buildCollectionUrl(job);
 
-    final query = <String, dynamic>{'limit': job.limit ?? 1000};
+    final query = <String, dynamic>{};
+    if (job.limit != null) {
+      query['limit'] = job.limit;
+    }
     if (cursor != null && cursor.isNotEmpty) {
       query['cursor'] = cursor;
     }

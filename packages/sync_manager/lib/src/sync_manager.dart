@@ -194,7 +194,7 @@ class SyncManager {
     required String entityType,
     String? parentId,
     String? entityId,
-    int limit = 1000,
+    int? limit,
     String? cursor,
     String? nextCursor,
     bool isCrossDomain = false,
