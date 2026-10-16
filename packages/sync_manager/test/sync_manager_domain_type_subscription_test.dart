@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:sltt_core/sltt_core.dart';
+import 'package:sync_manager/src/models/entity_state_pagination_job.isar.dart';
 import 'package:sync_manager/src/sync_manager_websocket_client.dart';
 import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
@@ -174,6 +175,46 @@ void main() {
     );
 
     test(
+      'addedMe subscribe acks include the current JWT subject in the queued member fetch target',
+      () async {
+        const userId = 'user-42';
+        final jwt =
+            'eyJhbGciOiJub25lIn0.${base64Url.encode(utf8.encode('{"sub":"$userId"}'))}.signature';
+        syncManager.updateAuthToken(jwt);
+
+        await syncManager.processCrossDomainWsMessage(
+          domainType: kDomainMembership,
+          notifyType: WebsocketConstants.notifyTypeAddedMe,
+          actionType: WebsocketConstants.actionSubscribe,
+          entityType: kEntityTypeMember,
+        );
+
+        final queuedJobs = await syncManager.entityStatePaginationService
+            .debugListPersistedJobs();
+        expect(
+          queuedJobs,
+          anyElement(
+            isA<EntityStatePaginationJobRecord>()
+                .having(
+                  (job) => job.domainType,
+                  'domainType',
+                  kDomainMembership,
+                )
+                .having(
+                  (job) => job.entityType,
+                  'entityType',
+                  kEntityTypeMember,
+                )
+                .having((job) => job.entityId, 'entityId', userId)
+                .having((job) => job.isCollection, 'isCollection', isTrue),
+          ),
+          reason:
+              'AddedMe subscribe acknowledgements should queue a member-specific cross-domain fetch keyed to the current user.',
+        );
+      },
+    );
+
+    test(
       'membership root notify change messages use the userId as the member fetch target',
       () async {
         final before = syncManager.getEntityStatePaginationJobQueueCounts();
@@ -183,7 +224,6 @@ void main() {
           actionType: WebsocketConstants.actionChange,
           entityType: kEntityTypeMember,
           domainId: 'project-membership-root-1',
-          userId: 'user-42',
         );
         final after = syncManager.getEntityStatePaginationJobQueueCounts();
 

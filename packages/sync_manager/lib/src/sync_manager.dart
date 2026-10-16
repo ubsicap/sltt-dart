@@ -189,6 +189,7 @@ class SyncManager {
     String? domainId,
     required String entityType,
     String? parentId,
+    String? entityId,
     int limit = 100,
     String? cursor,
     String? nextCursor,
@@ -208,6 +209,7 @@ class SyncManager {
       domainId: effectiveDomainId,
       entityType: entityType,
       parentId: parentId,
+      entityId: entityId,
       limit: limit,
       cursor: cursor ?? nextCursor,
       isCrossDomain: isCrossDomain,
@@ -1102,7 +1104,6 @@ class SyncManager {
     required String domainType,
     required String notifyType,
     required String actionType,
-    String? userId,
     String? domainId,
     String? entityType,
   }) async {
@@ -1162,16 +1163,29 @@ class SyncManager {
       return;
     }
 
+    final resolvedRootEntityId =
+        notifyType == WebsocketConstants.notifyTypeAddedMe
+        ? (_resolveCurrentUserIdFromAuthToken() ?? '').trim()
+        : '';
+    if (notifyType == WebsocketConstants.notifyTypeAddedMe &&
+        resolvedRootEntityId.isEmpty) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Ignoring AddedMe root subscribe-ack because no current userId could be resolved from the websocket payload or auth token.',
+      );
+      return;
+    }
+
     enqueueJobFetchEntityStateCollection(
       domainType: domainType,
       entityType: nextEntityType,
+      entityId: resolvedRootEntityId.isEmpty ? null : resolvedRootEntityId,
       isCrossDomain: true,
     );
 
     if (notifyType == WebsocketConstants.notifyTypeAddedMe ||
         notifyType == WebsocketConstants.notifyTypeNewDomainId) {
       SlttLogger.logger.info(
-        '[SyncManager] Queued initial cross-domain subscribe-ack fetch for $notifyType $domainType userId=${userId ?? ''}',
+        '[SyncManager] Queued initial cross-domain subscribe-ack fetch for $notifyType $domainType entityType=$nextEntityType entityId=${resolvedRootEntityId.isEmpty ? '<all>' : resolvedRootEntityId}',
       );
     }
   }

@@ -581,6 +581,7 @@ class EntityStatePaginationService {
     String? domainId,
     required String entityType,
     String? parentId,
+    String? entityId,
     int? limit,
     String? cursor,
     String? nextCursor,
@@ -594,6 +595,7 @@ class EntityStatePaginationService {
         'domainId is required unless isCrossDomain is true.',
       );
     }
+    final effectiveEntityId = (entityId ?? '').trim();
     final effectiveCursor = cursor ?? nextCursor;
 
     // TODO(entity-state-queue): beyond debounce flush merging, handle queued
@@ -609,10 +611,15 @@ class EntityStatePaginationService {
     // This should eventually be reflected in transition logs (e.g.
     // obsoleted_by_collection) for debug tracing.
     final existingIndex = _queueLifo.indexWhere((job) {
+      final sameEntityId =
+          (effectiveEntityId.isEmpty &&
+              (job.entityId == null || job.entityId!.trim().isEmpty)) ||
+          job.entityId == effectiveEntityId;
       return job.isCollection &&
           job.domainType == domainType &&
           job.entityType == entityType &&
           job.parentId == parentId &&
+          sameEntityId &&
           ((job.isCrossDomain && isCrossDomain) ||
               (!job.isCrossDomain &&
                   !isCrossDomain &&
@@ -632,6 +639,7 @@ class EntityStatePaginationService {
       domainId: effectiveDomainId,
       entityType: entityType,
       parentId: parentId,
+      entityId: effectiveEntityId.isEmpty ? null : effectiveEntityId,
       isCrossDomain: isCrossDomain,
     );
     final active = _activeJobs[key];
@@ -655,6 +663,7 @@ class EntityStatePaginationService {
       entityType: entityType,
       isCollection: true,
       isCrossDomain: isCrossDomain,
+      entityId: effectiveEntityId.isEmpty ? null : effectiveEntityId,
       parentId: parentId,
       enqueuedAt: DateTime.now().toUtc(),
       priority: _EntityStateJobPriority.normal,
@@ -1119,6 +1128,10 @@ class EntityStatePaginationService {
     if (job.isCrossDomain || job.domainId.isEmpty) {
       final encodedDomainType = Uri.encodeComponent(job.domainType);
       final encodedEntityType = Uri.encodeComponent(job.entityType);
+      final encodedEntityId = (job.entityId ?? '').trim();
+      if (encodedEntityId.isNotEmpty) {
+        return '$_baseUrl/api/cross-domain/$encodedDomainType/states/$encodedEntityType/${Uri.encodeComponent(encodedEntityId)}';
+      }
       return '$_baseUrl/api/cross-domain/$encodedDomainType/states/$encodedEntityType';
     }
 
@@ -1162,9 +1175,14 @@ class EntityStatePaginationService {
     required String domainId,
     required String entityType,
     String? parentId,
+    String? entityId,
     bool isCrossDomain = false,
   }) {
-    return '${_scopeKey(domainType: domainType, domainId: domainId, entityType: entityType, parentId: parentId, isCrossDomain: isCrossDomain)}|collection';
+    final normalizedEntityId = (entityId ?? '').trim();
+    final suppliedSegment = normalizedEntityId.isEmpty
+        ? ''
+        : '|entityId:$normalizedEntityId';
+    return '${_scopeKey(domainType: domainType, domainId: domainId, entityType: entityType, parentId: parentId, isCrossDomain: isCrossDomain)}|collection$suppliedSegment';
   }
 
   String _singleJobKey({
