@@ -839,9 +839,22 @@ class EntityStatePaginationService {
     final state = body['state'];
 
     final items = <Map<String, dynamic>>[];
-    if (state is Map) {
-      items.add(state.cast<String, dynamic>());
+    if (state is Map && state.isNotEmpty) {
+      items.add(Map<String, dynamic>.from(state));
+    } else if (state == null || (state is Map && state.isEmpty)) {
+      SlttLogger.logger.warning(
+        '[EntityStateQueue] Single fetch returned empty state for job=${job.jobKey}; likely bad URL/endpoint. Skipping storeFetchedItems.',
+      );
     }
+    _logFetchSummary(
+      requestKind: 'single',
+      url: url,
+      queryParameters: const {},
+      statusCode: response.statusCode,
+      itemsCount: items.length,
+      hasMore: false,
+      cursor: null,
+    );
 
     final storeFetchedItems = _onStoreFetchedItems;
     if (storeFetchedItems != null && items.isNotEmpty) {
@@ -1027,6 +1040,15 @@ class EntityStatePaginationService {
 
     final nextCursor = body['cursor']?.toString();
     final hasMore = body['hasMore'] == true;
+    _logFetchSummary(
+      requestKind: 'collection',
+      url: url,
+      queryParameters: query,
+      statusCode: response.statusCode,
+      itemsCount: items.length,
+      hasMore: hasMore,
+      cursor: nextCursor,
+    );
     return _CollectionPageResponse(
       items: items,
       cursor: nextCursor,
@@ -1106,6 +1128,36 @@ class EntityStatePaginationService {
         errorMessage: errorMessage,
       );
     }
+  }
+
+  void _logFetchSummary({
+    required String requestKind,
+    required String url,
+    required Map<String, dynamic> queryParameters,
+    required int? statusCode,
+    required int itemsCount,
+    required bool hasMore,
+    String? cursor,
+  }) {
+    final summary =
+        '[EntityStateQueue] $requestKind fetch summary: '
+        'url=$url '
+        'queryParameters=${_formatQueryParameters(queryParameters)} '
+        'statusCode=${statusCode ?? 'unknown'} '
+        'items=$itemsCount '
+        'hasMore=$hasMore '
+        'cursor=${cursor ?? '<none>'}';
+    SlttLogger.logger.info(summary);
+  }
+
+  String _formatQueryParameters(Map<String, dynamic> queryParameters) {
+    if (queryParameters.isEmpty) return '{}';
+    return queryParameters.entries
+        .map(
+          (entry) =>
+              '${entry.key}=${entry.value is List ? entry.value.join(',') : entry.value}',
+        )
+        .join(', ');
   }
 
   String _resolveDomainCollection(String domainType) {

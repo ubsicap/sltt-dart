@@ -2,12 +2,16 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:isar_community/isar.dart' show Isar;
+import 'package:logging/logging.dart';
+import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/models/entity_state_pagination_job.isar.dart';
 import 'package:sync_manager/src/models/entity_state_pagination_job_transition_log.isar.dart';
 import 'package:sync_manager/sync_manager.dart';
 import 'package:test/test.dart';
 
 void main() {
+  SlttLogger.init(level: SlttLogLevel.info);
+
   group('EntityStatePaginationService job persistence', () {
     setUpAll(() async {
       await Isar.initializeIsarCore(download: true);
@@ -121,6 +125,68 @@ void main() {
         );
       },
     );
+
+    test('single fetch with empty state does not store fetched items', () async {
+      const workspacePrefix = '__test_specific_prefix_empty_state';
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: workspacePrefix,
+      );
+
+      var storeCallCount = 0;
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+                data: {'state': {}},
+              ),
+            );
+          },
+        ),
+      );
+
+      final service = EntityStatePaginationService(
+        baseUrl: 'https://example.invalid',
+        dio: dio,
+        singleRequestDebounce: const Duration(milliseconds: 10),
+        workspacePrefix: workspacePrefix,
+        onStoreFetchedItems:
+            ({
+              required String domainType,
+              required String domainId,
+              required String entityType,
+              required List<Map<String, dynamic>> items,
+              required DateTime storedAt,
+            }) async {
+              storeCallCount++;
+            },
+      );
+
+      service.startProcessing();
+      service.enqueueJobFetchEntityState(
+        domainType: 'project',
+        domainId: '__test_domain_empty_state',
+        entityType: 'task',
+        entityId: 'abc123',
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+
+      expect(
+        storeCallCount,
+        0,
+        reason:
+            'An empty state usually means the URL is wrong; we should not store it as a fetched item.',
+      );
+
+      await service.dispose();
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: workspacePrefix,
+      );
+    });
 
     test('startProcessing resumes persisted queued jobs', () async {
       const workspacePrefix = '__test_specific_prefix_resume_on_start';
@@ -319,6 +385,61 @@ void main() {
         );
       },
     );
+
+    test('logs the request url, query parameters, and response summary', () async {
+      const workspacePrefix = '__test_specific_prefix_log_summary';
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: workspacePrefix,
+      );
+
+      final messages = <String>[];
+      final subscription = Logger.root.onRecord.listen((record) {
+        messages.add(record.message);
+      });
+
+      final service = EntityStatePaginationService(
+        baseUrl: 'https://example.invalid',
+        dio: _buildDeterministicDio(),
+        workspacePrefix: workspacePrefix,
+      );
+
+      addTearDown(() async {
+        await subscription.cancel();
+      });
+
+      service.startProcessing();
+      service.enqueueJobFetchEntityStateCollection(
+        domainType: 'project',
+        domainId: '__test_domain_log_summary',
+        entityType: 'task',
+        limit: 25,
+      );
+
+      await _waitForStatus(service, expectedStatus: 'completed');
+
+      final summaryLog = messages.firstWhere(
+        (message) =>
+            message.contains('url=') &&
+            message.contains('queryParameters=') &&
+            message.contains('items=') &&
+            message.contains('https://example.invalid'),
+        orElse: () => '',
+      );
+
+      expect(
+        summaryLog,
+        isNotEmpty,
+        reason:
+            'request logs should include the URL, query parameters, and item count',
+      );
+      expect(summaryLog, contains('limit=25'));
+      expect(summaryLog, contains('items=1'));
+
+      await service.dispose();
+      await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+        workspacePrefix: workspacePrefix,
+      );
+    });
 
     test('writes transition log entries for job lifecycle', () async {
       const workspacePrefix = '__test_specific_prefix_transition_lifecycle';
