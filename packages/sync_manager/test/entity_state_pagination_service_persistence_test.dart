@@ -672,6 +672,80 @@ void main() {
         );
       },
     );
+
+    test(
+      'cross-domain collection jobs use /api/super/cross-domain path when super user access is requested',
+      () async {
+        const workspacePrefix =
+            '__test_specific_prefix_super_cross_domain_queried';
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+
+        final requestedUrls = <String>[];
+        final dio = Dio();
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              requestedUrls.add(options.uri.toString());
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  statusCode: 200,
+                  data: {
+                    'items': [
+                      {'entityId': 'item-1'},
+                    ],
+                    'hasMore': false,
+                    'cursor': null,
+                  },
+                ),
+              );
+            },
+          ),
+        );
+
+        final service = EntityStatePaginationService(
+          baseUrl: 'https://example.invalid',
+          dio: dio,
+          workspacePrefix: workspacePrefix,
+        );
+
+        service.startProcessing();
+        service.enqueueJobFetchEntityStateCollection(
+          domainType: 'project',
+          entityType: 'project',
+          limit: 250,
+          isCrossDomain: true,
+          isSuperUserRequest: true,
+        );
+
+        await _waitForStatus(service, expectedStatus: 'completed');
+
+        expect(
+          requestedUrls,
+          isNotEmpty,
+          reason: 'super user fetch should issue a request',
+        );
+        expect(
+          requestedUrls.single,
+          contains('/api/super/cross-domain/project/states/project'),
+          reason:
+              'super user cross-domain collection requests must use the /api/super/cross-domain route',
+        );
+        expect(
+          requestedUrls.single,
+          contains('limit=250'),
+          reason:
+              'super user collection requests should honor the chosen page size',
+        );
+
+        await service.dispose();
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+      },
+    );
   });
 }
 

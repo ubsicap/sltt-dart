@@ -190,10 +190,11 @@ class SyncManager {
     required String entityType,
     String? parentId,
     String? entityId,
-    int limit = 100,
+    int limit = 1000,
     String? cursor,
     String? nextCursor,
     bool isCrossDomain = false,
+    bool isSuperUserRequest = false,
   }) {
     final effectiveDomainId = isCrossDomain ? '' : (domainId ?? '');
     if (!isCrossDomain && effectiveDomainId.isEmpty) {
@@ -213,6 +214,7 @@ class SyncManager {
       limit: limit,
       cursor: cursor ?? nextCursor,
       isCrossDomain: isCrossDomain,
+      isSuperUserRequest: isSuperUserRequest,
     );
   }
 

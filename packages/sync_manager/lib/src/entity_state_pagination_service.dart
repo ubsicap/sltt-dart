@@ -70,6 +70,7 @@ class _EntityStateJob {
     required this.enqueuedAt,
     required this.priority,
     this.isCrossDomain = false,
+    this.isSuperUserRequest = false,
     this.entityId,
     this.parentId,
     this.limit,
@@ -85,6 +86,7 @@ class _EntityStateJob {
   final String entityType;
   final bool isCollection;
   final bool isCrossDomain;
+  final bool isSuperUserRequest;
   final String? entityId;
   final String? parentId;
   final int? limit;
@@ -494,12 +496,17 @@ class EntityStatePaginationService {
     required String entityType,
     required String entityId,
     String? parentId,
+    bool isCrossDomain = false,
+    bool isSuperUserRequest = false,
   }) {
+    final effectiveDomainId = isCrossDomain ? '' : domainId;
     final scopeKey = _scopeKey(
       domainType: domainType,
-      domainId: domainId,
+      domainId: effectiveDomainId,
       entityType: entityType,
       parentId: parentId,
+      isCrossDomain: isCrossDomain,
+      isSuperUserRequest: isSuperUserRequest,
     );
 
     final activeCollectionForScope = _activeJobs.values.any(
@@ -512,10 +519,12 @@ class EntityStatePaginationService {
     final existingSingleActive =
         _activeJobs[_singleJobKey(
           domainType: domainType,
-          domainId: domainId,
+          domainId: effectiveDomainId,
           entityType: entityType,
           entityId: entityId,
           parentId: parentId,
+          isCrossDomain: isCrossDomain,
+          isSuperUserRequest: isSuperUserRequest,
         )];
     if (existingSingleActive != null) {
       _ignoredDuplicateSingleRequestDuringActiveCount++;
@@ -525,10 +534,12 @@ class EntityStatePaginationService {
     final existingSingleInQueueIndex = _queueLifo.indexWhere((job) {
       return !job.isCollection &&
           job.domainType == domainType &&
-          job.domainId == domainId &&
+          job.domainId == effectiveDomainId &&
           job.entityType == entityType &&
           job.parentId == parentId &&
-          job.entityId == entityId;
+          job.entityId == entityId &&
+          job.isCrossDomain == isCrossDomain &&
+          job.isSuperUserRequest == isSuperUserRequest;
     });
     if (existingSingleInQueueIndex != -1) {
       final queued = _queueLifo.removeAt(existingSingleInQueueIndex);
@@ -551,10 +562,12 @@ class EntityStatePaginationService {
 
     final requestKey = _singleJobKey(
       domainType: domainType,
-      domainId: domainId,
+      domainId: effectiveDomainId,
       entityType: entityType,
       entityId: entityId,
       parentId: parentId,
+      isCrossDomain: isCrossDomain,
+      isSuperUserRequest: isSuperUserRequest,
     );
     bucket.requestsByEntityId[entityId] = _PendingSingleRequest(
       requestKey: requestKey,
@@ -565,9 +578,11 @@ class EntityStatePaginationService {
     bucket.timer = Timer(singleRequestDebounce, () {
       _flushSingleEntityBucket(
         domainType: domainType,
-        domainId: domainId,
+        domainId: effectiveDomainId,
         entityType: entityType,
         parentId: parentId,
+        isCrossDomain: isCrossDomain,
+        isSuperUserRequest: isSuperUserRequest,
       );
     });
 
@@ -582,10 +597,11 @@ class EntityStatePaginationService {
     required String entityType,
     String? parentId,
     String? entityId,
-    int? limit,
+    int limit = 1000,
     String? cursor,
     String? nextCursor,
     bool isCrossDomain = false,
+    bool isSuperUserRequest = false,
   }) {
     final effectiveDomainId = isCrossDomain ? '' : (domainId ?? '');
     if (!isCrossDomain && effectiveDomainId.isEmpty) {
@@ -619,6 +635,7 @@ class EntityStatePaginationService {
           job.domainType == domainType &&
           job.entityType == entityType &&
           job.parentId == parentId &&
+          job.isSuperUserRequest == isSuperUserRequest &&
           sameEntityId &&
           ((job.isCrossDomain && isCrossDomain) ||
               (!job.isCrossDomain &&
@@ -641,6 +658,7 @@ class EntityStatePaginationService {
       parentId: parentId,
       entityId: effectiveEntityId.isEmpty ? null : effectiveEntityId,
       isCrossDomain: isCrossDomain,
+      isSuperUserRequest: isSuperUserRequest,
     );
     final active = _activeJobs[key];
     if (active != null) {
@@ -657,12 +675,14 @@ class EntityStatePaginationService {
         entityType: entityType,
         parentId: parentId,
         isCrossDomain: isCrossDomain,
+        isSuperUserRequest: isSuperUserRequest,
       ),
       domainType: domainType,
       domainId: effectiveDomainId,
       entityType: entityType,
       isCollection: true,
       isCrossDomain: isCrossDomain,
+      isSuperUserRequest: isSuperUserRequest,
       entityId: effectiveEntityId.isEmpty ? null : effectiveEntityId,
       parentId: parentId,
       enqueuedAt: DateTime.now().toUtc(),
@@ -684,6 +704,7 @@ class EntityStatePaginationService {
     required String entityType,
     String? parentId,
     bool isCrossDomain = false,
+    bool isSuperUserRequest = false,
   }) {
     final effectiveDomainId = isCrossDomain ? '' : domainId;
     final scopeKey = _scopeKey(
@@ -692,6 +713,7 @@ class EntityStatePaginationService {
       entityType: entityType,
       parentId: parentId,
       isCrossDomain: isCrossDomain,
+      isSuperUserRequest: isSuperUserRequest,
     );
     final bucket = _singleDebounceBuckets.remove(scopeKey);
     if (bucket == null || bucket.requestsByEntityId.isEmpty) return;
@@ -710,6 +732,7 @@ class EntityStatePaginationService {
         entityType: entityType,
         isCollection: false,
         isCrossDomain: isCrossDomain,
+        isSuperUserRequest: isSuperUserRequest,
         entityId: entityId,
         parentId: parentId,
         enqueuedAt: DateTime.now().toUtc(),
@@ -726,6 +749,7 @@ class EntityStatePaginationService {
           entityType: entityType,
           parentId: parentId,
           isCrossDomain: isCrossDomain,
+          isSuperUserRequest: isSuperUserRequest,
         ),
         requestKey: _collectionJobKey(
           domainType: domainType,
@@ -733,6 +757,7 @@ class EntityStatePaginationService {
           entityType: entityType,
           parentId: parentId,
           isCrossDomain: isCrossDomain,
+          isSuperUserRequest: isSuperUserRequest,
         ),
         scopeKey: scopeKey,
         domainType: domainType,
@@ -740,6 +765,7 @@ class EntityStatePaginationService {
         entityType: entityType,
         isCollection: true,
         isCrossDomain: isCrossDomain,
+        isSuperUserRequest: isSuperUserRequest,
         parentId: parentId,
         enqueuedAt: DateTime.now().toUtc(),
         priority: _EntityStateJobPriority.normal,
@@ -984,6 +1010,7 @@ class EntityStatePaginationService {
           entityType: job.entityType,
           isCollection: true,
           isCrossDomain: job.isCrossDomain,
+          isSuperUserRequest: job.isSuperUserRequest,
           parentId: job.parentId,
           enqueuedAt: DateTime.now().toUtc(),
           priority: _EntityStateJobPriority.low,
@@ -1008,6 +1035,7 @@ class EntityStatePaginationService {
         entityType: job.entityType,
         isCollection: true,
         isCrossDomain: job.isCrossDomain,
+        isSuperUserRequest: job.isSuperUserRequest,
         parentId: job.parentId,
         enqueuedAt: DateTime.now().toUtc(),
         priority: _EntityStateJobPriority.low,
@@ -1025,7 +1053,7 @@ class EntityStatePaginationService {
   }) async {
     final url = _buildCollectionUrl(job);
 
-    final query = <String, dynamic>{'limit': job.limit};
+    final query = <String, dynamic>{'limit': job.limit ?? 1000};
     if (cursor != null && cursor.isNotEmpty) {
       query['cursor'] = cursor;
     }
@@ -1195,10 +1223,13 @@ class EntityStatePaginationService {
       final encodedDomainType = Uri.encodeComponent(job.domainType);
       final encodedEntityType = Uri.encodeComponent(job.entityType);
       final encodedEntityId = (job.entityId ?? '').trim();
+      final routePrefix = job.isSuperUserRequest && encodedEntityId.isEmpty
+          ? '$_baseUrl/api/super/cross-domain'
+          : '$_baseUrl/api/cross-domain';
       if (encodedEntityId.isNotEmpty) {
-        return '$_baseUrl/api/cross-domain/$encodedDomainType/states/$encodedEntityType/${Uri.encodeComponent(encodedEntityId)}';
+        return '$routePrefix/$encodedDomainType/states/$encodedEntityType/${Uri.encodeComponent(encodedEntityId)}';
       }
-      return '$_baseUrl/api/cross-domain/$encodedDomainType/states/$encodedEntityType';
+      return '$routePrefix/$encodedDomainType/states/$encodedEntityType';
     }
 
     final domainCollection = _resolveDomainCollection(job.domainType);
@@ -1229,11 +1260,13 @@ class EntityStatePaginationService {
     required String entityType,
     String? parentId,
     bool isCrossDomain = false,
+    bool isSuperUserRequest = false,
   }) {
     final normalizedDomainId = isCrossDomain || domainId.isEmpty
         ? 'cross-domain'
         : domainId;
-    return '$domainType|$normalizedDomainId|$entityType|parent:${parentId ?? ''}';
+    final accessScope = isSuperUserRequest ? 'super' : 'standard';
+    return '$domainType|$normalizedDomainId|$entityType|$accessScope|parent:${parentId ?? ''}';
   }
 
   String _collectionJobKey({
@@ -1243,12 +1276,13 @@ class EntityStatePaginationService {
     String? parentId,
     String? entityId,
     bool isCrossDomain = false,
+    bool isSuperUserRequest = false,
   }) {
     final normalizedEntityId = (entityId ?? '').trim();
     final suppliedSegment = normalizedEntityId.isEmpty
         ? ''
         : '|entityId:$normalizedEntityId';
-    return '${_scopeKey(domainType: domainType, domainId: domainId, entityType: entityType, parentId: parentId, isCrossDomain: isCrossDomain)}|collection$suppliedSegment';
+    return '${_scopeKey(domainType: domainType, domainId: domainId, entityType: entityType, parentId: parentId, isCrossDomain: isCrossDomain, isSuperUserRequest: isSuperUserRequest)}|collection$suppliedSegment';
   }
 
   String _singleJobKey({
@@ -1258,8 +1292,15 @@ class EntityStatePaginationService {
     required String entityId,
     String? parentId,
     bool isCrossDomain = false,
+    bool isSuperUserRequest = false,
   }) {
-    return '${_scopeKey(domainType: domainType, domainId: domainId, entityType: entityType, parentId: parentId, isCrossDomain: isCrossDomain)}|single|$entityId';
+    return '${_scopeKey(domainType: domainType, domainId: domainId, entityType: entityType, parentId: parentId, isCrossDomain: isCrossDomain, isSuperUserRequest: isSuperUserRequest)}|single|$entityId';
+  }
+
+  bool _isSuperUserRequestScopeKey(String scopeKey) {
+    final parts = scopeKey.split('|');
+    if (parts.length < 4) return false;
+    return parts[3] == 'super';
   }
 
   String? _extractEntityId(Map<String, dynamic> item) {
@@ -1279,6 +1320,7 @@ class EntityStatePaginationService {
       entityType: record.entityType,
       isCollection: record.isCollection,
       isCrossDomain: record.domainId.isEmpty,
+      isSuperUserRequest: _isSuperUserRequestScopeKey(record.scopeKey),
       entityId: record.entityId,
       parentId: record.parentId,
       limit: record.limit,
