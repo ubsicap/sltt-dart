@@ -884,7 +884,11 @@ class SyncManager {
     required String notifyType,
   }) {
     final profile = getDomainTypeProfile(domainType);
-    if (profile?.hasSeparateDomainIdEntityType == true) {
+    if (profile == null) {
+      return domainId;
+    }
+
+    if (profile.hasSeparateDomainIdEntityType) {
       if (notifyType == WebsocketConstants.notifyTypeAddedMe) {
         final currentUserId = (_resolveCurrentUserIdFromAuthToken() ?? '')
             .trim();
@@ -892,7 +896,13 @@ class SyncManager {
           return currentUserId;
         }
       }
+
+      // For separate domain/root entity types, the domain ID cannot be reused as
+      // the entity ID. Returning an empty value here lets callers skip the fetch
+      // instead of producing a broken URL such as /memberships/{projectId}/members/{projectId}.
+      return '';
     }
+
     return domainId;
   }
 
@@ -1132,6 +1142,12 @@ class SyncManager {
         entityType: nextEntityType,
         notifyType: notifyType,
       );
+      if (requestedEntityId.isEmpty) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Skipping root domain change fetch for $notifyType $domainType/$normalizedDomainId because the root entityId could not be resolved for a separate domainId/rootEntityType mapping.',
+        );
+        return;
+      }
       final requestKey = enqueueJobFetchEntityState(
         domainType: domainType,
         domainId: normalizedDomainId,
@@ -1151,6 +1167,12 @@ class SyncManager {
         entityType: nextEntityType,
         notifyType: notifyType,
       );
+      if (requestedEntityId.isEmpty) {
+        SlttLogger.logger.warning(
+          '[SyncManager] Skipping root subscribe-ack fetch for $notifyType $domainType/$normalizedDomainId because the root entityId could not be resolved for a separate domainId/rootEntityType mapping.',
+        );
+        return;
+      }
       final requestKey = enqueueJobFetchEntityState(
         domainType: domainType,
         domainId: normalizedDomainId,

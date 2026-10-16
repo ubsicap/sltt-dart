@@ -217,6 +217,11 @@ void main() {
     test(
       'membership root notify change messages use the userId as the member fetch target',
       () async {
+        const userId = 'user-42';
+        final jwt =
+            'eyJhbGciOiJub25lIn0.${base64Url.encode(utf8.encode('{"sub":"$userId"}'))}.signature';
+        syncManager.updateAuthToken(jwt);
+
         final before = syncManager.getEntityStatePaginationJobQueueCounts();
         await syncManager.processCrossDomainWsMessage(
           domainType: kDomainMembership,
@@ -232,6 +237,33 @@ void main() {
           greaterThan(before.queuedSingle),
           reason:
               'membership change notifications should enqueue a single fetch for the member userId even when the domainId remains the project id.',
+        );
+
+        final queuedJobs = await syncManager.entityStatePaginationService
+            .debugListPersistedJobs();
+        expect(
+          queuedJobs,
+          anyElement(
+            isA<EntityStatePaginationJobRecord>()
+                .having(
+                  (job) => job.domainType,
+                  'domainType',
+                  kDomainMembership,
+                )
+                .having(
+                  (job) => job.entityType,
+                  'entityType',
+                  kEntityTypeMember,
+                )
+                .having((job) => job.entityId, 'entityId', userId)
+                .having(
+                  (job) => job.domainId,
+                  'domainId',
+                  'project-membership-root-1',
+                ),
+          ),
+          reason:
+              'membership root fetches must use the member userId as the entityId while keeping the project id as the domainId.',
         );
       },
     );

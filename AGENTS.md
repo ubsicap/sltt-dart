@@ -6,6 +6,7 @@
 - prefer running commands with cmd.exe instead of powershell pwsh.
 - Whenever pwsh is used, don't use '&&' since that is not a valid statement separator
 - first try running `dart test [options]` rather than using special scripts to run tests.
+- prefer `dart test` directly without `setup_test_env.sh` when the native library is already available or when the environment is otherwise prepared.
 - When adding or updating tests, include `reason:` text on failing assertions where it helps identify which behavior or file check failed.
 - Always keep the `/api/help` documentation in sync with the actual API handlers implemented in `lib/src/api/base_rest_api_server.dart` (`_handleApiDocs`).
 - Whenever you add, remove, or change any API endpoint or its behavior, immediately update the `/api/help` docs to reflect those changes.
