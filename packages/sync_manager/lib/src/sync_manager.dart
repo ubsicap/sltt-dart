@@ -96,7 +96,7 @@ class SyncManager {
 
   EntityStatePaginationService _createEntityStatePaginationService() {
     final config = _entityStatePaginationServiceConfig;
-    return EntityStatePaginationService(
+    final service = EntityStatePaginationService(
       baseUrl: _cloudStorageUrl,
       maxConcurrentRequests: config.maxConcurrentRequests,
       singleRequestDebounce: config.singleRequestDebounce,
@@ -107,6 +107,10 @@ class SyncManager {
       persistenceInspector: config.persistenceInspector,
       onStoreFetchedItems: storeFetchedEntityStates,
     );
+    if (_authToken != null && _authToken!.trim().isNotEmpty) {
+      service.updateAuthToken(_authToken);
+    }
+    return service;
   }
 
   EntityStatePaginationService get entityStatePaginationService {
@@ -596,6 +600,7 @@ class SyncManager {
   void updateAuthToken(String token) {
     final hadToken = _hasWebSocketAuth;
     _authToken = token;
+    _entityStatePaginationService?.updateAuthToken(token);
     SlttLogger.logger.info('[SyncManager] Auth token updated in sync isolate');
     if (!hadToken && _hasWebSocketAuth) {
       _ensureWebSocketConnected();

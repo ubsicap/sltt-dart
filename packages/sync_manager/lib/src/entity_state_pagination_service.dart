@@ -162,6 +162,19 @@ class EntityStatePaginationService {
   _queueCountsEventsController =
       StreamController<EntityStateJobQueueCounts>.broadcast();
   String _baseUrl;
+  String? _authToken;
+
+  void updateAuthToken(String? token) {
+    _authToken = token != null && token.trim().isNotEmpty ? token : null;
+  }
+
+  Options _requestOptionsWithAuth() {
+    final token = _authToken;
+    if (token == null || token.trim().isEmpty) {
+      return Options();
+    }
+    return Options(headers: {'Authorization': 'Bearer $token'});
+  }
 
   bool _processingQueue = false;
   bool _enabled = false;
@@ -864,7 +877,7 @@ class EntityStatePaginationService {
     final items = <Map<String, dynamic>>[];
 
     try {
-      response = await _dio.get(url);
+      response = await _dio.get(url, options: _requestOptionsWithAuth());
       final body = (response.data as Map).cast<String, dynamic>();
       final state = body['state'];
 
@@ -1067,7 +1080,11 @@ class EntityStatePaginationService {
     bool hasMore = false;
 
     try {
-      response = await _dio.get(url, queryParameters: query);
+      response = await _dio.get(
+        url,
+        queryParameters: query,
+        options: _requestOptionsWithAuth(),
+      );
       final body = (response.data as Map).cast<String, dynamic>();
       final dynamic itemsRaw = body['items'];
       items = itemsRaw is List

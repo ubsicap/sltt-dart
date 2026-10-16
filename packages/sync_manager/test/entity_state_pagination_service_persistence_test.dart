@@ -674,6 +674,126 @@ void main() {
     );
 
     test(
+      'collection queries include bearer auth header when JWT is available',
+      () async {
+        const workspacePrefix = '__test_specific_prefix_collection_bearer_auth';
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+
+        String? seenAuthorization;
+        final dio = Dio();
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              seenAuthorization = options.headers['Authorization'] as String?;
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  statusCode: 200,
+                  data: {
+                    'items': [
+                      {'entityId': 'item-1'},
+                    ],
+                    'hasMore': false,
+                    'cursor': null,
+                  },
+                ),
+              );
+            },
+          ),
+        );
+
+        final service = EntityStatePaginationService(
+          baseUrl: 'https://example.invalid',
+          dio: dio,
+          workspacePrefix: workspacePrefix,
+        );
+
+        service.updateAuthToken('jwt-token-123');
+        service.startProcessing();
+        service.enqueueJobFetchEntityStateCollection(
+          domainType: 'project',
+          entityType: 'project',
+          limit: 250,
+          isCrossDomain: true,
+        );
+
+        await _waitForStatus(service, expectedStatus: 'completed');
+
+        expect(
+          seenAuthorization,
+          'Bearer jwt-token-123',
+          reason:
+              'collection entity-state queries must send the active JWT as a bearer token',
+        );
+
+        await service.dispose();
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+      },
+    );
+
+    test(
+      'single-entity queries include bearer auth header when JWT is available',
+      () async {
+        const workspacePrefix = '__test_specific_prefix_single_bearer_auth';
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+
+        String? seenAuthorization;
+        final dio = Dio();
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              seenAuthorization = options.headers['Authorization'] as String?;
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  statusCode: 200,
+                  data: {
+                    'state': {'entityId': 'entity-1'},
+                  },
+                ),
+              );
+            },
+          ),
+        );
+
+        final service = EntityStatePaginationService(
+          baseUrl: 'https://example.invalid',
+          dio: dio,
+          workspacePrefix: workspacePrefix,
+        );
+
+        service.updateAuthToken('jwt-token-123');
+        service.startProcessing();
+        service.enqueueJobFetchEntityState(
+          domainType: 'project',
+          domainId: 'project-123',
+          entityType: 'project',
+          entityId: 'entity-1',
+        );
+
+        await _waitForStatus(service, expectedStatus: 'completed');
+
+        expect(
+          seenAuthorization,
+          'Bearer jwt-token-123',
+          reason:
+              'single-entity state queries must send the active JWT as a bearer token',
+        );
+
+        await service.dispose();
+        await EntityStatePaginationService.deletePersistedJobsForWorkspacePrefix(
+          workspacePrefix: workspacePrefix,
+        );
+      },
+    );
+
+    test(
       'cross-domain collection jobs use /api/super/cross-domain path when super user access is requested',
       () async {
         const workspacePrefix =
