@@ -184,6 +184,10 @@ class IsarStorageService extends BaseStorageService {
     bool inspector = false,
     bool backupAndSwitchOnMissingSchemas = false,
   }) async {
+    SlttLogger.logger.info(
+      '[$_logPrefix] initialize start: dbName=$_databaseName, initialized=${_initialized}, existingInstanceOpen=${Isar.getInstance(_databaseName)?.isOpen ?? false}, dbDirectory=$_dbDirectory',
+    );
+
     if (_initialized) return;
 
     final existingInstance = Isar.getInstance(_databaseName);
@@ -231,12 +235,23 @@ class IsarStorageService extends BaseStorageService {
     );
 
     // Initialize Isar with all schemas
-    _isar = await Isar.open(
-      schemas,
-      directory: dir.path,
-      name: _databaseName,
-      inspector: inspector,
+    SlttLogger.logger.info(
+      '[$_logPrefix] calling Isar.open for dbName=$_databaseName with ${schemas.length} schemas and inspector=$inspector',
     );
+    try {
+      _isar = await Isar.open(
+        schemas,
+        directory: dir.path,
+        name: _databaseName,
+        inspector: inspector,
+      );
+    } catch (error, stackTrace) {
+      final concurrentInstance = Isar.getInstance(_databaseName);
+      SlttLogger.logger.severe(
+        '[$_logPrefix] Isar.open failed for dbName=$_databaseName. existingInstanceOpen=${concurrentInstance?.isOpen ?? false}. Error: $error\n$stackTrace',
+      );
+      rethrow;
+    }
     _dbPath = '${dir.path}/$_databaseName.isar';
     await _writeSchemaManifest(
       File(_schemaManifestPath(dir.path)),
