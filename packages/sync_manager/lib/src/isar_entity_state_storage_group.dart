@@ -58,29 +58,18 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
   )
   getAllByChange_domainIdEntityId;
 
-  /// Query every persisted state for a given domain type + entity type across
-  /// all domain IDs.
-  ///
-  /// This is intentionally narrow: only the project-member domain is supported
-  /// today. Other entity types are expected to raise [NotImplementedError] so
-  /// callers do not accidentally rely on broader fallback scanning.
-  final Future<List<T>> Function({
-    required String domainType,
-    required String entityType,
-  })?
-  _findAllByDomainTypeAndEntityType;
+  /// Query a persisted state set for the storage group, optionally filtering by
+  /// the entity ID when the backing Isar index can narrow the result set.
+  final Future<List<T>> Function({String? entityId})? _findAll;
 
-  Future<List<T>> findAllByDomainTypeAndEntityType({
-    required String domainType,
-    required String entityType,
-  }) {
-    final fn = _findAllByDomainTypeAndEntityType;
+  Future<List<T>> findAll({String? entityId}) {
+    final fn = _findAll;
     if (fn == null) {
       throw UnimplementedError(
-        'Cross-domain lookup is not implemented for entityType=$entityType',
+        'findAll is not implemented for entityType=${entityType.name}',
       );
     }
-    return fn(domainType: domainType, entityType: entityType);
+    return fn(entityId: entityId);
   }
 
   final StreamSubscription<void> Function({
@@ -108,13 +97,9 @@ class IsarEntityStateStorageGroup<T extends BaseEntityState> {
     required this.findByDomainWithPagination,
     required this.getAllByChange_domainIdEntityId,
     required this.deleteByDomain,
-    Future<List<T>> Function({
-      required String domainType,
-      required String entityType,
-    })?
-    findAllByDomainTypeAndEntityType,
+    Future<List<T>> Function({String? entityId})? findAll,
     this.lazyListenToEntityChanges,
-  }) : _findAllByDomainTypeAndEntityType = findAllByDomainTypeAndEntityType;
+  }) : _findAll = findAll;
 }
 
 /// Registry container that stores entity state storage groups. Each
