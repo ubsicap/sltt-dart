@@ -185,7 +185,7 @@ class IsarStorageService extends BaseStorageService {
     bool backupAndSwitchOnMissingSchemas = false,
   }) async {
     SlttLogger.logger.info(
-      '[$_logPrefix] initialize start: dbName=$_databaseName, initialized=${_initialized}, existingInstanceOpen=${Isar.getInstance(_databaseName)?.isOpen ?? false}, dbDirectory=$_dbDirectory',
+      '[$_logPrefix] initialize start: dbName=$_databaseName, initialized=$_initialized, existingInstanceOpen=${Isar.getInstance(_databaseName)?.isOpen ?? false}, dbDirectory=$_dbDirectory',
     );
 
     if (_initialized) return;
