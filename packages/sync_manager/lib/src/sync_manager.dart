@@ -17,6 +17,8 @@ import 'entity_state_pagination_service_config.dart';
 import 'isar_storage_service.dart';
 import 'sync_manager_websocket_client.dart';
 
+enum CloudServiceStatus { available, unavailable }
+
 class SyncManager {
   static SyncManager? _instance;
   static SyncManager get instance => _instance ??= SyncManager._();
@@ -63,7 +65,13 @@ class SyncManager {
   final StreamController<LocalDomainStatsUpdate>
   _localDomainStatsEventsController =
       StreamController<LocalDomainStatsUpdate>.broadcast();
+  final StreamController<CloudServiceStatus> _cloudServiceStatusController =
+      StreamController<CloudServiceStatus>.broadcast();
   String? _authToken;
+  CloudServiceStatus _cloudServiceStatus = CloudServiceStatus.available;
+  Timer? _cloudHealthProbeTimer;
+  DateTime? _lastCloudServiceStatusChangeAt;
+  bool _cloudHealthProbeInFlight = false;
 
   bool _ackDrivenStateProcessingRestorePending = false;
   bool _ackDrivenStateProcessingWasEnabled = false;
@@ -86,6 +94,11 @@ class SyncManager {
       _cloudDomainStatsEventsController.stream;
   Stream<LocalDomainStatsUpdate> get localDomainStatsEvents =>
       _localDomainStatsEventsController.stream;
+  Stream<CloudServiceStatus> get cloudServiceStatusEvents =>
+      _cloudServiceStatusController.stream;
+  CloudServiceStatus get cloudServiceStatus => _cloudServiceStatus;
+  DateTime? get lastCloudServiceStatusChangeAt =>
+      _lastCloudServiceStatusChangeAt;
   EntityStatePaginationService? _entityStatePaginationService;
   Stream<EntityStateFetchEvent> get singleEntityStateEvents =>
       entityStatePaginationService.singleEntityEvents;
@@ -106,6 +119,15 @@ class SyncManager {
       persistenceDbNamePrefix: config.persistenceDbNamePrefix,
       persistenceInspector: config.persistenceInspector,
       onStoreFetchedItems: storeFetchedEntityStates,
+      isCloudServiceAvailable: _shouldAllowRemoteRequest,
+      onCloudServiceUnavailable:
+          ({required String context, Object? error, StackTrace? stackTrace}) {
+            _reportCloudServiceUnavailable(
+              context: context,
+              error: error,
+              stackTrace: stackTrace,
+            );
+          },
     );
     if (_authToken != null && _authToken!.trim().isNotEmpty) {
       service.updateAuthToken(_authToken);
@@ -162,6 +184,139 @@ class SyncManager {
 
   bool get _entityStatePaginationProcessingEnabled =>
       _entityStatePaginationService?.isProcessingEnabled ?? false;
+
+  bool _shouldAllowRemoteRequest() {
+    return _cloudServiceStatus != CloudServiceStatus.unavailable;
+  }
+
+  bool _isCloudConnectivityFailure(dynamic error) {
+    if (error is TimeoutException) {
+      return true;
+    }
+    if (error is SocketException || error is HttpException) {
+      return true;
+    }
+    if (error is DioException) {
+      final type = error.type;
+      final networkTypes = {
+        DioExceptionType.connectionError,
+        DioExceptionType.connectionTimeout,
+        DioExceptionType.receiveTimeout,
+        DioExceptionType.sendTimeout,
+      };
+      if (networkTypes.contains(type)) {
+        return true;
+      }
+      final underlying = error.error;
+      if (underlying is SocketException ||
+          underlying is TimeoutException ||
+          underlying is HttpException) {
+        return true;
+      }
+      final statusCode = error.response?.statusCode;
+      return statusCode != null && statusCode >= 500;
+    }
+    return false;
+  }
+
+  void _reportCloudServiceUnavailable({
+    required String context,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    if (_cloudServiceStatus == CloudServiceStatus.unavailable) {
+      return;
+    }
+    SlttLogger.logger.warning(
+      '[SyncManager] [$context] Cloud service became unavailable because of a transport or AWS outage: $error',
+      error,
+      stackTrace,
+    );
+    _setCloudServiceStatus(CloudServiceStatus.unavailable);
+  }
+
+  Future<T> _runCloudRequest<T>(
+    String context,
+    Future<T> Function() request,
+  ) async {
+    try {
+      return await request();
+    } catch (error, stackTrace) {
+      if (_isCloudConnectivityFailure(error)) {
+        _reportCloudServiceUnavailable(
+          context: context,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  void _setCloudServiceStatus(CloudServiceStatus nextStatus) {
+    if (_cloudServiceStatus == nextStatus) {
+      return;
+    }
+    _cloudServiceStatus = nextStatus;
+    _lastCloudServiceStatusChangeAt = DateTime.now().toUtc();
+    SlttLogger.logger.warning(
+      '[SyncManager] Cloud service status changed to $nextStatus at $_lastCloudServiceStatusChangeAt',
+    );
+    if (nextStatus == CloudServiceStatus.unavailable) {
+      _entityStatePaginationService?.stopProcessing();
+    } else if (nextStatus == CloudServiceStatus.available) {
+      if (_entityStatePaginationService != null) {
+        startEntityStatePaginationService();
+      }
+    }
+    if (!_cloudServiceStatusController.isClosed) {
+      _cloudServiceStatusController.add(_cloudServiceStatus);
+    }
+  }
+
+  Future<void> _runCloudHealthProbe() async {
+    if (_cloudHealthProbeInFlight) {
+      return;
+    }
+    _cloudHealthProbeInFlight = true;
+    try {
+      final response = await _dio.get(
+        'https://dynamodb.us-east-1.amazonaws.com',
+        options: Options(
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+          connectTimeout: const Duration(seconds: 5),
+        ),
+      );
+      final isHealthy =
+          response.statusCode != null && response.statusCode! < 500;
+      if (isHealthy) {
+        if (_cloudServiceStatus == CloudServiceStatus.unavailable) {
+          _setCloudServiceStatus(CloudServiceStatus.available);
+        }
+        return;
+      }
+      _setCloudServiceStatus(CloudServiceStatus.unavailable);
+    } catch (e, stackTrace) {
+      SlttLogger.logger.warning(
+        '[SyncManager] Cloud health probe failed: $e',
+        e,
+        stackTrace,
+      );
+      _setCloudServiceStatus(CloudServiceStatus.unavailable);
+    } finally {
+      _cloudHealthProbeInFlight = false;
+    }
+  }
+
+  void _restartCloudHealthProbe() {
+    _cloudHealthProbeTimer?.cancel();
+    _cloudHealthProbeTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => unawaited(_runCloudHealthProbe()),
+    );
+    unawaited(_runCloudHealthProbe());
+  }
 
   void _trackAckDrivenEntityStateDownloadRequest(String requestKey) {
     if (_ackDrivenStateDownloadRequestKeys.isEmpty) {
@@ -268,6 +423,12 @@ class SyncManager {
   }) async {
     if (_initialized) return;
 
+    _cloudServiceStatusController.onListen = () {
+      if (_cloudServiceStatusController.hasListener) {
+        _cloudServiceStatusController.add(_cloudServiceStatus);
+      }
+    };
+
     _entityStatePaginationServiceConfig = entityStatePaginationServiceConfig;
     _entityStatePaginationService = entityStatePaginationService;
     if (_entityStatePaginationService != null) {
@@ -297,6 +458,7 @@ class SyncManager {
     _dio.options.sendTimeout = const Duration(seconds: 300);
 
     _ensureEntityStateEventSubscriptions();
+    _restartCloudHealthProbe();
 
     _initialized = true;
     SlttLogger.logger.info(
@@ -825,6 +987,12 @@ class SyncManager {
   bool get _hasWebSocketAuth => _authToken?.isNotEmpty == true;
 
   void _ensureWebSocketConnected() {
+    if (_cloudServiceStatus == CloudServiceStatus.unavailable) {
+      SlttLogger.logger.info(
+        '[SyncManager] Websocket connect suppressed while cloud service status is $_cloudServiceStatus',
+      );
+      return;
+    }
     if (_isWebSocketOpen || _isWebSocketConnecting) {
       return;
     }
@@ -849,6 +1017,12 @@ class SyncManager {
   }
 
   Future<void> _connectWebSocket() async {
+    if (_cloudServiceStatus == CloudServiceStatus.unavailable) {
+      SlttLogger.logger.info(
+        '[SyncManager] Skipping websocket connect while cloud service status is $_cloudServiceStatus',
+      );
+      return;
+    }
     _isWebSocketConnecting = true;
     try {
       await _refreshWebSocketAuthToken();
@@ -878,6 +1052,7 @@ class SyncManager {
         e,
         stackTrace,
       );
+      _setCloudServiceStatus(CloudServiceStatus.unavailable);
       _scheduleWebSocketReconnect();
     } finally {
       _isWebSocketConnecting = false;
@@ -1016,6 +1191,7 @@ class SyncManager {
   void _onWebSocketDone() {
     SlttLogger.logger.info('[SyncManager] Websocket connection closed');
     _webSocketClient = null;
+    _setCloudServiceStatus(CloudServiceStatus.unavailable);
     if (_autoDownsyncEnabled ||
         _subscribedDomainChangeKeys.isNotEmpty ||
         _subscribedDomainStatsKeys.isNotEmpty ||
@@ -1031,6 +1207,7 @@ class SyncManager {
       stackTrace,
     );
     _webSocketClient = null;
+    _setCloudServiceStatus(CloudServiceStatus.unavailable);
     if (_autoDownsyncEnabled ||
         _subscribedDomainChangeKeys.isNotEmpty ||
         _subscribedDomainStatsKeys.isNotEmpty ||
@@ -1678,6 +1855,13 @@ class SyncManager {
     dynamic e,
     StackTrace stackTrace,
   ) {
+    if (_isCloudConnectivityFailure(e)) {
+      _reportCloudServiceUnavailable(
+        context: context,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
     dynamic response;
     try {
       response = (e as dynamic).response;
@@ -1832,9 +2016,9 @@ class SyncManager {
         includeStateUpdates: true,
       );
 
-      final response = await _dio.post(
-        '$_cloudStorageUrl/api/changes',
-        data: req.toJson(),
+      final response = await _runCloudRequest(
+        'OutsyncToCloud',
+        () => _dio.post('$_cloudStorageUrl/api/changes', data: req.toJson()),
       );
 
       if (response.statusCode == 200) {
@@ -1929,10 +2113,17 @@ class SyncManager {
         }
 
         // First, get all domain ids from the cloud storage (authoritative source)
-        final response = await _dio.get(
-          '$_cloudStorageUrl/api/ids/$collection',
+        final response = await _runCloudRequest(
+          'DownsyncFromCloud',
+          () => _dio.get('$_cloudStorageUrl/api/ids/$collection'),
         );
         if (response.statusCode != 200) {
+          if ((response.statusCode ?? 0) >= 500) {
+            _reportCloudServiceUnavailable(
+              context: 'DownsyncFromCloud',
+              error: response,
+            );
+          }
           throw Exception(
             'Failed to get $collection ids from cloud: ${response.statusCode}',
           );
@@ -1990,7 +2181,10 @@ class SyncManager {
           final url =
               '$_cloudStorageUrl/api/changes/$collection/$encodedDomainId?cursor=$cursor';
 
-          final response = await _dio.get(url);
+          final response = await _runCloudRequest(
+            'DownsyncFromCloud',
+            () => _dio.get(url),
+          );
           final changesResponseData = response.data as Map<String, dynamic>;
 
           hasMore = changesResponseData['hasMore'] as bool;
@@ -2263,8 +2457,9 @@ class SyncManager {
       if (!skipCloudStats) {
         try {
           final collection = getCollectionByDomain(domainType) ?? 'projects';
-          final response = await _dio.get(
-            '$_cloudStorageUrl/api/stats/$collection/$domainId',
+          final response = await _runCloudRequest(
+            'GetSyncStatus',
+            () => _dio.get('$_cloudStorageUrl/api/stats/$collection/$domainId'),
           );
           if (response.statusCode == 200) {
             final stats = response.data as Map<String, dynamic>;
@@ -2353,10 +2548,17 @@ class SyncManager {
         return null;
       }
 
-      final response = await _dio.get(
-        '$_cloudStorageUrl/api/stats/$collection/$domainId',
+      final response = await _runCloudRequest(
+        'FetchLatestSeqByEntityTypeFromCloudStats',
+        () => _dio.get('$_cloudStorageUrl/api/stats/$collection/$domainId'),
       );
       if (response.statusCode != 200) {
+        if ((response.statusCode ?? 0) >= 500) {
+          _reportCloudServiceUnavailable(
+            context: 'FetchLatestSeqByEntityTypeFromCloudStats',
+            error: response,
+          );
+        }
         return null;
       }
 

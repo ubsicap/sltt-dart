@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:isar_community/isar.dart';
@@ -20,6 +21,13 @@ typedef StoreFetchedEntityStatesCallback =
       required String entityType,
       required List<Map<String, dynamic>> items,
       required DateTime storedAt,
+    });
+typedef CloudServiceAvailabilityChecker = bool Function();
+typedef CloudServiceUnavailableReporter =
+    void Function({
+      required String context,
+      Object? error,
+      StackTrace? stackTrace,
     });
 
 class EntityStateFetchEvent {
@@ -127,10 +135,14 @@ class EntityStatePaginationService {
     this.persistenceDbNamePrefix = 'entity_state_pagination_jobs',
     this.persistenceInspector = true,
     StoreFetchedEntityStatesCallback? onStoreFetchedItems,
+    CloudServiceAvailabilityChecker? isCloudServiceAvailable,
+    CloudServiceUnavailableReporter? onCloudServiceUnavailable,
     Dio? dio,
   }) : _baseUrl = baseUrl,
        _dio = dio ?? Dio(),
-       _onStoreFetchedItems = onStoreFetchedItems {
+       _onStoreFetchedItems = onStoreFetchedItems,
+       _isCloudServiceAvailable = isCloudServiceAvailable,
+       _onCloudServiceUnavailable = onCloudServiceUnavailable {
     _requestLimiter = RequestLimiter(maxConcurrentRequests);
     if (persistJobs) {
       _jobStore = EntityStatePaginationJobPersistenceStore(
@@ -151,6 +163,8 @@ class EntityStatePaginationService {
   final bool persistenceInspector;
   final Dio _dio;
   StoreFetchedEntityStatesCallback? _onStoreFetchedItems;
+  final CloudServiceAvailabilityChecker? _isCloudServiceAvailable;
+  final CloudServiceUnavailableReporter? _onCloudServiceUnavailable;
   late final RequestLimiter _requestLimiter;
   EntityStatePaginationJobPersistenceStore? _jobStore;
   final StreamController<EntityStateFetchEvent> _singleEntityEventsController =
@@ -174,6 +188,79 @@ class EntityStatePaginationService {
       return Options();
     }
     return Options(headers: {'Authorization': 'Bearer $token'});
+  }
+
+  bool get _cloudRequestsAvailable =>
+      _isCloudServiceAvailable == null || _isCloudServiceAvailable();
+
+  void _reportCloudServiceUnavailable({
+    required String context,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    _onCloudServiceUnavailable?.call(
+      context: context,
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  bool _isCloudTransportFailure(dynamic error) {
+    if (error is TimeoutException) {
+      return true;
+    }
+    if (error is SocketException || error is HttpException) {
+      return true;
+    }
+    if (error is DioException) {
+      final type = error.type;
+      final networkTypes = {
+        DioExceptionType.connectionError,
+        DioExceptionType.connectionTimeout,
+        DioExceptionType.receiveTimeout,
+        DioExceptionType.sendTimeout,
+      };
+      if (networkTypes.contains(type)) {
+        return true;
+      }
+      final underlying = error.error;
+      if (underlying is SocketException ||
+          underlying is TimeoutException ||
+          underlying is HttpException) {
+        return true;
+      }
+      final statusCode = error.response?.statusCode;
+      return statusCode != null && statusCode >= 500;
+    }
+    return false;
+  }
+
+  Future<Response<T>> _requestCloudWithAvailabilityGuard<T>({
+    required String context,
+    required Future<Response<T>> Function() request,
+  }) async {
+    if (!_cloudRequestsAvailable) {
+      _reportCloudServiceUnavailable(
+        context: context,
+        error: StateError('Cloud service unavailable for entity state request'),
+      );
+      throw StateError(
+        'Entity state cloud requests are temporarily unavailable.',
+      );
+    }
+
+    try {
+      return await request();
+    } catch (error, stackTrace) {
+      if (_isCloudTransportFailure(error)) {
+        _reportCloudServiceUnavailable(
+          context: context,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+      rethrow;
+    }
   }
 
   bool _processingQueue = false;
@@ -816,11 +903,26 @@ class EntityStatePaginationService {
 
   void _processQueue() {
     if (_processingQueue || !_enabled) return;
+    if (!_cloudRequestsAvailable) {
+      SlttLogger.logger.info(
+        '[EntityStateQueue] Cloud service is unavailable; deferring entity-state remote requests until recovery.',
+      );
+      _notifyQueueCountsChanged();
+      return;
+    }
     _processingQueue = true;
 
     Future<void>.microtask(() async {
       try {
         while (_enabled && _queueLifo.isNotEmpty) {
+          if (!_cloudRequestsAvailable) {
+            SlttLogger.logger.info(
+              '[EntityStateQueue] Cloud service became unavailable while processing; pausing the queue.',
+            );
+            _notifyQueueCountsChanged();
+            return;
+          }
+
           await _requestLimiter.acquire();
 
           if (!_enabled) {
@@ -877,7 +979,10 @@ class EntityStatePaginationService {
     final items = <Map<String, dynamic>>[];
 
     try {
-      response = await _dio.get(url, options: _requestOptionsWithAuth());
+      response = await _requestCloudWithAvailabilityGuard(
+        context: 'EntityStateQueueSingleFetch',
+        request: () => _dio.get(url, options: _requestOptionsWithAuth()),
+      );
       final body = (response.data as Map).cast<String, dynamic>();
       final state = body['state'];
 
@@ -1083,10 +1188,13 @@ class EntityStatePaginationService {
     bool hasMore = false;
 
     try {
-      response = await _dio.get(
-        url,
-        queryParameters: query,
-        options: _requestOptionsWithAuth(),
+      response = await _requestCloudWithAvailabilityGuard(
+        context: 'EntityStateQueueCollectionFetch',
+        request: () => _dio.get(
+          url,
+          queryParameters: query,
+          options: _requestOptionsWithAuth(),
+        ),
       );
       final body = (response.data as Map).cast<String, dynamic>();
       final dynamic itemsRaw = body['items'];
