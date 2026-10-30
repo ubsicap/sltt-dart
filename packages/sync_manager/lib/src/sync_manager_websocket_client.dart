@@ -63,25 +63,29 @@ class SyncManagerWebSocketClient implements SyncManagerWebSocketConnection {
   final WebSocketDoneHandler? onDone;
   final WebSocketErrorHandler? onError;
 
+  @override
   bool get isOpen =>
       _webSocket != null && _webSocket!.readyState == WebSocket.open;
+  @override
   bool get isConnecting => _isConnecting;
   bool get hasAuth => _authToken?.isNotEmpty == true;
 
   String get cloudWssUrl => _cloudWssUrl;
+  @override
   String? get authToken => _authToken;
 
+  @override
   void updateAuthToken(String authToken) {
     _authToken = authToken;
   }
 
+  @override
   void updateCloudWssUrl(String cloudWssUrl) {
     _cloudWssUrl = cloudWssUrl;
   }
 
-  Future<void> connect({
-    Duration timeout = const Duration(seconds: 15),
-  }) async {
+  @override
+  Future<void> connect({Duration timeout = const Duration(seconds: 15)}) async {
     if (isOpen) return;
     if (_isConnecting) {
       throw StateError('Websocket connection is already in progress');
@@ -104,19 +108,16 @@ class SyncManagerWebSocketClient implements SyncManagerWebSocketConnection {
         // WebSocket.connect itself is not cancellable. Close a socket if the
         // underlying handshake completes after our timeout has fired.
         unawaited(
-          connectFuture.then<void>(
-            (lateSocket) async {
-              await lateSocket.close(
-                WebSocketStatus.goingAway,
-                'connect_timed_out',
-              );
-            },
-            onError: (Object _) {},
-          ),
+          connectFuture.then<void>((lateSocket) async {
+            await lateSocket.close(
+              WebSocketStatus.goingAway,
+              'connect_timed_out',
+            );
+          }, onError: (Object _) {}),
         );
         rethrow;
       }
-      final connectedSocket = socket!;
+      final connectedSocket = socket;
       _webSocket = connectedSocket;
       connectedSocket.pingInterval = const Duration(seconds: 20);
       connectedSocket.listen(
@@ -148,6 +149,7 @@ class SyncManagerWebSocketClient implements SyncManagerWebSocketConnection {
     }
   }
 
+  @override
   Future<void> disconnect() async {
     final socket = _webSocket;
     _webSocket = null;
@@ -158,6 +160,7 @@ class SyncManagerWebSocketClient implements SyncManagerWebSocketConnection {
     }
   }
 
+  @override
   void send(Map<String, dynamic> message) {
     if (!isOpen) {
       throw StateError('Websocket is not open');
@@ -165,6 +168,7 @@ class SyncManagerWebSocketClient implements SyncManagerWebSocketConnection {
     _webSocket?.add(jsonEncode(message));
   }
 
+  @override
   void subscribe(
     String domainType, {
     String domainId = '',

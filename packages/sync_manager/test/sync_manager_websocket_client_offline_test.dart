@@ -96,10 +96,14 @@ void main() {
 
     test('forwards server acknowledgments to the message handler', () async {
       final received = <dynamic>[];
+      final messageReceived = Completer<void>();
       final ackClient = SyncManagerWebSocketClient(
         cloudWssUrl: 'wss://unit.test/ws',
         connector: (url, {headers}) async => socket,
-        onMessage: received.add,
+        onMessage: (message) {
+          received.add(message);
+          if (!messageReceived.isCompleted) messageReceived.complete();
+        },
       );
       await ackClient.connect();
       final ack = {
@@ -112,6 +116,7 @@ void main() {
       };
 
       socket.serverSend(jsonEncode(ack));
+      await messageReceived.future.timeout(const Duration(seconds: 1));
 
       expect(received, [jsonEncode(ack)]);
       await ackClient.disconnect();
@@ -126,6 +131,7 @@ class FakeWebSocket implements WebSocket {
   final List<String> sentMessages = <String>[];
   int _readyState = WebSocket.connecting;
   int closeCalls = 0;
+  @override
   Duration? pingInterval;
 
   FakeWebSocket() {
