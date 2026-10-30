@@ -250,7 +250,14 @@ class IsarStorageService extends BaseStorageService {
       SlttLogger.logger.severe(
         '[$_logPrefix] Isar.open failed for dbName=$_databaseName. existingInstanceOpen=${concurrentInstance?.isOpen ?? false}. Error: $error\n$stackTrace',
       );
-      rethrow;
+      if (concurrentInstance != null && concurrentInstance.isOpen) {
+        SlttLogger.logger.warning(
+          '[$_logPrefix] Reusing already-open Isar instance for database $_databaseName after open failure.',
+        );
+        _isar = concurrentInstance;
+      } else {
+        rethrow;
+      }
     }
     _dbPath = '${dir.path}/$_databaseName.isar';
     await _writeSchemaManifest(
