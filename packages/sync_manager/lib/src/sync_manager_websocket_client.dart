@@ -8,6 +8,8 @@ typedef WebSocketMessageHandler = void Function(dynamic rawMessage);
 typedef WebSocketDoneHandler = void Function();
 typedef WebSocketErrorHandler =
     void Function(dynamic error, StackTrace stackTrace);
+typedef WebSocketConnector =
+    Future<WebSocket> Function(String url, {Map<String, dynamic>? headers});
 
 class SyncManagerWebSocketClient {
   SyncManagerWebSocketClient({
@@ -16,12 +18,15 @@ class SyncManagerWebSocketClient {
     this.onMessage,
     this.onDone,
     this.onError,
+    WebSocketConnector? connector,
   }) : _cloudWssUrl = cloudWssUrl,
-       _authToken = authToken;
+       _authToken = authToken,
+       _connector = connector ?? WebSocket.connect;
 
   String _cloudWssUrl;
   String? _authToken;
   WebSocket? _webSocket;
+  final WebSocketConnector _connector;
   bool _isConnecting = false;
 
   final WebSocketMessageHandler? onMessage;
@@ -44,41 +49,78 @@ class SyncManagerWebSocketClient {
     _cloudWssUrl = cloudWssUrl;
   }
 
-  Future<void> connect() async {
-    if (isOpen || _isConnecting) {
-      return;
+  Future<void> connect({Duration timeout = const Duration(seconds: 15)}) async {
+    if (isOpen) return;
+    if (_isConnecting) {
+      throw StateError('Websocket connection is already in progress');
     }
+
     _isConnecting = true;
+    WebSocket? socket;
     try {
       final headers = <String, String>{};
       if (hasAuth) {
         headers['Authorization'] = 'Bearer $_authToken';
       }
-      _webSocket = await WebSocket.connect(
+      final connectFuture = _connector(
         _cloudWssUrl,
         headers: headers.isEmpty ? null : headers,
       );
-      _webSocket?.pingInterval = const Duration(seconds: 20);
-      _webSocket?.listen(
+      try {
+        socket = await connectFuture.timeout(timeout);
+      } on TimeoutException {
+        // WebSocket.connect itself is not cancellable. Close a socket if the
+        // underlying handshake completes after our timeout has fired.
+        unawaited(
+          connectFuture.then<void>((lateSocket) async {
+            await lateSocket.close(
+              WebSocketStatus.goingAway,
+              'connect_timed_out',
+            );
+          }, onError: (Object _) {}),
+        );
+        rethrow;
+      }
+      final connectedSocket = socket;
+      _webSocket = connectedSocket;
+      connectedSocket.pingInterval = const Duration(seconds: 20);
+      connectedSocket.listen(
         onMessage,
-        onDone: onDone,
-        onError: (error, stackTrace) {
-          onError?.call(error, stackTrace);
+        onDone: () {
+          if (identical(_webSocket, connectedSocket)) _webSocket = null;
+          onDone?.call();
         },
-        cancelOnError: true,
+        onError: (error, stackTrace) {
+          // Keep the stream alive long enough to receive onDone as well. The
+          // manager's callback is guarded by client identity.
+          onError?.call(error, stackTrace);
+          unawaited(
+            connectedSocket.close(WebSocketStatus.goingAway, 'stream_error'),
+          );
+        },
+        cancelOnError: false,
       );
+    } catch (_) {
+      if (identical(_webSocket, socket)) _webSocket = null;
+      try {
+        await socket?.close(WebSocketStatus.goingAway, 'connect_failed');
+      } catch (_) {
+        // Ignore cleanup errors; preserve the original connect failure.
+      }
+      rethrow;
     } finally {
       _isConnecting = false;
     }
   }
 
   Future<void> disconnect() async {
+    final socket = _webSocket;
+    _webSocket = null;
     try {
-      await _webSocket?.close(WebSocketStatus.normalClosure, 'client_shutdown');
+      await socket?.close(WebSocketStatus.normalClosure, 'client_shutdown');
     } catch (_) {
       // ignore
     }
-    _webSocket = null;
   }
 
   void send(Map<String, dynamic> message) {

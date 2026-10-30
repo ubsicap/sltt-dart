@@ -16,6 +16,7 @@ import 'entity_state_pagination_service.dart';
 import 'entity_state_pagination_service_config.dart';
 import 'isar_storage_service.dart';
 import 'sync_manager_websocket_client.dart';
+import 'websocket_subscription_registry.dart';
 
 enum CloudServiceStatus { available, unavailable }
 
@@ -53,9 +54,27 @@ class SyncManager {
   Duration localDomainStatsDebounceDuration = const Duration(milliseconds: 500);
   bool _autoOutsyncEnabled = false;
   bool _autoDownsyncEnabled = false;
-  final Set<String> _subscribedDomainChangeKeys = <String>{};
-  final Set<String> _subscribedDomainStatsKeys = <String>{};
-  final Set<String> _subscribedDomainTypeKeys = <String>{};
+  // Owns desired, pending, and server-confirmed remote subscription state.
+  // Confirmed state is valid only for the current WebSocket connection.
+  final WebSocketSubscriptionRegistry _subscriptionRegistry =
+      WebSocketSubscriptionRegistry();
+
+  // Read-only internal views keep the existing orchestration code readable;
+  // all state transitions are delegated to the registry.
+  Set<String> get _subscribedDomainChangeKeys =>
+      _subscriptionRegistry.confirmedDomainChangeKeys;
+  Set<String> get _subscribedDomainStatsKeys =>
+      _subscriptionRegistry.confirmedDomainStatsKeys;
+  Set<String> get _subscribedDomainTypeKeys =>
+      _subscriptionRegistry.confirmedDomainTypeKeys;
+  Set<String> get _pendingDomainChangeKeys =>
+      _subscriptionRegistry.pendingDomainChangeKeys;
+  Set<String> get _pendingDomainStatsKeys =>
+      _subscriptionRegistry.pendingDomainStatsKeys;
+  Set<String> get _pendingDomainTypeKeys =>
+      _subscriptionRegistry.pendingDomainTypeKeys;
+  Map<String, Map<String, dynamic>> get _pendingWebSocketUnsubscriptions =>
+      _subscriptionRegistry.pendingUnsubscriptions;
   final Map<String, int> _remoteLastDomainSeqByDomain = {};
   final Map<String, DateTime> _remoteLastDomainChangeAtByDomain = {};
   final Map<String, DomainStatsResponse> _cachedCloudDomainStatsByDomain = {};
@@ -83,13 +102,22 @@ class SyncManager {
   Timer? _webSocketReconnectTimer;
   bool _downsyncInFlight = false;
 
-  // Public getters for testing
+  // Read-only subscription snapshots are useful to diagnostics and callers.
   bool get autoOutsyncEnabled => _autoOutsyncEnabled;
   bool get autoDownsyncEnabled => _autoDownsyncEnabled;
   StreamSubscription<void>? get changeLogSubscription => _changeLogSubscription;
-  Set<String> get subscribedDomainChangeKeys => _subscribedDomainChangeKeys;
-  Set<String> get subscribedDomainStatsKeys => _subscribedDomainStatsKeys;
-  Set<String> get subscribedDomainTypeKeys => _subscribedDomainTypeKeys;
+  Set<String> get subscribedDomainChangeKeys =>
+      _subscriptionRegistry.confirmedDomainChangeKeys;
+  Set<String> get subscribedDomainStatsKeys =>
+      _subscriptionRegistry.confirmedDomainStatsKeys;
+  Set<String> get subscribedDomainTypeKeys =>
+      _subscriptionRegistry.confirmedDomainTypeKeys;
+  Set<String> get pendingDomainChangeKeys =>
+      _subscriptionRegistry.pendingDomainChangeKeys;
+  Set<String> get pendingDomainStatsKeys =>
+      _subscriptionRegistry.pendingDomainStatsKeys;
+  Set<String> get pendingDomainTypeKeys =>
+      _subscriptionRegistry.pendingDomainTypeKeys;
   Stream<CloudDomainStatsUpdate> get cloudDomainStatsEvents =>
       _cloudDomainStatsEventsController.stream;
   Stream<LocalDomainStatsUpdate> get localDomainStatsEvents =>
@@ -527,9 +555,7 @@ class SyncManager {
 
     _autoDownsyncEnabled = false;
     SlttLogger.logger.info('[SyncManager] Auto-downsync disabled');
-    if (_subscribedDomainChangeKeys.isEmpty &&
-        _subscribedDomainStatsKeys.isEmpty &&
-        _subscribedDomainTypeKeys.isEmpty) {
+    if (_subscriptionRegistry.isEmpty) {
       _disconnectWebSocket();
     }
   }
@@ -553,7 +579,7 @@ class SyncManager {
   }) {
     final key = _domainChangeKey(domainType: domainType, domainId: domainId);
     if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
-      if (_subscribedDomainStatsKeys.add(key)) {
+      if (_subscriptionRegistry.requestSubscribe(WebSocketSubscriptionKind.domainStats, key)) {
         SlttLogger.logger.info(
           '[SyncManager] Subscribed to domain stats: $key',
         );
@@ -567,7 +593,7 @@ class SyncManager {
     }
 
     if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
-      if (_subscribedDomainChangeKeys.add(key)) {
+      if (_subscriptionRegistry.requestSubscribe(WebSocketSubscriptionKind.domainChange, key)) {
         SlttLogger.logger.info(
           '[SyncManager] Subscribed to domain changes: $key',
         );
@@ -615,7 +641,7 @@ class SyncManager {
       domainType: domainType,
       notifyType: normalizedNotifyType,
     );
-    if (_subscribedDomainTypeKeys.add(key)) {
+    if (_subscriptionRegistry.requestSubscribe(WebSocketSubscriptionKind.domainType, key)) {
       SlttLogger.logger.info('[SyncManager] Subscribed to domain type: $key');
       _trySendDomainTypeSubscription(
         domainType: domainType,
@@ -634,7 +660,7 @@ class SyncManager {
   }) {
     final key = _domainChangeKey(domainType: domainType, domainId: domainId);
     if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
-      if (_subscribedDomainStatsKeys.remove(key)) {
+      if (_subscriptionRegistry.requestUnsubscribe(WebSocketSubscriptionKind.domainStats, key)) {
         SlttLogger.logger.info(
           '[SyncManager] Unsubscribed from domain stats: $key',
         );
@@ -645,7 +671,7 @@ class SyncManager {
         _unsubscribeFromLocalDomainStats(domainType, domainId);
       }
     } else if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
-      if (_subscribedDomainChangeKeys.remove(key)) {
+      if (_subscriptionRegistry.requestUnsubscribe(WebSocketSubscriptionKind.domainChange, key)) {
         SlttLogger.logger.info(
           '[SyncManager] Unsubscribed from domain changes: $key',
         );
@@ -661,9 +687,7 @@ class SyncManager {
       );
     }
 
-    if (_subscribedDomainChangeKeys.isEmpty &&
-        _subscribedDomainStatsKeys.isEmpty &&
-        _subscribedDomainTypeKeys.isEmpty) {
+    if (_subscriptionRegistry.isEmpty) {
       _disconnectWebSocket();
     }
   }
@@ -687,7 +711,7 @@ class SyncManager {
       domainType: domainType,
       notifyType: normalizedNotifyType,
     );
-    if (_subscribedDomainTypeKeys.remove(key)) {
+    if (_subscriptionRegistry.requestUnsubscribe(WebSocketSubscriptionKind.domainType, key)) {
       SlttLogger.logger.info(
         '[SyncManager] Unsubscribed from domain type: $key',
       );
@@ -702,9 +726,7 @@ class SyncManager {
       );
     }
 
-    if (_subscribedDomainChangeKeys.isEmpty &&
-        _subscribedDomainStatsKeys.isEmpty &&
-        _subscribedDomainTypeKeys.isEmpty) {
+    if (_subscriptionRegistry.isEmpty) {
       _disconnectWebSocket();
     }
   }
@@ -839,10 +861,57 @@ class SyncManager {
     return '$domainType|$notifyType|${scopeUserId ?? ''}';
   }
 
+  String _webSocketSubscriptionIdentity(Map<String, dynamic> message) =>
+      '${message['notifyType'] ?? ''}|${message['domainType'] ?? ''}|'
+      '${message['domainId'] ?? ''}|${message['entityType'] ?? WebsocketConstants.lastRecordEntityType}|'
+      '${message['userId'] ?? ''}';
+
+  bool get _hasWebSocketWork =>
+      _autoDownsyncEnabled || !_subscriptionRegistry.isEmpty;
+
+  void _sendOrQueueWebSocketUnsubscription(Map<String, dynamic> payload) {
+    final identity = _webSocketSubscriptionIdentity(payload);
+    _subscriptionRegistry.queueUnsubscription(identity, payload);
+    if (_isWebSocketOpen) {
+      _webSocketClient!.send(payload);
+      SlttLogger.logger.info(
+        '[SyncManager] Sent websocket unsubscribe; awaiting ack for $identity',
+      );
+    } else {
+      SlttLogger.logger.info(
+        '[SyncManager] Queued websocket unsubscribe pending connection for $identity',
+      );
+      _ensureWebSocketConnected();
+    }
+  }
+
+  void _clearPendingUnsubscription({
+    required String domainType,
+    String domainId = '',
+    required String notifyType,
+    String entityType = WebsocketConstants.lastRecordEntityType,
+    String? userId,
+  }) {
+    _subscriptionRegistry.removeUnsubscription(
+      _webSocketSubscriptionIdentity({
+        'notifyType': notifyType,
+        'domainType': domainType,
+        'domainId': domainId,
+        'entityType': entityType,
+        if (userId != null && userId.isNotEmpty) 'userId': userId,
+      }),
+    );
+  }
+
   void _trySendDomainChangeSubscription({
     required String domainType,
     required String domainId,
   }) {
+    _clearPendingUnsubscription(
+      domainType: domainType,
+      domainId: domainId,
+      notifyType: WebsocketConstants.notifyTypeDomainChange,
+    );
     if (_isWebSocketOpen) {
       _webSocketClient?.subscribe(
         domainType,
@@ -866,6 +935,12 @@ class SyncManager {
     required String domainType,
     required String domainId,
   }) {
+    _clearPendingUnsubscription(
+      domainType: domainType,
+      domainId: domainId,
+      notifyType: WebsocketConstants.notifyTypeDomainStats,
+      entityType: WebsocketConstants.wildcardEntityType,
+    );
     if (_isWebSocketOpen) {
       final payload = {
         'action': WebsocketConstants.actionSubscribe,
@@ -894,6 +969,12 @@ class SyncManager {
     required String entityType,
     String? userId,
   }) {
+    _clearPendingUnsubscription(
+      domainType: domainType,
+      notifyType: notifyType,
+      entityType: entityType,
+      userId: userId,
+    );
     if (_isWebSocketOpen) {
       _webSocketClient?.subscribe(
         domainType,
@@ -917,46 +998,26 @@ class SyncManager {
     required String domainType,
     required String domainId,
   }) {
-    if (_isWebSocketOpen) {
-      _webSocketClient?.unsubscribe(
-        domainType,
-        domainId: domainId,
-        notifyType: WebsocketConstants.notifyTypeDomainChange,
-      );
-      SlttLogger.logger.info(
-        '[SyncManager] Sent websocket unsubscribe for $domainType/$domainId',
-      );
-    } else {
-      SlttLogger.logger.info(
-        '[SyncManager] Websocket not connected; queued unsubscribe for '
-        '$domainType/$domainId',
-      );
-    }
-
-    if (_subscribedDomainChangeKeys.isEmpty) {
-      _disconnectWebSocket();
-    }
+    _sendOrQueueWebSocketUnsubscription({
+      'action': WebsocketConstants.actionUnsubscribe,
+      'notifyType': WebsocketConstants.notifyTypeDomainChange,
+      'domainType': domainType,
+      'domainId': domainId,
+      'entityType': WebsocketConstants.lastRecordEntityType,
+    });
   }
 
   void _trySendDomainStatsUnsubscription({
     required String domainType,
     required String domainId,
   }) {
-    if (_isWebSocketOpen) {
-      _webSocketClient?.unsubscribe(
-        domainType,
-        domainId: domainId,
-        notifyType: WebsocketConstants.notifyTypeDomainStats,
-      );
-      SlttLogger.logger.info(
-        '[SyncManager] Sent websocket stats unsubscribe for $domainType/$domainId',
-      );
-    } else {
-      SlttLogger.logger.info(
-        '[SyncManager] Websocket not connected; queued stats unsubscribe for '
-        '$domainType/$domainId',
-      );
-    }
+    _sendOrQueueWebSocketUnsubscription({
+      'action': WebsocketConstants.actionUnsubscribe,
+      'notifyType': WebsocketConstants.notifyTypeDomainStats,
+      'domainType': domainType,
+      'domainId': domainId,
+      'entityType': WebsocketConstants.wildcardEntityType,
+    });
   }
 
   void _trySendDomainTypeUnsubscription({
@@ -965,21 +1026,14 @@ class SyncManager {
     required String entityType,
     String? userId,
   }) {
-    if (_isWebSocketOpen) {
-      _webSocketClient?.unsubscribe(
-        domainType,
-        notifyType: notifyType,
-        entityType: entityType,
-        userId: userId,
-      );
-      SlttLogger.logger.info(
-        '[SyncManager] Sent websocket $notifyType unsubscribe for domainType=$domainType entityType=$entityType userId=${userId ?? ''}',
-      );
-    } else {
-      SlttLogger.logger.info(
-        '[SyncManager] Websocket not connected; queued $notifyType unsubscribe for domainType=$domainType',
-      );
-    }
+    _sendOrQueueWebSocketUnsubscription({
+      'action': WebsocketConstants.actionUnsubscribe,
+      'notifyType': notifyType,
+      'domainType': domainType,
+      'domainId': '',
+      'entityType': entityType,
+      if (userId != null && userId.isNotEmpty) 'userId': userId,
+    });
   }
 
   bool get _isWebSocketOpen => _webSocketClient?.isOpen == true;
@@ -987,19 +1041,10 @@ class SyncManager {
   bool get _hasWebSocketAuth => _authToken?.isNotEmpty == true;
 
   void _ensureWebSocketConnected() {
-    if (_cloudServiceStatus == CloudServiceStatus.unavailable) {
-      SlttLogger.logger.info(
-        '[SyncManager] Websocket connect suppressed while cloud service status is $_cloudServiceStatus',
-      );
-      return;
-    }
     if (_isWebSocketOpen || _isWebSocketConnecting) {
       return;
     }
-    if (!_autoDownsyncEnabled &&
-        _subscribedDomainChangeKeys.isEmpty &&
-        _subscribedDomainStatsKeys.isEmpty &&
-        _subscribedDomainTypeKeys.isEmpty) {
+    if (!_hasWebSocketWork) {
       return;
     }
     if (!_hasWebSocketAuth && _hostAuthTokenRequestPort != null) {
@@ -1017,24 +1062,35 @@ class SyncManager {
   }
 
   Future<void> _connectWebSocket() async {
-    if (_cloudServiceStatus == CloudServiceStatus.unavailable) {
-      SlttLogger.logger.info(
-        '[SyncManager] Skipping websocket connect while cloud service status is $_cloudServiceStatus',
-      );
+    if (_isWebSocketConnecting || _isWebSocketOpen || !_hasWebSocketWork) {
       return;
     }
     _isWebSocketConnecting = true;
     try {
       await _refreshWebSocketAuthToken();
-      _webSocketClient ??= SyncManagerWebSocketClient(
-        cloudWssUrl: _cloudWssUrl,
-        authToken: _authToken,
-        onMessage: _handleWebSocketMessage,
-        onDone: _onWebSocketDone,
-        onError: _onWebSocketError,
-      );
-      if (_webSocketClient!.authToken != _authToken) {
-        _webSocketClient!.updateAuthToken(_authToken ?? '');
+      final existingClient = _webSocketClient;
+      if (existingClient == null) {
+        late final SyncManagerWebSocketClient client;
+        client = SyncManagerWebSocketClient(
+          cloudWssUrl: _cloudWssUrl,
+          authToken: _authToken,
+          onMessage: (message) {
+            if (identical(_webSocketClient, client)) {
+              _handleWebSocketMessage(message);
+            }
+          },
+          onDone: () {
+            if (identical(_webSocketClient, client)) _onWebSocketDone();
+          },
+          onError: (error, stackTrace) {
+            if (identical(_webSocketClient, client)) {
+              _onWebSocketError(error, stackTrace);
+            }
+          },
+        );
+        _webSocketClient = client;
+      } else if (existingClient.authToken != _authToken) {
+        existingClient.updateAuthToken(_authToken ?? '');
       }
       final authTokenInfo = _authToken?.isNotEmpty == true
           ? 'present len=${_authToken!.length}'
@@ -1043,8 +1099,10 @@ class SyncManager {
         '[SyncManager] Connecting websocket to: $_cloudWssUrl auth=$authTokenInfo',
       );
       await _webSocketClient!.connect();
+      if (!_webSocketClient!.isOpen) {
+        throw StateError('Websocket connect completed without an open socket');
+      }
       _webSocketReconnectAttempts = 0;
-      SlttLogger.logger.info('[SyncManager] Websocket connected');
       _sendPendingDomainChangeSubscriptions();
     } catch (e, stackTrace) {
       SlttLogger.logger.warning(
@@ -1157,10 +1215,7 @@ class SyncManager {
   }
 
   void _scheduleWebSocketReconnect() {
-    if (!_autoDownsyncEnabled &&
-        _subscribedDomainChangeKeys.isEmpty &&
-        _subscribedDomainStatsKeys.isEmpty &&
-        _subscribedDomainTypeKeys.isEmpty) {
+    if (!_hasWebSocketWork) {
       return;
     }
     _webSocketReconnectTimer?.cancel();
@@ -1169,10 +1224,7 @@ class SyncManager {
         ? 30
         : 2 << (_webSocketReconnectAttempts - 1);
     _webSocketReconnectTimer = Timer(Duration(seconds: delaySeconds), () {
-      if (_autoDownsyncEnabled ||
-          _subscribedDomainChangeKeys.isNotEmpty ||
-          _subscribedDomainStatsKeys.isNotEmpty ||
-          _subscribedDomainTypeKeys.isNotEmpty) {
+      if (_hasWebSocketWork) {
         unawaited(_connectWebSocket());
       }
     });
@@ -1184,23 +1236,23 @@ class SyncManager {
   Future<void> _disconnectWebSocket() async {
     _webSocketReconnectTimer?.cancel();
     _webSocketReconnectTimer = null;
-    await _webSocketClient?.disconnect();
+    final client = _webSocketClient;
     _webSocketClient = null;
+    await client?.disconnect();
   }
 
   void _onWebSocketDone() {
     SlttLogger.logger.info('[SyncManager] Websocket connection closed');
+    _moveConfirmedSubscriptionsToPending();
     _webSocketClient = null;
     _setCloudServiceStatus(CloudServiceStatus.unavailable);
-    if (_autoDownsyncEnabled ||
-        _subscribedDomainChangeKeys.isNotEmpty ||
-        _subscribedDomainStatsKeys.isNotEmpty ||
-        _subscribedDomainTypeKeys.isNotEmpty) {
+    if (_hasWebSocketWork) {
       _scheduleWebSocketReconnect();
     }
   }
 
   void _onWebSocketError(dynamic error, StackTrace stackTrace) {
+    _moveConfirmedSubscriptionsToPending();
     SlttLogger.logger.warning(
       '[SyncManager] Websocket error: $error',
       error,
@@ -1208,32 +1260,34 @@ class SyncManager {
     );
     _webSocketClient = null;
     _setCloudServiceStatus(CloudServiceStatus.unavailable);
-    if (_autoDownsyncEnabled ||
-        _subscribedDomainChangeKeys.isNotEmpty ||
-        _subscribedDomainStatsKeys.isNotEmpty ||
-        _subscribedDomainTypeKeys.isNotEmpty) {
+    if (_hasWebSocketWork) {
       _scheduleWebSocketReconnect();
     }
   }
 
+  void _moveConfirmedSubscriptionsToPending() {
+    _subscriptionRegistry.onConnectionLost();
+  }
+
   void _sendPendingDomainChangeSubscriptions() {
-    if (_subscribedDomainChangeKeys.isEmpty &&
-        _subscribedDomainStatsKeys.isEmpty &&
-        _subscribedDomainTypeKeys.isEmpty) {
+    if (_pendingDomainChangeKeys.isEmpty &&
+        _pendingDomainStatsKeys.isEmpty &&
+        _pendingDomainTypeKeys.isEmpty &&
+        _pendingWebSocketUnsubscriptions.isEmpty) {
       SlttLogger.logger.info(
-        '[SyncManager] No pending websocket domain subscriptions to flush',
+        '[SyncManager] No pending websocket operations to flush',
       );
       return;
     }
     final totalPending =
-        _subscribedDomainChangeKeys.length +
-        _subscribedDomainStatsKeys.length +
-        _subscribedDomainTypeKeys.length;
+        _pendingDomainChangeKeys.length +
+        _pendingDomainStatsKeys.length +
+        _pendingDomainTypeKeys.length;
     SlttLogger.logger.info(
       '[SyncManager] Flushing $totalPending pending websocket domain subscriptions: '
-      '${_subscribedDomainChangeKeys.join(', ')}${_subscribedDomainChangeKeys.isNotEmpty && _subscribedDomainStatsKeys.isNotEmpty ? ', ' : ''}${_subscribedDomainStatsKeys.join(', ')}${(_subscribedDomainChangeKeys.isNotEmpty || _subscribedDomainStatsKeys.isNotEmpty) && _subscribedDomainTypeKeys.isNotEmpty ? ', ' : ''}${_subscribedDomainTypeKeys.join(', ')}',
+      '${_pendingDomainChangeKeys.join(', ')}${_pendingDomainChangeKeys.isNotEmpty && _pendingDomainStatsKeys.isNotEmpty ? ', ' : ''}${_pendingDomainStatsKeys.join(', ')}${(_pendingDomainChangeKeys.isNotEmpty || _pendingDomainStatsKeys.isNotEmpty) && _pendingDomainTypeKeys.isNotEmpty ? ', ' : ''}${_pendingDomainTypeKeys.join(', ')}',
     );
-    for (final key in _subscribedDomainChangeKeys) {
+    for (final key in _pendingDomainChangeKeys) {
       final parts = key.split('/');
       if (parts.length != 2) {
         SlttLogger.logger.warning(
@@ -1250,7 +1304,7 @@ class SyncManager {
         '[SyncManager] Sent queued websocket subscribe for ${parts[0]}/${parts[1]}',
       );
     }
-    for (final key in _subscribedDomainStatsKeys) {
+    for (final key in _pendingDomainStatsKeys) {
       final parts = key.split('/');
       if (parts.length != 2) {
         SlttLogger.logger.warning(
@@ -1268,7 +1322,7 @@ class SyncManager {
         '[SyncManager] Sent queued websocket stats subscribe for ${parts[0]}/${parts[1]}',
       );
     }
-    for (final key in _subscribedDomainTypeKeys) {
+    for (final key in _pendingDomainTypeKeys) {
       final parts = key.split('|');
       if (parts.length < 3) {
         SlttLogger.logger.warning(
@@ -1291,6 +1345,10 @@ class SyncManager {
       SlttLogger.logger.info(
         '[SyncManager] Sent queued websocket $notifyType subscribe for domainType=$domainType',
       );
+    }
+    for (final payload in _pendingWebSocketUnsubscriptions.values.toList()) {
+      if (!_isWebSocketOpen) break;
+      _webSocketClient!.send(payload);
     }
   }
 
@@ -1428,6 +1486,14 @@ class SyncManager {
     }
 
     if (_isRootDomainTypeNotification(notifyType)) {
+      final rootKey = _domainTypeSubscriptionKey(
+        domainType: domainType,
+        notifyType: notifyType,
+      );
+      _subscriptionRegistry.acknowledgeSubscribe(
+        WebSocketSubscriptionKind.domainType,
+        rootKey,
+      );
       await handleWebSocketRootDomainTypeAckMessage(message);
       return;
     }
@@ -1437,6 +1503,22 @@ class SyncManager {
         '[SyncManager] Websocket subscribe ack missing domainId for $domainType/$notifyType: $message',
       );
       return;
+    }
+
+    final acknowledgedKey = _domainChangeKey(
+      domainType: domainType,
+      domainId: domainId,
+    );
+    if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
+      _subscriptionRegistry.acknowledgeSubscribe(
+        WebSocketSubscriptionKind.domainStats,
+        acknowledgedKey,
+      );
+    } else if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
+      _subscriptionRegistry.acknowledgeSubscribe(
+        WebSocketSubscriptionKind.domainChange,
+        acknowledgedKey,
+      );
     }
 
     final data = message['stats'] as Map<String, dynamic>?;
@@ -1765,6 +1847,30 @@ class SyncManager {
       final action = message['action'] as String?;
       if (action == WebsocketConstants.actionSubscribe) {
         unawaited(_handleWebSocketActionSubscribeMessage(message));
+        return;
+      }
+      if (action == WebsocketConstants.actionUnsubscribe) {
+        if (message['status'] == 'ok') {
+          final ackIdentity = _webSocketSubscriptionIdentity(message);
+          if (_subscriptionRegistry.acknowledgeUnsubscription(ackIdentity) == null) {
+            // Some server acknowledgments omit optional scope fields such as
+            // userId. Only use the reduced match when it is unambiguous.
+            final ackBase = '${message['notifyType'] ?? ''}|'
+                '${message['domainType'] ?? ''}|${message['domainId'] ?? ''}|'
+                '${message['entityType'] ?? WebsocketConstants.lastRecordEntityType}|';
+            final candidates = _pendingWebSocketUnsubscriptions.keys
+                .where((key) => key.startsWith(ackBase))
+                .toList();
+            if (candidates.length == 1) {
+              _subscriptionRegistry.acknowledgeUnsubscription(candidates.single);
+            }
+          }
+          if (!_hasWebSocketWork) unawaited(_disconnectWebSocket());
+        } else {
+          SlttLogger.logger.warning(
+            '[SyncManager] Websocket unsubscribe ack failed: $message',
+          );
+        }
         return;
       }
       if (action == WebsocketConstants.actionChange) {
