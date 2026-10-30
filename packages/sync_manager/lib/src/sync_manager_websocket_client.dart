@@ -11,7 +11,37 @@ typedef WebSocketErrorHandler =
 typedef WebSocketConnector =
     Future<WebSocket> Function(String url, {Map<String, dynamic>? headers});
 
-class SyncManagerWebSocketClient {
+/// Narrow connection contract used by [SyncManager]. Keeping orchestration
+/// dependent on this interface allows deterministic fake connections in tests.
+abstract interface class SyncManagerWebSocketConnection {
+  bool get isOpen;
+  bool get isConnecting;
+  String? get authToken;
+
+  Future<void> connect();
+  Future<void> disconnect();
+  void updateAuthToken(String authToken);
+  void updateCloudWssUrl(String cloudWssUrl);
+  void send(Map<String, dynamic> message);
+  void subscribe(
+    String domainType, {
+    String domainId = '',
+    required String notifyType,
+    String entityType = WebsocketConstants.lastRecordEntityType,
+    String? userId,
+  });
+}
+
+typedef SyncManagerWebSocketClientFactory =
+    SyncManagerWebSocketConnection Function({
+      required String cloudWssUrl,
+      String? authToken,
+      WebSocketMessageHandler? onMessage,
+      WebSocketDoneHandler? onDone,
+      WebSocketErrorHandler? onError,
+    });
+
+class SyncManagerWebSocketClient implements SyncManagerWebSocketConnection {
   SyncManagerWebSocketClient({
     required String cloudWssUrl,
     String? authToken,
@@ -49,7 +79,9 @@ class SyncManagerWebSocketClient {
     _cloudWssUrl = cloudWssUrl;
   }
 
-  Future<void> connect({Duration timeout = const Duration(seconds: 15)}) async {
+  Future<void> connect({
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
     if (isOpen) return;
     if (_isConnecting) {
       throw StateError('Websocket connection is already in progress');
@@ -72,16 +104,19 @@ class SyncManagerWebSocketClient {
         // WebSocket.connect itself is not cancellable. Close a socket if the
         // underlying handshake completes after our timeout has fired.
         unawaited(
-          connectFuture.then<void>((lateSocket) async {
-            await lateSocket.close(
-              WebSocketStatus.goingAway,
-              'connect_timed_out',
-            );
-          }, onError: (Object _) {}),
+          connectFuture.then<void>(
+            (lateSocket) async {
+              await lateSocket.close(
+                WebSocketStatus.goingAway,
+                'connect_timed_out',
+              );
+            },
+            onError: (Object _) {},
+          ),
         );
         rethrow;
       }
-      final connectedSocket = socket;
+      final connectedSocket = socket!;
       _webSocket = connectedSocket;
       connectedSocket.pingInterval = const Duration(seconds: 20);
       connectedSocket.listen(

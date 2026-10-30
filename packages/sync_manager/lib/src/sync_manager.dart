@@ -24,7 +24,41 @@ class SyncManager {
   static SyncManager? _instance;
   static SyncManager get instance => _instance ??= SyncManager._();
 
-  SyncManager._();
+  SyncManager._()
+    : _webSocketClientFactory = _defaultWebSocketClientFactory,
+      _webSocketReconnectDelay = _defaultWebSocketReconnectDelay;
+
+  /// Creates an independently-owned manager with an injectable WebSocket
+  /// connection factory. This is also useful for embedding multiple managers
+  /// with different connection policies; it is not a test-only API.
+  SyncManager.withWebSocketClientFactory({
+    required SyncManagerWebSocketClientFactory webSocketClientFactory,
+    Duration Function(int attempt)? reconnectDelay,
+  }) : _webSocketClientFactory = webSocketClientFactory,
+       _webSocketReconnectDelay =
+           reconnectDelay ?? _defaultWebSocketReconnectDelay;
+
+  static SyncManagerWebSocketConnection _defaultWebSocketClientFactory({
+    required String cloudWssUrl,
+    String? authToken,
+    WebSocketMessageHandler? onMessage,
+    WebSocketDoneHandler? onDone,
+    WebSocketErrorHandler? onError,
+  }) => SyncManagerWebSocketClient(
+    cloudWssUrl: cloudWssUrl,
+    authToken: authToken,
+    onMessage: onMessage,
+    onDone: onDone,
+    onError: onError,
+  );
+
+  static Duration _defaultWebSocketReconnectDelay(int attempt) {
+    final delaySeconds = attempt > 6 ? 30 : 2 << (attempt - 1);
+    return Duration(seconds: delaySeconds);
+  }
+
+  final SyncManagerWebSocketClientFactory _webSocketClientFactory;
+  final Duration Function(int attempt) _webSocketReconnectDelay;
 
   final String instanceId = _generateInstanceId();
   final Dio _dio = Dio();
@@ -87,16 +121,15 @@ class SyncManager {
   final StreamController<CloudServiceStatus> _cloudServiceStatusController =
       StreamController<CloudServiceStatus>.broadcast();
   String? _authToken;
+  // Availability represents the WebSocket connection, not HTTP/API health.
   CloudServiceStatus _cloudServiceStatus = CloudServiceStatus.available;
-  Timer? _cloudHealthProbeTimer;
   DateTime? _lastCloudServiceStatusChangeAt;
-  bool _cloudHealthProbeInFlight = false;
 
   bool _ackDrivenStateProcessingRestorePending = false;
   bool _ackDrivenStateProcessingWasEnabled = false;
   final Set<String> _ackDrivenStateDownloadRequestKeys = <String>{};
   SendPort? _hostAuthTokenRequestPort;
-  SyncManagerWebSocketClient? _webSocketClient;
+  SyncManagerWebSocketConnection? _webSocketClient;
   bool _isWebSocketConnecting = false;
   int _webSocketReconnectAttempts = 0;
   Timer? _webSocketReconnectTimer;
@@ -302,6 +335,10 @@ class SyncManager {
     }
   }
 
+  // Retained for a future non-WebSocket context that needs an HTTP health
+  // fallback. This endpoint must not determine WebSocket availability:
+  // https://dynamodb.us-east-1.amazonaws.com
+  /*
   Future<void> _runCloudHealthProbe() async {
     if (_cloudHealthProbeInFlight) {
       return;
@@ -344,7 +381,7 @@ class SyncManager {
       (_) => unawaited(_runCloudHealthProbe()),
     );
     unawaited(_runCloudHealthProbe());
-  }
+  } */
 
   void _trackAckDrivenEntityStateDownloadRequest(String requestKey) {
     if (_ackDrivenStateDownloadRequestKeys.isEmpty) {
@@ -486,7 +523,6 @@ class SyncManager {
     _dio.options.sendTimeout = const Duration(seconds: 300);
 
     _ensureEntityStateEventSubscriptions();
-    _restartCloudHealthProbe();
 
     _initialized = true;
     SlttLogger.logger.info(
@@ -579,7 +615,10 @@ class SyncManager {
   }) {
     final key = _domainChangeKey(domainType: domainType, domainId: domainId);
     if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
-      if (_subscriptionRegistry.requestSubscribe(WebSocketSubscriptionKind.domainStats, key)) {
+      if (_subscriptionRegistry.requestSubscribe(
+        WebSocketSubscriptionKind.domainStats,
+        key,
+      )) {
         SlttLogger.logger.info(
           '[SyncManager] Subscribed to domain stats: $key',
         );
@@ -593,7 +632,10 @@ class SyncManager {
     }
 
     if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
-      if (_subscriptionRegistry.requestSubscribe(WebSocketSubscriptionKind.domainChange, key)) {
+      if (_subscriptionRegistry.requestSubscribe(
+        WebSocketSubscriptionKind.domainChange,
+        key,
+      )) {
         SlttLogger.logger.info(
           '[SyncManager] Subscribed to domain changes: $key',
         );
@@ -641,7 +683,10 @@ class SyncManager {
       domainType: domainType,
       notifyType: normalizedNotifyType,
     );
-    if (_subscriptionRegistry.requestSubscribe(WebSocketSubscriptionKind.domainType, key)) {
+    if (_subscriptionRegistry.requestSubscribe(
+      WebSocketSubscriptionKind.domainType,
+      key,
+    )) {
       SlttLogger.logger.info('[SyncManager] Subscribed to domain type: $key');
       _trySendDomainTypeSubscription(
         domainType: domainType,
@@ -660,7 +705,10 @@ class SyncManager {
   }) {
     final key = _domainChangeKey(domainType: domainType, domainId: domainId);
     if (notifyType == WebsocketConstants.notifyTypeDomainStats) {
-      if (_subscriptionRegistry.requestUnsubscribe(WebSocketSubscriptionKind.domainStats, key)) {
+      if (_subscriptionRegistry.requestUnsubscribe(
+        WebSocketSubscriptionKind.domainStats,
+        key,
+      )) {
         SlttLogger.logger.info(
           '[SyncManager] Unsubscribed from domain stats: $key',
         );
@@ -671,7 +719,10 @@ class SyncManager {
         _unsubscribeFromLocalDomainStats(domainType, domainId);
       }
     } else if (notifyType == WebsocketConstants.notifyTypeDomainChange) {
-      if (_subscriptionRegistry.requestUnsubscribe(WebSocketSubscriptionKind.domainChange, key)) {
+      if (_subscriptionRegistry.requestUnsubscribe(
+        WebSocketSubscriptionKind.domainChange,
+        key,
+      )) {
         SlttLogger.logger.info(
           '[SyncManager] Unsubscribed from domain changes: $key',
         );
@@ -711,7 +762,10 @@ class SyncManager {
       domainType: domainType,
       notifyType: normalizedNotifyType,
     );
-    if (_subscriptionRegistry.requestUnsubscribe(WebSocketSubscriptionKind.domainType, key)) {
+    if (_subscriptionRegistry.requestUnsubscribe(
+      WebSocketSubscriptionKind.domainType,
+      key,
+    )) {
       SlttLogger.logger.info(
         '[SyncManager] Unsubscribed from domain type: $key',
       );
@@ -1070,8 +1124,8 @@ class SyncManager {
       await _refreshWebSocketAuthToken();
       final existingClient = _webSocketClient;
       if (existingClient == null) {
-        late final SyncManagerWebSocketClient client;
-        client = SyncManagerWebSocketClient(
+        late final SyncManagerWebSocketConnection client;
+        client = _webSocketClientFactory(
           cloudWssUrl: _cloudWssUrl,
           authToken: _authToken,
           onMessage: (message) {
@@ -1104,12 +1158,26 @@ class SyncManager {
       }
       _webSocketReconnectAttempts = 0;
       _sendPendingDomainChangeSubscriptions();
+      // The client has installed its message/done/error listeners and reports
+      // open only when the underlying WebSocket is in WebSocket.open state.
+      if (_webSocketClient?.isOpen != true) {
+        throw StateError('Websocket closed before it became available');
+      }
+      _setCloudServiceStatus(CloudServiceStatus.available);
     } catch (e, stackTrace) {
       SlttLogger.logger.warning(
         '[SyncManager] Websocket connect failed: $e',
         e,
         stackTrace,
       );
+      final failedClient = _webSocketClient;
+      _webSocketClient = null;
+      try {
+        await failedClient?.disconnect();
+      } catch (_) {
+        // Preserve the original connection error.
+      }
+      _moveConfirmedSubscriptionsToPending();
       _setCloudServiceStatus(CloudServiceStatus.unavailable);
       _scheduleWebSocketReconnect();
     } finally {
@@ -1220,16 +1288,14 @@ class SyncManager {
     }
     _webSocketReconnectTimer?.cancel();
     _webSocketReconnectAttempts += 1;
-    final delaySeconds = _webSocketReconnectAttempts > 6
-        ? 30
-        : 2 << (_webSocketReconnectAttempts - 1);
-    _webSocketReconnectTimer = Timer(Duration(seconds: delaySeconds), () {
+    final delay = _webSocketReconnectDelay(_webSocketReconnectAttempts);
+    _webSocketReconnectTimer = Timer(delay, () {
       if (_hasWebSocketWork) {
         unawaited(_connectWebSocket());
       }
     });
     SlttLogger.logger.info(
-      '[SyncManager] Scheduled websocket reconnect in $delaySeconds seconds',
+      '[SyncManager] Scheduled websocket reconnect in ${delay.inMilliseconds}ms',
     );
   }
 
@@ -1239,6 +1305,7 @@ class SyncManager {
     final client = _webSocketClient;
     _webSocketClient = null;
     await client?.disconnect();
+    _setCloudServiceStatus(CloudServiceStatus.unavailable);
   }
 
   void _onWebSocketDone() {
@@ -1852,17 +1919,21 @@ class SyncManager {
       if (action == WebsocketConstants.actionUnsubscribe) {
         if (message['status'] == 'ok') {
           final ackIdentity = _webSocketSubscriptionIdentity(message);
-          if (_subscriptionRegistry.acknowledgeUnsubscription(ackIdentity) == null) {
+          if (_subscriptionRegistry.acknowledgeUnsubscription(ackIdentity) ==
+              null) {
             // Some server acknowledgments omit optional scope fields such as
             // userId. Only use the reduced match when it is unambiguous.
-            final ackBase = '${message['notifyType'] ?? ''}|'
+            final ackBase =
+                '${message['notifyType'] ?? ''}|'
                 '${message['domainType'] ?? ''}|${message['domainId'] ?? ''}|'
                 '${message['entityType'] ?? WebsocketConstants.lastRecordEntityType}|';
             final candidates = _pendingWebSocketUnsubscriptions.keys
                 .where((key) => key.startsWith(ackBase))
                 .toList();
             if (candidates.length == 1) {
-              _subscriptionRegistry.acknowledgeUnsubscription(candidates.single);
+              _subscriptionRegistry.acknowledgeUnsubscription(
+                candidates.single,
+              );
             }
           }
           if (!_hasWebSocketWork) unawaited(_disconnectWebSocket());
@@ -2751,6 +2822,11 @@ class SyncManager {
   }
 
   Future<void> close() async {
+    _webSocketReconnectTimer?.cancel();
+    _webSocketReconnectTimer = null;
+    _autoDownsyncEnabled = false;
+    await _disconnectWebSocket();
+
     if (_initialized) {
       // Clean up auto-sync resources
       disableAutoOutsync();
@@ -2785,9 +2861,19 @@ class SyncManager {
         await _localStorage.close();
       }
       _initialized = false;
-      _instance = null;
-      SlttLogger.logger.info('[SyncManager] Closed');
     }
+
+    if (!_cloudDomainStatsEventsController.isClosed) {
+      await _cloudDomainStatsEventsController.close();
+    }
+    if (!_localDomainStatsEventsController.isClosed) {
+      await _localDomainStatsEventsController.close();
+    }
+    if (!_cloudServiceStatusController.isClosed) {
+      await _cloudServiceStatusController.close();
+    }
+    if (identical(_instance, this)) _instance = null;
+    SlttLogger.logger.info('[SyncManager] Closed');
   }
 
   void _ensureEntityStateEventSubscriptions() {
