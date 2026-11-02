@@ -128,6 +128,26 @@ void main() {
       expect(primary.isar.isOpen, isFalse);
       expect(secondary.isar.isOpen, isFalse);
       await primary.deleteDatabase();
+    }, skip: 'deprecated');
+
+    test('able to concurrently open database path without crashing', () async {
+      final duplicateDbName = '${testDbName}_duplicate_open_guard';
+      final primary = IsarStorageService(duplicateDbName, 'Primary');
+      final secondary = IsarStorageService(duplicateDbName, 'Secondary');
+
+      await primary.deleteDatabase();
+      // try to open the same concurrently. await both in parallel
+      await Future.wait([primary.initialize(), secondary.initialize()]);
+      // expect(secondary.isar, same(primary.isar));
+      expect(primary.isar.isOpen, isTrue);
+      expect(secondary.isar.isOpen, isTrue);
+
+      await primary.close();
+      await secondary.close();
+      expect(primary.isar.isOpen, isFalse);
+      expect(secondary.isar.isOpen, isFalse);
+      await primary.deleteDatabase();
+      await secondary.deleteDatabase();
     });
 
     test(

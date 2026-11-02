@@ -185,22 +185,10 @@ class IsarStorageService extends BaseStorageService {
     bool backupAndSwitchOnMissingSchemas = false,
   }) async {
     SlttLogger.logger.info(
-      '[$_logPrefix] initialize start: dbName=$_databaseName, initialized=${_initialized}, existingInstanceOpen=${Isar.getInstance(_databaseName)?.isOpen ?? false}, dbDirectory=$_dbDirectory',
+      '[$_logPrefix] initialize start: dbName=$_databaseName, initialized=$_initialized, existingInstanceOpen=${Isar.getInstance(_databaseName)?.isOpen ?? false}, dbDirectory=$_dbDirectory',
     );
 
     if (_initialized) return;
-
-    final existingInstance = Isar.getInstance(_databaseName);
-    if (existingInstance != null && existingInstance.isOpen) {
-      SlttLogger.logger.warning(
-        '[$_logPrefix] Reusing already-open Isar instance for database $_databaseName; skipping reopen.',
-      );
-      _isar = existingInstance;
-      _initialized = true;
-      _dbPath = '$_dbDirectory/$_databaseName.isar';
-      _storageId = await ensureStorageId();
-      return;
-    }
 
     // Create local directory for database
     final dir = Directory(_dbDirectory);
