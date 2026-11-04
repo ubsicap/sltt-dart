@@ -178,9 +178,7 @@ void main() {
 
       try {
         await Future.wait([
-          primary.initialize(
-            providedEntityStateSchemas: [IsarTaskStateSchema],
-          ),
+          primary.initialize(providedEntityStateSchemas: [IsarTaskStateSchema]),
           secondary.initialize(
             providedEntityStateSchemas: [IsarTaskStateSchema],
           ),
@@ -211,6 +209,44 @@ void main() {
         await directory.delete(recursive: true);
       }
     });
+
+    test(
+      'clears initialization and schema tracking when Isar is already closed',
+      () async {
+        final duplicateDbName = '${testDbName}_close_already_closed';
+        final directory = await Directory.systemTemp.createTemp(
+          'isar_close_already_closed_',
+        );
+        final service = IsarStorageService(
+          duplicateDbName,
+          'Test',
+          dbDirectory: directory.path,
+        );
+
+        try {
+          await service.initialize(
+            providedEntityStateSchemas: [IsarTaskStateSchema],
+          );
+          final isar = service.isar;
+          expect(service.registeredSchemaNames(), contains('IsarTaskState'));
+          expect(service.isInitialized(), isTrue);
+
+          await isar.close();
+          await service.close();
+
+          expect(service.databasePath, isNull);
+          expect(service.registeredSchemaNames(), isEmpty);
+          expect(service.isInitialized(), isFalse);
+        } finally {
+          await service.close();
+          await IsarStorageService.deleteDatabaseFiles(
+            duplicateDbName,
+            dirPath: directory.path,
+          );
+          await directory.delete(recursive: true);
+        }
+      },
+    );
 
     test('rejects a sequential instance with a different schema', () async {
       final duplicateDbName = '${testDbName}_sequential_schema_mismatch';
@@ -286,9 +322,7 @@ void main() {
         try {
           final results = await Future.wait([
             primary
-                .initialize(
-                  providedEntityStateSchemas: [IsarTaskStateSchema],
-                )
+                .initialize(providedEntityStateSchemas: [IsarTaskStateSchema])
                 .then<Object?>((_) => null, onError: (Object error) => error),
             secondary
                 .initialize(
