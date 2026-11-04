@@ -15,6 +15,8 @@ import 'models/isar_change_log_entry.dart' as client;
 import 'register_entity_states.dart';
 
 class IsarStorageService extends BaseStorageService {
+  static final Map<Isar, Set<String>> _instanceSchemaNames = {};
+
   final String _databaseName;
   final String _logPrefix;
 
@@ -26,6 +28,12 @@ class IsarStorageService extends BaseStorageService {
 
   final IsarEntityStateStorageRegistry _entityStateRegistry =
       IsarEntityStateStorageRegistry();
+
+  Set<String> registeredSchemaNames() => _instanceSchemaNames.containsKey(_isar)
+      ? _instanceSchemaNames[_isar]!
+      : <String>{};
+
+  bool isInitialized() => _initialized;
 
   IsarEntityStateStorageRegistry get entityStateRegistry =>
       _entityStateRegistry;
@@ -190,18 +198,6 @@ class IsarStorageService extends BaseStorageService {
 
     if (_initialized) return;
 
-    final existingInstance = Isar.getInstance(_databaseName);
-    if (existingInstance != null && existingInstance.isOpen) {
-      SlttLogger.logger.warning(
-        '[$_logPrefix] Reusing already-open Isar instance for database $_databaseName; skipping reopen.',
-      );
-      _isar = existingInstance;
-      _initialized = true;
-      _dbPath = '$_dbDirectory/$_databaseName.isar';
-      _storageId = await ensureStorageId();
-      return;
-    }
-
     // Create local directory for database
     final dir = Directory(_dbDirectory);
     if (!await dir.exists()) {
@@ -220,12 +216,15 @@ class IsarStorageService extends BaseStorageService {
       fileInfoDirectoryPath: dir.path,
       fileInfoDatabaseName: _databaseName,
     );
-    await _protectDatabaseAgainstSchemaRegression(
-      directoryPath: dir.path,
-      requestedIncomingSchemas: incomingSchemas,
-      requestedSchemasInfo: requestedSchemasInfo,
-      strict: !backupAndSwitchOnMissingSchemas,
-    );
+    final existingInstanceAtStart = Isar.getInstance(_databaseName);
+    if (existingInstanceAtStart == null) {
+      await _protectDatabaseAgainstSchemaRegression(
+        directoryPath: dir.path,
+        requestedIncomingSchemas: incomingSchemas,
+        requestedSchemasInfo: requestedSchemasInfo,
+        strict: !backupAndSwitchOnMissingSchemas,
+      );
+    }
 
     final resolvedDbPath = File(
       '${dir.path}/$_databaseName.isar',
@@ -238,6 +237,7 @@ class IsarStorageService extends BaseStorageService {
     SlttLogger.logger.info(
       '[$_logPrefix] calling Isar.open for dbName=$_databaseName with ${schemas.length} schemas and inspector=$inspector',
     );
+    bool hasExistingInstance = false;
     try {
       _isar = await Isar.open(
         schemas,
@@ -247,23 +247,73 @@ class IsarStorageService extends BaseStorageService {
       );
     } catch (error, stackTrace) {
       final concurrentInstance = Isar.getInstance(_databaseName);
-      SlttLogger.logger.severe(
-        '[$_logPrefix] Isar.open failed for dbName=$_databaseName. existingInstanceOpen=${concurrentInstance?.isOpen ?? false}. Error: $error\n$stackTrace',
-      );
-      if (concurrentInstance != null && concurrentInstance.isOpen) {
-        SlttLogger.logger.warning(
-          '[$_logPrefix] Reusing already-open Isar instance for database $_databaseName after open failure.',
-        );
+      if (concurrentInstance != null) {
+        // gracefully handle: IsarError: Instance has already been opened.
         _isar = concurrentInstance;
+        hasExistingInstance = true;
+        if (existingInstanceAtStart == null &&
+            !_instanceSchemaNames.containsKey(concurrentInstance)) {
+          _instanceSchemaNames[concurrentInstance] = requestedSchemasInfo
+              .schemaNames
+              .toSet();
+        }
       } else {
+        SlttLogger.logger.severe(
+          '[$_logPrefix] Isar.open failed for dbName=$_databaseName. existingInstanceOpen=${concurrentInstance?.isOpen ?? false}. Error: $error\n$stackTrace',
+        );
         rethrow;
       }
     }
+    if (!hasExistingInstance) {
+      _instanceSchemaNames[_isar] = requestedSchemasInfo.schemaNames.toSet();
+    }
     _dbPath = '${dir.path}/$_databaseName.isar';
-    await _writeSchemaManifest(
-      File(_schemaManifestPath(dir.path)),
-      incomingSchemas: incomingSchemas,
-    );
+    final registeredInstance = Isar.getInstance(_databaseName);
+    final hasDifferentConcurrentInstance =
+        registeredInstance != null && !identical(registeredInstance, _isar);
+    final hasCompetingInstance =
+        hasExistingInstance || hasDifferentConcurrentInstance;
+    if (hasCompetingInstance) {
+      try {
+        await _verifyIncomingSchemasMatchManifest(
+          directoryPath: dir.path,
+          incomingSchemas: incomingSchemas,
+        );
+      } catch (_) {
+        final instanceSchemaNames = _instanceSchemaNames[_isar];
+        if (instanceSchemaNames != null) {
+          final latestManifestInfo = IsarStorageService.calculateSchemasInfo(
+            incomingSchemas: incomingSchemas,
+            calculateFileInfoSchemaStatus: true,
+            fileInfoDirectoryPath: dir.path,
+            fileInfoDatabaseName: _databaseName,
+          );
+          final latestManifestSchemaNames = latestManifestInfo
+              .fileInfoSchemaNames
+              .toSet();
+          final instanceMatchesManifest =
+              instanceSchemaNames.length == latestManifestSchemaNames.length &&
+              instanceSchemaNames.containsAll(latestManifestSchemaNames);
+          if (!instanceMatchesManifest && _isar.isOpen) {
+            await _isar.close();
+            _instanceSchemaNames.remove(_isar);
+          }
+        }
+        rethrow;
+      }
+    } else {
+      await _writeSchemaManifest(
+        File(_schemaManifestPath(dir.path)),
+        incomingSchemas: incomingSchemas,
+      );
+      final writtenManifestInfo = IsarStorageService.calculateSchemasInfo(
+        incomingSchemas: incomingSchemas,
+        calculateFileInfoSchemaStatus: true,
+        fileInfoDirectoryPath: dir.path,
+        fileInfoDatabaseName: _databaseName,
+      );
+      await _closeInstancesNotMatchingManifest(writtenManifestInfo);
+    }
 
     // Register storage groups with the initialized Isar instance. Always
     // start from a clean registry so re-initialization doesn't duplicate
@@ -339,6 +389,53 @@ class IsarStorageService extends BaseStorageService {
     await manifestFile.writeAsString('$payload\n', flush: true);
   }
 
+  Future<void> _verifyIncomingSchemasMatchManifest({
+    required String directoryPath,
+    required List<CollectionSchema> incomingSchemas,
+  }) async {
+    SchemasInfo calculateManifestInfo() {
+      return IsarStorageService.calculateSchemasInfo(
+        incomingSchemas: incomingSchemas,
+        calculateFileInfoSchemaStatus: true,
+        fileInfoDirectoryPath: directoryPath,
+        fileInfoDatabaseName: _databaseName,
+      );
+    }
+
+    var manifestInfo = calculateManifestInfo();
+    if (manifestInfo.schemaStatus != SchemaStatus.noChanges) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      manifestInfo = calculateManifestInfo();
+    }
+
+    if (manifestInfo.schemaStatus != SchemaStatus.noChanges) {
+      throw StateError(
+        'IsarStorageService: Unexpected incoming schema for database '
+        '$_databaseName. Existing: ${manifestInfo.fileInfoSchemaNames}, '
+        'Requested: ${manifestInfo.schemaNames}.',
+      );
+    }
+  }
+
+  Future<void> _closeInstancesNotMatchingManifest(
+    SchemasInfo manifestInfo,
+  ) async {
+    final manifestSchemaNames = manifestInfo.fileInfoSchemaNames.toSet();
+    final openedInstances = _instanceSchemaNames.entries
+        .where((entry) => entry.key.name == _databaseName)
+        .toList();
+
+    for (final entry in openedInstances) {
+      final instanceMatchesManifest =
+          entry.value.length == manifestSchemaNames.length &&
+          entry.value.containsAll(manifestSchemaNames);
+      if (!instanceMatchesManifest && entry.key.isOpen) {
+        await entry.key.close();
+        _instanceSchemaNames.remove(entry.key);
+      }
+    }
+  }
+
   Future<bool> _copyFileIfExists(
     File source,
     File destination, {
@@ -367,10 +464,6 @@ class IsarStorageService extends BaseStorageService {
 
     if (requestedSchemasInfo.schemaStatus == SchemaStatus.addIncoming ||
         requestedSchemasInfo.schemaStatus == SchemaStatus.noInfo) {
-      await _writeSchemaManifest(
-        manifestFile,
-        incomingSchemas: requestedIncomingSchemas,
-      );
       return;
     }
 
@@ -1671,6 +1764,8 @@ class IsarStorageService extends BaseStorageService {
     if (_initialized) {
       if (!_isar.isOpen) {
         SlttLogger.logger.info('[$_logPrefix] Isar database already closed');
+        _instanceSchemaNames.remove(_isar);
+        _initialized = false;
         return;
       }
       try {
@@ -1689,6 +1784,7 @@ class IsarStorageService extends BaseStorageService {
           );
         }
       }
+      _instanceSchemaNames.remove(_isar);
       _initialized = false;
       SlttLogger.logger.info('[$_logPrefix] Isar database closed');
     }
@@ -1708,6 +1804,7 @@ class IsarStorageService extends BaseStorageService {
       if (_initialized) {
         try {
           await _isar.close();
+          _instanceSchemaNames.remove(_isar);
         } catch (_) {
           // ignore
         }

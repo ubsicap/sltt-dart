@@ -7,6 +7,7 @@ import 'package:sync_manager/src/isar_storage_service.dart';
 import 'package:sync_manager/src/models/cursor_sync_state.dart';
 import 'package:sync_manager/src/models/isar_change_log_entry.dart';
 import 'package:sync_manager/src/models/isar_entity_type_sync_state.dart';
+import 'package:sync_manager/src/models/isar_project_state.dart';
 import 'package:sync_manager/src/models/isar_storage_state.dart';
 import 'package:sync_manager/src/models/isar_task_state.dart';
 import 'package:sync_manager/src/models/unknown_entity_state.isar.dart';
@@ -111,24 +112,273 @@ void main() {
       ); // Short storage ID format
     });
 
-    test('reuses an already-open database path without crashing', () async {
+    test(
+      'sequentially initializes an already-open database path without crashing',
+      () async {
+        final duplicateDbName = '${testDbName}_duplicate_open_guard';
+        final directory = await Directory.systemTemp.createTemp(
+          'isar_sequential_open_',
+        );
+        final primary = IsarStorageService(
+          duplicateDbName,
+          'Primary',
+          dbDirectory: directory.path,
+        );
+        final secondary = IsarStorageService(
+          duplicateDbName,
+          'Secondary',
+          dbDirectory: directory.path,
+        );
+
+        try {
+          await primary.initialize(
+            providedEntityStateSchemas: [IsarTaskStateSchema],
+          );
+          await secondary.initialize(
+            providedEntityStateSchemas: [IsarTaskStateSchema],
+          );
+          expect(secondary.isar, same(primary.isar));
+          expect(primary.isar.isOpen, isTrue);
+          expect(secondary.isar.isOpen, isTrue);
+
+          final manifestInfo = IsarStorageService.calculateSchemasInfo(
+            incomingSchemas: [IsarTaskStateSchema],
+            calculateFileInfoSchemaStatus: true,
+            fileInfoDirectoryPath: directory.path,
+            fileInfoDatabaseName: duplicateDbName,
+          );
+          expect(manifestInfo.schemaStatus, SchemaStatus.noChanges);
+        } finally {
+          await secondary.close();
+          await primary.close();
+          await IsarStorageService.deleteDatabaseFiles(
+            duplicateDbName,
+            dirPath: directory.path,
+          );
+          await directory.delete(recursive: true);
+        }
+      },
+    );
+
+    test('concurrently opened instances use the written schema', () async {
       final duplicateDbName = '${testDbName}_duplicate_open_guard';
-      final primary = IsarStorageService(duplicateDbName, 'Primary');
-      final secondary = IsarStorageService(duplicateDbName, 'Secondary');
+      final directory = await Directory.systemTemp.createTemp(
+        'isar_concurrent_open_',
+      );
+      final primary = IsarStorageService(
+        duplicateDbName,
+        'Primary',
+        dbDirectory: directory.path,
+      );
+      final secondary = IsarStorageService(
+        duplicateDbName,
+        'Secondary',
+        dbDirectory: directory.path,
+      );
 
-      await primary.deleteDatabase();
-      await primary.initialize();
+      try {
+        await Future.wait([
+          primary.initialize(providedEntityStateSchemas: [IsarTaskStateSchema]),
+          secondary.initialize(
+            providedEntityStateSchemas: [IsarTaskStateSchema],
+          ),
+        ]);
+        expect(primary.isar.isOpen, isTrue);
+        expect(secondary.isar.isOpen, isTrue);
 
-      await secondary.initialize();
-      expect(secondary.isar, same(primary.isar));
-      expect(primary.isar.isOpen, isTrue);
-      expect(secondary.isar.isOpen, isTrue);
-
-      await primary.close();
-      expect(primary.isar.isOpen, isFalse);
-      expect(secondary.isar.isOpen, isFalse);
-      await primary.deleteDatabase();
+        final manifestInfo = IsarStorageService.calculateSchemasInfo(
+          incomingSchemas: [IsarTaskStateSchema],
+          calculateFileInfoSchemaStatus: true,
+          fileInfoDirectoryPath: directory.path,
+          fileInfoDatabaseName: duplicateDbName,
+        );
+        expect(manifestInfo.schemaStatus, SchemaStatus.noChanges);
+      } finally {
+        await secondary.close();
+        await primary.close();
+        if (secondary.isar.isOpen) {
+          await secondary.isar.close();
+        }
+        if (primary.isar.isOpen) {
+          await primary.isar.close();
+        }
+        await IsarStorageService.deleteDatabaseFiles(
+          duplicateDbName,
+          dirPath: directory.path,
+        );
+        await directory.delete(recursive: true);
+      }
     });
+
+    test(
+      'clears initialization and schema tracking when Isar is already closed',
+      () async {
+        final duplicateDbName = '${testDbName}_close_already_closed';
+        final directory = await Directory.systemTemp.createTemp(
+          'isar_close_already_closed_',
+        );
+        final service = IsarStorageService(
+          duplicateDbName,
+          'Test',
+          dbDirectory: directory.path,
+        );
+
+        try {
+          await service.initialize(
+            providedEntityStateSchemas: [IsarTaskStateSchema],
+          );
+          final isar = service.isar;
+          expect(service.registeredSchemaNames(), contains('IsarTaskState'));
+          expect(service.isInitialized(), isTrue);
+
+          await isar.close();
+          await service.close();
+
+          expect(service.databasePath, isNull);
+          expect(service.registeredSchemaNames(), isEmpty);
+          expect(service.isInitialized(), isFalse);
+        } finally {
+          await service.close();
+          await IsarStorageService.deleteDatabaseFiles(
+            duplicateDbName,
+            dirPath: directory.path,
+          );
+          await directory.delete(recursive: true);
+        }
+      },
+    );
+
+    test('rejects a sequential instance with a different schema', () async {
+      final duplicateDbName = '${testDbName}_sequential_schema_mismatch';
+      final directory = await Directory.systemTemp.createTemp(
+        'isar_sequential_schema_',
+      );
+      final primary = IsarStorageService(
+        duplicateDbName,
+        'Primary',
+        dbDirectory: directory.path,
+      );
+      final secondary = IsarStorageService(
+        duplicateDbName,
+        'Secondary',
+        dbDirectory: directory.path,
+      );
+
+      try {
+        await primary.initialize(
+          providedEntityStateSchemas: [IsarTaskStateSchema],
+        );
+        await expectLater(
+          secondary.initialize(
+            providedEntityStateSchemas: [IsarProjectStateSchema],
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              contains('Unexpected incoming schema'),
+            ),
+          ),
+        );
+
+        expect(secondary.isar, same(primary.isar));
+        expect(primary.isar.isOpen, isTrue);
+        final taskManifestInfo = IsarStorageService.calculateSchemasInfo(
+          incomingSchemas: [IsarTaskStateSchema],
+          calculateFileInfoSchemaStatus: true,
+          fileInfoDirectoryPath: directory.path,
+          fileInfoDatabaseName: duplicateDbName,
+        );
+        expect(taskManifestInfo.schemaStatus, SchemaStatus.noChanges);
+      } finally {
+        await secondary.close();
+        await primary.close();
+        await IsarStorageService.deleteDatabaseFiles(
+          duplicateDbName,
+          dirPath: directory.path,
+        );
+        await directory.delete(recursive: true);
+      }
+    });
+
+    test(
+      'concurrent instances with different schemas close the nonmatching instance',
+      () async {
+        final duplicateDbName = '${testDbName}_concurrent_schema_mismatch';
+        final directory = await Directory.systemTemp.createTemp(
+          'isar_concurrent_schema_',
+        );
+        final primary = IsarStorageService(
+          duplicateDbName,
+          'Primary',
+          dbDirectory: directory.path,
+        );
+        final secondary = IsarStorageService(
+          duplicateDbName,
+          'Secondary',
+          dbDirectory: directory.path,
+        );
+
+        try {
+          final results = await Future.wait([
+            primary
+                .initialize(providedEntityStateSchemas: [IsarTaskStateSchema])
+                .then<Object?>((_) => null, onError: (Object error) => error),
+            secondary
+                .initialize(
+                  providedEntityStateSchemas: [IsarProjectStateSchema],
+                )
+                .then<Object?>((_) => null, onError: (Object error) => error),
+          ]);
+          final errors = results.whereType<StateError>().toList();
+          expect(errors, hasLength(1));
+          expect(errors.single.message, contains('Unexpected incoming schema'));
+
+          final taskManifestInfo = IsarStorageService.calculateSchemasInfo(
+            incomingSchemas: [IsarTaskStateSchema],
+            calculateFileInfoSchemaStatus: true,
+            fileInfoDirectoryPath: directory.path,
+            fileInfoDatabaseName: duplicateDbName,
+          );
+          final projectManifestInfo = IsarStorageService.calculateSchemasInfo(
+            incomingSchemas: [IsarProjectStateSchema],
+            calculateFileInfoSchemaStatus: true,
+            fileInfoDirectoryPath: directory.path,
+            fileInfoDatabaseName: duplicateDbName,
+          );
+          final taskSchemaMatches =
+              taskManifestInfo.schemaStatus == SchemaStatus.noChanges;
+          final projectSchemaMatches =
+              projectManifestInfo.schemaStatus == SchemaStatus.noChanges;
+          expect(taskSchemaMatches ^ projectSchemaMatches, isTrue);
+
+          final nonmatchingService = taskSchemaMatches ? secondary : primary;
+          if (!identical(primary.isar, secondary.isar)) {
+            expect(
+              nonmatchingService.isar.isOpen,
+              isFalse,
+              reason:
+                  'taskMatches=$taskSchemaMatches, results=$results, '
+                  'sameInstance=${identical(primary.isar, secondary.isar)}',
+            );
+          }
+        } finally {
+          await secondary.close();
+          await primary.close();
+          if (secondary.isar.isOpen) {
+            await secondary.isar.close();
+          }
+          if (primary.isar.isOpen) {
+            await primary.isar.close();
+          }
+          await IsarStorageService.deleteDatabaseFiles(
+            duplicateDbName,
+            dirPath: directory.path,
+          );
+          await directory.delete(recursive: true);
+        }
+      },
+    );
 
     test(
       'createEntityStateFromJson falls back to unknown storage group for known entityType without concrete registration',
