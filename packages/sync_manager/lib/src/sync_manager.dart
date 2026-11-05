@@ -532,6 +532,7 @@ class SyncManager {
     SlttLogger.logger.info(
       '[SyncManager] Initialized with instanceId=$instanceId and cloud URL: $_cloudStorageUrl',
     );
+    _ensureWebSocketConnected();
   }
 
   static String _generateInstanceId() {
@@ -851,6 +852,7 @@ class SyncManager {
 
   void bindHostAuthTokenRequestPort(SendPort? requestPort) {
     _hostAuthTokenRequestPort = requestPort;
+    _ensureWebSocketConnected();
   }
 
   Future<void> _refreshWebSocketAuthToken() async {
@@ -1102,13 +1104,7 @@ class SyncManager {
     if (_isWebSocketOpen || _isWebSocketConnecting) {
       return;
     }
-    if (!_hasWebSocketWork) {
-      return;
-    }
-    if (!_hasWebSocketAuth && _hostAuthTokenRequestPort != null) {
-      unawaited(_refreshWebSocketAuthToken());
-    }
-    if (!_hasWebSocketAuth) {
+    if (!_hasWebSocketAuth && _hostAuthTokenRequestPort == null) {
       SlttLogger.logger.info(
         '[SyncManager] Websocket connect deferred until auth token is available',
       );
@@ -1120,12 +1116,18 @@ class SyncManager {
   }
 
   Future<void> _connectWebSocket() async {
-    if (_isWebSocketConnecting || _isWebSocketOpen || !_hasWebSocketWork) {
+    if (_isWebSocketConnecting || _isWebSocketOpen) {
       return;
     }
     _isWebSocketConnecting = true;
     try {
       await _refreshWebSocketAuthToken();
+      if (!_hasWebSocketAuth) {
+        SlttLogger.logger.info(
+          '[SyncManager] Websocket connect deferred until auth token is available',
+        );
+        return;
+      }
       final existingClient = _webSocketClient;
       if (existingClient == null) {
         late final SyncManagerWebSocketConnection client;

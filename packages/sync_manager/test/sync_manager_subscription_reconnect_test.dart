@@ -55,6 +55,19 @@ void main() {
       );
     });
 
+    test('connects for cloud status before websocket work exists', () async {
+      manager.updateAuthToken('test-token');
+
+      final client = await firstClientCreated.future.timeout(
+        const Duration(seconds: 1),
+      );
+      await client.connected.future.timeout(const Duration(seconds: 1));
+
+      expect(client.isOpen, isTrue);
+      expect(client.sentSubscriptions, isEmpty);
+      expect(manager.cloudServiceStatus, CloudServiceStatus.available);
+    });
+
     test(
       'throttles repeated websocket errors and omits later stack traces',
       () async {
