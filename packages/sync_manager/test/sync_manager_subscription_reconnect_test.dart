@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:logging/logging.dart';
 import 'package:sltt_core/sltt_core.dart';
 import 'package:sync_manager/src/sync_manager.dart';
 import 'package:sync_manager/src/sync_manager_websocket_client.dart';
@@ -11,13 +12,16 @@ void main() {
     late Completer<FakeWebSocketConnection> firstClientCreated;
     late Completer<FakeWebSocketConnection> secondClientCreated;
     late SyncManager manager;
+    late DateTime now;
 
     setUp(() {
+      now = DateTime(2026);
       clients = <FakeWebSocketConnection>[];
       firstClientCreated = Completer<FakeWebSocketConnection>();
       secondClientCreated = Completer<FakeWebSocketConnection>();
       manager = SyncManager.withWebSocketClientFactory(
         reconnectDelay: (_) => Duration.zero,
+        clock: () => now,
         webSocketClientFactory:
             ({required cloudWssUrl, authToken, onMessage, onDone, onError}) {
               final client = FakeWebSocketConnection(
@@ -50,6 +54,48 @@ void main() {
         reason: 'Cloud availability must begin available',
       );
     });
+
+    test(
+      'throttles repeated websocket errors and omits later stack traces',
+      () async {
+        final warnings = <LogRecord>[];
+        final logSubscription = Logger.root.onRecord.listen((record) {
+          if (record.message.contains('[SyncManager] Websocket error:')) {
+            warnings.add(record);
+          }
+        });
+        addTearDown(logSubscription.cancel);
+
+        manager.subscribeToDomain(
+          notifyType: WebsocketConstants.notifyTypeDomainChange,
+          domainType: 'user',
+          domainId: 'user-123',
+        );
+        manager.updateAuthToken('test-token');
+        final first = await firstClientCreated.future.timeout(
+          const Duration(seconds: 1),
+        );
+        await first.connected.future.timeout(const Duration(seconds: 1));
+
+        first.serverError(StateError('first socket failure'));
+        expect(warnings, hasLength(1));
+        expect(warnings.single.stackTrace, isNotNull);
+
+        final second = await secondClientCreated.future.timeout(
+          const Duration(seconds: 1),
+        );
+        await second.connected.future.timeout(const Duration(seconds: 1));
+        second.serverError(StateError('repeated socket failure'));
+        expect(warnings, hasLength(1));
+
+        await _waitForClientCount(clients, 3);
+        now = now.add(const Duration(minutes: 1));
+        clients[2].serverError(StateError('later socket failure'));
+
+        expect(warnings, hasLength(2));
+        expect(warnings.last.stackTrace, isNull);
+      },
+    );
 
     test('replays desired subscriptions after disconnect and ignores stale ack', () async {
       manager.subscribeToDomain(
@@ -122,10 +168,7 @@ void main() {
         const Duration(seconds: 1),
       );
       await second.connected.future.timeout(const Duration(seconds: 1));
-      await _waitForCloudServiceStatus(
-        manager,
-        CloudServiceStatus.available,
-      );
+      await _waitForCloudServiceStatus(manager, CloudServiceStatus.available);
       expect(
         manager.cloudServiceStatus,
         CloudServiceStatus.available,
@@ -225,10 +268,7 @@ void main() {
         const Duration(seconds: 1),
       );
       await second.connected.future.timeout(const Duration(seconds: 1));
-      await _waitForCloudServiceStatus(
-        manager,
-        CloudServiceStatus.available,
-      );
+      await _waitForCloudServiceStatus(manager, CloudServiceStatus.available);
       expect(
         manager.cloudServiceStatus,
         CloudServiceStatus.available,
@@ -330,6 +370,19 @@ Future<void> _waitForCloudServiceStatus(
   await manager.cloudServiceStatusEvents
       .firstWhere((status) => status == expected)
       .timeout(const Duration(seconds: 1));
+}
+
+Future<void> _waitForClientCount(
+  List<FakeWebSocketConnection> clients,
+  int count,
+) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 1));
+  while (clients.length < count) {
+    if (DateTime.now().isAfter(deadline)) {
+      throw TimeoutException('Expected $count websocket clients');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 1));
+  }
 }
 
 /// Mock connection used by integration tests. It exercises SyncManager's real

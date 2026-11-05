@@ -26,7 +26,8 @@ class SyncManager {
 
   SyncManager._()
     : _webSocketClientFactory = _defaultWebSocketClientFactory,
-      _webSocketReconnectDelay = _defaultWebSocketReconnectDelay;
+      _webSocketReconnectDelay = _defaultWebSocketReconnectDelay,
+      _now = DateTime.now;
 
   /// Creates an independently-owned manager with an injectable WebSocket
   /// connection factory. This is also useful for embedding multiple managers
@@ -34,9 +35,11 @@ class SyncManager {
   SyncManager.withWebSocketClientFactory({
     required SyncManagerWebSocketClientFactory webSocketClientFactory,
     Duration Function(int attempt)? reconnectDelay,
+    DateTime Function()? clock,
   }) : _webSocketClientFactory = webSocketClientFactory,
        _webSocketReconnectDelay =
-           reconnectDelay ?? _defaultWebSocketReconnectDelay;
+           reconnectDelay ?? _defaultWebSocketReconnectDelay,
+       _now = clock ?? DateTime.now;
 
   static SyncManagerWebSocketConnection _defaultWebSocketClientFactory({
     required String cloudWssUrl,
@@ -52,13 +55,12 @@ class SyncManager {
     onError: onError,
   );
 
-  static Duration _defaultWebSocketReconnectDelay(int attempt) {
-    final delaySeconds = attempt > 6 ? 30 : 2 << (attempt - 1);
-    return Duration(seconds: delaySeconds);
-  }
+  static Duration _defaultWebSocketReconnectDelay(int _) =>
+      const Duration(seconds: 5);
 
   final SyncManagerWebSocketClientFactory _webSocketClientFactory;
   final Duration Function(int attempt) _webSocketReconnectDelay;
+  final DateTime Function() _now;
 
   final String instanceId = _generateInstanceId();
   final Dio _dio = Dio();
@@ -133,6 +135,8 @@ class SyncManager {
   bool _isWebSocketConnecting = false;
   int _webSocketReconnectAttempts = 0;
   Timer? _webSocketReconnectTimer;
+  DateTime? _lastWebSocketReconnectProgressLogAt;
+  DateTime? _lastWebSocketReconnectErrorLogAt;
   bool _downsyncInFlight = false;
 
   // Read-only subscription snapshots are useful to diagnostics and callers.
@@ -1149,9 +1153,11 @@ class SyncManager {
       final authTokenInfo = _authToken?.isNotEmpty == true
           ? 'present len=${_authToken!.length}'
           : 'absent';
-      SlttLogger.logger.info(
-        '[SyncManager] Connecting websocket to: $_cloudWssUrl auth=$authTokenInfo',
-      );
+      if (_shouldLogWebSocketReconnectProgress()) {
+        SlttLogger.logger.info(
+          '[SyncManager] Connecting websocket to: $_cloudWssUrl auth=$authTokenInfo',
+        );
+      }
       await _webSocketClient!.connect();
       if (!_webSocketClient!.isOpen) {
         throw StateError('Websocket connect completed without an open socket');
@@ -1165,7 +1171,7 @@ class SyncManager {
       }
       _setCloudServiceStatus(CloudServiceStatus.available);
     } catch (e, stackTrace) {
-      SlttLogger.logger.warning(
+      _logWebSocketReconnectError(
         '[SyncManager] Websocket connect failed: $e',
         e,
         stackTrace,
@@ -1294,9 +1300,11 @@ class SyncManager {
         unawaited(_connectWebSocket());
       }
     });
-    SlttLogger.logger.info(
-      '[SyncManager] Scheduled websocket reconnect in ${delay.inMilliseconds}ms',
-    );
+    if (_shouldLogWebSocketReconnectProgress()) {
+      SlttLogger.logger.info(
+        '[SyncManager] Scheduled websocket reconnect in ${delay.inMilliseconds}ms',
+      );
+    }
   }
 
   Future<void> _disconnectWebSocket() async {
@@ -1309,7 +1317,9 @@ class SyncManager {
   }
 
   void _onWebSocketDone() {
-    SlttLogger.logger.info('[SyncManager] Websocket connection closed');
+    if (_shouldLogWebSocketReconnectProgress()) {
+      SlttLogger.logger.info('[SyncManager] Websocket connection closed');
+    }
     _moveConfirmedSubscriptionsToPending();
     _webSocketClient = null;
     _setCloudServiceStatus(CloudServiceStatus.unavailable);
@@ -1320,7 +1330,7 @@ class SyncManager {
 
   void _onWebSocketError(dynamic error, StackTrace stackTrace) {
     _moveConfirmedSubscriptionsToPending();
-    SlttLogger.logger.warning(
+    _logWebSocketReconnectError(
       '[SyncManager] Websocket error: $error',
       error,
       stackTrace,
@@ -1329,6 +1339,38 @@ class SyncManager {
     _setCloudServiceStatus(CloudServiceStatus.unavailable);
     if (_hasWebSocketWork) {
       _scheduleWebSocketReconnect();
+    }
+  }
+
+  bool _shouldLogWebSocketReconnectProgress() {
+    final now = _now();
+    final lastLoggedAt = _lastWebSocketReconnectProgressLogAt;
+    if (lastLoggedAt != null &&
+        now.difference(lastLoggedAt) < const Duration(minutes: 1)) {
+      return false;
+    }
+
+    _lastWebSocketReconnectProgressLogAt = now;
+    return true;
+  }
+
+  void _logWebSocketReconnectError(
+    String message,
+    Object? error,
+    StackTrace stackTrace,
+  ) {
+    final now = _now();
+    final lastLoggedAt = _lastWebSocketReconnectErrorLogAt;
+    if (lastLoggedAt != null &&
+        now.difference(lastLoggedAt) < const Duration(minutes: 1)) {
+      return;
+    }
+
+    _lastWebSocketReconnectErrorLogAt = now;
+    if (lastLoggedAt == null) {
+      SlttLogger.logger.warning(message, error, stackTrace);
+    } else {
+      SlttLogger.logger.warning(message);
     }
   }
 
