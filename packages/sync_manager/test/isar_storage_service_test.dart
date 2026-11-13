@@ -211,6 +211,39 @@ void main() {
     });
 
     test(
+      'closes the database when close is called during initialization',
+      () async {
+        final duplicateDbName = '${testDbName}_close_during_initialization';
+        final directory = await Directory.systemTemp.createTemp(
+          'isar_close_during_initialization_',
+        );
+        final service = IsarStorageService(
+          duplicateDbName,
+          'Test',
+          dbDirectory: directory.path,
+        );
+
+        try {
+          final initialization = service.initialize(
+            providedEntityStateSchemas: [IsarTaskStateSchema],
+          );
+          await service.close();
+          await initialization;
+
+          expect(service.isInitialized(), isFalse);
+          expect(service.isar.isOpen, isFalse);
+        } finally {
+          await service.close();
+          await IsarStorageService.deleteDatabaseFiles(
+            duplicateDbName,
+            dirPath: directory.path,
+          );
+          await directory.delete(recursive: true);
+        }
+      },
+    );
+
+    test(
       'clears initialization and schema tracking when Isar is already closed',
       () async {
         final duplicateDbName = '${testDbName}_close_already_closed';

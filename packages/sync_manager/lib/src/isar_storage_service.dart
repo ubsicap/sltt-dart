@@ -22,6 +22,10 @@ class IsarStorageService extends BaseStorageService {
 
   late Isar _isar;
   bool _initialized = false;
+
+  /// The initialization currently in progress, if any. `close()` waits for it
+  /// so a close requested mid-initialization is not silently ignored.
+  Future<void>? _initialization;
   late String _storageId;
   late String _dbPath;
   late String _dbDirectory;
@@ -187,6 +191,36 @@ class IsarStorageService extends BaseStorageService {
 
   @override
   Future<void> initialize({
+    List<CollectionSchema>? providedEntityStateSchemas,
+    void Function(IsarEntityStateStorageRegistry, Isar)? registerStorageGroups,
+    bool inspector = false,
+    bool backupAndSwitchOnMissingSchemas = false,
+  }) async {
+    // Join an initialization that is already running on this service instead
+    // of starting a second one.
+    final inFlight = _initialization;
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
+
+    final initialization = _initialize(
+      providedEntityStateSchemas: providedEntityStateSchemas,
+      registerStorageGroups: registerStorageGroups,
+      inspector: inspector,
+      backupAndSwitchOnMissingSchemas: backupAndSwitchOnMissingSchemas,
+    );
+    _initialization = initialization;
+    try {
+      await initialization;
+    } finally {
+      if (identical(_initialization, initialization)) {
+        _initialization = null;
+      }
+    }
+  }
+
+  Future<void> _initialize({
     List<CollectionSchema>? providedEntityStateSchemas,
     void Function(IsarEntityStateStorageRegistry, Isar)? registerStorageGroups,
     bool inspector = false,
@@ -1761,6 +1795,17 @@ class IsarStorageService extends BaseStorageService {
 
   @override
   Future<void> close() async {
+    // If initialization is still running, let it finish first; otherwise it
+    // would mark the service initialized and leave the database open after
+    // this close() has already returned. A failed initialization has nothing
+    // left to close, and its error belongs to the initialize() caller.
+    final initializing = _initialization;
+    if (initializing != null) {
+      try {
+        await initializing;
+      } catch (_) {}
+    }
+
     if (_initialized) {
       if (!_isar.isOpen) {
         SlttLogger.logger.info('[$_logPrefix] Isar database already closed');
