@@ -243,6 +243,177 @@ void main() {
       },
     );
 
+    Future<void> withTempService(
+      String suffix,
+      Future<void> Function(IsarStorageService service, Directory directory)
+      body,
+    ) async {
+      final dbName = '${testDbName}_$suffix';
+      final directory = await Directory.systemTemp.createTemp(
+        'isar_${suffix}_',
+      );
+      final service = IsarStorageService(
+        dbName,
+        'Test',
+        dbDirectory: directory.path,
+      );
+      try {
+        await body(service, directory);
+      } finally {
+        await service.close();
+        await IsarStorageService.deleteDatabaseFiles(
+          dbName,
+          dirPath: directory.path,
+        );
+        await directory.delete(recursive: true);
+      }
+    }
+
+    test(
+      'closes the database and allows a retry when writing the schema manifest fails',
+      () async {
+        await withTempService('manifest_write_failure', (
+          service,
+          directory,
+        ) async {
+          // A directory at the manifest path makes the manifest write throw.
+          final blocker = Directory(
+            '${directory.path}/${service.databaseName}.isar.schemas',
+          );
+          await blocker.create();
+
+          await expectLater(
+            service.initialize(
+              providedEntityStateSchemas: [IsarTaskStateSchema],
+            ),
+            throwsA(isA<FileSystemException>()),
+          );
+
+          expect(service.isInitialized(), isFalse);
+          expect(service.isar.isOpen, isFalse);
+          expect(
+            Isar.getInstance(service.databaseName)?.isOpen ?? false,
+            isFalse,
+          );
+          expect(service.registeredSchemaNames(), isEmpty);
+
+          // The failed attempt must not poison a retry once the IO problem is
+          // fixed.
+          await blocker.delete();
+          await service.initialize(
+            providedEntityStateSchemas: [IsarTaskStateSchema],
+          );
+          expect(service.isInitialized(), isTrue);
+          expect(service.isar.isOpen, isTrue);
+        });
+      },
+    );
+
+    test(
+      'closes the database and allows a retry when initialization fails after open',
+      () async {
+        await withTempService('failure_after_open', (service, directory) async {
+          var initializedDuringRegistration = true;
+
+          await expectLater(
+            service.initialize(
+              providedEntityStateSchemas: [IsarTaskStateSchema],
+              registerStorageGroups: (registry, isar) {
+                initializedDuringRegistration = service.isInitialized();
+                throw StateError('registration failed');
+              },
+            ),
+            throwsA(
+              isA<StateError>().having(
+                (error) => error.message,
+                'message',
+                contains('registration failed'),
+              ),
+            ),
+          );
+
+          expect(initializedDuringRegistration, isFalse);
+          expect(service.isInitialized(), isFalse);
+          expect(service.isar.isOpen, isFalse);
+          expect(
+            Isar.getInstance(service.databaseName)?.isOpen ?? false,
+            isFalse,
+          );
+          expect(service.registeredSchemaNames(), isEmpty);
+
+          await service.initialize(
+            providedEntityStateSchemas: [IsarTaskStateSchema],
+          );
+          expect(service.isInitialized(), isTrue);
+          expect(service.isar.isOpen, isTrue);
+        });
+      },
+    );
+
+    test(
+      'close during an initialization that fails does not throw',
+      () async {
+        await withTempService('close_during_failing_init', (
+          service,
+          directory,
+        ) async {
+          final initialization = service.initialize(
+            providedEntityStateSchemas: [IsarTaskStateSchema],
+            registerStorageGroups: (registry, isar) {
+              throw StateError('registration failed');
+            },
+          );
+          final initializationError = expectLater(
+            initialization,
+            throwsA(isA<StateError>()),
+          );
+
+          await service.close();
+          await initializationError;
+
+          expect(service.isInitialized(), isFalse);
+          expect(service.isar.isOpen, isFalse);
+        });
+      },
+    );
+
+    test(
+      'is only marked initialized after initialization completes',
+      () async {
+        await withTempService('initialized_flag_timing', (
+          service,
+          directory,
+        ) async {
+          bool? initializedDuringRegistration;
+
+          await service.initialize(
+            providedEntityStateSchemas: [IsarTaskStateSchema],
+            registerStorageGroups: (registry, isar) {
+              initializedDuringRegistration = service.isInitialized();
+              registerIsarUnknownEntityStateStorageGroup(registry, isar);
+            },
+          );
+
+          expect(initializedDuringRegistration, isFalse);
+          expect(service.isInitialized(), isTrue);
+        });
+      },
+    );
+
+    test(
+      'migrateUnknownEntityStates still requires an initialized service',
+      () async {
+        final service = IsarStorageService(
+          '${testDbName}_migrate_guard',
+          'Test',
+        );
+        await expectLater(
+          service.migrateUnknownEntityStates(),
+          throwsStateError,
+        );
+      },
+    );
+
     test(
       'clears initialization and schema tracking when Isar is already closed',
       () async {

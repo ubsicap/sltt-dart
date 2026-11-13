@@ -336,49 +336,92 @@ class IsarStorageService extends BaseStorageService {
         rethrow;
       }
     } else {
-      await _writeSchemaManifest(
-        File(_schemaManifestPath(dir.path)),
-        incomingSchemas: incomingSchemas,
-      );
-      final writtenManifestInfo = IsarStorageService.calculateSchemasInfo(
-        incomingSchemas: incomingSchemas,
-        calculateFileInfoSchemaStatus: true,
-        fileInfoDirectoryPath: dir.path,
-        fileInfoDatabaseName: _databaseName,
-      );
-      await _closeInstancesNotMatchingManifest(writtenManifestInfo);
+      try {
+        await _writeSchemaManifest(
+          File(_schemaManifestPath(dir.path)),
+          incomingSchemas: incomingSchemas,
+        );
+        final writtenManifestInfo = IsarStorageService.calculateSchemasInfo(
+          incomingSchemas: incomingSchemas,
+          calculateFileInfoSchemaStatus: true,
+          fileInfoDirectoryPath: dir.path,
+          fileInfoDatabaseName: _databaseName,
+        );
+        await _closeInstancesNotMatchingManifest(writtenManifestInfo);
+      } catch (error, stackTrace) {
+        // We opened this instance above and are not initialized, so close()
+        // would skip it. Close it here, otherwise the database stays open and
+        // a retry hits the "competing instance" path with no manifest.
+        SlttLogger.logger.severe(
+          '[$_logPrefix] Failed to write schema manifest for dbName=$_databaseName; closing database. Error: $error\n$stackTrace',
+        );
+        await _closeDatabaseAfterFailedInitialization();
+        rethrow;
+      }
     }
 
     // Register storage groups with the initialized Isar instance. Always
     // start from a clean registry so re-initialization doesn't duplicate
     // entries.
-    _entityStateRegistry.clear();
-    registerIsarChangeLogSerializableGroup();
-    if (registerStorageGroups != null) {
-      registerIsarUnknownEntityStateStorageGroup(_entityStateRegistry, _isar);
-      registerStorageGroups(_entityStateRegistry, _isar);
-    } else {
-      // Fall back to default registration
-      registerAllIsarEntityStateStorageGroups(_entityStateRegistry, _isar);
+    //
+    // `_initialized` is only set once every step below has succeeded, so a
+    // failure never leaves the service looking initialized.
+    try {
+      _entityStateRegistry.clear();
+      registerIsarChangeLogSerializableGroup();
+      if (registerStorageGroups != null) {
+        registerIsarUnknownEntityStateStorageGroup(_entityStateRegistry, _isar);
+        registerStorageGroups(_entityStateRegistry, _isar);
+      } else {
+        // Fall back to default registration
+        registerAllIsarEntityStateStorageGroups(_entityStateRegistry, _isar);
+      }
+
+      // Ensure storage ID is set
+      _storageId = await ensureStorageId();
+
+      // Log registered storage groups and their entity types
+      final registeredGroups = _entityStateRegistry.registeredEntityTypes();
+      SlttLogger.logger.info(
+        '[$_logPrefix] Registered Isar entity state storage groups: $registeredGroups',
+      );
+
+      // Perform unknown entity state migration on initialization
+      // in case we have registered new storage groups that can resolve previously unknown entities.
+      await _migrateUnknownEntityStates();
+    } catch (error, stackTrace) {
+      SlttLogger.logger.severe(
+        '[$_logPrefix] Initialization failed after opening dbName=$_databaseName. Error: $error\n$stackTrace',
+      );
+      _entityStateRegistry.clear();
+      if (hasCompetingInstance) {
+        // The instance is shared with another service; leave it open.
+        _initialized = false;
+      } else {
+        await _closeDatabaseAfterFailedInitialization();
+      }
+      rethrow;
     }
 
     _initialized = true;
     SlttLogger.logger.info(
       '[$_logPrefix] Isar database initialized at: ${dir.path}/$_databaseName.isar',
     );
+  }
 
-    // Ensure storage ID is set
-    _storageId = await ensureStorageId();
-
-    // Log registered storage groups and their entity types
-    final registeredGroups = _entityStateRegistry.registeredEntityTypes();
-    SlttLogger.logger.info(
-      '[$_logPrefix] Registered Isar entity state storage groups: $registeredGroups',
-    );
-
-    // Perform unknown entity state migration on initialization
-    // in case we have registered new storage groups that can resolve previously unknown entities.
-    await migrateUnknownEntityStates();
+  Future<void> _closeDatabaseAfterFailedInitialization() async {
+    _initialized = false;
+    try {
+      if (_isar.isOpen) {
+        await _isar.close();
+      }
+    } catch (e) {
+      SlttLogger.logger.warning(
+        '[$_logPrefix] Failed to close Isar after failed initialization: $e',
+      );
+    } finally {
+      _instanceSchemaNames.remove(_isar);
+    }
   }
 
   static List<String> _sortedDistinctSchemaNames(
@@ -597,7 +640,14 @@ class IsarStorageService extends BaseStorageService {
         'IsarStorageService must be initialized before migration',
       );
     }
+    return _migrateUnknownEntityStates(maxRowsPerBatch: maxRowsPerBatch);
+  }
 
+  /// Migration body without the `_initialized` guard, so `initialize` can run
+  /// it before marking the service initialized.
+  Future<UnknownEntityStateMigrationResult> _migrateUnknownEntityStates({
+    int maxRowsPerBatch = 200,
+  }) async {
     SlttLogger.logger.info(
       '[$_logPrefix] Starting unknown entity state migration with batch size $maxRowsPerBatch',
     );
