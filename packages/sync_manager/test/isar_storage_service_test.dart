@@ -230,7 +230,7 @@ void main() {
           await service.close();
           await initialization;
 
-          expect(service.isInitialized(), isFalse);
+          expect(service.isInitialized, isFalse);
           expect(service.isar.isOpen, isFalse);
         } finally {
           await service.close();
@@ -289,7 +289,7 @@ void main() {
             throwsA(isA<FileSystemException>()),
           );
 
-          expect(service.isInitialized(), isFalse);
+          expect(service.isInitialized, isFalse);
           expect(service.isar.isOpen, isFalse);
           expect(
             Isar.getInstance(service.databaseName)?.isOpen ?? false,
@@ -303,7 +303,7 @@ void main() {
           await service.initialize(
             providedEntityStateSchemas: [IsarTaskStateSchema],
           );
-          expect(service.isInitialized(), isTrue);
+          expect(service.isInitialized, isTrue);
           expect(service.isar.isOpen, isTrue);
         });
       },
@@ -319,7 +319,7 @@ void main() {
             service.initialize(
               providedEntityStateSchemas: [IsarTaskStateSchema],
               registerStorageGroups: (registry, isar) {
-                initializedDuringRegistration = service.isInitialized();
+                initializedDuringRegistration = service.isInitialized;
                 throw StateError('registration failed');
               },
             ),
@@ -333,7 +333,7 @@ void main() {
           );
 
           expect(initializedDuringRegistration, isFalse);
-          expect(service.isInitialized(), isFalse);
+          expect(service.isInitialized, isFalse);
           expect(service.isar.isOpen, isFalse);
           expect(
             Isar.getInstance(service.databaseName)?.isOpen ?? false,
@@ -344,61 +344,55 @@ void main() {
           await service.initialize(
             providedEntityStateSchemas: [IsarTaskStateSchema],
           );
-          expect(service.isInitialized(), isTrue);
+          expect(service.isInitialized, isTrue);
           expect(service.isar.isOpen, isTrue);
         });
       },
     );
 
-    test(
-      'close during an initialization that fails does not throw',
-      () async {
-        await withTempService('close_during_failing_init', (
-          service,
-          directory,
-        ) async {
-          final initialization = service.initialize(
-            providedEntityStateSchemas: [IsarTaskStateSchema],
-            registerStorageGroups: (registry, isar) {
-              throw StateError('registration failed');
-            },
-          );
-          final initializationError = expectLater(
-            initialization,
-            throwsA(isA<StateError>()),
-          );
+    test('close during an initialization that fails does not throw', () async {
+      await withTempService('close_during_failing_init', (
+        service,
+        directory,
+      ) async {
+        final initialization = service.initialize(
+          providedEntityStateSchemas: [IsarTaskStateSchema],
+          registerStorageGroups: (registry, isar) {
+            throw StateError('registration failed');
+          },
+        );
+        final initializationError = expectLater(
+          initialization,
+          throwsA(isA<StateError>()),
+        );
 
-          await service.close();
-          await initializationError;
+        await service.close();
+        await initializationError;
 
-          expect(service.isInitialized(), isFalse);
-          expect(service.isar.isOpen, isFalse);
-        });
-      },
-    );
+        expect(service.isInitialized, isFalse);
+        expect(service.isar.isOpen, isFalse);
+      });
+    });
 
-    test(
-      'is only marked initialized after initialization completes',
-      () async {
-        await withTempService('initialized_flag_timing', (
-          service,
-          directory,
-        ) async {
-          bool? initializedDuringRegistration;
+    test('is only marked initialized after initialization completes', () async {
+      await withTempService('initialized_flag_timing', (
+        service,
+        directory,
+      ) async {
+        bool? initializedDuringRegistration;
 
-          await service.initialize(
-            providedEntityStateSchemas: [IsarTaskStateSchema],
-            registerStorageGroups: (registry, isar) {
-              initializedDuringRegistration = service.isInitialized();
-              registerIsarUnknownEntityStateStorageGroup(registry, isar);
-            },
-          );
+        await service.initialize(
+          providedEntityStateSchemas: [IsarTaskStateSchema],
+          registerStorageGroups: (registry, isar) {
+            initializedDuringRegistration = service.isInitialized;
+            registerIsarUnknownEntityStateStorageGroup(registry, isar);
+          },
+        );
 
-          expect(initializedDuringRegistration, isFalse);
-          expect(service.isInitialized(), isTrue);
-        });
-      },
-    );
+        expect(initializedDuringRegistration, isFalse);
+        expect(service.isInitialized, isTrue);
+      });
+    });
 
     test(
       'migrateUnknownEntityStates still requires an initialized service',
@@ -433,14 +427,14 @@ void main() {
           );
           final isar = service.isar;
           expect(service.registeredSchemaNames(), contains('IsarTaskState'));
-          expect(service.isInitialized(), isTrue);
+          expect(service.isInitialized, isTrue);
 
           await isar.close();
           await service.close();
 
           expect(service.databasePath, isNull);
           expect(service.registeredSchemaNames(), isEmpty);
-          expect(service.isInitialized(), isFalse);
+          expect(service.isInitialized, isFalse);
         } finally {
           await service.close();
           await IsarStorageService.deleteDatabaseFiles(

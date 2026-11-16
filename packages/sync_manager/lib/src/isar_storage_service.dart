@@ -37,7 +37,8 @@ class IsarStorageService extends BaseStorageService {
       ? _instanceSchemaNames[_isar]!
       : <String>{};
 
-  bool isInitialized() => _initialized;
+  bool get isInitialized => _initialized;
+  bool get isInitializing => _initialization != null;
 
   IsarEntityStateStorageRegistry get entityStateRegistry =>
       _entityStateRegistry;
