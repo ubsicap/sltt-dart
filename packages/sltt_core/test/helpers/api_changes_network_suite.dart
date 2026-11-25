@@ -153,6 +153,23 @@ class ApiChangesNetworkTestSuite {
     await postSingleChange(change);
   }
 
+  Future<Map<String, dynamic>> getStorageId() async {
+    final baseUrl = await resolveBaseUrl();
+    final queryParams = <String, String>{};
+
+    final uri = baseUrl.replace(
+      // New changes path
+      path: '${baseUrl.path}/api/storage/id',
+      queryParameters: queryParams.isEmpty ? null : queryParams,
+    );
+
+    final req = await HttpClient().getUrl(uri);
+    final res = await req.close();
+    expect(res.statusCode, 200);
+    final body = await res.transform(utf8.decoder).join();
+    return jsonDecode(body) as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> getProjectChanges(
     String projectId, {
     int? cursor,
@@ -429,6 +446,16 @@ class ApiChangesNetworkTestSuite {
           },
     };
     return {
+      '/api/storage/id': {
+        'GET': ({setup, tearDown}) async {
+          await _runTestWithLifecycle(
+            '',
+            _testGetStorageId,
+            setup: setup,
+            tearDown: tearDown,
+          );
+        },
+      },
       'GET /api/stats/{domainCollection}/{domainId}': statsTests,
       'POST /api/changes': {
         'with includeChangeUpdates/includeStateUpdates returns summaries':
@@ -791,6 +818,13 @@ class ApiChangesNetworkTestSuite {
   }
 
   // Individual test implementations
+
+  Future<void> _testGetStorageId({required String domainId}) async {
+    final resp = await getStorageId();
+    expect(resp['storageId'], isNotEmpty);
+    expect(resp['storageType'], isNotEmpty);
+    expect(resp['timestamp'], isNotEmpty);
+  }
 
   Future<void> _testPostChangesWithSummaries({required String domainId}) async {
     // Use helper to post a single change so the helper can ensure

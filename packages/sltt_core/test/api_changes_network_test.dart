@@ -76,6 +76,21 @@ void main() {
     // `packages/sltt_core/test/helpers/api_changes_network_suite.dart` and
     // add a corresponding `test()` call in this file and
     // `packages/sync_manager/test/isar_storage_api_changes_network_test.dart`.
+    group('GET /api/changes', () {
+      late ApiChangesNetworkTestSuite suite;
+      late Map<String, Future<void> Function()> getTests;
+
+      setUp(() async {
+        suite = ApiChangesNetworkTestSuite(resolveBaseUrl);
+        final testGroups = suite.getTestGroups();
+        getTests = testGroups['/api/storage/id']!;
+      });
+
+      test('storage id', () async {
+        await getTests['GET']!();
+      });
+    });
+
     group('POST /api/changes', () {
       late ApiChangesNetworkTestSuite suite;
       late Map<String, Future<void> Function()> postTests;

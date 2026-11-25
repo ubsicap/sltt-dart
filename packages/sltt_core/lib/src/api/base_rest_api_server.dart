@@ -10,40 +10,6 @@ import 'package:sltt_core/sltt_core.dart';
 
 import 'api_help_renderer.dart';
 
-/// Marker exception for API-level conflicts that should return 409.
-abstract class ApiConflictException implements Exception {
-  String get message;
-}
-
-/// Exception thrown when an S3 object write is rejected due to an existing
-/// object or concurrent write conflict.
-class AwsMediaStorageConflictException implements ApiConflictException {
-  AwsMediaStorageConflictException(this.message, this.remoteFileKey);
-
-  @override
-  final String message;
-  final String remoteFileKey;
-
-  @override
-  String toString() => 'AwsMediaStorageConflictException: $message';
-}
-
-class AwsMediaStorageObjectAlreadyExistsException
-    extends AwsMediaStorageConflictException {
-  AwsMediaStorageObjectAlreadyExistsException(
-    String remoteFileKey,
-    String message,
-  ) : super(message, remoteFileKey);
-}
-
-class AwsMediaStorageConcurrentUploadConflictException
-    extends AwsMediaStorageConflictException {
-  AwsMediaStorageConcurrentUploadConflictException(
-    String remoteFileKey,
-    String message,
-  ) : super(message, remoteFileKey);
-}
-
 /// Base REST API server that provides common functionality for all storage types.
 ///
 /// This eliminates code duplication between different server implementations
@@ -274,6 +240,7 @@ abstract class BaseRestApiServer {
     router.post('/api/media/list-parts', _handleMediaGetFileParts);
     router.post('/api/media/multipart-create', _handleMediaCreateMultipart);
     router.post('/api/media/multipart-complete', _handleMediaCompleteMultipart);
+    router.get('/api/storage/id', _handleGetStorageId);
     router.post('/api/storage/__test/state', _handleStorageTestStoreState);
     router.post('/api/storage/__test/change', _handleStorageTestStoreChange);
     router.delete(
@@ -1059,7 +1026,20 @@ abstract class BaseRestApiServer {
               'description': 'Maximum number of results (1-1000)',
             },
           ],
-          'response': paginationResponseSchema,
+          'response': {
+            'type': 'object',
+            'properties': {
+              'storageId': {
+                'type': 'string',
+                'description': 'storage id (e.g. 2607212159_00CM1)',
+              },
+              'storageType': {
+                'type': 'string',
+                'description': 'storage type (e.g. cloud|local)',
+              },
+            },
+            ...paginationResponseSchema,
+          },
         },
         {
           'method': 'GET',
@@ -1309,6 +1289,29 @@ abstract class BaseRestApiServer {
                 'items': {'type': 'string'},
                 'description':
                     'List of entity types that have data in this domain',
+              },
+            },
+          },
+        },
+        {
+          'method': 'GET',
+          'path': '/api/storage/id',
+          'description': 'Get storage id (e.g. 2607212159_00CM1)',
+          'response': {
+            'type': 'object',
+            'properties': {
+              'storageId': {
+                'type': 'string',
+                'description': 'storage id (e.g. 2607212159_00CM1)',
+              },
+              'storageType': {
+                'type': 'string',
+                'description': 'storage type (e.g. cloud|local)',
+              },
+              'timestamp': {
+                'type': 'string',
+                'format': 'ISO8601',
+                'description': 'When the response was generated',
               },
             },
           },
@@ -2530,6 +2533,20 @@ abstract class BaseRestApiServer {
     }
   }
 
+  Future<Response> _handleGetStorageId(Request request) async {
+    final storageId = await storage.getStorageId();
+    final storageType = storage.getStorageType();
+
+    return Response.ok(
+      jsonEncode({
+        'storageId': storageId,
+        'storageType': storageType,
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+      }),
+      headers: {'Content-Type': 'application/json'},
+    );
+  }
+
   /// Test endpoint: Store entity state directly
   Future<Response> _handleStorageTestStoreState(Request request) async {
     try {
@@ -2786,4 +2803,38 @@ class StartResponse {
   final String storageType;
 
   StartResponse({required this.storageId, required this.storageType});
+}
+
+/// Marker exception for API-level conflicts that should return 409.
+abstract class ApiConflictException implements Exception {
+  String get message;
+}
+
+/// Exception thrown when an S3 object write is rejected due to an existing
+/// object or concurrent write conflict.
+class AwsMediaStorageConflictException implements ApiConflictException {
+  AwsMediaStorageConflictException(this.message, this.remoteFileKey);
+
+  @override
+  final String message;
+  final String remoteFileKey;
+
+  @override
+  String toString() => 'AwsMediaStorageConflictException: $message';
+}
+
+class AwsMediaStorageObjectAlreadyExistsException
+    extends AwsMediaStorageConflictException {
+  AwsMediaStorageObjectAlreadyExistsException(
+    String remoteFileKey,
+    String message,
+  ) : super(message, remoteFileKey);
+}
+
+class AwsMediaStorageConcurrentUploadConflictException
+    extends AwsMediaStorageConflictException {
+  AwsMediaStorageConcurrentUploadConflictException(
+    String remoteFileKey,
+    String message,
+  ) : super(message, remoteFileKey);
 }
